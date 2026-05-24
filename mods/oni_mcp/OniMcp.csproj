@@ -121,6 +121,7 @@
 
     <!-- 复制 README -->
     <Copy SourceFiles="$(MSBuildProjectDirectory)/README.md" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/README.md')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/README_EN.md" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/README_EN.md')" />
   </Target>
 
   <!-- 构建后打包 Mod 到仓库根目录 dist/ -->
@@ -144,6 +145,7 @@
       <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />
       <ModOutputFiles Include="$(OutputPath)preview.jpg" Condition="Exists('$(OutputPath)preview.jpg')" />
       <ModOutputFiles Include="$(OutputPath)README.md" Condition="Exists('$(OutputPath)README.md')" />
+      <ModOutputFiles Include="$(OutputPath)README_EN.md" Condition="Exists('$(OutputPath)README_EN.md')" />
       <ModOutputFiles Include="$(OutputPath)assets/edit_mark_tool.png" Condition="Exists('$(OutputPath)assets/edit_mark_tool.png')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
