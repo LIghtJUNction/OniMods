@@ -1,0 +1,161 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ========================================
+    ONI MCP Server Mod
+    ========================================
+    将 Oxygen Not Included 游戏操作封装为 Model Context Protocol 服务
+    使用 Streamable HTTP 传输层
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>OniMcp</AssemblyName>
+    <RootNamespace>OniMcp</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
+    <!-- Mod 元数据 -->
+    <ModTitle>ONI MCP Server</ModTitle>
+    <ModDescription>Oxygen Not Included MCP Server - 将游戏操作封装为 Model Context Protocol 服务，使用 Streamable HTTP 传输层</ModDescription>
+    <ModStaticID>LIghtJUNction.OniMcp</ModStaticID>
+    <ModVersion>0.1.0</ModVersion>
+
+    <!-- mod_info.yaml 元数据 -->
+    <ModApiVersion>2</ModApiVersion>
+  </PropertyGroup>
+
+  <!--
+    引用游戏 DLL。
+    $(OniManagedPath) 由根目录 Directory.Build.props 提供。
+    Private=false 确保这些 DLL 不会被复制到输出目录
+  -->
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(OniManagedPath)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(OniManagedPath)/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(OniManagedPath)/Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(OniManagedPath)/UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(OniManagedPath)/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(OniManagedPath)/UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(OniManagedPath)/UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(OniManagedPath)/Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(OniManagedPath)/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(OniManagedPath)/UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(OniManagedPath)/UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule">
+      <HintPath>$(OniManagedPath)/UnityEngine.ScreenCaptureModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Newtonsoft.Json 游戏自带，不合并 -->
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(OniManagedPath)/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 项目根目录的预览图自动复制到输出 -->
+  <ItemGroup>
+    <PreviewImage Include="$(MSBuildProjectDirectory)/preview.png" Condition="Exists('$(MSBuildProjectDirectory)/preview.png')" />
+    <PreviewImage Include="$(MSBuildProjectDirectory)/preview.jpg" Condition="Exists('$(MSBuildProjectDirectory)/preview.jpg')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(MSBuildProjectDirectory)/assets/edit_mark_tool.png" Condition="Exists('$(MSBuildProjectDirectory)/assets/edit_mark_tool.png')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- 构建后生成元数据文件 -->
+  <Target Name="GenerateModFiles" AfterTargets="Build">
+    <!-- mod.yaml: 游戏运行时读取 -->
+    <WriteLinesToFile File="$(OutputPath)mod.yaml" Lines="title: &quot;$(ModTitle)&quot;;description: &quot;$(ModDescription)&quot;;staticID: &quot;$(ModStaticID)&quot;" Overwrite="true" />
+    <Message Text="Generated mod.yaml -&gt; $(OutputPath)mod.yaml" Importance="high" />
+
+    <!-- mod_info.yaml: OniUploader / 游戏 Mod 列表读取 -->
+    <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="supportedContent: ALL" Overwrite="true" />
+    <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="minimumSupportedBuild: 525812" Overwrite="false" />
+    <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="APIVersion: $(ModApiVersion)" Overwrite="false" />
+    <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="version: &quot;$(ModVersion)&quot;" Overwrite="false" />
+    <Message Text="Generated mod_info.yaml -&gt; $(OutputPath)mod_info.yaml" Importance="high" />
+
+    <!-- 复制预览图 -->
+    <Copy SourceFiles="@(PreviewImage)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(PreviewImage)' != ''">
+      <Output TaskParameter="CopiedFiles" PropertyName="CopiedPreviewImage" />
+    </Copy>
+    <Message Text="Copied preview image -&gt; $(OutputPath)" Importance="high" Condition="'@(PreviewImage)' != ''" />
+
+    <!-- 复制 README -->
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/README.md" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/README.md')" />
+  </Target>
+
+  <!-- 构建后打包 Mod 到仓库根目录 dist/ -->
+  <Target Name="PackageMod" AfterTargets="GenerateModFiles">
+    <PropertyGroup>
+      <DistPath>$(MSBuildProjectDirectory)/../../dist/</DistPath>
+      <DistModPath>$(DistPath)$(AssemblyName)/</DistModPath>
+      <ZipFile>$(DistPath)$(AssemblyName).zip</ZipFile>
+    </PropertyGroup>
+
+    <!-- 清理旧文件 -->
+    <RemoveDir Directories="$(DistModPath)" />
+    <Delete Files="$(ZipFile)" />
+    <Delete Files="$(DistPath)$(AssemblyName)-src.tar.gz" />
+
+    <!-- 复制 mod 文件到 dist/ModName/ -->
+    <ItemGroup>
+      <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
+      <ModOutputFiles Include="$(OutputPath)mod.yaml" />
+      <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
+      <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />
+      <ModOutputFiles Include="$(OutputPath)preview.jpg" Condition="Exists('$(OutputPath)preview.jpg')" />
+      <ModOutputFiles Include="$(OutputPath)README.md" Condition="Exists('$(OutputPath)README.md')" />
+      <ModOutputFiles Include="$(OutputPath)assets/edit_mark_tool.png" Condition="Exists('$(OutputPath)assets/edit_mark_tool.png')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+
+    <!-- 打包成 zip (mod 发布包) -->
+    <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
+
+    <!-- 打包源码成 tar.gz -->
+    <Exec Command="tar -czf '$(DistPath)$(AssemblyName)-src.tar.gz' -C '$(MSBuildProjectDirectory)' --exclude='bin' --exclude='obj' --exclude='dist' ." />
+
+    <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
+    <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
+  </Target>
+
+</Project>

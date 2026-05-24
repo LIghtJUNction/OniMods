@@ -1,0 +1,36 @@
+# Build artifacts
+bin/
+obj/
+*.dll
+*.pdb
+*.cache
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.csproj.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Game decompiled source & game files (copyrighted, do not commit)
+oni/
+
+# Rust build
+target/
+Cargo.lock
+
+# Mod output
+mods/*/publish/
+mods/*/dll/
+mods/*/dist/
+dist/
+
+
+# Added by cargo
+
+/target
+deps/

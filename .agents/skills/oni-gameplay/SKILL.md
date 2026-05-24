@@ -1,0 +1,366 @@
+---
+name: oni-mcp-control
+description: MCP control skill for Oxygen Not Included. Defines the control loop (sense → analyze → decide → act → verify), tool calling strategies, parameter selection, batch patterns, and error recovery. Use when controlling ONI through MCP tools.
+---
+
+# ONI MCP Control
+
+## When to use
+
+Use when the user wants to **control ONI via MCP tools**, not when they want game tips.
+
+## Control Model
+
+### The OODA Loop for ONI MCP
+
+```
+Observe (Sense)    → call read tools → get state snapshot
+Orient (Analyze)   → parse JSON, identify gaps/anomalies
+Decide (Plan)      → select target state, choose tools
+Act (Execute)      → call write/execute tools with confirm
+Verify (Check)     → re-call read tools, compare before/after
+```
+
+Every control action must complete the full loop. Never act without prior observation, never stop without verification.
+
+### Control Modes
+
+| Mode | Trigger | Primary Tools | Output |
+|------|---------|--------------|--------|
+| **Diagnostic** | User asks "what's wrong" | `colony_diagnostics`, `colony_alerts`, `resources_food`, `dupes_needs`, `power_summary`, `thermal_overheat_risk_scan` | Problem list + severity |
+| **Planning** | User asks "what should I do" | `tools_guide`, `plan_harness_create`, `plan_harness_validate` | Validated plan with `plannedCalls` |
+| **Execution** | User says "do it" | `plan_harness_execute`, `tools_call_many`, individual write/execute tools | Execution result + task IDs |
+| **Monitoring** | User wants status update | `resources_inventory`, `colony_status`, `game_time` | Snapshot diff |
+
+Mode transitions: Diagnostic → Planning → Execution → Monitoring. If Execution fails, fall back to Diagnostic.
+
+## Tool Selection Strategy
+
+### Read vs Write vs Execute
+
+- **Read** (`colony_*`, `dupes_*`, `resources_*`, `world_*`, `power_summary`, `rooms_list`) → 获取状态，无副作用，可缓存
+- **Write** (`set_personal_priority`, `set_schedule_block`, `set_storage_filter`) → 修改配置，需 `confirm=true`（medium risk）
+- **Execute** (`game_pause`, `camera_move`, `orders_dig`, `buildings_deconstruct`) → 对游戏下达动作，dangerous 需 `confirm=true`
+
+Mode is inferred from tool name: `get_*` / `list_*` → read; `set_*` / `configure_*` → write; `move_*` / `pause_*` / `focus_*` → execute.
+
+### Resource vs Tool vs Prompt
+
+- **Resource** (`oni://...`) → 固定快照，适合重复读取的参考数据（inventory, schedules, dupes list）
+- **Tool** (`tools/call`) → 交互式，带参数，适合针对性查询和动作
+- **Prompt** → 启动标准化工作流（`power_audit`, `rooms_overview`, `thermal_audit`）
+
+Resource URIs are idempotent and cacheable. Tools with parameters are not. Prompts orchestrate multiple resources and tools in sequence.
+
+### When to use which discovery tool
+
+| Goal | Use |
+|------|-----|
+| "What tools exist?" | `tools_manifest` (full) or `tools_search detail=brief` (filtered) |
+| "What can I do about X?" | `tools_guide goal=X` |
+| "Am I missing coverage?" | `tools_player_action_coverage` |
+| "Is this tool safe?" | `tools_static_audit` |
+
+`tools_manifest` exposes ~60 core tools by default; `tools_search detail=full` reveals the complete ~320 tool registry. Use `detail=brief` for low-token discovery.
+
+## Standard Control Sequences
+
+### Sequence 1: Colony Health Check
+
+```
+colony_status          → baseline: cycle, dupe count, world count, speed
+colony_diagnostics     → alerts + severity ranking
+colony_alerts          → current notification list
+resources_food         → food inventory with expiry
+power_summary          → generation vs load per circuit
+thermal_overheat_risk_scan → overheat risk sorted by delta-T
+rooms_list             → room coverage summary
+→ Parse JSON, compare against thresholds, flag anomalies
+```
+
+Use `detail=compact` on all calls for a sub-5-second scan. Escalate to `detail=full` only when an anomaly is flagged.
+
+### Sequence 2: Execute a Plan
+
+```
+plan_harness_create
+  goal: "<objective>"
+  constraints: { maxCycles: N, riskTolerance: low|medium|high }
+  plannedCalls: [
+    { tool: "...", params: { ... } },
+    ...
+  ]
+
+plan_harness_validate
+  planId: <from create>
+  → checks: tool existence, param types, confirm requirements
+
+plan_harness_execute
+  planId: <validated>
+  confirm: true
+  → executes through gate, returns per-call results
+```
+
+If `validate` reports missing `confirm`, inject it into the corresponding `plannedCalls` entry and re-validate. Never skip validation before execution.
+
+### Sequence 3: Batch Configuration
+
+```
+tools_call_many
+  dryRun: true
+  defaults: { confirm: true }
+  items:
+    - { t: set_personal_priority, a: { id: 1, choreGroup: Dig, priority: 4 } }
+    - { t: set_personal_priority, a: { id: 2, choreGroup: Build, priority: 4 } }
+    - { t: set_schedule_block,   a: { scheduleId: 0, blockIndex: 3, activity: Sleep } }
+    ...
+  requireAllValid: true
+  stopOnError: true
+```
+
+If `dryRun` passes, re-call with `dryRun: false` to execute. `defaults` merges into every item. Use low-token shorthand (`t` / `a`) for large batches. Max 20 items per call.
+
+### Sequence 4: Spatial Analysis + Action
+
+```
+camera_get_view        → current position, zoom, active world
+camera_move            → x, y, zoom (optional: worldId)
+world_text_map
+  x1, y1, x2, y2
+  profile: scan
+  encoding: rle
+  includeBuildings: false
+→ Parse RLE output for terrain composition
+→ If buildings needed: world_text_map with includeBuildings=true
+→ Define reusable area: area_define → areaId
+→ Plan: plan_building_rect or plan_many
+→ Execute: plan_harness or tools_call_many
+```
+
+Use `encoding=rle` for minimal token terrain scans. Only enable `includeBuildings` / `includeDupes` / `includeItems` when spatial layout of objects is required for decision-making.
+
+### Sequence 5: Duplicant Management
+
+```
+dupes_list             → all dupes with ID, name, world, stress
+dupes_detail           → single dupe: attributes, traits, skills
+dupes_needs            → needs, stress sources, morale
+dupes_priorities_list  → current chore priorities
+→ Identify gaps
+→ Batch update: tools_call_many with set_personal_priority items
+→ Verify: dupes_priorities_list
+```
+
+Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools require numeric `id`, not name.
+
+## Parameter Selection Rules
+
+### worldId
+- Default: current active world (omit or pass null)
+- `-1`: all worlds (for summary scans across asteroid clusters)
+- Specific ID: target that world only
+
+### limit
+- Default is usually 50/80
+- Use lower for quick scans, higher for audits
+- Never exceed max (usually 200–300)
+- If result is truncated, use pagination via offset or narrower filters
+
+### detail / encoding / profile
+- `detail=brief` or `detail=compact` → low token, quick decisions
+- `detail=full` → deep analysis, more tokens
+- `detail=summary` → balanced
+- `profile=scan` + `encoding=rle` → minimal token terrain scan
+- `format=json` → structured data for plan harness validation
+
+### confirm
+- `confirm: true` required for all medium/dangerous write tools
+- `plan_harness_validate` checks this automatically
+- `tools_call_many` with `dryRun: true` pre-validates confirm requirements
+- Never bypass confirm for dangerous tools (`orders_dig`, `orders_deconstruct`, `orders_sweep`)
+
+### x1, y1, x2, y2 (area coordinates)
+- Always specify in world cell coordinates
+- `x1 < x2`, `y1 < y2` (origin is bottom-left)
+- Large areas → high token cost; use `encoding=rle` to compress
+
+## Batch and Efficiency Patterns
+
+### Pattern A: Read-Before-Write
+
+Always read current state before modifying:
+
+```
+BAD:  directly call set_schedule_block with new values
+GOOD: schedules_list → identify target scheduleId/blockIndex
+      set_schedule_block → schedules_list to verify
+```
+
+### Pattern B: Area-Based Operations
+
+1. `area_define` with `x1,y1,x2,y2,name` → get `areaId`
+2. Reuse `areaId` in subsequent calls (`world_text_map?areaId=xyz`)
+3. Bulk operations within area (`plan_many` with defaults)
+4. Clean up with `area_forget` when area is no longer needed
+
+### Pattern C: Differential Updates
+
+1. Read full list (`dupes_list`, `schedules_list`, `buildings_summary`)
+2. Compute delta locally (don't diff on server)
+3. Send only changes via `tools_call_many`
+
+### Pattern D: Parallel Reads
+
+Use `tools_call_many` for independent read calls to reduce round-trips:
+
+```
+tools_call_many
+  items:
+    - { t: colony_status }
+    - { t: colony_diagnostics }
+    - { t: resources_food }
+    - { t: power_summary }
+```
+
+Do NOT batch interdependent calls (e.g., `plan_harness_create` + `plan_harness_validate` in one batch — validate needs the planId from create).
+
+## Error Recovery
+
+### Tool returns error
+1. Check error message for missing param / invalid value / type mismatch
+2. Re-read state if stale data suspected (IDs may have shifted)
+3. Retry with corrected params
+4. If persistent, fall back to `tools_search` to find alternative tool
+
+### Request timeout (10s)
+1. Check if task was created via `tasks/list` or server polling
+2. If task exists and is "working", poll `tasks/get`
+3. If no task, retry the call
+4. If consistently timing out, reduce scope (smaller `limit`, narrower query, smaller area)
+
+### confirm rejected
+1. Dangerous tool was called without `confirm=true`
+2. Add `confirm:true` and retry
+3. If `plan_harness` rejected, read validation errors and fix `plannedCalls`
+4. If batch rejected, identify which item failed and retry subset
+
+### Stale data / ID mismatch
+1. Game state changes between read and write (dupes die, buildings deconstructed)
+2. Always re-read target list if write fails with "not found"
+3. Use name-based lookup as fallback when ID is unstable
+
+## Risk Management
+
+### Tool Risk Levels
+- **none**: read-only, cacheable, retry-safe (`colony_status`, `dupes_list`, `world_text_map`)
+- **low**: minor state change (`camera_move`, `game_pause`, `set_light_color`)
+- **medium**: config changes (`set_personal_priority`, `set_schedule_block`, `set_threshold`) — confirm recommended
+- **dangerous**: map-altering (`orders_dig`, `orders_deconstruct`, `orders_sweep`, `orders_cut_conduits`) — confirm required
+
+Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` / `dig` → dangerous; `set_` / `assign` / `sweep` / `launch` → medium; `pause` / `resume` / `focus` → low; everything else → none.
+
+### Pre-Execution Checklist
+- [ ] Read current state
+- [ ] Validate parameters (type, range, existence)
+- [ ] Check confirm requirement for write/execute tools
+- [ ] Use `dryRun` if available (`tools_call_many`, `plan_harness_validate`)
+- [ ] Define rollback read tools for verification
+- [ ] Ensure game is paused (`game_pause`) for complex multi-step operations
+
+## State Caching Strategy
+
+### What to cache (short TTL)
+- `tools_manifest` / `tools_search` result → static after init
+- `colony_status` → 5 seconds (cycle/time change slowly)
+- `resources_inventory` → 10 seconds
+- `dupes_list` → 10 seconds
+- `buildings_summary` → 15 seconds
+- `rooms_list` → 30 seconds
+
+### What NOT to cache
+- Any write/execute result
+- `world_cell_info` (can change every tick)
+- `camera_view` (player may have moved)
+- `colony_alerts` (volatile)
+- `power_summary` during grid changes
+
+### Cache invalidation
+- Any write/execute tool call → invalidate related read caches
+- Game pause/resume/speed change → invalidate time-sensitive caches
+- `orders_dig` / `orders_deconstruct` → invalidate `world_text_map` and `buildings_summary`
+
+## Tool Categories at a Glance
+
+| Category | Read | Write | Execute |
+|----------|------|-------|---------|
+| **colony** | `colony_status`, `colony_diagnostics`, `colony_alerts`, `colony_report`, `colony_summary`, `diagnostic_settings_list`, `notifications_list` | `set_diagnostic_settings` | `click_notification`, `dismiss_notification` |
+| **dupes** | `dupes_list`, `dupes_detail`, `dupes_attributes`, `dupes_needs`, `dupes_priorities_list`, `dupes_skills`, `equipment`, `direct_commands`, `todos` | `set_personal_priority`, `batchSetPersonalPriorities`, `learn_skill`, `set_hat`, `rename_dupe`, `set_assignable`, `set_assignable_slot_item` | `move_dupe`, `move_dupes_batch` |
+| **schedules** | `schedules_list` | `create_schedule`, `set_schedule_block`, `assign_dupe_schedule`, `optimize_schedules` | — |
+| **resources** | `resources_inventory`, `resources_food`, `resources_pins`, `storage_list`, `storage_detail`, `diet_status` | `set_resource_pin`, `set_storage_filter`, `set_diet_food`, `apply_diet_policy` | — |
+| **buildings** | `buildings_list`, `buildings_summary`, `buildings_search_defs`, `buildings_config_list`, `artables_list`, `lights_list`, `pixel_packs_list` | `set_building_enabled`, `configure_manual_delivery`, `copy_settings`, `set_artable_stage`, `set_light_color`, `set_pixel_pack_color` | — |
+| **orders** | `priorities_list` | `set_building_priority`, `set_priority_area`, `plan_building`, `plan_building_rect`, `plan_many`, `set_building_toggle` | `deconstruct_building`, `sweep_area`, `dig_area`, `mop_area`, `disinfect_area`, `attack`, `cancel_area`, `harvest_area`, `capture_critters`, `empty_conduits`, `cut_conduits` |
+| **power** | `power_summary` | — | — |
+| **rooms** | `rooms_list` | — | — |
+| **world** | `world_list`, `world_cell_info`, `world_element_summary`, `world_text_map`, `thermal_overheat_risk_scan` | `area_define`, `area_forget` | — |
+| **camera** | `camera_get_view` | — | `camera_move`, `camera_set_view`, `camera_switch_view`, `camera_focus_cell`, `camera_focus_dupe`, `game_screenshot` |
+| **game** | `game_time`, `list_saves`, `list_dlc_activation` | `set_sandbox_mode`, `activate_dlc_for_save` | `game_pause`, `game_resume`, `set_game_speed`, `save_game`, `load_save`, `quit_game` |
+| **planning** | `plan_harness_get`, `plan_harness_list`, `plan_harness_validate` | `plan_harness_create`, `plan_harness_record` | `plan_harness_execute` |
+| **tools** | `tools_manifest`, `tools_search`, `tools_guide`, `tools_player_action_coverage`, `tools_static_audit` | `edit_mark_request_create`, `edit_mark_request_clear` | `tools_call_many` |
+| **server** | `server_status`, `mcp_client_capabilities`, `logs_tail` | — | — |
+
+## Prompt Workflows
+
+| Prompt | Trigger | Internal Tool Chain |
+|--------|---------|---------------------|
+| `colony_triage` | Quick health check | `oni://colony/status` → `oni://colony/diagnostics` → `oni://colony/alerts` → `oni://resources/food` |
+| `next_cycle_plan` | Action planning | `oni://colony/summary` → `oni://resources/inventory` → `oni://research/status` → `oni://schedules` → `oni://dupes` |
+| `inspect_area` | Spatial analysis | `oni://world/text-map` (RLE scan) → optionally `world_text_map` with `includeBuildings=true` |
+| `dupe_care_review` | Duplicant audit | `oni://dupes` → `oni://schedules` → `dupes_detail` / `dupes_needs` / `dupes_attributes` |
+| `power_audit` | Power system check | `oni://power/summary` → optionally `buildings_config_list` filtered for power |
+| `rooms_overview` | Room coverage check | `oni://rooms/list` → filter by type/size |
+| `thermal_audit` | Overheat risk scan | `oni://thermal/overheat-risk` → optionally `world_element_summary` |
+
+Prompts return a structured text that tells you which resources and tools to call. They do not execute directly — you must make the calls.
+
+## Resource URI Reference
+
+| URI | Tool Equivalent | Use Case |
+|-----|-----------------|----------|
+| `oni://colony/status` | `colony_status` | Baseline snapshot |
+| `oni://colony/diagnostics` | `colony_diagnostics` | Alert summary |
+| `oni://colony/alerts` | `colony_alerts` | Notification list |
+| `oni://colony/summary` | `colony_summary` | Planning input |
+| `oni://resources/inventory` | `resources_inventory` | Stock levels |
+| `oni://resources/food` | `resources_food` | Food with expiry |
+| `oni://power/summary` | `power_summary` | Circuit health |
+| `oni://rooms/list` | `rooms_list` | Room coverage |
+| `oni://thermal/overheat-risk` | `thermal_overheat_risk_scan` | Heat risk ranking |
+| `oni://world/elements` | `world_element_summary` | Element mass/temp |
+| `oni://world/text-map` | `world_text_map` | Terrain scan |
+| `oni://dupes` | `dupes_list` | Duplicant roster |
+| `oni://schedules` | `schedules_list` | Schedule definitions |
+| `oni://research/status` | `research_status` | Tech progress |
+| `oni://tools/manifest` | `tools_manifest` | Tool catalog |
+| `oni://tools/search` | `tools_search` | Filtered discovery |
+| `oni://plans` | `plan_harness_list` | Active plans |
+
+Resource templates accept query params: `oni://power/summary?worldId=2&includeDetails=true`, `oni://thermal/overheat-risk?marginC=20&limit=50`.
+
+## Quick Reference
+
+| Situation | First Tool | Second Tool | Verification |
+|-----------|-----------|-------------|--------------|
+| "What's happening?" | `colony_diagnostics` | `colony_alerts` | `colony_status` |
+| "Fix power" | `power_summary` | `buildings_config_list` (power subset) | `power_summary` |
+| "Build something" | `buildings_search_defs` | `plan_building_rect` | `world_text_map` |
+| "Manage dupes" | `dupes_list` | `dupes_detail` / `dupes_needs` | `dupes_list` |
+| "Check heat" | `thermal_overheat_risk_scan` | `world_element_summary` | `thermal_overheat_risk_scan` |
+| "Plan actions" | `plan_harness_create` | `plan_harness_validate` | `plan_harness_execute` |
+| "Batch config" | `tools_call_many` (dryRun) | `tools_call_many` (execute) | relevant read tools |
+| "Find a tool" | `tools_search` | `tools_guide` | `tools_static_audit` |
+| "Area ops" | `area_define` | `world_text_map` (with areaId) | `area_get` |
+| "Camera nav" | `camera_get_view` | `camera_move` / `camera_focus_cell` | `camera_get_view` |
+| "Check research" | `research_status` | `list_research` | `research_status` |
+| "Check rockets" | `rockets_status` | `rockets_detail` | `rockets_status` |
+| "Storage config" | `storage_list` | `storage_detail` | `set_storage_filter` |
+| "Automation setup" | `automation_controls_list` | `set_automatable_control` | `automation_controls_list` |

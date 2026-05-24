@@ -1,0 +1,54 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: OniMcp\n"
+"Application: Oxygen Not Included\n"
+"POT Version: 2.0\n"
+"PO-Revision-Date: 2026-05-24 00:00+0800\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "ONI MCP Server"
+msgstr "ONI MCP 服务器"
+
+msgid "Oxygen Not Included MCP Server - exposes game state and actions through Model Context Protocol."
+msgstr "缺氧 MCP 服务器 - 通过模型上下文协议提供游戏状态和操作。"
+
+msgid "Server"
+msgstr "服务器"
+
+msgid "Screenshots"
+msgstr "截图"
+
+msgid "Host"
+msgstr "主机"
+
+msgid "HTTP listen host. Use localhost for local-only access, or 0.0.0.0 to listen on all interfaces."
+msgstr "HTTP 监听主机。使用 localhost 表示仅本机访问，使用 0.0.0.0 表示监听所有网卡。"
+
+msgid "Port"
+msgstr "端口"
+
+msgid "HTTP listen port for the MCP endpoint."
+msgstr "MCP 端点的 HTTP 监听端口。"
+
+msgid "Auto-clean screenshots"
+msgstr "自动清理截图"
+
+msgid "Automatically delete old temporary screenshots created by MCP camera tools."
+msgstr "自动删除 MCP 相机工具创建的旧临时截图。"
+
+msgid "Screenshot retention minutes"
+msgstr "截图保留分钟数"
+
+msgid "Delete MCP temporary screenshots older than this many minutes."
+msgstr "删除超过指定分钟数的 MCP 临时截图。"
+
+msgid "Maximum screenshots"
+msgstr "最大截图数量"
+
+msgid "Keep at most this many MCP temporary screenshots."
+msgstr "最多保留指定数量的 MCP 临时截图。"

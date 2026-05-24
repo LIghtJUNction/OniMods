@@ -1,0 +1,26 @@
+[mcp_servers.oni]
+url = "http://127.0.0.1:8787/mcp/"
+
+[mcp_servers.oni.tools.get_duplicants]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.get_worlds]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.get_resources]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.get_buildings]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.get_building_summary]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.get_food_inventory]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.get_inventory]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.get_world_element_summary]
+approval_mode = "approve"

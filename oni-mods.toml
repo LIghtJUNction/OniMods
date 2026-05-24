@@ -1,0 +1,8 @@
+# onim 配置文件
+# 游戏路径在 Directory.Build.props 中统一管理
+
+# 默认 Mod（不指定 -m 时使用）
+default_mod = "oni_mcp"
+
+[mods.oni_mcp]
+path = "mods/oni_mcp"
