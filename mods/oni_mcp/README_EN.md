@@ -180,7 +180,3 @@ To add a new tool: create a new `McpTool` under `Tools/` and register it in `Oni
 ## Credits & Testing
 
 This mod was co-developed and tested by **gpt5.5** (approx. 400M tokens consumed), **Kimi k2.6**, and player **LIghtJUNction**. The full source code is open — feel free to inspect and contribute.
-
-## Screenshots
-
-(Preview images are bundled with the mod release on Steam Workshop)
