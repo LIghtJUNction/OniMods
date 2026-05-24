@@ -591,7 +591,7 @@ namespace OniMcp.Server
                     },
                     Experimental = new JObject
                     {
-                        ["streamableHttpSse"] = true,
+                        ["streamableHttpSse"] = new JObject(),
                         ["serverInitiatedRequests"] = new JObject
                         {
                             ["transport"] = "sse",
