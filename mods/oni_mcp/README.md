@@ -1,4 +1,4 @@
-**源代码 | Source Code:** https://github.com/LIghtJUNction/OniMods/
+**源代码:** https://github.com/LIghtJUNction/OniMods/
 
 # ONI MCP Server
 

@@ -1,3 +1,5 @@
+**Source Code:** https://github.com/LIghtJUNction/OniMods/
+
 # ONI MCP Server
 
 Let your AI assistant connect directly to your Oxygen Not Included colony. Once this mod is installed, any MCP-compatible AI (Claude, Cursor, or any other MCP client) can read game state, analyze your situation, and even issue construction and scheduling commands through a local HTTP interface.
