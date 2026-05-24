@@ -14,10 +14,10 @@ Use when the user wants to **build, dig, deconstruct, or reorganize** the colony
 ### Construction Control Loop
 
 ```
-Scan    → camera_move + world_area_snapshot/world_text_map → understand space
-Plan    → area_define + buildings_plan* → create build plan
-Validate→ plan_harness_validate → check params + confirm
-Execute → plan_harness_execute or tools_call_many → issue orders
+Scan    → camera_move + world_area_snapshot preset=planning / layout_candidates → understand space
+Plan    → choose candidate rectangle + area_define + buildings_plan* → create build plan
+Validate→ dryRun tools first; use plan_harness_validate only for formal plans
+Execute → tools_call_many for simple work; plan_harness_execute only for existing formal plans
 Verify  → world_text_map + buildings_search_defs → confirm completion
 ```
 
@@ -29,20 +29,50 @@ Verify  → world_text_map + buildings_search_defs → confirm completion
 - Grid: integer cells, x increases right, y increases up
 - World ID: each asteroid has its own worldId
 - Active world: `ClusterManager.Instance.activeWorldId`
+- Screenshots are not a coordinate source. They are only visual confirmation.
+- Before placing floors, walls, ladders, wires, pipes, or machines, anchor every planned coordinate to `world_area_snapshot`, `world_text_map`, `world_cell_info`, or an `areaId`.
+
+### Grid Alignment Rule
+
+Misaligned blueprints are usually caused by estimating coordinates from screenshots. Avoid this with a strict grid workflow:
+
+1. Read a map first:
+   ```
+   world_text_map x1 y1 x2 y2 profile=standard encoding=plain includeBuildings=true includeElements=true
+   ```
+   or:
+   ```
+   world_area_snapshot x1 y1 x2 y2 preset=construction encoding=plain includeScreenshot=false
+   ```
+2. Identify the anchor row/column from map coordinates, not from the image. Existing platform tiles are `tile`; natural solids are `sol`; gases/liquids are `oxy/po2/co2/hyd/liq`; buildings are `bld`.
+3. For a horizontal platform, use one constant `y` for the whole line: `l: [x1, y, x2, y]`.
+4. For a vertical ladder/wall, use one constant `x` for the whole line: `l: [x, y1, x, y2]`.
+5. Do not split one straight platform into multiple guessed segments unless all segments share the same exact `y` and touch/overlap intentionally.
+6. Never place support tiles from a screenshot rectangle alone. If a screenshot suggests a target, convert it to a map read and derive exact cells first.
+7. After `dryRun=true`, inspect `results`/`planned`/`valid` and the requested coordinates. If any line is off by one row/column, stop and re-read the map instead of executing.
+
+For the common "extend existing platform left/right from the printing pod" task:
+
+- Locate the existing platform row from `world_text_map`; it is the row containing a run of `tile` under/near the printing pod.
+- Use world absolute coordinates from the map output for build calls.
+- Extend left with `{ "p": "Tile", "l": [leftX, platformY, existingLeftX - 1, platformY] }`.
+- Extend right with `{ "p": "Tile", "l": [existingRightX + 1, platformY, rightX, platformY] }`.
+- If the terrain/ice blocks the route, queue `orders_dig_area` for the blocking natural tiles first; do not shift the floor line up/down to avoid terrain unless the plan explicitly calls for a ramp or step.
 
 ### Scanning Workflow
 
 ```
 camera_get_view        → get current position + zoom + worldId
 camera_move mode=jump x=targetX y=targetY zoom=1 → jump to area
-world_area_snapshot x1 y1 x2 y2 preset=construction encoding=rle → default planning snapshot
-  → Use preset=utilities for power+gas+liquid+shipping+logic overlays
-world_text_map x1 y1 x2 y2 profile=scan encoding=rle → minimal terrain-only scan
+world_area_snapshot x1 y1 x2 y2 preset=planning encoding=plain → default base-layout snapshot
+  → Use preset=utilities for utility-only power+gas+liquid+shipping+logic overlays
+layout_candidates x1 y1 x2 y2 purpose=lab|barracks|bathroom|power|farm → scored room/platform candidates
+world_text_map x1 y1 x2 y2 profile=standard encoding=plain → readable terrain/object scan
   → If need objects: add includeBuildings=true, includeItems=true
   → If need elements: add includeElements=true
 ```
 
-Prefer `world_area_snapshot` when planning construction, digging, power, pipes, or automation. It returns base terrain plus relevant overlay maps in one JSON response. Use `world_text_map` when you need a very small focused scan. Use screenshots only as visual confirmation; do not infer exact build coordinates from screenshots alone.
+Prefer `world_area_snapshot preset=planning` for room/base layout. It returns base terrain, utility overlays, floor runs, dig runs, hazards, and candidate rectangles. Use `layout_candidates` before choosing room coordinates for labs, barracks, bathrooms, power rooms, or farms. Use `world_text_map` only for very small focused scans. Use screenshots only as visual confirmation; do not infer exact build coordinates from screenshots alone.
 
 Example:
 ```json
@@ -60,12 +90,15 @@ Example:
 
 ```
 area_define x1 y1 x2 y2 label="bedroom_block" → get areaId
-world_area_snapshot areaId=bedroom_block preset=construction → reusable planning context
-world_text_map areaId=bedroom_block profile=scan → reuse area
+area_blocks worldId=<id> maxCells=1600 → get b* blocks for whole-world scanning
+area_merge areaIds=["b1","b2","b3"] label="north_expansion" → create a merged a* area
+world_area_snapshot areaId=bedroom_block preset=planning → reusable planning context
+layout_candidates areaId=bedroom_block purpose=barracks → choose room rectangle
+world_text_map areaId=bedroom_block profile=standard encoding=plain → reuse area
 buildings_plan_rect areaId=bedroom_block ... → build within area
 ```
 
-`area_define` 返回的 areaId 可以在任何接受 `areaId` 参数的工具中复用，替代 `x1/y1/x2/y2`。
+`area_define` 返回手工 `a*` areaId；`area_blocks` 返回自动地图块 `b*` areaId。两者都可以在任何接受 `areaId` 参数的工具中复用，替代 `x1/y1/x2/y2`。相邻块可临时写成 `areaId=b1+b2+b3`，或用 `area_merge` 生成新的 `a*`。拼接使用外接矩形，非相邻块会包含中间空隙。对块内施工或订单优先使用地图输出的世界绝对坐标。
 
 ## Building Plan Tools
 
@@ -77,11 +110,24 @@ buildings_plan_rect areaId=bedroom_block ... → build within area
 | Rectangular fill (floor, wall) | `buildings_plan_rect` | Lines, rooms, platforms |
 | Mixed batch (different buildings) | `buildings_plan_many` | Complex structures |
 
+### Fast Path
+
+For simple low-risk construction, do not create a `plan_harness`:
+
+```
+world_area_snapshot preset=planning encoding=plain
+buildings_plan_many dryRun=true confirm=true ...
+buildings_plan_many dryRun=false confirm=true ...
+world_area_snapshot preset=construction encoding=plain
+```
+
+Use `plan_harness` only for broad, risky, multi-phase, user-marked, or resume-later plans.
+
 ### buildings_plan
 
 Parameters:
 - `prefabId`: building type identifier
-- `x`, `y`: grid position
+- `x`, `y`: world grid position
 - `worldId`: target world (default active)
 - Optional: `orientation` (Neutral/R90/R180/R270/FlipH), `material`, `facade`, `priority` (1-9)
 - Optional: `dryRun` / `validateOnly` to validate without placing
@@ -93,8 +139,8 @@ Example:
 {
   "name": "buildings_plan",
   "arguments": {
-    "prefabId": "Bed", "x": 12, "y": 22,
-    "worldId": 0, "orientation": "Neutral",
+    "prefabId": "Bed",
+    "x": 12, "y": 3, "orientation": "Neutral",
     "confirm": true
   }
 }
@@ -106,8 +152,8 @@ Fills an entire rectangle with the same building. Hard limit: 200 cells.
 
 Parameters:
 - `prefabId`: building type
-- `x1`, `y1`, `x2`, `y2`: rectangle bounds (inclusive)
-- `areaId`: optional, replaces x1/y1/x2/y2
+- `x1`, `y1`, `x2`, `y2`: world rectangle bounds (inclusive)
+- `areaId`: optional, replaces x1/y1/x2/y2 with that area's absolute rectangle
 - `worldId`, `material`, `facade`, `priority`
 - `dryRun` / `validateOnly` validates without placing
 - `allowUnsupported` bypasses OnFloor support blocking; avoid for normal play
@@ -118,8 +164,9 @@ Example:
 {
   "name": "buildings_plan_rect",
   "arguments": {
-    "prefabId": "Tile", "x1": 10, "y1": 20, "x2": 20, "y2": 20,
-    "worldId": 0, "confirm": true
+    "prefabId": "Tile",
+    "x1": 70, "y1": 132, "x2": 80, "y2": 132,
+    "confirm": true
   }
 }
 ```
@@ -132,6 +179,7 @@ Top-level parameters:
 - `items`: array of plan items
 - `routes`: optional utility routes expanded into Wire/LogicWire/GasConduit/LiquidConduit/SolidConduit cells
 - `worldId`/`w`, `material`/`m`, `facade`/`f`, `priority`/`pri`, `orientation`/`o`: defaults merged into each item
+- `areaId`/`a`: optional area handle for whole-area item placement; item coordinates and routes otherwise use world absolute coordinates
 - `detail`: return per-cell results (default false)
 - `maxCells`: cell expansion limit
 - `dryRun` / `validateOnly`: validate the whole batch without placing
@@ -170,7 +218,7 @@ Routes connect endpoints in the same call:
   }
 }
 ```
-Use `viaX` or `viaY` to control the L-shaped path. For pipe ports, prefer explicit `[x,y]` endpoints when exact port offsets matter.
+Use `viaX` or `viaY` to control the L-shaped path. Route endpoints and via coordinates are world absolute coordinates. For pipe ports, prefer explicit `[x,y]` endpoints when exact port offsets matter.
 
 Example with mixed formats:
 ```json
@@ -205,10 +253,24 @@ orders_dig_area x1 y1 x2 y2 worldId confirm=true
 ### Sweeping
 
 ```
-orders_sweep_area x1 y1 x2 y2 worldId confirm=true
+orders_sweep_area x1 y1 x2 y2 worldId dryRun=true confirm=true
+orders_sweep_area x1 y1 x2 y2 worldId confirm=true priority=5
 ```
-- Marks debris for sweeping
+- Marks solid debris/pickupables for sweeping to storage.
+- Never use sweep for water, polluted water, or any liquid. For "地上的水", spills, or liquid cells on a floor, use `orders_mop_area`.
 - `confirm=true` required when area exceeds 100 cells
+- Use `dryRun=true` first if a sweep seems ineffective. Read `inRect`, `marked`, `targets`, and `skipped` to distinguish no debris, stored/equipped items, missing `Clearable`, or wrong world/coordinates.
+- Sweep only creates errands; dupes still need reachable storage accepting the item.
+
+### Mopping
+
+```
+orders_mop_area x1 y1 x2 y2 worldId confirm=true priority=5
+```
+- Marks water/polluted water/liquid cells on a floor for mopping.
+- Use this for user wording like "地上的水", "拖地", "漏水", "液体", "water", "liquid", or "spill".
+- Mop skips cells without floor support or liquid above the game's mop mass limit.
+- If `orders_sweep_area` returns `liquidCellsInRect > 0` or a `mopHint`, switch to `orders_mop_area`; do not repeat sweep with the same area.
 
 ### Deconstruction
 
@@ -246,12 +308,13 @@ orders_cancel_area x1 y1 x2 y2 worldId confirm=true
 
 ```
 Step 1: Scan
-  world_text_map x1 y1 x2 y2 profile=scan
+  world_text_map x1 y1 x2 y2 profile=standard encoding=plain
   → Identify existing terrain, buildings, items
 
 Step 2: Clear (if needed)
   orders_dig_area x1 y1 x2 y2 confirm=true
-  orders_sweep_area x1 y1 x2 y2 confirm=true
+  orders_sweep_area x1 y1 x2 y2 confirm=true  # solid debris only
+  orders_mop_area x1 y1 x2 y2 confirm=true    # water/liquid only
   → Poll with world_text_map to check completion
 
 Step 3: Define Area
@@ -315,17 +378,22 @@ Step 4: Execute
 
 ### Pre-Build Checks
 
-1. **Space check**: `world_text_map` confirms area is clear or planned clearance is complete
-2. **Building availability**: `buildings_search_defs query=...` confirms `prefabId` exists and is unlocked
-3. **Support check**: run `buildings_plan* dryRun=true`; OnFloor buildings must have existing or same-batch prior support tiles
-4. **Confirm check**: dangerous tools (`orders_dig_area`, `buildings_deconstruct`, `plan_harness_execute`) require `confirm: true`
-5. **Cell limits**: `buildings_plan_rect` refuses >200 cells; `buildings_plan_many` refuses >maxCells (default 500, max 1000); `tools_call_many` max 20 calls
+1. **Map anchor check**: `world_text_map`/`world_area_snapshot` provides exact `x/y`; never use screenshot-only coordinates.
+2. **Line alignment check**: horizontal lines have `y1 == y2`; vertical lines have `x1 == x2`; extensions of one platform share the same `platformY`.
+3. **Space check**: `world_text_map` confirms area is clear or planned clearance is complete.
+4. **Building availability**: `buildings_search_defs query=...` confirms `prefabId` exists and is unlocked.
+5. **Support check**: run `buildings_plan* dryRun=true`; OnFloor buildings must have existing or same-batch prior support tiles.
+6. **Dry-run coordinate check**: compare dry-run result coordinates against the intended map row/column before executing.
+7. **Confirm check**: dangerous tools (`orders_dig_area`, `buildings_deconstruct`, `plan_harness_execute`) require `confirm: true`.
+8. **Cell limits**: `buildings_plan_rect` refuses >200 cells; `buildings_plan_many` refuses >maxCells (default 500, max 1000); `tools_call_many` max 20 calls.
 
 ### Post-Build Verification
 
-1. `world_text_map includeBuildings=true` → buildings appear at planned coordinates
-2. `buildings_search_defs` → verify `prefabId` if placement failed with "Building def not found"
-3. `world_cell_info x y` → inspect a single cell for element/overlay details
+1. Re-read the same area with `world_text_map profile=standard encoding=plain includeBuildings=true`.
+2. Confirm every planned floor/wall/ladder line appears on the intended constant `x` or `y`.
+3. If any blueprint appears one row/column off, cancel the wrong cells with `orders_cancel_area` before placing replacements.
+4. `buildings_search_defs` → verify `prefabId` if placement failed with "Building def not found".
+5. `world_cell_info x y` → inspect a single cell for element/overlay details.
 
 ## Error Recovery
 
@@ -348,7 +416,8 @@ Step 4: Execute
 
 ### "No valid material selected"
 - The specified `material` tag is not valid for this building
-- Omit `material` to use default, or check `buildings_search_defs` output for `materialCategories`/`defaultMaterials`
+- Omit `material` or use `material=auto`, then check `buildings_materials prefabId=<id> includeUnavailable=true`
+- Do not conclude a material is invalid from category names alone; use the returned candidate `categories` and a dry-run placement result
 
 ### "Facade 'X' is not available"
 - Facade ID is invalid, not unlocked, or not applicable to this building

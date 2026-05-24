@@ -63,19 +63,7 @@ namespace OniMcp.Tools
 
         public static int ResolveWorldId(JObject args, int fallbackWorldId = -1)
         {
-            int? requested = GetInt(args, "worldId");
-            if (requested.HasValue)
-                return requested.Value;
-
-            string areaId = args["areaId"]?.ToString();
-            AreaHandle area;
-            if (!string.IsNullOrWhiteSpace(areaId) && AreaHandleRegistry.TryGet(areaId, out area))
-                return area.WorldId;
-
-            if (fallbackWorldId >= 0)
-                return fallbackWorldId;
-
-            return ClusterManager.Instance?.activeWorldId ?? -1;
+            return WorldEditor.ResolveWorldId(args, fallbackWorldId);
         }
 
         public static bool CellMatchesWorld(int cell, int worldId)
@@ -126,23 +114,7 @@ namespace OniMcp.Tools
 
         public static Dictionary<string, int> GetRect(JObject args)
         {
-            string areaId = args["areaId"]?.ToString();
-            if (!string.IsNullOrWhiteSpace(areaId))
-                return AreaHandleRegistry.ResolveRect(areaId);
-
-            int x1 = GetInt(args, "x1") ?? GetInt(args, "x") ?? 0;
-            int y1 = GetInt(args, "y1") ?? GetInt(args, "y") ?? 0;
-            int x2 = GetInt(args, "x2") ?? x1;
-            int y2 = GetInt(args, "y2") ?? y1;
-            if (x2 < x1) { int t = x1; x1 = x2; x2 = t; }
-            if (y2 < y1) { int t = y1; y1 = y2; y2 = t; }
-            return new Dictionary<string, int>
-            {
-                ["x1"] = Mathf.Clamp(x1, 0, Grid.WidthInCells - 1),
-                ["y1"] = Mathf.Clamp(y1, 0, Grid.HeightInCells - 1),
-                ["x2"] = Mathf.Clamp(x2, 0, Grid.WidthInCells - 1),
-                ["y2"] = Mathf.Clamp(y2, 0, Grid.HeightInCells - 1)
-            };
+            return WorldEditor.ResolveRect(args);
         }
 
         public static float SafeFloat(float value)

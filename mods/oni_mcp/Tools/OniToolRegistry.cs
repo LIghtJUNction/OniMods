@@ -44,11 +44,15 @@ namespace OniMcp.Tools
             "thermal_overheat_risk_scan",
             "world_text_map",
             "world_area_snapshot",
+            "layout_candidates",
             "area_define",
             "area_get",
             "area_list",
+            "area_blocks",
+            "area_merge",
             "area_forget",
             "critters_list",
+            "dupes_status_check",
             "orders_dig_area",
             "orders_sweep_area",
             "orders_cancel_area",
@@ -91,6 +95,8 @@ namespace OniMcp.Tools
             Register(AreaTools.DefineArea());
             Register(AreaTools.GetArea());
             Register(AreaTools.ListAreas());
+            Register(AreaTools.GenerateAreaBlocks());
+            Register(AreaTools.MergeAreas());
             Register(AreaTools.ForgetArea());
             Register(CameraTools.GetCameraView());
             Register(CameraTools.SetActiveWorld());
@@ -118,6 +124,7 @@ namespace OniMcp.Tools
             Register(PlanningHarnessTools.RecordPlanStage());
             Register(PlanningHarnessTools.ValidatePlan());
             Register(PlanningHarnessTools.ExecutePlan());
+            Register(DuplicantTools.GetDupeStatusCheck());
             Register(DuplicantTools.GetDupeDetails());
             Register(DuplicantTools.GetDupeAttributes());
             Register(DuplicantTools.GetDupeNeeds());
@@ -148,6 +155,7 @@ namespace OniMcp.Tools
             Register(DiagnosticsTools.GetColonyAlerts());
             Register(DiagnosticsTools.ListDiagnosticSettings());
             Register(DiagnosticsTools.SetDiagnosticSettings());
+            Register(DiagnosticsTools.SetGlobalAutoDisinfect());
             Register(ColonyReportTools.GetColonyReport());
             Register(ColonyReportTools.GetColonySummary());
             Register(NotificationTools.ListNotifications());
@@ -373,6 +381,7 @@ namespace OniMcp.Tools
             Register(WorldAnalysisTools.GetWorldElementSummary());
             Register(WorldAnalysisTools.GetWorldTextMap());
             Register(WorldAnalysisTools.GetWorldAreaSnapshot());
+            Register(WorldAnalysisTools.GetLayoutCandidates());
             Register(WorldAnalysisTools.ScanOverheatRisk());
             Register(SandboxTools.ListSandboxActions());
             Register(SandboxTools.SampleCell());
@@ -570,21 +579,38 @@ namespace OniMcp.Tools
 
         private static string InferGroup(string name)
         {
+            name = (name ?? "").ToLowerInvariant();
+
             if (name.StartsWith("tools_")) return "tools";
-            if (name.StartsWith("server_") || name.Contains("mcp")) return "server";
+            if (name.StartsWith("server_") || name.StartsWith("logs_") || name.StartsWith("mcp_") || name.Contains("mcp")) return "server";
+            if (name.StartsWith("database_")) return "database";
             if (name.StartsWith("research_")) return "research";
-            if (name.StartsWith("rocket") || name.StartsWith("space_") || name.Contains("spacecraft")) return "rockets";
+            if (name.StartsWith("plan_harness_")) return "planning";
+            if (name.StartsWith("edit_mark_") || name.StartsWith("ui_")) return "ui";
+            if (name.StartsWith("map_")) return "map";
+            if (name.StartsWith("sandbox_") || name.StartsWith("debug_")) return "sandbox";
+            if (name.StartsWith("rocket") || name.StartsWith("launch_") || name.StartsWith("assignment_group_") || name.Contains("spacecraft")) return "rockets";
+            if (name.StartsWith("space_") || name.StartsWith("starmap_") || name.StartsWith("temporal_") || name.StartsWith("warp_")) return "space";
+            if (name.StartsWith("story_") || name.StartsWith("lore_") || name.StartsWith("printerceptor") || name.StartsWith("remote_work_") || name.StartsWith("artifact_")) return "story";
             if (name.StartsWith("diet_")) return "diet";
             if (name.StartsWith("game_") || name.Contains("speed") || name.Contains("pause")) return "game";
             if (name.StartsWith("camera_")) return "camera";
-            if (name.StartsWith("dupe") || name.Contains("duplicant")) return "dupes";
+            if (name.StartsWith("dupe") || name.StartsWith("assignable") || name.StartsWith("minion_") || name.StartsWith("bionic_") || name.Contains("duplicant")) return "dupes";
             if (name.StartsWith("schedule_")) return "schedules";
-            if (name.StartsWith("storage_")) return "storage";
-            if (name.StartsWith("resources_") || name.Contains("inventory") || name.Contains("food") || name.Contains("resources")) return "resources";
-            if (name.StartsWith("building") || name.Contains("building")) return "buildings";
-            if (name.StartsWith("orders_") || name.Contains("dig") || name.Contains("sweep") || name.Contains("deconstruct")) return "orders";
-            if (name.StartsWith("world_") || name.Contains("cell")) return "world";
-            if (name.StartsWith("colony_") || name.Contains("colony") || name.Contains("alerts")) return "colony";
+            if (name.StartsWith("resources_") || name.StartsWith("storage_") || name.StartsWith("receptacle") || name.Contains("inventory") || name.Contains("food") || name.Contains("resources")) return "resources";
+            if (name.StartsWith("filters_")) return "filters";
+            if (name.StartsWith("automation_") || name.StartsWith("automatable_") || name.StartsWith("logic_") || name.StartsWith("critter_sensor") || name.StartsWith("comet_detector") || name.StartsWith("cluster_location_sensor")) return "automation";
+            if (name.StartsWith("side_") || name.StartsWith("state_") || name.StartsWith("direction_") || name.StartsWith("few_option_") || name.StartsWith("capacity_") || name.StartsWith("checkbox_") || name.StartsWith("time_range_") || name.StartsWith("activation_") || name.StartsWith("progress_") || name.StartsWith("user_menu_") || name.StartsWith("maintenance_") || name.StartsWith("related_") || name.StartsWith("n_toggle")) return "controls";
+            if (name.StartsWith("building") || name.StartsWith("buildings_") || name.StartsWith("doors_") || name.StartsWith("access_control_") || name.StartsWith("lights_") || name.StartsWith("pixel_") || name.StartsWith("geo_") || name.StartsWith("dispenser") || name.StartsWith("suit_locker") || name.StartsWith("telepad") || name.Contains("building")) return "buildings";
+            if (name.StartsWith("production_") || name.StartsWith("configurable_consumer") || name.StartsWith("mutant_seed")) return "production";
+            if (name.StartsWith("orders_") || name.StartsWith("priorities_") || name.StartsWith("conduits_") || name.StartsWith("plants_uproot") || name.Contains("dig") || name.Contains("sweep") || name.Contains("deconstruct")) return "orders";
+            if (name.StartsWith("critters_") || name.StartsWith("incubator") || name.StartsWith("creature_lure")) return "ranching";
+            if (name.StartsWith("farming_")) return "farming";
+            if (name.StartsWith("medical_") || name.StartsWith("doctor_")) return "medical";
+            if (name.StartsWith("power_")) return "power";
+            if (name.StartsWith("rooms_")) return "rooms";
+            if (name.StartsWith("world_") || name.StartsWith("area_") || name.StartsWith("layout_") || name.StartsWith("thermal_") || name.Contains("cell")) return "world";
+            if (name.StartsWith("notification") || name.StartsWith("colony_") || name.Contains("colony") || name.Contains("alerts")) return "colony";
             return "misc";
         }
 

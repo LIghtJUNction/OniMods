@@ -3,7 +3,7 @@
 ## 快速开始
 
 - **MCP 服务器地址**：`http://localhost:8787/mcp/`
-- **协议版本**：2025-11-25 / 2024-11-05
+- **协议版本**：2025-11-25
 - **工具总数**：~320 个（`tools/list` 默认暴露约 60–80 个核心入口）
 - **会话要求**：非 `initialize` 请求必须携带 `Mcp-Session-Id` 和协商后的 `Mcp-Protocol-Version`
 
@@ -34,6 +34,7 @@
 | 工具 | 模式 | 风险 | 用途 |
 |------|------|------|------|
 | `dupes_list` | read | none | 列出所有复制人基本状态 |
+| `dupes_status_check` | read | none | 复制人状态/被困检查：位置、差事、需求、周边可达格 |
 | `dupes_detail` | read | none | 单个复制人详情 |
 | `dupes_attributes` | read | none | 属性与特性 |
 | `dupes_needs` | read | none | 需求、压力和士气 |
@@ -94,8 +95,8 @@
 | `set_building_priority` / `set_priority_area` | write | low/medium | 建筑/区域优先级 |
 | `plan_building` / `plan_building_rect` / `plan_many` | write | medium | 单建筑/矩形/多建筑规划 |
 | `deconstruct_building` | write | **dangerous** | 拆除建筑（需 `confirm=true`）|
-| `sweep_area` / `dig_area` | write | **dangerous** | 清扫/挖掘区域（需 `confirm=true`）；挖地必须使用 `orders_dig_area` |
-| `mop_area` / `disinfect_area` | write | medium | 拖地/消毒 |
+| `sweep_area` / `dig_area` | write | **dangerous** | 固体散落物清扫/挖掘区域（大区域需 `confirm=true`）；清扫支持 `dryRun` 诊断，挖地必须使用 `orders_dig_area`；水/液体不能 sweep |
+| `mop_area` / `disinfect_area` | write | medium | 拖地/消毒；地上的水、污水、液体必须使用 `orders_mop_area` |
 | `orders_attack` | execute | **dangerous** | 仅攻击小动物/敌对目标；不能用于挖掘；区域攻击需额外 `attackAreaConfirm="attack area"` |
 | `cancel_area` / `harvest_area` / `capture_critters` | write | medium | 取消/收获/捕捉 |
 | `empty_conduits` / `cut_conduits` | write | medium/**dangerous** | 倒空/切断管道 |
@@ -193,10 +194,11 @@
 | `world_list` | read | none | 已加载世界与激活世界 |
 | `world_cell_info` | read | none | 指定格子元素、质量、温度、病菌 |
 | `world_element_summary` | read | none | 世界元素质量和温度摘要 |
-| `world_text_map` | read | none | 紧凑文本地图（支持 RLE 低 token）|
+| `world_text_map` | read | none | 文本地图，默认 standard plain，用固定宽度 token 输出每格；RLE 仅用于大范围低 token 扫描 |
 | `world_area_snapshot` | execute | low | 区域上下文包：文本地图 + utility overlay + 可选截图 |
+| `layout_candidates` | read | none | 平面布局候选：房间矩形、需挖掘/铺砖、危险和连通性评分 |
 | `thermal_overheat_risk_scan` | read | none | 扫描建筑过热风险，按温差排序 |
-| `area_define` / `area_get` / `area_list` / `area_forget` | read/write | low | 命名区域管理 |
+| `area_define` / `area_get` / `area_list` / `area_blocks` / `area_merge` / `area_forget` | read/write | low | 命名区域、自动地图块和区域拼接管理 |
 
 ### 相机与截图 (camera)
 
@@ -212,12 +214,21 @@
 
 | 场景 | 首选 | 原因 |
 |------|------|------|
-| 挖掘、铺砖、建造、电线/管路规划 | `world_area_snapshot preset=construction/utilities` | 返回精确坐标、RLE 地形、建筑/复制人对象、utility overlay |
-| 大范围低 token 初扫 | `world_text_map profile=scan encoding=rle` | 输出最小，适合快速定位可用空间/固液气边界 |
+| 挖掘、铺砖、建造、电线/管路规划 | `world_area_snapshot preset=planning/utilities` | 返回精确坐标、plain 地形、建筑/复制人对象、utility overlay、规划摘要 |
+| 平面结构候选 | `layout_candidates purpose=lab|barracks|bathroom` | 返回候选矩形、评分、需挖掘、需铺砖、危险格和可达性 |
+| 常规地形/对象读图 | `world_text_map profile=standard encoding=plain` | 返回 areaId、origin、行列坐标和固定宽度 token，适合 agent 直接规划 |
+| 全图分块巡检 | `area_blocks` → `world_text_map areaId=bN` | 把世界切成 `b*` 小块句柄，逐块读取，避免一次扫太大 |
+| 大范围低 token 初扫 | `world_text_map profile=scan encoding=rle` | 输出更短但可读性差，仅在范围很大时使用 |
 | 精确校验某个格子 | `world_cell_info` | 返回单格元素、质量、温度、可见性 |
 | 房间视觉、装饰、作物阶段、UI 覆盖层确认 | `camera_switch_view` + `game_screenshot` | 这些信息更接近人眼观察，文本地图可能不表达完整视觉状态 |
 
-`world_area_snapshot` 默认返回 JSON，`maps.base` 是基础地形/对象，`maps.power` 等是稀疏 overlay。`includeScreenshot=true` 会保存当前相机画面路径，但截图不自动保证覆盖传入矩形，除非调用前先移动相机。
+`world_text_map profile=standard encoding=plain` 的文本行使用固定宽度 token，不再要求 agent 解读单字母格子：`sol` 自然固体，`tile` 已建地砖/地基，`oxy/po2/co2/hyd` 气体，`liq` 液体，`bld/dup/itm/bp` 为建筑、复制人、散落物和蓝图 overlay。执行建造/挖掘/清扫类工具时使用地图返回的世界绝对坐标。
+
+`area_define` 生成手工区域 `a*`；`area_blocks` 按世界边界自动生成地图块 `b*`。默认块大小约 `40x40`，可传 `blockWidth/blockHeight/maxCells` 调整。`b*` 与 `a*` 是同一种 areaId 协议，可直接用于 `world_text_map areaId=b7`、`world_area_snapshot areaId=b7`，以及支持 areaId 的整块工具。
+
+多个区域可以临时拼接：`areaId=b1+b2+b3` 会按同一世界内这些区域的外接矩形读取或编辑。需要长期复用时，用 `area_merge areaIds=["b1","b2","b3"]` 生成新的 `a*` 句柄。拼接不是多边形裁剪；非相邻区域会包含中间空隙，`area_merge` 会返回 `gapCells` 和 warning。
+
+`world_text_map view=temperature` 输出温度 token：`frz/cold/mild/hot/xhot`。`world_area_snapshot` 默认返回 JSON，`maps.base` 是基础地形/对象，`maps.power` 等 overlay 默认也是逐格行。`profile=scan` 才会把 overlay 改成稀疏输出。`includeScreenshot=true` 会保存当前相机画面路径，但截图不自动保证覆盖传入矩形，除非调用前先移动相机。
 
 ### 游戏控制 (game)
 
@@ -293,6 +304,7 @@
 |------|------|------|------|
 | `plan_harness_create` | write | medium | 创建规划-反馈-验证-实施会话 |
 | `plan_harness_get` / `plan_harness_list` | read | none | 读取规划会话 |
+| `plan_harness_parse` | read | none | 解析 JSON/行式 plannedCalls；可传 `confirm`、`dryRun` 等默认参数，并返回 `resolvedCalls` |
 | `plan_harness_record` | write | medium | 记录约束或反馈 |
 | `plan_harness_validate` | read | none | 验证计划参数与工具存在性 |
 | `plan_harness_execute` | execute | medium | 通过门禁后执行 plannedCalls |
@@ -375,10 +387,22 @@
 - 默认 `responseMode: "summary"`，只返回每项状态和截断文本；需要完整子工具内容时显式传 `responseMode: "full"`
 - `responseMode: "errors"` 只返回错误项，同时用 `attempted` / `executed` / `omitted` 区分尝试、实际执行和省略结果
 - 支持 `stopOnError: true`，首个执行错误处停止
+- 同批次重复的 write/execute 调用会返回 `warnings`。看到零效果结果时不要原样重复同一工具和同一区域，应读取结果字段后更换工具或修正参数。
 
 领域批量工具也遵循同一套 `defaults` 约定：`user_menu_actions_batch_press`、`maintenance_actions_batch_execute`、`buildings_config_batch_set`、`production_queue_batch_set`、`activation_ranges_batch_set`、`receptacles_batch_control`、`storage_tile_selections_batch_set` 等。
 
-建造工具 `buildings_plan`、`buildings_plan_rect`、`buildings_plan_many` 也支持 `dryRun: true` / `validateOnly: true`。对 `BuildLocationRule=OnFloor` 的建筑，服务器会检查下方支撑；缺少地板或同批靠前的支撑蓝图时返回 `Unsupported OnFloor building`，默认不放置蓝图。确有特殊用途时可传 `allowUnsupported: true`。
+清扫/拖地区分：
+
+```json
+{ "name": "orders_sweep_area", "arguments": { "x1": 10, "y1": 20, "x2": 20, "y2": 30, "confirm": true } }
+{ "name": "orders_mop_area", "arguments": { "x1": 10, "y1": 20, "x2": 20, "y2": 30, "confirm": true } }
+```
+
+`orders_sweep_area` 只处理固体散落物/碎片。地上的水、污水、漏液或任何液体格子使用 `orders_mop_area`。如果 sweep 返回 `marked=0`、`liquidCellsInRect>0` 或 `mopHint`，不要重复调用同一区域 sweep。
+
+建造工具 `buildings_plan`、`buildings_plan_rect`、`buildings_plan_many` 也支持 `dryRun: true` / `validateOnly: true`。坐标统一使用世界绝对格子；`buildings_plan_rect` / `buildings_plan_many` 的整块 areaId 输入表示使用该区域的绝对矩形。对 `BuildLocationRule=OnFloor` 的建筑，服务器会检查下方支撑；缺少地板或同批靠前的支撑蓝图时返回 `Unsupported OnFloor building`，默认不放置蓝图。确有特殊用途时可传 `allowUnsupported: true`。
+
+`plan_harness_parse` 会返回原始 `plannedCalls`、默认参数 `defaults` 和已合并默认参数的 `resolvedCalls`。执行型空间工具疑似使用未锚定的小坐标时，校验器会给出提示。
 
 `buildings_plan_many` 支持 `routes` 自动展开电线/管路路径，减少“先放设备、再单独补线”的二次调用：
 
@@ -429,7 +453,7 @@
 | 玩家操作查找 | `tools_player_action_coverage query=...&detail=brief` |
 | 批量调用 | `items: [{t:"name",a:{}}]` + `defaults` + 默认 `responseMode=summary` |
 | 常规观察 | `colony_state_snapshot profile=brief` |
-| 文本地图初扫 | `world_text_map profile=scan encoding=rle` |
+| 文本地图初扫 | `world_text_map profile=standard encoding=plain` |
 | 区域建筑速查 | `oni://buildings/configurables?areaId=xxx&limit=20` |
 
 ---
@@ -493,6 +517,7 @@
 | `oni://storage/list` | `resources_storage_list` | 储存列表 |
 | `oni://diet/status` | `diet_status` | 饮食权限 |
 | `oni://dupes` | `dupes_list` | 复制人列表 |
+| `oni://dupes/status-check` | `dupes_status_check` | 复制人状态/被困检查 |
 | `oni://dupes/priorities` | `dupes_priorities_list` | 个人优先级 |
 | `oni://dupes/skills` | `dupes_skills_list` | 技能 |
 | `oni://schedules` | `schedule_list` | 日程 |
@@ -513,7 +538,7 @@
 | URI Template | 对应工具 | 说明 |
 |--------------|----------|------|
 | `oni://world/cell/{x}/{y}` | `world_cell_info` | 指定格子详情 |
-| `oni://world/text-map{?...}` | `world_text_map` | 文本地图；`profile=scan&encoding=rle` 低 token 初扫 |
+| `oni://world/text-map{?...}` | `world_text_map` | 文本地图；默认 `profile=standard&encoding=plain` 固定宽度 token，大范围低 token 初扫才用 `profile=scan&encoding=rle` |
 | `oni://power/summary{?worldId,includeDetails,limit}` | `power_summary` | 按世界过滤电力摘要 |
 | `oni://rooms/list{?worldId,type,includeBuildings,limit}` | `rooms_list` | 按类型过滤房间 |
 | `oni://thermal/overheat-risk{?worldId,marginC,limit}` | `thermal_overheat_risk_scan` | 按温差阈值过滤 |

@@ -143,11 +143,16 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "plan_parse", "planning_parse", "planned_calls_parse" },
                 Tags = new List<string> { "plan", "parse", "text", "plannedCalls", "feedback", "规划", "解析" },
-                Description = "把文本规划解析为可校验/执行的 plannedCalls。支持 JSON/代码块/每行 tool_name {json}；解析失败返回 parseErrors 和示例，供 agent 修正。",
+                Description = "把文本规划解析为可校验/执行的 plannedCalls。支持 JSON/代码块/每行 tool_name {json}；支持 defaults/defaultArguments 携带 areaId+relative=true，让规划里的坐标按文本地图局部 rx/ry 解释。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["planText"] = new McpToolParameter { Type = "string", Description = "规划文本。推荐直接给 JSON：{\"plannedCalls\":[{\"name\":\"orders_dig_area\",\"arguments\":{...}}]}", Required = true },
-                    ["defaults"] = new McpToolParameter { Type = "object", Description = "可选默认参数，会随解析结果返回并参与校验", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "可选默认参数，会随解析结果返回并参与校验；常用 {areaId:'a1',relative:true,confirm:true}", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "便捷默认区域句柄；等同于 defaults.areaId，用于把规划坐标锚定到 world_text_map 返回的区域", Required = false },
+                    ["relative"] = new McpToolParameter { Type = "boolean", Description = "便捷默认相对坐标开关；等同于 defaults.relative=true，使 x/y/line/r/cells 按区域 rx/ry 解释", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "便捷默认确认参数；等同于 defaults.confirm=true，用于需要确认的 plannedCalls", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "便捷默认 dryRun 参数；等同于 defaults.dryRun=true，适合先验证建造规划", Required = false },
+                    ["applyDefaults"] = new McpToolParameter { Type = "boolean", Description = "是否在返回中额外给出 resolvedCalls（已合并 defaults），默认 true；plannedCalls 保持原始结构", Required = false },
                     ["validate"] = new McpToolParameter { Type = "boolean", Description = "是否同时校验工具存在、必填参数和危险 confirm，默认 true", Required = false }
                 },
                 Handler = args =>
@@ -158,12 +163,14 @@ namespace OniMcp.Tools
 
                     var parse = ParsePlannedCalls(planText);
                     JObject defaults = MergeParsedDefaults(parse.Defaults, args["defaults"] as JObject);
+                    MergeConvenienceDefaults(defaults, args);
                     var payload = new JObject
                     {
                         ["ok"] = parse.Ok,
                         ["source"] = parse.Source,
                         ["plannedCalls"] = parse.PlannedCalls ?? new JArray(),
-                        ["defaults"] = defaults
+                        ["defaults"] = defaults,
+                        ["coordinateMode"] = CoordinateMode(defaults)
                     };
 
                     if (!parse.Ok)
@@ -176,6 +183,9 @@ namespace OniMcp.Tools
                             IsError = true
                         };
                     }
+
+                    if (ToolUtil.GetBool(args, "applyDefaults", true))
+                        payload["resolvedCalls"] = ResolveCallsWithDefaults(parse.PlannedCalls, defaults);
 
                     if (ToolUtil.GetBool(args, "validate", true))
                     {
@@ -522,6 +532,39 @@ namespace OniMcp.Tools
                     issues.Add(Issue("dangerous_without_confirm", $"{ev.Stage}.{key}[{i}] dangerous tool '{tool.Name}' must include arguments.confirm=true"));
                 else if (string.Equals(tool.Risk, "medium", StringComparison.OrdinalIgnoreCase) && tool.Parameters.ContainsKey("confirm") && !ToolUtil.GetBool(arguments, "confirm", false))
                     warnings.Add(Issue("medium_without_confirm", $"{ev.Stage}.{key}[{i}] medium-risk tool '{tool.Name}' usually requires arguments.confirm=true"));
+
+                ValidateCoordinateUse(ev, key, i, tool, arguments, issues, warnings);
+            }
+        }
+
+        private static void ValidateCoordinateUse(PlanEvent ev, string key, int index, McpTool tool, JObject arguments, List<Dictionary<string, object>> issues, List<Dictionary<string, object>> warnings)
+        {
+            if (tool == null || arguments == null)
+                return;
+
+            bool hasCoords = HasCoordinateShape(arguments);
+            if (!hasCoords)
+                return;
+
+            bool hasAreaId = HasAreaId(arguments);
+            bool relative = HasRelative(arguments);
+            bool spatialEdit = IsSpatialEditTool(tool);
+            string prefix = $"{ev.Stage}.{key}[{index}] tool '{tool.Name}'";
+
+            if (relative && !hasAreaId)
+            {
+                issues.Add(Issue("relative_without_areaId", $"{prefix} uses relative=true but no areaId/a is available; relative coordinates need an area handle from world_text_map/world_area_snapshot"));
+                return;
+            }
+
+            if (hasAreaId && !relative && spatialEdit)
+            {
+                warnings.Add(Issue("areaId_without_relative", $"{prefix} has areaId/a and coordinate fields but relative=true is missing; coordinates will be interpreted as world coordinates, not rx/ry offsets"));
+            }
+
+            if (!hasAreaId && !relative && spatialEdit && LooksLikeRelativeCoordinates(arguments))
+            {
+                warnings.Add(Issue("unanchored_small_coordinates", $"{prefix} uses small coordinate values without areaId+relative=true; if these came from a text map, pass the map areaId and set relative=true"));
             }
         }
 
@@ -765,6 +808,46 @@ namespace OniMcp.Tools
             return result;
         }
 
+        private static void MergeConvenienceDefaults(JObject defaults, JObject args)
+        {
+            if (defaults == null || args == null)
+                return;
+
+            if (args["areaId"] != null && defaults["areaId"] == null)
+                defaults["areaId"] = args["areaId"].DeepClone();
+            if (args["relative"] != null && defaults["relative"] == null)
+                defaults["relative"] = args["relative"].DeepClone();
+            if (args["confirm"] != null && defaults["confirm"] == null)
+                defaults["confirm"] = args["confirm"].DeepClone();
+            if (args["dryRun"] != null && defaults["dryRun"] == null)
+                defaults["dryRun"] = args["dryRun"].DeepClone();
+        }
+
+        private static JArray ResolveCallsWithDefaults(JArray calls, JObject defaults)
+        {
+            var resolved = new JArray();
+            if (calls == null)
+                return resolved;
+
+            for (int i = 0; i < calls.Count; i++)
+            {
+                var call = calls[i] as JObject;
+                if (call == null)
+                    continue;
+
+                string name = call["name"]?.ToString() ?? call["tool"]?.ToString() ?? call["t"]?.ToString();
+                var args = CloneArguments(call["arguments"] ?? call["args"] ?? call["a"]) ?? new JObject();
+                MergeDefaults(args, defaults);
+                resolved.Add(new JObject
+                {
+                    ["name"] = name,
+                    ["arguments"] = args,
+                    ["coordinateMode"] = CoordinateMode(args)
+                });
+            }
+            return resolved;
+        }
+
         private static JArray ExpectedPlanFormats()
         {
             return new JArray
@@ -772,18 +855,32 @@ namespace OniMcp.Tools
                 new JObject
                 {
                     ["kind"] = "json_object",
-                    ["example"] = "{\"plannedCalls\":[{\"name\":\"orders_dig_area\",\"arguments\":{\"worldId\":0,\"x1\":101,\"y1\":253,\"x2\":106,\"y2\":256,\"confirm\":true}}]}"
+                    ["example"] = "{\"defaults\":{\"areaId\":\"a3\",\"relative\":true,\"confirm\":true},\"plannedCalls\":[{\"name\":\"orders_dig_area\",\"arguments\":{\"x1\":0,\"y1\":2,\"x2\":8,\"y2\":2}}]}"
                 },
                 new JObject
                 {
                     ["kind"] = "compact_json",
-                    ["example"] = "{\"items\":[{\"t\":\"orders_dig_area\",\"a\":{\"worldId\":0,\"x1\":101,\"y1\":253,\"x2\":106,\"y2\":256,\"confirm\":true}}]}"
+                    ["example"] = "{\"defaults\":{\"areaId\":\"a3\",\"relative\":true,\"confirm\":true},\"items\":[{\"t\":\"buildings_plan_many\",\"a\":{\"items\":[{\"p\":\"Tile\",\"l\":[0,2,8,2]}]}}]}"
                 },
                 new JObject
                 {
                     ["kind"] = "line",
-                    ["example"] = "orders_dig_area {\"worldId\":0,\"x1\":101,\"y1\":253,\"x2\":106,\"y2\":256,\"confirm\":true}"
+                    ["example"] = "orders_dig_area {\"areaId\":\"a3\",\"relative\":true,\"x1\":0,\"y1\":2,\"x2\":8,\"y2\":2,\"confirm\":true}"
                 }
+            };
+        }
+
+        private static JObject CoordinateMode(JObject defaults)
+        {
+            bool relative = defaults != null && (ToolUtil.GetBool(defaults, "relative", false) || ToolUtil.GetBool(defaults, "rel", false));
+            string areaId = defaults?["areaId"]?.ToString();
+            return new JObject
+            {
+                ["mode"] = relative ? "relative" : "absolute",
+                ["areaId"] = string.IsNullOrWhiteSpace(areaId) ? null : areaId,
+                ["rule"] = relative
+                    ? "x/y/x1/y1/x2/y2 and compact line/r/cells coordinates are offsets from the area origin when supported by the target tool"
+                    : "coordinates are world grid coordinates unless each call supplies areaId+relative=true"
             };
         }
 
@@ -804,6 +901,126 @@ namespace OniMcp.Tools
                 if (target[property.Name] == null)
                     target[property.Name] = property.Value.DeepClone();
             }
+        }
+
+        private static bool HasAreaId(JObject arguments)
+        {
+            return !string.IsNullOrWhiteSpace(arguments["areaId"]?.ToString())
+                || !string.IsNullOrWhiteSpace(arguments["a"]?.ToString());
+        }
+
+        private static bool HasRelative(JObject arguments)
+        {
+            return ToolUtil.GetBool(arguments, "relative", false)
+                || ToolUtil.GetBool(arguments, "rel", false);
+        }
+
+        private static bool IsSpatialEditTool(McpTool tool)
+        {
+            if (tool == null)
+                return false;
+            string name = tool.Name ?? "";
+            if (name.StartsWith("buildings_plan", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (name.StartsWith("orders_", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (name.IndexOf("deconstruct", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            return tool.Parameters != null
+                && tool.Parameters.ContainsKey("confirm")
+                && (string.Equals(tool.Mode, "write", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(tool.Mode, "execute", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool HasCoordinateShape(JToken token)
+        {
+            var obj = token as JObject;
+            if (obj != null)
+            {
+                if ((obj["x"] != null && obj["y"] != null)
+                    || (obj["x1"] != null && obj["y1"] != null)
+                    || obj["line"] != null
+                    || obj["l"] != null
+                    || obj["r"] != null
+                    || obj["cells"] != null
+                    || obj["cs"] != null
+                    || obj["path"] != null
+                    || obj["points"] != null
+                    || obj["pts"] != null)
+                {
+                    return true;
+                }
+
+                foreach (var property in obj.Properties())
+                {
+                    if (HasCoordinateShape(property.Value))
+                        return true;
+                }
+                return false;
+            }
+
+            var array = token as JArray;
+            if (array == null)
+                return false;
+            foreach (var item in array)
+            {
+                if (HasCoordinateShape(item))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool LooksLikeRelativeCoordinates(JToken token)
+        {
+            var values = new List<int>();
+            CollectCoordinateNumbers(token, values, 40);
+            return values.Count >= 2 && values.All(value => value >= 0 && value <= 80);
+        }
+
+        private static void CollectCoordinateNumbers(JToken token, List<int> values, int limit)
+        {
+            if (token == null || values.Count >= limit)
+                return;
+
+            var obj = token as JObject;
+            if (obj != null)
+            {
+                AddInt(obj["x"], values, limit);
+                AddInt(obj["y"], values, limit);
+                AddInt(obj["x1"], values, limit);
+                AddInt(obj["y1"], values, limit);
+                AddInt(obj["x2"], values, limit);
+                AddInt(obj["y2"], values, limit);
+                CollectCoordinateNumbers(obj["line"] ?? obj["l"], values, limit);
+                CollectCoordinateNumbers(obj["r"], values, limit);
+                CollectCoordinateNumbers(obj["cells"] ?? obj["cs"], values, limit);
+                CollectCoordinateNumbers(obj["path"] ?? obj["points"] ?? obj["pts"], values, limit);
+                CollectCoordinateNumbers(obj["items"], values, limit);
+                CollectCoordinateNumbers(obj["routes"], values, limit);
+                return;
+            }
+
+            var array = token as JArray;
+            if (array != null)
+            {
+                foreach (var item in array)
+                {
+                    if (values.Count >= limit)
+                        return;
+                    AddInt(item, values, limit);
+                    if (item is JArray || item is JObject)
+                        CollectCoordinateNumbers(item, values, limit);
+                }
+            }
+        }
+
+        private static void AddInt(JToken token, List<int> values, int limit)
+        {
+            if (token == null || values.Count >= limit)
+                return;
+            int value;
+            if (int.TryParse(token.ToString(), out value))
+                values.Add(value);
         }
 
         private static List<string> MissingRequiredArguments(McpTool tool, JObject arguments)

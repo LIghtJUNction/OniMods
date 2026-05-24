@@ -28,8 +28,8 @@ Every control action must complete the full loop. Never act without prior observ
 | Mode | Trigger | Primary Tools | Output |
 |------|---------|--------------|--------|
 | **Diagnostic** | User asks "what's wrong" | `colony_diagnostics`, `colony_alerts`, `resources_food`, `dupes_needs`, `power_summary`, `thermal_overheat_risk_scan` | Problem list + severity |
-| **Planning** | User asks "what should I do" | `tools_guide`, `plan_harness_create`, `plan_harness_validate` | Validated plan with `plannedCalls` |
-| **Execution** | User says "do it" | `plan_harness_execute`, `tools_call_many`, individual write/execute tools | Execution result + task IDs |
+| **Planning** | User asks "what should I do" | `tools_guide`, compact reads, dry-run tools; `plan_harness_create` only for complex/risky/user-marked plans | Short plan or validated `plannedCalls` |
+| **Execution** | User says "do it" | `tools_call_many`, individual write/execute tools; `plan_harness_execute` only for existing formal plans | Execution result + task IDs |
 | **Monitoring** | User wants status update | `resources_inventory`, `colony_status`, `game_time` | Snapshot diff |
 
 Mode transitions: Diagnostic → Planning → Execution → Monitoring. If Execution fails, fall back to Diagnostic.
@@ -63,6 +63,134 @@ Resource URIs are idempotent and cacheable. Tools with parameters are not. Promp
 
 `tools_manifest` exposes ~60 core tools by default; `tools_search detail=full` reveals the complete ~320 tool registry. Use `detail=brief` for low-token discovery.
 
+## Observation: Camera, Views, Screenshots, Maps
+
+Spatial ONI control starts by choosing the right observation layer. Do not treat screenshots as the main source of grid truth. Use text maps and snapshots for coordinates, elements, buildings, pipes, wires, and planning; use camera screenshots for human-visual checks.
+
+### Camera Navigation
+
+Use camera tools when the user asks to look somewhere, when you need a screenshot of a specific region, or when a visual overlay matters:
+
+```
+camera_get_view
+  → read current position, zoom, activeWorldId, screen size
+
+camera_focus_cell
+  x, y, worldId?, zoom?
+  → center a known grid cell
+
+camera_focus_dupe
+  id/name
+  → follow a duplicant
+
+camera_move
+  mode: jump | pan
+  x/y for jump, dx/dy for pan, zoom?
+  → move to a coordinate or nudge the view
+
+camera_set_active_world
+  worldId
+  → switch asteroid/rocket interior before reading or viewing that world
+```
+
+After moving the camera, call `camera_get_view` if exact view confirmation matters. For map-data tools, moving the camera is optional when you pass explicit `x1,y1,x2,y2`; it is required only for screenshots or default camera-centered map reads.
+
+### View / Overlay Switching
+
+Use `camera_switch_view` for visual overlays and optional screenshot capture:
+
+```
+camera_switch_view
+  view: none | oxygen | power | gas_conduits | liquid_conduits | solid_conveyor | logic | temperature | heat_flow | materials | light | decor | rooms | priorities | disease | radiation | sound | suit | crop | harvest
+  screenshot: true|false
+```
+
+Rules:
+- Use `view=none` before a normal visual screenshot.
+- Use `view=oxygen`, `temperature`, `rooms`, `decor`, `crop`, `harvest`, `priorities`, `disease`, etc. when the task depends on visual overlay colors/icons.
+- For power, gas pipes, liquid pipes, conveyors, and logic wires, prefer `world_area_snapshot` or `world_text_map view=...` for coordinate-accurate planning; use `camera_switch_view` only to visually confirm.
+- `camera_switch_view screenshot=true` is the shortest way to switch overlay and capture the current screen in one call.
+
+### Screenshot Use
+
+Use `game_screenshot` only after the camera and overlay are set correctly. Screenshot is useful for:
+
+- confirming the player-facing visual state
+- room/decor/crop/harvest/priority/disease overlays
+- UI state that is not represented by world maps
+- comparing what the user sees with structured map data
+
+Screenshot is weak for exact coordinates. If a decision affects digging, building, sweeping, mopping, wiring, piping, or deconstruction, read `world_area_snapshot` or `world_text_map` before acting.
+
+### Build Coordinate Discipline
+
+For any build/dig/deconstruct action, screenshots are insufficient. A screenshot may suggest the target area, but exact coordinates must come from `world_area_snapshot`, `world_text_map`, `world_cell_info`, or an `areaId`.
+
+Rules:
+- Before placing a platform/floor line, read the map and identify the exact `platformY` from existing `tile` cells or intended support cells.
+- A horizontal line must use one constant y: `l: [x1, y, x2, y]`.
+- A vertical wall/ladder must use one constant x: `l: [x, y1, x, y2]`.
+- To extend an existing platform left/right, reuse the existing platform row. Do not shift up/down based on screenshot appearance.
+- Always dry-run `buildings_plan* dryRun=true` before execution, then compare the dry-run coordinates with the intended map row/column.
+- After execution, re-read the same area. If blueprints are one row/column off, cancel wrong cells with `orders_cancel_area` before replacing them.
+
+### World Map Reads
+
+Use `world_area_snapshot` as the default spatial context package:
+
+```
+world_area_snapshot
+  x1, y1, x2, y2, worldId?
+  preset: terrain | construction | utilities | planning | all
+  encoding: rle
+  includeScreenshot: false
+```
+
+Presets:
+- `terrain`: base terrain only
+- `construction`: terrain + power overlay; good default for build/dig planning
+- `utilities`: terrain + power/gas/liquid/conveyor/logic overlays
+- `planning`: utilities + layout candidates/planning summary
+- `all`: utilities + screenshot; only use when visual confirmation is also needed
+
+Use `world_text_map` for narrower or more controlled reads:
+
+```
+world_text_map
+  x1, y1, x2, y2, worldId?
+  profile: standard | minimal | scan
+  encoding: plain | rle | both
+  view: base | temperature | power | gas_conduits | liquid_conduits | solid_conveyor | logic
+  includeBuildings/includeDupes/includeItems/includeElements?
+  detail: compact | full
+```
+
+Rules:
+- For humans/debugging: `profile=standard encoding=plain includeElements=true`.
+- Default for spatial planning/debugging: `profile=standard encoding=plain`.
+- For very large low-token scans only: `profile=scan encoding=rle`.
+- Treat the returned `areaId` as the handle for the exact area you read. Rows/columns also show relative `ry/rx`, but build/order tools should use world absolute coordinates from the map output.
+- When editing the same area, convert any `rx/ry` notes back to world `x/y` using the map origin before calling build/order tools. Example: if origin is `(70,130)`, relative row `ry=2` becomes world `y=132`.
+- Standard text rows use fixed-width tokens, not single-letter cells: `sol` natural solid, `tile` constructed tile, `oxy/po2/co2/hyd` gases, `liq` liquid, `bld/dup/itm/bp` overlays.
+- For exact per-cell data: `detail=full` on a small rectangle.
+- For utility coordinate checks: use `view=power`, `view=gas_conduits`, `view=liquid_conduits`, `view=solid_conveyor`, or `view=logic`; these are sparse overlay maps.
+- For heat checks, use `view=temperature`; tokens are `frz/cold/mild/hot/xhot`.
+
+### Recommended Observation Order
+
+For a spatial task:
+
+```
+game_pause                         → pause if planning or executing
+camera_get_view                    → know active world/current view
+world_area_snapshot                → get coordinate-accurate terrain/objects/utilities
+camera_focus_cell or camera_move   → only if a screenshot or visual confirmation is needed
+camera_switch_view                 → choose visual overlay if needed
+game_screenshot                    → optional visual confirmation
+```
+
+If the user gives an area or edit marker, use that area directly; do not waste time moving the camera before reading the map.
+
 ## Standard Control Sequences
 
 ### Sequence 1: Colony Health Check
@@ -80,20 +208,50 @@ rooms_list             → room coverage summary
 
 Use `detail=compact` on all calls for a sub-5-second scan. Escalate to `detail=full` only when an anomaly is flagged.
 
-### Sequence 2: Execute a Plan
+### Sequence 2: Fast Execute A Simple Plan
+
+Use this for low-risk, small-scope actions such as a short dig, mop, sweep, floor line, config batch, or dry-run-passed blueprint:
+
+```
+tools_call_many
+  dryRun: true
+  responseMode: summary
+  requireAllValid: true
+  stopOnError: true
+  items: [...]
+
+tools_call_many
+  dryRun: false
+  responseMode: summary
+  requireAllValid: true
+  stopOnError: true
+  items: [...]
+
+verify with colony_state_snapshot/world_area_snapshot/targeted read
+```
+
+Do not create `plan_harness` for trivial single-step actions. It adds latency without improving safety.
+
+### Sequence 3: Execute A Formal Plan
+
+Use this only for complex/risky/multi-phase/player-marked plans:
 
 ```
 plan_harness_create
   goal: "<objective>"
   constraints: { maxCycles: N, riskTolerance: low|medium|high }
-  plannedCalls: [
-    { tool: "...", params: { ... } },
-    ...
-  ]
+
+plan_harness_parse
+  planText: "<JSON or line-form plannedCalls>"
+  areaId: <world_text_map areaId when spatial>
+  relative: true
+  confirm: true
+  dryRun: true
+  → inspect resolvedCalls and warnings
 
 plan_harness_validate
   planId: <from create>
-  → checks: tool existence, param types, confirm requirements
+  → checks: tool existence, required args, confirm requirements, coordinate anchoring
 
 plan_harness_execute
   planId: <validated>
@@ -101,9 +259,9 @@ plan_harness_execute
   → executes through gate, returns per-call results
 ```
 
-If `validate` reports missing `confirm`, inject it into the corresponding `plannedCalls` entry and re-validate. Never skip validation before execution.
+If `validate` reports missing `confirm`, inject it into defaults or the corresponding `plannedCalls` entry and re-validate. If it reports coordinate anchoring issues, convert the plan to world absolute coordinates before any dry-run or execution. Never skip validation before execution.
 
-### Sequence 3: Batch Configuration
+### Sequence 4: Batch Configuration
 
 ```
 tools_call_many
@@ -121,31 +279,35 @@ tools_call_many
 
 If `dryRun` passes, re-call with `dryRun: false` to execute. `defaults` merges into every item. Use low-token shorthand (`t` / `a`) for large batches. Max 20 items per call. Keep `responseMode=summary` for normal batches; use `responseMode=errors` for retry loops and `responseMode=full` only when exact child payloads are needed.
 
-### Sequence 4: Spatial Analysis + Action
+### Sequence 5: Spatial Analysis + Action
 
 ```
-camera_get_view        → current position, zoom, active world
-camera_move            → x, y, zoom (optional: worldId)
+game_pause             → freeze state for complex or destructive spatial plans
 world_area_snapshot
   x1, y1, x2, y2
   preset: construction | utilities
   encoding: rle
   includeScreenshot: false
-→ Preferred single-call context for build/dig/power/pipe planning
+→ Preferred coordinate-accurate context for build/dig/power/pipe planning
 world_text_map
   x1, y1, x2, y2
-  profile: scan
-  encoding: rle
-  includeBuildings: false
-→ Use directly for narrow terrain scans or when snapshot is too broad
-→ Define reusable area: area_define → areaId
+  profile: standard
+  encoding: plain
+  includeElements: true
+→ Use directly for human-readable terrain/object debugging
+camera_focus_cell / camera_move
+camera_switch_view
+game_screenshot
+→ Optional visual confirmation only after structured maps
+→ Define reusable area: area_define → areaId when the same region will be reused
 → Plan: plan_building_rect or plan_many
 → Execute: plan_harness or tools_call_many
+→ Verify: world_area_snapshot or world_text_map over the same area
 ```
 
-Use `world_area_snapshot` for normal spatial planning because it keeps base terrain, objects, and utility overlays in one response. Use `world_text_map profile=scan encoding=rle` for minimal token terrain scans. Use screenshots only for visual confirmation, room/decor/crop/UI overlay interpretation, or when text maps cannot express the visual state.
+Use `world_area_snapshot` for normal spatial planning because it keeps base terrain, objects, and utility overlays in one response. Use `world_text_map profile=standard encoding=plain` by default; reserve `profile=scan encoding=rle` for very large low-token terrain scans. Use screenshots only for visual confirmation, room/decor/crop/UI overlay interpretation, or when text maps cannot express the visual state.
 
-### Sequence 5: Duplicant Management
+### Sequence 6: Duplicant Management
 
 ```
 dupes_list             → all dupes with ID, name, world, stress
@@ -176,7 +338,8 @@ Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools 
 - `detail=brief` or `detail=compact` → low token, quick decisions
 - `detail=full` → deep analysis, more tokens
 - `detail=summary` → balanced
-- `profile=scan` + `encoding=rle` → minimal token terrain scan
+- `profile=standard` + `encoding=plain` → default readable terrain/object map
+- `profile=scan` + `encoding=rle` → very large low-token terrain scan only
 - `format=json` → structured data for plan harness validation
 - `tools_call_many responseMode=summary` → compact per-call status without nested full payloads
 
@@ -186,11 +349,13 @@ Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools 
 - `tools_call_many` with `dryRun: true` pre-validates confirm requirements
 - `buildings_plan*` with `dryRun: true` validates material, visibility, world, and OnFloor support before placing blueprints
 - Never bypass confirm for dangerous tools (`orders_dig`, `orders_deconstruct`, `orders_sweep`)
+- Do not repeat the same write/execute tool with identical coordinates after a zero-effect result. Read the result fields, re-read state if needed, then choose a different tool or corrected parameters.
+- Use `orders_sweep_area` only for solid debris/pickupables. Use `orders_mop_area` for water, polluted water, spills, "地上的水", or other liquid cells on a floor.
 
 ### x1, y1, x2, y2 (area coordinates)
 - Always specify in world cell coordinates
 - `x1 < x2`, `y1 < y2` (origin is bottom-left)
-- Large areas → high token cost; use `encoding=rle` to compress
+- Large areas → high token cost; shrink the rectangle first, and use `encoding=rle` only when token budget matters more than readability
 
 ## Batch and Efficiency Patterns
 
@@ -206,10 +371,13 @@ GOOD: schedules_list → identify target scheduleId/blockIndex
 
 ### Pattern B: Area-Based Operations
 
-1. `area_define` with `x1,y1,x2,y2,name` → get `areaId`
+1. `area_define` with `x1,y1,x2,y2,name` → get `a*` areaId for a hand-picked region
+   or `area_blocks worldId=<id>` → get `b*` areaIds for automatic world chunks
 2. Reuse `areaId` in subsequent calls (`world_text_map?areaId=xyz`)
-3. Bulk operations within area (`plan_many` with defaults)
-4. Clean up with `area_forget` when area is no longer needed
+   or temporarily join adjacent blocks with `areaId=b1+b2+b3`
+3. For repeated use, call `area_merge areaIds=[...]` to create one merged `a*` handle
+4. Bulk operations within area (`buildings_plan_many` with world absolute coordinates, or an `areaId` only for whole-area operations)
+5. Clean up temporary `a*` areas with `area_forget` when no longer needed; keep `b*` blocks while scanning the world
 
 ### Pattern C: Differential Updates
 
@@ -273,6 +441,7 @@ For construction, always dry-run the exact `buildings_plan*` call before executi
 - **low**: minor state change (`camera_move`, `game_pause`, `set_light_color`)
 - **medium**: config changes (`set_personal_priority`, `set_schedule_block`, `set_threshold`) — confirm recommended
 - **dangerous**: map-altering (`orders_dig`, `orders_deconstruct`, `orders_sweep`, `orders_cut_conduits`) — confirm required
+- `orders_sweep_area` is solid debris/storage cleanup only; liquid cleanup is `orders_mop_area`.
 
 Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` / `dig` → dangerous; `set_` / `assign` / `sweep` / `launch` → medium; `pause` / `resume` / `focus` → low; everything else → none.
 
@@ -332,7 +501,7 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 |--------|---------|---------------------|
 | `colony_triage` | Quick health check | `oni://colony/status` → `oni://colony/diagnostics` → `oni://colony/alerts` → `oni://resources/food` |
 | `next_cycle_plan` | Action planning | `oni://colony/summary` → `oni://resources/inventory` → `oni://research/status` → `oni://schedules` → `oni://dupes` |
-| `inspect_area` | Spatial analysis | `oni://world/text-map` (RLE scan) → optionally `world_text_map` with `includeBuildings=true` |
+| `inspect_area` | Spatial analysis | `oni://world/text-map` plain map → optionally `world_text_map` with `includeBuildings=true` |
 | `dupe_care_review` | Duplicant audit | `oni://dupes` → `oni://schedules` → `dupes_detail` / `dupes_needs` / `dupes_attributes` |
 | `power_audit` | Power system check | `oni://power/summary` → optionally `buildings_config_list` filtered for power |
 | `rooms_overview` | Room coverage check | `oni://rooms/list` → filter by type/size |

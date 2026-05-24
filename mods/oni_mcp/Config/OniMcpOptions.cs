@@ -13,6 +13,12 @@ namespace OniMcp.Config
 
         public int Port { get; set; } = 8787;
 
+        public bool AuthEnabled { get; set; } = false;
+
+        public string AuthToken { get; set; } = "";
+
+        public bool GlobalAutoDisinfectDisabled { get; set; } = false;
+
         public bool ScreenshotCleanupEnabled { get; set; } = true;
 
         public int ScreenshotRetentionMinutes { get; set; } = 120;
@@ -54,6 +60,19 @@ namespace OniMcp.Config
             _current = Load();
         }
 
+        public static void Save(OniMcpOptions options)
+        {
+            options = Sanitize(options);
+            string path = ConfigPath;
+            string dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            string json = JsonConvert.SerializeObject(options, Formatting.Indented);
+            File.WriteAllText(path, json);
+            _current = options;
+        }
+
         private static OniMcpOptions Load()
         {
             string path = ConfigPath;
@@ -81,6 +100,9 @@ namespace OniMcp.Config
             options.Host = NormalizeHost(options.Host);
             if (options.Port < 1024 || options.Port > 65535)
                 options.Port = 8787;
+            options.AuthToken = (options.AuthToken ?? "").Trim();
+            if (string.IsNullOrEmpty(options.AuthToken))
+                options.AuthEnabled = false;
             options.ScreenshotRetentionMinutes = Clamp(options.ScreenshotRetentionMinutes, 1, 10080);
             options.ScreenshotMaxFiles = Clamp(options.ScreenshotMaxFiles, 1, 1000);
             return options;

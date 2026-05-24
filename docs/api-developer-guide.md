@@ -64,7 +64,7 @@ curl -X POST http://localhost:8787/mcp/ \
       "resources": { "subscribe": false, "listChanged": false },
       "tasks": { "list": {}, "cancel": {}, "requests": { "tools": { "call": {} } } }
     },
-    "serverInfo": { "name": "OniMcp", "version": "0.1.0" }
+    "serverInfo": { "name": "OniMcp", "version": "0.1.3" }
   }
 }
 ```
@@ -89,7 +89,7 @@ curl -X POST http://localhost:8787/mcp/ \
 | Header | 方向 | 说明 |
 |--------|------|------|
 | `Mcp-Session-Id` | 请求/响应 | 会话标识。initialize 可省略，响应中分配 |
-| `Mcp-Protocol-Version` | 请求/响应 | 支持 `2025-11-25`、`2024-11-05` |
+| `Mcp-Protocol-Version` | 请求/响应 | 支持 `2025-11-25` |
 | `Content-Type` | 请求 | 必须设为 `application/json` |
 
 非 `initialize` 请求缺失 header 或 session 不存在/已终止，返回 `400` 或 `404`。
@@ -285,13 +285,13 @@ curl -X POST http://localhost:8787/mcp/ \
   -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
   -d '{"jsonrpc":"2.0","id":12,"method":"resources/templates/list","params":{}}'
 
-# 读取模板资源（RLE 文本地图）
+# 读取模板资源（plain 文本地图）
 curl -X POST http://localhost:8787/mcp/ \
   -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
   -d '{
     "jsonrpc": "2.0", "id": 13,
     "method": "resources/read",
-    "params": { "uri": "oni://world/text-map?x1=100&y1=50&x2=120&y2=70&encoding=rle&profile=scan" }
+    "params": { "uri": "oni://world/text-map?x1=100&y1=50&x2=120&y2=70&encoding=plain&profile=standard" }
   }'
 ```
 

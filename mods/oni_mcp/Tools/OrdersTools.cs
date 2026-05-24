@@ -195,9 +195,17 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
-                Description = "把矩形区域内散落物标记为清扫",
+                Description = "把矩形区域内固体散落物/碎片标记为清扫到仓库；不处理水、污水或任何液体，地上的水/液体必须使用 orders_mop_area；返回逐项诊断",
+                Aliases = new List<string> { "sweep_area", "clear_debris_area", "solid_debris_sweep_area" },
+                Tags = new List<string> { "orders", "sweep", "clear", "debris", "solid", "pickupable", "storage", "not-liquid", "固体", "碎片", "散落物", "清扫到仓库" },
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "清扫差事优先级 1-9，默认 5", Required = false },
+                    ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "是否设为红色最高优先级，默认 false", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只扫描并返回会标记/跳过的对象，不实际下达清扫，默认 false", Required = false },
+                    ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "是否把已存储对象纳入诊断；默认 false，通常不应清扫已存储对象", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐项目标诊断，默认 true", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "逐项诊断最多返回数量，默认 120，最大 500", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "区域超过 100 格时必须为 true", Required = false }
                 }),
                 Handler = args =>
@@ -211,24 +219,91 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("confirm=true is required when sweeping more than 100 cells");
 
                     int worldId = ToolUtil.ResolveWorldId(args);
+                    bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
+                    bool includeStored = ToolUtil.GetBool(args, "includeStored", false);
+                    bool detail = ToolUtil.GetBool(args, "detail", true);
+                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 120, 500));
                     int marked = 0;
+                    int scanned = 0;
+                    int inRect = 0;
+                    int skippedStored = 0;
+                    int skippedEquipped = 0;
+                    int skippedNoCell = 0;
+                    int skippedNoClearable = 0;
+                    var liquidScan = ScanLiquidCells(rect, worldId, 12);
+                    var targets = new List<Dictionary<string, object>>();
+
                     foreach (var pickupable in Components.Pickupables.Items)
                     {
-                        if (pickupable == null || pickupable.KPrefabID == null) continue;
-                        if (pickupable.KPrefabID.HasTag(GameTags.Stored) || pickupable.KPrefabID.HasTag(GameTags.Equipped)) continue;
-                        int cell = pickupable.cachedCell;
-                        if (!CellInRect(cell, rect, worldId)) continue;
+                        if (pickupable == null || pickupable.gameObject == null)
+                            continue;
+
+                        scanned++;
+                        int cell = SweepCell(pickupable);
+                        if (!Grid.IsValidCell(cell))
+                        {
+                            skippedNoCell++;
+                            AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_invalid_cell");
+                            continue;
+                        }
+                        if (!CellInRect(cell, rect, worldId))
+                            continue;
+
+                        inRect++;
+                        var kpid = pickupable.KPrefabID ?? pickupable.GetComponent<KPrefabID>();
+                        if (kpid != null && kpid.HasTag(GameTags.Equipped))
+                        {
+                            skippedEquipped++;
+                            AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_equipped");
+                            continue;
+                        }
+                        if (!includeStored && kpid != null && (kpid.HasTag(GameTags.Stored) || pickupable.storage != null))
+                        {
+                            skippedStored++;
+                            AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_stored");
+                            continue;
+                        }
+
                         var clearable = pickupable.GetComponent<Clearable>();
-                        if (clearable == null) continue;
-                        clearable.MarkForClear();
+                        if (clearable == null)
+                        {
+                            skippedNoClearable++;
+                            AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_no_clearable");
+                            continue;
+                        }
+
+                        if (!dryRun)
+                        {
+                            clearable.MarkForClear();
+                            ApplyPriority(pickupable.gameObject, args);
+                        }
                         marked++;
+                        AddSweepTarget(targets, detail, limit, pickupable, cell, dryRun ? "would_mark" : "marked");
                     }
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
+                        ["dryRun"] = dryRun,
+                        ["scannedPickupables"] = scanned,
+                        ["inRect"] = inRect,
                         ["marked"] = marked,
+                        ["skipped"] = new Dictionary<string, object>
+                        {
+                            ["invalidCell"] = skippedNoCell,
+                            ["stored"] = skippedStored,
+                            ["equipped"] = skippedEquipped,
+                            ["noClearable"] = skippedNoClearable
+                        },
                         ["worldId"] = worldId,
-                        ["rect"] = rect
+                        ["rect"] = rect,
+                        ["targets"] = targets,
+                        ["truncatedTargets"] = detail ? Math.Max(0, inRect - targets.Count) : 0,
+                        ["liquidCellsInRect"] = liquidScan["count"],
+                        ["mopHint"] = (int)liquidScan["count"] > 0 ? "This area contains liquid cells. Sweep only handles solid pickupables/debris; use orders_mop_area for water/liquid on floor." : null,
+                        ["liquidSamples"] = liquidScan["samples"],
+                        ["note"] = marked == 0
+                            ? "No sweep errands were marked. Check targets/skipped; sweep only handles solid pickupables/debris, not water/liquid. For floor liquids use orders_mop_area. Sweep also requires reachable storage accepting the item before dupes will haul it."
+                            : "Sweep marks solid debris only; it never mops water/liquid. Dupes still need reachable storage accepting the item."
                     }, McpJsonUtil.Settings));
                 }
             };
@@ -364,8 +439,9 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "mop_area", "liquids_mop_area" },
-                Description = "在矩形区域内对可拖地液体格子下达拖地命令；遵循游戏限制：下方必须有地面且液体质量不能超过可拖地上限",
+                Aliases = new List<string> { "mop_area", "liquids_mop_area", "water_mop_area", "mop_liquid_area", "mop_water_area" },
+                Tags = new List<string> { "orders", "mop", "liquid", "water", "polluted-water", "floor", "spill", "地上的水", "拖地", "液体", "水" },
+                Description = "在矩形区域内对地上的水、污水或其他可拖地液体格子下达拖地命令；不是清扫固体碎片。遵循游戏限制：下方必须有地面且液体质量不能超过可拖地上限",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "拖地差事优先级 1-9，默认 5", Required = false },
@@ -1216,6 +1292,43 @@ namespace OniMcp.Tools
             return x >= rect["x1"] && x <= rect["x2"] && y >= rect["y1"] && y <= rect["y2"];
         }
 
+        private static int SweepCell(Pickupable pickupable)
+        {
+            if (pickupable == null)
+                return Grid.InvalidCell;
+            if (Grid.IsValidCell(pickupable.cachedCell))
+                return pickupable.cachedCell;
+            return Grid.PosToCell(pickupable.gameObject);
+        }
+
+        private static Dictionary<string, object> ScanLiquidCells(Dictionary<string, int> rect, int worldId, int sampleLimit)
+        {
+            int count = 0;
+            var samples = new List<Dictionary<string, object>>();
+
+            for (int y = rect["y1"]; y <= rect["y2"]; y++)
+            {
+                for (int x = rect["x1"]; x <= rect["x2"]; x++)
+                {
+                    int cell = Grid.XYToCell(x, y);
+                    if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                        continue;
+                    if (Grid.Solid[cell] || !Grid.Element[cell].IsLiquid)
+                        continue;
+
+                    count++;
+                    if (samples.Count < sampleLimit)
+                        samples.Add(CellResult(cell, "liquid_in_sweep_area"));
+                }
+            }
+
+            return new Dictionary<string, object>
+            {
+                ["count"] = count,
+                ["samples"] = samples
+            };
+        }
+
         private static int RectCellCount(Dictionary<string, int> rect)
         {
             return (rect["x2"] - rect["x1"] + 1) * (rect["y2"] - rect["y1"] + 1);
@@ -1435,6 +1548,32 @@ namespace OniMcp.Tools
                 ["x"] = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
                 ["y"] = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1
             };
+        }
+
+        private static void AddSweepTarget(List<Dictionary<string, object>> targets, bool detail, int limit, Pickupable pickupable, int cell, string status)
+        {
+            if (!detail || targets.Count >= limit || pickupable == null)
+                return;
+
+            var go = pickupable.gameObject;
+            var kpid = pickupable.KPrefabID ?? pickupable.GetComponent<KPrefabID>();
+            var primary = pickupable.PrimaryElement ?? pickupable.GetComponent<PrimaryElement>();
+            bool valid = Grid.IsValidCell(cell);
+            targets.Add(new Dictionary<string, object>
+            {
+                ["status"] = status,
+                ["id"] = kpid?.InstanceID ?? go.GetInstanceID(),
+                ["prefabId"] = kpid?.PrefabTag.Name ?? go.name,
+                ["name"] = ToolUtil.CleanName(go.GetProperName()),
+                ["x"] = valid ? Grid.CellColumn(cell) : -1,
+                ["y"] = valid ? Grid.CellRow(cell) : -1,
+                ["worldId"] = valid && Grid.IsWorldValidCell(cell) ? Grid.WorldIdx[cell] : pickupable.GetMyWorldId(),
+                ["massKg"] = primary != null ? Math.Round(ToolUtil.SafeFloat(primary.Mass), 3) : 0,
+                ["element"] = primary != null ? primary.ElementID.ToString() : null,
+                ["stored"] = pickupable.storage != null || (kpid != null && kpid.HasTag(GameTags.Stored)),
+                ["equipped"] = kpid != null && kpid.HasTag(GameTags.Equipped),
+                ["hasClearable"] = pickupable.GetComponent<Clearable>() != null
+            });
         }
 
         private static Dictionary<string, object> CellResult(int cell, string status)

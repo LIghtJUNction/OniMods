@@ -163,7 +163,7 @@ namespace OniMcp.Server
                 // CORS
                 response.Headers.Add("Access-Control-Allow-Origin", "*");
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Accept");
+                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Accept, Authorization, X-Oni-Mcp-Token");
                 response.Headers.Add("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
 
                 if (request.HttpMethod == "OPTIONS")
@@ -172,6 +172,9 @@ namespace OniMcp.Server
                     response.Close();
                     return;
                 }
+
+                if (!ValidateAuth(request, response))
+                    return;
 
                 string sessionId = request.Headers["Mcp-Session-Id"];
                 string protocolVersion = request.Headers["Mcp-Protocol-Version"];
@@ -291,6 +294,50 @@ namespace OniMcp.Server
             }
 
             DispatchPostResponse(response, rpcRequest, sessionId);
+        }
+
+        private bool ValidateAuth(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            var options = _options ?? OniMcpOptions.Current;
+            if (options == null || !options.AuthEnabled)
+                return true;
+
+            string expected = options.AuthToken ?? "";
+            if (string.IsNullOrWhiteSpace(expected))
+                return true;
+
+            string provided = request.Headers["X-Oni-Mcp-Token"];
+            string authorization = request.Headers["Authorization"];
+            if (!string.IsNullOrWhiteSpace(authorization)
+                && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                provided = authorization.Substring("Bearer ".Length).Trim();
+            }
+
+            if (SlowEquals(provided ?? "", expected))
+                return true;
+
+            response.Headers["WWW-Authenticate"] = "Bearer realm=\"OniMcp\"";
+            SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Unauthorized MCP request"), 401);
+            return false;
+        }
+
+        private static bool SlowEquals(string left, string right)
+        {
+            if (left == null)
+                left = "";
+            if (right == null)
+                right = "";
+
+            int diff = left.Length ^ right.Length;
+            int max = Math.Max(left.Length, right.Length);
+            for (int i = 0; i < max; i++)
+            {
+                char a = i < left.Length ? left[i] : '\0';
+                char b = i < right.Length ? right[i] : '\0';
+                diff |= a ^ b;
+            }
+            return diff == 0;
         }
 
         private void DispatchPostResponse(HttpListenerResponse response, JsonRpcRequest rpcRequest, string sessionId)
@@ -534,7 +581,7 @@ namespace OniMcp.Server
             }
         }
 
-        private static readonly string[] SupportedProtocolVersions = { "2025-11-25", "2024-11-05" };
+        private static readonly string[] SupportedProtocolVersions = { CurrentProtocolVersion };
         private const string CurrentProtocolVersion = "2025-11-25";
 
         private static bool IsSupportedProtocolVersion(string protocolVersion)
@@ -602,7 +649,7 @@ namespace OniMcp.Server
                 ServerInfo = new Implementation
                 {
                     Name = "OniMcp",
-                    Version = "0.1.0"
+                    Version = "0.1.3"
                 }
             };
         }

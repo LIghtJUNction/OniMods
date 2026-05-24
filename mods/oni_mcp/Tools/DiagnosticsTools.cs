@@ -170,6 +170,48 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool SetGlobalAutoDisinfect()
+        {
+            return new McpTool
+            {
+                Name = "colony_auto_disinfect_set",
+                Group = "colony",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "auto_disinfect_set", "global_auto_disinfect_set", "disable_auto_disinfect_global" },
+                Tags = new List<string> { "auto-disinfect", "disinfect", "global", "care", "消毒", "全局", "禁用消毒" },
+                Description = "设置全局自动消毒策略；disabled=true 会关闭现有和新出现对象的 AutoDisinfectable，避免逐对象 user-menu 批量调用",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["disabled"] = new McpToolParameter { Type = "boolean", Description = "true=全局禁用自动消毒；false=允许游戏默认自动消毒行为", Required = true },
+                    ["applyNow"] = new McpToolParameter { Type = "boolean", Description = "是否立即同步现有对象，默认 true", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认修改全局自动消毒策略", Required = true }
+                },
+                Handler = args =>
+                {
+                    if (!ToolUtil.GetBool(args, "confirm", false))
+                        return CallToolResult.Error("confirm=true is required to change global auto-disinfect policy");
+
+                    bool disabled = ToolUtil.GetBool(args, "disabled", false);
+                    bool applyNow = ToolUtil.GetBool(args, "applyNow", true);
+                    var before = AutoDisinfectPolicy.Status();
+                    AutoDisinfectPolicy.SetDisabled(disabled, persist: true);
+                    int changed = applyNow ? AutoDisinfectPolicy.ApplyToExisting() : 0;
+                    var after = AutoDisinfectPolicy.Status();
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["before"] = before,
+                        ["after"] = after,
+                        ["changedExistingObjects"] = changed,
+                        ["note"] = disabled
+                            ? "Global auto-disinfect is disabled. New AutoDisinfectable objects will be forced off by the MCP policy patch."
+                            : "Global auto-disinfect policy is off; existing object states are not force-enabled."
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
         private static Dictionary<string, object> BuildDiagnostics()
         {
             int dupes = Components.LiveMinionIdentities.Count;

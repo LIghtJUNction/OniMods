@@ -292,7 +292,8 @@ namespace OniMcp.Tools
                             errors.Add(BatchError(i, null, -1, -1, "prefabId/p is required"));
                             continue;
                         }
-                        if (!HasLocation(item))
+                        var planArgs = BuildItemArgs(args, item);
+                        if (!HasLocation(item) && string.IsNullOrWhiteSpace(planArgs["areaId"]?.ToString()))
                         {
                             failed++;
                             errors.Add(BatchError(i, prefabId, -1, -1, "x/y, line/l, path/points, r, cells/cs or areaId/a is required"));
@@ -307,7 +308,6 @@ namespace OniMcp.Tools
                             continue;
                         }
 
-                        var planArgs = BuildItemArgs(args, item);
                         foreach (var cell in ExpandItemCells(item, planArgs))
                         {
                             var result = TryPlanOne(prefabId, cell.x, cell.y, planArgs, plannedSupportCells);
@@ -409,7 +409,7 @@ namespace OniMcp.Tools
                 };
             }
 
-            var pos = Grid.CellToPosCBC(cell, def.SceneLayer);
+            var pos = BuildPlacementPosition(cell, def);
             var go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
             if (go == null)
                 return ErrorResult(prefabId, x, y, "Placement failed", materialResult.ToDictionary());
@@ -932,6 +932,14 @@ namespace OniMcp.Tools
             return ToolUtil.GetBool(args, "dryRun", false) || ToolUtil.GetBool(args, "validateOnly", false);
         }
 
+        private static Vector3 BuildPlacementPosition(int cell, BuildingDef def)
+        {
+            var pos = Grid.CellToPosCBC(cell, def.SceneLayer);
+            pos.x += (Math.Max(1, def.WidthInCells) - 1) * 0.5f;
+            pos.y += (Math.Max(1, def.HeightInCells) - 1) * 0.5f;
+            return pos;
+        }
+
         private static void RegisterSupportBlueprint(string prefabId, int x, int y, HashSet<int> plannedSupportCells)
         {
             if (plannedSupportCells == null || !IsSupportPrefab(prefabId))
@@ -1082,13 +1090,14 @@ namespace OniMcp.Tools
                     || EqualsIgnoreCase(item.Name, requested)
                     || Contains(item.Tag.Name, requested)
                     || Contains(item.Name, requested));
+            var candidates = AvailableMaterials(def, worldId, includeUnavailable: true).Take(20).ToList();
             if (match == null || !match.ValidForBuilding)
             {
                 return MaterialSelection.Invalid(
                     $"Material '{requested}' is not valid for {def.PrefabID}",
                     requested,
                     available,
-                    AvailableMaterials(def, worldId, includeUnavailable: true).Take(20).ToList());
+                    candidates);
             }
 
             if (match.AvailableKg <= 0f && !IsFreeBuildContext())
@@ -1097,7 +1106,7 @@ namespace OniMcp.Tools
                     $"Material '{match.Tag.Name}' is valid for {def.PrefabID}, but none is currently available",
                     requested,
                     available,
-                    AvailableMaterials(def, worldId, includeUnavailable: true).Take(20).ToList());
+                    candidates);
             }
 
             return MaterialSelection.Success(new List<Tag> { match.Tag }, "explicit", requested, match, available);
@@ -1105,7 +1114,7 @@ namespace OniMcp.Tools
 
         private static List<BuildMaterialInfo> AvailableMaterials(BuildingDef def, int worldId, bool includeUnavailable)
         {
-            var candidates = CandidateMaterialTags(def)
+            var candidates = CandidateMaterialTags(def, worldId)
                 .Where(tag => tag.IsValid)
                 .Distinct()
                 .Select(tag => new BuildMaterialInfo
@@ -1113,7 +1122,8 @@ namespace OniMcp.Tools
                     Tag = tag,
                     Name = tag.ProperNameStripLink(),
                     AvailableKg = AvailableAmount(worldId, tag),
-                    ValidForBuilding = true
+                    ValidForBuilding = true,
+                    Categories = MatchingMaterialCategories(def, tag).ToList()
                 })
                 .Where(item => includeUnavailable || item.AvailableKg > 0f || IsFreeBuildContext())
                 .OrderByDescending(item => item.AvailableKg)
@@ -1123,12 +1133,12 @@ namespace OniMcp.Tools
             return candidates;
         }
 
-        private static IEnumerable<Tag> CandidateMaterialTags(BuildingDef def)
+        private static IEnumerable<Tag> CandidateMaterialTags(BuildingDef def, int worldId)
         {
             foreach (var tag in def.DefaultElements())
                 yield return tag;
 
-            if (def.MaterialCategory == null || DiscoveredResources.Instance == null)
+            if (def.MaterialCategory == null)
                 yield break;
 
             foreach (string categoryName in def.MaterialCategory)
@@ -1140,22 +1150,115 @@ namespace OniMcp.Tools
                 if (!category.IsValid)
                     continue;
 
-                IEnumerable<Tag> discovered = null;
-                try
+                if (DiscoveredResources.Instance != null)
                 {
-                    discovered = DiscoveredResources.Instance.GetDiscoveredResourcesFromTag(category);
-                }
-                catch
-                {
-                    discovered = null;
-                }
+                    IEnumerable<Tag> discovered = null;
+                    try
+                    {
+                        discovered = DiscoveredResources.Instance.GetDiscoveredResourcesFromTag(category);
+                    }
+                    catch
+                    {
+                        discovered = null;
+                    }
 
-                if (discovered == null)
+                    if (discovered != null)
+                    {
+                        foreach (var tag in discovered)
+                            yield return tag;
+                    }
+                }
+            }
+
+            foreach (var tag in InventoryMaterialTags(def, worldId))
+                yield return tag;
+        }
+
+        private static IEnumerable<Tag> InventoryMaterialTags(BuildingDef def, int worldId)
+        {
+            var categories = MaterialCategoryTags(def).ToList();
+            if (categories.Count == 0)
+                yield break;
+
+            foreach (var pickupable in Components.Pickupables.Items)
+            {
+                if (pickupable == null || pickupable.gameObject == null)
                     continue;
 
-                foreach (var tag in discovered)
-                    yield return tag;
+                int itemWorldId = PickupableWorldId(pickupable);
+                if (worldId >= 0 && itemWorldId != worldId)
+                    continue;
+
+                var kpid = pickupable.KPrefabID ?? pickupable.GetComponent<KPrefabID>();
+                var primary = pickupable.PrimaryElement ?? pickupable.GetComponent<PrimaryElement>();
+                Tag prefabTag = kpid?.PrefabTag ?? Tag.Invalid;
+                Tag elementTag = primary != null ? new Tag(primary.ElementID.ToString()) : Tag.Invalid;
+
+                if (MaterialMatchesAnyCategory(prefabTag, categories))
+                    yield return prefabTag;
+                if (MaterialMatchesAnyCategory(elementTag, categories))
+                    yield return elementTag;
+                if (kpid != null && categories.Any(category => kpid.HasTag(category)))
+                {
+                    if (elementTag.IsValid)
+                        yield return elementTag;
+                    if (prefabTag.IsValid)
+                        yield return prefabTag;
+                }
             }
+        }
+
+        private static IEnumerable<Tag> MatchingMaterialCategories(BuildingDef def, Tag material)
+        {
+            var categories = MaterialCategoryTags(def).ToList();
+            foreach (var category in categories)
+            {
+                if (MaterialMatchesCategory(material, category))
+                    yield return category;
+            }
+        }
+
+        private static IEnumerable<Tag> MaterialCategoryTags(BuildingDef def)
+        {
+            if (def.MaterialCategory == null)
+                yield break;
+            foreach (string categoryName in def.MaterialCategory)
+            {
+                if (string.IsNullOrWhiteSpace(categoryName))
+                    continue;
+                var category = new Tag(categoryName);
+                if (category.IsValid)
+                    yield return category;
+            }
+        }
+
+        private static bool MaterialMatchesAnyCategory(Tag material, List<Tag> categories)
+        {
+            return material.IsValid && categories.Any(category => MaterialMatchesCategory(material, category));
+        }
+
+        private static bool MaterialMatchesCategory(Tag material, Tag category)
+        {
+            if (!material.IsValid || !category.IsValid)
+                return false;
+            if (material == category)
+                return true;
+
+            var element = ElementLoader.GetElement(material);
+            if (element != null && (element.GetMaterialCategoryTag() == category || element.HasTag(category)))
+                return true;
+
+            var prefab = Assets.GetPrefab(material);
+            var kpid = prefab != null ? prefab.GetComponent<KPrefabID>() : null;
+            return kpid != null && kpid.HasTag(category);
+        }
+
+        private static int PickupableWorldId(Pickupable pickupable)
+        {
+            int cell = pickupable.cachedCell;
+            if (Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell))
+                return Grid.WorldIdx[cell];
+            return pickupable.GetMyWorldId();
         }
 
         private static float AvailableAmount(int worldId, Tag tag)
@@ -1396,6 +1499,7 @@ namespace OniMcp.Tools
             public string Name;
             public float AvailableKg;
             public bool ValidForBuilding;
+            public List<Tag> Categories = new List<Tag>();
 
             public Dictionary<string, object> ToDictionary()
             {
@@ -1404,7 +1508,8 @@ namespace OniMcp.Tools
                     ["tag"] = Tag.Name,
                     ["name"] = Name,
                     ["availableKg"] = Math.Round(ToolUtil.SafeFloat(AvailableKg), 3),
-                    ["validForBuilding"] = ValidForBuilding
+                    ["validForBuilding"] = ValidForBuilding,
+                    ["categories"] = Categories.Select(tag => tag.Name).OrderBy(name => name).ToList()
                 };
             }
         }

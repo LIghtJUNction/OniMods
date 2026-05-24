@@ -78,6 +78,97 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool GetDupeStatusCheck()
+        {
+            return new McpTool
+            {
+                Name = "dupes_status_check",
+                Group = "dupes",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "duplicants_status_check", "dupes_stuck_check", "dupe_rescue_check" },
+                Tags = new List<string> { "dupes", "duplicants", "status", "stuck", "trapped", "navigation", "rescue", "复制人", "被困", "状态" },
+                Description = "【复制人状态/被困检查首选】一次返回复制人位置、当前差事、关键需求、周边可达格和疑似被困风险；只读，不移动复制人。用于替代 dupes_list + dupes_detail + dupes_needs + 局部地图的常规组合调用。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；留空检查全部", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称；留空检查全部", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；默认全部世界，指定后只检查该世界复制人", Required = false },
+                    ["radius"] = new McpToolParameter { Type = "integer", Description = "周边可达性扫描半径，默认 8，最大 20", Required = false },
+                    ["targetX"] = new McpToolParameter { Type = "integer", Description = "可选目标格 X；提供 targetX/targetY 后检查每个复制人是否能到达", Required = false },
+                    ["targetY"] = new McpToolParameter { Type = "integer", Description = "可选目标格 Y；提供 targetX/targetY 后检查每个复制人是否能到达", Required = false },
+                    ["targetWorldId"] = new McpToolParameter { Type = "integer", Description = "目标格世界 ID，默认 worldId 或当前激活世界", Required = false },
+                    ["includeReachableSamples"] = new McpToolParameter { Type = "boolean", Description = "是否返回少量可达格样本，默认 true", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回复制人数，默认 50，最大 100", Required = false }
+                },
+                Handler = args =>
+                {
+                    if (Game.Instance == null)
+                        return CallToolResult.Error("Game not initialized");
+
+                    int radius = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "radius") ?? 8, 20));
+                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 50, 100));
+                    int worldId = ToolUtil.GetInt(args, "worldId") ?? -1;
+                    bool includeReachableSamples = ToolUtil.GetBool(args, "includeReachableSamples", true);
+                    int? targetX = ToolUtil.GetInt(args, "targetX");
+                    int? targetY = ToolUtil.GetInt(args, "targetY");
+                    int targetWorldId = ToolUtil.GetInt(args, "targetWorldId") ?? (worldId >= 0 ? worldId : ClusterManager.Instance?.activeWorldId ?? 0);
+
+                    var selected = ToolUtil.FindDupe(args);
+                    var dupes = selected != null
+                        ? new List<MinionIdentity> { selected }
+                        : Components.LiveMinionIdentities.Items
+                            .Where(dupe => dupe != null)
+                            .Where(dupe => worldId < 0 || dupe.GetMyWorldId() == worldId)
+                            .OrderBy(dupe => dupe.GetProperName())
+                            .Take(limit)
+                            .ToList();
+
+                    int? targetCell = null;
+                    Dictionary<string, object> target = null;
+                    if (targetX.HasValue && targetY.HasValue)
+                    {
+                        int cell = Grid.XYToCell(targetX.Value, targetY.Value);
+                        bool valid = Grid.IsValidCell(cell) && ToolUtil.CellMatchesWorld(cell, targetWorldId);
+                        targetCell = valid ? cell : (int?)null;
+                        target = new Dictionary<string, object>
+                        {
+                            ["x"] = targetX.Value,
+                            ["y"] = targetY.Value,
+                            ["worldId"] = targetWorldId,
+                            ["valid"] = valid,
+                            ["visible"] = valid && Grid.IsVisible(cell)
+                        };
+                    }
+
+                    var checks = dupes
+                        .Select(dupe => DupeStatusCheck(dupe, radius, targetCell, includeReachableSamples))
+                        .ToList();
+                    var flagged = checks.Where(item => item["risk"].ToString() != "ok").ToList();
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["v"] = 1,
+                        ["readOnly"] = true,
+                        ["radius"] = radius,
+                        ["target"] = target,
+                        ["count"] = checks.Count,
+                        ["flagged"] = flagged.Count,
+                        ["items"] = checks,
+                        ["summary"] = new Dictionary<string, object>
+                        {
+                            ["critical"] = checks.Count(item => item["risk"].ToString() == "critical"),
+                            ["warning"] = checks.Count(item => item["risk"].ToString() == "warning"),
+                            ["ok"] = checks.Count(item => item["risk"].ToString() == "ok")
+                        },
+                        ["recommendedFollowUp"] = flagged.Count == 0
+                            ? "No suspected trapped duplicants. Use world_area_snapshot only if visual terrain confirmation is needed."
+                            : "For flagged dupes, inspect the returned rect with world_area_snapshot preset=construction before issuing dig/build/move rescue actions."
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
         public static McpTool ListPersonalPriorities()
         {
             return new McpTool
@@ -1014,6 +1105,217 @@ namespace OniMcp.Tools
             };
         }
 
+        private static Dictionary<string, object> DupeStatusCheck(MinionIdentity dupe, int radius, int? targetCell, bool includeReachableSamples)
+        {
+            var pos = dupe.transform.GetPosition();
+            int cell = Grid.PosToCell(dupe);
+            int x = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1;
+            int y = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1;
+            int worldId = dupe.GetMyWorldId();
+            var navigator = dupe.GetComponent<Navigator>();
+            var moveMonitor = navigator?.GetSMI<MoveToLocationMonitor.Instance>();
+            var reachable = ScanReachableNearby(navigator, x, y, worldId, radius, includeReachableSamples);
+            var needs = KeyNeedValues(dupe);
+            var environment = CellEnvironment(cell);
+            var current = CurrentChoreSummary(dupe);
+            var reasons = new List<string>();
+
+            bool canReceiveMove = navigator != null && moveMonitor != null;
+            bool currentCellValid = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell);
+            bool targetReachable = targetCell.HasValue && navigator != null && SafeCanReach(navigator, targetCell.Value);
+
+            if (!currentCellValid)
+                reasons.Add("invalid_current_cell");
+            if (!canReceiveMove)
+                reasons.Add("cannot_receive_move_command");
+            if (reachable.ReachableCells == 0)
+                reasons.Add("no_reachable_nearby_cells");
+            else if (reachable.ReachableCells <= 2)
+                reasons.Add("very_few_reachable_nearby_cells");
+            if (targetCell.HasValue && !targetReachable)
+                reasons.Add("target_unreachable");
+            if (needs.Stamina >= 0f && needs.Stamina < 15f)
+                reasons.Add("low_stamina");
+            if (needs.Calories > 0f && needs.Calories < 1000f)
+                reasons.Add("low_calories");
+            if (needs.Breath < 35f)
+                reasons.Add("low_breath");
+            if (environment.TryGetValue("temperatureC", out var tempObj) && tempObj is double tempC && (tempC < -20d || tempC > 60d))
+                reasons.Add("dangerous_temperature");
+            if (environment.TryGetValue("state", out var stateObj) && stateObj?.ToString() == "liquid")
+                reasons.Add("standing_in_liquid");
+
+            string risk = "ok";
+            if (reasons.Contains("invalid_current_cell") || reasons.Contains("no_reachable_nearby_cells") || reasons.Contains("low_breath"))
+                risk = "critical";
+            else if (reasons.Count > 0)
+                risk = "warning";
+
+            return new Dictionary<string, object>
+            {
+                ["dupe"] = DupeRef(dupe),
+                ["position"] = new Dictionary<string, object>
+                {
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["worldId"] = worldId,
+                    ["cell"] = cell,
+                    ["worldPosition"] = new[] { Math.Round(pos.x, 2), Math.Round(pos.y, 2) }
+                },
+                ["risk"] = risk,
+                ["reasons"] = reasons,
+                ["currentChore"] = current,
+                ["navigation"] = new Dictionary<string, object>
+                {
+                    ["hasNavigator"] = navigator != null,
+                    ["canReceiveMoveCommand"] = canReceiveMove,
+                    ["radius"] = radius,
+                    ["reachableCells"] = reachable.ReachableCells,
+                    ["visibleCells"] = reachable.VisibleCells,
+                    ["solidCells"] = reachable.SolidCells,
+                    ["targetReachable"] = targetCell.HasValue ? (object)targetReachable : null,
+                    ["samples"] = reachable.Samples
+                },
+                ["needs"] = needs.ToDictionary(),
+                ["environment"] = environment,
+                ["scanRect"] = new[] { x - radius, y - radius, x + radius, y + radius },
+                ["nextRead"] = risk == "ok" ? null : $"world_area_snapshot x1={x - radius} y1={y - radius} x2={x + radius} y2={y + radius} worldId={worldId} preset=construction encoding=rle"
+            };
+        }
+
+        private static ReachabilitySummary ScanReachableNearby(Navigator navigator, int x, int y, int worldId, int radius, bool includeSamples)
+        {
+            var summary = new ReachabilitySummary();
+            if (navigator == null || x < 0 || y < 0)
+                return summary;
+
+            for (int yy = y - radius; yy <= y + radius; yy++)
+            {
+                for (int xx = x - radius; xx <= x + radius; xx++)
+                {
+                    if (xx < 0 || xx >= Grid.WidthInCells || yy < 0 || yy >= Grid.HeightInCells)
+                        continue;
+                    int cell = Grid.XYToCell(xx, yy);
+                    if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                        continue;
+                    if (Grid.IsVisible(cell))
+                        summary.VisibleCells++;
+                    if (Grid.Solid[cell])
+                        summary.SolidCells++;
+                    if (!SafeCanReach(navigator, cell))
+                        continue;
+
+                    summary.ReachableCells++;
+                    if (includeSamples && summary.Samples.Count < 12)
+                    {
+                        summary.Samples.Add(new Dictionary<string, object>
+                        {
+                            ["x"] = xx,
+                            ["y"] = yy,
+                            ["solid"] = Grid.Solid[cell],
+                            ["visible"] = Grid.IsVisible(cell)
+                        });
+                    }
+                }
+            }
+
+            return summary;
+        }
+
+        private static bool SafeCanReach(Navigator navigator, int cell)
+        {
+            try
+            {
+                return navigator != null && Grid.IsValidCell(cell) && navigator.CanReach(cell);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static Dictionary<string, object> CurrentChoreSummary(MinionIdentity dupe)
+        {
+            try
+            {
+                var consumer = dupe.GetComponent<ChoreConsumer>();
+                var current = consumer?.choreDriver?.GetCurrentChore();
+                if (current == null)
+                    return null;
+                return new Dictionary<string, object>
+                {
+                    ["name"] = SafeString(() => GameUtil.GetChoreName(current, null), SafeString(() => current.GetReportName(), current.GetType().Name)),
+                    ["reportName"] = SafeString(() => current.GetReportName(), current.GetType().Name),
+                    ["type"] = current.choreType?.Id ?? current.GetType().Name,
+                    ["groups"] = current.choreType?.groups?.Select(group => group.Id).ToList() ?? new List<string>()
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Dictionary<string, object> CellEnvironment(int cell)
+        {
+            if (!Grid.IsValidCell(cell) || !Grid.IsWorldValidCell(cell))
+                return new Dictionary<string, object> { ["valid"] = false };
+
+            var element = Grid.Element[cell];
+            float tempK = ToolUtil.SafeFloat(Grid.Temperature[cell]);
+            return new Dictionary<string, object>
+            {
+                ["valid"] = true,
+                ["visible"] = Grid.IsVisible(cell),
+                ["element"] = element?.id.ToString() ?? "Unknown",
+                ["elementName"] = ToolUtil.CleanName(element?.name ?? "Unknown"),
+                ["state"] = ToolUtil.GetElementState(element),
+                ["massKg"] = Math.Round(ToolUtil.SafeFloat(Grid.Mass[cell]), 3),
+                ["temperatureC"] = Math.Round(tempK - 273.15f, 2),
+                ["solid"] = Grid.Solid[cell],
+                ["foundation"] = Grid.Foundation[cell],
+                ["diseaseCount"] = Grid.DiseaseCount[cell]
+            };
+        }
+
+        private static KeyNeeds KeyNeedValues(MinionIdentity dupe)
+        {
+            var result = new KeyNeeds();
+            var amounts = dupe.GetComponent<Amounts>();
+            if (amounts == null)
+                return result;
+
+            foreach (var amount in amounts.ModifierList)
+            {
+                if (amount == null || amount.amount == null)
+                    continue;
+                string id = amount.amount.Id ?? "";
+                string name = amount.amount.Name ?? "";
+                float value = ToolUtil.SafeFloat(amount.value);
+                if (Contains(id, "Stamina") || Contains(name, "Stamina")) result.Stamina = value;
+                else if (Contains(id, "Calories") || Contains(name, "Calories")) result.Calories = value;
+                else if (Contains(id, "Stress") || Contains(name, "Stress")) result.Stress = value;
+                else if (Contains(id, "Bladder") || Contains(name, "Bladder")) result.Bladder = value;
+                else if (Contains(id, "Breath") || Contains(name, "Breath")) result.Breath = value;
+                else if (Contains(id, "Temperature") || Contains(name, "Temperature")) result.BodyTemperature = value;
+            }
+
+            return result;
+        }
+
+        private static string SafeString(Func<string> getter, string fallback)
+        {
+            try
+            {
+                var value = getter();
+                return string.IsNullOrWhiteSpace(value) ? fallback : ToolUtil.CleanName(value);
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
         private static string TryMoveDupeToCell(MinionIdentity dupe, int x, int y, int worldId, out Dictionary<string, object> moved)
         {
             moved = null;
@@ -1705,6 +2007,42 @@ namespace OniMcp.Tools
         private static bool Contains(string value, string query)
         {
             return !string.IsNullOrEmpty(value) && value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private sealed class ReachabilitySummary
+        {
+            public int ReachableCells;
+            public int VisibleCells;
+            public int SolidCells;
+            public readonly List<Dictionary<string, object>> Samples = new List<Dictionary<string, object>>();
+        }
+
+        private sealed class KeyNeeds
+        {
+            public float Stamina = -1f;
+            public float Calories = -1f;
+            public float Stress = -1f;
+            public float Bladder = -1f;
+            public float Breath = 100f;
+            public float BodyTemperature = -1f;
+
+            public Dictionary<string, object> ToDictionary()
+            {
+                return new Dictionary<string, object>
+                {
+                    ["stamina"] = RoundOrNull(Stamina),
+                    ["calories"] = RoundOrNull(Calories),
+                    ["stress"] = RoundOrNull(Stress),
+                    ["bladder"] = RoundOrNull(Bladder),
+                    ["breath"] = RoundOrNull(Breath),
+                    ["bodyTemperature"] = RoundOrNull(BodyTemperature)
+                };
+            }
+
+            private static object RoundOrNull(float value)
+            {
+                return value < 0f ? null : (object)Math.Round(value, 2);
+            }
         }
     }
 }

@@ -144,7 +144,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
-                Description = "按玩家目标生成低 token 工具使用指南：推荐资源、检索词、工具链、批量策略和规划 harness 步骤",
+                Description = "按玩家目标生成低 token 工具使用指南：推荐资源、检索词、工具链、批量策略和必要时的规划 harness 步骤",
                 Aliases = new List<string> { "tools_intent_guide", "tool_route", "action_guide" },
                 Tags = new List<string> { "catalog", "intent", "routing", "planning", "batch", "low-token", "工具指南" },
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -168,9 +168,9 @@ namespace OniMcp.Tools
                         {
                             "1. Read recommended resources first; tools/list is intentionally core-only, so use oni://... resources, tools_search detail=brief/full, or tools_manifest for discovery.",
                             "2. If the player action surface is unclear, call tools_player_action_coverage with detail=brief and query=<goal>; then call tools_search with detail=brief for exact schemas.",
-                            "3. For changes, create/record a plan_harness session before write/execute tools; plan payload may use plannedCalls or compact calls/items:[{t,a}] plus defaults.",
-                            "4. Batch independent low-risk calls with tools_call_many responseMode=summary; use compact items:[{t,a}] and defaults for repeated arguments.",
-                            "5. Verify with read resources after execution, then record feedback/verification."
+                            "3. For simple low-risk changes, skip plan_harness: dry-run when available, then execute via tools_call_many responseMode=summary with compact items:[{t,a}] and defaults.",
+                            "4. Use plan_harness only for complex, risky, multi-phase, player edit-marker, or resume-later plans; plan payload may use plannedCalls or compact calls/items:[{t,a}] plus defaults.",
+                            "5. Do not repeat the same write/execute call after a zero-effect result; re-read state or choose the correct tool. Verify with read resources after execution."
                         },
                         ["batch"] = new Dictionary<string, object>
                         {
@@ -181,7 +181,7 @@ namespace OniMcp.Tools
                             ["domainDefaults"] = "Selected domain batch tools also accept defaults/defaultArguments, including user_menu_actions_batch_press, maintenance_actions_batch_execute, buildings_config_batch_set, automation_controls_batch_set, automatable_controls_batch_set, critter_sensors_batch_set, production_queue_batch_set, activation_ranges_batch_set, receptacles_batch_control, and storage_tile_selections_batch_set.",
                             ["recommendedPreflight"] = "dryRun=true before execute; keep requireAllValid=true for write/execute batches",
                             ["maxCalls"] = 20,
-                            ["note"] = "Batch tool does not bypass child tool confirm/safety parameters."
+                            ["note"] = "Batch tool does not bypass child tool confirm/safety parameters. Repeating the same write/execute tool with the same area usually just repeats the mistake; inspect the result and route to a different tool when marked=0 or skipped dominates."
                         }
                     };
 
@@ -319,8 +319,19 @@ namespace OniMcp.Tools
                 string normalized = token.ToLowerInvariant();
                 tokens.Add(normalized);
                 tokens.AddRange(Synonyms(normalized));
+                tokens.AddRange(ContainedSynonyms(normalized));
             }
             return string.Join(" ", tokens.Distinct().ToArray());
+        }
+
+        private static IEnumerable<string> ContainedSynonyms(string token)
+        {
+            var result = new List<string>();
+            if (token.Contains("water") || token.Contains("liquid") || token.Contains("污水") || token.Contains("液") || token.Contains("水") || token.Contains("拖地"))
+                result.AddRange(new[] { "orders", "mop", "liquid", "water", "floor", "spill", "orders_mop_area" });
+            if (token.Contains("sweep") || token.Contains("debris") || token.Contains("清扫") || token.Contains("打扫") || token.Contains("散落") || token.Contains("碎片"))
+                result.AddRange(new[] { "orders", "sweep", "clear", "storage", "debris", "pickupable", "orders_sweep_area" });
+            return result;
         }
 
         private static IEnumerable<string> Synonyms(string token)
@@ -334,7 +345,17 @@ namespace OniMcp.Tools
                 case "sweep":
                 case "清扫":
                 case "打扫":
-                    return new[] { "orders", "sweep", "clear", "storage" };
+                    return new[] { "orders", "sweep", "clear", "storage", "debris", "pickupable" };
+                case "mop":
+                case "water":
+                case "liquid":
+                case "spill":
+                case "水":
+                case "污水":
+                case "液体":
+                case "地上的水":
+                case "拖地":
+                    return new[] { "orders", "mop", "liquid", "water", "floor", "spill", "orders_mop_area" };
                 case "build":
                 case "building":
                 case "建造":
@@ -468,15 +489,15 @@ namespace OniMcp.Tools
                     new[] { "oni://tools/manifest", "oni://tools/player-action-coverage", "oni://colony/summary" },
                     new[] { "colony_state_snapshot", "tools_search", "tools_manifest", "tools_call_many", "plan_harness_create" },
                     new[] { "colony_state_snapshot profile=brief", "tools_search detail=brief query=<goal>", "tools_guide goal=<goal>" },
-                    "Use colony_state_snapshot as the default first read. Use tools_call_many for independent read checks; keep write/execute tools explicit.",
-                    new[] { "read colony_state_snapshot", "search tools", "create plan", "execute", "verify" }),
+                    "Use colony_state_snapshot as the default first read. Use tools_call_many for independent reads and simple low-risk writes. Use plan_harness only for complex/risky/multi-phase/player-marked plans.",
+                    new[] { "read colony_state_snapshot", "search tools", "dry-run simple actions or create formal plan", "execute", "verify" }),
                 new ToolGuide("map_area_orders",
-                    new[] { "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "地图", "挖掘", "清扫", "区域" },
+                    new[] { "dig", "sweep", "mop", "water", "liquid", "spill", "disinfect", "cancel", "harvest", "地图", "挖掘", "清扫", "拖地", "地上的水", "液体", "区域" },
                     new[] { "oni://world/text-map{?profile=scan,format=json}", "oni://tools/read/priorities_list" },
-                    new[] { "world_area_snapshot", "world_text_map", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_cancel_area", "orders_harvest_area", "tools_call_many" },
-                    new[] { "world_area_snapshot preset=construction x1=... y1=... x2=... y2=...", "orders_dig_area x1 y1 x2 y2 confirm=true", "dig sweep mop harvest cancel" },
-                    "Use orders_dig_area for terrain excavation. Do not use orders_attack for digging; attack belongs to critter_removal/combat only.",
-                    new[] { "read world_area_snapshot preset=construction", "define area", "plan orders", "execute confirmed area tool", "verify with text map" }),
+                    new[] { "world_area_snapshot", "layout_candidates", "world_text_map", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_cancel_area", "orders_harvest_area", "tools_call_many" },
+                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "layout_candidates purpose=lab|barracks|bathroom", "orders_dig_area x1 y1 x2 y2 confirm=true", "orders_mop_area x1 y1 x2 y2 confirm=true for water/liquid on floor", "orders_sweep_area x1 y1 x2 y2 dryRun=true for solid debris only" },
+                    "Use world_area_snapshot preset=planning or layout_candidates before terrain/base layout work. Use orders_dig_area for terrain excavation. Use orders_mop_area for water/liquid on the floor; never use orders_sweep_area for liquids. Use orders_sweep_area only for solid debris/pickupables. Do not use orders_attack for digging; attack belongs to critter_removal/combat only.",
+                    new[] { "read planning snapshot", "choose candidate rectangle", "plan orders", "execute confirmed area tool", "verify with text map" }),
                 new ToolGuide("critter_removal",
                     new[] { "kill", "attack", "critter", "creature", "crab", "hermit", "杀", "杀死", "攻击", "小动物", "寄居蟹" },
                     new[] { "oni://ranching/critters", "oni://world/text-map{?profile=scan,format=json}" },
@@ -487,17 +508,17 @@ namespace OniMcp.Tools
                 new ToolGuide("build_and_configure",
                     new[] { "build", "building", "construct", "config", "toilet", "outhouse", "plumbing", "建造", "建筑", "配置", "厕所", "茅厕", "卫生间", "洗手间" },
                     new[] { "oni://buildings/defs{?query}", "oni://buildings/materials{?prefabId}", "oni://buildings/configurables", "oni://automation/controls", "oni://world/text-map{?profile=scan,format=json}" },
-                    new[] { "world_area_snapshot", "buildings_search_defs", "buildings_materials", "buildings_plan", "buildings_plan_rect", "buildings_plan_many", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
-                    new[] { "world_area_snapshot preset=construction x1=... y1=... x2=... y2=...", "buildings_search_defs query=toilet", "buildings_materials prefabId=Outhouse", "buildings_plan_many dryRun=true", "building automation threshold" },
-                    "Use world_area_snapshot first for terrain, objects, and utility overlays. Use buildings_search_defs to choose prefab/facade. Prefer material=auto; call buildings_materials before explicit material. Invalid or unavailable materials return structured candidates for retry. Use buildings_plan_many dryRun before placement, then config batch tools after placement.",
-                    new[] { "snapshot area", "search defs", "use material=auto or read materials", "dry-run blueprint", "place blueprint", "verify placement", "batch config if needed" }),
+                    new[] { "world_area_snapshot", "layout_candidates", "buildings_search_defs", "buildings_materials", "buildings_plan", "buildings_plan_rect", "buildings_plan_many", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
+                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "layout_candidates purpose=lab|barracks|bathroom", "buildings_search_defs query=toilet", "buildings_materials prefabId=Outhouse", "buildings_plan_many dryRun=true", "building automation threshold" },
+                    "Use world_area_snapshot preset=planning or layout_candidates first for base layout. Use buildings_search_defs to choose prefab/facade. Prefer material=auto; call buildings_materials before explicit material. Invalid or unavailable materials return structured candidates for retry. Use buildings_plan_many dryRun before placement, then config batch tools after placement.",
+                    new[] { "snapshot planning area", "choose candidate rectangle", "search defs", "use material=auto or read materials", "dry-run blueprint", "place blueprint", "verify placement", "batch config if needed" }),
                 new ToolGuide("dupes_and_assignments",
-                    new[] { "dupe", "duplicant", "schedule", "skill", "bed", "assign", "复制人", "日程", "技能", "分配" },
-                    new[] { "oni://dupes", "oni://dupes/direct-commands", "oni://dupes/priorities", "oni://dupes/priority-settings", "oni://dupes/equipment", "oni://assignables", "oni://schedules" },
-                    new[] { "dupes_list", "dupes_detail", "dupes_move_to", "dupes_move_batch_to", "dupes_skills_list", "dupes_learn_skill", "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "dupes_priority_settings_list", "dupes_priority_settings_get", "dupes_priority_settings_set", "dupes_equipment_list", "assignables_list", "assignables_set", "assignable_slot_item_set", "schedule_set_block" },
-                    new[] { "dupe schedule skill assign bed move priority jobs" },
-                    "Use dupes_move_batch_to for multiple move commands and dupes_priorities_batch_set for Jobs/Priorities screen edits; schedule/assignment changes can be grouped via tools_call_many.",
-                    new[] { "read dupes/resources", "choose target dupe", "create plan", "apply assignment/schedule", "verify" }),
+                    new[] { "dupe", "duplicant", "schedule", "skill", "bed", "assign", "stuck", "trapped", "rescue", "复制人", "日程", "技能", "分配", "被困", "卡住", "救援" },
+                    new[] { "oni://dupes", "oni://dupes/status-check", "oni://dupes/direct-commands", "oni://dupes/priorities", "oni://dupes/priority-settings", "oni://dupes/equipment", "oni://assignables", "oni://schedules" },
+                    new[] { "dupes_status_check", "dupes_list", "dupes_detail", "dupes_move_to", "dupes_move_batch_to", "dupes_skills_list", "dupes_learn_skill", "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "dupes_priority_settings_list", "dupes_priority_settings_get", "dupes_priority_settings_set", "dupes_equipment_list", "assignables_list", "assignables_set", "assignable_slot_item_set", "schedule_set_block" },
+                    new[] { "dupes_status_check", "dupe stuck trapped rescue schedule skill assign bed move priority jobs" },
+                    "Use dupes_status_check first for duplicant health, location, navigation, and suspected trapped cases. Use dupes_move_batch_to only after reading status and confirming reachable rescue targets. Schedule/assignment changes can be grouped via tools_call_many.",
+                    new[] { "read dupes_status_check", "inspect flagged scanRect if needed", "choose safe rescue/config action", "dry-run construction if needed", "execute only after confirmation", "verify" }),
                 new ToolGuide("resources_food_storage",
                     new[] { "resources", "food", "storage", "filter", "diet", "diagnostics", "alerts", "资源", "食物", "储存", "过滤" },
                     new[] { "oni://resources/inventory", "oni://resources/food", "oni://resources/pins", "oni://colony/diagnostic-settings", "oni://storage/list", "oni://filters/controls" },
@@ -615,17 +636,26 @@ namespace OniMcp.Tools
                 case "ui": return "管理面板、覆盖层、建造分类、百科和安全 UI Action 入口。";
                 case "sandbox": return "沙盒/调试模式下的生成、刷元素和清除操作。";
                 case "colony": return "殖民地总体状态、告警和诊断。";
+                case "diagnostics": return "诊断条件、过程状态和异常/风险检查。";
                 case "dupes": return "复制人列表、属性、需求、改名和自动命名。";
                 case "schedules": return "日程读取、区块编辑和复制人分配。";
                 case "resources": return "资源、食物、库存和储存过滤器。";
+                case "diet": return "复制人饮食许可、食物策略和口粮控制。";
                 case "filters": return "单选元素过滤器和树形/平铺多选过滤器。";
                 case "controls": return "方向、少量选项、广播频道等通用侧屏控件。";
+                case "automation": return "自动化、逻辑、传感器阈值和自动化侧屏设置。";
                 case "buildings": return "建筑查询、蓝图、运行状态、侧屏配置、优先级和拆除。";
                 case "production": return "制作站、精炼、厨房等配方队列和生产设置。";
                 case "orders": return "对地图区域下达清扫、挖掘等命令。";
                 case "ranching": return "小动物抓捕、放生和牧场相关命令。";
                 case "farming": return "植物收获、铲除、种植选择和种植槽状态。";
                 case "medical": return "医疗床、诊疗阈值和护理相关分配。";
+                case "power": return "电力网络、电池、发电/耗电统计。";
+                case "rooms": return "房间识别、房间类型和士气相关概览。";
+                case "rockets": return "火箭、发射台、舱组、乘员货物和飞行控制。";
+                case "space": return "星图、望远镜、太空目标和裂隙相关操作。";
+                case "story": return "故事建筑、遗迹设施、传送器和特殊剧情对象。";
+                case "research": return "研究状态、科技列表、研究队列设置和取消。";
                 case "world": return "地图格子、元素、温度、气液固统计。";
                 default: return "未归类工具。";
             }

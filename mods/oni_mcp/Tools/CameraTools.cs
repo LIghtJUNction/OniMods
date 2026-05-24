@@ -313,7 +313,7 @@ namespace OniMcp.Tools
 
                     bool screenshot = ToolUtil.GetBool(args, "screenshot", true);
                     if (screenshot)
-                        result["screenshot"] = SaveScreenshot(args["filename"]?.ToString());
+                        result["screenshot"] = WorldEditor.SaveScreenshot(args["filename"]?.ToString());
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
@@ -395,7 +395,7 @@ namespace OniMcp.Tools
                 },
                 Handler = args =>
                 {
-                    var result = SaveScreenshot(args["filename"]?.ToString());
+                    var result = WorldEditor.SaveScreenshot(args["filename"]?.ToString());
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
             };
@@ -403,7 +403,7 @@ namespace OniMcp.Tools
 
         public static Dictionary<string, object> CleanupTemporaryScreenshots()
         {
-            return CleanupTemporaryScreenshots(0);
+            return WorldEditor.CleanupTemporaryScreenshots();
         }
 
         private static bool TryResolveOverlayView(string requestedView, out string viewName, out HashedString mode)

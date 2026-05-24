@@ -1,56 +1,56 @@
 ---
 name: oni-mcp-opening-setup
-description: Use when starting a new Oxygen Not Included colony or when the user asks for opening setup/bootstrap configuration. Covers pausing before thinking, staggered schedules, attribute-based duplicant renaming with user-confirmed naming style, disabling auto-disinfect, scouting the starting asteroid, and planning early two-sided expansion plus a printing-pod laboratory.
+description: 当开始新的 Oxygen Not Included 殖民地，或用户要求开局设置/bootstrap 配置时使用。涵盖思考前暂停、错峰日程、按属性重命名复制人并由用户确认命名风格、禁用自动消毒、侦察起始星体，以及规划早期双侧扩张和打印舱实验室。
 ---
 
-# ONI MCP Opening Setup
+# ONI MCP 开局设置
 
-## Trigger
+## 触发
 
-Use this skill for new-game or early-cycle setup:
+新游戏或早期周期设置使用本技能：
 
-- opening configuration
-- start-of-run bootstrap
-- schedule setup
-- duplicant renaming by attributes
-- initial asteroid overview
-- first dig/foundation/lab plan near the printing pod
+- 开局配置
+- 开局 bootstrap
+- 日程设置
+- 按属性重命名复制人
+- 初始星体概览
+- 打印舱附近第一轮挖掘/地基/实验室计划
 
-## Hard Rule
+## 硬规则
 
-Before analysis or planning, pause the game:
+分析或规划前先暂停游戏：
 
 ```
 game_pause
 ```
 
-Keep the game paused while reading state, planning, asking questions, and issuing setup commands. Only resume after the plan is complete and either:
+读取状态、规划、提问和下达设置命令时保持暂停。只有计划完成且满足以下任一条件后才恢复：
 
-- the user explicitly asks to continue, or
-- the current task specifically includes "resume after setup".
+- 用户明确要求继续
+- 当前任务明确包含“设置后恢复”
 
-If the user asks to think, inspect, plan, or configure, pause first.
+如果用户要求思考、检查、规划或配置，先暂停。
 
-## Required User Question
+## 必问用户问题
 
-Before renaming duplicants, ask the user for the naming style.
+重命名复制人前，询问用户命名风格。
 
-Ask once, briefly. Examples:
+只简短询问一次。示例：
 
 - `职业前缀`: `Dig-Ada`, `Build-Meep`
 - `中文岗位`: `挖掘-艾达`, `建造-米普`
 - `短标签`: `Digger`, `Builder`, `Cook`
-- User custom style
+- 用户自定义风格
 
-Do not apply `dupes_auto_rename apply=true` until the user answers. Preview is allowed:
+用户回答前，不要执行 `dupes_auto_rename apply=true`。允许预览：
 
 ```
 dupes_auto_rename style=<candidate> apply=false
 ```
 
-## Opening Flow
+## 开局流程
 
-### 1. Pause And Snapshot
+### 1. 暂停并快照
 
 ```
 game_pause
@@ -59,34 +59,34 @@ world_list
 camera_get_view
 ```
 
-Use `colony_state_snapshot` instead of separate status/dupe/food/research calls unless detail is missing.
+除非缺少细节，否则使用 `colony_state_snapshot`，不要拆成单独的 status/dupe/food/research 调用。
 
-### 2. Configure Staggered Schedules
+### 2. 配置错峰日程
 
-Read current schedules:
+读取当前日程：
 
 ```
 schedule_list
 ```
 
-Preview staggered shifts:
+预览错峰班次：
 
 ```
 schedule_optimize apply=false
 ```
 
-Apply only when the task is explicitly setup/configuration, or after confirming with the user:
+只有当任务明确是设置/配置，或用户确认后才应用：
 
 ```
 schedule_optimize apply=true prefix="AI轮班"
 schedule_list
 ```
 
-The goal is early staggered shifts that reduce toilet, bed, and recreation congestion. Keep the default automatic shift count unless the user requested a specific number.
+目标是早期开局错峰，减少厕所、床位和娱乐拥堵。除非用户要求具体数量，否则保持默认自动班次数。
 
-### 3. Rename Duplicants By Attributes
+### 3. 按属性重命名复制人
 
-Read enough dupe context:
+读取足够的复制人上下文：
 
 ```
 dupes_list
@@ -94,100 +94,102 @@ dupes_attributes
 dupes_skills_list
 ```
 
-Infer roles from attributes/interests:
+根据属性/兴趣推断岗位：
 
-- Digging/construction: excavation, construction, strength
-- Research/operator: science, machinery
-- Farming/ranching/cooking: agriculture, ranching, cuisine
-- Supplier/tidier: athletics, strength, low specialization
+- 挖掘/建造：excavation、construction、strength
+- 研究/操作：science、machinery
+- 农业/畜牧/烹饪：agriculture、ranching、cuisine
+- 供应/整理：athletics、strength、低专精
 
-Ask naming style before applying. Then either:
+应用前先询问命名风格。然后使用：
 
 ```
 dupes_auto_rename style=<user style> apply=false
 dupes_auto_rename style=<user style> apply=true
 ```
 
-or use explicit:
+或显式重命名：
 
 ```
 dupes_rename id=<dupeId> newName=<name>
 ```
 
-Verify with `dupes_list`.
+用 `dupes_list` 验证。
 
-### 4. Disable Auto-Disinfect
+### 4. 禁用自动消毒
 
-Do not issue broad disinfect orders in the opening.
+开局不要下达大范围消毒命令。
 
-Find auto-disinfect targets first:
-
-```
-user_menu_actions_list query=auto-disinfect category=care limit=100
-```
-
-For targets offering `disable_auto_disinfect`, batch press:
+使用全局策略工具，不要逐对象按用户菜单：
 
 ```
-user_menu_actions_batch_press
-  confirm=true
-  defaults={ "actionKey": "disable_auto_disinfect" }
-  items=[ { "id": ... }, ... ]
+colony_auto_disinfect_set disabled=true applyNow=true confirm=true
 ```
 
-If no targets exist, record that auto-disinfect had nothing to disable.
+开局设置时绝不要遍历 `AutoDisinfectable` 对象并调用 `user_menu_actions_batch_press`。目标是全局关闭自动消毒，让当前和新发现对象都保持关闭。
 
-### 5. Scout Starting Area And Asteroid Overview
+### 5. 侦察起始区域和星体概览
 
-Get map context around current camera / printing-pod area:
+获取当前相机/打印舱区域地图上下文：
 
 ```
-world_area_snapshot preset=utilities encoding=rle includeScreenshot=false
+world_area_snapshot preset=utilities encoding=plain includeScreenshot=false
 ```
 
-If the area is too small or the printing pod is not visible, expand around the observed starting coordinates with 40x30 to 60x40 cells, staying under `maxCells`.
+如果区域太小或打印舱不可见，围绕观察到的起始坐标扩大到 40x30 到 60x40 格，并保持低于 `maxCells`。
 
-Summarize for the user:
+为用户总结：
 
-- active world / asteroid type
-- starting biome signals
-- nearby solids/liquids/gases
-- immediate hazards
-- food/plant/resource hints
-- usable expansion directions
-- whether early oxygen, water, or temperature looks urgent
+- active world / 星体类型
+- 起始生态区信号
+- 附近固体/液体/气体
+- 直接危险
+- 食物/植物/资源线索
+- 可用扩张方向
+- 早期氧气、水或温度是否紧急
 
-Use text maps, not screenshots, for coordinate conclusions.
+坐标结论使用文本地图，不用截图。
 
-### 6. First Build/Expansion Plan
+### 6. 第一轮建造/扩张计划
 
-Default opening recommendation:
+默认开局建议：
 
-- Expand left and right from the printing pod.
-- Queue conservative dig rectangles on both sides, avoiding liquids and hazardous pockets.
-- Place foundations/platforms as straight lines using `buildings_plan_many` with `l`/`line`.
-- Reserve the printing-pod-adjacent area as an early laboratory.
-- Research/power setup must include floor/support first, then generator, battery, research station, and connected wire route.
+- 从打印舱向左和向右扩张。
+- 两侧排入小型保守挖掘矩形，避开液体和危险空腔。
+- 使用 `buildings_plan_many` 的 `l`/`line` 放置直线地基/平台。
+- 保留打印舱附近区域作为早期实验室。
+- 研究/电力设置必须先有地板/支撑，再放人力发电机、电池、研究站和连接电线。
 
-Before placing or digging, dry-run:
+第一波保持小规模。普通 Cycle 1 开局工作优先使用一次紧凑快照、一次 dry-run、一次动作批处理。不要为了挖一小块材料或放短平台创建正式计划。
+
+放置或挖掘前 dry-run：
 
 ```
 buildings_plan_many dryRun=true confirm=true ...
 ```
 
-For utility routes, use `routes` in `buildings_plan_many` so wires/pipes connect in the same call.
+utility 路线使用 `buildings_plan_many` 的 `routes`，让电线/管道在同一调用里连接。
 
-For excavation:
+挖掘：
 
 ```
 orders_dig_area confirm=true ...
 ```
 
-Never use `orders_attack` for digging.
+绝不要用 `orders_attack` 挖掘。
 
-### 7. Record Plan
+### 7. 快速路径与正式计划
 
-Use plan harness for the opening plan:
+简单低风险开局动作默认走快速路径：
+
+```
+tools_call_many dryRun=true responseMode=summary requireAllValid=true stopOnError=true items=[...]
+tools_call_many dryRun=false responseMode=summary requireAllValid=true stopOnError=true items=[...]
+```
+
+适用于日程设置、全局自动消毒、小型安全挖掘矩形、短支撑/地板线，以及 dry-run 通过的第一间实验室/电力蓝图。
+
+只有当开局计划范围大、多阶段、有风险、来自用户计划，或需要以后恢复时才用 `plan_harness`：
 
 ```
 plan_harness_create objective="Opening setup and Cycle 1 expansion" riskTolerance=low requireVerification=true
@@ -195,38 +197,31 @@ plan_harness_record stage=plan summary="Opening setup plan" payload={...}
 plan_harness_validate id=<planId>
 ```
 
-If actions were executed, verify:
+如果执行了动作，用 `colony_state_snapshot profile=brief` 和 `world_area_snapshot preset=construction encoding=plain` 等可读地图验证。只有存在 harness 时才记录 harness 验证。
 
-```
-schedule_list
-dupes_list
-world_area_snapshot areaId=<area> preset=utilities encoding=rle
-plan_harness_record stage=verification passed=true ...
-```
+## 执行策略
 
-## Execution Policy
-
-This skill is allowed to execute setup actions when the user asked for opening setup/configuration:
+当用户要求开局设置/配置时，本技能允许执行设置动作：
 
 - `game_pause`
 - `schedule_optimize apply=true`
-- `dupes_auto_rename apply=true` only after naming-style answer
-- `user_menu_actions_batch_press` for `disable_auto_disinfect`
+- 用户回答命名风格后才允许 `dupes_auto_rename apply=true`
+- `colony_auto_disinfect_set disabled=true applyNow=true confirm=true`
 - `orders_dig_area`
 - `buildings_plan_many`
 
-Still use dry runs for construction before placement.
+建造放置前仍要 dry-run。
 
-Do not resume the game until planning/configuration is complete and the user permits continuation.
+规划/配置完成且用户允许继续前，不要恢复游戏。
 
-## Final Response Shape
+## 最终回复格式
 
-Keep it concise:
+保持简洁：
 
-- paused status
-- schedule setup result
-- rename status or pending naming-style question
-- auto-disinfect result
-- asteroid overview
-- expansion/lab plan summary
-- whether game remains paused or was resumed by explicit request
+- 暂停状态
+- 日程设置结果
+- 重命名状态或待确认的命名风格问题
+- 自动消毒结果
+- 星体概览
+- 扩张/实验室计划摘要
+- 游戏是否保持暂停，或是否按明确请求恢复

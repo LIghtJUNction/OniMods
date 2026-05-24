@@ -20,7 +20,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "execute",
                 Risk = "dangerous",
-                Description = "万能批量工具：按顺序一次调用多个 ONI MCP 工具，默认返回紧凑摘要；支持 dryRun 预检、requireAllValid 全量有效才执行和默认参数合并",
+                Description = "万能批量工具：按顺序一次调用多个 ONI MCP 工具，默认返回紧凑摘要；支持 dryRun 预检、重复调用预警、requireAllValid 全量有效才执行和默认参数合并",
                 Tags = new List<string> { "batch", "multi", "universal", "aggregate", "万能", "批量" },
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -105,7 +105,8 @@ namespace OniMcp.Tools
                     bool includeArguments = ToolUtil.GetBool(args, "includeArguments", false);
                     int maxTextChars = Math.Max(80, Math.Min(ToolUtil.GetInt(args, "maxTextChars") ?? 500, 4000));
                     var defaults = args["defaults"] as JObject ?? args["defaultArguments"] as JObject ?? new JObject();
-                    var preflight = PreflightCalls(calls, defaults, includeArguments);
+                    var preflightWarnings = DuplicateCallWarnings(calls, defaults);
+                    var preflight = PreflightCalls(calls, defaults, includeArguments, preflightWarnings);
                     bool preflightValid = preflight.All(item => !(item.ContainsKey("isError") && (bool)item["isError"]));
 
                     if (dryRun || (requireAllValid && !preflightValid))
@@ -118,6 +119,7 @@ namespace OniMcp.Tools
                             ["executed"] = 0,
                             ["succeeded"] = 0,
                             ["failed"] = preflight.Count(item => item.ContainsKey("isError") && (bool)item["isError"]),
+                            ["warnings"] = preflightWarnings.Values.Distinct().ToList(),
                             ["requireAllValid"] = requireAllValid,
                             ["results"] = preflight
                         };
@@ -172,6 +174,7 @@ namespace OniMcp.Tools
                         ["omitted"] = attempted - results.Count,
                         ["resultCount"] = results.Count,
                         ["stopped"] = stopped,
+                        ["warnings"] = preflightWarnings.Values.Distinct().ToList(),
                         ["requireAllValid"] = requireAllValid,
                         ["responseMode"] = responseMode,
                         ["results"] = results
@@ -182,15 +185,15 @@ namespace OniMcp.Tools
             };
         }
 
-        private static List<Dictionary<string, object>> PreflightCalls(JArray calls, JObject defaults, bool includeArguments)
+        private static List<Dictionary<string, object>> PreflightCalls(JArray calls, JObject defaults, bool includeArguments, Dictionary<int, string> warnings)
         {
             var results = new List<Dictionary<string, object>>();
             for (int i = 0; i < calls.Count; i++)
-                results.Add(PreflightSingleCall(i, calls[i], defaults, includeArguments));
+                results.Add(PreflightSingleCall(i, calls[i], defaults, includeArguments, warnings));
             return results;
         }
 
-        private static Dictionary<string, object> PreflightSingleCall(int index, JToken callToken, JObject defaults, bool includeArguments)
+        private static Dictionary<string, object> PreflightSingleCall(int index, JToken callToken, JObject defaults, bool includeArguments, Dictionary<int, string> warnings = null)
         {
             var call = callToken as JObject;
             if (call == null)
@@ -239,6 +242,8 @@ namespace OniMcp.Tools
                 result["id"] = callId;
             if (includeArguments)
                 result["arguments"] = arguments;
+            if (warnings != null && warnings.ContainsKey(index))
+                result["warning"] = warnings[index];
 
             var missingRequired = MissingRequiredArguments(tool, arguments);
             if (missingRequired.Count > 0)
@@ -342,6 +347,65 @@ namespace OniMcp.Tools
 
                 target[property.Name] = property.Value.DeepClone();
             }
+        }
+
+        private static Dictionary<int, string> DuplicateCallWarnings(JArray calls, JObject defaults)
+        {
+            var warnings = new Dictionary<int, string>();
+            var seen = new Dictionary<string, int>();
+
+            for (int i = 0; i < calls.Count; i++)
+            {
+                var call = calls[i] as JObject;
+                if (call == null)
+                    continue;
+
+                string name = call["name"]?.ToString() ?? call["tool"]?.ToString() ?? call["t"]?.ToString();
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
+
+                var argumentsToken = call["arguments"] ?? call["args"] ?? call["a"];
+                JObject arguments = (argumentsToken as JObject) != null ? (JObject)argumentsToken.DeepClone() : new JObject();
+                MergeDefaults(arguments, defaults);
+
+                McpTool tool;
+                string canonicalName = OniToolRegistry.TryGetTool(name, out tool) ? tool.Name : name;
+                if (!IsWriteOrExecute(tool))
+                    continue;
+
+                string key = canonicalName + ":" + CanonicalJson(arguments);
+                int previous;
+                if (seen.TryGetValue(key, out previous))
+                {
+                    string message = $"duplicate write/execute call matches index {previous}; repeated same-area calls usually indicate wrong routing or stale state. Read the previous result before retrying.";
+                    warnings[i] = message;
+                }
+                else
+                {
+                    seen[key] = i;
+                }
+            }
+
+            return warnings;
+        }
+
+        private static bool IsWriteOrExecute(McpTool tool)
+        {
+            if (tool == null)
+                return true;
+            return string.Equals(tool.Mode, "write", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(tool.Mode, "execute", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string CanonicalJson(JObject arguments)
+        {
+            if (arguments == null)
+                return "{}";
+
+            var ordered = new JObject();
+            foreach (var property in arguments.Properties().OrderBy(p => p.Name, StringComparer.Ordinal))
+                ordered[property.Name] = property.Value.DeepClone();
+            return ordered.ToString(Formatting.None);
         }
 
         private static Dictionary<string, object> ErrorResult(int index, string name, JObject call, string message)

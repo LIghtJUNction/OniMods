@@ -13,6 +13,7 @@ namespace OniMcp
             public static class CATEGORIES
             {
                 public static LocString SERVER = "Server";
+                public static LocString SECURITY = "Security";
                 public static LocString SCREENSHOTS = "Screenshots";
             }
 
@@ -26,6 +27,18 @@ namespace OniMcp
             {
                 public static LocString NAME = "Port";
                 public static LocString TOOLTIP = "HTTP listen port for the MCP endpoint.";
+            }
+
+            public static class AUTH_ENABLED
+            {
+                public static LocString NAME = "Require token";
+                public static LocString TOOLTIP = "Require clients to send Authorization: Bearer <token> or X-Oni-Mcp-Token.";
+            }
+
+            public static class AUTH_TOKEN
+            {
+                public static LocString NAME = "Token";
+                public static LocString TOOLTIP = "Shared token used when token authentication is enabled.";
             }
 
             public static class SCREENSHOT_CLEANUP_ENABLED
