@@ -136,7 +136,7 @@ fn prompt(question: &str, default: Option<&str>) -> Result<String> {
     }
 }
 
-pub fn run(cfg: &Config, selected: &SelectedMod, use_gui: bool, desc_file: Option<&std::path::Path>) -> Result<()> {
+pub fn run(cfg: &Config, selected: &SelectedMod, use_gui: bool) -> Result<()> {
     let repo_root = env::var_os("ONI_CLI_REPO_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|| env::current_dir().unwrap());
@@ -180,19 +180,8 @@ pub fn run(cfg: &Config, selected: &SelectedMod, use_gui: bool, desc_file: Optio
     // 尝试 SteamCMD 全自动上传
     if has_steamcmd() {
         println!("\n📡 检测到 steamcmd，支持全自动上传！");
-        let (title, mut desc, version) = read_mod_info(&dist_mod)
+        let (title, desc, version) = read_mod_info(&dist_mod)
             .unwrap_or_else(|| (selected.name.clone(), String::new(), "1.0.0".to_string()));
-
-        // 如果指定了 desc-file，优先读取文件内容作为长描述
-        if let Some(path) = desc_file {
-            if path.exists() {
-                desc = std::fs::read_to_string(path)
-                    .with_context(|| format!("读取描述文件 {} 失败", path.display()))?;
-                println!("   使用描述文件: {}", path.display());
-            } else {
-                println!("⚠️  描述文件 {} 不存在，回退到 mod.yaml 中的描述", path.display());
-            }
-        }
 
         let changenote = prompt(
             &format!("更新说明 [默认: 版本 {}]: ", version),

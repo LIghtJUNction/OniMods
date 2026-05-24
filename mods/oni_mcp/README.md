@@ -1,3 +1,5 @@
+**源代码 | Source Code:** https://github.com/LIghtJUNction/OniMods/
+
 # ONI MCP Server
 
 让 AI 助手直接连接你的缺氧殖民地。安装此 Mod 后，任何支持 MCP（Model Context Protocol）的 AI（如 Claude、Cursor、或其他 MCP 客户端）都可以通过本地 HTTP 接口读取游戏状态、帮你分析局势、甚至执行建造和调度命令。

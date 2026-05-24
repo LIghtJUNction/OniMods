@@ -69,9 +69,6 @@ enum Commands {
         /// 强制使用 OniUploader GUI（不用 SteamCMD）
         #[arg(long)]
         gui: bool,
-        /// 指定描述文件（Markdown），用于 Steam 创意工坊长描述
-        #[arg(long)]
-        desc_file: Option<PathBuf>,
     },
     /// 列出所有配置的 Mod
     List,
@@ -127,9 +124,9 @@ fn main() -> Result<()> {
             uninstall::run(&cfg, &selected, scope)
         }
         Commands::Info => info::run(&cfg),
-        Commands::Publish { gui, desc_file } => {
+        Commands::Publish { gui } => {
             let selected = cfg.select_mod(cli.r#mod)?;
-            publish::run(&cfg, &selected, gui, desc_file.as_deref())
+            publish::run(&cfg, &selected, gui)
         }
         Commands::List => {
             println!("已配置的 Mod：");
