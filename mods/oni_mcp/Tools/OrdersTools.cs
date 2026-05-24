@@ -291,7 +291,7 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
-                Description = "按对象、格子或矩形区域标记/取消攻击目标；标记攻击需要 confirm=true",
+                Description = "仅用于攻击小动物/敌对目标，不能用于挖掘。按对象、格子或矩形区域标记/取消攻击目标；区域攻击除 confirm=true 外还必须 action=mark 且 attackAreaConfirm=\"attack area\"",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID；提供后优先于坐标/区域", Required = false },
@@ -301,6 +301,7 @@ namespace OniMcp.Tools
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "攻击差事优先级 1-9，默认 5", Required = false },
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "是否设为红色最高优先级，默认 false", Required = false },
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "允许标记友方/协助阵营目标，默认 false", Required = false },
+                    ["attackAreaConfirm"] = new McpToolParameter { Type = "string", Description = "区域攻击二次确认；矩形区域 mark 攻击必须精确填写 attack area，防止把挖掘误调成攻击", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认；标记攻击时必须为 true", Required = false }
                 }),
                 Handler = args =>
@@ -309,6 +310,9 @@ namespace OniMcp.Tools
                     bool mark = action != "cancel";
                     if (mark && !ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required for attack orders");
+                    bool areaAttack = mark && args["id"] == null && HasRectInput(args);
+                    if (areaAttack && args["attackAreaConfirm"]?.ToString() != "attack area")
+                        return CallToolResult.Error("Refusing area attack without attackAreaConfirm=\"attack area\". For terrain excavation use orders_dig_area, not orders_attack.");
                     if (FactionManager.Instance == null)
                         return CallToolResult.Error("FactionManager is not initialized");
 

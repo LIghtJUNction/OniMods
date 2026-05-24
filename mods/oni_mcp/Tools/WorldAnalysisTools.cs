@@ -395,6 +395,107 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool GetWorldAreaSnapshot()
+        {
+            return new McpTool
+            {
+                Name = "world_area_snapshot",
+                Group = "world",
+                Mode = "execute",
+                Risk = "low",
+                Aliases = new List<string> { "area_snapshot", "world_snapshot_area" },
+                Tags = new List<string> { "map", "snapshot", "text", "grid", "screenshot", "overlay", "地图", "截图", "快照" },
+                Description = "【区域上下文首选】一次返回同一区域的结构化文本地图、对象摘要和可选 utility overlay（电力/气管/液管/运输/逻辑）。默认不截图；includeScreenshot=true 时附当前屏幕截图路径，仅用于视觉确认。做挖掘、建造、电线/管路规划时优先用本工具或 world_text_map，不要只依赖截图。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；提供后可省略 x1/y1/x2/y2/worldId", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "区域起点/左下 X；留空时默认当前相机视野附近", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "区域起点/左下 Y；留空时默认当前相机视野附近", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "区域终点/右上 X；留空时默认当前相机视野附近", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "区域终点/右上 Y；留空时默认当前相机视野附近", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只导出已揭示格子，默认 true", Required = false },
+                    ["preset"] = new McpToolParameter { Type = "string", Description = "快照预设：terrain=只地形，construction=地形+电力，utilities=地形+全部 utility overlay，all=utilities+截图。默认 construction", Required = false, EnumValues = new List<string> { "terrain", "construction", "utilities", "all" } },
+                    ["overlays"] = new McpToolParameter { Type = "array", Description = "可选 overlay 列表或逗号分隔字符串：power、gas_conduits、liquid_conduits、solid_conveyor、logic；覆盖 preset 默认值", Required = false },
+                    ["includeBase"] = new McpToolParameter { Type = "boolean", Description = "是否包含基础地形文本地图，默认 true", Required = false },
+                    ["includeBuildings"] = new McpToolParameter { Type = "boolean", Description = "基础地图是否包含建筑对象，默认 true", Required = false },
+                    ["includeItems"] = new McpToolParameter { Type = "boolean", Description = "基础地图是否包含散落物，默认 false", Required = false },
+                    ["includeDupes"] = new McpToolParameter { Type = "boolean", Description = "基础地图是否包含复制人，默认 true", Required = false },
+                    ["includeElements"] = new McpToolParameter { Type = "boolean", Description = "基础地图是否包含元素统计，默认 false", Required = false },
+                    ["includeScreenshot"] = new McpToolParameter { Type = "boolean", Description = "是否保存并附带当前屏幕截图路径，默认 false；截图不保证覆盖指定区域，除非调用前已移动相机", Required = false },
+                    ["encoding"] = new McpToolParameter { Type = "string", Description = "地图行编码：plain/rle/both，默认 rle", Required = false, EnumValues = new List<string> { "plain", "rle", "both" } },
+                    ["profile"] = new McpToolParameter { Type = "string", Description = "传给 world_text_map 的 profile：scan/minimal/standard，默认 scan", Required = false, EnumValues = new List<string> { "standard", "minimal", "scan" } },
+                    ["objectLimit"] = new McpToolParameter { Type = "integer", Description = "对象/稀疏格子最多返回多少项，默认 120，最大 500", Required = false },
+                    ["label"] = new McpToolParameter { Type = "string", Description = "可选区域短标签；返回的 areaId 会记住这个标签", Required = false },
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大导出格子数，默认 1600，硬上限 2500", Required = false }
+                },
+                Handler = args =>
+                {
+                    if (Game.Instance == null)
+                        return CallToolResult.Error("Game not initialized");
+
+                    AreaHandle requestedArea = null;
+                    if (!string.IsNullOrWhiteSpace(args["areaId"]?.ToString()))
+                    {
+                        if (!AreaHandleRegistry.TryGet(args["areaId"].ToString(), out requestedArea))
+                            return CallToolResult.Error("Unknown areaId");
+                    }
+
+                    int maxCells = Math.Max(1, Math.Min(TryGetInt(args, "maxCells", 1600), MaxTextMapCells));
+                    var rect = ResolveTextMapRect(args, maxCells);
+                    int worldId = TryGetInt(args, "worldId", requestedArea?.WorldId ?? ClusterManager.Instance?.activeWorldId ?? 0);
+                    int width = rect["x2"] - rect["x1"] + 1;
+                    int height = rect["y2"] - rect["y1"] + 1;
+                    int cells = width * height;
+                    if (cells > maxCells)
+                        return CallToolResult.Error($"Area too large: {width}x{height}={cells} cells, maxCells={maxCells}");
+
+                    string preset = NormalizeSnapshotPreset(args["preset"]?.ToString());
+                    bool includeBase = TryGetBool(args, "includeBase", true);
+                    bool includeScreenshot = TryGetBool(args, "includeScreenshot", preset == "all");
+                    bool visibleOnly = TryGetBool(args, "visibleOnly", true);
+                    bool includeBuildings = TryGetBool(args, "includeBuildings", true);
+                    bool includeItems = TryGetBool(args, "includeItems", false);
+                    bool includeDupes = TryGetBool(args, "includeDupes", true);
+                    bool includeElements = TryGetBool(args, "includeElements", false);
+                    string encoding = NormalizeEncoding(args["encoding"]?.ToString(), "rle");
+                    string profile = NormalizeProfile(args["profile"]?.ToString() ?? "scan");
+                    int objectLimit = ClampInt(args, "objectLimit", 120, 0, 500);
+
+                    var area = AreaHandleRegistry.Define(rect, worldId, args["label"]?.ToString());
+                    var overlayViews = ResolveSnapshotOverlays(args["overlays"], preset);
+                    var maps = BuildSnapshotMapsSinglePass(area, rect, worldId, width, height, includeBase, overlayViews, visibleOnly, includeBuildings, includeItems, includeDupes, includeElements, encoding, objectLimit);
+
+                    var result = new Dictionary<string, object>
+                    {
+                        ["v"] = 1,
+                        ["areaId"] = area.Id,
+                        ["worldId"] = worldId,
+                        ["rect"] = new[] { rect["x1"], rect["y1"], rect["x2"], rect["y2"] },
+                        ["size"] = new[] { width, height },
+                        ["cells"] = cells,
+                        ["visibleOnly"] = visibleOnly,
+                        ["preset"] = preset,
+                        ["maps"] = maps,
+                        ["comparison"] = new Dictionary<string, object>
+                        {
+                            ["textMapStrength"] = "grid-accurate terrain, elements, buildings, dupes, wires and conduits; use for planning and validation",
+                            ["screenshotStrength"] = "human visual confirmation of current camera view, UI overlays, decor/room/crop visuals; not reliable for exact coordinates by itself",
+                            ["defaultRule"] = "plan from maps; use screenshot only as supplementary visual evidence"
+                        }
+                    };
+
+                    if (includeScreenshot)
+                    {
+                        var screenshot = CameraTools.TakeScreenshot().Handler(new JObject());
+                        result["screenshot"] = ToolResultToToken(screenshot);
+                    }
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
+                }
+            };
+        }
+
         public static McpTool ScanOverheatRisk()
         {
             return new McpTool
@@ -561,6 +662,146 @@ namespace OniMcp.Tools
         private static string NormalizeFormat(string value)
         {
             return string.Equals(value?.Trim(), "json", StringComparison.OrdinalIgnoreCase) ? "json" : "text";
+        }
+
+        private static string NormalizeSnapshotPreset(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "construction";
+            string preset = value.Trim().ToLowerInvariant();
+            if (preset == "terrain" || preset == "construction" || preset == "utilities" || preset == "all")
+                return preset;
+            return "construction";
+        }
+
+        private static List<string> ResolveSnapshotOverlays(JToken value, string preset)
+        {
+            var overlays = new List<string>();
+            if (value != null && value.Type != JTokenType.Null)
+            {
+                if (value.Type == JTokenType.Array)
+                {
+                    foreach (var item in value.Children())
+                        AddSnapshotOverlay(overlays, item?.ToString());
+                }
+                else
+                {
+                    foreach (string item in value.ToString().Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                        AddSnapshotOverlay(overlays, item);
+                }
+                return overlays;
+            }
+
+            if (preset == "terrain")
+                return overlays;
+            if (preset == "construction")
+            {
+                overlays.Add("power");
+                return overlays;
+            }
+
+            overlays.Add("power");
+            overlays.Add("gas_conduits");
+            overlays.Add("liquid_conduits");
+            overlays.Add("solid_conveyor");
+            overlays.Add("logic");
+            return overlays;
+        }
+
+        private static void AddSnapshotOverlay(List<string> overlays, string value)
+        {
+            string view = NormalizeTextMapView(value);
+            if (view == "base" || overlays.Contains(view))
+                return;
+            overlays.Add(view);
+        }
+
+        private static Dictionary<string, object> BuildSnapshotMapsSinglePass(
+            AreaHandle area,
+            Dictionary<string, int> rect,
+            int worldId,
+            int width,
+            int height,
+            bool includeBase,
+            List<string> overlayViews,
+            bool visibleOnly,
+            bool includeBuildings,
+            bool includeItems,
+            bool includeDupes,
+            bool includeElements,
+            string encoding,
+            int objectLimit)
+        {
+            var maps = new List<SnapshotMapAccumulator>();
+            if (includeBase)
+            {
+                maps.Add(new SnapshotMapAccumulator(
+                    "base",
+                    sparse: false,
+                    visibleOnly: visibleOnly,
+                    encoding: encoding,
+                    overlays: BuildOverlayIndex(rect, worldId, includeBuildings, includeItems, includeDupes),
+                    includeElements: includeElements,
+                    elementLimit: includeElements ? 40 : 0,
+                    objectLimit: objectLimit));
+            }
+
+            var overlayIndexes = BuildSnapshotOverlayIndexes(rect, worldId, overlayViews);
+            foreach (string view in overlayViews)
+            {
+                Dictionary<int, OverlaySummary> overlays;
+                if (!overlayIndexes.TryGetValue(view, out overlays))
+                    overlays = new Dictionary<int, OverlaySummary>();
+                maps.Add(new SnapshotMapAccumulator(
+                    view,
+                    sparse: true,
+                    visibleOnly: visibleOnly,
+                    encoding: encoding,
+                    overlays: overlays,
+                    includeElements: false,
+                    elementLimit: 0,
+                    objectLimit: objectLimit));
+            }
+
+            for (int y = rect["y2"]; y >= rect["y1"]; y--)
+            {
+                foreach (var map in maps)
+                    map.StartRow(y);
+
+                for (int x = rect["x1"]; x <= rect["x2"]; x++)
+                {
+                    int cell = Grid.XYToCell(x, y);
+                    foreach (var map in maps)
+                    {
+                        var summary = GetCellSummary(cell, x, y, worldId, visibleOnly, map.Overlays, map.OverlayView);
+                        map.Add(summary);
+                    }
+                }
+
+                foreach (var map in maps)
+                    map.EndRow();
+            }
+
+            return maps.ToDictionary(
+                map => map.View,
+                map => (object)BuildTextMapJson(area, rect, worldId, width, height, map.View, map.Sparse, visibleOnly, encoding, map.ValidCells, map.VisibleCells, map.Overlays, BuildLegend(map.View), map.Rows, map.SparseCells, map.ElementCounts, map.IncludeElements, map.ElementLimit, map.ObjectLimit));
+        }
+
+        private static object ToolResultToToken(CallToolResult result)
+        {
+            string text = result?.Content != null && result.Content.Count > 0 ? result.Content[0].Text : "";
+            if (result == null)
+                return new Dictionary<string, object> { ["isError"] = true, ["text"] = "" };
+            if (result.IsError)
+                return new Dictionary<string, object> { ["isError"] = true, ["text"] = text };
+            try
+            {
+                return JToken.Parse(text);
+            }
+            catch
+            {
+                return new Dictionary<string, object> { ["isError"] = false, ["text"] = text };
+            }
         }
 
         private static string NormalizeTextMapView(string value)
@@ -966,6 +1207,51 @@ namespace OniMcp.Tools
             return overlays;
         }
 
+        private static Dictionary<string, Dictionary<int, OverlaySummary>> BuildSnapshotOverlayIndexes(Dictionary<string, int> rect, int worldId, List<string> views)
+        {
+            var indexes = views.Distinct().ToDictionary(view => view, view => new Dictionary<int, OverlaySummary>());
+            if (indexes.Count == 0)
+                return indexes;
+
+            for (int y = rect["y1"]; y <= rect["y2"]; y++)
+            {
+                for (int x = rect["x1"]; x <= rect["x2"]; x++)
+                {
+                    int cell = Grid.XYToCell(x, y);
+                    if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                        continue;
+
+                    AddLayerOverlayIfRequested(indexes, "power", cell, x, y, 'w', "wire", ObjectLayer.Wire, ObjectLayer.WireTile, ObjectLayer.ReplacementWire);
+                    AddLayerOverlayIfRequested(indexes, "gas_conduits", cell, x, y, 'g', "gas_conduit", ObjectLayer.GasConduit, ObjectLayer.GasConduitTile, ObjectLayer.ReplacementGasConduit);
+                    AddLayerOverlayIfRequested(indexes, "liquid_conduits", cell, x, y, 'l', "liquid_conduit", ObjectLayer.LiquidConduit, ObjectLayer.LiquidConduitTile, ObjectLayer.ReplacementLiquidConduit);
+                    AddLayerOverlayIfRequested(indexes, "solid_conveyor", cell, x, y, 's', "solid_conveyor", ObjectLayer.SolidConduit, ObjectLayer.SolidConduitTile, ObjectLayer.ReplacementSolidConduit);
+                    AddLayerOverlayIfRequested(indexes, "logic", cell, x, y, 'a', "logic_wire", ObjectLayer.LogicWire, ObjectLayer.LogicWireTile, ObjectLayer.ReplacementLogicWire);
+                }
+            }
+
+            Dictionary<int, OverlaySummary> power;
+            if (indexes.TryGetValue("power", out power))
+                AddPowerDevices(power, rect, worldId);
+
+            return indexes;
+        }
+
+        private static void AddLayerOverlayIfRequested(Dictionary<string, Dictionary<int, OverlaySummary>> indexes, string view, int cell, int x, int y, char symbol, string kind, params ObjectLayer[] layers)
+        {
+            Dictionary<int, OverlaySummary> overlays;
+            if (!indexes.TryGetValue(view, out overlays))
+                return;
+
+            foreach (var layer in layers)
+            {
+                var go = Grid.Objects[cell, (int)layer];
+                if (go == null)
+                    continue;
+                AddOverlay(overlays, cell, go, kind, symbol, x, y);
+                return;
+            }
+        }
+
         private static void AddLayerOverlays(Dictionary<int, OverlaySummary> overlays, Dictionary<string, int> rect, int worldId, char symbol, string kind, params ObjectLayer[] layers)
         {
             for (int y = rect["y1"]; y <= rect["y2"]; y++)
@@ -1193,6 +1479,61 @@ namespace OniMcp.Tools
             public int Y;
             public char Symbol;
             public string Extra;
+        }
+
+        private class SnapshotMapAccumulator
+        {
+            public readonly string View;
+            public readonly bool Sparse;
+            public readonly bool OverlayView;
+            public readonly bool IncludeElements;
+            public readonly int ElementLimit;
+            public readonly int ObjectLimit;
+            public readonly string Encoding;
+            public readonly Dictionary<int, OverlaySummary> Overlays;
+            public readonly List<Dictionary<string, object>> Rows = new List<Dictionary<string, object>>();
+            public readonly List<Dictionary<string, object>> SparseCells = new List<Dictionary<string, object>>();
+            public readonly Dictionary<string, ElementAggregate> ElementCounts = new Dictionary<string, ElementAggregate>();
+            public int ValidCells;
+            public int VisibleCells;
+            private readonly StringBuilder rowSymbols = new StringBuilder();
+            private int currentY;
+
+            public SnapshotMapAccumulator(string view, bool sparse, bool visibleOnly, string encoding, Dictionary<int, OverlaySummary> overlays, bool includeElements, int elementLimit, int objectLimit)
+            {
+                View = view;
+                Sparse = sparse;
+                OverlayView = view != "base";
+                Encoding = encoding;
+                Overlays = overlays;
+                IncludeElements = includeElements;
+                ElementLimit = elementLimit;
+                ObjectLimit = objectLimit;
+            }
+
+            public void StartRow(int y)
+            {
+                currentY = y;
+                rowSymbols.Length = 0;
+            }
+
+            public void Add(CellSummary summary)
+            {
+                rowSymbols.Append(summary.Symbol);
+                if (summary.Valid)
+                    ValidCells++;
+                if (summary.Visible)
+                    VisibleCells++;
+                AddElementAggregate(ElementCounts, summary);
+                if (Sparse && IsSparseRelevant(summary, OverlayView))
+                    SparseCells.Add(SparseCell(summary));
+            }
+
+            public void EndRow()
+            {
+                if (!Sparse)
+                    Rows.Add(MapRow(currentY, rowSymbols.ToString(), Encoding));
+            }
         }
 
         private class CellSummary

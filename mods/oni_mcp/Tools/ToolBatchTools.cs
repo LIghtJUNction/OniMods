@@ -20,7 +20,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "execute",
                 Risk = "dangerous",
-                Description = "万能批量工具：按顺序一次调用多个 ONI MCP 工具，支持 dryRun 预检、requireAllValid 全量有效才执行和默认参数合并",
+                Description = "万能批量工具：按顺序一次调用多个 ONI MCP 工具，默认返回紧凑摘要；支持 dryRun 预检、requireAllValid 全量有效才执行和默认参数合并",
                 Tags = new List<string> { "batch", "multi", "universal", "aggregate", "万能", "批量" },
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -69,14 +69,14 @@ namespace OniMcp.Tools
                     ["responseMode"] = new McpToolParameter
                     {
                         Type = "string",
-                        Description = "返回模式：full=完整内容，summary=每项只返回状态和截断文本，errors=只返回错误项；默认 full",
+                        Description = "返回模式：summary=每项只返回状态和截断文本，full=完整内容，errors=只返回错误项；默认 summary",
                         Required = false,
                         EnumValues = new List<string> { "full", "summary", "errors" }
                     },
                     ["includeArguments"] = new McpToolParameter
                     {
                         Type = "boolean",
-                        Description = "是否在每项结果中回显 arguments，默认 full 模式 true，其他模式 false",
+                        Description = "是否在每项结果中回显合并 defaults 后的 arguments，默认 false；调试参数合并时再开启",
                         Required = false
                     },
                     ["maxTextChars"] = new McpToolParameter
@@ -102,10 +102,10 @@ namespace OniMcp.Tools
                     bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
                     bool requireAllValid = ToolUtil.GetBool(args, "requireAllValid", true);
                     string responseMode = NormalizeResponseMode(args["responseMode"]?.ToString());
-                    bool includeArguments = ToolUtil.GetBool(args, "includeArguments", responseMode == "full");
+                    bool includeArguments = ToolUtil.GetBool(args, "includeArguments", false);
                     int maxTextChars = Math.Max(80, Math.Min(ToolUtil.GetInt(args, "maxTextChars") ?? 500, 4000));
                     var defaults = args["defaults"] as JObject ?? args["defaultArguments"] as JObject ?? new JObject();
-                    var preflight = PreflightCalls(calls, defaults);
+                    var preflight = PreflightCalls(calls, defaults, includeArguments);
                     bool preflightValid = preflight.All(item => !(item.ContainsKey("isError") && (bool)item["isError"]));
 
                     if (dryRun || (requireAllValid && !preflightValid))
@@ -131,11 +131,16 @@ namespace OniMcp.Tools
                     var results = new List<Dictionary<string, object>>();
                     int succeeded = 0;
                     int failed = 0;
+                    int attempted = 0;
+                    int executed = 0;
                     bool stopped = false;
 
                     for (int i = 0; i < calls.Count; i++)
                     {
                         var result = ExecuteSingleCall(i, calls[i], defaults, responseMode, includeArguments, maxTextChars);
+                        attempted++;
+                        if (result.ContainsKey("executed") && (bool)result["executed"])
+                            executed++;
                         bool isError = result.ContainsKey("isError") && (bool)result["isError"];
                         if (responseMode != "errors" || isError)
                             results.Add(result);
@@ -160,9 +165,12 @@ namespace OniMcp.Tools
                         ["dryRun"] = false,
                         ["valid"] = failed == 0,
                         ["requested"] = calls.Count,
-                        ["executed"] = results.Count,
+                        ["attempted"] = attempted,
+                        ["executed"] = executed,
                         ["succeeded"] = succeeded,
                         ["failed"] = failed,
+                        ["omitted"] = attempted - results.Count,
+                        ["resultCount"] = results.Count,
                         ["stopped"] = stopped,
                         ["requireAllValid"] = requireAllValid,
                         ["responseMode"] = responseMode,
@@ -174,15 +182,15 @@ namespace OniMcp.Tools
             };
         }
 
-        private static List<Dictionary<string, object>> PreflightCalls(JArray calls, JObject defaults)
+        private static List<Dictionary<string, object>> PreflightCalls(JArray calls, JObject defaults, bool includeArguments)
         {
             var results = new List<Dictionary<string, object>>();
             for (int i = 0; i < calls.Count; i++)
-                results.Add(PreflightSingleCall(i, calls[i], defaults));
+                results.Add(PreflightSingleCall(i, calls[i], defaults, includeArguments));
             return results;
         }
 
-        private static Dictionary<string, object> PreflightSingleCall(int index, JToken callToken, JObject defaults)
+        private static Dictionary<string, object> PreflightSingleCall(int index, JToken callToken, JObject defaults, bool includeArguments)
         {
             var call = callToken as JObject;
             if (call == null)
@@ -191,6 +199,8 @@ namespace OniMcp.Tools
             string name = call["name"]?.ToString() ?? call["tool"]?.ToString() ?? call["t"]?.ToString();
             if (string.IsNullOrWhiteSpace(name))
                 return ErrorResult(index, null, call, "tool name is required");
+
+            string callId = call["id"]?.ToString() ?? call["key"]?.ToString();
 
             if (string.Equals(name, ToolName, StringComparison.OrdinalIgnoreCase))
                 return ErrorResult(index, name, call, $"{ToolName} cannot call itself");
@@ -221,9 +231,14 @@ namespace OniMcp.Tools
                 ["group"] = tool.Group,
                 ["mode"] = tool.Mode,
                 ["risk"] = tool.Risk,
+                ["executed"] = false,
                 ["isError"] = false,
                 ["text"] = "preflight ok"
             };
+            if (!string.IsNullOrWhiteSpace(callId))
+                result["id"] = callId;
+            if (includeArguments)
+                result["arguments"] = arguments;
 
             var missingRequired = MissingRequiredArguments(tool, arguments);
             if (missingRequired.Count > 0)
@@ -258,6 +273,10 @@ namespace OniMcp.Tools
             if (string.IsNullOrWhiteSpace(name))
                 return ErrorResult(index, null, call, "tool name is required");
 
+            var preflight = PreflightSingleCall(index, callToken, defaults, includeArguments);
+            if (preflight.ContainsKey("isError") && (bool)preflight["isError"])
+                return preflight;
+
             if (string.Equals(name, ToolName, StringComparison.OrdinalIgnoreCase))
                 return ErrorResult(index, name, call, $"{ToolName} cannot call itself");
 
@@ -291,9 +310,16 @@ namespace OniMcp.Tools
             {
                 ["index"] = index,
                 ["name"] = name,
+                ["canonicalName"] = preflight.ContainsKey("canonicalName") ? preflight["canonicalName"] : name,
+                ["group"] = preflight.ContainsKey("group") ? preflight["group"] : null,
+                ["mode"] = preflight.ContainsKey("mode") ? preflight["mode"] : null,
+                ["risk"] = preflight.ContainsKey("risk") ? preflight["risk"] : null,
+                ["executed"] = true,
                 ["isError"] = toolResult.IsError,
                 ["text"] = Truncate(ExtractText(toolResult), maxTextChars)
             };
+            if (preflight.ContainsKey("id"))
+                result["id"] = preflight["id"];
             if (includeArguments)
                 result["arguments"] = arguments;
             if (responseMode == "full")
@@ -345,12 +371,12 @@ namespace OniMcp.Tools
 
         private static string NormalizeResponseMode(string value)
         {
-            string mode = string.IsNullOrWhiteSpace(value) ? "full" : value.Trim().ToLowerInvariant();
+            string mode = string.IsNullOrWhiteSpace(value) ? "summary" : value.Trim().ToLowerInvariant();
             if (mode == "compact")
                 return "summary";
             if (mode == "full" || mode == "summary" || mode == "errors")
                 return mode;
-            return "full";
+            return "summary";
         }
 
         private static List<Dictionary<string, object>> ContentToDictionaries(List<ToolContent> content)

@@ -25,6 +25,7 @@ namespace OniMcp.Tools
             "tools_player_action_coverage",
             "tools_static_audit",
             "tools_call_many",
+            "colony_state_snapshot",
             "plan_harness_create",
             "plan_harness_get",
             "plan_harness_list",
@@ -42,12 +43,16 @@ namespace OniMcp.Tools
             "rooms_list",
             "thermal_overheat_risk_scan",
             "world_text_map",
+            "world_area_snapshot",
             "area_define",
             "area_get",
             "area_list",
             "area_forget",
             "critters_list",
-            "orders_attack",
+            "orders_dig_area",
+            "orders_sweep_area",
+            "orders_cancel_area",
+            "orders_harvest_area",
             "buildings_search_defs",
             "buildings_materials",
             "buildings_plan"
@@ -65,6 +70,7 @@ namespace OniMcp.Tools
             _initialized = true;
 
             Register(ColonyTools.GetColonyInfo());
+            Register(SnapshotTools.GetColonyStateSnapshot());
             Register(ColonyTools.GetDuplicants());
             Register(ColonyTools.GetWorlds());
             Register(ColonyTools.GetResources());
@@ -366,6 +372,7 @@ namespace OniMcp.Tools
             Register(WorldAnalysisTools.GetCellInfo());
             Register(WorldAnalysisTools.GetWorldElementSummary());
             Register(WorldAnalysisTools.GetWorldTextMap());
+            Register(WorldAnalysisTools.GetWorldAreaSnapshot());
             Register(WorldAnalysisTools.ScanOverheatRisk());
             Register(SandboxTools.ListSandboxActions());
             Register(SandboxTools.SampleCell());

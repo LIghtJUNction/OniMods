@@ -14,7 +14,7 @@ Use when the user wants to **build, dig, deconstruct, or reorganize** the colony
 ### Construction Control Loop
 
 ```
-Scan    → camera_move + world_text_map → understand space
+Scan    → camera_move + world_area_snapshot/world_text_map → understand space
 Plan    → area_define + buildings_plan* → create build plan
 Validate→ plan_harness_validate → check params + confirm
 Execute → plan_harness_execute or tools_call_many → issue orders
@@ -35,10 +35,14 @@ Verify  → world_text_map + buildings_search_defs → confirm completion
 ```
 camera_get_view        → get current position + zoom + worldId
 camera_move mode=jump x=targetX y=targetY zoom=1 → jump to area
-world_text_map x1 y1 x2 y2 profile=scan encoding=rle → minimal terrain scan
+world_area_snapshot x1 y1 x2 y2 preset=construction encoding=rle → default planning snapshot
+  → Use preset=utilities for power+gas+liquid+shipping+logic overlays
+world_text_map x1 y1 x2 y2 profile=scan encoding=rle → minimal terrain-only scan
   → If need objects: add includeBuildings=true, includeItems=true
   → If need elements: add includeElements=true
 ```
+
+Prefer `world_area_snapshot` when planning construction, digging, power, pipes, or automation. It returns base terrain plus relevant overlay maps in one JSON response. Use `world_text_map` when you need a very small focused scan. Use screenshots only as visual confirmation; do not infer exact build coordinates from screenshots alone.
 
 Example:
 ```json
@@ -56,6 +60,7 @@ Example:
 
 ```
 area_define x1 y1 x2 y2 label="bedroom_block" → get areaId
+world_area_snapshot areaId=bedroom_block preset=construction → reusable planning context
 world_text_map areaId=bedroom_block profile=scan → reuse area
 buildings_plan_rect areaId=bedroom_block ... → build within area
 ```
@@ -79,6 +84,8 @@ Parameters:
 - `x`, `y`: grid position
 - `worldId`: target world (default active)
 - Optional: `orientation` (Neutral/R90/R180/R270/FlipH), `material`, `facade`, `priority` (1-9)
+- Optional: `dryRun` / `validateOnly` to validate without placing
+- Optional: `allowUnsupported` to bypass OnFloor support blocking; avoid unless intentionally placing unsupported blueprints
 - `confirm`: must be `true`
 
 Example:
@@ -102,6 +109,8 @@ Parameters:
 - `x1`, `y1`, `x2`, `y2`: rectangle bounds (inclusive)
 - `areaId`: optional, replaces x1/y1/x2/y2
 - `worldId`, `material`, `facade`, `priority`
+- `dryRun` / `validateOnly` validates without placing
+- `allowUnsupported` bypasses OnFloor support blocking; avoid for normal play
 - `confirm`: must be `true`
 
 Example:
@@ -121,18 +130,47 @@ Compact batch placement. Supports multiple location formats per item. Default `m
 
 Top-level parameters:
 - `items`: array of plan items
+- `routes`: optional utility routes expanded into Wire/LogicWire/GasConduit/LiquidConduit/SolidConduit cells
 - `worldId`/`w`, `material`/`m`, `facade`/`f`, `priority`/`pri`, `orientation`/`o`: defaults merged into each item
 - `detail`: return per-cell results (default false)
 - `maxCells`: cell expansion limit
+- `dryRun` / `validateOnly`: validate the whole batch without placing
+- `allowUnsupported`: bypass OnFloor support blocking; avoid for normal play
 - `confirm`: must be `true`
 
 Item location formats (each item must have one):
 - `x` + `y`: single cell
+- `line` or `l`: `[x1, y1, x2, y2]` horizontal/vertical line only
+- `path`, `points`, or `pts`: `[[x,y], ...]` orthogonal polyline; every segment must be horizontal or vertical
 - `r`: `[x1, y1, x2, y2]` rectangle
 - `cells` or `cs`: `[[x, y], ...]` cell list
 - `areaId` or `a`: predefined area handle
 
 Short fields accepted everywhere: `p` = `prefabId`, `w` = `worldId`, `m` = `material`, `f`/`fid` = `facade`/`facadeId`, `pri` = `priority`, `o` = `orientation`.
+
+Use `line/l` for straight floors, ladders, wires, and pipes. Use `path/points` for L-shaped or multi-segment routes. Do not use `r` for a line unless the rectangle is intentionally one cell high or one cell wide; `r` fills the entire rectangle.
+
+For `BuildLocationRule=OnFloor` buildings, the server checks support cells below the footprint. Missing support returns `Unsupported OnFloor building` with `missingSupportCells`. In `buildings_plan_many`, list support tiles before floor-bound buildings so the dry-run can validate against same-batch supports.
+
+Routes connect endpoints in the same call:
+```json
+{
+  "name": "buildings_plan_many",
+  "arguments": {
+    "items": [
+      { "p": "ManualGenerator", "x": 80, "y": 136 },
+      { "p": "Battery", "x": 83, "y": 136 },
+      { "p": "ResearchCenter", "x": 85, "y": 136 }
+    ],
+    "routes": [
+      { "p": "Wire", "from": { "p": "ManualGenerator", "x": 80, "y": 136, "port": "powerOutput" }, "to": { "p": "ResearchCenter", "x": 85, "y": 136, "port": "powerInput" }, "viaY": 135 }
+    ],
+    "confirm": true,
+    "dryRun": true
+  }
+}
+```
+Use `viaX` or `viaY` to control the L-shaped path. For pipe ports, prefer explicit `[x,y]` endpoints when exact port offsets matter.
 
 Example with mixed formats:
 ```json
@@ -142,7 +180,7 @@ Example with mixed formats:
     "defaults": { "worldId": 0, "orientation": "Neutral" },
     "items": [
       { "prefabId": "Tile", "x": 10, "y": 20 },
-      { "p": "Tile", "r": [11, 20, 15, 20] },
+      { "p": "Tile", "l": [11, 20, 15, 20] },
       { "p": "Bed", "x": 12, "y": 22 },
       { "p": "Bed", "x": 14, "y": 22 }
     ],
@@ -162,6 +200,7 @@ orders_dig_area x1 y1 x2 y2 worldId confirm=true
 - `confirm=true` required (dangerous tool)
 - Does not guarantee completion; dupes must execute
 - Skips already-placed dig orders, foundations, and non-solid cells
+- Never use `orders_attack` for excavation. `orders_attack` is only for critters/enemies and area attack requires a separate attack confirmation.
 
 ### Sweeping
 
@@ -230,6 +269,8 @@ Step 5: Plan Interior
       - { prefabId: Bed, x: 14, y: 22 }
 
 Step 6: Validate
+  buildings_plan_many dryRun=true
+    items ordered with Tile/support first, then furniture/machines
   plan_harness_create objective="Build room_A" areaId="room_A"
   plan_harness_record id=p0001 stage=plan summary="Room build plan"
     payload: { plannedCalls: [...] }
@@ -238,7 +279,7 @@ Step 6: Validate
 
 Step 7: Execute
   plan_harness_execute id=p0001 confirm=true
-  → Or tools_call_many with dryRun=true first
+  → Or repeat the validated buildings_plan_many with dryRun=false
 
 Step 8: Verify
   world_text_map areaId=room_A includeBuildings=true
@@ -262,7 +303,7 @@ Step 3: Plan Infrastructure
     items:
       - { prefabId: Wire, x: 10, y: 20 }
       - { prefabId: Wire, x: 11, y: 20 }
-      - { prefabId: Wire, r: [12, 20, 20, 20] }
+      - { prefabId: Wire, line: [12, 20, 20, 20] }
 
 Step 4: Execute
   tools_call_many
@@ -276,8 +317,9 @@ Step 4: Execute
 
 1. **Space check**: `world_text_map` confirms area is clear or planned clearance is complete
 2. **Building availability**: `buildings_search_defs query=...` confirms `prefabId` exists and is unlocked
-3. **Confirm check**: dangerous tools (`orders_dig_area`, `buildings_deconstruct`, `plan_harness_execute`) require `confirm: true`
-4. **Cell limits**: `buildings_plan_rect` refuses >200 cells; `buildings_plan_many` refuses >maxCells (default 500, max 1000); `tools_call_many` max 20 calls
+3. **Support check**: run `buildings_plan* dryRun=true`; OnFloor buildings must have existing or same-batch prior support tiles
+4. **Confirm check**: dangerous tools (`orders_dig_area`, `buildings_deconstruct`, `plan_harness_execute`) require `confirm: true`
+5. **Cell limits**: `buildings_plan_rect` refuses >200 cells; `buildings_plan_many` refuses >maxCells (default 500, max 1000); `tools_call_many` max 20 calls
 
 ### Post-Build Verification
 
@@ -294,6 +336,11 @@ Step 4: Execute
 ### "Invalid or not visible cell"
 - Cell is outside world bounds or in fog of war
 - Use `camera_move mode=jump x=... y=...` to ensure area is revealed
+
+### "Unsupported OnFloor building"
+- The building needs floor/support cells below its footprint
+- Add `Tile`/support cells first, or move the building onto existing floor
+- For `buildings_plan_many`, put support items earlier than beds, generators, batteries, research stations, toilets, and other floor-bound buildings
 
 ### "Building def not found"
 - Call `buildings_search_defs query=...` to find correct `prefabId`
@@ -331,8 +378,12 @@ Step 4: Execute
 | material | string | null | Default material if omitted |
 | facade | string | null | `default` or unlocked facade ID |
 | priority | int | 5 | 1-9 build order priority |
+| dryRun / validateOnly | bool | false | Validate without placing blueprints |
+| allowUnsupported | bool | false | Bypass OnFloor support validation; avoid for normal play |
 | label | string | null | Human-readable tag for `area_define` |
 | maxCells | int | 500 | `buildings_plan_many` expansion limit |
+| line / l | array | null | Straight horizontal/vertical segment `[x1,y1,x2,y2]` |
+| path / points / pts | array | null | Orthogonal polyline `[[x,y],...]` |
 
 ## Batch Composition Examples
 
@@ -431,8 +482,8 @@ Step 4: Execute
   "arguments": {
     "defaults": { "w": 0, "o": "Neutral" },
     "items": [
-      { "p": "Tile", "r": [10, 20, 20, 20] },
-      { "p": "Ladder", "r": [10, 21, 10, 25] },
+      { "p": "Tile", "l": [10, 20, 20, 20] },
+      { "p": "Ladder", "l": [10, 21, 10, 25] },
       { "p": "Bed", "x": 12, "y": 22 },
       { "p": "Bed", "x": 14, "y": 22 }
     ],

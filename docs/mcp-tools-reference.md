@@ -17,6 +17,7 @@
 
 | 工具 | 模式 | 风险 | 用途 |
 |------|------|------|------|
+| `colony_state_snapshot` | read | none | 高效状态快照：时间、诊断、食物、复制人、研究 |
 | `colony_status` | read | none | 周期、复制人数、世界数、暂停/速度状态 |
 | `colony_diagnostics` | read | none | 缺氧、断粮、过热等诊断汇总 |
 | `colony_alerts` | read | none | 当前警报和通知列表 |
@@ -93,8 +94,9 @@
 | `set_building_priority` / `set_priority_area` | write | low/medium | 建筑/区域优先级 |
 | `plan_building` / `plan_building_rect` / `plan_many` | write | medium | 单建筑/矩形/多建筑规划 |
 | `deconstruct_building` | write | **dangerous** | 拆除建筑（需 `confirm=true`）|
-| `sweep_area` / `dig_area` | write | **dangerous** | 清扫/挖掘区域（需 `confirm=true`）|
-| `mop_area` / `disinfect_area` / `attack` | write | medium | 拖地/消毒/攻击 |
+| `sweep_area` / `dig_area` | write | **dangerous** | 清扫/挖掘区域（需 `confirm=true`）；挖地必须使用 `orders_dig_area` |
+| `mop_area` / `disinfect_area` | write | medium | 拖地/消毒 |
+| `orders_attack` | execute | **dangerous** | 仅攻击小动物/敌对目标；不能用于挖掘；区域攻击需额外 `attackAreaConfirm="attack area"` |
 | `cancel_area` / `harvest_area` / `capture_critters` | write | medium | 取消/收获/捕捉 |
 | `empty_conduits` / `cut_conduits` | write | medium/**dangerous** | 倒空/切断管道 |
 
@@ -192,6 +194,7 @@
 | `world_cell_info` | read | none | 指定格子元素、质量、温度、病菌 |
 | `world_element_summary` | read | none | 世界元素质量和温度摘要 |
 | `world_text_map` | read | none | 紧凑文本地图（支持 RLE 低 token）|
+| `world_area_snapshot` | execute | low | 区域上下文包：文本地图 + utility overlay + 可选截图 |
 | `thermal_overheat_risk_scan` | read | none | 扫描建筑过热风险，按温差排序 |
 | `area_define` / `area_get` / `area_list` / `area_forget` | read/write | low | 命名区域管理 |
 
@@ -204,6 +207,17 @@
 | `camera_switch_view` | execute | low | 切换覆盖层（氧气/电力/温度/房间等）|
 | `camera_focus_cell` / `camera_focus_dupe` | execute | low | 聚焦到格子或复制人 |
 | `game_screenshot` | execute | low | 截图并返回 PNG 路径 |
+
+地图分析默认使用 `world_text_map` 或 `world_area_snapshot`，截图只作为视觉补充：
+
+| 场景 | 首选 | 原因 |
+|------|------|------|
+| 挖掘、铺砖、建造、电线/管路规划 | `world_area_snapshot preset=construction/utilities` | 返回精确坐标、RLE 地形、建筑/复制人对象、utility overlay |
+| 大范围低 token 初扫 | `world_text_map profile=scan encoding=rle` | 输出最小，适合快速定位可用空间/固液气边界 |
+| 精确校验某个格子 | `world_cell_info` | 返回单格元素、质量、温度、可见性 |
+| 房间视觉、装饰、作物阶段、UI 覆盖层确认 | `camera_switch_view` + `game_screenshot` | 这些信息更接近人眼观察，文本地图可能不表达完整视觉状态 |
+
+`world_area_snapshot` 默认返回 JSON，`maps.base` 是基础地形/对象，`maps.power` 等是稀疏 overlay。`includeScreenshot=true` 会保存当前相机画面路径，但截图不自动保证覆盖传入矩形，除非调用前先移动相机。
 
 ### 游戏控制 (game)
 
@@ -358,9 +372,51 @@
 - 支持 `defaults` / `defaultArguments` 合并到每个子调用
 - 低 token 形态：`items: [{t:"tool_name",a:{...}}]`
 - 默认 `requireAllValid: true`，任一预检失败则全部不执行
+- 默认 `responseMode: "summary"`，只返回每项状态和截断文本；需要完整子工具内容时显式传 `responseMode: "full"`
+- `responseMode: "errors"` 只返回错误项，同时用 `attempted` / `executed` / `omitted` 区分尝试、实际执行和省略结果
 - 支持 `stopOnError: true`，首个执行错误处停止
 
 领域批量工具也遵循同一套 `defaults` 约定：`user_menu_actions_batch_press`、`maintenance_actions_batch_execute`、`buildings_config_batch_set`、`production_queue_batch_set`、`activation_ranges_batch_set`、`receptacles_batch_control`、`storage_tile_selections_batch_set` 等。
+
+建造工具 `buildings_plan`、`buildings_plan_rect`、`buildings_plan_many` 也支持 `dryRun: true` / `validateOnly: true`。对 `BuildLocationRule=OnFloor` 的建筑，服务器会检查下方支撑；缺少地板或同批靠前的支撑蓝图时返回 `Unsupported OnFloor building`，默认不放置蓝图。确有特殊用途时可传 `allowUnsupported: true`。
+
+`buildings_plan_many` 支持 `routes` 自动展开电线/管路路径，减少“先放设备、再单独补线”的二次调用：
+
+```json
+{
+  "items": [
+    { "p": "ManualGenerator", "x": 80, "y": 136 },
+    { "p": "Battery", "x": 83, "y": 136 },
+    { "p": "ResearchCenter", "x": 85, "y": 136 }
+  ],
+  "routes": [
+    {
+      "p": "Wire",
+      "from": { "p": "ManualGenerator", "x": 80, "y": 136, "port": "powerOutput" },
+      "to": { "p": "ResearchCenter", "x": 85, "y": 136, "port": "powerInput" },
+      "viaY": 135
+    }
+  ],
+  "confirm": true,
+  "dryRun": true
+}
+```
+
+`routes[].p` 可为 `Wire`、`LogicWire`、`GasConduit`、`LiquidConduit`、`SolidConduit`。端点可写 `{x,y}`、`[x,y]`，或 `{p/prefabId,x,y,port}`。电力端口会使用建筑定义的 power offset；管路端口在无实例蓝图阶段无法可靠读取时会回退到 footprint 中心，精确管口建议传显式坐标。
+
+快速画线使用 `buildings_plan_many.items[].line` 或短字段 `l`：
+
+```json
+{ "p": "Wire", "l": [80, 135, 88, 135] }
+```
+
+折线使用 `path` / `points` / `pts`：
+
+```json
+{ "p": "Wire", "path": [[80,135],[88,135],[88,138]] }
+```
+
+`line/l` 和 `path/points` 只接受水平/垂直段。`r` 是矩形填充，不要把 `r:[x1,y1,x2,y2]` 当作普通直线，除非宽或高为 1。
 
 ---
 
@@ -371,7 +427,8 @@
 | 工具搜索 | `tools_search detail=brief` |
 | 工具清单 | `oni://tools/manifest?detail=brief` |
 | 玩家操作查找 | `tools_player_action_coverage query=...&detail=brief` |
-| 批量调用 | `items: [{t:"name",a:{}}]` + `defaults` |
+| 批量调用 | `items: [{t:"name",a:{}}]` + `defaults` + 默认 `responseMode=summary` |
+| 常规观察 | `colony_state_snapshot profile=brief` |
 | 文本地图初扫 | `world_text_map profile=scan encoding=rle` |
 | 区域建筑速查 | `oni://buildings/configurables?areaId=xxx&limit=20` |
 

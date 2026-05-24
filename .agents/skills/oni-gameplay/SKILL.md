@@ -14,7 +14,7 @@ Use when the user wants to **control ONI via MCP tools**, not when they want gam
 ### The OODA Loop for ONI MCP
 
 ```
-Observe (Sense)    → call read tools → get state snapshot
+Observe (Sense)    → colony_state_snapshot/world_area_snapshot → get state snapshot
 Orient (Analyze)   → parse JSON, identify gaps/anomalies
 Decide (Plan)      → select target state, choose tools
 Act (Execute)      → call write/execute tools with confirm
@@ -108,6 +108,7 @@ If `validate` reports missing `confirm`, inject it into the corresponding `plann
 ```
 tools_call_many
   dryRun: true
+  responseMode: summary
   defaults: { confirm: true }
   items:
     - { t: set_personal_priority, a: { id: 1, choreGroup: Dig, priority: 4 } }
@@ -118,26 +119,31 @@ tools_call_many
   stopOnError: true
 ```
 
-If `dryRun` passes, re-call with `dryRun: false` to execute. `defaults` merges into every item. Use low-token shorthand (`t` / `a`) for large batches. Max 20 items per call.
+If `dryRun` passes, re-call with `dryRun: false` to execute. `defaults` merges into every item. Use low-token shorthand (`t` / `a`) for large batches. Max 20 items per call. Keep `responseMode=summary` for normal batches; use `responseMode=errors` for retry loops and `responseMode=full` only when exact child payloads are needed.
 
 ### Sequence 4: Spatial Analysis + Action
 
 ```
 camera_get_view        → current position, zoom, active world
 camera_move            → x, y, zoom (optional: worldId)
+world_area_snapshot
+  x1, y1, x2, y2
+  preset: construction | utilities
+  encoding: rle
+  includeScreenshot: false
+→ Preferred single-call context for build/dig/power/pipe planning
 world_text_map
   x1, y1, x2, y2
   profile: scan
   encoding: rle
   includeBuildings: false
-→ Parse RLE output for terrain composition
-→ If buildings needed: world_text_map with includeBuildings=true
+→ Use directly for narrow terrain scans or when snapshot is too broad
 → Define reusable area: area_define → areaId
 → Plan: plan_building_rect or plan_many
 → Execute: plan_harness or tools_call_many
 ```
 
-Use `encoding=rle` for minimal token terrain scans. Only enable `includeBuildings` / `includeDupes` / `includeItems` when spatial layout of objects is required for decision-making.
+Use `world_area_snapshot` for normal spatial planning because it keeps base terrain, objects, and utility overlays in one response. Use `world_text_map profile=scan encoding=rle` for minimal token terrain scans. Use screenshots only for visual confirmation, room/decor/crop/UI overlay interpretation, or when text maps cannot express the visual state.
 
 ### Sequence 5: Duplicant Management
 
@@ -172,11 +178,13 @@ Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools 
 - `detail=summary` → balanced
 - `profile=scan` + `encoding=rle` → minimal token terrain scan
 - `format=json` → structured data for plan harness validation
+- `tools_call_many responseMode=summary` → compact per-call status without nested full payloads
 
 ### confirm
 - `confirm: true` required for all medium/dangerous write tools
 - `plan_harness_validate` checks this automatically
 - `tools_call_many` with `dryRun: true` pre-validates confirm requirements
+- `buildings_plan*` with `dryRun: true` validates material, visibility, world, and OnFloor support before placing blueprints
 - Never bypass confirm for dangerous tools (`orders_dig`, `orders_deconstruct`, `orders_sweep`)
 
 ### x1, y1, x2, y2 (area coordinates)
@@ -215,6 +223,7 @@ Use `tools_call_many` for independent read calls to reduce round-trips:
 
 ```
 tools_call_many
+  responseMode: summary
   items:
     - { t: colony_status }
     - { t: colony_diagnostics }
@@ -223,6 +232,14 @@ tools_call_many
 ```
 
 Do NOT batch interdependent calls (e.g., `plan_harness_create` + `plan_harness_validate` in one batch — validate needs the planId from create).
+
+### Pattern E: One-Shot State Snapshot
+
+Use `colony_state_snapshot profile=brief|standard` as the default first read. It replaces the common `game_time + colony_status + colony_diagnostics + colony_alerts + resources_food + dupes_list + research_status` bundle. Keep `includeAtmosphere=false` unless oxygen totals are needed, because atmosphere requires a full grid scan.
+
+### Pattern F: Build Dry-Run First
+
+For construction, always dry-run the exact `buildings_plan*` call before execution. `BuildLocationRule=OnFloor` buildings must have floor/support cells below them. In `buildings_plan_many`, put support tiles first in the same batch so later beds, generators, batteries, and research stations can validate against those planned supports. Do not set `allowUnsupported=true` unless intentionally creating a temporary invalid blueprint.
 
 ## Error Recovery
 
@@ -264,6 +281,7 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 - [ ] Validate parameters (type, range, existence)
 - [ ] Check confirm requirement for write/execute tools
 - [ ] Use `dryRun` if available (`tools_call_many`, `plan_harness_validate`)
+- [ ] For `buildings_plan*`, dry-run exact coordinates and check `valid/blocked/missingSupportCells`
 - [ ] Define rollback read tools for verification
 - [ ] Ensure game is paused (`game_pause`) for complex multi-step operations
 
@@ -298,7 +316,7 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 | **schedules** | `schedules_list` | `create_schedule`, `set_schedule_block`, `assign_dupe_schedule`, `optimize_schedules` | — |
 | **resources** | `resources_inventory`, `resources_food`, `resources_pins`, `storage_list`, `storage_detail`, `diet_status` | `set_resource_pin`, `set_storage_filter`, `set_diet_food`, `apply_diet_policy` | — |
 | **buildings** | `buildings_list`, `buildings_summary`, `buildings_search_defs`, `buildings_config_list`, `artables_list`, `lights_list`, `pixel_packs_list` | `set_building_enabled`, `configure_manual_delivery`, `copy_settings`, `set_artable_stage`, `set_light_color`, `set_pixel_pack_color` | — |
-| **orders** | `priorities_list` | `set_building_priority`, `set_priority_area`, `plan_building`, `plan_building_rect`, `plan_many`, `set_building_toggle` | `deconstruct_building`, `sweep_area`, `dig_area`, `mop_area`, `disinfect_area`, `attack`, `cancel_area`, `harvest_area`, `capture_critters`, `empty_conduits`, `cut_conduits` |
+| **orders** | `priorities_list` | `set_building_priority`, `set_priority_area`, `plan_building`, `plan_building_rect`, `plan_many`, `set_building_toggle` | `buildings_deconstruct`, `orders_sweep_area`, `orders_dig_area`, `orders_mop_area`, `orders_disinfect_area`, `orders_cancel_area`, `orders_harvest_area`, `critters_capture`, `conduits_empty_area`, `conduits_cut` |
 | **power** | `power_summary` | — | — |
 | **rooms** | `rooms_list` | — | — |
 | **world** | `world_list`, `world_cell_info`, `world_element_summary`, `world_text_map`, `thermal_overheat_risk_scan` | `area_define`, `area_forget` | — |

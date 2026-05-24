@@ -219,7 +219,7 @@ curl -X POST http://localhost:8787/mcp/ \
 
 ### 批量调用
 
-`tools_call_many` 一次顺序调用最多 20 个工具，支持 `dryRun` 预检和 `defaults` 合并：
+`tools_call_many` 一次顺序调用最多 20 个工具，支持 `dryRun` 预检和 `defaults` 合并。默认返回 `responseMode: "summary"`，避免批量读把完整子工具内容重复嵌套到响应里：
 
 ```bash
 curl -X POST http://localhost:8787/mcp/ \
@@ -231,6 +231,7 @@ curl -X POST http://localhost:8787/mcp/ \
       "name": "tools_call_many",
       "arguments": {
         "dryRun": true, "requireAllValid": true,
+        "responseMode": "summary",
         "defaults": { "confirm": true },
         "calls": [
           { "name": "game_pause", "arguments": {} },
@@ -254,7 +255,13 @@ curl -X POST http://localhost:8787/mcp/ \
 }
 ```
 
-预检通过后去掉 `dryRun` 再次请求即可执行。`stopOnError: true` 会在首个执行错误处停止。
+预检通过后去掉 `dryRun` 再次请求即可执行。`stopOnError: true` 会在首个执行错误处停止。需要完整子工具返回时传 `responseMode: "full"`；只关心失败项时传 `responseMode: "errors"`。
+
+建造工具 `buildings_plan` / `buildings_plan_rect` / `buildings_plan_many` 也支持 `dryRun: true` / `validateOnly: true`。对 `BuildLocationRule=OnFloor` 的建筑，服务器会检查下方是否有实体地板或同批靠前的支撑蓝图；缺支撑时默认拒绝并返回 `missingSupportCells`。
+
+`buildings_plan_many` 可用 `routes` 在同一次调用里展开电线/管路路径。`routes[].p` 支持 `Wire`、`LogicWire`、`GasConduit`、`LiquidConduit`、`SolidConduit`；端点可用 `{x,y}`、`[x,y]` 或 `{p/prefabId,x,y,port}`，并可通过 `viaX` / `viaY` 指定 L 形路径拐点。
+
+快速直线使用 `items[].line` 或短字段 `l`，例如 `{ "p": "Wire", "l": [80,135,88,135] }`。折线使用 `path` / `points`，例如 `{ "p": "Wire", "path": [[80,135],[88,135],[88,138]] }`。`r` 表示矩形填充，不应用作普通线段。
 
 ---
 

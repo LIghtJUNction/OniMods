@@ -124,6 +124,9 @@ namespace OniMcp.Tools
                     ["facade"] = new McpToolParameter { Type = "string", Description = "可选建筑外观 ID；使用 buildings_search_defs 查看 facades，default/DEFAULT_FACADE 表示默认外观", Required = false },
                     ["orientation"] = new McpToolParameter { Type = "string", Description = "方向：Neutral、R90、R180、R270、FlipH，默认 Neutral", Required = false },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "优先级 1-9，默认 5", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只验证位置/材料/支撑，不实际放置蓝图，默认 false", Required = false },
+                    ["validateOnly"] = new McpToolParameter { Type = "boolean", Description = "dryRun 的别名", Required = false },
+                    ["allowUnsupported"] = new McpToolParameter { Type = "boolean", Description = "允许 OnFloor 建筑缺少地板/支撑面，默认 false；通常不要开启", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认放置，必须为 true", Required = true }
                 },
                 Handler = args =>
@@ -164,6 +167,9 @@ namespace OniMcp.Tools
                     ["material"] = new McpToolParameter { Type = "string", Description = "可选材料 Tag；默认/auto 自动选择当前可用且库存最多的合法材料", Required = false },
                     ["facade"] = new McpToolParameter { Type = "string", Description = "可选建筑外观 ID；default/DEFAULT_FACADE 表示默认外观", Required = false },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "优先级 1-9，默认 5", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只验证位置/材料/支撑，不实际放置蓝图，默认 false", Required = false },
+                    ["validateOnly"] = new McpToolParameter { Type = "boolean", Description = "dryRun 的别名", Required = false },
+                    ["allowUnsupported"] = new McpToolParameter { Type = "boolean", Description = "允许 OnFloor 建筑缺少地板/支撑面，默认 false；通常不要开启", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认放置，必须为 true", Required = true }
                 },
                 Handler = args =>
@@ -190,11 +196,17 @@ namespace OniMcp.Tools
                             results.Add(TryPlanOne(prefabId, x, y, args));
                     }
 
+                    int valid = results.Count(item => item.ContainsKey("valid") && (bool)item["valid"]);
+                    int planned = results.Count(item => item.ContainsKey("planned") && (bool)item["planned"]);
+                    int blocked = results.Count - valid;
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
                         ["prefabId"] = prefabId,
+                        ["dryRun"] = IsDryRun(args),
                         ["rect"] = rect,
-                        ["planned"] = results.Count(item => item.ContainsKey("planned") && (bool)item["planned"]),
+                        ["valid"] = valid,
+                        ["planned"] = planned,
+                        ["blocked"] = blocked,
                         ["results"] = results
                     }, McpJsonUtil.Settings));
                 }
@@ -209,10 +221,11 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "execute",
                 Risk = "medium",
-                Description = "紧凑批量放置建筑蓝图；items 支持 {p,x,y}、{p,r:[x1,y1,x2,y2]}、{p,cells:[[x,y]]}，顶层可给默认 m/f/pri/w/o，默认只返回汇总",
+                Description = "紧凑批量放置建筑蓝图；items 支持 {p,x,y}、{p,line:[x1,y1,x2,y2]}、{p,path:[[x,y],...] }、{p,r:[x1,y1,x2,y2]}、{p,cells:[[x,y]]}，顶层可给默认 m/f/pri/w/o，默认只返回汇总",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["items"] = new McpToolParameter { Type = "array", Description = "批量计划项。长字段 prefabId/material/facade/facadeId/priority/worldId/orientation 也可用短字段 p/m/f/fid/pri/w/o", Required = true },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "批量计划项。长字段 prefabId/material/facade/facadeId/priority/worldId/orientation 也可用短字段 p/m/f/fid/pri/w/o；位置支持 x/y、line/l、path/points、r、cells/cs、areaId/a", Required = true },
+                    ["routes"] = new McpToolParameter { Type = "array", Description = "可选自动连线/管路项，会展开为 Wire/GasConduit/LiquidConduit/SolidConduit/LogicWire。格式：[{p:\"Wire\",from:{prefabId,x,y,port:\"powerInput\"},to:{x,y},viaY:135}]；短字段 from/to 可用 a/b", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "默认世界 ID；短字段 w", Required = false },
                     ["material"] = new McpToolParameter { Type = "string", Description = "默认材料 Tag；短字段 m；默认/auto 自动选择当前可用且库存最多的合法材料", Required = false },
                     ["facade"] = new McpToolParameter { Type = "string", Description = "默认建筑外观 ID；短字段 f，也兼容 facadeId/fid", Required = false },
@@ -220,6 +233,9 @@ namespace OniMcp.Tools
                     ["orientation"] = new McpToolParameter { Type = "string", Description = "默认方向 Neutral/R90/R180/R270/FlipH；短字段 o", Required = false },
                     ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐格结果，默认 false 以节省 token", Required = false },
                     ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最多展开格数，默认 500，最大 1000", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只验证整批位置/材料/支撑，不实际放置蓝图，默认 false", Required = false },
+                    ["validateOnly"] = new McpToolParameter { Type = "boolean", Description = "dryRun 的别名", Required = false },
+                    ["allowUnsupported"] = new McpToolParameter { Type = "boolean", Description = "允许 OnFloor 建筑缺少地板/支撑面，默认 false；通常不要开启", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认放置，必须为 true", Required = true }
                 },
                 Handler = args =>
@@ -228,24 +244,40 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("confirm=true is required");
 
                     var items = args["items"] as JArray ?? args["plans"] as JArray;
-                    if (items == null || items.Count == 0)
-                        return CallToolResult.Error("items array is required");
+                    var routes = args["routes"] as JArray ?? args["connect"] as JArray;
+                    if ((items == null || items.Count == 0) && (routes == null || routes.Count == 0))
+                        return CallToolResult.Error("items or routes array is required");
+
+                    var expandedItems = new JArray();
+                    if (items != null)
+                        foreach (var item in items)
+                            expandedItems.Add(item.DeepClone());
+                    var routeErrors = ExpandRoutes(args, routes, expandedItems);
+                    if (routeErrors.Count > 0)
+                        return CallToolResult.Error(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        {
+                            ["error"] = "route expansion failed",
+                            ["routeErrors"] = routeErrors
+                        }, McpJsonUtil.Settings));
 
                     int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 500, 1000));
-                    int requested = CountRequestedCells(items);
+                    int requested = CountRequestedCells(expandedItems);
                     if (requested > maxCells)
                         return CallToolResult.Error($"Refusing to place {requested} cells; maxCells={maxCells}");
 
                     bool detail = ToolUtil.GetBool(args, "detail", false);
+                    bool dryRun = IsDryRun(args);
                     int planned = 0;
+                    int valid = 0;
                     int failed = 0;
                     var byPrefab = new Dictionary<string, int>();
                     var errors = new List<Dictionary<string, object>>();
                     var details = new List<Dictionary<string, object>>();
+                    var plannedSupportCells = new HashSet<int>();
 
-                    for (int i = 0; i < items.Count; i++)
+                    for (int i = 0; i < expandedItems.Count; i++)
                     {
-                        var item = items[i] as JObject;
+                        var item = expandedItems[i] as JObject;
                         if (item == null)
                         {
                             failed++;
@@ -263,19 +295,31 @@ namespace OniMcp.Tools
                         if (!HasLocation(item))
                         {
                             failed++;
-                            errors.Add(BatchError(i, prefabId, -1, -1, "x/y, r, cells/cs or areaId/a is required"));
+                            errors.Add(BatchError(i, prefabId, -1, -1, "x/y, line/l, path/points, r, cells/cs or areaId/a is required"));
+                            continue;
+                        }
+
+                        string locationError = ValidateItemLocation(item);
+                        if (!string.IsNullOrWhiteSpace(locationError))
+                        {
+                            failed++;
+                            errors.Add(BatchError(i, prefabId, -1, -1, locationError));
                             continue;
                         }
 
                         var planArgs = BuildItemArgs(args, item);
                         foreach (var cell in ExpandItemCells(item, planArgs))
                         {
-                            var result = TryPlanOne(prefabId, cell.x, cell.y, planArgs);
+                            var result = TryPlanOne(prefabId, cell.x, cell.y, planArgs, plannedSupportCells);
                             bool ok = result.ContainsKey("planned") && (bool)result["planned"];
-                            if (ok)
+                            bool validPlacement = result.ContainsKey("valid") && (bool)result["valid"];
+                            if (ok || (dryRun && validPlacement))
                             {
-                                planned++;
+                                valid++;
+                                if (ok)
+                                    planned++;
                                 byPrefab[prefabId] = byPrefab.ContainsKey(prefabId) ? byPrefab[prefabId] + 1 : 1;
+                                RegisterSupportBlueprint(prefabId, cell.x, cell.y, plannedSupportCells);
                             }
                             else
                             {
@@ -299,10 +343,14 @@ namespace OniMcp.Tools
 
                     var response = new Dictionary<string, object>
                     {
+                        ["dryRun"] = dryRun,
                         ["requested"] = requested,
+                        ["valid"] = valid,
                         ["planned"] = planned,
                         ["failed"] = failed,
+                        ["blocked"] = failed,
                         ["byPrefab"] = byPrefab,
+                        ["routesExpanded"] = expandedItems.Count - (items?.Count ?? 0),
                         ["errors"] = errors.Take(50).ToList(),
                         ["truncatedErrors"] = Math.Max(0, errors.Count - 50)
                     };
@@ -314,7 +362,7 @@ namespace OniMcp.Tools
             };
         }
 
-        private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args)
+        private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args, HashSet<int> plannedSupportCells = null)
         {
             var def = Assets.GetBuildingDef(prefabId);
             if (def == null)
@@ -337,20 +385,47 @@ namespace OniMcp.Tools
             if (!facadeResult.Valid)
                 return ErrorResult(prefabId, x, y, facadeResult.Error);
 
+            var supportResult = ValidateSupport(def, x, y, ToolUtil.GetBool(args, "allowUnsupported", false), plannedSupportCells);
+            if (!supportResult.Valid)
+                return ErrorResult(prefabId, x, y, supportResult.Error, supportResult.ToDictionary());
+
+            if (IsDryRun(args))
+            {
+                RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
+                return new Dictionary<string, object>
+                {
+                    ["planned"] = false,
+                    ["valid"] = true,
+                    ["dryRun"] = true,
+                    ["prefabId"] = prefabId,
+                    ["name"] = ToolUtil.CleanName(def.Name),
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["worldId"] = worldId,
+                    ["support"] = supportResult.ToDictionary(),
+                    ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
+                    ["materialSelection"] = materialResult.ToDictionary(),
+                    ["facade"] = facadeResult.ResponseId
+                };
+            }
+
             var pos = Grid.CellToPosCBC(cell, def.SceneLayer);
             var go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
             if (go == null)
                 return ErrorResult(prefabId, x, y, "Placement failed", materialResult.ToDictionary());
 
             SetPriority(go, ToolUtil.GetInt(args, "priority") ?? 5);
+            RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
             return new Dictionary<string, object>
             {
                 ["planned"] = true,
+                ["valid"] = true,
                 ["prefabId"] = prefabId,
                 ["name"] = ToolUtil.CleanName(def.Name),
                 ["x"] = x,
                 ["y"] = y,
                 ["worldId"] = worldId,
+                ["support"] = supportResult.ToDictionary(),
                 ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
                 ["materialSelection"] = materialResult.ToDictionary(),
                 ["facade"] = facadeResult.ResponseId,
@@ -367,12 +442,18 @@ namespace OniMcp.Tools
             CopyCompact(defaults, result, "facadeId", "fid");
             CopyCompact(defaults, result, "priority", "pri");
             CopyCompact(defaults, result, "orientation", "o");
+            CopyCompact(defaults, result, "dryRun", "dry");
+            CopyCompact(defaults, result, "validateOnly", "validate");
+            CopyCompact(defaults, result, "allowUnsupported", "unsupported");
             CopyCompact(item, result, "worldId", "w");
             CopyCompact(item, result, "material", "m");
             CopyCompact(item, result, "facade", "f");
             CopyCompact(item, result, "facadeId", "fid");
             CopyCompact(item, result, "priority", "pri");
             CopyCompact(item, result, "orientation", "o");
+            CopyCompact(item, result, "dryRun", "dry");
+            CopyCompact(item, result, "validateOnly", "validate");
+            CopyCompact(item, result, "allowUnsupported", "unsupported");
             CopyCompact(item, result, "areaId", "a");
             return result;
         }
@@ -387,6 +468,227 @@ namespace OniMcp.Tools
         private static string GetString(JObject item, string longKey, string shortKey)
         {
             return (item[longKey] ?? item[shortKey])?.ToString();
+        }
+
+        private static List<Dictionary<string, object>> ExpandRoutes(JObject defaults, JArray routes, JArray expandedItems)
+        {
+            var errors = new List<Dictionary<string, object>>();
+            if (routes == null)
+                return errors;
+
+            for (int i = 0; i < routes.Count; i++)
+            {
+                var route = routes[i] as JObject;
+                if (route == null)
+                {
+                    errors.Add(RouteError(i, "route must be an object"));
+                    continue;
+                }
+
+                string prefabId = GetString(route, "prefabId", "p");
+                if (string.IsNullOrWhiteSpace(prefabId))
+                    prefabId = argsString(defaults, "routePrefabId", "rp") ?? "Wire";
+                if (!IsRoutePrefab(prefabId))
+                {
+                    errors.Add(RouteError(i, $"unsupported route prefab '{prefabId}'"));
+                    continue;
+                }
+
+                RouteEndpoint from;
+                RouteEndpoint to;
+                string error;
+                if (!TryResolveRouteEndpoint(route["from"] ?? route["a"], out from, out error))
+                {
+                    errors.Add(RouteError(i, "from: " + error));
+                    continue;
+                }
+                if (!TryResolveRouteEndpoint(route["to"] ?? route["b"], out to, out error))
+                {
+                    errors.Add(RouteError(i, "to: " + error));
+                    continue;
+                }
+
+                var cells = RouteCells(from.X, from.Y, to.X, to.Y, ToolUtil.GetInt(route, "viaX"), ToolUtil.GetInt(route, "viaY")).ToList();
+                if (cells.Count == 0)
+                {
+                    errors.Add(RouteError(i, "route produced no cells"));
+                    continue;
+                }
+
+                var item = new JObject
+                {
+                    ["prefabId"] = prefabId,
+                    ["cells"] = new JArray(cells.Select(cell => new JArray(cell.x, cell.y))),
+                    ["routeIndex"] = i
+                };
+                CopyCompact(defaults, item, "worldId", "w");
+                CopyCompact(defaults, item, "material", "m");
+                CopyCompact(defaults, item, "priority", "pri");
+                CopyCompact(defaults, item, "dryRun", "dry");
+                CopyCompact(defaults, item, "validateOnly", "validate");
+                CopyCompact(route, item, "worldId", "w");
+                CopyCompact(route, item, "material", "m");
+                CopyCompact(route, item, "priority", "pri");
+                CopyCompact(route, item, "dryRun", "dry");
+                CopyCompact(route, item, "validateOnly", "validate");
+                expandedItems.Add(item);
+            }
+
+            return errors;
+        }
+
+        private static string argsString(JObject args, string longKey, string shortKey)
+        {
+            return (args[longKey] ?? args[shortKey])?.ToString();
+        }
+
+        private static Dictionary<string, object> RouteError(int index, string error)
+        {
+            return new Dictionary<string, object>
+            {
+                ["index"] = index,
+                ["error"] = error
+            };
+        }
+
+        private static bool IsRoutePrefab(string prefabId)
+        {
+            return EqualsIgnoreCase(prefabId, "Wire")
+                || EqualsIgnoreCase(prefabId, "HighWattageWire")
+                || EqualsIgnoreCase(prefabId, "HighWattageWireBridge")
+                || EqualsIgnoreCase(prefabId, "LogicWire")
+                || EqualsIgnoreCase(prefabId, "GasConduit")
+                || EqualsIgnoreCase(prefabId, "LiquidConduit")
+                || EqualsIgnoreCase(prefabId, "SolidConduit");
+        }
+
+        private static bool TryResolveRouteEndpoint(JToken token, out RouteEndpoint endpoint, out string error)
+        {
+            endpoint = default(RouteEndpoint);
+            error = null;
+            var obj = token as JObject;
+            if (obj == null)
+            {
+                var pair = token as JArray;
+                if (pair != null && pair.Count >= 2)
+                {
+                    endpoint = new RouteEndpoint(TokenInt(pair[0]), TokenInt(pair[1]));
+                    return true;
+                }
+                error = "endpoint must be object or [x,y]";
+                return false;
+            }
+
+            int? x = ToolUtil.GetInt(obj, "x");
+            int? y = ToolUtil.GetInt(obj, "y");
+            if (!x.HasValue || !y.HasValue)
+            {
+                error = "x and y are required";
+                return false;
+            }
+
+            string prefabId = obj["prefabId"]?.ToString() ?? obj["p"]?.ToString();
+            string port = obj["port"]?.ToString() ?? obj["kind"]?.ToString();
+            if (!string.IsNullOrWhiteSpace(prefabId) && !string.IsNullOrWhiteSpace(port))
+            {
+                var def = Assets.GetBuildingDef(prefabId);
+                if (def == null)
+                {
+                    error = "Building def not found for endpoint prefabId=" + prefabId;
+                    return false;
+                }
+
+                var offset = ResolvePortOffset(def, port);
+                x = x.Value + offset.x;
+                y = y.Value + offset.y;
+            }
+
+            endpoint = new RouteEndpoint(x.Value, y.Value);
+            return true;
+        }
+
+        private static CellCoord ResolvePortOffset(BuildingDef def, string port)
+        {
+            string normalized = (port ?? "").Trim().ToLowerInvariant();
+            if (normalized == "power" || normalized == "powerinput" || normalized == "input")
+                return ToCellCoord(def.PowerInputOffset);
+            if (normalized == "poweroutput" || normalized == "output")
+                return ToCellCoord(def.PowerOutputOffset);
+            if (normalized == "utilityinput" || normalized == "pipeinput" || normalized == "gasinput" || normalized == "liquidinput")
+                return new CellCoord(Math.Max(0, def.WidthInCells / 2), 0);
+            if (normalized == "utilityoutput" || normalized == "pipeoutput" || normalized == "gasoutput" || normalized == "liquidoutput")
+                return new CellCoord(Math.Max(0, def.WidthInCells / 2), 0);
+
+            return new CellCoord(Math.Max(0, def.WidthInCells / 2), 0);
+        }
+
+        private static CellCoord ToCellCoord(CellOffset offset)
+        {
+            return new CellCoord(offset.x, offset.y);
+        }
+
+        private static IEnumerable<CellCoord> RouteCells(int x1, int y1, int x2, int y2, int? viaX, int? viaY)
+        {
+            var seen = new HashSet<string>();
+
+            if (viaX.HasValue)
+            {
+                foreach (var cell in LineCells(x1, y1, viaX.Value, y1, seen))
+                    yield return cell;
+                foreach (var cell in LineCells(viaX.Value, y1, viaX.Value, y2, seen))
+                    yield return cell;
+                foreach (var cell in LineCells(viaX.Value, y2, x2, y2, seen))
+                    yield return cell;
+                yield break;
+            }
+
+            if (viaY.HasValue)
+            {
+                foreach (var cell in LineCells(x1, y1, x1, viaY.Value, seen))
+                    yield return cell;
+                foreach (var cell in LineCells(x1, viaY.Value, x2, viaY.Value, seen))
+                    yield return cell;
+                foreach (var cell in LineCells(x2, viaY.Value, x2, y2, seen))
+                    yield return cell;
+                yield break;
+            }
+
+            foreach (var cell in LineCells(x1, y1, x2, y1, seen))
+                yield return cell;
+            foreach (var cell in LineCells(x2, y1, x2, y2, seen))
+                yield return cell;
+        }
+
+        private static IEnumerable<CellCoord> LineCells(int x1, int y1, int x2, int y2, HashSet<string> seen)
+        {
+            int dx = Math.Sign(x2 - x1);
+            int dy = Math.Sign(y2 - y1);
+            int x = x1;
+            int y = y1;
+            while (true)
+            {
+                string key = x + "," + y;
+                if (seen.Add(key))
+                    yield return new CellCoord(x, y);
+                if (x == x2 && y == y2)
+                    yield break;
+                if (x != x2)
+                    x += dx;
+                else if (y != y2)
+                    y += dy;
+            }
+        }
+
+        private struct RouteEndpoint
+        {
+            public readonly int X;
+            public readonly int Y;
+
+            public RouteEndpoint(int x, int y)
+            {
+                X = x;
+                Y = y;
+            }
         }
 
         private static int CountRequestedCells(JArray items)
@@ -405,6 +707,24 @@ namespace OniMcp.Tools
                 if (cells != null)
                 {
                     count += cells.Count;
+                    continue;
+                }
+
+                var line = item["line"] as JArray ?? item["l"] as JArray;
+                if (line != null && line.Count >= 4)
+                {
+                    int x1 = TokenInt(line[0]);
+                    int y1 = TokenInt(line[1]);
+                    int x2 = TokenInt(line[2]);
+                    int y2 = TokenInt(line[3]);
+                    count += Math.Max(Math.Abs(x2 - x1), Math.Abs(y2 - y1)) + 1;
+                    continue;
+                }
+
+                var path = item["path"] as JArray ?? item["points"] as JArray ?? item["pts"] as JArray;
+                if (path != null)
+                {
+                    count += CountPathCells(path);
                     continue;
                 }
 
@@ -440,12 +760,51 @@ namespace OniMcp.Tools
         private static bool HasLocation(JObject item)
         {
             return (item["x"] != null && item["y"] != null)
+                || item["line"] != null
+                || item["l"] != null
+                || item["path"] != null
+                || item["points"] != null
+                || item["pts"] != null
                 || item["r"] != null
                 || item["cells"] != null
                 || item["cs"] != null
                 || item["areaId"] != null
                 || item["a"] != null
                 || (item["x1"] != null && item["y1"] != null && item["x2"] != null && item["y2"] != null);
+        }
+
+        private static string ValidateItemLocation(JObject item)
+        {
+            var line = item["line"] as JArray ?? item["l"] as JArray;
+            if (line != null)
+            {
+                if (line.Count < 4)
+                    return "line/l must be [x1,y1,x2,y2]";
+                int x1 = TokenInt(line[0]);
+                int y1 = TokenInt(line[1]);
+                int x2 = TokenInt(line[2]);
+                int y2 = TokenInt(line[3]);
+                if (x1 != x2 && y1 != y2)
+                    return "line/l only supports horizontal or vertical lines; use path/points for L-shaped or polyline routes";
+            }
+
+            var path = item["path"] as JArray ?? item["points"] as JArray ?? item["pts"] as JArray;
+            if (path != null)
+            {
+                if (path.Count < 2)
+                    return "path/points must contain at least two [x,y] points";
+                for (int i = 1; i < path.Count; i++)
+                {
+                    CellCoord a;
+                    CellCoord b;
+                    if (!TryReadPoint(path[i - 1], out a) || !TryReadPoint(path[i], out b))
+                        return "path/points entries must be [x,y]";
+                    if (a.x != b.x && a.y != b.y)
+                        return "path/points segments must be horizontal or vertical";
+                }
+            }
+
+            return null;
         }
 
         private static IEnumerable<CellCoord> ExpandItemCells(JObject item, JObject planArgs)
@@ -460,6 +819,22 @@ namespace OniMcp.Tools
                         continue;
                     yield return new CellCoord(TokenInt(pair[0]), TokenInt(pair[1]));
                 }
+                yield break;
+            }
+
+            var line = item["line"] as JArray ?? item["l"] as JArray;
+            if (line != null && line.Count >= 4)
+            {
+                foreach (var cell in StraightLineCells(TokenInt(line[0]), TokenInt(line[1]), TokenInt(line[2]), TokenInt(line[3])))
+                    yield return cell;
+                yield break;
+            }
+
+            var path = item["path"] as JArray ?? item["points"] as JArray ?? item["pts"] as JArray;
+            if (path != null)
+            {
+                foreach (var cell in PathCells(path))
+                    yield return cell;
                 yield break;
             }
 
@@ -484,6 +859,42 @@ namespace OniMcp.Tools
             }
 
             yield return new CellCoord(TokenInt(item["x"]), TokenInt(item["y"]));
+        }
+
+        private static int CountPathCells(JArray path)
+        {
+            return PathCells(path).Count();
+        }
+
+        private static IEnumerable<CellCoord> PathCells(JArray path)
+        {
+            var seen = new HashSet<string>();
+            for (int i = 1; i < path.Count; i++)
+            {
+                CellCoord a;
+                CellCoord b;
+                if (!TryReadPoint(path[i - 1], out a) || !TryReadPoint(path[i], out b))
+                    yield break;
+                foreach (var cell in LineCells(a.x, a.y, b.x, b.y, seen))
+                    yield return cell;
+            }
+        }
+
+        private static IEnumerable<CellCoord> StraightLineCells(int x1, int y1, int x2, int y2)
+        {
+            var seen = new HashSet<string>();
+            foreach (var cell in LineCells(x1, y1, x2, y2, seen))
+                yield return cell;
+        }
+
+        private static bool TryReadPoint(JToken token, out CellCoord point)
+        {
+            point = default(CellCoord);
+            var pair = token as JArray;
+            if (pair == null || pair.Count < 2)
+                return false;
+            point = new CellCoord(TokenInt(pair[0]), TokenInt(pair[1]));
+            return true;
         }
 
         private static IEnumerable<CellCoord> RectCells(int x1, int y1, int x2, int y2)
@@ -516,6 +927,105 @@ namespace OniMcp.Tools
             return result;
         }
 
+        private static bool IsDryRun(JObject args)
+        {
+            return ToolUtil.GetBool(args, "dryRun", false) || ToolUtil.GetBool(args, "validateOnly", false);
+        }
+
+        private static void RegisterSupportBlueprint(string prefabId, int x, int y, HashSet<int> plannedSupportCells)
+        {
+            if (plannedSupportCells == null || !IsSupportPrefab(prefabId))
+                return;
+
+            int cell = Grid.XYToCell(x, y);
+            if (Grid.IsValidCell(cell))
+                plannedSupportCells.Add(cell);
+        }
+
+        private static bool IsSupportPrefab(string prefabId)
+        {
+            if (string.IsNullOrWhiteSpace(prefabId))
+                return false;
+
+            return EqualsIgnoreCase(prefabId, "Tile")
+                || EqualsIgnoreCase(prefabId, "MeshTile")
+                || EqualsIgnoreCase(prefabId, "GasPermeableMembrane")
+                || EqualsIgnoreCase(prefabId, "AirflowTile")
+                || EqualsIgnoreCase(prefabId, "BunkerTile")
+                || EqualsIgnoreCase(prefabId, "GlassTile")
+                || EqualsIgnoreCase(prefabId, "InsulationTile")
+                || EqualsIgnoreCase(prefabId, "PlasticTile")
+                || EqualsIgnoreCase(prefabId, "MetalTile")
+                || EqualsIgnoreCase(prefabId, "CarpetTile");
+        }
+
+        private static SupportValidation ValidateSupport(BuildingDef def, int x, int y, bool allowUnsupported, HashSet<int> plannedSupportCells)
+        {
+            if (def == null)
+                return SupportValidation.Success("unknown", null);
+
+            string rule = def.BuildLocationRule.ToString();
+            if (!EqualsIgnoreCase(rule, "OnFloor"))
+                return SupportValidation.Success(rule, null);
+
+            var missing = new List<Dictionary<string, object>>();
+            foreach (var supportCell in FloorSupportCells(def, x, y))
+            {
+                bool supported = Grid.IsValidCell(supportCell.Cell)
+                    && (Grid.Solid[supportCell.Cell]
+                        || HasSupportBlueprint(supportCell.Cell)
+                        || (plannedSupportCells != null && plannedSupportCells.Contains(supportCell.Cell)));
+                if (!supported)
+                    missing.Add(new Dictionary<string, object>
+                    {
+                        ["x"] = supportCell.X,
+                        ["y"] = supportCell.Y
+                    });
+            }
+
+            if (missing.Count == 0)
+                return SupportValidation.Success(rule, null);
+
+            string error = $"Unsupported OnFloor building: place floor/support tiles below {def.PrefabID} first, or set allowUnsupported=true";
+            return allowUnsupported
+                ? SupportValidation.Warning(rule, missing, error)
+                : SupportValidation.Invalid(rule, missing, error);
+        }
+
+        private static IEnumerable<SupportCell> FloorSupportCells(BuildingDef def, int x, int y)
+        {
+            int width = Math.Max(1, def.WidthInCells);
+            int supportY = y - 1;
+            for (int dx = 0; dx < width; dx++)
+            {
+                int sx = x + dx;
+                yield return new SupportCell(sx, supportY, Grid.XYToCell(sx, supportY));
+            }
+        }
+
+        private static bool HasSupportBlueprint(int cell)
+        {
+            if (!Grid.IsValidCell(cell))
+                return false;
+
+            for (int layer = 0; layer < (int)ObjectLayer.NumLayers; layer++)
+            {
+                var go = Grid.Objects[cell, layer];
+                if (go == null)
+                    continue;
+
+                var building = go.GetComponent<Building>();
+                if (building != null && building.Def != null && IsSupportPrefab(building.Def.PrefabID))
+                    return true;
+
+                var prefabId = go.GetComponent<KPrefabID>()?.PrefabTag.Name;
+                if (IsSupportPrefab(prefabId))
+                    return true;
+            }
+
+            return false;
+        }
+
         private struct CellCoord
         {
             public readonly int x;
@@ -525,6 +1035,20 @@ namespace OniMcp.Tools
             {
                 this.x = x;
                 this.y = y;
+            }
+        }
+
+        private struct SupportCell
+        {
+            public readonly int X;
+            public readonly int Y;
+            public readonly int Cell;
+
+            public SupportCell(int x, int y, int cell)
+            {
+                X = x;
+                Y = y;
+                Cell = cell;
             }
         }
 
@@ -814,6 +1338,7 @@ namespace OniMcp.Tools
             var result = new Dictionary<string, object>
             {
                 ["planned"] = false,
+                ["valid"] = false,
                 ["prefabId"] = prefabId,
                 ["x"] = x,
                 ["y"] = y,
@@ -933,6 +1458,62 @@ namespace OniMcp.Tools
                     ["availableMaterials"] = Available.Take(20).Select(item => item.ToDictionary()).ToList(),
                     ["candidateMaterials"] = Candidates.Take(20).Select(item => item.ToDictionary()).ToList(),
                     ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect resources_inventory/buildings_materials",
+                    ["error"] = Error
+                };
+            }
+        }
+
+        private sealed class SupportValidation
+        {
+            public bool Valid;
+            public bool WarningOnly;
+            public string Rule;
+            public List<Dictionary<string, object>> MissingSupportCells = new List<Dictionary<string, object>>();
+            public string Error;
+
+            public static SupportValidation Success(string rule, List<Dictionary<string, object>> missing)
+            {
+                return new SupportValidation
+                {
+                    Valid = true,
+                    WarningOnly = false,
+                    Rule = rule,
+                    MissingSupportCells = missing ?? new List<Dictionary<string, object>>()
+                };
+            }
+
+            public static SupportValidation Warning(string rule, List<Dictionary<string, object>> missing, string error)
+            {
+                return new SupportValidation
+                {
+                    Valid = true,
+                    WarningOnly = true,
+                    Rule = rule,
+                    MissingSupportCells = missing ?? new List<Dictionary<string, object>>(),
+                    Error = error
+                };
+            }
+
+            public static SupportValidation Invalid(string rule, List<Dictionary<string, object>> missing, string error)
+            {
+                return new SupportValidation
+                {
+                    Valid = false,
+                    WarningOnly = false,
+                    Rule = rule,
+                    MissingSupportCells = missing ?? new List<Dictionary<string, object>>(),
+                    Error = error
+                };
+            }
+
+            public Dictionary<string, object> ToDictionary()
+            {
+                return new Dictionary<string, object>
+                {
+                    ["valid"] = Valid,
+                    ["warningOnly"] = WarningOnly,
+                    ["buildLocationRule"] = Rule,
+                    ["missingSupportCells"] = MissingSupportCells,
                     ["error"] = Error
                 };
             }
