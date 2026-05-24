@@ -12,6 +12,8 @@ const BUILD_PROPS: &str = "Directory.Build.props";
 pub struct ModConfig {
     pub path: PathBuf,
     pub name: Option<String>,
+    /// Steam 创意工坊 ID（publishedfileid），配置后发布时自动使用
+    pub publishedfileid: Option<String>,
 }
 
 impl ModConfig {

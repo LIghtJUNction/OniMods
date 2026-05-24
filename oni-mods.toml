@@ -6,3 +6,5 @@ default_mod = "oni_mcp"
 
 [mods.oni_mcp]
 path = "mods/oni_mcp"
+# Steam 创意工坊 ID，首次上传后填写，后续发布时自动使用
+# publishedfileid = ""

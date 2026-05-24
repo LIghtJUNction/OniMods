@@ -188,11 +188,16 @@ pub fn run(cfg: &Config, selected: &SelectedMod, use_gui: bool) -> Result<()> {
             Some(&format!("Release {}", version)),
         )?;
 
-        let publishedfileid = prompt("已有 Workshop ID？（首次上传留空）: ", Some("0"))?;
-        let publishedfileid = if publishedfileid.trim().is_empty() {
-            "0".to_string()
+        let publishedfileid = if let Some(ref id) = selected.config.publishedfileid {
+            println!("   使用配置中的 Workshop ID: {}", id);
+            id.clone()
         } else {
-            publishedfileid
+            let id = prompt("已有 Workshop ID？（首次上传留空）: ", Some("0"))?;
+            if id.trim().is_empty() {
+                "0".to_string()
+            } else {
+                id
+            }
         };
 
         let vdf = generate_vdf(
