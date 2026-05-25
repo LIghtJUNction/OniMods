@@ -156,19 +156,21 @@ world_area_snapshot preset=utilities encoding=plain includeScreenshot=false
 
 - 从打印舱向左和向右扩张。
 - 两侧排入小型保守挖掘矩形，避开液体和危险空腔。
-- 使用 `buildings_plan_many` 的 `l`/`line` 放置直线地基/平台。
+- 使用 `agent_pointer_select_tool tool=build` + `agent_pointer_hold_left` 放置直线地基/平台。
 - 保留打印舱附近区域作为早期实验室。
 - 研究/电力设置必须先有地板/支撑，再放人力发电机、电池、研究站和连接电线。
 
-第一波保持小规模。普通 Cycle 1 开局工作优先使用一次紧凑快照、一次 dry-run、一次动作批处理。不要为了挖一小块材料或放短平台创建正式计划。
+第一波保持小规模。普通 Cycle 1 开局工作优先使用一次紧凑快照，然后用指针点击/拖拽执行。不要为了挖一小块材料或放短平台创建正式计划。
 
-放置或挖掘前 dry-run：
+放置：
 
 ```
-buildings_plan_many dryRun=true confirm=true ...
+agent_pointer_jump x=<startX> y=<startY>
+agent_pointer_select_tool tool=build prefabId=<PrefabId> material=auto
+agent_pointer_hold_left direction=<dir> length=<cells> confirm=true
 ```
 
-utility 路线使用 `buildings_plan_many` 的 `routes`，让电线/管道在同一调用里连接。
+utility 路线同样使用指针拖拽；水平/垂直拆成多段 `agent_pointer_hold_left`。
 
 挖掘：
 
@@ -208,9 +210,10 @@ plan_harness_validate id=<planId>
 - 用户回答命名风格后才允许 `dupes_auto_rename apply=true`
 - `colony_auto_disinfect_set disabled=true applyNow=true confirm=true`
 - `orders_dig_area`
-- `buildings_plan_many`
+- `agent_pointer_left_click`
+- `agent_pointer_hold_left`
 
-建造放置前仍要 dry-run。
+建造放置前仍要检查 prefab、材料和支撑。
 
 规划/配置完成且用户允许继续前，不要恢复游戏。
 

@@ -14,7 +14,7 @@ Use when the user wants to **control ONI via MCP tools**, not when they want gam
 ### The OODA Loop for ONI MCP
 
 ```
-Observe (Sense)    → colony_state_snapshot/world_area_snapshot → get state snapshot
+Observe (Sense)    → colony_state_snapshot minimal/delta + targeted small reads → get state snapshot
 Orient (Analyze)   → parse JSON, identify gaps/anomalies
 Decide (Plan)      → select target state, choose tools
 Act (Execute)      → call write/execute tools with confirm
@@ -23,14 +23,35 @@ Verify (Check)     → re-call read tools, compare before/after
 
 Every control action must complete the full loop. Never act without prior observation, never stop without verification.
 
+## Pointer-First Policy
+
+All map actions must be driven through the visible agent pointer unless the tool is configuration-only or no pointer equivalent exists.
+
+Default action workflow:
+
+```
+agent_pointer_jump or agent_pointer_aim_cell
+agent_pointer_select_tool tool=<build|dig|cancel|sweep|mop|disinfect|harvest|deconstruct> prefabId? material? priority?
+agent_pointer_left_click confirm=true
+# or for straight lines:
+agent_pointer_hold_left direction=<right|left|up|down> length=<cells> confirm=true
+```
+
+Rules:
+- Legacy coordinate building tools are removed from the public MCP surface. Do not call or suggest them.
+- Treat direct `orders_*_area` calls as compatibility/debug paths. Do not use them as the first choice for normal play.
+- Use `agent_pointer_hold_left` for wires, pipes, ladders, tiles, straight digs, sweep lines, mop lines, cancel lines, and harvest lines.
+- Use `agent_pointer_jump code=home|p1|p2` or `agent_pointer_jump x/y|dx/dy|direction+steps` for navigation. Use `agent_pointer_jump_point_set code=p1` to save repeat work locations.
+- If a coordinate is known from a read tool, jump the pointer to it and act with the pointer; do not pass that coordinate directly to build/order tools.
+
 ### Control Modes
 
 | Mode | Trigger | Primary Tools | Output |
 |------|---------|--------------|--------|
 | **Diagnostic** | User asks "what's wrong" | `colony_diagnostics`, `colony_alerts`, `resources_food`, `dupes_needs`, `power_summary`, `thermal_overheat_risk_scan` | Problem list + severity |
-| **Planning** | User asks "what should I do" | `tools_guide`, compact reads, dry-run tools; `plan_harness_create` only for complex/risky/user-marked plans | Short plan or validated `plannedCalls` |
-| **Execution** | User says "do it" | `tools_call_many`, individual write/execute tools; `plan_harness_execute` only for existing formal plans | Execution result + task IDs |
-| **Monitoring** | User wants status update | `resources_inventory`, `colony_status`, `game_time` | Snapshot diff |
+| **Planning** | User asks "what should I do" | `tools_guide`, compact reads, dry-run tools | Short plan with explicit validation steps |
+| **Execution** | User says "do it" | `tools_call_many`, individual write/execute tools | Execution result + task IDs |
+| **Monitoring** | User wants status update | `colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts` | Snapshot diff |
 
 Mode transitions: Diagnostic → Planning → Execution → Monitoring. If Execution fails, fall back to Diagnostic.
 
@@ -65,7 +86,7 @@ Resource URIs are idempotent and cacheable. Tools with parameters are not. Promp
 
 ## Observation: Camera, Views, Screenshots, Maps
 
-Spatial ONI control starts by choosing the right observation layer. Do not treat screenshots as the main source of grid truth. Use text maps and snapshots for coordinates, elements, buildings, pipes, wires, and planning; use camera screenshots for human-visual checks.
+Spatial ONI control starts with the visible agent pointer. Use text maps only as supporting context for unknown terrain, hazards, or verification. Do not make the model's primary action interface raw coordinates.
 
 ### Camera Navigation
 
@@ -122,21 +143,22 @@ Use `game_screenshot` only after the camera and overlay are set correctly. Scree
 
 Screenshot is weak for exact coordinates. If a decision affects digging, building, sweeping, mopping, wiring, piping, or deconstruction, read `world_area_snapshot` or `world_text_map` before acting.
 
-### Build Coordinate Discipline
+### Pointer Build Discipline
 
-For any build/dig/deconstruct action, screenshots are insufficient. A screenshot may suggest the target area, but exact coordinates must come from `world_area_snapshot`, `world_text_map`, `world_cell_info`, or an `areaId`.
+For any build/dig/deconstruct action, screenshots and text maps are observation only. The actual command path should be pointer selection plus click/drag.
 
 Rules:
-- Before placing a platform/floor line, read the map and identify the exact `platformY` from existing `tile` cells or intended support cells.
-- A horizontal line must use one constant y: `l: [x1, y, x2, y]`.
-- A vertical wall/ladder must use one constant x: `l: [x, y1, x, y2]`.
-- To extend an existing platform left/right, reuse the existing platform row. Do not shift up/down based on screenshot appearance.
-- Always dry-run `buildings_plan* dryRun=true` before execution, then compare the dry-run coordinates with the intended map row/column.
-- After execution, re-read the same area. If blueprints are one row/column off, cancel wrong cells with `orders_cancel_area` before replacing them.
+- Before placing a line, aim the pointer at the start cell with `agent_pointer_jump` or `agent_pointer_aim_cell`.
+- Select the current tool with `agent_pointer_select_tool`.
+- Treat `buildings_search_defs.placement.anchor=lowerLeftCell` as the build anchor. Do not treat screenshot center, tooltip position, or blueprint center as the anchor.
+- For horizontal/vertical 1x1 work (tiles, ladders, wires, conduits), use `agent_pointer_hold_left direction=... length=... confirm=true`.
+- For furniture/machines or any footprint wider/taller than 1 cell, use `agent_pointer_left_click` once per lower-left anchor. `agent_pointer_hold_left` rejects these by default; pass `allowFootprintDrag=true` only when repeated footprint placement is intentional.
+- Preflight uncertain multi-cell placements with `agent_pointer_left_click dryRun=true`, then execute with `confirm=true`.
+- After execution, compare `placementCheck` with a targeted `world_area_snapshot`/`world_text_map`. If the blueprint is shifted, cancel it with the pointer's cancel tool before replacing.
 
 ### World Map Reads
 
-Use `world_area_snapshot` as the default spatial context package:
+Use `world_area_snapshot` only when pointer/camera state and compact status do not provide enough spatial context:
 
 ```
 world_area_snapshot
@@ -166,8 +188,9 @@ world_text_map
 ```
 
 Rules:
+- Prefer `chunksOnly=true` for large areas, then read one returned block with `profile=scan encoding=rle`.
 - For humans/debugging: `profile=standard encoding=plain includeElements=true`.
-- Default for spatial planning/debugging: `profile=standard encoding=plain`.
+- Default for targeted verification: `profile=scan encoding=rle`.
 - For very large low-token scans only: `profile=scan encoding=rle`.
 - Treat the returned `areaId` as the handle for the exact area you read. Rows/columns also show relative `ry/rx`, but build/order tools should use world absolute coordinates from the map output.
 - When editing the same area, convert any `rx/ry` notes back to world `x/y` using the map origin before calling build/order tools. Example: if origin is `(70,130)`, relative row `ry=2` becomes world `y=132`.
@@ -181,12 +204,11 @@ Rules:
 For a spatial task:
 
 ```
-game_pause                         → pause if planning or executing
-camera_get_view                    → know active world/current view
-world_area_snapshot                → get coordinate-accurate terrain/objects/utilities
-camera_focus_cell or camera_move   → only if a screenshot or visual confirmation is needed
-camera_switch_view                 → choose visual overlay if needed
-game_screenshot                    → optional visual confirmation
+game_pause
+colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
+agent_pointer_get
+agent_pointer_jump/aim_cell if target is known
+targeted world_area_snapshot only if terrain/hazard context is missing
 ```
 
 If the user gives an area or edit marker, use that area directly; do not waste time moving the camera before reading the map.
@@ -196,10 +218,9 @@ If the user gives an area or edit marker, use that area directly; do not waste t
 ### Sequence 1: Colony Health Check
 
 ```
-colony_status          → baseline: cycle, dupe count, world count, speed
-colony_diagnostics     → alerts + severity ranking
-colony_alerts          → current notification list
-resources_food         → food inventory with expiry
+colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
+colony_state_snapshot profile=brief only when minimal flags a concern
+resources_food         → only when food detail is needed
 power_summary          → generation vs load per circuit
 thermal_overheat_risk_scan → overheat risk sorted by delta-T
 rooms_list             → room coverage summary
@@ -230,33 +251,18 @@ tools_call_many
 verify with colony_state_snapshot/world_area_snapshot/targeted read
 ```
 
-Do not create `plan_harness` for trivial single-step actions. It adds latency without improving safety.
+For map actions, the `items` should usually be pointer tool calls, not coordinate order/build calls. Do not create separate planning records for trivial single-step actions. It adds latency without improving safety.
 
-### Sequence 3: Execute A Formal Plan
+### Sequence 3: Execute A Complex Plan
 
 Use this only for complex/risky/multi-phase/player-marked plans:
 
 ```
-plan_harness_create
-  goal: "<objective>"
-  constraints: { maxCycles: N, riskTolerance: low|medium|high }
-
-plan_harness_parse
-  planText: "<JSON or line-form plannedCalls>"
-  areaId: <world_text_map areaId when spatial>
-  relative: true
-  confirm: true
-  dryRun: true
-  → inspect resolvedCalls and warnings
-
-plan_harness_validate
-  planId: <from create>
-  → checks: tool existence, required args, confirm requirements, coordinate anchoring
-
-plan_harness_execute
-  planId: <validated>
-  confirm: true
-  → executes through gate, returns per-call results
+1. Write the planned tool calls in the response with key arguments.
+2. Run exact dryRun/validateOnly calls where supported.
+3. Inspect errors and revise the calls.
+4. Execute only after the user has authorized the action.
+5. Verify with targeted read tools.
 ```
 
 If `validate` reports missing `confirm`, inject it into defaults or the corresponding `plannedCalls` entry and re-validate. If it reports coordinate anchoring issues, convert the plan to world absolute coordinates before any dry-run or execution. Never skip validation before execution.
@@ -300,8 +306,8 @@ camera_switch_view
 game_screenshot
 → Optional visual confirmation only after structured maps
 → Define reusable area: area_define → areaId when the same region will be reused
-→ Plan: plan_building_rect or plan_many
-→ Execute: plan_harness or tools_call_many
+→ Plan: choose pointer start, build/order tool, and click/drag gestures
+→ Execute: agent_pointer_left_click or agent_pointer_hold_left
 → Verify: world_area_snapshot or world_text_map over the same area
 ```
 
@@ -340,14 +346,13 @@ Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools 
 - `detail=summary` → balanced
 - `profile=standard` + `encoding=plain` → default readable terrain/object map
 - `profile=scan` + `encoding=rle` → very large low-token terrain scan only
-- `format=json` → structured data for plan harness validation
+- `format=json` → structured data for machine-readable planning and validation
 - `tools_call_many responseMode=summary` → compact per-call status without nested full payloads
 
 ### confirm
 - `confirm: true` required for all medium/dangerous write tools
-- `plan_harness_validate` checks this automatically
 - `tools_call_many` with `dryRun: true` pre-validates confirm requirements
-- `buildings_plan*` with `dryRun: true` validates material, visibility, world, and OnFloor support before placing blueprints
+- Use `buildings_materials` and `buildings_search_defs` before construction; build placement itself must go through the visible pointer.
 - Never bypass confirm for dangerous tools (`orders_dig`, `orders_deconstruct`, `orders_sweep`)
 - Do not repeat the same write/execute tool with identical coordinates after a zero-effect result. Read the result fields, re-read state if needed, then choose a different tool or corrected parameters.
 - Use `orders_sweep_area` only for solid debris/pickupables. Use `orders_mop_area` for water, polluted water, spills, "地上的水", or other liquid cells on a floor.
@@ -376,7 +381,7 @@ GOOD: schedules_list → identify target scheduleId/blockIndex
 2. Reuse `areaId` in subsequent calls (`world_text_map?areaId=xyz`)
    or temporarily join adjacent blocks with `areaId=b1+b2+b3`
 3. For repeated use, call `area_merge areaIds=[...]` to create one merged `a*` handle
-4. Bulk operations within area (`buildings_plan_many` with world absolute coordinates, or an `areaId` only for whole-area operations)
+4. Bulk operations within an area should be decomposed into visible pointer clicks/drags; use direct area tools only when no pointer equivalent exists
 5. Clean up temporary `a*` areas with `area_forget` when no longer needed; keep `b*` blocks while scanning the world
 
 ### Pattern C: Differential Updates
@@ -399,15 +404,15 @@ tools_call_many
     - { t: power_summary }
 ```
 
-Do NOT batch interdependent calls (e.g., `plan_harness_create` + `plan_harness_validate` in one batch — validate needs the planId from create).
+Do NOT batch interdependent calls where a later call needs an id or result from an earlier call.
 
 ### Pattern E: One-Shot State Snapshot
 
 Use `colony_state_snapshot profile=brief|standard` as the default first read. It replaces the common `game_time + colony_status + colony_diagnostics + colony_alerts + resources_food + dupes_list + research_status` bundle. Keep `includeAtmosphere=false` unless oxygen totals are needed, because atmosphere requires a full grid scan.
 
-### Pattern F: Build Dry-Run First
+### Pattern F: Pointer Build First
 
-For construction, always dry-run the exact `buildings_plan*` call before execution. `BuildLocationRule=OnFloor` buildings must have floor/support cells below them. In `buildings_plan_many`, put support tiles first in the same batch so later beds, generators, batteries, and research stations can validate against those planned supports. Do not set `allowUnsupported=true` unless intentionally creating a temporary invalid blueprint.
+For construction, choose prefab/material with read tools, aim the pointer at the exact start cell, then use `agent_pointer_left_click` or `agent_pointer_hold_left`. `BuildLocationRule=OnFloor` buildings must have floor/support cells below them; place visible support tiles first with the pointer before machines, beds, toilets, batteries, and research stations.
 
 ## Error Recovery
 
@@ -426,8 +431,7 @@ For construction, always dry-run the exact `buildings_plan*` call before executi
 ### confirm rejected
 1. Dangerous tool was called without `confirm=true`
 2. Add `confirm:true` and retry
-3. If `plan_harness` rejected, read validation errors and fix `plannedCalls`
-4. If batch rejected, identify which item failed and retry subset
+3. If batch rejected, identify which item failed and retry subset
 
 ### Stale data / ID mismatch
 1. Game state changes between read and write (dupes die, buildings deconstructed)
@@ -449,8 +453,8 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 - [ ] Read current state
 - [ ] Validate parameters (type, range, existence)
 - [ ] Check confirm requirement for write/execute tools
-- [ ] Use `dryRun` if available (`tools_call_many`, `plan_harness_validate`)
-- [ ] For `buildings_plan*`, dry-run exact coordinates and check `valid/blocked/missingSupportCells`
+- [ ] Use `dryRun` or `validateOnly` if available
+- [ ] For construction, confirm prefab/material and support cells before pointer click/drag
 - [ ] Define rollback read tools for verification
 - [ ] Ensure game is paused (`game_pause`) for complex multi-step operations
 
@@ -485,13 +489,12 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 | **schedules** | `schedules_list` | `create_schedule`, `set_schedule_block`, `assign_dupe_schedule`, `optimize_schedules` | — |
 | **resources** | `resources_inventory`, `resources_food`, `resources_pins`, `storage_list`, `storage_detail`, `diet_status` | `set_resource_pin`, `set_storage_filter`, `set_diet_food`, `apply_diet_policy` | — |
 | **buildings** | `buildings_list`, `buildings_summary`, `buildings_search_defs`, `buildings_config_list`, `artables_list`, `lights_list`, `pixel_packs_list` | `set_building_enabled`, `configure_manual_delivery`, `copy_settings`, `set_artable_stage`, `set_light_color`, `set_pixel_pack_color` | — |
-| **orders** | `priorities_list` | `set_building_priority`, `set_priority_area`, `plan_building`, `plan_building_rect`, `plan_many`, `set_building_toggle` | `buildings_deconstruct`, `orders_sweep_area`, `orders_dig_area`, `orders_mop_area`, `orders_disinfect_area`, `orders_cancel_area`, `orders_harvest_area`, `critters_capture`, `conduits_empty_area`, `conduits_cut` |
+| **orders** | `priorities_list` | `set_building_priority`, `set_priority_area`, `set_building_toggle` | `agent_pointer_left_click`, `agent_pointer_hold_left`, `buildings_deconstruct`, `orders_sweep_area`, `orders_dig_area`, `orders_mop_area`, `orders_disinfect_area`, `orders_cancel_area`, `orders_harvest_area`, `critters_capture`, `conduits_empty_area`, `conduits_cut` |
 | **power** | `power_summary` | — | — |
 | **rooms** | `rooms_list` | — | — |
 | **world** | `world_list`, `world_cell_info`, `world_element_summary`, `world_text_map`, `thermal_overheat_risk_scan` | `area_define`, `area_forget` | — |
 | **camera** | `camera_get_view` | — | `camera_move`, `camera_set_view`, `camera_switch_view`, `camera_focus_cell`, `camera_focus_dupe`, `game_screenshot` |
 | **game** | `game_time`, `list_saves`, `list_dlc_activation` | `set_sandbox_mode`, `activate_dlc_for_save` | `game_pause`, `game_resume`, `set_game_speed`, `save_game`, `load_save`, `quit_game` |
-| **planning** | `plan_harness_get`, `plan_harness_list`, `plan_harness_validate` | `plan_harness_create`, `plan_harness_record` | `plan_harness_execute` |
 | **tools** | `tools_manifest`, `tools_search`, `tools_guide`, `tools_player_action_coverage`, `tools_static_audit` | `edit_mark_request_create`, `edit_mark_request_clear` | `tools_call_many` |
 | **server** | `server_status`, `mcp_client_capabilities`, `logs_tail` | — | — |
 
@@ -529,8 +532,6 @@ Prompts return a structured text that tells you which resources and tools to cal
 | `oni://research/status` | `research_status` | Tech progress |
 | `oni://tools/manifest` | `tools_manifest` | Tool catalog |
 | `oni://tools/search` | `tools_search` | Filtered discovery |
-| `oni://plans` | `plan_harness_list` | Active plans |
-
 Resource templates accept query params: `oni://power/summary?worldId=2&includeDetails=true`, `oni://thermal/overheat-risk?marginC=20&limit=50`.
 
 ## Quick Reference
@@ -539,10 +540,10 @@ Resource templates accept query params: `oni://power/summary?worldId=2&includeDe
 |-----------|-----------|-------------|--------------|
 | "What's happening?" | `colony_diagnostics` | `colony_alerts` | `colony_status` |
 | "Fix power" | `power_summary` | `buildings_config_list` (power subset) | `power_summary` |
-| "Build something" | `buildings_search_defs` | `plan_building_rect` | `world_text_map` |
+| "Build something" | `buildings_search_defs` | `agent_pointer_select_tool` + `agent_pointer_left_click`/`agent_pointer_hold_left` | `world_text_map` |
 | "Manage dupes" | `dupes_list` | `dupes_detail` / `dupes_needs` | `dupes_list` |
 | "Check heat" | `thermal_overheat_risk_scan` | `world_element_summary` | `thermal_overheat_risk_scan` |
-| "Plan actions" | `plan_harness_create` | `plan_harness_validate` | `plan_harness_execute` |
+| "Plan actions" | `tools_guide` | `tools_search` + dryRun-capable tools | relevant read tools |
 | "Batch config" | `tools_call_many` (dryRun) | `tools_call_many` (execute) | relevant read tools |
 | "Find a tool" | `tools_search` | `tools_guide` | `tools_static_audit` |
 | "Area ops" | `area_define` | `world_text_map` (with areaId) | `area_get` |

@@ -120,11 +120,10 @@ namespace OniMcp.Tools
             Resource("oni://game/red-alert", "game_red_alert_status", "红色警戒", "当前/全部世界红色警戒（紧急模式）状态。", "game_red_alert_status"),
             Resource("oni://game/saves", "game_saves_list", "存档文件", "本地/云端存档文件、当前 active save 和保存根目录。", "game_saves_list"),
             Resource("oni://game/dlc", "game_dlc_activation_list", "DLC 存档激活状态", "暂停菜单 DLC 激活按钮状态：订阅、当前存档启用、是否允许激活。", "game_dlc_activation_list"),
-            Resource("oni://plans", "plan_harness_list", "规划 Harness 会话", "规划-反馈-验证-实施-约束会话列表；用 plan_harness_execute 通过门禁执行 plannedCalls/calls/items。", "plan_harness_list"),
             Resource("oni://mcp/sessions", "mcp_client_capabilities", "MCP 会话", "当前 MCP session 和客户端 sampling、elicitation、tasks 能力。", "mcp_client_capabilities"),
             Resource("oni://ui/actions", "ui_actions_list", "UI Action 白名单", "可安全触发的管理菜单、覆盖层、建造分类和导航 Action。", "ui_actions_list"),
             Resource("oni://tools/manifest", "tools_manifest", "工具清单", "ONI MCP 工具目录。", "tools_manifest"),
-            Resource("oni://tools/guide", "tools_guide", "工具意图指南", "按玩家目标推荐资源、工具链、批量策略和规划 harness 步骤。", "tools_guide"),
+            Resource("oni://tools/guide", "tools_guide", "工具意图指南", "按玩家目标推荐资源、工具链和批量策略。", "tools_guide"),
             Resource("oni://tools/player-action-coverage", "tools_player_action_coverage", "玩家操作覆盖审计", "玩家可执行操作面、对应 MCP 工具和缺口状态。", "tools_player_action_coverage"),
             Resource("oni://tools/side-screen-surfaces", "side_screen_surfaces_audit", "侧屏 surface 审计", "运行时 SideScreenContent 类型到 MCP 工具/资源覆盖的映射审计。", "side_screen_surfaces_audit"),
             Resource("oni://tools/user-menu-surfaces", "user_menu_surfaces_audit", "用户菜单 surface 审计", "源码 UserMenu/context-menu 按钮来源到 MCP 工具/资源覆盖的映射审计。", "user_menu_surfaces_audit"),
@@ -292,14 +291,6 @@ namespace OniMcp.Tools
                 Name = "notification_surfaces_audit",
                 Title = "通知 surface 覆盖",
                 Description = "按 NotificationScreen/NotificationManager/MessageNotification 读取 MCP 覆盖；detail=brief 适合低 token 查询。",
-                MimeType = "application/json"
-            },
-            new McpResourceTemplateInfo
-            {
-                UriTemplate = "oni://plans/{id}",
-                Name = "plan_harness_get",
-                Title = "规划 Harness 会话",
-                Description = "读取指定规划-反馈-验证-实施-约束会话；plan payload 支持 plannedCalls 或 compact calls/items。",
                 MimeType = "application/json"
             },
             new McpResourceTemplateInfo
@@ -1000,18 +991,6 @@ namespace OniMcp.Tools
             {
                 var query = ParseQuery(parsed.Query);
                 return ReadToolResource(uri, "world_text_map", query, "text/plain");
-            }
-
-            if (parsed.Host == "plans")
-            {
-                var parts = parsed.AbsolutePath.Trim('/').Split('/');
-                if (parts.Length == 1 && !string.IsNullOrEmpty(parts[0]))
-                {
-                    return ReadToolResource(uri, "plan_harness_get", new JObject
-                    {
-                        ["id"] = parts[0]
-                    }, "application/json");
-                }
             }
 
             if (parsed.Host == "tools" && parsed.AbsolutePath.StartsWith("/read/"))

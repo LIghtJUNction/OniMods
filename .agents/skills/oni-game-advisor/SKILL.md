@@ -55,7 +55,8 @@ layout_candidates purpose=<goal>
 除非用户明确要求行动，否则不允许：
 
 - `orders_*`
-- `buildings_plan*`
+- `agent_pointer_left_click`
+- `agent_pointer_hold_left`
 - `game_resume`
 - 配置/写入/执行工具
 - 执行计划

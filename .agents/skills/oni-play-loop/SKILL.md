@@ -1,6 +1,6 @@
 ---
 name: oni-mcp-play-loop
-description: 当用户要求 agent 通过 MCP 循环游玩 Oxygen Not Included、自动玩一段时间、继续殖民地，或运行暂停-规划-恢复循环时使用。强制执行严格的 pause -> observe -> plan -> execute -> resume briefly -> pause -> verify 循环，读取 edit_mark_request_list，仅对重大/高风险计划使用 plan_harness，限制运行窗口，并在风险或歧义决策前停下等待用户确认。
+description: 当用户要求 agent 通过 MCP 循环游玩 Oxygen Not Included、自动玩一段时间、继续殖民地，或运行暂停-规划-恢复循环时使用。强制执行严格的 pause -> observe -> plan -> execute -> resume briefly -> pause -> verify 循环，读取 edit_mark_request_list，限制运行窗口，并在风险或歧义决策前停下等待用户确认。
 ---
 
 # ONI MCP 游玩循环
@@ -66,19 +66,15 @@ tools_call_many dryRun=false responseMode=summary requireAllValid=true stopOnErr
 
 适用于小范围挖掘、短地板、安全配置修改、收获/清扫/拖地命令，以及 dry-run 通过的 utility 路线。
 
-只有重大计划才用 `plan_harness`：多阶段殖民地工作、玩家编辑标记请求、大范围挖掘、危险液体/气体/热量暴露、拆除，或需要之后恢复的内容：
-
-```
-plan_harness_create objective="Play loop: <short goal>" riskTolerance=low requireVerification=true
-plan_harness_record stage=observation summary="..." payload={...}
-plan_harness_record stage=plan summary="..." payload={ plannedCalls, assumptions, stopConditions }
-plan_harness_validate id=<planId>
-```
+重大计划（多阶段殖民地工作、玩家编辑标记请求、大范围挖掘、危险液体/气体/热量暴露、拆除）先在回复中列出可执行工具调用、关键参数、假设和停止条件；可用时先 dry-run，再执行。
 
 建造：
 
 ```
-buildings_plan_many dryRun=true confirm=true ...
+agent_pointer_jump x=<startX> y=<startY>
+agent_pointer_select_tool tool=build prefabId=<PrefabId> material=auto
+agent_pointer_left_click confirm=true
+# or agent_pointer_hold_left direction=<dir> length=<cells> confirm=true
 ```
 
 挖掘：
@@ -132,11 +128,7 @@ dupes_status_check radius=8
 world_area_snapshot areaId=<area> preset=construction|utilities encoding=plain
 ```
 
-如果本循环用了 `plan_harness`，记录验证：
-
-```
-plan_harness_record stage=verification summary="..." payload={ passed, issues, nextLoopCandidate }
-```
+记录验证结果：说明目标是否推进、发现的问题、下一轮是否需要继续。
 
 ## 停止条件
 

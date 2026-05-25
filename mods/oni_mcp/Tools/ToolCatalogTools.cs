@@ -144,7 +144,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
-                Description = "按玩家目标生成低 token 工具使用指南：推荐资源、检索词、工具链、批量策略和必要时的规划 harness 步骤",
+                Description = "按玩家目标生成低 token 工具使用指南：推荐资源、检索词、工具链和批量策略",
                 Aliases = new List<string> { "tools_intent_guide", "tool_route", "action_guide" },
                 Tags = new List<string> { "catalog", "intent", "routing", "planning", "batch", "low-token", "工具指南" },
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -168,8 +168,8 @@ namespace OniMcp.Tools
                         {
                             "1. Read recommended resources first; tools/list is intentionally core-only, so use oni://... resources, tools_search detail=brief/full, or tools_manifest for discovery.",
                             "2. If the player action surface is unclear, call tools_player_action_coverage with detail=brief and query=<goal>; then call tools_search with detail=brief for exact schemas.",
-                            "3. For simple low-risk changes, skip plan_harness: dry-run when available, then execute via tools_call_many responseMode=summary with compact items:[{t,a}] and defaults.",
-                            "4. Use plan_harness only for complex, risky, multi-phase, player edit-marker, or resume-later plans; plan payload may use plannedCalls or compact calls/items:[{t,a}] plus defaults.",
+                            "3. For player-like map actions, use the visible agent pointer: agent_pointer_jump/aim_cell, agent_pointer_select_tool, then agent_pointer_left_click or agent_pointer_hold_left. Coordinate placement tools are not exposed. Multi-cell buildings use lower-left anchors and should be placed with one left_click per anchor.",
+                            "4. For risky or multi-step work, write the plan in the response and use dryRun/validateOnly where available before executing.",
                             "5. Do not repeat the same write/execute call after a zero-effect result; re-read state or choose the correct tool. Verify with read resources after execution."
                         },
                         ["batch"] = new Dictionary<string, object>
@@ -487,17 +487,17 @@ namespace OniMcp.Tools
                 new ToolGuide("general",
                     new[] { "general", "help", "unknown", "工具", "帮助" },
                     new[] { "oni://tools/manifest", "oni://tools/player-action-coverage", "oni://colony/summary" },
-                    new[] { "colony_state_snapshot", "tools_search", "tools_manifest", "tools_call_many", "plan_harness_create" },
-                    new[] { "colony_state_snapshot profile=brief", "tools_search detail=brief query=<goal>", "tools_guide goal=<goal>" },
-                    "Use colony_state_snapshot as the default first read. Use tools_call_many for independent reads and simple low-risk writes. Use plan_harness only for complex/risky/multi-phase/player-marked plans.",
-                    new[] { "read colony_state_snapshot", "search tools", "dry-run simple actions or create formal plan", "execute", "verify" }),
+                    new[] { "colony_state_snapshot", "tools_search", "tools_manifest", "tools_call_many" },
+                    new[] { "colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts", "tools_search detail=brief query=<goal>", "tools_guide goal=<goal>" },
+                    "Use colony_state_snapshot profile=minimal or delta=true for loop polling. Use tools_call_many for independent reads and simple low-risk writes. For complex/risky/player-marked plans, write the plan in the response and dry-run exact actions before execution.",
+                    new[] { "read minimal/delta colony_state_snapshot", "search tools", "dry-run actions", "execute", "verify" }),
                 new ToolGuide("map_area_orders",
                     new[] { "dig", "sweep", "mop", "water", "liquid", "spill", "disinfect", "cancel", "harvest", "地图", "挖掘", "清扫", "拖地", "地上的水", "液体", "区域" },
                     new[] { "oni://world/text-map{?profile=scan,format=json}", "oni://tools/read/priorities_list" },
-                    new[] { "world_area_snapshot", "layout_candidates", "world_text_map", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_cancel_area", "orders_harvest_area", "tools_call_many" },
-                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "layout_candidates purpose=lab|barracks|bathroom", "orders_dig_area x1 y1 x2 y2 confirm=true", "orders_mop_area x1 y1 x2 y2 confirm=true for water/liquid on floor", "orders_sweep_area x1 y1 x2 y2 dryRun=true for solid debris only" },
-                    "Use world_area_snapshot preset=planning or layout_candidates before terrain/base layout work. Use orders_dig_area for terrain excavation. Use orders_mop_area for water/liquid on the floor; never use orders_sweep_area for liquids. Use orders_sweep_area only for solid debris/pickupables. Do not use orders_attack for digging; attack belongs to critter_removal/combat only.",
-                    new[] { "read planning snapshot", "choose candidate rectangle", "plan orders", "execute confirmed area tool", "verify with text map" }),
+                    new[] { "world_area_snapshot", "layout_candidates", "world_text_map", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_cancel_area", "orders_harvest_area", "tools_call_many" },
+                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=... chunksOnly=true for large areas", "world_text_map areaId=b1 profile=scan encoding=rle", "agent_pointer_jump x=... y=...", "agent_pointer_select_tool tool=dig|mop|sweep|cancel|harvest", "agent_pointer_hold_left direction=right length=... confirm=true" },
+                    "Use world_area_snapshot preset=planning or layout_candidates before terrain/base layout work. Prefer pointer actions for orders so the game shows the agent mouse and tool badge. Use orders_mop_area for water/liquid on the floor; never use sweep for liquids. Do not use orders_attack for digging.",
+                    new[] { "read planning snapshot", "jump/aim pointer", "select order tool", "left-click or hold-left", "verify with text map" }),
                 new ToolGuide("critter_removal",
                     new[] { "kill", "attack", "critter", "creature", "crab", "hermit", "杀", "杀死", "攻击", "小动物", "寄居蟹" },
                     new[] { "oni://ranching/critters", "oni://world/text-map{?profile=scan,format=json}" },
@@ -508,10 +508,10 @@ namespace OniMcp.Tools
                 new ToolGuide("build_and_configure",
                     new[] { "build", "building", "construct", "config", "toilet", "outhouse", "plumbing", "建造", "建筑", "配置", "厕所", "茅厕", "卫生间", "洗手间" },
                     new[] { "oni://buildings/defs{?query}", "oni://buildings/materials{?prefabId}", "oni://buildings/configurables", "oni://automation/controls", "oni://world/text-map{?profile=scan,format=json}" },
-                    new[] { "world_area_snapshot", "layout_candidates", "buildings_search_defs", "buildings_materials", "buildings_plan", "buildings_plan_rect", "buildings_plan_many", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
-                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "layout_candidates purpose=lab|barracks|bathroom", "buildings_search_defs query=toilet", "buildings_materials prefabId=Outhouse", "buildings_plan_many dryRun=true", "building automation threshold" },
-                    "Use world_area_snapshot preset=planning or layout_candidates first for base layout. Use buildings_search_defs to choose prefab/facade. Prefer material=auto; call buildings_materials before explicit material. Invalid or unavailable materials return structured candidates for retry. Use buildings_plan_many dryRun before placement, then config batch tools after placement.",
-                    new[] { "snapshot planning area", "choose candidate rectangle", "search defs", "use material=auto or read materials", "dry-run blueprint", "place blueprint", "verify placement", "batch config if needed" }),
+                    new[] { "world_area_snapshot", "layout_candidates", "buildings_search_defs", "buildings_materials", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
+                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "buildings_search_defs query=wire|toilet", "buildings_materials prefabId=Wire", "agent_pointer_select_tool tool=build prefabId=Wire material=auto", "agent_pointer_hold_left direction=right length=12 confirm=true" },
+                    "Use world_area_snapshot/layout_candidates first for base layout. Use buildings_search_defs to choose prefab/facade and material=auto unless explicit material is justified. Build through the pointer flow: jump/aim, select build tool with prefab/material, then left-click or hold-left for 1x1 lines. For multi-cell furniture/machines, treat placement.anchor=lowerLeftCell as the anchor, dry-run if uncertain, and use one left_click per anchor.",
+                    new[] { "snapshot planning area", "choose target", "search defs/materials", "jump/aim pointer", "select build tool", "left-click or hold-left", "verify placement", "batch config if needed" }),
                 new ToolGuide("dupes_and_assignments",
                     new[] { "dupe", "duplicant", "schedule", "skill", "bed", "assign", "stuck", "trapped", "rescue", "复制人", "日程", "技能", "分配", "被困", "卡住", "救援" },
                     new[] { "oni://dupes", "oni://dupes/status-check", "oni://dupes/direct-commands", "oni://dupes/priorities", "oni://dupes/priority-settings", "oni://dupes/equipment", "oni://assignables", "oni://schedules" },
@@ -631,7 +631,6 @@ namespace OniMcp.Tools
                 case "server": return "MCP 服务状态和连接信息。";
                 case "game": return "游戏时间、暂停、速度、红色警戒/紧急模式和截图。";
                 case "camera": return "相机视角、聚焦和观察控制。";
-                case "planning": return "规划 harness：目标、约束、反馈、验证和实施门禁。";
                 case "map": return "地图上的提示、标记和可视反馈。";
                 case "ui": return "管理面板、覆盖层、建造分类、百科和安全 UI Action 入口。";
                 case "sandbox": return "沙盒/调试模式下的生成、刷元素和清除操作。";

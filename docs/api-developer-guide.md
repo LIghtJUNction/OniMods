@@ -257,11 +257,13 @@ curl -X POST http://localhost:8787/mcp/ \
 
 预检通过后去掉 `dryRun` 再次请求即可执行。`stopOnError: true` 会在首个执行错误处停止。需要完整子工具返回时传 `responseMode: "full"`；只关心失败项时传 `responseMode: "errors"`。
 
-建造工具 `buildings_plan` / `buildings_plan_rect` / `buildings_plan_many` 也支持 `dryRun: true` / `validateOnly: true`。对 `BuildLocationRule=OnFloor` 的建筑，服务器会检查下方是否有实体地板或同批靠前的支撑蓝图；缺支撑时默认拒绝并返回 `missingSupportCells`。
+建造蓝图不再暴露直接坐标规划工具。先用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，再用可视 agent 指针执行：`agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left`。
 
-`buildings_plan_many` 可用 `routes` 在同一次调用里展开电线/管路路径。`routes[].p` 支持 `Wire`、`LogicWire`、`GasConduit`、`LiquidConduit`、`SolidConduit`；端点可用 `{x,y}`、`[x,y]` 或 `{p/prefabId,x,y,port}`，并可通过 `viaX` / `viaY` 指定 L 形路径拐点。
+`buildings_search_defs` 会返回 `placement`，其中 `anchor=lowerLeftCell` 表示指针格是建筑 footprint 的左下锚点，不是视觉中心。`agent_pointer_left_click dryRun=true` 会返回预期 footprint；实际执行后返回 `placementCheck`，后续必须用 `world_area_snapshot` / `world_text_map` 复核。
 
-快速直线使用 `items[].line` 或短字段 `l`，例如 `{ "p": "Wire", "l": [80,135,88,135] }`。折线使用 `path` / `points`，例如 `{ "p": "Wire", "path": [[80,135],[88,135],[88,138]] }`。`r` 表示矩形填充，不应用作普通线段。
+对 `BuildLocationRule=OnFloor` 的建筑，必须先通过指针放置或确认下方已有实体地板/支撑。电线、管道、梯子和砖块的水平/垂直路线使用多段 `agent_pointer_hold_left`。床、厕所、机器等宽/高大于 1 的建筑默认拒绝拖拽建造，必须逐个 anchor 用 `agent_pointer_left_click` 放置；只有明确需要重复 footprint 时才传 `allowFootprintDrag=true`。
+
+快速直线示例：先把指针跳到起点，选择 `Wire`，再 `agent_pointer_hold_left direction=right length=9 confirm=true`。折线拆成多段水平/垂直拖拽。
 
 ---
 
@@ -430,7 +432,9 @@ curl -X POST http://localhost:8787/mcp/ \
       "arguments": {
         "goal": "Expand oxygen production",
         "plannedCalls": [
-          { "name": "buildings_plan", "arguments": { "defId": "Electrolyzer", "x": 120, "y": 60 } }
+          { "name": "agent_pointer_jump", "arguments": { "x": 120, "y": 60 } },
+          { "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Electrolyzer", "material": "auto" } },
+          { "name": "agent_pointer_left_click", "arguments": { "confirm": true } }
         ]
       }
     }

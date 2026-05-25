@@ -106,7 +106,8 @@ world_area_snapshot areaId=<request.areaId> preset=utilities encoding=plain
 不允许：
 
 - `orders_*`
-- `buildings_plan*`
+- `agent_pointer_left_click`
+- `agent_pointer_hold_left`
 - `game_resume`
 - 配置/写入/执行工具
 

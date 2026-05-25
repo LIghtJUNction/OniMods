@@ -91,9 +91,9 @@ namespace OniMcp.Tools
                     order++,
                     "build_category",
                     action,
-                    "Open build category " + suffix + ", discover available buildings/materials/facades, then place blueprints",
+                    "Open build category " + suffix + ", discover available buildings/materials/facades, then place blueprints through the agent pointer",
                     NormalizeBuildCategory(suffix),
-                    new[] { "ui_actions_list", "ui_action_trigger", "buildings_search_defs", "buildings_plan", "buildings_plan_rect", "buildings_plan_many" },
+                    new[] { "ui_actions_list", "ui_action_trigger", "buildings_search_defs", "buildings_materials", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left" },
                     new[] { "ui_actions_list", "buildings_search_defs" });
             }
 
@@ -101,9 +101,9 @@ namespace OniMcp.Tools
                 0,
                 "build_hotkeys",
                 "BuildMenuKeyA-Z",
-                "Trigger whitelisted build-menu item hotkeys after a build category is open; direct building placement uses prefab ids plus optional material/facade ids",
+                "Trigger whitelisted build-menu item hotkeys after a build category is open; placement uses the agent pointer with prefab ids plus optional material/facade ids",
                 "build_menu_keys",
-                new[] { "ui_actions_list", "ui_action_trigger", "buildings_search_defs", "buildings_plan", "buildings_plan_rect", "buildings_plan_many" },
+                new[] { "ui_actions_list", "ui_action_trigger", "buildings_search_defs", "buildings_materials", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left" },
                 new[] { "ui_actions_list", "buildings_search_defs" });
 
             yield return Covered(

@@ -17,7 +17,7 @@
 ### 🎮 语音/文字指挥
 - 对 AI 说"给我暂停游戏并截图" → AI 调用 `game_pause` + `take_screenshot`
 - 说"把复制人张三的挖掘优先级调到最高" → AI 调用 `dupes_priority_set`
-- 说"在 (100, 200) 位置建两张床" → AI 调用 `buildings_plan`
+- 说"在 (100, 200) 位置建两张床" → AI 移动可视 agent 指针并调用 `agent_pointer_left_click`
 - 说"检查火箭状态" → AI 调用 `rockets_status`
 
 ### 📊 实时数据面板
@@ -101,7 +101,7 @@
 | 电力 | `power_summary` | 电力系统摘要 |
 | 房间 | `rooms_list` | 房间系统状态 |
 | 温度 | `thermal_overheat_risk_scan` | 过热风险扫描 |
-| 建筑 | `buildings_search_defs`, `buildings_plan`, `buildings_deconstruct` | 搜索、规划、拆除 |
+| 建筑 | `buildings_search_defs`, `buildings_materials`, `agent_pointer_select_tool`, `agent_pointer_left_click`, `buildings_deconstruct` | 搜索、材料、指针建造、拆除 |
 | 订单 | `orders_dig`, `orders_sweep`, `orders_harvest` | 挖掘、清扫、收割 |
 | 火箭 | `rockets_list`, `rockets_status`, `rockets_request_launch` | 列表、状态、发射 |
 | 农业 | `farming_planting`, `farming_harvestables` | 种植、收获 |

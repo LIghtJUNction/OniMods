@@ -860,7 +860,7 @@ namespace OniMcp.Tools
                 new JObject
                 {
                     ["kind"] = "compact_json",
-                    ["example"] = "{\"defaults\":{\"areaId\":\"a3\",\"relative\":true,\"confirm\":true},\"items\":[{\"t\":\"buildings_plan_many\",\"a\":{\"items\":[{\"p\":\"Tile\",\"l\":[0,2,8,2]}]}}]}"
+                    ["example"] = "{\"defaults\":{\"confirm\":true},\"items\":[{\"t\":\"agent_pointer_jump\",\"a\":{\"x\":70,\"y\":132}},{\"t\":\"agent_pointer_select_tool\",\"a\":{\"tool\":\"build\",\"prefabId\":\"Tile\",\"material\":\"auto\"}},{\"t\":\"agent_pointer_hold_left\",\"a\":{\"direction\":\"right\",\"length\":9}}]}"
                 },
                 new JObject
                 {
@@ -920,7 +920,7 @@ namespace OniMcp.Tools
             if (tool == null)
                 return false;
             string name = tool.Name ?? "";
-            if (name.StartsWith("buildings_plan", StringComparison.OrdinalIgnoreCase))
+            if (name.StartsWith("agent_pointer_", StringComparison.OrdinalIgnoreCase))
                 return true;
             if (name.StartsWith("orders_", StringComparison.OrdinalIgnoreCase))
                 return true;

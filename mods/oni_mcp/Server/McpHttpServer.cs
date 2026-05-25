@@ -22,6 +22,7 @@ namespace OniMcp.Server
     public class McpHttpServer : MonoBehaviour
     {
         public static McpHttpServer Instance { get; private set; }
+        private static readonly AsyncLocal<string> CurrentSessionContext = new AsyncLocal<string>();
 
         private HttpListener _listener;
         private Thread _listenerThread;
@@ -530,6 +531,8 @@ namespace OniMcp.Server
         /// </summary>
         private object ProcessMethod(JsonRpcRequest request, string sessionId = null)
         {
+            using (PushSessionContext(sessionId))
+            {
             switch (request.Method)
             {
                 case "initialize":
@@ -546,7 +549,7 @@ namespace OniMcp.Server
                     if (callParams == null || string.IsNullOrEmpty(callParams.Name))
                         return CallToolResult.Error("Missing tool name");
                     if (callParams.Task != null)
-                        return CreateToolTask(callParams);
+                        return CreateToolTask(callParams, sessionId);
                     return OniToolRegistry.CallTool(callParams.Name, callParams.Arguments);
 
                 case "prompts/list":
@@ -578,6 +581,7 @@ namespace OniMcp.Server
 
                 default:
                     return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound, $"Unknown method: {request.Method}");
+            }
             }
         }
 
@@ -762,7 +766,7 @@ namespace OniMcp.Server
             }
         }
 
-        private CreateTaskResult CreateToolTask(CallToolParams callParams)
+        private CreateTaskResult CreateToolTask(CallToolParams callParams, string sessionId)
         {
             var task = new McpTaskEntry
             {
@@ -783,11 +787,11 @@ namespace OniMcp.Server
                 _tasks[task.TaskId] = task;
             }
 
-            ExecuteToolTask(task.TaskId, callParams.Name, callParams.Arguments);
+            ExecuteToolTask(task.TaskId, callParams.Name, callParams.Arguments, sessionId);
             return new CreateTaskResult { Task = task.ToInfo(), Meta = RelatedTaskMeta(task.TaskId) };
         }
 
-        private void ExecuteToolTask(string taskId, string toolName, JObject arguments)
+        private void ExecuteToolTask(string taskId, string toolName, JObject arguments, string sessionId)
         {
             MainThreadBridge.EnqueueDeferred(new System.Action(() =>
             {
@@ -803,7 +807,11 @@ namespace OniMcp.Server
 
                 try
                 {
-                    var result = OniToolRegistry.CallTool(toolName, arguments);
+                    CallToolResult result;
+                    using (PushSessionContext(sessionId))
+                    {
+                        result = OniToolRegistry.CallTool(toolName, arguments);
+                    }
                     lock (_taskLock)
                     {
                         if (task.CancelRequested)
@@ -1041,6 +1049,33 @@ namespace OniMcp.Server
                     CleanupExpiredTasks();
                     return _tasks.Count;
                 }
+            }
+        }
+
+        public static string CurrentSessionId
+        {
+            get { return CurrentSessionContext.Value; }
+        }
+
+        internal static IDisposable PushSessionContext(string sessionId)
+        {
+            var previous = CurrentSessionContext.Value;
+            CurrentSessionContext.Value = string.IsNullOrWhiteSpace(sessionId) ? previous : sessionId;
+            return new SessionContextScope(previous);
+        }
+
+        private sealed class SessionContextScope : IDisposable
+        {
+            private readonly string previous;
+
+            public SessionContextScope(string previous)
+            {
+                this.previous = previous;
+            }
+
+            public void Dispose()
+            {
+                CurrentSessionContext.Value = previous;
             }
         }
     }

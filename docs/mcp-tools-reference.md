@@ -93,7 +93,7 @@
 |------|------|------|------|
 | `priorities_list` | read | none | 全局优先级设置 |
 | `set_building_priority` / `set_priority_area` | write | low/medium | 建筑/区域优先级 |
-| `plan_building` / `plan_building_rect` / `plan_many` | write | medium | 单建筑/矩形/多建筑规划 |
+| `agent_pointer_select_tool` + `agent_pointer_left_click` / `agent_pointer_hold_left` | execute | medium | 通过可视 agent 指针放置建筑/砖块/电线/管路 |
 | `deconstruct_building` | write | **dangerous** | 拆除建筑（需 `confirm=true`）|
 | `sweep_area` / `dig_area` | write | **dangerous** | 固体散落物清扫/挖掘区域（大区域需 `confirm=true`）；清扫支持 `dryRun` 诊断，挖地必须使用 `orders_dig_area`；水/液体不能 sweep |
 | `mop_area` / `disinfect_area` | write | medium | 拖地/消毒；地上的水、污水、液体必须使用 `orders_mop_area` |
@@ -354,7 +354,7 @@
 1. `rooms_list` → 所有房间类型、大小、边界和士气效果
 2. 检查缺失的关键房间（Barracks、Great Hall、Washroom 等）
 3. 对未满足条件的房间，用 `world_text_map` 或 `camera_switch_view`（rooms 覆盖层）定位
-4. `plan_building` / `plan_building_rect` 补齐缺失建筑
+4. `agent_pointer_select_tool` + `agent_pointer_left_click` / `agent_pointer_hold_left` 补齐缺失建筑
 5. 重新 `rooms_list` 验证房间是否成型
 
 ### 过热风险管理流程
@@ -400,38 +400,28 @@
 
 `orders_sweep_area` 只处理固体散落物/碎片。地上的水、污水、漏液或任何液体格子使用 `orders_mop_area`。如果 sweep 返回 `marked=0`、`liquidCellsInRect>0` 或 `mopHint`，不要重复调用同一区域 sweep。
 
-建造工具 `buildings_plan`、`buildings_plan_rect`、`buildings_plan_many` 也支持 `dryRun: true` / `validateOnly: true`。坐标统一使用世界绝对格子；`buildings_plan_rect` / `buildings_plan_many` 的整块 areaId 输入表示使用该区域的绝对矩形。对 `BuildLocationRule=OnFloor` 的建筑，服务器会检查下方支撑；缺少地板或同批靠前的支撑蓝图时返回 `Unsupported OnFloor building`，默认不放置蓝图。确有特殊用途时可传 `allowUnsupported: true`。
+建造蓝图不再暴露直接坐标规划工具。使用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，然后通过可视 agent 指针执行：`agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left`。`buildings_search_defs` 的 `placement.anchor=lowerLeftCell` 表示指针格是 footprint 左下锚点，不是视觉中心；可先用 `agent_pointer_left_click dryRun=true` 预检 footprint。对 `BuildLocationRule=OnFloor` 的建筑，先用指针放置支撑砖或确认下方已有地板。
+
+`agent_pointer_hold_left` 默认只允许 1x1 footprint 的建筑。床、厕所、机器等多格建筑必须逐个 anchor 用 `agent_pointer_left_click` 放置，并在每批之后用 `world_area_snapshot` / `world_text_map` 比对 `placementCheck`；只有明确接受重复 footprint 拖拽时才传 `allowFootprintDrag=true`。
 
 `plan_harness_parse` 会返回原始 `plannedCalls`、默认参数 `defaults` 和已合并默认参数的 `resolvedCalls`。执行型空间工具疑似使用未锚定的小坐标时，校验器会给出提示。
 
-`buildings_plan_many` 支持 `routes` 自动展开电线/管路路径，减少“先放设备、再单独补线”的二次调用：
+电线、管路、梯子和砖块路线使用指针拖拽；折线拆成多段水平/垂直 `agent_pointer_hold_left`：
 
 ```json
 {
-  "items": [
-    { "p": "ManualGenerator", "x": 80, "y": 136 },
-    { "p": "Battery", "x": 83, "y": 136 },
-    { "p": "ResearchCenter", "x": 85, "y": 136 }
-  ],
-  "routes": [
-    {
-      "p": "Wire",
-      "from": { "p": "ManualGenerator", "x": 80, "y": 136, "port": "powerOutput" },
-      "to": { "p": "ResearchCenter", "x": 85, "y": 136, "port": "powerInput" },
-      "viaY": 135
-    }
-  ],
-  "confirm": true,
-  "dryRun": true
+  "plannedCalls": [
+    { "name": "agent_pointer_jump", "arguments": { "x": 80, "y": 135 } },
+    { "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Wire", "material": "auto" } },
+    { "name": "agent_pointer_hold_left", "arguments": { "direction": "right", "length": 9, "confirm": true } }
+  ]
 }
 ```
 
-`routes[].p` 可为 `Wire`、`LogicWire`、`GasConduit`、`LiquidConduit`、`SolidConduit`。端点可写 `{x,y}`、`[x,y]`，或 `{p/prefabId,x,y,port}`。电力端口会使用建筑定义的 power offset；管路端口在无实例蓝图阶段无法可靠读取时会回退到 footprint 中心，精确管口建议传显式坐标。
-
-快速画线使用 `buildings_plan_many.items[].line` 或短字段 `l`：
+快速画线使用 `agent_pointer_hold_left`：
 
 ```json
-{ "p": "Wire", "l": [80, 135, 88, 135] }
+{ "direction": "right", "length": 9, "confirm": true }
 ```
 
 折线使用 `path` / `points` / `pts`：
@@ -489,9 +479,6 @@
 | `room_list` / `rooms_overview` | `rooms_list` |
 | `priorities_list` | `orders_priorities_list` |
 | `priorities_set_area` | `orders_set_priority_area` |
-| `buildings_plan` | `plan_building` |
-| `buildings_plan_rect` | `plan_building_rect` |
-| `buildings_plan_many` | `plan_many` |
 | `conduits_cut` | `orders_cut_conduits` |
 
 ---

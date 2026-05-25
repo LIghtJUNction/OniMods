@@ -214,8 +214,8 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "get_world_text_map", "world_serialize_area" },
-                Tags = new List<string> { "map", "text", "grid", "sequence", "world", "地图", "格子" },
-                Description = "【地形分析首选】把指定矩形地图格子序列化为可读文本。当需要分析地形、气液固分布、建筑位置、复制人位置或资源布局时，优先使用此工具而非截图。默认返回固定宽度 token 地图、元素统计、建筑列表和每格明细（元素/质量/温度），数据精确且结构化，比截图更适合模型推理。",
+                Tags = new List<string> { "map", "text", "markdown", "sequence", "world", "地图", "格子" },
+                Description = "【地形分析首选】把指定矩形地图序列化为 Markdown 文档。当需要分析地形、气液固分布、建筑位置、复制人位置或资源布局时，优先使用此工具而非截图。默认把地图视为一个可读页面：元信息、图例、按行连续区段、元素统计和对象表；不用像素式密集网格。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；返回结果会把该区域左下角作为 origin，并同时显示世界绝对坐标", Required = false },
@@ -225,21 +225,24 @@ namespace OniMcp.Tools
                     ["y2"] = new McpToolParameter { Type = "integer", Description = "区域终点/右上 Y；留空时默认当前相机视野附近", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
                     ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只导出已揭示格子，默认 true", Required = false },
-                    ["view"] = new McpToolParameter { Type = "string", Description = "文本化视图：base/terrain、temperature、power、gas_conduits、liquid_conduits、solid_conveyor、logic。默认输出完整逐格地图；temperature 输出温度分级整图", Required = false, EnumValues = new List<string> { "base", "terrain", "temperature", "power", "gas_conduits", "liquid_conduits", "solid_conveyor", "logic" } },
+                    ["view"] = new McpToolParameter { Type = "string", Description = "文本化视图：base/terrain、temperature、power、gas_conduits、liquid_conduits、solid_conveyor、logic。默认输出 Markdown 区段地图；temperature 输出温度区段", Required = false, EnumValues = new List<string> { "base", "terrain", "temperature", "power", "gas_conduits", "liquid_conduits", "solid_conveyor", "logic" } },
                     ["sparse"] = new McpToolParameter { Type = "boolean", Description = "是否稀疏输出。默认 false；开启后只列出非空 overlay/关键格子，适合很大的管线/电力检查", Required = false },
                     ["includeBuildings"] = new McpToolParameter { Type = "boolean", Description = "是否标注区域内建筑，默认 true", Required = false },
                     ["includeItems"] = new McpToolParameter { Type = "boolean", Description = "是否标注区域内散落物，默认 false", Required = false },
                     ["includeDupes"] = new McpToolParameter { Type = "boolean", Description = "是否标注区域内复制人，默认 true", Required = false },
                     ["includeElements"] = new McpToolParameter { Type = "boolean", Description = "是否返回元素统计，默认 true", Required = false },
                     ["includeSummary"] = new McpToolParameter { Type = "boolean", Description = "是否返回 summary 行，默认 true", Required = false },
-                    ["detail"] = new McpToolParameter { Type = "string", Description = "compact 或 full。compact 返回 token 地图+图例，full 追加每格明细；默认 compact", Required = false },
-                    ["encoding"] = new McpToolParameter { Type = "string", Description = "地图行编码：plain=逐格字符，rle=游程压缩，both=同时返回；默认 plain，plain 最适合 agent 直接读图", Required = false, EnumValues = new List<string> { "plain", "rle", "both" } },
+                    ["detail"] = new McpToolParameter { Type = "string", Description = "compact 或 full。compact 返回 Markdown 区段地图+图例，full 追加每格明细；默认 compact", Required = false },
+                    ["encoding"] = new McpToolParameter { Type = "string", Description = "兼容参数：plain/rle/both。Markdown 输出会折叠为连续区段；json 输出仍按该编码返回 rows", Required = false, EnumValues = new List<string> { "plain", "rle", "both" } },
                     ["profile"] = new McpToolParameter { Type = "string", Description = "输出格式：standard 带坐标/图例，minimal 少说明，scan 极简；默认 standard", Required = false, EnumValues = new List<string> { "standard", "minimal", "scan" } },
-                    ["format"] = new McpToolParameter { Type = "string", Description = "返回格式：text 或 json。json 返回结构化紧凑地图，适合规划 harness 校验；默认 text", Required = false, EnumValues = new List<string> { "text", "json" } },
+                    ["format"] = new McpToolParameter { Type = "string", Description = "返回格式：markdown/text 或 json。markdown/text 默认返回 Markdown 页面；json 返回结构化紧凑地图", Required = false, EnumValues = new List<string> { "markdown", "text", "json" } },
                     ["elementLimit"] = new McpToolParameter { Type = "integer", Description = "元素统计最多返回多少项，默认 40，最大 200；0 表示不返回元素统计", Required = false },
                     ["objectLimit"] = new McpToolParameter { Type = "integer", Description = "对象列表最多返回多少项，默认 120，最大 500；0 表示不返回对象列表", Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选区域短标签；返回的 areaId 会记住这个标签和 origin", Required = false },
-                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大导出格子数，默认 1600，硬上限 2500", Required = false }
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大导出格子数，默认 1600，硬上限 2500", Required = false },
+                    ["chunksOnly"] = new McpToolParameter { Type = "boolean", Description = "只返回分块计划，不展开地图；适合大范围扫描", Required = false },
+                    ["chunkMaxCells"] = new McpToolParameter { Type = "integer", Description = "每块目标最大格子数，默认沿用 maxCells，硬上限 2500", Required = false },
+                    ["chunkLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个块详情，默认 200，最大 1000", Required = false }
                 },
                 Handler = args =>
                 {
@@ -275,14 +278,20 @@ namespace OniMcp.Tools
                     int elementLimit = ClampInt(args, "elementLimit", 40, 0, 200);
                     int objectLimit = ClampInt(args, "objectLimit", 120, 0, 500);
                     int maxCells = Math.Max(1, Math.Min(TryGetInt(args, "maxCells", 1600), MaxTextMapCells));
+                    bool chunksOnly = TryGetBool(args, "chunksOnly", false);
+                    int chunkMaxCells = Math.Max(64, Math.Min(TryGetInt(args, "chunkMaxCells", maxCells), MaxTextMapCells));
+                    int chunkLimit = Math.Max(1, Math.Min(TryGetInt(args, "chunkLimit", 200), 1000));
 
                     var rect = ResolveTextMapRect(args, maxCells);
                     var area = AreaHandleRegistry.Define(rect, worldId, args["label"]?.ToString());
                     int width = rect["x2"] - rect["x1"] + 1;
                     int height = rect["y2"] - rect["y1"] + 1;
                     int cells = width * height;
-                    if (cells > maxCells)
-                        return CallToolResult.Error($"Area too large: {width}x{height}={cells} cells, maxCells={maxCells}");
+                    if (chunksOnly || cells > maxCells)
+                    {
+                        var chunkPlan = BuildChunkPlan(area, rect, worldId, width, height, cells, maxCells, chunkMaxCells, chunkLimit);
+                        return CallToolResult.Text(JsonConvert.SerializeObject(chunkPlan, McpJsonUtil.Settings));
+                    }
 
                     var overlays = overlayView
                         ? BuildViewOverlayIndex(rect, worldId, view)
@@ -318,6 +327,7 @@ namespace OniMcp.Tools
                     var fullLines = new List<string>();
                     var jsonRows = new List<Dictionary<string, object>>();
                     var sparseCells = new List<Dictionary<string, object>>();
+                    var markdownRows = new List<string>();
 
                     for (int y = rect["y2"]; y >= rect["y1"]; y--)
                     {
@@ -344,6 +354,7 @@ namespace OniMcp.Tools
                         }
 
                         string symbols = rowSymbols.ToString();
+                        markdownRows.Add(MarkdownRowRunLine(y, rect["y1"], rect["x1"], rowTokens));
                         if (!sparse)
                         {
                             jsonRows.Add(MapRow(y, rect["y1"], symbols, encoding));
@@ -403,7 +414,7 @@ namespace OniMcp.Tools
                     if (format == "json")
                         return CallToolResult.Text(JsonConvert.SerializeObject(BuildTextMapJson(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, overlays, legend, jsonRows, sparseCells, elementCounts, includeElements, elementLimit, objectLimit), McpJsonUtil.Settings));
 
-                    return CallToolResult.Text(text.ToString());
+                    return CallToolResult.Text(BuildTextMapMarkdown(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, overlays, legend, markdownRows, sparseRuns, elementCounts, includeElements, elementLimit, objectLimit, detail == "full" ? fullLines : null));
                 }
             };
         }
@@ -440,7 +451,10 @@ namespace OniMcp.Tools
                     ["profile"] = new McpToolParameter { Type = "string", Description = "地图输出档位：standard/minimal/scan，默认 standard", Required = false, EnumValues = new List<string> { "standard", "minimal", "scan" } },
                     ["objectLimit"] = new McpToolParameter { Type = "integer", Description = "对象/稀疏格子最多返回多少项，默认 120，最大 500", Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选区域短标签；返回的 areaId 会记住这个标签", Required = false },
-                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大导出格子数，默认 1600，硬上限 2500", Required = false }
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大导出格子数，默认 1600，硬上限 2500", Required = false },
+                    ["chunksOnly"] = new McpToolParameter { Type = "boolean", Description = "只返回分块计划，不展开地图；适合大范围扫描", Required = false },
+                    ["chunkMaxCells"] = new McpToolParameter { Type = "integer", Description = "每块目标最大格子数，默认沿用 maxCells，硬上限 2500", Required = false },
+                    ["chunkLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个块详情，默认 200，最大 1000", Required = false }
                 },
                 Handler = args =>
                 {
@@ -455,13 +469,20 @@ namespace OniMcp.Tools
                     }
 
                     int maxCells = Math.Max(1, Math.Min(TryGetInt(args, "maxCells", 1600), MaxTextMapCells));
+                    bool chunksOnly = TryGetBool(args, "chunksOnly", false);
+                    int chunkMaxCells = Math.Max(64, Math.Min(TryGetInt(args, "chunkMaxCells", maxCells), MaxTextMapCells));
+                    int chunkLimit = Math.Max(1, Math.Min(TryGetInt(args, "chunkLimit", 200), 1000));
                     var rect = ResolveTextMapRect(args, maxCells);
                     int worldId = TryGetInt(args, "worldId", requestedArea?.WorldId ?? ClusterManager.Instance?.activeWorldId ?? 0);
                     int width = rect["x2"] - rect["x1"] + 1;
                     int height = rect["y2"] - rect["y1"] + 1;
                     int cells = width * height;
-                    if (cells > maxCells)
-                        return CallToolResult.Error($"Area too large: {width}x{height}={cells} cells, maxCells={maxCells}");
+                    var area = AreaHandleRegistry.Define(rect, worldId, args["label"]?.ToString());
+                    if (chunksOnly || cells > maxCells)
+                    {
+                        var chunkPlan = BuildChunkPlan(area, rect, worldId, width, height, cells, maxCells, chunkMaxCells, chunkLimit);
+                        return CallToolResult.Text(JsonConvert.SerializeObject(chunkPlan, McpJsonUtil.Settings));
+                    }
 
                     string preset = NormalizeSnapshotPreset(args["preset"]?.ToString());
                     bool includeBase = TryGetBool(args, "includeBase", true);
@@ -477,7 +498,6 @@ namespace OniMcp.Tools
                         encoding = "rle";
                     int objectLimit = ClampInt(args, "objectLimit", 120, 0, 500);
 
-                    var area = AreaHandleRegistry.Define(rect, worldId, args["label"]?.ToString());
                     var overlayViews = ResolveSnapshotOverlays(args["overlays"], preset);
                     bool sparseOverlays = profile == "scan";
                     var maps = BuildSnapshotMapsSinglePass(area, rect, worldId, width, height, includeBase, overlayViews, sparseOverlays, visibleOnly, includeBuildings, includeItems, includeDupes, includeElements, encoding, objectLimit);
@@ -495,7 +515,7 @@ namespace OniMcp.Tools
                         ["maps"] = maps,
                         ["comparison"] = new Dictionary<string, object>
                         {
-                            ["textMapStrength"] = "grid-accurate terrain, elements, buildings, dupes, wires and conduits; use for planning and validation",
+                            ["textMapStrength"] = "coordinate-accurate Markdown terrain, elements, buildings, dupes, wires and conduits; use for planning and validation",
                             ["screenshotStrength"] = "human visual confirmation of current camera view, UI overlays, decor/room/crop visuals; not reliable for exact coordinates by itself",
                             ["defaultRule"] = "plan from maps; use screenshot only as supplementary visual evidence"
                         }
@@ -1294,6 +1314,201 @@ namespace OniMcp.Tools
             return row;
         }
 
+        private static string MarkdownRowRunLine(int y, int originY, int originX, List<string> rowTokens)
+        {
+            var runs = new List<string>();
+            string current = null;
+            int start = 0;
+            int end = 0;
+
+            for (int i = 0; i < rowTokens.Count; i++)
+            {
+                string token = string.IsNullOrWhiteSpace(rowTokens[i]) ? "unk" : rowTokens[i].Trim();
+                if (current == null)
+                {
+                    current = token;
+                    start = i;
+                    end = i;
+                    continue;
+                }
+
+                if (token == current)
+                {
+                    end = i;
+                    continue;
+                }
+
+                runs.Add(MarkdownCellRun(originX, start, end, current));
+                current = token;
+                start = i;
+                end = i;
+            }
+
+            if (current != null)
+                runs.Add(MarkdownCellRun(originX, start, end, current));
+
+            return "| `" + y + "` | `" + (y - originY) + "` | " + EscapeMarkdown(string.Join("; ", runs.ToArray())) + " |";
+        }
+
+        private static string MarkdownCellRun(int originX, int start, int end, string token)
+        {
+            int x1 = originX + start;
+            int x2 = originX + end;
+            string xRange = x1 == x2 ? x1.ToString() : x1 + ".." + x2;
+            string rxRange = start == end ? start.ToString() : start + ".." + end;
+            return "x=" + xRange + " rx=" + rxRange + " `" + token + "`";
+        }
+
+        private static string BuildTextMapMarkdown(
+            AreaHandle area,
+            Dictionary<string, int> rect,
+            int worldId,
+            int width,
+            int height,
+            string view,
+            bool sparse,
+            bool visibleOnly,
+            string encoding,
+            int validCells,
+            int visibleCells,
+            Dictionary<int, OverlaySummary> overlays,
+            Dictionary<char, string> legend,
+            List<string> markdownRows,
+            List<Dictionary<string, object>> sparseRuns,
+            Dictionary<string, ElementAggregate> elementCounts,
+            bool includeElements,
+            int elementLimit,
+            int objectLimit,
+            List<string> fullLines)
+        {
+            var md = new StringBuilder();
+            md.AppendLine("# ONI Map");
+            md.AppendLine();
+            md.AppendLine("## Region");
+            md.AppendLine();
+            md.AppendLine("| Field | Value |");
+            md.AppendLine("|---|---|");
+            md.AppendLine("| Area | `" + EscapeMarkdown(area.Id) + "` |");
+            md.AppendLine("| World | `" + worldId + "` |");
+            md.AppendLine("| Rect | `" + rect["x1"] + "," + rect["y1"] + " .. " + rect["x2"] + "," + rect["y2"] + "` |");
+            md.AppendLine("| Origin | `" + rect["x1"] + "," + rect["y1"] + "` |");
+            md.AppendLine("| Relative Rect | `0,0 .. " + (width - 1) + "," + (height - 1) + "` |");
+            md.AppendLine("| Size | `" + width + " x " + height + "` |");
+            md.AppendLine("| View | `" + EscapeMarkdown(view) + "` |");
+            md.AppendLine("| Visible Only | `" + visibleOnly + "` |");
+            md.AppendLine("| Encoding Source | `" + EscapeMarkdown(encoding) + "` |");
+            md.AppendLine();
+            md.AppendLine("Coordinates are normal world cells. Use absolute `x,y` from this document when calling build/order tools. `rx,ry` are offsets from the origin.");
+            md.AppendLine();
+
+            md.AppendLine("## Legend");
+            md.AppendLine();
+            md.AppendLine("| Token | Meaning |");
+            md.AppendLine("|---|---|");
+            foreach (var item in BuildTokenLegend(view))
+                md.AppendLine("| `" + EscapeMarkdown(item.Key) + "` | " + EscapeMarkdown(item.Value) + " |");
+            foreach (var item in legend)
+            {
+                string token = TokenForSymbol(item.Key, view);
+                if (!BuildTokenLegend(view).ContainsKey(token))
+                    md.AppendLine("| `" + EscapeMarkdown(token) + "` | " + EscapeMarkdown(item.Value) + " |");
+            }
+            md.AppendLine();
+
+            md.AppendLine("## Map Content");
+            md.AppendLine();
+            if (sparse)
+            {
+                md.AppendLine("Sparse mode lists only meaningful cells as horizontal runs.");
+                md.AppendLine();
+                md.AppendLine("| Y | RY | X Range | RX Range | N | Token | Kind | Id / Element | Extra |");
+                md.AppendLine("|---|---:|---|---|---:|---|---|---|---|");
+                foreach (var item in sparseRuns.Take(objectLimit > 0 ? objectLimit : 500))
+                    md.AppendLine(MarkdownSparseRunLine(item, view));
+            }
+            else
+            {
+                md.AppendLine("Each row is represented as semantic horizontal runs, not a pixel grid.");
+                md.AppendLine();
+                md.AppendLine("| Y | RY | Runs |");
+                md.AppendLine("|---|---:|---|");
+                foreach (var line in markdownRows)
+                    md.AppendLine(line);
+            }
+            md.AppendLine();
+
+            md.AppendLine("## Summary");
+            md.AppendLine();
+            md.AppendLine("- Valid cells: `" + validCells + "`");
+            md.AppendLine("- Visible cells: `" + visibleCells + "`");
+            md.AppendLine("- Objects: `" + overlays.Count + "`");
+            md.AppendLine("- Sparse runs: `" + sparseRuns.Count + "`");
+            md.AppendLine();
+
+            if (includeElements && elementLimit > 0)
+            {
+                md.AppendLine("## Elements");
+                md.AppendLine();
+                md.AppendLine("| Element | State | Cells | Kg | Avg C |");
+                md.AppendLine("|---|---|---:|---:|---:|");
+                foreach (var item in elementCounts.Values.OrderByDescending(item => item.CellCount).ThenBy(item => item.Id).Take(elementLimit))
+                {
+                    float avgK = item.TemperatureWeight > 0f ? item.WeightedTemperatureK / item.TemperatureWeight : 0f;
+                    md.AppendLine("| `" + EscapeMarkdown(item.Id) + "` | `" + EscapeMarkdown(item.State) + "` | `" + item.CellCount + "` | `" + Math.Round(item.TotalMassKg, 2) + "` | `" + Math.Round(avgK - 273.15f, 1) + "` |");
+                }
+                md.AppendLine();
+            }
+
+            if (!sparse && overlays.Count > 0 && objectLimit > 0)
+            {
+                md.AppendLine("## Objects");
+                md.AppendLine();
+                md.AppendLine("| Token | Kind | Id | Name | RXY | XY | Extra |");
+                md.AppendLine("|---|---|---|---|---|---|---|");
+                foreach (var overlay in overlays.Values.OrderBy(item => item.Y).ThenBy(item => item.X).ThenBy(item => item.Kind).Take(objectLimit))
+                {
+                    md.AppendLine("| `" + EscapeMarkdown(TokenForSymbol(overlay.Symbol, view)) + "` | `" + EscapeMarkdown(overlay.Kind) + "` | `" + EscapeMarkdown(overlay.Id) + "` | " + EscapeMarkdown(overlay.Name) + " | `" + (overlay.X - rect["x1"]) + "," + (overlay.Y - rect["y1"]) + "` | `" + overlay.X + "," + overlay.Y + "` | " + EscapeMarkdown(overlay.Extra ?? "") + " |");
+                }
+                md.AppendLine();
+            }
+
+            if (fullLines != null && fullLines.Count > 0)
+            {
+                md.AppendLine("## Cell Details");
+                md.AppendLine();
+                foreach (var line in fullLines)
+                    md.AppendLine("- `" + EscapeMarkdown(line) + "`");
+            }
+
+            return md.ToString();
+        }
+
+        private static string MarkdownSparseRunLine(Dictionary<string, object> item, string view)
+        {
+            int x1 = ToInt(item, "x1");
+            int x2 = ToInt(item, "x2");
+            int rx1 = ToInt(item, "rx1");
+            int rx2 = ToInt(item, "rx2");
+            string xRange = x1 == x2 ? x1.ToString() : x1 + ".." + x2;
+            string rxRange = rx1 == rx2 ? rx1.ToString() : rx1 + ".." + rx2;
+            string kind = item.ContainsKey("kind") ? item["kind"]?.ToString() : item.ContainsKey("element") ? item["element"]?.ToString() : "";
+            string id = item.ContainsKey("id") ? item["id"]?.ToString() : item.ContainsKey("element") ? item["element"]?.ToString() : "";
+            string extra = item.ContainsKey("extra") ? item["extra"]?.ToString() : "";
+            if (item.ContainsKey("kgAvg"))
+                extra = (extra + " kg~" + item["kgAvg"]).Trim();
+            if (item.ContainsKey("cAvg"))
+                extra = (extra + " C~" + item["cAvg"]).Trim();
+
+            return "| `" + item["y"] + "` | `" + item["ry"] + "` | `" + xRange + "` | `" + rxRange + "` | `" + item["n"] + "` | `" + EscapeMarkdown(TokenForSparseItem(item, view)) + "` | `" + EscapeMarkdown(kind) + "` | `" + EscapeMarkdown(id) + "` | " + EscapeMarkdown(extra) + " |";
+        }
+
+        private static string EscapeMarkdown(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "";
+            return value.Replace("|", "\\|").Replace("\r", " ").Replace("\n", " ");
+        }
+
         private static Dictionary<string, object> BuildTextMapJson(
             AreaHandle area,
             Dictionary<string, int> rect,
@@ -1412,6 +1627,66 @@ namespace OniMcp.Tools
         private static Dictionary<string, int> ResolveTextMapRect(JObject args, int maxCells)
         {
             return WorldEditor.ResolveRectOrCamera(args, maxCells);
+        }
+
+        private static Dictionary<string, object> BuildChunkPlan(AreaHandle area, Dictionary<string, int> rect, int worldId, int width, int height, int cells, int maxCells, int chunkMaxCells, int chunkLimit)
+        {
+            int defaultSide = Math.Max(8, (int)Math.Floor(Math.Sqrt(chunkMaxCells)));
+            int blockWidth = Math.Max(8, Math.Min(defaultSide, 50));
+            int blockHeight = Math.Max(8, Math.Min(Math.Max(8, chunkMaxCells / blockWidth), 50));
+            if (blockWidth * blockHeight > chunkMaxCells)
+                blockHeight = Math.Max(8, chunkMaxCells / blockWidth);
+
+            var blocks = new List<AreaHandle>();
+            int rows = 0;
+            int cols = 0;
+            for (int y = rect["y1"]; y <= rect["y2"]; y += blockHeight)
+            {
+                int row = rows++;
+                cols = 0;
+                for (int x = rect["x1"]; x <= rect["x2"]; x += blockWidth)
+                {
+                    int col = cols++;
+                    var blockRect = new Dictionary<string, int>
+                    {
+                        ["x1"] = x,
+                        ["y1"] = y,
+                        ["x2"] = Math.Min(x + blockWidth - 1, rect["x2"]),
+                        ["y2"] = Math.Min(y + blockHeight - 1, rect["y2"])
+                    };
+                    blocks.Add(AreaHandleRegistry.DefineBlock(blockRect, worldId, col, row, blockWidth, blockHeight, "snapshot_block_" + col + "_" + row));
+                }
+            }
+
+            var returned = blocks
+                .OrderBy(block => block.BlockRow ?? 0)
+                .ThenBy(block => block.BlockColumn ?? 0)
+                .Take(chunkLimit)
+                .Select(block => block.ToDictionary())
+                .ToList();
+
+            return new Dictionary<string, object>
+            {
+                ["v"] = 1,
+                ["chunked"] = true,
+                ["reason"] = cells > maxCells ? "area_too_large" : "chunks_only",
+                ["areaId"] = area.Id,
+                ["worldId"] = worldId,
+                ["rect"] = new[] { rect["x1"], rect["y1"], rect["x2"], rect["y2"] },
+                ["size"] = new[] { width, height },
+                ["cells"] = cells,
+                ["maxCells"] = maxCells,
+                ["chunkMaxCells"] = chunkMaxCells,
+                ["blockWidth"] = blockWidth,
+                ["blockHeight"] = blockHeight,
+                ["cols"] = cols,
+                ["rows"] = rows,
+                ["generated"] = blocks.Count,
+                ["returned"] = returned.Count,
+                ["truncated"] = Math.Max(0, blocks.Count - returned.Count),
+                ["blocks"] = returned,
+                ["next"] = "Call world_text_map or world_area_snapshot with one returned block areaId; use profile=scan encoding=rle for broad first pass."
+            };
         }
 
         private static Dictionary<int, OverlaySummary> BuildOverlayIndex(Dictionary<string, int> rect, int worldId, bool includeBuildings, bool includeItems, bool includeDupes)

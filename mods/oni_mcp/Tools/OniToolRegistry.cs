@@ -25,18 +25,25 @@ namespace OniMcp.Tools
             "tools_player_action_coverage",
             "tools_static_audit",
             "tools_call_many",
+            "agent_pointer_get",
+            "agent_pointer_aim_cell",
+            "agent_pointer_aim_world",
+            "agent_pointer_nudge",
+            "agent_pointer_select_tool",
+            "agent_pointer_left_click",
+            "agent_pointer_hold_left",
+            "agent_pointer_jump",
+            "agent_pointer_jump_point_set",
+            "agent_pointer_jump_point_list",
+            "agent_pointer_jump_point_clear",
             "colony_state_snapshot",
-            "plan_harness_create",
-            "plan_harness_get",
-            "plan_harness_list",
-            "plan_harness_parse",
-            "plan_harness_record",
-            "plan_harness_validate",
-            "plan_harness_execute",
             "edit_mark_request_create",
             "edit_mark_request_list",
             "edit_mark_request_clear",
-            "game_screenshot",
+            "game_time",
+            "game_pause",
+            "game_resume",
+            "game_set_speed",
             "game_red_alert_status",
             "game_red_alert_set",
             "power_summary",
@@ -58,8 +65,7 @@ namespace OniMcp.Tools
             "orders_cancel_area",
             "orders_harvest_area",
             "buildings_search_defs",
-            "buildings_materials",
-            "buildings_plan"
+            "buildings_materials"
         };
         private static bool _initialized;
         private static List<McpToolInfo> _cachedCoreToolInfos;
@@ -106,6 +112,17 @@ namespace OniMcp.Tools
             Register(CameraTools.FocusCell());
             Register(CameraTools.FocusDupe());
             Register(CameraTools.TakeScreenshot());
+            Register(AgentPointerTools.GetPointerState());
+            Register(AgentPointerTools.AimCell());
+            Register(AgentPointerTools.AimWorld());
+            Register(AgentPointerTools.Nudge());
+            Register(AgentPointerTools.SelectTool());
+            Register(AgentPointerTools.LeftClick());
+            Register(AgentPointerTools.HoldLeft());
+            Register(AgentPointerTools.Jump());
+            Register(AgentPointerTools.SetJumpPoint());
+            Register(AgentPointerTools.ListJumpPoints());
+            Register(AgentPointerTools.ClearJumpPoint());
             Register(UiHintTools.CreateNotification());
             Register(UiHintTools.CreatePopupText());
             Register(UiHintTools.CreateMapMarker());
@@ -117,13 +134,6 @@ namespace OniMcp.Tools
             Register(EditMarkTools.CreateEditMarkRequest());
             Register(EditMarkTools.ListEditMarkRequests());
             Register(EditMarkTools.ClearEditMarkRequest());
-            Register(PlanningHarnessTools.CreatePlan());
-            Register(PlanningHarnessTools.GetPlan());
-            Register(PlanningHarnessTools.ListPlans());
-            Register(PlanningHarnessTools.ParsePlanText());
-            Register(PlanningHarnessTools.RecordPlanStage());
-            Register(PlanningHarnessTools.ValidatePlan());
-            Register(PlanningHarnessTools.ExecutePlan());
             Register(DuplicantTools.GetDupeStatusCheck());
             Register(DuplicantTools.GetDupeDetails());
             Register(DuplicantTools.GetDupeAttributes());
@@ -311,9 +321,6 @@ namespace OniMcp.Tools
             Register(MiscSideScreenTools.SetConfigurableConsumerOption());
             Register(BuildPlanningTools.SearchBuildables());
             Register(BuildPlanningTools.ListBuildMaterials());
-            Register(BuildPlanningTools.PlanBuilding());
-            Register(BuildPlanningTools.PlanBuildingRect());
-            Register(BuildPlanningTools.PlanMany());
             Register(RocketTools.ListRockets());
             Register(RocketTools.GetRocketStatus());
             Register(RocketTools.GetRocketDetail());

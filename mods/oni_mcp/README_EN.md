@@ -17,7 +17,7 @@ Let your AI assistant connect directly to your Oxygen Not Included colony. Once 
 ### 🎮 Voice/Text Commands
 - Tell the AI "pause the game and take a screenshot" → AI calls `game_pause` + `take_screenshot`
 - Say "set my digger Duplicant's digging priority to max" → AI calls `dupes_priority_set`
-- Say "build two beds at (100, 200)" → AI calls `buildings_plan`
+- Say "build two beds at (100, 200)" → AI moves the visible agent pointer and calls `agent_pointer_left_click`
 - Say "check rocket status" → AI calls `rockets_status`
 
 ### 📊 Real-Time Data Panel
@@ -101,7 +101,7 @@ About **320 tools** cover every game system, grouped as follows:
 | Power | `power_summary` | Power system summary |
 | Rooms | `rooms_list` | Room system status |
 | Thermal | `thermal_overheat_risk_scan` | Overheat risk scan |
-| Buildings | `buildings_search_defs`, `buildings_plan`, `buildings_deconstruct` | Search, plan, deconstruct |
+| Buildings | `buildings_search_defs`, `buildings_materials`, `agent_pointer_select_tool`, `agent_pointer_left_click`, `buildings_deconstruct` | Search, materials, pointer build, deconstruct |
 | Orders | `orders_dig`, `orders_sweep`, `orders_harvest` | Digging, sweeping, harvesting |
 | Rockets | `rockets_list`, `rockets_status`, `rockets_request_launch` | List, status, launch |
 | Farming | `farming_planting`, `farming_harvestables` | Planting, harvestables |

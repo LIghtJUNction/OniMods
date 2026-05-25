@@ -17,6 +17,7 @@ Oxygen Not Included Mods
 - 但是作为你的游戏顾问还是不错的，AI可以读取相当多的游戏数据，也能较好的完成一些简单任务，像调整日程，帮你修改建筑设置，设置门禁权限，以及复制人重命名这些操作，均可实现。
 - 但是像世界规划这种复杂任务，我还在尝试看看能不能尽量做成。
 这个是mcp服务器，不是完整的agent实现，后续如果有人想赋予复制人灵魂（闲着没事和复制人聊聊天），可以直接复用本项目。
+- 相关 AI Skill 实现参考：[zhuiyun.skill](https://github.com/LIghtJUNction/zhuiyun.skill)
 
 ## onim
 缺氧 (Oxygen Not Included) Mod 开发工具链。

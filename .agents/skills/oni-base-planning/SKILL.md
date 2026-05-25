@@ -14,11 +14,35 @@ Use when the user wants to **build, dig, deconstruct, or reorganize** the colony
 ### Construction Control Loop
 
 ```
-Scan    → camera_move + world_area_snapshot preset=planning / layout_candidates → understand space
-Plan    → choose candidate rectangle + area_define + buildings_plan* → create build plan
-Validate→ dryRun tools first; use plan_harness_validate only for formal plans
-Execute → tools_call_many for simple work; plan_harness_execute only for existing formal plans
-Verify  → world_text_map + buildings_search_defs → confirm completion
+Scan    → minimal status + pointer/camera + targeted small snapshot only if needed
+Plan    → choose pointer start + tool + click/drag gestures
+Validate→ dryRun/validateOnly tools first when available
+Execute → agent_pointer_left_click / agent_pointer_hold_left
+Verify  → agent_pointer_get + targeted small snapshot/status
+```
+
+## Pointer-First Construction Policy
+
+The visible agent pointer is the primary construction interface. Normal construction, digging, cancellation, sweeping, mopping, harvesting, and simple deconstruction must use pointer tools first:
+
+```
+agent_pointer_jump x=<startX> y=<startY> worldId=<worldId>
+agent_pointer_select_tool tool=build prefabId=<PrefabId> material=auto priority=5
+agent_pointer_left_click confirm=true
+agent_pointer_hold_left direction=<right|left|up|down> length=<cells> confirm=true
+```
+
+Use direct coordinate tools only when no pointer equivalent exists:
+
+- Legacy coordinate building tools are not exposed. Do not call or suggest them.
+- `orders_*_area`: use only for large rectangles or missing pointer support; otherwise select the corresponding pointer tool and drag/click.
+- `world_text_map`: use only for targeted verification or chunked scans, not as the default action substrate.
+
+For repeat locations, save pointer jump points:
+
+```
+agent_pointer_jump_point_set code=p1
+agent_pointer_jump code=p1
 ```
 
 ## Spatial Operations
@@ -29,50 +53,49 @@ Verify  → world_text_map + buildings_search_defs → confirm completion
 - Grid: integer cells, x increases right, y increases up
 - World ID: each asteroid has its own worldId
 - Active world: `ClusterManager.Instance.activeWorldId`
-- Screenshots are not a coordinate source. They are only visual confirmation.
-- Before placing floors, walls, ladders, wires, pipes, or machines, anchor every planned coordinate to `world_area_snapshot`, `world_text_map`, `world_cell_info`, or an `areaId`.
+- Screenshots and text maps are observation sources, not the main control surface.
+- Before placing floors, walls, ladders, wires, pipes, or machines, aim the visible agent pointer at the intended start cell and select the build tool.
 
 ### Grid Alignment Rule
 
-Misaligned blueprints are usually caused by estimating coordinates from screenshots. Avoid this with a strict grid workflow:
+Misaligned blueprints are usually caused by converting visual intent into raw coordinates. Avoid this with a strict pointer workflow:
 
-1. Read a map first:
+1. Use compact status first; only read a map if terrain/hazard context is unknown:
    ```
-   world_text_map x1 y1 x2 y2 profile=standard encoding=plain includeBuildings=true includeElements=true
+   colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
    ```
    or:
    ```
-   world_area_snapshot x1 y1 x2 y2 preset=construction encoding=plain includeScreenshot=false
+   world_area_snapshot areaId=<small area> preset=construction profile=scan encoding=rle includeScreenshot=false
    ```
-2. Identify the anchor row/column from map coordinates, not from the image. Existing platform tiles are `tile`; natural solids are `sol`; gases/liquids are `oxy/po2/co2/hyd/liq`; buildings are `bld`.
-3. For a horizontal platform, use one constant `y` for the whole line: `l: [x1, y, x2, y]`.
-4. For a vertical ladder/wall, use one constant `x` for the whole line: `l: [x, y1, x, y2]`.
-5. Do not split one straight platform into multiple guessed segments unless all segments share the same exact `y` and touch/overlap intentionally.
-6. Never place support tiles from a screenshot rectangle alone. If a screenshot suggests a target, convert it to a map read and derive exact cells first.
-7. After `dryRun=true`, inspect `results`/`planned`/`valid` and the requested coordinates. If any line is off by one row/column, stop and re-read the map instead of executing.
+2. Aim the pointer at the exact start cell with `agent_pointer_jump` or nudge from a known point.
+3. Select the desired tool/building/material with `agent_pointer_select_tool`.
+4. Use `agent_pointer_hold_left` for straight segments and `agent_pointer_left_click` for single placements.
+5. Use `agent_pointer_get` after the action to confirm the pointer endpoint.
+6. If a placement is wrong, switch to `tool=cancel` and click/drag the wrong cells before replacing.
 
 For the common "extend existing platform left/right from the printing pod" task:
 
-- Locate the existing platform row from `world_text_map`; it is the row containing a run of `tile` under/near the printing pod.
-- Use world absolute coordinates from the map output for build calls.
-- Extend left with `{ "p": "Tile", "l": [leftX, platformY, existingLeftX - 1, platformY] }`.
-- Extend right with `{ "p": "Tile", "l": [existingRightX + 1, platformY, rightX, platformY] }`.
-- If the terrain/ice blocks the route, queue `orders_dig_area` for the blocking natural tiles first; do not shift the floor line up/down to avoid terrain unless the plan explicitly calls for a ramp or step.
+- Jump or nudge the pointer to the existing platform endpoint.
+- Select `tool=build prefabId=Tile material=auto`.
+- Extend left/right with `agent_pointer_hold_left direction=left|right length=<cells> confirm=true`.
+- If terrain blocks the route, switch to `tool=dig` and drag the blocking natural tiles first; do not shift the floor line up/down unless the plan explicitly calls for a ramp or step.
 
 ### Scanning Workflow
 
 ```
-camera_get_view        → get current position + zoom + worldId
-camera_move mode=jump x=targetX y=targetY zoom=1 → jump to area
-world_area_snapshot x1 y1 x2 y2 preset=planning encoding=plain → default base-layout snapshot
-  → Use preset=utilities for utility-only power+gas+liquid+shipping+logic overlays
+colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
+agent_pointer_get      → get current agent pointer, selected tool, and jump points
+agent_pointer_jump     → jump to home/p1/p2/x/y when target is known
+world_area_snapshot chunksOnly=true → only for large unknown areas
+world_area_snapshot areaId=<block> preset=planning profile=scan encoding=rle → targeted base-layout snapshot
 layout_candidates x1 y1 x2 y2 purpose=lab|barracks|bathroom|power|farm → scored room/platform candidates
-world_text_map x1 y1 x2 y2 profile=standard encoding=plain → readable terrain/object scan
+world_text_map areaId=<small area> profile=scan encoding=rle → compact verification scan
   → If need objects: add includeBuildings=true, includeItems=true
   → If need elements: add includeElements=true
 ```
 
-Prefer `world_area_snapshot preset=planning` for room/base layout. It returns base terrain, utility overlays, floor runs, dig runs, hazards, and candidate rectangles. Use `layout_candidates` before choosing room coordinates for labs, barracks, bathrooms, power rooms, or farms. Use `world_text_map` only for very small focused scans. Use screenshots only as visual confirmation; do not infer exact build coordinates from screenshots alone.
+Prefer pointer state and small/chunked snapshots. Use `layout_candidates` before choosing room shapes, but execute simple lines and single placements through the pointer. Use screenshots only as visual confirmation; do not infer exact build coordinates from screenshots alone.
 
 Example:
 ```json
@@ -95,320 +118,158 @@ area_merge areaIds=["b1","b2","b3"] label="north_expansion" → create a merged 
 world_area_snapshot areaId=bedroom_block preset=planning → reusable planning context
 layout_candidates areaId=bedroom_block purpose=barracks → choose room rectangle
 world_text_map areaId=bedroom_block profile=standard encoding=plain → reuse area
-buildings_plan_rect areaId=bedroom_block ... → build within area
+agent_pointer_jump + agent_pointer_select_tool + agent_pointer_hold_left → build within area
 ```
 
 `area_define` 返回手工 `a*` areaId；`area_blocks` 返回自动地图块 `b*` areaId。两者都可以在任何接受 `areaId` 参数的工具中复用，替代 `x1/y1/x2/y2`。相邻块可临时写成 `areaId=b1+b2+b3`，或用 `area_merge` 生成新的 `a*`。拼接使用外接矩形，非相邻块会包含中间空隙。对块内施工或订单优先使用地图输出的世界绝对坐标。
 
-## Building Plan Tools
+## Building and Order Tools
 
 ### Tool Selection
 
 | Goal | Tool | When to use |
 |------|------|-------------|
-| Single building at position | `buildings_plan` | One-off placement |
-| Rectangular fill (floor, wall) | `buildings_plan_rect` | Lines, rooms, platforms |
-| Mixed batch (different buildings) | `buildings_plan_many` | Complex structures |
+| Single building | `agent_pointer_select_tool tool=build` + `agent_pointer_left_click` | Default one-off placement |
+| Straight floor/wire/pipe/ladder/dig line | `agent_pointer_hold_left` | Default line gesture |
+| Cancel/sweep/mop/harvest line | `agent_pointer_select_tool` + `agent_pointer_hold_left` | Default order gesture |
+| Dense mixed batch | Break into visible pointer clicks/drags | Complex structures still need player-visible gestures |
+| Large rectangle order | `orders_*_area` | Compatibility fallback when pointer drag is impractical |
 
 ### Fast Path
 
-For simple low-risk construction, do not create a `plan_harness`:
+For simple low-risk construction, use the direct pointer flow:
 
 ```
-world_area_snapshot preset=planning encoding=plain
-buildings_plan_many dryRun=true confirm=true ...
-buildings_plan_many dryRun=false confirm=true ...
-world_area_snapshot preset=construction encoding=plain
+colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
+agent_pointer_jump x=<startX> y=<startY>
+agent_pointer_select_tool tool=build prefabId=Tile material=auto priority=5
+agent_pointer_hold_left direction=right length=8 confirm=true
+agent_pointer_get
 ```
 
-Use `plan_harness` only for broad, risky, multi-phase, user-marked, or resume-later plans.
+For broad, risky, multi-phase, or player-marked plans, write the planned calls in the response and dry-run exact actions before execution.
 
-### buildings_plan
+### Build Gestures
 
-Parameters:
-- `prefabId`: building type identifier
-- `x`, `y`: world grid position
-- `worldId`: target world (default active)
-- Optional: `orientation` (Neutral/R90/R180/R270/FlipH), `material`, `facade`, `priority` (1-9)
-- Optional: `dryRun` / `validateOnly` to validate without placing
-- Optional: `allowUnsupported` to bypass OnFloor support blocking; avoid unless intentionally placing unsupported blueprints
-- `confirm`: must be `true`
+Use `agent_pointer_select_tool` to show the chosen building and material on the pointer before placing anything.
 
-Example:
+Single placement:
 ```json
-{
-  "name": "buildings_plan",
-  "arguments": {
-    "prefabId": "Bed",
-    "x": 12, "y": 3, "orientation": "Neutral",
-    "confirm": true
-  }
-}
+{ "name": "agent_pointer_jump", "arguments": { "x": 80, "y": 136, "worldId": 0 } }
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Bed", "material": "auto", "priority": 5 } }
+{ "name": "agent_pointer_left_click", "arguments": { "confirm": true } }
 ```
 
-### buildings_plan_rect
-
-Fills an entire rectangle with the same building. Hard limit: 200 cells.
-
-Parameters:
-- `prefabId`: building type
-- `x1`, `y1`, `x2`, `y2`: world rectangle bounds (inclusive)
-- `areaId`: optional, replaces x1/y1/x2/y2 with that area's absolute rectangle
-- `worldId`, `material`, `facade`, `priority`
-- `dryRun` / `validateOnly` validates without placing
-- `allowUnsupported` bypasses OnFloor support blocking; avoid for normal play
-- `confirm`: must be `true`
-
-Example:
+Straight utility or platform:
 ```json
-{
-  "name": "buildings_plan_rect",
-  "arguments": {
-    "prefabId": "Tile",
-    "x1": 70, "y1": 132, "x2": 80, "y2": 132,
-    "confirm": true
-  }
-}
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Wire", "material": "CopperOre", "priority": 5 } }
+{ "name": "agent_pointer_hold_left", "arguments": { "direction": "right", "length": 12, "confirm": true } }
 ```
 
-### buildings_plan_many
+For L-shaped utility routes, split the route into two visible pointer drags. Use `agent_pointer_jump_point_set code=p1` before a multi-step job so the pointer can return to the route start.
 
-Compact batch placement. Supports multiple location formats per item. Default `maxCells`: 500, hard max: 1000.
+### Dig, Sweep, Mop, Harvest, Cancel
 
-Top-level parameters:
-- `items`: array of plan items
-- `routes`: optional utility routes expanded into Wire/LogicWire/GasConduit/LiquidConduit/SolidConduit cells
-- `worldId`/`w`, `material`/`m`, `facade`/`f`, `priority`/`pri`, `orientation`/`o`: defaults merged into each item
-- `areaId`/`a`: optional area handle for whole-area item placement; item coordinates and routes otherwise use world absolute coordinates
-- `detail`: return per-cell results (default false)
-- `maxCells`: cell expansion limit
-- `dryRun` / `validateOnly`: validate the whole batch without placing
-- `allowUnsupported`: bypass OnFloor support blocking; avoid for normal play
-- `confirm`: must be `true`
-
-Item location formats (each item must have one):
-- `x` + `y`: single cell
-- `line` or `l`: `[x1, y1, x2, y2]` horizontal/vertical line only
-- `path`, `points`, or `pts`: `[[x,y], ...]` orthogonal polyline; every segment must be horizontal or vertical
-- `r`: `[x1, y1, x2, y2]` rectangle
-- `cells` or `cs`: `[[x, y], ...]` cell list
-- `areaId` or `a`: predefined area handle
-
-Short fields accepted everywhere: `p` = `prefabId`, `w` = `worldId`, `m` = `material`, `f`/`fid` = `facade`/`facadeId`, `pri` = `priority`, `o` = `orientation`.
-
-Use `line/l` for straight floors, ladders, wires, and pipes. Use `path/points` for L-shaped or multi-segment routes. Do not use `r` for a line unless the rectangle is intentionally one cell high or one cell wide; `r` fills the entire rectangle.
-
-For `BuildLocationRule=OnFloor` buildings, the server checks support cells below the footprint. Missing support returns `Unsupported OnFloor building` with `missingSupportCells`. In `buildings_plan_many`, list support tiles before floor-bound buildings so the dry-run can validate against same-batch supports.
-
-Routes connect endpoints in the same call:
-```json
-{
-  "name": "buildings_plan_many",
-  "arguments": {
-    "items": [
-      { "p": "ManualGenerator", "x": 80, "y": 136 },
-      { "p": "Battery", "x": 83, "y": 136 },
-      { "p": "ResearchCenter", "x": 85, "y": 136 }
-    ],
-    "routes": [
-      { "p": "Wire", "from": { "p": "ManualGenerator", "x": 80, "y": 136, "port": "powerOutput" }, "to": { "p": "ResearchCenter", "x": 85, "y": 136, "port": "powerInput" }, "viaY": 135 }
-    ],
-    "confirm": true,
-    "dryRun": true
-  }
-}
-```
-Use `viaX` or `viaY` to control the L-shaped path. Route endpoints and via coordinates are world absolute coordinates. For pipe ports, prefer explicit `[x,y]` endpoints when exact port offsets matter.
-
-Example with mixed formats:
-```json
-{
-  "name": "buildings_plan_many",
-  "arguments": {
-    "defaults": { "worldId": 0, "orientation": "Neutral" },
-    "items": [
-      { "prefabId": "Tile", "x": 10, "y": 20 },
-      { "p": "Tile", "l": [11, 20, 15, 20] },
-      { "p": "Bed", "x": 12, "y": 22 },
-      { "p": "Bed", "x": 14, "y": 22 }
-    ],
-    "confirm": true
-  }
-}
-```
-
-## Excavation and Clearance
-
-### Digging
-
-```
-orders_dig_area x1 y1 x2 y2 worldId confirm=true
-```
-- Issues dig orders for all diggable natural tiles in rectangle
-- `confirm=true` required (dangerous tool)
-- Does not guarantee completion; dupes must execute
-- Skips already-placed dig orders, foundations, and non-solid cells
-- Never use `orders_attack` for excavation. `orders_attack` is only for critters/enemies and area attack requires a separate attack confirmation.
-
-### Sweeping
-
-```
-orders_sweep_area x1 y1 x2 y2 worldId dryRun=true confirm=true
-orders_sweep_area x1 y1 x2 y2 worldId confirm=true priority=5
-```
-- Marks solid debris/pickupables for sweeping to storage.
-- Never use sweep for water, polluted water, or any liquid. For "地上的水", spills, or liquid cells on a floor, use `orders_mop_area`.
-- `confirm=true` required when area exceeds 100 cells
-- Use `dryRun=true` first if a sweep seems ineffective. Read `inRect`, `marked`, `targets`, and `skipped` to distinguish no debris, stored/equipped items, missing `Clearable`, or wrong world/coordinates.
-- Sweep only creates errands; dupes still need reachable storage accepting the item.
-
-### Mopping
-
-```
-orders_mop_area x1 y1 x2 y2 worldId confirm=true priority=5
-```
-- Marks water/polluted water/liquid cells on a floor for mopping.
-- Use this for user wording like "地上的水", "拖地", "漏水", "液体", "water", "liquid", or "spill".
-- Mop skips cells without floor support or liquid above the game's mop mass limit.
-- If `orders_sweep_area` returns `liquidCellsInRect > 0` or a `mopHint`, switch to `orders_mop_area`; do not repeat sweep with the same area.
-
-### Deconstruction
-
-```
-buildings_deconstruct id=X confirm=true   → single building by instance ID
-buildings_deconstruct x=X y=Y confirm=true → building at coordinate
-```
-- `confirm=true` required (dangerous tool)
-- Also accepts `areaId`, `prefabId`, `query` for lookup
-- Bulk via `tools_call_many`:
+Use the matching pointer tool and drag/click the affected cells:
 
 ```json
-{
-  "name": "tools_call_many",
-  "arguments": {
-    "items": [
-      { "name": "buildings_deconstruct", "arguments": { "id": 1, "confirm": true } },
-      { "name": "buildings_deconstruct", "arguments": { "id": 2, "confirm": true } }
-    ]
-  }
-}
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "dig", "priority": 5 } }
+{ "name": "agent_pointer_hold_left", "arguments": { "direction": "right", "length": 8, "confirm": true } }
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "cancel" } }
+{ "name": "agent_pointer_hold_left", "arguments": { "direction": "left", "length": 3, "confirm": true } }
 ```
 
-### Cancel Orders
+- Never use `orders_attack` for excavation. `orders_attack` is only for critters/enemies.
+- Use `tool=sweep` only for solid debris/pickupables.
+- Use `tool=mop` for water, polluted water, spills, "地上的水", "拖地", and liquid cells on floors.
+- Use `tool=cancel` to fix wrong pointer placements before replacing them.
+
+### Dense Batch Policy
+
+Coordinate building batch tools are removed from the public MCP surface. Keep construction visible by decomposing it into pointer gestures:
+
+- Use `buildings_search_defs` and `buildings_materials` for prefab/material validation.
+- Place support cells first with `agent_pointer_hold_left` or `agent_pointer_left_click`.
+- Place machines, beds, toilets, batteries, and research stations only after the support is visible.
+- `orders_*_area confirm=true`: large rectangular orders or emergency fallback when pointer support is missing.
+- `buildings_deconstruct id=<id> confirm=true`: allowed when a read tool returns a precise building id; otherwise prefer pointer `tool=deconstruct`.
+
+## Pointer Construction Patterns
+
+### Platform Extension
 
 ```
-orders_cancel_area x1 y1 x2 y2 worldId confirm=true
-```
-- Cancels player-placed orders: dig, build, deconstruct, sweep, harvest, attack, capture
-- `confirm=true` required when area exceeds 100 cells
-
-## Batch Construction Workflow
-
-### Pattern: Room Construction
-
-```
-Step 1: Scan
-  world_text_map x1 y1 x2 y2 profile=standard encoding=plain
-  → Identify existing terrain, buildings, items
-
-Step 2: Clear (if needed)
-  orders_dig_area x1 y1 x2 y2 confirm=true
-  orders_sweep_area x1 y1 x2 y2 confirm=true  # solid debris only
-  orders_mop_area x1 y1 x2 y2 confirm=true    # water/liquid only
-  → Poll with world_text_map to check completion
-
-Step 3: Define Area
-  area_define x1 y1 x2 y2 label="room_A"
-
-Step 4: Plan Walls/Floor
-  buildings_plan_rect prefabId=Tile x1 y1 x2 y2 confirm=true
-  → Or use buildings_plan_many with r (rect) items for mixed materials
-
-Step 5: Plan Interior
-  buildings_plan_many
-    defaults: { worldId: 0 }
-    items:
-      - { prefabId: Bed, x: 12, y: 22 }
-      - { prefabId: Bed, x: 14, y: 22 }
-
-Step 6: Validate
-  buildings_plan_many dryRun=true
-    items ordered with Tile/support first, then furniture/machines
-  plan_harness_create objective="Build room_A" areaId="room_A"
-  plan_harness_record id=p0001 stage=plan summary="Room build plan"
-    payload: { plannedCalls: [...] }
-  plan_harness_validate id=p0001
-  → Checks: tool exists? required params present? dangerous tools have confirm?
-
-Step 7: Execute
-  plan_harness_execute id=p0001 confirm=true
-  → Or repeat the validated buildings_plan_many with dryRun=false
-
-Step 8: Verify
-  world_text_map areaId=room_A includeBuildings=true
-  → Confirm buildings appear in planned positions
+agent_pointer_jump code=home or x/y at platform endpoint
+agent_pointer_select_tool tool=build prefabId=Tile material=auto priority=5
+agent_pointer_hold_left direction=right length=<cells> confirm=true
+agent_pointer_get
 ```
 
-### Pattern: Utility Routing
+If natural terrain blocks the line, switch to `tool=dig`, drag the blocking cells, then return to the platform jump point.
+
+### Room Construction
 
 ```
-Step 1: Path Planning
-  world_text_map with includeBuildings=true
-  → Identify existing pipes/wires from object list
-  → Plan route coordinates avoiding obstacles
-
-Step 2: Clear Path
-  orders_dig_area for buried route segments confirm=true
-
-Step 3: Plan Infrastructure
-  buildings_plan_many
-    defaults: { worldId: 0, orientation: "Neutral" }
-    items:
-      - { prefabId: Wire, x: 10, y: 20 }
-      - { prefabId: Wire, x: 11, y: 20 }
-      - { prefabId: Wire, line: [12, 20, 20, 20] }
-
-Step 4: Execute
-  tools_call_many
-    defaults: { confirm: true }
-    items: [ ... ]
+game_pause
+colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
+agent_pointer_jump to room corner
+agent_pointer_jump_point_set code=p1
+agent_pointer_select_tool tool=dig priority=5
+agent_pointer_hold_left for needed clearance lines
+agent_pointer_select_tool tool=build prefabId=Tile material=auto priority=5
+agent_pointer_hold_left for floor/wall lines
+agent_pointer_select_tool tool=build prefabId=<furniture> material=auto priority=5
+agent_pointer_left_click for each machine/furniture cell
+agent_pointer_get
 ```
+
+For multi-phase, risky, or player-marked rooms, write the pointer calls in the response and dry-run exact actions before execution.
+
+### Utility Routing
+
+```
+agent_pointer_jump to source side or saved p1
+agent_pointer_select_tool tool=build prefabId=Wire|GasConduit|LiquidConduit material=auto priority=5
+agent_pointer_hold_left direction=<dir> length=<n> confirm=true
+agent_pointer_hold_left direction=<dir2> length=<n2> confirm=true
+```
+
+Use a targeted utility snapshot only to identify existing ports, buried obstacles, or verification. Do not convert every wire/pipeline into raw coordinate batch calls by default.
 
 ## Validation and Safety
 
 ### Pre-Build Checks
 
-1. **Map anchor check**: `world_text_map`/`world_area_snapshot` provides exact `x/y`; never use screenshot-only coordinates.
-2. **Line alignment check**: horizontal lines have `y1 == y2`; vertical lines have `x1 == x2`; extensions of one platform share the same `platformY`.
-3. **Space check**: `world_text_map` confirms area is clear or planned clearance is complete.
-4. **Building availability**: `buildings_search_defs query=...` confirms `prefabId` exists and is unlocked.
-5. **Support check**: run `buildings_plan* dryRun=true`; OnFloor buildings must have existing or same-batch prior support tiles.
-6. **Dry-run coordinate check**: compare dry-run result coordinates against the intended map row/column before executing.
-7. **Confirm check**: dangerous tools (`orders_dig_area`, `buildings_deconstruct`, `plan_harness_execute`) require `confirm: true`.
-8. **Cell limits**: `buildings_plan_rect` refuses >200 cells; `buildings_plan_many` refuses >maxCells (default 500, max 1000); `tools_call_many` max 20 calls.
+1. **Pointer anchor check**: `agent_pointer_get` or `agent_pointer_jump` establishes the visible start cell.
+2. **Tool check**: `agent_pointer_select_tool` shows the active tool/building/material before click/drag.
+3. **Line check**: use one `agent_pointer_hold_left` per horizontal or vertical segment.
+4. **Space check**: use a targeted `world_area_snapshot profile=scan encoding=rle` only when terrain, hazards, or ports are unknown.
+5. **Building availability**: `buildings_search_defs query=...` confirms `prefabId` exists and is unlocked.
+6. **Support check**: place visible support first with the pointer before any OnFloor building.
+7. **Confirm check**: map-altering pointer clicks/drags and compatibility dangerous tools require `confirm=true`.
+8. **Stop check**: pause and ask before large destructive digs, liquid/heat exposure, combat, or irreversible deconstruction.
 
 ### Post-Build Verification
 
-1. Re-read the same area with `world_text_map profile=standard encoding=plain includeBuildings=true`.
-2. Confirm every planned floor/wall/ladder line appears on the intended constant `x` or `y`.
-3. If any blueprint appears one row/column off, cancel the wrong cells with `orders_cancel_area` before placing replacements.
-4. `buildings_search_defs` → verify `prefabId` if placement failed with "Building def not found".
-5. `world_cell_info x y` → inspect a single cell for element/overlay details.
+1. Call `agent_pointer_get` to confirm the endpoint and selected tool.
+2. Use targeted `world_area_snapshot areaId=<small area> preset=construction profile=scan encoding=rle includeScreenshot=false` when visible confirmation matters.
+3. If any blueprint appears wrong, switch pointer to `tool=cancel` and click/drag the wrong cells before replacing.
+4. Use `world_cell_info x y` only for a single ambiguous cell.
 
 ## Error Recovery
 
 ### "Building already exists at position"
-- Re-scan with `world_text_map includeBuildings=true`
-- If existing building is wrong: `buildings_deconstruct` with `id` or `x`/`y`, then retry
+- Re-read the small area with `world_area_snapshot includeBuildings=true`.
+- If existing building is wrong, select pointer `tool=deconstruct` or use `buildings_deconstruct id=<id> confirm=true` when the id is known.
 
 ### "Invalid or not visible cell"
 - Cell is outside world bounds or in fog of war
-- Use `camera_move mode=jump x=... y=...` to ensure area is revealed
+- Use `agent_pointer_jump code=home|p1` or `camera_move mode=jump` to reveal the area, then retry with the pointer.
 
 ### "Unsupported OnFloor building"
 - The building needs floor/support cells below its footprint
-- Add `Tile`/support cells first, or move the building onto existing floor
-- For `buildings_plan_many`, put support items earlier than beds, generators, batteries, research stations, toilets, and other floor-bound buildings
+- Place `Tile`/support cells first with the pointer, or move the pointer to existing floor.
+- For dense structures, place support cells first, then floor-bound buildings with pointer clicks/drags.
 
 ### "Building def not found"
 - Call `buildings_search_defs query=...` to find correct `prefabId`
@@ -425,138 +286,70 @@ Step 4: Execute
 
 ### Dig/deconstruct not completing
 - Dupes have not reached the work site
-- `world_text_map` shows if terrain blocks access path
-- `orders_dig_area` to clear access, then retry
+- Use `dupes_status_check` and a targeted small snapshot to find the blocked route.
+- Use pointer `tool=dig` to open access, then retry.
 
-### Plan harness gates failed
-- `plan_harness_execute` requires prior `plan` + `feedback` + `verification` stages
-- Record each stage with `plan_harness_record` before execute
-- Use `overrideGate=true` only for emergency bypass
+### Dry-run validation failed
+- Read the returned error and failed item index.
+- Fix prefab/material/support/confirm parameters before executing.
+- Re-read target state if the failure suggests stale map data.
 
 ## Tool Parameter Quick Reference
 
 | Parameter | Type | Default | Notes |
 |-----------|------|---------|-------|
-| x, y | int | required | Grid coordinates |
-| x1, y1, x2, y2 | int | required* | Rectangle bounds (inclusive); *omitted if areaId provided |
+| x, y | int | optional | Pointer target when jumping to a known cell |
+| dx, dy | int | optional | Relative pointer jump |
+| direction, length | string/int | required for drag | Pointer hold-left direction and cell count |
 | worldId | int | active | Target asteroid; -1 for all worlds where supported |
-| prefabId | string | required | Use `buildings_search_defs` to find |
-| confirm | bool | false | Required for dangerous tools |
-| areaId | string | null | Reuse predefined area from `area_define` |
+| prefabId | string | required for build | Use `buildings_search_defs` to find |
+| material | string | auto | Build material shown on the pointer badge |
+| priority | int | 5 | 1-9 order/build priority |
+| confirm | bool | false | Required for map-altering pointer or dangerous compatibility tools |
+| code | string | null | Pointer jump point such as `home`, `p1`, `p2` |
+| areaId | string | null | Read/verify region handle, not the normal action surface |
 | orientation | string | "Neutral" | Neutral, R90, R180, R270, FlipH |
-| material | string | null | Default material if omitted |
 | facade | string | null | `default` or unlocked facade ID |
-| priority | int | 5 | 1-9 build order priority |
 | dryRun / validateOnly | bool | false | Validate without placing blueprints |
-| allowUnsupported | bool | false | Bypass OnFloor support validation; avoid for normal play |
-| label | string | null | Human-readable tag for `area_define` |
-| maxCells | int | 500 | `buildings_plan_many` expansion limit |
-| line / l | array | null | Straight horizontal/vertical segment `[x1,y1,x2,y2]` |
-| path / points / pts | array | null | Orthogonal polyline `[[x,y],...]` |
+| allowUnsupported | bool | false | Batch fallback only; avoid for normal play |
 
-## Batch Composition Examples
+## Pointer Examples
 
 ### Example 1: Floor Platform
 ```json
-{
-  "calls": [
-    {
-      "name": "buildings_plan_rect",
-      "arguments": {
-        "prefabId": "Tile",
-        "x1": 10, "y1": 20, "x2": 20, "y2": 20,
-        "worldId": 0,
-        "confirm": true
-      }
-    }
-  ]
-}
+{ "name": "agent_pointer_jump", "arguments": { "x": 10, "y": 20, "worldId": 0 } }
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Tile", "material": "auto", "priority": 5 } }
+{ "name": "agent_pointer_hold_left", "arguments": { "direction": "right", "length": 10, "confirm": true } }
 ```
 
 ### Example 2: Mixed Room Interior
 ```json
-{
-  "calls": [
-    {
-      "name": "buildings_plan_many",
-      "arguments": {
-        "defaults": { "worldId": 0 },
-        "items": [
-          { "prefabId": "Bed", "x": 12, "y": 22 },
-          { "prefabId": "Bed", "x": 14, "y": 22 },
-          { "prefabId": "FloorLamp", "x": 13, "y": 24 }
-        ],
-        "confirm": true
-      }
-    }
-  ]
-}
+{ "name": "agent_pointer_jump", "arguments": { "x": 12, "y": 22, "worldId": 0 } }
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Bed", "material": "auto", "priority": 5 } }
+{ "name": "agent_pointer_left_click", "arguments": { "confirm": true } }
+{ "name": "agent_pointer_jump", "arguments": { "dx": 2, "dy": 0 } }
+{ "name": "agent_pointer_left_click", "arguments": { "confirm": true } }
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "FloorLamp", "material": "auto", "priority": 5 } }
+{ "name": "agent_pointer_jump", "arguments": { "dx": -1, "dy": 2 } }
+{ "name": "agent_pointer_left_click", "arguments": { "confirm": true } }
 ```
 
 ### Example 3: Excavate Then Build
 ```json
-{
-  "calls": [
-    {
-      "name": "orders_dig_area",
-      "arguments": {
-        "x1": 10, "y1": 20, "x2": 20, "y2": 30,
-        "confirm": true
-      }
-    },
-    {
-      "name": "orders_sweep_area",
-      "arguments": {
-        "x1": 10, "y1": 20, "x2": 20, "y2": 30,
-        "confirm": true
-      }
-    },
-    {
-      "name": "buildings_plan_rect",
-      "arguments": {
-        "prefabId": "Tile",
-        "x1": 10, "y1": 20, "x2": 20, "y2": 20,
-        "confirm": true
-      }
-    }
-  ]
-}
+{ "name": "agent_pointer_jump", "arguments": { "x": 10, "y": 20, "worldId": 0 } }
+{ "name": "agent_pointer_jump_point_set", "arguments": { "code": "p1" } }
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "dig", "priority": 5 } }
+{ "name": "agent_pointer_hold_left", "arguments": { "direction": "right", "length": 10, "confirm": true } }
+{ "name": "agent_pointer_jump", "arguments": { "code": "p1" } }
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Tile", "material": "auto", "priority": 5 } }
+{ "name": "agent_pointer_hold_left", "arguments": { "direction": "right", "length": 10, "confirm": true } }
 ```
 
-### Example 4: Plan Harness Full Flow
+### Example 4: Multi-Step Power Line Plan
 ```json
-// Create
-{ "name": "plan_harness_create", "arguments": { "objective": "Build power line", "areaId": "route_A" } }
-
-// Record plan
-{ "name": "plan_harness_record", "arguments": { "id": "p0001", "stage": "plan", "summary": "Wire route", "payload": { "plannedCalls": [{"name":"buildings_plan_many","arguments":{"items":[{"p":"Wire","r":[10,20,20,20]}],"confirm":true}}] } } }
-
-// Record feedback
-{ "name": "plan_harness_record", "arguments": { "id": "p0001", "stage": "feedback", "summary": "Area scanned, path clear" } }
-
-// Record verification
-{ "name": "plan_harness_record", "arguments": { "id": "p0001", "stage": "verification", "summary": "Params valid", "passed": true } }
-
-// Validate
-{ "name": "plan_harness_validate", "arguments": { "id": "p0001" } }
-
-// Execute
-{ "name": "plan_harness_execute", "arguments": { "id": "p0001", "confirm": true } }
-```
-
-### Example 5: Compact Short-Field Batch
-```json
-{
-  "name": "buildings_plan_many",
-  "arguments": {
-    "defaults": { "w": 0, "o": "Neutral" },
-    "items": [
-      { "p": "Tile", "l": [10, 20, 20, 20] },
-      { "p": "Ladder", "l": [10, 21, 10, 25] },
-      { "p": "Bed", "x": 12, "y": 22 },
-      { "p": "Bed", "x": 14, "y": 22 }
-    ],
-    "confirm": true
-  }
-}
+{ "name": "world_area_snapshot", "arguments": { "areaId": "route_A", "preset": "planning", "encoding": "plain" } }
+{ "name": "agent_pointer_jump", "arguments": { "x": 10, "y": 20 } }
+{ "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Wire", "material": "CopperOre", "priority": 5 } }
+{ "name": "agent_pointer_hold_left", "arguments": { "direction": "right", "length": 10, "confirm": true, "dryRun": true } }
+{ "name": "agent_pointer_hold_left", "arguments": { "direction": "right", "length": 10, "confirm": true } }
 ```
