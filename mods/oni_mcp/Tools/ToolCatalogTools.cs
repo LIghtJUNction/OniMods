@@ -39,7 +39,7 @@ namespace OniMcp.Tools
                     bool filtered = !string.IsNullOrEmpty(query) || !string.IsNullOrEmpty(groupFilter) || (mode != "any" && !string.IsNullOrEmpty(mode)) || (risk != "any" && !string.IsNullOrEmpty(risk)) || detail != "full";
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? (filtered ? 80 : 320), 320));
 
-                    var matchedTools = OniToolRegistry.GetTools()
+                    var matchedTools = OniToolRegistry.GetVisibleTools()
                         .Where(tool => string.IsNullOrEmpty(groupFilter) || tool.Group.ToLowerInvariant() == groupFilter)
                         .Where(tool => mode == "any" || string.IsNullOrEmpty(mode) || tool.Mode.ToLowerInvariant() == mode)
                         .Where(tool => risk == "any" || string.IsNullOrEmpty(risk) || tool.Risk.ToLowerInvariant() == risk)
@@ -64,8 +64,19 @@ namespace OniMcp.Tools
 
                     var result = new Dictionary<string, object>
                     {
-                        ["toolCount"] = OniToolRegistry.GetTools().Count,
+                        ["toolCount"] = OniToolRegistry.GetVisibleTools().Count,
                         ["returned"] = matchedTools.Count,
+                        ["groupSummary"] = matchedTools
+                            .GroupBy(item => item.Tool.Group)
+                            .OrderBy(group => group.Key)
+                            .Select(group => new Dictionary<string, object>
+                            {
+                                ["group"] = group.Key,
+                                ["count"] = group.Count(),
+                                ["description"] = GroupDescription(group.Key),
+                                ["sampleTools"] = group.Select(item => item.Tool.Name).OrderBy(name => name).Take(8).ToList()
+                            })
+                            .ToList(),
                         ["detail"] = detail,
                         ["query"] = query,
                         ["expandedQuery"] = expandedQuery,
@@ -109,7 +120,7 @@ namespace OniMcp.Tools
                     string detail = (args["detail"]?.ToString() ?? "compact").ToLowerInvariant();
                     int limit = ToolUtil.ClampLimit(args, 20, 100);
 
-                    var matches = OniToolRegistry.GetTools()
+                    var matches = OniToolRegistry.GetVisibleTools()
                         .Where(tool => string.IsNullOrEmpty(group) || tool.Group.ToLowerInvariant() == group)
                         .Where(tool => mode == "any" || string.IsNullOrEmpty(mode) || tool.Mode.ToLowerInvariant() == mode)
                         .Where(tool => risk == "any" || string.IsNullOrEmpty(risk) || tool.Risk.ToLowerInvariant() == risk)
@@ -168,7 +179,7 @@ namespace OniMcp.Tools
                         {
                             "1. Read recommended resources first; tools/list is intentionally core-only, so use oni://... resources, tools_search detail=brief/full, or tools_manifest for discovery.",
                             "2. If the player action surface is unclear, call tools_player_action_coverage with detail=brief and query=<goal>; then call tools_search with detail=brief for exact schemas.",
-                            "3. For player-like map actions, use the visible agent pointer: agent_pointer_jump/aim_cell, agent_pointer_select_tool, then agent_pointer_left_click or agent_pointer_hold_left. Coordinate placement tools are not exposed. Multi-cell buildings use lower-left anchors and should be placed with one left_click per anchor.",
+                            "3. For player-like map actions, use the visible agent pointer: agent_pointer_jump/aim_cell, agent_pointer_select_tool, then agent_pointer_left_click or agent_pointer_hold_left. Multi-cell buildings use lower-left anchors and should be placed with one left_click per anchor.",
                             "4. For risky or multi-step work, write the plan in the response and use dryRun/validateOnly where available before executing.",
                             "5. Do not repeat the same write/execute call after a zero-effect result; re-read state or choose the correct tool. Verify with read resources after execution."
                         },
@@ -495,7 +506,7 @@ namespace OniMcp.Tools
                     new[] { "dig", "sweep", "mop", "water", "liquid", "spill", "disinfect", "cancel", "harvest", "地图", "挖掘", "清扫", "拖地", "地上的水", "液体", "区域" },
                     new[] { "oni://world/text-map{?profile=scan,format=json}", "oni://tools/read/priorities_list" },
                     new[] { "world_area_snapshot", "layout_candidates", "world_text_map", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_cancel_area", "orders_harvest_area", "tools_call_many" },
-                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=... chunksOnly=true for large areas", "world_text_map areaId=b1 profile=scan encoding=rle", "agent_pointer_jump x=... y=...", "agent_pointer_select_tool tool=dig|mop|sweep|cancel|harvest", "agent_pointer_hold_left direction=right length=... confirm=true" },
+                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=... chunksOnly=true includeChunks=true for large areas", "world_text_map areaId=blk1 profile=scan encoding=rle", "agent_pointer_jump x=... y=...", "agent_pointer_select_tool tool=dig|mop|sweep|cancel|harvest", "agent_pointer_hold_left direction=right length=... confirm=true" },
                     "Use world_area_snapshot preset=planning or layout_candidates before terrain/base layout work. Prefer pointer actions for orders so the game shows the agent mouse and tool badge. Use orders_mop_area for water/liquid on the floor; never use sweep for liquids. Do not use orders_attack for digging.",
                     new[] { "read planning snapshot", "jump/aim pointer", "select order tool", "left-click or hold-left", "verify with text map" }),
                 new ToolGuide("critter_removal",

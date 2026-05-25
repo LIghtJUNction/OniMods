@@ -99,7 +99,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "world_blocks", "area_grid", "world_area_blocks" },
-                Description = "把一个世界自动切成 b 开头的地图块句柄（b1、b2...）。每块默认约 40x40，可传 blockWidth/blockHeight/maxCells 调整；返回的 b* 可像普通 areaId 一样用于 world_text_map、world_area_snapshot 和支持 areaId 的整块工具。",
+                Description = "把一个世界自动切成 blk 开头的地图块句柄（blk1、blk2...）。每块默认约 40x40，可传 blockWidth/blockHeight/maxCells 调整；返回的 blk* 可像普通 areaId 一样用于 world_text_map、world_area_snapshot 和支持 areaId 的整块工具。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
@@ -143,7 +143,7 @@ namespace OniMcp.Tools
                                 ["x2"] = Math.Min(x + blockWidth - 1, bounds["x2"]),
                                 ["y2"] = Math.Min(y + blockHeight - 1, bounds["y2"])
                             };
-                            blocks.Add(AreaHandleRegistry.DefineBlock(rect, worldId, col, row, blockWidth, blockHeight, label + "_" + col + "_" + row));
+                            blocks.Add(AreaHandleRegistry.DefineBlock(rect, worldId, col, row, blockWidth, blockHeight, label + "_" + col + "_" + row, "blk"));
                         }
                     }
 
@@ -166,8 +166,8 @@ namespace OniMcp.Tools
                         ["generated"] = blocks.Count,
                         ["returned"] = returned.Count,
                         ["truncated"] = Math.Max(0, blocks.Count - returned.Count),
-                        ["idPrefix"] = "b",
-                        ["coordRule"] = "Use any b* as areaId for area-aware reads or whole-area operations; use world absolute x/y for build/order coordinates.",
+                        ["idPrefix"] = "blk",
+                        ["coordRule"] = "Use any blk* as areaId for area-aware reads or whole-area operations; use world absolute x/y for build/order coordinates.",
                         ["blocks"] = returned
                     }, McpJsonUtil.Settings));
                 }
@@ -183,11 +183,11 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "area_union", "area_compose", "merge_areas" },
-                Description = "把多个 areaId（例如 b1+b2+b3 或 [\"b1\",\"b2\"]）拼接成一个新的 a* 区域句柄。拼接使用同一世界内的外接矩形；非相邻区域会包含中间空隙并返回 warning。",
+                Description = "把多个 areaId（例如 blk1+blk2+blk3 或 [\"blk1\",\"blk2\"]）拼接成一个新的 a* 区域句柄。拼接使用同一世界内的外接矩形；非相邻区域会包含中间空隙并返回 continuity/gapCellsPercent/warning。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["areaIds"] = new McpToolParameter { Type = "array", Description = "要拼接的区域句柄数组；也可传字符串 b1+b2,b3", Required = false },
-                    ["areaId"] = new McpToolParameter { Type = "string", Description = "要拼接的区域句柄字符串，支持 b1+b2、b1,b2、b1 b2", Required = false },
+                    ["areaIds"] = new McpToolParameter { Type = "array", Description = "要拼接的区域句柄数组；也可传字符串 blk1+blk2,blk3", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "要拼接的区域句柄字符串，支持 blk1+blk2、blk1,blk2、blk1 blk2", Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "新区域标签，默认 merged_area", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只返回拼接预览，不创建新 a*，默认 false", Required = false }
                 },
@@ -220,6 +220,7 @@ namespace OniMcp.Tools
                     int sourceCells = handles.Sum(handle => (handle.X2 - handle.X1 + 1) * (handle.Y2 - handle.Y1 + 1));
                     int mergedCells = (composed.X2 - composed.X1 + 1) * (composed.Y2 - composed.Y1 + 1);
                     int gapCells = Math.Max(0, mergedCells - sourceCells);
+                    double gapCellsPercent = mergedCells > 0 ? Math.Round(gapCells * 100.0 / mergedCells, 2) : 0;
                     bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
                     AreaHandle result = dryRun
                         ? composed
@@ -233,6 +234,8 @@ namespace OniMcp.Tools
                         ["sourceCells"] = sourceCells,
                         ["mergedCells"] = mergedCells,
                         ["gapCells"] = gapCells,
+                        ["gapCellsPercent"] = gapCellsPercent,
+                        ["continuity"] = gapCells == 0,
                         ["warning"] = gapCells > 0 ? "merge uses bounding rectangle; non-adjacent or uneven regions include cells between source areas" : null,
                         ["coordRule"] = "Use the returned areaId for area-aware reads or whole-area operations; use world absolute x/y for build/order coordinates.",
                         ["area"] = result.ToDictionary()

@@ -202,28 +202,41 @@ namespace OniMcp.Tools
                 {
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "清扫差事优先级 1-9，默认 5", Required = false },
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "是否设为红色最高优先级，默认 false", Required = false },
-                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只扫描并返回会标记/跳过的对象，不实际下达清扫，默认 false", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只扫描并返回会标记/跳过的对象，不实际下达清扫，默认 false；dryRun 不要求 confirm", Required = false },
                     ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "是否把已存储对象纳入诊断；默认 false，通常不应清扫已存储对象", Required = false },
                     ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐项目标诊断，默认 true", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "逐项诊断最多返回数量，默认 120，最大 500", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "区域超过 100 格时必须为 true", Required = false }
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "区域超过 100 格时必须为 true", Required = false },
+                    ["previewToken"] = new McpToolParameter { Type = "string", Description = "dryRun 返回的预览令牌；提供后可省略重复参数", Required = false }
                 }),
                 Handler = args =>
                 {
+                    bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
+                    string previewToken = args["previewToken"]?.ToString();
+                    if (!dryRun && !string.IsNullOrEmpty(previewToken))
+                    {
+                        var cachedArgs = PreviewTokenRegistry.Get(previewToken);
+                        if (cachedArgs == null)
+                            return CallToolResult.Error("Preview token expired or invalid; run dryRun=true first");
+                        args = cachedArgs;
+                        args["confirm"] = true;
+                        dryRun = false;
+                    }
+
                     if (!HasRectInput(args))
                         return CallToolResult.Error("areaId or x1/y1/x2/y2 are required");
 
                     var rect = ToolUtil.GetRect(args);
                     int cells = RectCellCount(rect);
-                    if (cells > 100 && !ToolUtil.GetBool(args, "confirm", false))
+                    if (!dryRun && cells > 100 && !ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required when sweeping more than 100 cells");
 
                     int worldId = ToolUtil.ResolveWorldId(args);
-                    bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
                     bool includeStored = ToolUtil.GetBool(args, "includeStored", false);
                     bool detail = ToolUtil.GetBool(args, "detail", true);
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 120, 500));
                     int marked = 0;
+                    double kgTotal = 0;
                     int scanned = 0;
                     int inRect = 0;
                     int skippedStored = 0;
@@ -272,6 +285,10 @@ namespace OniMcp.Tools
                             continue;
                         }
 
+                        var primary = pickupable.PrimaryElement ?? pickupable.GetComponent<PrimaryElement>();
+                        if (primary != null)
+                            kgTotal += ToolUtil.SafeFloat(primary.Mass);
+
                         if (!dryRun)
                         {
                             clearable.MarkForClear();
@@ -281,7 +298,7 @@ namespace OniMcp.Tools
                         AddSweepTarget(targets, detail, limit, pickupable, cell, dryRun ? "would_mark" : "marked");
                     }
 
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    var responseDict = new Dictionary<string, object>
                     {
                         ["dryRun"] = dryRun,
                         ["scannedPickupables"] = scanned,
@@ -296,6 +313,12 @@ namespace OniMcp.Tools
                         },
                         ["worldId"] = worldId,
                         ["rect"] = rect,
+                        ["preview"] = new Dictionary<string, object>
+                        {
+                            ["targets"] = targets.Where(item => item["status"]?.ToString() == "would_mark" || item["status"]?.ToString() == "marked").ToList(),
+                            ["kgTotal"] = Math.Round(kgTotal, 3),
+                            ["risks"] = SweepPreviewRisks(liquidScan)
+                        },
                         ["targets"] = targets,
                         ["truncatedTargets"] = detail ? Math.Max(0, inRect - targets.Count) : 0,
                         ["liquidCellsInRect"] = liquidScan["count"],
@@ -304,7 +327,10 @@ namespace OniMcp.Tools
                         ["note"] = marked == 0
                             ? "No sweep errands were marked. Check targets/skipped; sweep only handles solid pickupables/debris, not water/liquid. For floor liquids use orders_mop_area. Sweep also requires reachable storage accepting the item before dupes will haul it."
                             : "Sweep marks solid debris only; it never mops water/liquid. Dupes still need reachable storage accepting the item."
-                    }, McpJsonUtil.Settings));
+                    };
+                    if (dryRun)
+                        responseDict["previewToken"] = PreviewTokenRegistry.Register(args);
+                    return CallToolResult.Text(JsonConvert.SerializeObject(responseDict, McpJsonUtil.Settings));
                 }
             };
         }
@@ -317,24 +343,45 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
-                Description = "在矩形区域内对自然实体格子下达挖掘命令，需要 confirm=true",
+                Description = "在矩形区域内对自然实体格子下达挖掘命令；dryRun=true 只返回目标、质量和风险预览，不要求 confirm",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认，必须为 true", Required = true }
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只预检并返回 preview，不实际下达挖掘，默认 false；dryRun 不要求 confirm", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐格目标，默认 true", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "preview.targets 最多返回数量，默认 300，最大 1000", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认；dryRun=false 时必须为 true", Required = false },
+                    ["previewToken"] = new McpToolParameter { Type = "string", Description = "dryRun 返回的预览令牌；提供后可省略重复参数", Required = false }
                 }),
                 Handler = args =>
                 {
-                    if (!ToolUtil.GetBool(args, "confirm", false))
+                    bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
+                    string previewToken = args["previewToken"]?.ToString();
+                    if (!dryRun && !string.IsNullOrEmpty(previewToken))
+                    {
+                        var cachedArgs = PreviewTokenRegistry.Get(previewToken);
+                        if (cachedArgs == null)
+                            return CallToolResult.Error("Preview token expired or invalid; run dryRun=true first");
+                        args = cachedArgs;
+                        args["confirm"] = true;
+                        dryRun = false;
+                    }
+
+                    if (!dryRun && !ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required for dig orders");
                     if (!HasRectInput(args))
                         return CallToolResult.Error("areaId or x1/y1/x2/y2 are required");
-                    if (DigTool.Instance == null)
+                    if (!dryRun && DigTool.Instance == null)
                         return CallToolResult.Error("DigTool is not initialized; open a loaded colony UI before issuing dig orders");
 
                     var rect = ToolUtil.GetRect(args);
                     int worldId = ToolUtil.ResolveWorldId(args);
+                    bool detail = ToolUtil.GetBool(args, "detail", true);
+                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 300, 1000));
                     int marked = 0;
                     int dist = 0;
+                    double kgTotal = 0;
+                    var targets = new List<Dictionary<string, object>>();
+                    var riskBuilder = new DigRiskBuilder();
                     for (int y = rect["y1"]; y <= rect["y2"]; y++)
                     {
                         for (int x = rect["x1"]; x <= rect["x2"]; x++)
@@ -342,18 +389,44 @@ namespace OniMcp.Tools
                             int cell = Grid.XYToCell(x, y);
                             if (!Grid.IsValidCell(cell) || !Grid.IsVisible(cell) || !ToolUtil.CellMatchesWorld(cell, worldId)) continue;
                             if (!Grid.Solid[cell] || Grid.Foundation[cell]) continue;
-                            if (Grid.Objects[cell, (int)ObjectLayer.DigPlacer] != null) continue;
+                            if (Grid.Objects[cell, (int)ObjectLayer.DigPlacer] != null)
+                                continue;
+
+                            kgTotal += ToolUtil.SafeFloat(Grid.Mass[cell]);
+                            riskBuilder.ScanTarget(cell, x, y, worldId);
+                            if (detail && targets.Count < limit)
+                                targets.Add(DigTarget(cell, x, y, dryRun ? "would_dig" : "marked"));
+
+                            if (dryRun)
+                            {
+                                marked++;
+                                continue;
+                            }
+
                             if (DigTool.PlaceDig(cell, dist++) != null)
                                 marked++;
                         }
                     }
 
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    var responseDict = new Dictionary<string, object>
                     {
+                        ["dryRun"] = dryRun,
                         ["marked"] = marked,
+                        ["wouldMark"] = dryRun ? marked : (object)null,
                         ["worldId"] = worldId,
-                        ["rect"] = rect
-                    }, McpJsonUtil.Settings));
+                        ["rect"] = rect,
+                        ["preview"] = new Dictionary<string, object>
+                        {
+                            ["targets"] = targets,
+                            ["targetCount"] = marked,
+                            ["kgTotal"] = Math.Round(kgTotal, 3),
+                            ["risks"] = riskBuilder.ToList()
+                        },
+                        ["truncatedTargets"] = Math.Max(0, marked - targets.Count)
+                    };
+                    if (dryRun)
+                        responseDict["previewToken"] = PreviewTokenRegistry.Register(args);
+                    return CallToolResult.Text(JsonConvert.SerializeObject(responseDict, McpJsonUtil.Settings));
                 }
             };
         }
@@ -840,16 +913,30 @@ namespace OniMcp.Tools
                 {
                     ["mode"] = new McpToolParameter { Type = "string", Description = "mark、when_ready、cancel；默认 mark", Required = false, EnumValues = new List<string> { "mark", "when_ready", "cancel" } },
                     ["readyOnly"] = new McpToolParameter { Type = "boolean", Description = "mark 模式是否只处理当前可收获对象，默认 true", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "区域超过 100 格时必须为 true", Required = false }
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只返回会处理/跳过的目标和 skipReasons，不实际修改；dryRun 不要求 confirm", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "区域超过 100 格时必须为 true", Required = false },
+                    ["previewToken"] = new McpToolParameter { Type = "string", Description = "dryRun 返回的预览令牌；提供后可省略重复参数", Required = false }
                 }),
                 Handler = args =>
                 {
+                    bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
+                    string previewToken = args["previewToken"]?.ToString();
+                    if (!dryRun && !string.IsNullOrEmpty(previewToken))
+                    {
+                        var cachedArgs = PreviewTokenRegistry.Get(previewToken);
+                        if (cachedArgs == null)
+                            return CallToolResult.Error("Preview token expired or invalid; run dryRun=true first");
+                        args = cachedArgs;
+                        args["confirm"] = true;
+                        dryRun = false;
+                    }
+
                     if (!HasRectInput(args))
                         return CallToolResult.Error("areaId or x1/y1/x2/y2 are required");
 
                     var rect = ToolUtil.GetRect(args);
                     int cells = RectCellCount(rect);
-                    if (cells > 100 && !ToolUtil.GetBool(args, "confirm", false))
+                    if (!dryRun && cells > 100 && !ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required when changing harvest orders in more than 100 cells");
 
                     int worldId = ToolUtil.ResolveWorldId(args);
@@ -857,6 +944,8 @@ namespace OniMcp.Tools
                     bool readyOnly = ToolUtil.GetBool(args, "readyOnly", true);
                     int changed = 0;
                     int skipped = 0;
+                    int matched = 0;
+                    int notReady = 0;
                     var results = new List<Dictionary<string, object>>();
 
                     foreach (var harvestable in Components.HarvestDesignatables.Items)
@@ -868,44 +957,57 @@ namespace OniMcp.Tools
                         if (!CellInRect(cell, rect, worldId))
                             continue;
 
+                        matched++;
                         if (mode == "cancel")
                         {
-                            go.Trigger(CancelEvent);
-                            harvestable.SetHarvestWhenReady(false);
+                            if (!dryRun)
+                            {
+                                go.Trigger(CancelEvent);
+                                harvestable.SetHarvestWhenReady(false);
+                            }
                             changed++;
-                            results.Add(ObjectResult(go, "cancelled"));
+                            results.Add(ObjectResult(go, dryRun ? "would_cancel" : "cancelled"));
                         }
                         else if (mode == "when_ready")
                         {
-                            harvestable.SetHarvestWhenReady(true);
+                            if (!dryRun)
+                                harvestable.SetHarvestWhenReady(true);
                             changed++;
-                            results.Add(ObjectResult(go, "when_ready"));
+                            results.Add(ObjectResult(go, dryRun ? "would_when_ready" : "when_ready"));
                         }
                         else
                         {
                             bool canHarvest = harvestable.CanBeHarvested();
                             if (readyOnly && !canHarvest)
                             {
+                                notReady++;
                                 skipped++;
                                 results.Add(ObjectResult(go, "skipped_not_ready"));
                                 continue;
                             }
-                            harvestable.MarkForHarvest();
+                            if (!dryRun)
+                                harvestable.MarkForHarvest();
                             changed++;
-                            results.Add(ObjectResult(go, "marked"));
+                            results.Add(ObjectResult(go, dryRun ? "would_mark" : "marked"));
                         }
                     }
 
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    var responseDict = new Dictionary<string, object>
                     {
+                        ["dryRun"] = dryRun,
                         ["mode"] = mode == "when_ready" || mode == "cancel" ? mode : "mark",
                         ["changed"] = changed,
+                        ["matched"] = matched,
                         ["skipped"] = skipped,
+                        ["skipReasons"] = HarvestSkipReasons(matched, notReady, skipped),
                         ["worldId"] = worldId,
                         ["rect"] = rect,
                         ["targets"] = results.Take(200).ToList(),
                         ["truncatedTargets"] = Math.Max(0, results.Count - 200)
-                    }, McpJsonUtil.Settings));
+                    };
+                    if (dryRun)
+                        responseDict["previewToken"] = PreviewTokenRegistry.Register(args);
+                    return CallToolResult.Text(JsonConvert.SerializeObject(responseDict, McpJsonUtil.Settings));
                 }
             };
         }
@@ -1329,6 +1431,123 @@ namespace OniMcp.Tools
             };
         }
 
+        private static List<Dictionary<string, object>> SweepPreviewRisks(Dictionary<string, object> liquidScan)
+        {
+            var risks = new List<Dictionary<string, object>>();
+            int liquidCount = liquidScan != null && liquidScan.ContainsKey("count") ? Convert.ToInt32(liquidScan["count"]) : 0;
+            if (liquidCount > 0)
+            {
+                risks.Add(new Dictionary<string, object>
+                {
+                    ["type"] = "liquid_in_area",
+                    ["severity"] = "info",
+                    ["count"] = liquidCount,
+                    ["samples"] = liquidScan.ContainsKey("samples") ? liquidScan["samples"] : null,
+                    ["message"] = "Sweep ignores liquid cells; use orders_mop_area for floor liquids."
+                });
+            }
+            return risks;
+        }
+
+        private static Dictionary<string, object> DigTarget(int cell, int x, int y, string status)
+        {
+            return new Dictionary<string, object>
+            {
+                ["status"] = status,
+                ["x"] = x,
+                ["y"] = y,
+                ["cell"] = cell,
+                ["element"] = Grid.IsValidCell(cell) ? Grid.Element[cell].id.ToString() : "",
+                ["kg"] = Grid.IsValidCell(cell) ? Math.Round(ToolUtil.SafeFloat(Grid.Mass[cell]), 3) : 0,
+                ["temperatureC"] = Grid.IsValidCell(cell) ? Math.Round(ToolUtil.SafeFloat(Grid.Temperature[cell]) - 273.15f, 1) : 0
+            };
+        }
+
+        private sealed class DigRiskBuilder
+        {
+            private readonly Dictionary<string, RiskBucket> buckets = new Dictionary<string, RiskBucket>();
+
+            public void ScanTarget(int cell, int x, int y, int worldId)
+            {
+                if (!Grid.IsValidCell(cell))
+                    return;
+
+                float tempC = ToolUtil.SafeFloat(Grid.Temperature[cell]) - 273.15f;
+                if (tempC >= 75f)
+                    Add("hot_target", "warning", cell, x, y, $"Target solid is hot ({Math.Round(tempC, 1)}C).");
+
+                foreach (int neighbor in Neighbors(cell))
+                {
+                    if (!Grid.IsValidCell(neighbor) || !ToolUtil.CellMatchesWorld(neighbor, worldId))
+                        continue;
+                    int nx = Grid.CellColumn(neighbor);
+                    int ny = Grid.CellRow(neighbor);
+                    var element = Grid.Element[neighbor];
+                    if (element != null && element.IsLiquid)
+                        Add("adjacent_liquid", "danger", neighbor, nx, ny, "Digging may open into adjacent liquid.");
+                    else if (Grid.Mass[neighbor] <= 0.001f)
+                        Add("adjacent_vacuum", "warning", neighbor, nx, ny, "Digging may open into vacuum.");
+
+                    float neighborTempC = ToolUtil.SafeFloat(Grid.Temperature[neighbor]) - 273.15f;
+                    if (neighborTempC >= 75f)
+                        Add("adjacent_hot_cell", "warning", neighbor, nx, ny, $"Adjacent cell is hot ({Math.Round(neighborTempC, 1)}C).");
+                }
+            }
+
+            public List<Dictionary<string, object>> ToList()
+            {
+                return buckets.Values
+                    .OrderByDescending(item => item.Severity == "danger" ? 2 : item.Severity == "warning" ? 1 : 0)
+                    .ThenBy(item => item.Type)
+                    .Select(item => item.ToDictionary())
+                    .ToList();
+            }
+
+            private void Add(string type, string severity, int cell, int x, int y, string message)
+            {
+                RiskBucket bucket;
+                if (!buckets.TryGetValue(type, out bucket))
+                {
+                    bucket = new RiskBucket { Type = type, Severity = severity, Message = message };
+                    buckets[type] = bucket;
+                }
+                bucket.Count++;
+                if (bucket.Samples.Count < 12)
+                    bucket.Samples.Add(CellResult(cell, type));
+            }
+
+            private static IEnumerable<int> Neighbors(int cell)
+            {
+                int x = Grid.CellColumn(cell);
+                int y = Grid.CellRow(cell);
+                yield return Grid.XYToCell(x, y + 1);
+                yield return Grid.XYToCell(x, y - 1);
+                yield return Grid.XYToCell(x - 1, y);
+                yield return Grid.XYToCell(x + 1, y);
+            }
+        }
+
+        private sealed class RiskBucket
+        {
+            public string Type;
+            public string Severity;
+            public string Message;
+            public int Count;
+            public readonly List<Dictionary<string, object>> Samples = new List<Dictionary<string, object>>();
+
+            public Dictionary<string, object> ToDictionary()
+            {
+                return new Dictionary<string, object>
+                {
+                    ["type"] = Type,
+                    ["severity"] = Severity,
+                    ["count"] = Count,
+                    ["message"] = Message,
+                    ["samples"] = Samples
+                };
+            }
+        }
+
         private static int RectCellCount(Dictionary<string, int> rect)
         {
             return (rect["x2"] - rect["x1"] + 1) * (rect["y2"] - rect["y1"] + 1);
@@ -1548,6 +1767,18 @@ namespace OniMcp.Tools
                 ["x"] = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
                 ["y"] = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1
             };
+        }
+
+        private static List<string> HarvestSkipReasons(int matched, int notReady, int skipped)
+        {
+            var reasons = new List<string>();
+            if (matched == 0)
+                reasons.Add("no_harvestable_plants_in_area");
+            if (notReady > 0)
+                reasons.Add("no_mature_plants_in_area");
+            if (skipped > notReady)
+                reasons.Add("some_targets_skipped");
+            return reasons;
         }
 
         private static void AddSweepTarget(List<Dictionary<string, object>> targets, bool detail, int limit, Pickupable pickupable, int cell, string status)

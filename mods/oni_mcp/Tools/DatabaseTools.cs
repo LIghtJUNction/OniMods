@@ -13,7 +13,7 @@ namespace OniMcp.Tools
 {
     public static class DatabaseTools
     {
-        private const int MaxContentChars = 6000;
+        private const int MaxContentChars = 8000;
         private static readonly Regex RichTextTagRegex = new Regex("<[^>]+>", RegexOptions.Compiled);
         private static readonly Regex WhitespaceRegex = new Regex("\\s+", RegexOptions.Compiled);
 
@@ -25,17 +25,18 @@ namespace OniMcp.Tools
                 Group = "database",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "codex_query", "wiki_query" },
-                Tags = new List<string> { "codex", "wiki", "database", "百科", "数据库" },
-                Description = "查询游戏内置 Database/百科条目。可按条目 ID、名称、分类、子条目和正文内容搜索",
+                Aliases = new List<string> { "codex_query", "wiki_query", "gamepedia_search", "mechanics_query", "building_info", "element_query", "how_does_x_work" },
+                Tags = new List<string> { "codex", "wiki", "database", "百科", "数据库", "mechanics", "buildings", "elements", "creatures", "food" },
+                Description = "Query the ONI in-game encyclopedia (Codex) for building mechanics, element properties, creature info, food recipes, and game formulas. Use this when the user asks 'what does X do', 'what is the difference between A and B', or 'what are the inputs for Y'.",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "string", Description = "精确条目 ID 或子条目 ID；优先于 query", Required = false },
-                    ["query"] = new McpToolParameter { Type = "string", Description = "搜索词，可匹配 ID、标题、名称、分类、子条目和正文", Required = false },
-                    ["category"] = new McpToolParameter { Type = "string", Description = "可选分类过滤，例如 BUILDINGS、ELEMENTS、FOOD、CREATURES", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "搜索词，可匹配 ID、标题、名称、分类、子条目和正文。例如：\"隔热砖和陶瓷砖的区别\"、\"肥料合成器输入\"、\"氢气比热容\"", Required = false },
+                    ["category"] = new McpToolParameter { Type = "string", Description = "可选分类过滤。常用分类：BUILDINGS、ELEMENTS、CREATURES、FOOD、PLANTS、EQUIPMENT、TIPS", Required = false },
                     ["includeContent"] = new McpToolParameter { Type = "boolean", Description = "是否返回正文摘要，默认 true", Required = false },
                     ["includeDisabled"] = new McpToolParameter { Type = "boolean", Description = "是否包含禁用条目，默认 false", Required = false },
-                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少条，默认 20，最大 100", Required = false }
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少条，默认 20，最大 100", Required = false },
+                    ["maxResults"] = new McpToolParameter { Type = "integer", Description = "最多返回多少条百科条目，默认 3，最大 10", Required = false }
                 },
                 Handler = args =>
                 {
@@ -49,7 +50,7 @@ namespace OniMcp.Tools
                     string category = CleanQuery(args["category"]?.ToString());
                     bool includeContent = ToolUtil.GetBool(args, "includeContent", true);
                     bool includeDisabled = ToolUtil.GetBool(args, "includeDisabled", false);
-                    int limit = ToolUtil.ClampLimit(args, 20, 100);
+                    int maxResults = ClampMaxResults(args);
 
                     var entries = CodexCache.entries
                         .Where(kv => kv.Value != null)
@@ -73,7 +74,7 @@ namespace OniMcp.Tools
                         matches = allItems
                             .Where(item => EqualsIgnoreCase(item.Id, id) || EqualsIgnoreCase(item.CacheKey, id))
                             .OrderBy(item => item.Kind)
-                            .Take(limit)
+                            .Take(maxResults)
                             .ToList();
                     }
                     else
@@ -84,7 +85,7 @@ namespace OniMcp.Tools
                             .OrderByDescending(item => item.Score)
                             .ThenBy(item => item.Item.Category)
                             .ThenBy(item => item.Item.TitleOrName)
-                            .Take(limit)
+                            .Take(maxResults)
                             .Select(item => item.Item)
                             .ToList();
                     }
@@ -115,6 +116,16 @@ namespace OniMcp.Tools
                 return;
 
             CodexCache.CodexCacheInit();
+        }
+
+        private static int ClampMaxResults(JObject args)
+        {
+            if (args != null && args.TryGetValue("maxResults", out JToken token) && token != null)
+            {
+                if (int.TryParse(token.ToString(), out int value))
+                    return Math.Max(1, Math.Min(10, value));
+            }
+            return 3;
         }
 
         private static Dictionary<string, object> EntryToDictionary(DatabaseEntryItem item, bool includeContent)

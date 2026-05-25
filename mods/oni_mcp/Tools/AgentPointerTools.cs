@@ -25,44 +25,74 @@ namespace OniMcp.Tools
         public int DragCurrentCell { get; set; } = -1;
         public string DragMode { get; set; }
         public string DragTool { get; set; }
+        public System.DateTime DragFeedbackUntil { get; set; }
         public string CurrentTool { get; set; } = "inspect";
         public string ToolLabel { get; set; } = "Inspect";
         public string ToolIcon { get; set; } = "inspect";
         public string BuildPrefabId { get; set; }
         public string BuildMaterial { get; set; }
         public string BuildFacade { get; set; }
+        public string Message { get; set; }
+        public System.DateTime MessageCreatedAt { get; set; }
+        public System.DateTime MessageExpiresAt { get; set; }
         public int Priority { get; set; } = 5;
         public string LastAction { get; set; }
         public System.DateTime UpdatedAt { get; set; }
 
         public Dictionary<string, object> ToDictionary()
         {
+            RefreshScreenPosition();
+            bool isPositioned = Grid.IsValidCell(Cell);
+            int x = -1;
+            int y = -1;
+            if (isPositioned)
+                Grid.CellToXY(Cell, out x, out y);
+
             return new Dictionary<string, object>
             {
                 ["sessionId"] = SessionId,
                 ["agentId"] = AgentId,
+                ["scope"] = "session",
                 ["visible"] = Visible,
                 ["label"] = Label,
                 ["color"] = new { r = Math.Round(Color.r, 3), g = Math.Round(Color.g, 3), b = Math.Round(Color.b, 3), a = Math.Round(Color.a, 3) },
                 ["worldId"] = WorldId,
                 ["cell"] = Cell,
-                ["worldPosition"] = new { x = Math.Round(WorldPosition.x, 2), y = Math.Round(WorldPosition.y, 2), z = Math.Round(WorldPosition.z, 2) },
-                ["screenPosition"] = new { x = Math.Round(ScreenPosition.x, 2), y = Math.Round(ScreenPosition.y, 2) },
+                ["isPositioned"] = isPositioned,
+                ["worldPosition"] = isPositioned ? (object)new { x = Math.Round(WorldPosition.x, 2), y = Math.Round(WorldPosition.y, 2), z = Math.Round(WorldPosition.z, 2) } : null,
+                ["screenPosition"] = isPositioned ? (object)new { x = Math.Round(ScreenPosition.x, 2), y = Math.Round(ScreenPosition.y, 2) } : null,
                 ["dragging"] = IsDragging,
                 ["dragStartCell"] = DragStartCell,
                 ["dragCurrentCell"] = DragCurrentCell,
                 ["dragMode"] = DragMode,
                 ["dragTool"] = DragTool,
+                ["dragFeedbackVisible"] = DragFeedbackUntil > System.DateTime.UtcNow,
+                ["dragFeedbackUntil"] = DragFeedbackUntil == default(System.DateTime) ? null : DragFeedbackUntil.ToString("o"),
                 ["currentTool"] = CurrentTool,
                 ["toolLabel"] = ToolLabel,
                 ["toolIcon"] = ToolIcon,
                 ["buildPrefabId"] = BuildPrefabId,
                 ["buildMaterial"] = BuildMaterial,
                 ["buildFacade"] = BuildFacade,
+                ["message"] = Message,
+                ["messageVisible"] = !string.IsNullOrWhiteSpace(Message) && MessageExpiresAt > System.DateTime.UtcNow,
+                ["messageCreatedAt"] = MessageCreatedAt == default(System.DateTime) ? null : MessageCreatedAt.ToString("o"),
+                ["messageExpiresAt"] = MessageExpiresAt == default(System.DateTime) ? null : MessageExpiresAt.ToString("o"),
                 ["priority"] = Priority,
                 ["lastAction"] = LastAction,
-                ["updatedAt"] = UpdatedAt.ToString("o")
+                ["updatedAt"] = UpdatedAt.ToString("o"),
+                ["x"] = isPositioned ? (object)x : null,
+                ["y"] = isPositioned ? (object)y : null
             };
+        }
+
+        private void RefreshScreenPosition()
+        {
+            var camera = Camera.main;
+            if (camera == null)
+                return;
+            var screen = camera.WorldToScreenPoint(WorldPosition);
+            ScreenPosition = new Vector2(screen.x, Screen.height - screen.y);
         }
     }
 
@@ -121,7 +151,8 @@ namespace OniMcp.Tools
                 AgentPointerState pointer;
                 if (SessionPointers.TryGetValue(key, out pointer))
                 {
-                    pointer.SessionId = normalizedSessionId;
+                    if (string.IsNullOrWhiteSpace(pointer.SessionId))
+                        pointer.SessionId = normalizedSessionId;
                     return pointer;
                 }
 
@@ -129,7 +160,7 @@ namespace OniMcp.Tools
                 {
                     SessionId = normalizedSessionId,
                     AgentId = normalizedAgentId,
-                    Label = normalizedAgentId,
+                    Label = DefaultLabel(normalizedSessionId, normalizedAgentId),
                     Color = Palette[SessionPointers.Count % Palette.Length],
                     UpdatedAt = System.DateTime.UtcNow
                 };
@@ -226,6 +257,16 @@ namespace OniMcp.Tools
             }
         }
 
+        public static bool Remove(string sessionId, string agentId, out bool jumpPointsRemoved)
+        {
+            string key = ResolveKey(sessionId, agentId);
+            lock (Lock)
+            {
+                jumpPointsRemoved = JumpPoints.Remove(key);
+                return SessionPointers.Remove(key);
+            }
+        }
+
         public static List<Dictionary<string, object>> List()
         {
             lock (Lock)
@@ -291,6 +332,7 @@ namespace OniMcp.Tools
             pointer.DragMode = "line";
             pointer.WorldPosition = CellToWorld(cell);
             pointer.ScreenPosition = WorldToScreen(pointer.WorldPosition);
+            pointer.DragFeedbackUntil = System.DateTime.UtcNow.AddSeconds(0.8);
             if (!string.IsNullOrWhiteSpace(label))
                 pointer.Label = label;
             pointer.UpdatedAt = System.DateTime.UtcNow;
@@ -305,6 +347,7 @@ namespace OniMcp.Tools
             pointer.Cell = cell;
             pointer.WorldPosition = CellToWorld(cell);
             pointer.ScreenPosition = WorldToScreen(pointer.WorldPosition);
+            pointer.DragFeedbackUntil = System.DateTime.UtcNow.AddSeconds(0.8);
             pointer.UpdatedAt = System.DateTime.UtcNow;
             pointer.LastAction = "drag_update";
             return pointer;
@@ -318,14 +361,46 @@ namespace OniMcp.Tools
             pointer.WorldPosition = CellToWorld(cell);
             pointer.ScreenPosition = WorldToScreen(pointer.WorldPosition);
             pointer.IsDragging = false;
+            pointer.DragFeedbackUntil = System.DateTime.UtcNow.AddSeconds(0.8);
             pointer.UpdatedAt = System.DateTime.UtcNow;
             pointer.LastAction = "drag_end";
             return pointer;
         }
 
+        public static AgentPointerState SetMessage(string sessionId, string agentId, string message, float durationSeconds)
+        {
+            var pointer = GetOrCreate(sessionId, agentId);
+            var now = System.DateTime.UtcNow;
+            pointer.Message = NormalizeMessage(message);
+            pointer.MessageCreatedAt = now;
+            pointer.MessageExpiresAt = now.AddSeconds(Math.Max(1f, Math.Min(durationSeconds, 60f)));
+            pointer.UpdatedAt = now;
+            pointer.LastAction = "say";
+            return pointer;
+        }
+
+        public static AgentPointerState ClearMessage(string sessionId, string agentId)
+        {
+            var pointer = GetOrCreate(sessionId, agentId);
+            pointer.Message = null;
+            pointer.MessageCreatedAt = default(System.DateTime);
+            pointer.MessageExpiresAt = default(System.DateTime);
+            pointer.UpdatedAt = System.DateTime.UtcNow;
+            pointer.LastAction = "say_clear";
+            return pointer;
+        }
+
+        private static string NormalizeMessage(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return "";
+            message = message.Trim().Replace("\r\n", "\n").Replace('\r', '\n');
+            return message.Length <= 160 ? message : message.Substring(0, 159) + ".";
+        }
+
         private static string ResolveKey(string sessionId, string agentId)
         {
-            return "agent:" + NormalizeAgentId(agentId);
+            return "session:" + NormalizeSessionId(sessionId) + ":agent:" + NormalizeAgentId(agentId);
         }
 
         private static string NormalizeSessionId(string sessionId)
@@ -336,6 +411,72 @@ namespace OniMcp.Tools
         private static string NormalizeAgentId(string agentId)
         {
             return string.IsNullOrWhiteSpace(agentId) ? DefaultAgentId : agentId.Trim();
+        }
+
+        internal static string PublicAgentId(string agentId)
+        {
+            return NormalizeAgentId(agentId);
+        }
+
+        private static string DefaultLabel(string sessionId, string agentId)
+        {
+            string prefix = ClientLabelPrefix(sessionId);
+            return string.IsNullOrWhiteSpace(prefix) ? agentId : prefix + ":" + agentId;
+        }
+
+        private static string ClientLabelPrefix(string sessionId)
+        {
+            string normalizedSessionId = NormalizeSessionId(sessionId);
+            if (normalizedSessionId == DefaultSessionId)
+                return "";
+
+            string clientName = null;
+            try
+            {
+                clientName = McpHttpServer.Instance?.GetSessionClientInfo(normalizedSessionId)?.Name;
+            }
+            catch
+            {
+                clientName = null;
+            }
+
+            string prefix = SanitizeLabelPart(clientName);
+            string suffix = ShortSessionSuffix(normalizedSessionId);
+            if (string.IsNullOrWhiteSpace(prefix))
+                return string.IsNullOrWhiteSpace(suffix) ? "" : "s" + suffix;
+            return string.IsNullOrWhiteSpace(suffix) ? prefix : prefix + "-" + suffix;
+        }
+
+        private static string SanitizeLabelPart(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "";
+
+            value = value.Trim().ToLowerInvariant();
+            var chars = new List<char>();
+            foreach (char c in value)
+            {
+                if (char.IsLetterOrDigit(c))
+                    chars.Add(c);
+                else if ((c == '-' || c == '_' || c == '.') && chars.Count > 0 && chars[chars.Count - 1] != '-')
+                    chars.Add('-');
+                else if (char.IsWhiteSpace(c) && chars.Count > 0 && chars[chars.Count - 1] != '-')
+                    chars.Add('-');
+                if (chars.Count >= 16)
+                    break;
+            }
+
+            while (chars.Count > 0 && chars[chars.Count - 1] == '-')
+                chars.RemoveAt(chars.Count - 1);
+            return new string(chars.ToArray());
+        }
+
+        private static string ShortSessionSuffix(string sessionId)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+                return "";
+            sessionId = sessionId.Trim();
+            return sessionId.Length <= 6 ? sessionId : sessionId.Substring(0, 6);
         }
 
         internal static string NormalizeJumpCode(string code)
@@ -388,6 +529,9 @@ namespace OniMcp.Tools
 
     public static class AgentPointerTools
     {
+        private const float DisplayTextDurationSeconds = 8f;
+        private const string AgentIdDescription = "可选逻辑指针名，作用域为当前 MCP session；省略时使用本 session 的默认 agent 指针。不同 session 的同名 agentId 不共享状态。";
+
         public static McpTool GetPointerState()
         {
             return new McpTool
@@ -399,13 +543,35 @@ namespace OniMcp.Tools
                 Description = "读取当前 agent 的指针状态",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识；默认使用稳定的 agent 指针", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false }
                 },
                 Handler = args =>
                 {
                     string sessionId = ToolSessionContext.SessionId;
                     var pointer = AgentPointerRegistry.GetOrCreate(sessionId, args["agentId"]?.ToString());
                     return CallToolResult.Text(JsonConvert.SerializeObject(pointer.ToDictionary(), McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool GetUserMouse()
+        {
+            return new McpTool
+            {
+                Name = "agent_pointer_user_mouse_get",
+                Group = "camera",
+                Mode = "read",
+                Risk = "none",
+                Description = "读取玩家当前鼠标所在屏幕位置、世界坐标和格子；可配合 agent_pointer_jump code=mouse 让 agent 指针跳到玩家鼠标处",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "可选世界 ID；默认当前激活世界，仅用于校验 cell 是否属于该世界", Required = false }
+                },
+                Handler = args =>
+                {
+                    if (!TryGetUserMouseCell(ToolUtil.GetInt(args, "worldId"), out var payload, out string error))
+                        return CallToolResult.Error(error);
+                    return CallToolResult.Text(JsonConvert.SerializeObject(payload, McpJsonUtil.Settings));
                 }
             };
         }
@@ -424,8 +590,9 @@ namespace OniMcp.Tools
                     ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X", Required = true },
                     ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y", Required = true },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false },
-                    ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
+                    ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false },
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
                 },
                 Handler = args =>
                 {
@@ -447,8 +614,8 @@ namespace OniMcp.Tools
                         x.Value,
                         y.Value,
                         args["label"]?.ToString());
+                    ApplyDisplayText(args, args["agentId"]?.ToString());
 
-                    CameraController.Instance?.SnapTo(new Vector3(x.Value + 0.5f, y.Value + 0.5f, -100f), Camera.main != null ? Camera.main.orthographicSize : 8f);
                     return CallToolResult.Text(JsonConvert.SerializeObject(pointer.ToDictionary(), McpJsonUtil.Settings));
                 }
             };
@@ -468,8 +635,9 @@ namespace OniMcp.Tools
                     ["x"] = new McpToolParameter { Type = "number", Description = "世界 X 坐标", Required = true },
                     ["y"] = new McpToolParameter { Type = "number", Description = "世界 Y 坐标", Required = true },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false },
-                    ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
+                    ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false },
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
                 },
                 Handler = args =>
                 {
@@ -486,8 +654,8 @@ namespace OniMcp.Tools
                         worldId,
                         worldPos,
                         args["label"]?.ToString());
+                    ApplyDisplayText(args, args["agentId"]?.ToString());
 
-                    CameraController.Instance?.SnapTo(worldPos, Camera.main != null ? Camera.main.orthographicSize : 8f);
                     return CallToolResult.Text(JsonConvert.SerializeObject(pointer.ToDictionary(), McpJsonUtil.Settings));
                 }
             };
@@ -508,8 +676,9 @@ namespace OniMcp.Tools
                     ["steps"] = new McpToolParameter { Type = "integer", Description = "移动格数，默认 1", Required = false },
                     ["dx"] = new McpToolParameter { Type = "integer", Description = "相对 X 偏移；direction 为空时使用", Required = false },
                     ["dy"] = new McpToolParameter { Type = "integer", Description = "相对 Y 偏移；direction 为空时使用", Required = false },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false },
-                    ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
+                    ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false },
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
                 },
                 Handler = args =>
                 {
@@ -550,6 +719,7 @@ namespace OniMcp.Tools
                         targetX,
                         targetY,
                         args["label"]?.ToString());
+                    ApplyDisplayText(args, agentId);
                     return CallToolResult.Text(JsonConvert.SerializeObject(moved.ToDictionary(), McpJsonUtil.Settings));
                 }
             };
@@ -571,7 +741,8 @@ namespace OniMcp.Tools
                     ["material"] = new McpToolParameter { Type = "string", Description = "tool=build 时的材料 Tag；默认/auto 自动选择", Required = false },
                     ["facade"] = new McpToolParameter { Type = "string", Description = "tool=build 时的外观 ID", Required = false },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "优先级 1-9，默认 5", Required = false },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
                 },
                 Handler = args =>
                 {
@@ -590,6 +761,51 @@ namespace OniMcp.Tools
                         args["material"]?.ToString(),
                         args["facade"]?.ToString(),
                         ToolUtil.GetInt(args, "priority") ?? 5);
+                    ApplyDisplayText(args, args["agentId"]?.ToString());
+                    return CallToolResult.Text(JsonConvert.SerializeObject(pointer.ToDictionary(), McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool Say()
+        {
+            return new McpTool
+            {
+                Name = "agent_pointer_say",
+                Group = "camera",
+                Mode = "execute",
+                Risk = "low",
+                Description = "在当前 agent 指针旁显示一条聊天气泡消息；只影响画面提示，不执行游戏操作",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["message"] = new McpToolParameter { Type = "string", Description = "要显示的短消息，最长 160 字符；留空或 clear=true 会清除气泡", Required = false },
+                    ["durationSeconds"] = new McpToolParameter { Type = "number", Description = "显示秒数，默认 8，范围 1-60", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "true=立即清除当前 agent 的气泡", Required = false },
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false }
+                },
+                Handler = args =>
+                {
+                    string agentId = args["agentId"]?.ToString();
+                    var current = AgentPointerRegistry.Get(ToolSessionContext.SessionId, agentId);
+                    if (current == null || !Grid.IsValidCell(current.Cell))
+                        return CallToolResult.Error("Pointer is not aimed at a valid cell; call agent_pointer_aim_cell first");
+
+                    if (ToolUtil.GetBool(args, "clear", false))
+                    {
+                        var cleared = AgentPointerRegistry.ClearMessage(ToolSessionContext.SessionId, agentId);
+                        return CallToolResult.Text(JsonConvert.SerializeObject(cleared.ToDictionary(), McpJsonUtil.Settings));
+                    }
+
+                    string message = args["message"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(message))
+                    {
+                        var cleared = AgentPointerRegistry.ClearMessage(ToolSessionContext.SessionId, agentId);
+                        return CallToolResult.Text(JsonConvert.SerializeObject(cleared.ToDictionary(), McpJsonUtil.Settings));
+                    }
+
+                    float duration = ToolUtil.GetFloat(args, "durationSeconds") ?? 8f;
+                    var pointer = AgentPointerRegistry.SetMessage(ToolSessionContext.SessionId, agentId, message, duration);
+                    ApplyDisplayText(args, agentId);
                     return CallToolResult.Text(JsonConvert.SerializeObject(pointer.ToDictionary(), McpJsonUtil.Settings));
                 }
             };
@@ -606,9 +822,10 @@ namespace OniMcp.Tools
                 Description = "在当前指针格子执行一次左键确认，按当前选中工具触发建造/挖掘/取消/清扫等操作",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false },
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行修改必须为 true；dryRun=true 时可省略", Required = false },
-                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，传给支持 dryRun 的子工具", Required = false }
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，传给支持 dryRun 的子工具", Required = false },
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
                 },
                 Handler = args =>
                 {
@@ -620,6 +837,7 @@ namespace OniMcp.Tools
 
                     Grid.CellToXY(pointer.State.Cell, out int x, out int y);
                     var result = ExecuteSelectedTool(pointer.State, x, y, x, y, args, isDrag: false);
+                    ApplyDisplayText(args, args["agentId"]?.ToString());
                     pointer.State.LastAction = "left_click";
                     pointer.State.UpdatedAt = System.DateTime.UtcNow;
                     return WrapActionResult(pointer.State, result);
@@ -640,10 +858,11 @@ namespace OniMcp.Tools
                 {
                     ["direction"] = new McpToolParameter { Type = "string", Description = "方向：right、left、up、down", Required = true, EnumValues = new List<string> { "right", "left", "up", "down" } },
                     ["length"] = new McpToolParameter { Type = "integer", Description = "覆盖格数，包含起点；例如 5 表示 5 格", Required = true },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false },
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行修改必须为 true；dryRun=true 时可省略", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，传给支持 dryRun 的子工具", Required = false },
-                    ["allowFootprintDrag"] = new McpToolParameter { Type = "boolean", Description = "默认 false。拖拽建造只允许 1x1 footprint；床、厕所、机器等多格建筑需逐个 left_click，除非显式设为 true", Required = false }
+                    ["allowFootprintDrag"] = new McpToolParameter { Type = "boolean", Description = "默认 false。拖拽建造只允许 1x1 footprint；床、厕所、机器等多格建筑需逐个 left_click，除非显式设为 true", Required = false },
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
                 },
                 Handler = args =>
                 {
@@ -671,6 +890,7 @@ namespace OniMcp.Tools
                     AgentPointerRegistry.BeginDrag(ToolSessionContext.SessionId, args["agentId"]?.ToString(), pointer.State.WorldId, pointer.State.Cell, pointer.State.CurrentTool);
                     var result = ExecuteSelectedTool(pointer.State, x, y, endX, endY, args, isDrag: true);
                     var finalPointer = AgentPointerRegistry.EndDrag(ToolSessionContext.SessionId, args["agentId"]?.ToString(), endCell);
+                    ApplyDisplayText(args, args["agentId"]?.ToString());
                     return WrapActionResult(finalPointer, result);
                 }
             };
@@ -684,7 +904,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "跳转 agent 指针和相机。支持绝对 x/y、相对 dx/dy、方向 steps，或跳转到 p1/p2 等标点",
+                Description = "跳转 agent 指针，不默认移动相机。支持绝对 x/y、相对 dx/dy、方向 steps，或跳转到 p1/p2 等标点",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["code"] = new McpToolParameter { Type = "string", Description = "跳转点代号，如 p1、p2；提供时优先使用", Required = false },
@@ -695,8 +915,10 @@ namespace OniMcp.Tools
                     ["direction"] = new McpToolParameter { Type = "string", Description = "相对方向：right、left、up、down", Required = false },
                     ["steps"] = new McpToolParameter { Type = "integer", Description = "direction 的移动格数，默认 1", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前或指针世界", Required = false },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false },
-                    ["zoom"] = new McpToolParameter { Type = "number", Description = "跳转后相机缩放，默认保持当前缩放", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
+                    ["moveCamera"] = new McpToolParameter { Type = "boolean", Description = "是否同时把相机移动到指针，默认 false", Required = false },
+                    ["zoom"] = new McpToolParameter { Type = "number", Description = "moveCamera=true 时的相机缩放，默认保持当前缩放", Required = false },
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
                 },
                 Handler = args =>
                 {
@@ -721,7 +943,8 @@ namespace OniMcp.Tools
                     ["y"] = new McpToolParameter { Type = "integer", Description = "可选绝对 Y；留空使用当前指针", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "可选世界 ID；默认当前或指针世界", Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选标签", Required = false },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
                 },
                 Handler = args =>
                 {
@@ -747,6 +970,7 @@ namespace OniMcp.Tools
                         return CallToolResult.Error($"Jump point cell is not in worldId={worldId}");
 
                     var point = AgentPointerRegistry.SetJumpPoint(ToolSessionContext.SessionId, args["agentId"]?.ToString(), args["code"]?.ToString(), worldId, cell, args["label"]?.ToString());
+                    ApplyDisplayText(args, args["agentId"]?.ToString());
                     return CallToolResult.Text(JsonConvert.SerializeObject(point.ToDictionary(), McpJsonUtil.Settings));
                 }
             };
@@ -763,7 +987,7 @@ namespace OniMcp.Tools
                 Description = "列出当前 agent 的 AI 跳转点",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -787,7 +1011,7 @@ namespace OniMcp.Tools
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["code"] = new McpToolParameter { Type = "string", Description = "跳转点代号，如 p1、p2", Required = true },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识", Required = false }
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -796,6 +1020,36 @@ namespace OniMcp.Tools
                     {
                         ["removed"] = removed,
                         ["code"] = AgentPointerRegistry.NormalizeJumpCode(args["code"]?.ToString())
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ClearPointer()
+        {
+            return new McpTool
+            {
+                Name = "agent_pointer_clear",
+                Group = "camera",
+                Mode = "execute",
+                Risk = "low",
+                Description = "删除当前 MCP session 内指定 agentId 的可视 agent 指针，并同时清除该指针的 AI 跳转点；不影响其他 session 的同名指针",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false }
+                },
+                Handler = args =>
+                {
+                    string agentId = args["agentId"]?.ToString();
+                    bool jumpPointsRemoved;
+                    bool removed = AgentPointerRegistry.Remove(ToolSessionContext.SessionId, agentId, out jumpPointsRemoved);
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["removed"] = removed,
+                        ["scope"] = "session",
+                        ["sessionId"] = ToolSessionContext.SessionId,
+                        ["agentId"] = AgentPointerRegistry.PublicAgentId(agentId),
+                        ["jumpPointsCleared"] = jumpPointsRemoved
                     }, McpJsonUtil.Settings));
                 }
             };
@@ -971,18 +1225,112 @@ namespace OniMcp.Tools
 
         private static CallToolResult WrapActionResult(AgentPointerState pointer, CallToolResult result)
         {
+            var parsed = ParseResultPayload(result);
+            bool isError = result == null || result.IsError;
+            bool ok = !isError && ActionSucceeded(parsed);
             var payload = new Dictionary<string, object>
             {
-                ["ok"] = result != null && !result.IsError,
+                ["ok"] = ok,
+                ["actionSucceeded"] = ok,
                 ["pointer"] = pointer != null ? pointer.ToDictionary() : null,
                 ["result"] = new Dictionary<string, object>
                 {
-                    ["isError"] = result == null || result.IsError,
-                    ["text"] = ResultText(result)
+                    ["isError"] = isError,
+                    ["json"] = parsed,
+                    ["text"] = parsed == null ? ResultText(result) : null
                 }
             };
+            AddPlacementOutcome(payload, parsed);
             string text = JsonConvert.SerializeObject(payload, McpJsonUtil.Settings);
-            return result != null && result.IsError ? CallToolResult.Error(text) : CallToolResult.Text(text);
+            return isError || !ok ? CallToolResult.Error(text) : CallToolResult.Text(text);
+        }
+
+        private static JObject ParseResultPayload(CallToolResult result)
+        {
+            string text = ResultText(result);
+            if (string.IsNullOrWhiteSpace(text))
+                return null;
+            try
+            {
+                return JObject.Parse(text);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static bool ActionSucceeded(JObject payload)
+        {
+            if (payload == null)
+                return true;
+            if (payload["planned"] != null)
+                return ToolUtil.GetBool(payload, "dryRun", false)
+                    ? GetTruthyResultCount(payload, "valid") > 0
+                    : GetTruthyResultCount(payload, "planned") > 0;
+            if (payload["valid"] != null && payload["error"] != null)
+                return GetTruthyResultCount(payload, "valid") > 0;
+            return true;
+        }
+
+        private static void AddPlacementOutcome(Dictionary<string, object> payload, JObject resultPayload)
+        {
+            if (resultPayload == null || resultPayload["planned"] == null)
+                return;
+
+            bool dryRun = ToolUtil.GetBool(resultPayload, "dryRun", false);
+            bool planned = GetTruthyResultCount(resultPayload, "planned") > 0;
+            payload["blueprintPlaced"] = !dryRun && planned;
+            payload["actualAnchor"] = ExtractActualAnchor(resultPayload);
+            payload["expectedAnchor"] = new[] { ToolUtil.GetInt(resultPayload, "x") ?? -1, ToolUtil.GetInt(resultPayload, "y") ?? -1 };
+            payload["placementReason"] = planned
+                ? "placed"
+                : ClassifyPlacementFailure(resultPayload);
+        }
+
+        private static int GetTruthyResultCount(JObject payload, string key)
+        {
+            if (payload == null || payload[key] == null)
+                return 0;
+
+            bool boolValue;
+            if (bool.TryParse(payload[key].ToString(), out boolValue))
+                return boolValue ? 1 : 0;
+
+            int intValue;
+            if (int.TryParse(payload[key].ToString(), out intValue))
+                return intValue;
+
+            return 0;
+        }
+
+        private static object ExtractActualAnchor(JObject resultPayload)
+        {
+            var actual = resultPayload["actualPlacement"] as JObject;
+            if (actual == null)
+                return null;
+            int x = ToolUtil.GetInt(actual, "derivedAnchorX") ?? -1;
+            int y = ToolUtil.GetInt(actual, "derivedAnchorY") ?? -1;
+            return new[] { x, y };
+        }
+
+        private static string ClassifyPlacementFailure(JObject resultPayload)
+        {
+            string error = resultPayload["error"]?.ToString() ?? "";
+            string detailText = resultPayload["details"]?.ToString(Formatting.None) ?? "";
+            if (error.IndexOf("Unsupported", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "unsupported";
+            if (error.IndexOf("Invalid footprint", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "invalidFloor";
+            if (error.IndexOf("Obstructed", StringComparison.OrdinalIgnoreCase) >= 0
+                || detailText.IndexOf("obstructions", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "obstructed";
+            if (error.IndexOf("material", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "unavailableMaterial";
+            if (error.IndexOf("not visible", StringComparison.OrdinalIgnoreCase) >= 0
+                || error.IndexOf("not in worldId", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "invalidCell";
+            return string.IsNullOrWhiteSpace(error) ? "unknown" : "failed";
         }
 
         private static string ResultText(CallToolResult result)
@@ -1003,7 +1351,16 @@ namespace OniMcp.Tools
 
             if (!string.IsNullOrWhiteSpace(code))
             {
-                if (string.Equals(code.Trim(), "home", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(code.Trim(), "mouse", StringComparison.OrdinalIgnoreCase) || string.Equals(code.Trim(), "cursor", StringComparison.OrdinalIgnoreCase))
+                {
+                    int? mouseWorldId = ToolUtil.GetInt(args, "worldId") ?? ClusterManager.Instance?.activeWorldId;
+                    if (!TryGetUserMouseCell(mouseWorldId, out var mouse, out string error))
+                        return CallToolResult.Error(error);
+                    targetX = Convert.ToInt32(mouse["x"]);
+                    targetY = Convert.ToInt32(mouse["y"]);
+                    worldId = Convert.ToInt32(mouse["worldId"]);
+                }
+                else if (string.Equals(code.Trim(), "home", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!TryFindHomeCell(worldId, out targetX, out targetY, out worldId))
                         return CallToolResult.Error("Could not resolve home marker");
@@ -1060,10 +1417,81 @@ namespace OniMcp.Tools
                 return CallToolResult.Error($"Target cell is not in worldId={worldId}");
 
             var pointer = AgentPointerRegistry.SetCell(ToolSessionContext.SessionId, agentId, worldId, targetX, targetY);
-            float zoom = ToolUtil.GetFloat(args, "zoom") ?? (Camera.main != null ? Camera.main.orthographicSize : 8f);
-            CameraController.Instance?.SnapTo(new Vector3(targetX + 0.5f, targetY + 0.5f, -100f), zoom);
+            if (ToolUtil.GetBool(args, "moveCamera", false))
+            {
+                float zoom = ToolUtil.GetFloat(args, "zoom") ?? (Camera.main != null ? Camera.main.orthographicSize : 8f);
+                CameraController.Instance?.SnapTo(new Vector3(targetX + 0.5f, targetY + 0.5f, -100f), zoom);
+            }
             pointer.LastAction = "jump";
+            ApplyDisplayText(args, agentId);
             return CallToolResult.Text(JsonConvert.SerializeObject(pointer.ToDictionary(), McpJsonUtil.Settings));
+        }
+
+        private static void ApplyDisplayText(JObject args, string agentId)
+        {
+            if (args == null)
+                return;
+
+            string displayText = args["displayText"]?.ToString();
+            if (string.IsNullOrWhiteSpace(displayText))
+                return;
+
+            AgentPointerRegistry.SetMessage(ToolSessionContext.SessionId, agentId, displayText, DisplayTextDurationSeconds);
+        }
+
+        private static bool TryGetUserMouseCell(int? requestedWorldId, out Dictionary<string, object> payload, out string error)
+        {
+            payload = null;
+            error = null;
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                error = "Camera.main is not available";
+                return false;
+            }
+
+            Vector3 mouse = Input.mousePosition;
+            bool withinScreen = mouse.x >= 0f && mouse.y >= 0f && mouse.x <= Screen.width && mouse.y <= Screen.height;
+            var reference = camera.WorldToScreenPoint(new Vector3(0f, 0f, -100f));
+            var world = camera.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, reference.z));
+            world.z = -100f;
+            int cell = Grid.PosToCell(world);
+            int worldId = requestedWorldId ?? ClusterManager.Instance?.activeWorldId ?? 0;
+            bool validCell = Grid.IsValidCell(cell);
+            bool matchesWorld = validCell && ToolUtil.CellMatchesWorld(cell, worldId);
+            int x = -1;
+            int y = -1;
+            if (validCell)
+                Grid.CellToXY(cell, out x, out y);
+
+            payload = new Dictionary<string, object>
+            {
+                ["screen"] = new { x = Math.Round(mouse.x, 2), y = Math.Round(mouse.y, 2), topLeftY = Math.Round(Screen.height - mouse.y, 2), width = Screen.width, height = Screen.height, withinScreen },
+                ["worldPosition"] = new { x = Math.Round(world.x, 2), y = Math.Round(world.y, 2), z = Math.Round(world.z, 2) },
+                ["worldId"] = worldId,
+                ["cell"] = cell,
+                ["x"] = x,
+                ["y"] = y,
+                ["validCell"] = validCell,
+                ["matchesWorld"] = matchesWorld
+            };
+
+            if (!withinScreen)
+            {
+                error = "User mouse is outside the game window";
+                return false;
+            }
+            if (!validCell)
+            {
+                error = "User mouse is not over a valid grid cell";
+                return false;
+            }
+            if (!matchesWorld)
+            {
+                error = $"User mouse cell is not in worldId={worldId}";
+                return false;
+            }
+            return true;
         }
 
         private static bool TryFindHomeCell(int preferredWorldId, out int x, out int y, out int worldId)

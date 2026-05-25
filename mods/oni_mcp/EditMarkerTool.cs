@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using TMPro;
 using Newtonsoft.Json;
 using OniMcp.Support;
@@ -357,11 +358,11 @@ namespace OniMcp
                 rootRect.offsetMin = Vector2.zero;
                 rootRect.offsetMax = Vector2.zero;
 
-                var fillRect = CreateImage(root.transform, "Fill", new Color(0.15f, 0.95f, 1f, 0.18f));
-                var topBorder = CreateImage(root.transform, "TopBorder", new Color(0.2f, 1f, 1f, 0.95f));
-                var bottomBorder = CreateImage(root.transform, "BottomBorder", new Color(0.2f, 1f, 1f, 0.95f));
-                var leftBorder = CreateImage(root.transform, "LeftBorder", new Color(0.2f, 1f, 1f, 0.95f));
-                var rightBorder = CreateImage(root.transform, "RightBorder", new Color(0.2f, 1f, 1f, 0.95f));
+                var fillRect = CreateImage(root.transform, "Fill", new Color(1f, 0.70f, 0.16f, 0.18f));
+                var topBorder = CreateImage(root.transform, "TopBorder", new Color(1f, 0.82f, 0.26f, 0.95f));
+                var bottomBorder = CreateImage(root.transform, "BottomBorder", new Color(1f, 0.82f, 0.26f, 0.95f));
+                var leftBorder = CreateImage(root.transform, "LeftBorder", new Color(1f, 0.82f, 0.26f, 0.95f));
+                var rightBorder = CreateImage(root.transform, "RightBorder", new Color(1f, 0.82f, 0.26f, 0.95f));
                 root.SetActive(false);
                 return new RectSelectionOverlay(root, rootRect, fillRect, topBorder, bottomBorder, leftBorder, rightBorder);
             }
@@ -415,144 +416,97 @@ namespace OniMcp
             }
         }
 
-        private sealed class EditMarkerPromptScreen : KScreen
+        private sealed class EditMarkerPromptScreen
         {
-            private const int PromptSortingOrder = 5100;
+            private const int CharacterLimit = 2000;
+            private static readonly FieldInfo InfoDialogContentContainerField = typeof(InfoDialogScreen).GetField("contentContainer", BindingFlags.Instance | BindingFlags.NonPublic);
             private Action<string> onTextChanged;
             private System.Action onCreate;
             private System.Action onCancel;
+            private InfoDialogScreen dialog;
             private KInputTextField inputField;
             private KButton createButton;
             private bool closingSilently;
 
-            public override float GetSortKey()
-            {
-                return EDITING_SCREEN_SORT_KEY;
-            }
-
-            public override bool IsModal()
-            {
-                return true;
-            }
-
             public static EditMarkerPromptScreen Create(string areaText, Action<string> onTextChanged, System.Action onCreate, System.Action onCancel)
             {
-                var root = new GameObject("OniMcp_EditMarkerPrompt", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-                UnityEngine.Object.DontDestroyOnLoad(root);
+                if (ScreenPrefabs.Instance == null || ScreenPrefabs.Instance.InfoDialogScreen == null || GameScreenManager.Instance == null)
+                    throw new InvalidOperationException("ONI screen prefabs are not ready");
 
-                var canvas = root.GetComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvas.sortingOrder = PromptSortingOrder;
+                var dialog = GameScreenManager.Instance.StartScreen(ScreenPrefabs.Instance.InfoDialogScreen.gameObject, null, GameScreenManager.UIRenderTarget.ScreenSpaceOverlay) as InfoDialogScreen;
+                if (dialog == null)
+                    throw new InvalidOperationException("Failed to create ONI info dialog");
 
-                var scaler = root.GetComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = new Vector2(1920f, 1080f);
-                scaler.matchWidthOrHeight = 1f;
-
-                var rootRect = root.GetComponent<RectTransform>();
-                rootRect.anchorMin = Vector2.zero;
-                rootRect.anchorMax = Vector2.one;
-                rootRect.offsetMin = Vector2.zero;
-                rootRect.offsetMax = Vector2.zero;
-
-                var screen = root.AddComponent<EditMarkerPromptScreen>();
+                var screen = new EditMarkerPromptScreen();
                 screen.onTextChanged = onTextChanged;
                 screen.onCreate = onCreate;
                 screen.onCancel = onCancel;
+                screen.dialog = dialog;
                 screen.Build(areaText);
-                screen.Activate();
                 return screen;
+            }
+
+            public bool IsActive()
+            {
+                return dialog != null && dialog.IsActive();
             }
 
             public void CloseSilently()
             {
                 closingSilently = true;
-                if (IsActive())
-                    Deactivate();
-            }
-
-            public override void OnKeyDown(KButtonEvent e)
-            {
-                if (e.TryConsume(Action.Escape))
-                {
-                    Cancel();
-                    return;
-                }
-                base.OnKeyDown(e);
-                e.Consumed = true;
-            }
-
-            protected override void OnActivate()
-            {
-                base.OnActivate();
-                SetIsEditing(true);
-                if (CameraController.Instance != null)
-                    CameraController.Instance.DisableUserCameraControl = true;
-                if (inputField != null)
-                {
-                    inputField.Select();
-                    inputField.ActivateInputField();
-                }
-            }
-
-            protected override void OnDeactivate()
-            {
-                if (CameraController.Instance != null)
-                    CameraController.Instance.DisableUserCameraControl = false;
-                SetIsEditing(false);
-                if (!closingSilently && onCancel != null)
-                    onCancel();
-                base.OnDeactivate();
+                if (dialog != null && dialog.IsActive())
+                    dialog.Deactivate();
             }
 
             private void Build(string areaText)
             {
-                var panel = CreatePanel(transform);
-                CreateText(panel, "Title", "MCP Edit Mark", 24, FontStyles.Bold, new Vector2(24f, -52f), new Vector2(-24f, -20f));
-                CreateText(panel, "Area", areaText, 15, FontStyles.Normal, new Vector2(24f, -84f), new Vector2(-24f, -58f));
-                CreateText(panel, "Hint", "Enter an edit prompt. The client agent should plan first, then act.", 14, FontStyles.Normal, new Vector2(24f, -116f), new Vector2(-24f, -88f));
+                dialog.SetHeader("MCP Edit Mark");
+                dialog.AddPlainText(areaText);
+                dialog.AddPlainText("Enter an edit prompt. The client agent should plan first, then act.");
+                inputField = AddPromptInput(dialog);
 
-                inputField = CreateInput(panel);
                 inputField.onValueChanged.AddListener(value =>
                 {
                     onTextChanged?.Invoke(value);
                     RefreshCreateButton();
                 });
 
-                createButton = CreateButton(panel, "CreateButton", "Create request", new Vector2(-284f, 24f), new Vector2(-144f, 62f), Create);
-                CreateButton(panel, "CancelButton", "Cancel", new Vector2(-132f, 24f), new Vector2(-24f, 62f), Cancel);
+                dialog.AddOption("Paste clipboard", d => PasteClipboard());
+                dialog.AddOption("Cancel", d => d.Deactivate());
+                dialog.AddOption(true, out createButton, out LocText createButtonText);
+                createButtonText.text = "Create request";
+                createButton.onClick += Create;
+                dialog.onDeactivateFn = OnDialogDeactivate;
+
+                FocusInput();
                 RefreshCreateButton();
             }
 
-            private RectTransform CreatePanel(Transform parent)
+            private static KInputTextField AddPromptInput(InfoDialogScreen dialog)
             {
-                var panel = new GameObject("Panel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                panel.transform.SetParent(parent, false);
-                var rect = panel.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0.5f, 0.5f);
-                rect.anchorMax = new Vector2(0.5f, 0.5f);
-                rect.pivot = new Vector2(0.5f, 0.5f);
-                rect.sizeDelta = new Vector2(560f, 330f);
-                rect.anchoredPosition = Vector2.zero;
+                var contentContainer = InfoDialogContentContainerField?.GetValue(dialog) as GameObject;
+                if (contentContainer == null)
+                    throw new InvalidOperationException("ONI info dialog content container is not ready");
 
-                var image = panel.GetComponent<Image>();
-                image.color = new Color(0.07f, 0.08f, 0.09f, 0.96f);
-                image.raycastTarget = true;
-                return rect;
-            }
+                var inputRoot = new GameObject("OniMcp_EditMarkerPromptInput", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(KInputTextField), typeof(LayoutElement));
+                inputRoot.transform.SetParent(contentContainer.transform, false);
 
-            private KInputTextField CreateInput(Transform parent)
-            {
-                var inputRoot = new GameObject("PromptInput", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(KInputTextField));
-                inputRoot.transform.SetParent(parent, false);
+                var layout = inputRoot.GetComponent<LayoutElement>();
+                layout.minWidth = 360f;
+                layout.preferredWidth = 420f;
+                layout.flexibleWidth = 1f;
+                layout.minHeight = 126f;
+                layout.preferredHeight = 126f;
+                layout.flexibleHeight = 0f;
+
                 var rect = inputRoot.GetComponent<RectTransform>();
                 rect.anchorMin = new Vector2(0f, 0f);
-                rect.anchorMax = new Vector2(1f, 1f);
-                rect.offsetMin = new Vector2(24f, 82f);
-                rect.offsetMax = new Vector2(-24f, -126f);
+                rect.anchorMax = new Vector2(1f, 0f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = new Vector2(420f, 126f);
 
                 var image = inputRoot.GetComponent<Image>();
-                image.color = new Color(0.015f, 0.018f, 0.022f, 0.96f);
+                image.color = new Color(0.055f, 0.060f, 0.070f, 1f);
                 image.raycastTarget = true;
 
                 var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
@@ -560,19 +514,11 @@ namespace OniMcp
                 var viewportRect = viewport.GetComponent<RectTransform>();
                 viewportRect.anchorMin = Vector2.zero;
                 viewportRect.anchorMax = Vector2.one;
-                viewportRect.offsetMin = new Vector2(10f, 8f);
-                viewportRect.offsetMax = new Vector2(-10f, -8f);
+                viewportRect.offsetMin = new Vector2(12f, 10f);
+                viewportRect.offsetMax = new Vector2(-12f, -10f);
 
-                var text = CreateText(viewportRect, "Text", "", 16, FontStyles.Normal, Vector2.zero, Vector2.zero);
-                Stretch(text.rectTransform);
-                text.alignment = TextAlignmentOptions.TopLeft;
-                text.textWrappingMode = TextWrappingModes.Normal;
-
-                var placeholder = CreateText(viewportRect, "Placeholder", "Describe what the agent should change in this area...", 16, FontStyles.Italic, Vector2.zero, Vector2.zero);
-                Stretch(placeholder.rectTransform);
-                placeholder.color = new Color(0.72f, 0.76f, 0.78f, 0.55f);
-                placeholder.alignment = TextAlignmentOptions.TopLeft;
-                placeholder.textWrappingMode = TextWrappingModes.Normal;
+                var text = CreateInputText(viewportRect, "Text", "", 16, FontStyles.Normal, new Color(0.93f, 0.94f, 0.91f, 1f));
+                var placeholder = CreateInputText(viewportRect, "Placeholder", "Describe what the agent should change in this area...", 16, FontStyles.Italic, new Color(0.72f, 0.74f, 0.70f, 0.62f));
 
                 var input = inputRoot.GetComponent<KInputTextField>();
                 input.textViewport = viewportRect;
@@ -580,76 +526,72 @@ namespace OniMcp
                 input.placeholder = placeholder;
                 input.lineType = TMP_InputField.LineType.MultiLineNewline;
                 input.contentType = TMP_InputField.ContentType.Standard;
-                input.characterLimit = 2000;
-                input.caretColor = new Color(0.4f, 1f, 1f, 1f);
-                input.customCaretColor = true;
-                input.selectionColor = new Color(0.2f, 0.8f, 1f, 0.35f);
+                input.characterLimit = CharacterLimit;
+                input.richText = true;
+                input.shouldHideMobileInput = false;
+                input.text = "";
+                inputRoot.AddComponent<PromptInputFocusKeeper>().Initialize(input);
                 return input;
             }
 
-            private KButton CreateButton(Transform parent, string name, string label, Vector2 offsetMin, Vector2 offsetMax, System.Action onClick)
-            {
-                var buttonRoot = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(KImage), typeof(KButton));
-                buttonRoot.transform.SetParent(parent, false);
-                var rect = buttonRoot.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(1f, 0f);
-                rect.anchorMax = new Vector2(1f, 0f);
-                rect.offsetMin = offsetMin;
-                rect.offsetMax = offsetMax;
-
-                var image = buttonRoot.GetComponent<KImage>();
-                image.color = new Color(0.14f, 0.18f, 0.20f, 1f);
-                image.raycastTarget = true;
-
-                var button = buttonRoot.GetComponent<KButton>();
-                button.soundPlayer = new ButtonSoundPlayer();
-                button.bgImage = image;
-                button.additionalKImages = new KImage[0];
-                button.onClick += onClick;
-
-                var text = CreateText(buttonRoot.transform, "Label", label, 15, FontStyles.Bold, Vector2.zero, Vector2.zero);
-                Stretch(text.rectTransform);
-                text.alignment = TextAlignmentOptions.Center;
-                return button;
-            }
-
-            private TextMeshProUGUI CreateText(Transform parent, string name, string value, int size, FontStyles style, Vector2 offsetMin, Vector2 offsetMax)
+            private static TextMeshProUGUI CreateInputText(Transform parent, string name, string value, int size, FontStyles style, Color color)
             {
                 var textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
                 textObject.transform.SetParent(parent, false);
                 var rect = textObject.GetComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0f, 1f);
-                rect.anchorMax = new Vector2(1f, 1f);
-                rect.pivot = new Vector2(0f, 1f);
-                rect.offsetMin = offsetMin;
-                rect.offsetMax = offsetMax;
-
-                var text = textObject.GetComponent<TextMeshProUGUI>();
-                text.text = value;
-                text.fontSize = size;
-                text.fontStyle = style;
-                text.color = new Color(0.91f, 0.94f, 0.95f, 1f);
-                text.raycastTarget = false;
-                text.alignment = TextAlignmentOptions.MidlineLeft;
-                text.overflowMode = TextOverflowModes.Ellipsis;
-                if (Localization.FontAsset != null)
-                    text.font = Localization.FontAsset;
-                return text;
-            }
-
-            private void Stretch(RectTransform rect)
-            {
                 rect.anchorMin = Vector2.zero;
                 rect.anchorMax = Vector2.one;
                 rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.offsetMin = Vector2.zero;
                 rect.offsetMax = Vector2.zero;
+
+                var text = textObject.GetComponent<TextMeshProUGUI>();
+                text.text = value;
+                text.fontSize = size;
+                text.fontStyle = style;
+                text.color = color;
+                text.raycastTarget = false;
+                text.alignment = TextAlignmentOptions.TopLeft;
+                text.textWrappingMode = TextWrappingModes.Normal;
+                text.overflowMode = TextOverflowModes.Overflow;
+                if (Localization.FontAsset != null)
+                    text.font = Localization.FontAsset;
+                return text;
+            }
+
+            private void FocusInput()
+            {
+                if (inputField == null)
+                    return;
+
+                Input.imeCompositionMode = IMECompositionMode.On;
+                if (inputField.textComponent != null)
+                    Input.compositionCursorPos = RectTransformUtility.WorldToScreenPoint(null, inputField.textComponent.rectTransform.position);
+                inputField.Select();
+                inputField.ActivateInputField();
+            }
+
+            private void OnDialogDeactivate()
+            {
+                Input.imeCompositionMode = IMECompositionMode.Auto;
+                if (!closingSilently && onCancel != null)
+                    onCancel();
             }
 
             private void RefreshCreateButton()
             {
                 if (createButton != null && inputField != null)
                     createButton.isInteractable = !string.IsNullOrWhiteSpace(inputField.text);
+            }
+
+            private void PasteClipboard()
+            {
+                if (inputField == null)
+                    return;
+
+                PromptInputFocusKeeper.InsertText(inputField, GUIUtility.systemCopyBuffer);
+                FocusInput();
+                RefreshCreateButton();
             }
 
             private void Create()
@@ -660,14 +602,117 @@ namespace OniMcp
                 closingSilently = true;
                 onTextChanged?.Invoke(inputField.text);
                 onCreate?.Invoke();
-                Deactivate();
+                if (dialog != null && dialog.IsActive())
+                    dialog.Deactivate();
+            }
+        }
+
+        private sealed class PromptInputFocusKeeper : MonoBehaviour
+        {
+            private KInputTextField inputField;
+            private string lastText = "";
+
+            public void Initialize(KInputTextField input)
+            {
+                inputField = input;
+                lastText = input != null ? input.text ?? "" : "";
             }
 
-            private void Cancel()
+            private void LateUpdate()
             {
-                closingSilently = true;
-                onCancel?.Invoke();
-                Deactivate();
+                if (inputField == null || !inputField.isActiveAndEnabled)
+                    return;
+
+                Input.imeCompositionMode = IMECompositionMode.On;
+                var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+                if (eventSystem != null && eventSystem.currentSelectedGameObject != inputField.gameObject && !Input.GetMouseButton(0))
+                    eventSystem.SetSelectedGameObject(inputField.gameObject);
+                if (!inputField.isFocused)
+                    inputField.ActivateInputField();
+                if (inputField.textComponent != null)
+                    Input.compositionCursorPos = RectTransformUtility.WorldToScreenPoint(null, inputField.textComponent.rectTransform.position);
+
+                ApplyClipboardShortcut();
+                ApplyFallbackInputString();
+                lastText = inputField.text ?? "";
+            }
+
+            private void ApplyClipboardShortcut()
+            {
+                bool modifier = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) || Input.GetKey(KeyCode.LeftCommand) || Input.GetKey(KeyCode.RightCommand);
+                if (modifier && Input.GetKeyDown(KeyCode.V))
+                    InsertText(inputField, GUIUtility.systemCopyBuffer);
+            }
+
+            private void ApplyFallbackInputString()
+            {
+                string rawInput = Input.inputString;
+                if (string.IsNullOrEmpty(rawInput) || (inputField.text ?? "") != lastText)
+                    return;
+
+                string textToInsert = FilterTextInput(rawInput);
+                if (!string.IsNullOrEmpty(textToInsert))
+                {
+                    InsertText(inputField, textToInsert);
+                    return;
+                }
+
+                if (rawInput.IndexOf('\b') >= 0)
+                    Backspace();
+            }
+
+            private static string FilterTextInput(string rawInput)
+            {
+                var builder = new System.Text.StringBuilder(rawInput.Length);
+                for (int i = 0; i < rawInput.Length; i++)
+                {
+                    char c = rawInput[i];
+                    if (c >= ' ' || c == '\t' || c == '\r' || c == '\n')
+                        builder.Append(c == '\r' ? '\n' : c);
+                }
+                return builder.ToString();
+            }
+
+            public static void InsertText(KInputTextField inputField, string textToInsert)
+            {
+                if (inputField == null || string.IsNullOrEmpty(textToInsert))
+                    return;
+
+                string current = inputField.text ?? "";
+                int start = Mathf.Clamp(Math.Min(inputField.selectionStringAnchorPosition, inputField.selectionStringFocusPosition), 0, current.Length);
+                int end = Mathf.Clamp(Math.Max(inputField.selectionStringAnchorPosition, inputField.selectionStringFocusPosition), 0, current.Length);
+                int allowed = inputField.characterLimit > 0 ? Math.Max(0, inputField.characterLimit - (current.Length - (end - start))) : textToInsert.Length;
+                if (allowed < textToInsert.Length)
+                    textToInsert = textToInsert.Substring(0, allowed);
+                if (string.IsNullOrEmpty(textToInsert))
+                    return;
+
+                inputField.text = current.Substring(0, start) + textToInsert + current.Substring(end);
+                int caret = start + textToInsert.Length;
+                inputField.stringPosition = caret;
+                inputField.selectionStringAnchorPosition = caret;
+                inputField.selectionStringFocusPosition = caret;
+            }
+
+            private void Backspace()
+            {
+                string current = inputField.text ?? "";
+                if (current.Length == 0)
+                    return;
+
+                int start = Mathf.Clamp(Math.Min(inputField.selectionStringAnchorPosition, inputField.selectionStringFocusPosition), 0, current.Length);
+                int end = Mathf.Clamp(Math.Max(inputField.selectionStringAnchorPosition, inputField.selectionStringFocusPosition), 0, current.Length);
+                if (start == end)
+                {
+                    if (start == 0)
+                        return;
+                    start--;
+                }
+
+                inputField.text = current.Remove(start, end - start);
+                inputField.stringPosition = start;
+                inputField.selectionStringAnchorPosition = start;
+                inputField.selectionStringFocusPosition = start;
             }
         }
     }

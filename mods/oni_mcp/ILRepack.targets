@@ -1,0 +1,20 @@
+<Project>
+  <Target Name="MergePLibIntoOniMcp" AfterTargets="Build" BeforeTargets="GenerateModFiles" Condition="Exists('$(OutputPath)PLib.dll')">
+    <ItemGroup>
+      <InputAssemblies Include="$(OutputPath)$(TargetName)$(TargetExt)" />
+      <InputAssemblies Include="$(OutputPath)PLib.dll" />
+    </ItemGroup>
+
+    <Message Text="Merging PLib.dll into $(OutputPath)$(TargetName)$(TargetExt)" Importance="high" />
+    <ILRepack
+      Parallel="true"
+      DebugInfo="true"
+      AllowDuplicateResources="true"
+      LibraryPath="$(OniManagedPath)"
+      InputAssemblies="@(InputAssemblies)"
+      TargetKind="SameAsPrimaryAssembly"
+      OutputFile="$(OutputPath)$(TargetName)$(TargetExt)" />
+
+    <Delete Files="$(OutputPath)PLib.dll;$(OutputPath)PLib.xml" />
+  </Target>
+</Project>

@@ -26,17 +26,21 @@ namespace OniMcp.Tools
             "tools_player_action_coverage",
             "tools_static_audit",
             "tools_call_many",
+            "agent_program_execute",
             "agent_pointer_get",
+            "agent_pointer_user_mouse_get",
             "agent_pointer_aim_cell",
             "agent_pointer_aim_world",
             "agent_pointer_nudge",
             "agent_pointer_select_tool",
+            "agent_pointer_say",
             "agent_pointer_left_click",
             "agent_pointer_hold_left",
             "agent_pointer_jump",
             "agent_pointer_jump_point_set",
             "agent_pointer_jump_point_list",
             "agent_pointer_jump_point_clear",
+            "agent_pointer_clear",
             "colony_state_snapshot",
             "edit_mark_request_create",
             "edit_mark_request_list",
@@ -66,7 +70,8 @@ namespace OniMcp.Tools
             "orders_cancel_area",
             "orders_harvest_area",
             "buildings_search_defs",
-            "buildings_materials"
+            "buildings_materials",
+            "build_preview"
         };
         private static bool _initialized;
         private static List<McpToolInfo> _cachedCoreToolInfos;
@@ -98,6 +103,7 @@ namespace OniMcp.Tools
             Register(GlobalControlSurfaceAuditTools.AuditGlobalControlSurfaces());
             Register(NotificationSurfaceAuditTools.AuditNotificationSurfaces());
             Register(ToolBatchTools.CallMany());
+            Register(AgentProgramTools.ExecuteProgram());
             Register(DatabaseTools.QueryDatabase());
             Register(AreaTools.DefineArea());
             Register(AreaTools.GetArea());
@@ -114,16 +120,19 @@ namespace OniMcp.Tools
             Register(CameraTools.FocusDupe());
             Register(CameraTools.TakeScreenshot());
             Register(AgentPointerTools.GetPointerState());
+            Register(AgentPointerTools.GetUserMouse());
             Register(AgentPointerTools.AimCell());
             Register(AgentPointerTools.AimWorld());
             Register(AgentPointerTools.Nudge());
             Register(AgentPointerTools.SelectTool());
+            Register(AgentPointerTools.Say());
             Register(AgentPointerTools.LeftClick());
             Register(AgentPointerTools.HoldLeft());
             Register(AgentPointerTools.Jump());
             Register(AgentPointerTools.SetJumpPoint());
             Register(AgentPointerTools.ListJumpPoints());
             Register(AgentPointerTools.ClearJumpPoint());
+            Register(AgentPointerTools.ClearPointer());
             Register(UiHintTools.CreateNotification());
             Register(UiHintTools.CreatePopupText());
             Register(UiHintTools.CreateMapMarker());
@@ -322,6 +331,8 @@ namespace OniMcp.Tools
             Register(MiscSideScreenTools.SetConfigurableConsumerOption());
             Register(BuildPlanningTools.SearchBuildables());
             Register(BuildPlanningTools.ListBuildMaterials());
+            Register(BuildPlanningTools.PreviewBuild());
+            Register(BuildPlanningTools.BuildArea());
             Register(RocketTools.ListRockets());
             Register(RocketTools.GetRocketStatus());
             Register(RocketTools.GetRocketDetail());
@@ -434,6 +445,11 @@ namespace OniMcp.Tools
             return _tools.Values.OrderBy(t => t.Group).ThenBy(t => t.Name).ToList();
         }
 
+        public static List<McpTool> GetVisibleTools()
+        {
+            return _tools.Values.Where(t => !t.Hidden).OrderBy(t => t.Group).ThenBy(t => t.Name).ToList();
+        }
+
         public static bool TryGetTool(string name, out McpTool tool)
         {
             tool = null;
@@ -474,7 +490,7 @@ namespace OniMcp.Tools
         {
             var infos = new List<McpToolInfo>();
             foreach (var tool in _tools.Values
-                .Where(tool => includeAll || CoreToolNames.Contains(tool.Name))
+                .Where(tool => !tool.Hidden && (includeAll || CoreToolNames.Contains(tool.Name)))
                 .OrderBy(tool => tool.Group)
                 .ThenBy(tool => tool.Name))
             {
@@ -548,6 +564,7 @@ namespace OniMcp.Tools
         public string Group { get; set; }
         public string Mode { get; set; }
         public string Risk { get; set; }
+        public bool Hidden { get; set; }
         public List<string> Aliases { get; set; }
         public List<string> Tags { get; set; }
         public Dictionary<string, McpToolParameter> Parameters { get; set; }
@@ -629,7 +646,6 @@ namespace OniMcp.Tools
             if (name.StartsWith("server_") || name.StartsWith("logs_") || name.StartsWith("mcp_") || name.Contains("mcp")) return "server";
             if (name.StartsWith("database_")) return "database";
             if (name.StartsWith("research_")) return "research";
-            if (name.StartsWith("plan_harness_")) return "planning";
             if (name.StartsWith("edit_mark_") || name.StartsWith("ui_")) return "ui";
             if (name.StartsWith("map_")) return "map";
             if (name.StartsWith("sandbox_") || name.StartsWith("debug_")) return "sandbox";

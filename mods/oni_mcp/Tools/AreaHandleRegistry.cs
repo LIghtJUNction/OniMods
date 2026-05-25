@@ -83,6 +83,7 @@ namespace OniMcp.Tools
         private static readonly Dictionary<string, AreaHandle> Areas = new Dictionary<string, AreaHandle>();
         private static int _nextId = 1;
         private static int _nextBlockId = 1;
+        private static int _nextSnapshotBlockId = 1;
 
         public static AreaHandle Define(Dictionary<string, int> rect, int worldId, string label = null)
         {
@@ -126,13 +127,15 @@ namespace OniMcp.Tools
             }
         }
 
-        public static AreaHandle DefineBlock(Dictionary<string, int> rect, int worldId, int col, int row, int blockWidth, int blockHeight, string label = null)
+        public static AreaHandle DefineBlock(Dictionary<string, int> rect, int worldId, int col, int row, int blockWidth, int blockHeight, string label = null, string idPrefix = "blk")
         {
             rect = NormalizeRect(rect);
+            idPrefix = NormalizeBlockPrefix(idPrefix);
             lock (Lock)
             {
                 var existing = Areas.Values.FirstOrDefault(area =>
                     area.Kind == "block"
+                    && area.Id.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase)
                     && area.WorldId == worldId
                     && area.X1 == rect["x1"]
                     && area.Y1 == rect["y1"]
@@ -156,7 +159,7 @@ namespace OniMcp.Tools
 
                 var handle = new AreaHandle
                 {
-                    Id = "b" + _nextBlockId++,
+                    Id = idPrefix + NextBlockNumber(idPrefix),
                     Label = string.IsNullOrWhiteSpace(label) ? null : label.Trim(),
                     Kind = "block",
                     WorldId = worldId,
@@ -174,6 +177,25 @@ namespace OniMcp.Tools
                 Areas[handle.Id] = handle;
                 return handle;
             }
+        }
+
+        private static int NextBlockNumber(string idPrefix)
+        {
+            if (string.Equals(idPrefix, "snap", StringComparison.OrdinalIgnoreCase))
+                return _nextSnapshotBlockId++;
+            return _nextBlockId++;
+        }
+
+        private static string NormalizeBlockPrefix(string prefix)
+        {
+            if (string.IsNullOrWhiteSpace(prefix))
+                return "blk";
+            prefix = new string(prefix.Trim().Where(char.IsLetter).ToArray()).ToLowerInvariant();
+            if (prefix.Length == 0)
+                return "blk";
+            if (prefix == "a")
+                return "blk";
+            return prefix;
         }
 
         public static bool TryGet(string id, out AreaHandle handle)

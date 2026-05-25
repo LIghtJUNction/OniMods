@@ -1,28 +1,45 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using OniMcp.Server;
 using OniMcp.Support;
+using PeterHan.PLib.Options;
+using UnityEngine;
 
 namespace OniMcp.Config
 {
-    public class OniMcpOptions
+    [ConfigFile("OniMcpConfig.json", true)]
+    [ModInfo("https://steamcommunity.com/sharedfiles/filedetails/?id=3731864673", "preview.png")]
+    public class OniMcpOptions : IOptions
     {
         private static OniMcpOptions _current;
 
+        [Option("Host", "HTTP listen host. Use localhost for local clients, or 0.0.0.0 to listen on all interfaces.", "Server")]
         public string Host { get; set; } = "localhost";
 
+        [Option("Port", "HTTP port for the MCP endpoint.", "Server")]
+        [Limit(1024, 65535, 1)]
         public int Port { get; set; } = 8787;
 
+        [Option("Require token", "Require clients to send the configured bearer token.", "Authentication")]
         public bool AuthEnabled { get; set; } = false;
 
+        [Option("Token", "Bearer token required when token authentication is enabled.", "Authentication")]
         public string AuthToken { get; set; } = "";
 
+        [Option("Disable auto disinfect globally", "Keep ONI's global auto disinfect setting disabled when the mod applies this policy.", "Gameplay")]
         public bool GlobalAutoDisinfectDisabled { get; set; } = false;
 
+        [Option("Clean up screenshots", "Automatically remove old temporary screenshots created by MCP tools.", "Screenshots")]
         public bool ScreenshotCleanupEnabled { get; set; } = true;
 
+        [Option("Screenshot retention minutes", "How long temporary screenshots are retained before cleanup.", "Screenshots")]
+        [Limit(1, 10080, 1)]
         public int ScreenshotRetentionMinutes { get; set; } = 120;
 
+        [Option("Screenshot max files", "Maximum number of temporary screenshots to keep.", "Screenshots")]
+        [Limit(1, 1000, 1)]
         public int ScreenshotMaxFiles { get; set; } = 40;
 
         public static OniMcpOptions Current
@@ -37,8 +54,10 @@ namespace OniMcp.Config
 
         public static string ConfigPath => OniMcpPaths.ConfigPath;
 
+        [JsonIgnore]
         public string EndpointUrl => $"http://{DisplayHost}:{Port}/mcp/";
 
+        [JsonIgnore]
         public IEnumerable<string> ListenPrefixes
         {
             get
@@ -71,6 +90,69 @@ namespace OniMcp.Config
             string json = JsonConvert.SerializeObject(options, Formatting.Indented);
             File.WriteAllText(path, json);
             _current = options;
+        }
+
+        public IEnumerable<IOptionsEntry> CreateOptions()
+        {
+            yield return new TextBlockOptionsEntry(
+                "OniMcpStatus",
+                new OptionAttribute(
+                    "Endpoint: " + EndpointUrl + "\nConfig: " + ConfigPath,
+                    "Current ONI MCP endpoint and configuration file path.",
+                    "Status"));
+
+            var restartButton = new ButtonOptionsEntry(
+                "RestartMcpServer",
+                new OptionAttribute(
+                    "Restart MCP server",
+                    "Restart the ONI MCP HTTP server without restarting the game.",
+                    "Status"));
+            restartButton.Value = (Action<object>)(_ => RestartServer());
+            yield return restartButton;
+
+            var configButton = new ButtonOptionsEntry(
+                "OpenConfigFolder",
+                new OptionAttribute(
+                    "Open config folder",
+                    "Open the folder containing OniMcpConfig.json.",
+                    "Status"));
+            configButton.Value = (Action<object>)(_ => OpenConfigFolder());
+            yield return configButton;
+        }
+
+        public void OnOptionsChanged()
+        {
+            Save(this);
+            if (McpHttpServer.Instance != null)
+                McpHttpServer.Instance.RestartServer();
+        }
+
+        private static void RestartServer()
+        {
+            if (McpHttpServer.Instance != null)
+            {
+                McpHttpServer.Instance.RestartServer();
+                OniMcpLog.Debug("[OniMcp] MCP server restarted from PLib options.");
+            }
+            else
+            {
+                OniMcpLog.Warning("[OniMcp] Cannot restart MCP server from options: server is not available.");
+            }
+        }
+
+        private static void OpenConfigFolder()
+        {
+            string dir = Path.GetDirectoryName(ConfigPath);
+            if (string.IsNullOrEmpty(dir))
+                dir = OniMcpPaths.ModPath;
+
+            if (string.IsNullOrEmpty(dir))
+            {
+                OniMcpLog.Warning("[OniMcp] Cannot open config folder: path is not available.");
+                return;
+            }
+
+            Application.OpenURL(new Uri(dir + Path.DirectorySeparatorChar).AbsoluteUri);
         }
 
         private static OniMcpOptions Load()
@@ -129,6 +211,7 @@ namespace OniMcp.Config
             return value;
         }
 
+        [JsonIgnore]
         private string ListenHost
         {
             get
@@ -139,6 +222,7 @@ namespace OniMcp.Config
             }
         }
 
+        [JsonIgnore]
         private string DisplayHost
         {
             get

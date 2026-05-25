@@ -334,7 +334,6 @@ namespace OniMcp.Tools
                     ["x"] = new McpToolParameter { Type = "integer", Description = "格子 X 坐标", Required = true },
                     ["y"] = new McpToolParameter { Type = "integer", Description = "格子 Y 坐标", Required = true },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
-                    ["agentId"] = new McpToolParameter { Type = "string", Description = "可选 agent 标识；默认当前 MCP session 指针", Required = false },
                     ["zoom"] = new McpToolParameter { Type = "number", Description = "相机正交缩放，默认 8", Required = false }
                 },
                 Handler = args =>
@@ -351,12 +350,11 @@ namespace OniMcp.Tools
 
                     float zoom = ToolUtil.GetFloat(args, "zoom") ?? 8f;
                     CameraController.Instance?.SnapTo(new Vector3(x.Value + 0.5f, y.Value + 0.5f, -100f), zoom);
-                    var pointer = AgentPointerRegistry.SetCell(ToolSessionContext.SessionId, args["agentId"]?.ToString(), worldId, x.Value, y.Value, "camera");
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
                         ["focused"] = new { x = x.Value, y = y.Value },
                         ["worldId"] = worldId,
-                        ["pointer"] = pointer.ToDictionary()
+                        ["zoom"] = Math.Round(zoom, 2)
                     }, McpJsonUtil.Settings));
                 }
             };

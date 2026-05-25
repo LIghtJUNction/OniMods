@@ -1040,6 +1040,18 @@ namespace OniMcp.Server
             }
         }
 
+        public Implementation GetSessionClientInfo(string sessionId)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+                return null;
+
+            lock (_sessionLock)
+            {
+                McpSession session;
+                return _sessions.TryGetValue(sessionId, out session) ? session.ClientInfo : null;
+            }
+        }
+
         private int TaskCount
         {
             get

@@ -7,6 +7,8 @@
 - **工具总数**：~320 个（`tools/list` 默认暴露约 60–80 个核心入口）
 - **会话要求**：非 `initialize` 请求必须携带 `Mcp-Session-Id` 和协商后的 `Mcp-Protocol-Version`
 
+> **API 稳定性警告**：`oni_mcp` 在 `1.0.0` 之前不承诺工具、参数、资源和返回字段稳定。二创或第三方集成请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 作为实际兼容依据。
+
 > 提示：未在 `tools/list` 中看到的工具仍可直接 `tools/call` 按名称调用，或用 `tools_search detail=full` 检索完整注册表。
 
 ---
@@ -94,6 +96,8 @@
 | `priorities_list` | read | none | 全局优先级设置 |
 | `set_building_priority` / `set_priority_area` | write | low/medium | 建筑/区域优先级 |
 | `agent_pointer_select_tool` + `agent_pointer_left_click` / `agent_pointer_hold_left` | execute | medium | 通过可视 agent 指针放置建筑/砖块/电线/管路 |
+| `agent_pointer_user_mouse_get` / `agent_pointer_say` | read/execute | none/low | 读取玩家鼠标所在格；在指针旁显示 agent 聊天气泡 |
+| `agent_pointer_clear` | execute | low | 删除当前 session 内指定 agent 指针及其跳转点 |
 | `deconstruct_building` | write | **dangerous** | 拆除建筑（需 `confirm=true`）|
 | `sweep_area` / `dig_area` | write | **dangerous** | 固体散落物清扫/挖掘区域（大区域需 `confirm=true`）；清扫支持 `dryRun` 诊断，挖地必须使用 `orders_dig_area`；水/液体不能 sweep |
 | `mop_area` / `disinfect_area` | write | medium | 拖地/消毒；地上的水、污水、液体必须使用 `orders_mop_area` |
@@ -207,7 +211,7 @@
 | `camera_get_view` | read | none | 当前相机位置、缩放、激活世界 |
 | `camera_set_view` / `camera_move` | execute | low | 设置/平移/跳转相机 |
 | `camera_switch_view` | execute | low | 切换覆盖层（氧气/电力/温度/房间等）|
-| `camera_focus_cell` / `camera_focus_dupe` | execute | low | 聚焦到格子或复制人 |
+| `camera_focus_cell` / `camera_focus_dupe` | execute | low | 聚焦到格子或复制人；不会移动 agent 指针 |
 | `game_screenshot` | execute | low | 截图并返回 PNG 路径 |
 
 地图分析默认使用 `world_text_map` 或 `world_area_snapshot`，截图只作为视觉补充：
@@ -217,16 +221,16 @@
 | 挖掘、铺砖、建造、电线/管路规划 | `world_area_snapshot preset=planning/utilities` | 返回精确坐标、plain 地形、建筑/复制人对象、utility overlay、规划摘要 |
 | 平面结构候选 | `layout_candidates purpose=lab|barracks|bathroom` | 返回候选矩形、评分、需挖掘、需铺砖、危险格和可达性 |
 | 常规地形/对象读图 | `world_text_map profile=standard encoding=plain` | 返回 areaId、origin、行列坐标和固定宽度 token，适合 agent 直接规划 |
-| 全图分块巡检 | `area_blocks` → `world_text_map areaId=bN` | 把世界切成 `b*` 小块句柄，逐块读取，避免一次扫太大 |
+| 全图分块巡检 | `area_blocks` → `world_text_map areaId=blkN` | 把世界切成 `blk*` 小块句柄，逐块读取；`world_text_map includeChunks=true` 可在大区域响应中内联每块预览 |
 | 大范围低 token 初扫 | `world_text_map profile=scan encoding=rle` | 输出更短但可读性差，仅在范围很大时使用 |
 | 精确校验某个格子 | `world_cell_info` | 返回单格元素、质量、温度、可见性 |
 | 房间视觉、装饰、作物阶段、UI 覆盖层确认 | `camera_switch_view` + `game_screenshot` | 这些信息更接近人眼观察，文本地图可能不表达完整视觉状态 |
 
-`world_text_map profile=standard encoding=plain` 的文本行使用固定宽度 token，不再要求 agent 解读单字母格子：`sol` 自然固体，`tile` 已建地砖/地基，`oxy/po2/co2/hyd` 气体，`liq` 液体，`bld/dup/itm/bp` 为建筑、复制人、散落物和蓝图 overlay。执行建造/挖掘/清扫类工具时使用地图返回的世界绝对坐标。
+`world_text_map profile=standard encoding=plain` 的文本行使用固定宽度 token，不再要求 agent 解读单字母格子：`sol` 自然固体，`tile` 已建地砖/地基，`oxy/po2/co2/hyd` 气体，`liq` 液体，`bld/dup/itm/bp` 为建筑、复制人、散落物和蓝图 overlay。建筑/蓝图会按完整 footprint 覆盖所有占用格；`bld_anchor`/`bp_anchor` 是 lower-left anchor，调用指针建造时点对象列表里的 `anchor`。执行建造/挖掘/清扫类工具时使用地图返回的世界绝对坐标。
 
-`area_define` 生成手工区域 `a*`；`area_blocks` 按世界边界自动生成地图块 `b*`。默认块大小约 `40x40`，可传 `blockWidth/blockHeight/maxCells` 调整。`b*` 与 `a*` 是同一种 areaId 协议，可直接用于 `world_text_map areaId=b7`、`world_area_snapshot areaId=b7`，以及支持 areaId 的整块工具。
+`area_define` 生成手工区域 `a*`；`area_blocks` 按世界边界自动生成地图块 `blk*`；`world_text_map` / `world_area_snapshot` 大区域自动分块生成 `snap*`。默认块大小约 `40x40`，可传 `blockWidth/blockHeight/maxCells` 调整。`blk*`、`snap*` 与 `a*` 是同一种 areaId 协议，可直接用于 `world_text_map areaId=blk7`、`world_area_snapshot areaId=snap7`，以及支持 areaId 的整块工具。
 
-多个区域可以临时拼接：`areaId=b1+b2+b3` 会按同一世界内这些区域的外接矩形读取或编辑。需要长期复用时，用 `area_merge areaIds=["b1","b2","b3"]` 生成新的 `a*` 句柄。拼接不是多边形裁剪；非相邻区域会包含中间空隙，`area_merge` 会返回 `gapCells` 和 warning。
+多个区域可以临时拼接：`areaId=blk1+blk2+blk3` 会按同一世界内这些区域的外接矩形读取或编辑。需要长期复用时，用 `area_merge areaIds=["blk1","blk2","blk3"]` 生成新的 `a*` 句柄。拼接不是多边形裁剪；非相邻区域会包含中间空隙，`area_merge dryRun=true` 会返回 `continuity=false`、`gapCellsPercent` 和 warning。
 
 `world_text_map view=temperature` 输出温度 token：`frz/cold/mild/hot/xhot`。`world_area_snapshot` 默认返回 JSON，`maps.base` 是基础地形/对象，`maps.power` 等 overlay 默认也是逐格行。`profile=scan` 才会把 overlay 改成稀疏输出。`includeScreenshot=true` 会保存当前相机画面路径，但截图不自动保证覆盖传入矩形，除非调用前先移动相机。
 
@@ -298,17 +302,6 @@
 | `get_access_control` / `set_access_control` | read/write | medium | 门禁权限 |
 | `batch_set_building_configs` / `batch_set_automation_controls` | write | medium | 批量设置建筑配置 |
 
-### 规划 Harness (planning)
-
-| 工具 | 模式 | 风险 | 用途 |
-|------|------|------|------|
-| `plan_harness_create` | write | medium | 创建规划-反馈-验证-实施会话 |
-| `plan_harness_get` / `plan_harness_list` | read | none | 读取规划会话 |
-| `plan_harness_parse` | read | none | 解析 JSON/行式 plannedCalls；可传 `confirm`、`dryRun` 等默认参数，并返回 `resolvedCalls` |
-| `plan_harness_record` | write | medium | 记录约束或反馈 |
-| `plan_harness_validate` | read | none | 验证计划参数与工具存在性 |
-| `plan_harness_execute` | execute | medium | 通过门禁后执行 plannedCalls |
-
 ### 工具发现与批量 (tools)
 
 | 工具 | 模式 | 风险 | 用途 |
@@ -316,6 +309,7 @@
 | `tools_manifest` / `tools_search` / `tools_guide` | read | none | 工具清单/搜索/意图指南 |
 | `tools_player_action_coverage` / `tools_static_audit` | read | none | 玩家操作覆盖审计/静态自检 |
 | `tools_call_many` | execute | medium | 批量顺序调用（最多 20 个）|
+| `agent_program_execute` | execute | medium | 受限流程 DSL：变量、if/while/repeat、条件调用工具 |
 | `database_query` | read | none | 查询游戏内置 Database/百科 |
 | `edit_mark_request_create` / `list` / `clear` | read/write | low | 框选区域编辑请求管理 |
 
@@ -391,6 +385,31 @@
 
 领域批量工具也遵循同一套 `defaults` 约定：`user_menu_actions_batch_press`、`maintenance_actions_batch_execute`、`buildings_config_batch_set`、`production_queue_batch_set`、`activation_ranges_batch_set`、`receptacles_batch_control`、`storage_tile_selections_batch_set` 等。
 
+`agent_program_execute` 用于需要条件分支或循环的小型 agent 流程。它执行受限 JSON DSL，不执行任意 C#/shell 代码；脚本通过 `op=call` 或快捷 `jump`、`nudge`、`select`、`click`、`drag`、`readCell` 调用现有 MCP 工具。字符串 `$name.path` 会读取变量路径，工具返回 JSON 可用 `saveAs` 保存后参与条件判断：
+
+```json
+{
+  "program": {
+    "steps": [
+      { "op": "jump", "x": 80, "y": 135 },
+      { "op": "readCell", "saveAs": "cell" },
+      {
+        "op": "if",
+        "when": { "eq": [ "$cell.element", "Water" ] },
+        "then": [
+          { "op": "select", "tool": "mop" },
+          { "op": "click", "confirm": true }
+        ],
+        "else": [
+          { "op": "nudge", "direction": "right", "steps": 1 }
+        ]
+      }
+    ]
+  },
+  "maxSteps": 80
+}
+```
+
 清扫/拖地区分：
 
 ```json
@@ -400,11 +419,13 @@
 
 `orders_sweep_area` 只处理固体散落物/碎片。地上的水、污水、漏液或任何液体格子使用 `orders_mop_area`。如果 sweep 返回 `marked=0`、`liquidCellsInRect>0` 或 `mopHint`，不要重复调用同一区域 sweep。
 
-建造蓝图不再暴露直接坐标规划工具。使用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，然后通过可视 agent 指针执行：`agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left`。`buildings_search_defs` 的 `placement.anchor=lowerLeftCell` 表示指针格是 footprint 左下锚点，不是视觉中心；可先用 `agent_pointer_left_click dryRun=true` 预检 footprint。对 `BuildLocationRule=OnFloor` 的建筑，先用指针放置支撑砖或确认下方已有地板。
+建造蓝图优先使用可视 agent 指针。使用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，然后 `build_preview` 预检单个 lower-left anchor；确认后用 `agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left` 放置。`agent_pointer_jump code=mouse` 可把指针跳到玩家当前鼠标所在格；指针移动不会默认移动相机，确实需要跟镜头时传 `moveCamera=true`。`buildings_search_defs` 的 `placement.anchor=lowerLeftCell` 表示 x/y 或指针格是 footprint 左下锚点，不是视觉中心。
 
-`agent_pointer_hold_left` 默认只允许 1x1 footprint 的建筑。床、厕所、机器等多格建筑必须逐个 anchor 用 `agent_pointer_left_click` 放置，并在每批之后用 `world_area_snapshot` / `world_text_map` 比对 `placementCheck`；只有明确接受重复 footprint 拖拽时才传 `allowFootprintDrag=true`。
+`agentId` 是当前 MCP session 内的逻辑指针名；省略时使用本 session 的默认 `agent` 指针。不同 MCP session 的同名 `agentId` 不共享状态，默认标签会带客户端名和 session 短前缀，客户端信息可用 `mcp_client_capabilities` 查看。需要同一客户端内复用指针时，持续传同一个 `agentId`；需要第二个指针时，换一个 `agentId`。不再需要某个指针时，用 `agent_pointer_clear agentId=...` 删除它及其跳转点。
 
-`plan_harness_parse` 会返回原始 `plannedCalls`、默认参数 `defaults` 和已合并默认参数的 `resolvedCalls`。执行型空间工具疑似使用未锚定的小坐标时，校验器会给出提示。
+这些指针动作大多都支持可选 `displayText`，传入后会立刻在 agent 指针旁短暂显示该文本。
+
+`agent_pointer_hold_left` 默认只允许 1x1 footprint 的建筑。床、厕所、机器等多格建筑建议逐个 anchor 用 `agent_pointer_left_click` 放置。只有明确接受重复 footprint 拖拽时才传 `allowFootprintDrag=true`。
 
 电线、管路、梯子和砖块路线使用指针拖拽；折线拆成多段水平/垂直 `agent_pointer_hold_left`：
 
@@ -510,7 +531,6 @@
 | `oni://schedules` | `schedule_list` | 日程 |
 | `oni://research/status` | `research_status` | 研究状态 |
 | `oni://rockets/status` | `rockets_status` | 火箭状态 |
-| `oni://plans` | `plan_harness_list` | 规划 Harness 会话 |
 | `oni://mcp/sessions` | `mcp_client_capabilities` | MCP 会话与能力 |
 | `oni://tools/manifest` | `tools_manifest` | 工具清单 |
 | `oni://tools/guide` | `tools_guide` | 工具意图指南 |
@@ -533,8 +553,6 @@
 | `oni://tools/search{?query,group,mode,risk,detail,limit}` | `tools_search` | 低 token 工具搜索 |
 | `oni://tools/guide{?goal,detail}` | `tools_guide` | 按目标生成指南 |
 | `oni://tools/read/{name}{?...}` | 任意 read 工具 | 将只读工具作为 resource 读取 |
-| `oni://plans/{id}` | `plan_harness_get` | 读取指定规划会话 |
-
 ---
 
 ## Prompts 速查

@@ -2,54 +2,73 @@
 
 # ONI MCP Server
 
-Let your AI assistant connect directly to your Oxygen Not Included colony. Once this mod is installed, any MCP-compatible AI (Claude, Cursor, or any other MCP client) can read game state, analyze your situation, and even issue construction and scheduling commands through a local HTTP interface.
+ONI MCP Server is an Oxygen Not Included mod. It starts a local MCP Streamable HTTP server inside the game, allowing MCP-capable AI clients to read colony state, query game data, inspect the map, and execute authorized game actions.
 
-> No coding knowledge required. Just install the mod, launch the game, configure your AI client, and your assistant can "see" and "manage" your colony.
+Default endpoint:
 
-## What This Mod Does
+```text
+http://localhost:8787/mcp/
+```
 
-### 🤖 AI Colony Advisor
-- **Colony Health Check**: AI automatically scans oxygen, food, power, and temperature, identifies risks, and offers advice
-- **Power Audit**: Detects power shortfalls, battery status, and circuit loads to prevent blackouts
-- **Thermal Management**: Scans for overheating buildings and warns you before equipment fails
-- **Room Planning**: Checks if morale rooms are complete and identifies missing room types
+> **API stability warning**: Before `oni_mcp` reaches `1.0.0`, tool names, parameters, resource paths, and response fields may change incompatibly. Derivative mods, plugins, scripts, and third-party clients should pin a specific version and use the runtime `tools_manifest` / `oni://tools/manifest` as the compatibility source of truth.
 
-### 🎮 Voice/Text Commands
-- Tell the AI "pause the game and take a screenshot" → AI calls `game_pause` + `take_screenshot`
-- Say "set my digger Duplicant's digging priority to max" → AI calls `dupes_priority_set`
-- Say "build two beds at (100, 200)" → AI moves the visible agent pointer and calls `agent_pointer_left_click`
-- Say "check rocket status" → AI calls `rockets_status`
+## What It Is Good For
 
-### 📊 Real-Time Data Panel
-Through `oni://...` resource URIs, the AI can read live game data:
-- Colony status, diagnostics, and alerts
-- Resource inventory and food reserves
-- Duplicant roster and needs
-- Power system summary
-- Room system status
-- Building overheat risks
+- Colony advice: check oxygen, food, power, temperature, Duplicants, rooms, and alerts.
+- Live game data: read `oni://...` resources instead of relying only on screenshots.
+- Small operations: pause, change speed, take screenshots, adjust schedules, configure doors, set storage filters, change priorities, and rename Duplicants.
+- Planning support: read text maps, define areas, generate layout candidates, and use a plan gate before execution.
+- Agent experiments: expose tool search, manifests, resource templates, and risk levels for custom AI skills.
 
-### 🛡️ Safety Controls
-- All mutating operations have risk levels clearly marked
-- Dangerous actions (digging, deconstruction) require explicit confirmation
-- Supports Plan Harness workflow: AI proposes a plan, you review and confirm, then it executes
+## What It Is Not
+
+- It does not make current AI reliably autonomous at Oxygen Not Included. Long-term planning, priority management, and cascading failures are still difficult.
+- It is not recommended to let AI run large dig, deconstruct, sandbox, save, or load operations without confirmation.
+- This project provides the MCP server and game control surface. It is not a complete autonomous agent.
 
 ## Installation
 
-### Prerequisites
-- Oxygen Not Included (Steam version)
-- Install the mod: extract `OniMcp.zip` into the game's `mods/` folder, or subscribe via Steam Workshop
+### Steam Workshop
 
-### Launch
-1. Launch Oxygen Not Included
-2. From the main menu, go to **Mods** → enable **ONI MCP Server**
-3. Load or create a colony
-4. The MCP server starts automatically at `http://localhost:8787/mcp/`
+Subscribe to **ONI MCP Server**, enable it in the Mods menu, then restart the game.
 
-### Connect Your AI
+### Local Install
 
-#### Claude Desktop Setup
-Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+Extract `OniMcp.zip` into the game's local mod directory, for example:
+
+```text
+mods/Local/OniMcp/
+```
+
+For development, install it into:
+
+```text
+mods/Dev/OniMcp/
+```
+
+With this repository's `onim` tool:
+
+```bash
+onim dev -m oni_mcp
+```
+
+## Launch
+
+1. Start Oxygen Not Included.
+2. Enable **ONI MCP Server** in the main menu **Mods** screen.
+3. Load or create a colony.
+4. The mod starts the MCP server at `http://localhost:8787/mcp/` by default.
+
+The server starts as early as possible in the main menu. Tools that need colony state only return useful data after a save is loaded.
+
+## Connect An AI Client
+
+### Claude Desktop Example
+
+Edit the Claude Desktop config file:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -61,122 +80,177 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
 }
 ```
 
-Restart Claude Desktop, then type "check my colony status" in chat to get started.
+Restart the client, then start with a read-only request:
 
-#### Other MCP Clients
-Any client that supports MCP Streamable HTTP transport can connect. Just set the URL to `http://localhost:8787/mcp/`.
+```text
+Do not modify the save yet. Check my colony status and list the three most urgent risks.
+```
 
-## Mod Configuration
+### Other MCP Clients
 
-Create or edit `OniMcpConfig.json` (in the mod directory or the game's persistent data folder):
+Any client that supports MCP Streamable HTTP can connect. Set the URL to:
+
+```text
+http://localhost:8787/mcp/
+```
+
+If token authentication is enabled, the client must send `Authorization: Bearer <token>` or `X-Oni-Mcp-Token: <token>`.
+
+## Configuration
+
+You can use the in-game mod options screen or edit `OniMcpConfig.json`. The mod first checks the mod directory; if no config exists there, it uses the game's persistent data directory.
 
 ```json
 {
   "Host": "localhost",
   "Port": 8787,
+  "AuthEnabled": false,
+  "AuthToken": "",
+  "GlobalAutoDisinfectDisabled": false,
   "ScreenshotCleanupEnabled": true,
   "ScreenshotRetentionMinutes": 120,
   "ScreenshotMaxFiles": 40
 }
 ```
 
-- `Host`: Defaults to `localhost`. Set to `0.0.0.0` for LAN access
-- `Port`: Defaults to `8787`
-- `ScreenshotCleanupEnabled`: Auto-cleanup AI screenshots
-- `ScreenshotRetentionMinutes`: How long screenshots are kept
-- `ScreenshotMaxFiles`: Maximum number of screenshots to retain
+| Field | Default | Description |
+|-------|---------|-------------|
+| `Host` | `localhost` | HTTP listen host. Use `0.0.0.0` for LAN access |
+| `Port` | `8787` | MCP port, from `1024` to `65535` |
+| `AuthEnabled` | `false` | Require token authentication |
+| `AuthToken` | empty | Token value. Empty token disables authentication |
+| `GlobalAutoDisinfectDisabled` | `false` | Keep global auto-disinfect disabled |
+| `ScreenshotCleanupEnabled` | `true` | Remove old temporary screenshots |
+| `ScreenshotRetentionMinutes` | `120` | Temporary screenshot retention in minutes |
+| `ScreenshotMaxFiles` | `40` | Maximum temporary screenshot count |
 
-Changes take effect after restarting the game.
+After changing `Host`, `Port`, or authentication settings, restart the game or save the mod options to restart the server.
 
-## Feature Details
+## Security Notes
 
-### Tools
+- Keep `Host=localhost` by default so only local AI clients can connect.
+- If you set `Host=0.0.0.0` for LAN access, enable `AuthEnabled` and use a strong token.
+- Ask the AI to analyze first and execute only after permission. Large dig, deconstruct, sandbox, save, and load actions need extra care.
+- Save manually before long automated sessions, and limit the AI to short run windows.
 
-About **320 tools** cover every game system, grouped as follows:
+## MCP Capabilities
 
-| System | Representative Tools | Capabilities |
-|--------|----------------------|--------------|
-| Colony | `colony_status`, `colony_diagnostics`, `colony_alerts` | Status, diagnostics, alerts |
-| Duplicants | `dupes_list`, `dupes_detail`, `dupes_needs`, `dupes_attributes` | List, details, needs, attributes |
-| Power | `power_summary` | Power system summary |
-| Rooms | `rooms_list` | Room system status |
-| Thermal | `thermal_overheat_risk_scan` | Overheat risk scan |
-| Buildings | `buildings_search_defs`, `buildings_materials`, `agent_pointer_select_tool`, `agent_pointer_left_click`, `buildings_deconstruct` | Search, materials, pointer build, deconstruct |
-| Orders | `orders_dig`, `orders_sweep`, `orders_harvest` | Digging, sweeping, harvesting |
-| Rockets | `rockets_list`, `rockets_status`, `rockets_request_launch` | List, status, launch |
-| Farming | `farming_planting`, `farming_harvestables` | Planting, harvestables |
-| Research | `research_status`, `set_research` | Status, set |
-| Schedule | `schedule_list`, `schedule_set_block` | List, set block |
-| Resources | `resources_inventory`, `resources_food` | Inventory, food |
-| Camera | `camera_move`, `camera_switch_view`, `take_screenshot` | Move, switch overlay, screenshot |
-| World | `world_cell_info`, `world_text_map` | Cell info, text map |
-| Game Control | `game_pause`, `game_set_speed`, `save_game` | Pause, speed, save |
-| Meta Tools | `tools_call_many`, `plan_harness_create` | Batch calls, plan harness |
+The current implementation includes 330+ tools, 120+ fixed resources, and 100+ resource templates. The exact list may change with the code; use the runtime `tools_manifest` tool or `oni://tools/manifest` resource as the source of truth.
 
-### Prompts
+### Core Tools
 
-7 built-in scenario prompts to kick off standard workflows:
+| Area | Example tools | Purpose |
+|------|---------------|---------|
+| Server and catalog | `server_status`, `tools_manifest`, `tools_search`, `tools_guide` | Check service state, search tools, route goals to tool chains |
+| Game control | `game_pause`, `game_resume`, `game_set_speed`, `game_save` | Pause, resume, change speed, save |
+| Camera and screenshots | `camera_move`, `camera_switch_view`, `game_screenshot` | Move camera, switch overlays, capture screenshots |
+| World reading | `world_text_map`, `world_area_snapshot`, `world_cell_info` | Text maps, area snapshots, cell details |
+| Area management | `area_define`, `area_get`, `area_blocks`, `area_merge` | Define and reuse map regions |
+| Agent pointer | `agent_pointer_aim_cell`, `agent_pointer_user_mouse_get`, `agent_pointer_say`, `agent_pointer_left_click` | Execute click-based actions, read the user's mouse cell, and show pointer speech bubbles |
+| Buildings and orders | `buildings_search_defs`, `buildings_materials`, `build_preview`, `build_area`, `orders_dig_area`, `orders_sweep_area` | Find buildings, choose materials, preview/batch-place blueprints, create dig and sweep orders |
+| Duplicants | `dupes_status_check`, `dupes_detail`, `dupes_needs`, `dupes_priority_set`, `dupes_rename` | Check status, needs, priorities, and names |
+| Management screens | `schedule_list`, `schedule_set_block`, `diet_status`, `resources_storage_set_filter` | Schedules, diet, storage filters, and management screen settings |
+| Side screens | `filters_list`, `state_controls_list`, `automation_controls_list`, `lights_color_set` | Common building side-screen configuration |
+| Rockets and space | `rockets_status`, `rocket_modules_list`, `rocket_crew_requests_list` | Rocket state, modules, crew, and space systems |
+| Audit and coverage | `tools_player_action_coverage`, `tools_static_audit`, `side_screen_surfaces_audit` | Inspect tool coverage and gaps |
+| Batch and planning | `tools_call_many`, `agent_program_execute`, `edit_mark_request_list` | Batch calls, conditional/loop flow scripts, and player edit marks |
 
-- `colony_triage` — Colony Health Check
-- `power_audit` — Power Audit
-- `rooms_overview` — Rooms Overview
-- `thermal_audit` — Thermal Audit
-- `next_cycle_plan` — Next Cycle Plan
-- `inspect_area` — Area Map Analysis
-- `dupe_care_review` — Duplicant Care Review
+For `agent_pointer_*`, `agentId` is a logical pointer name scoped to the current MCP session. If omitted, the session's default `agent` pointer is used. The same `agentId` in different client sessions does not share state; default labels include the client name and a short session prefix. Use `mcp_client_capabilities` to inspect current sessions and client info. Use `agent_pointer_clear` to delete a pointer and its jump points when it is no longer needed.
 
-### Resources
+### Common Resources
 
-Read live game state via `oni://` URIs:
+| URI | Description |
+|-----|-------------|
+| `oni://colony/status` | Cycle, Duplicant count, speed, pause state |
+| `oni://colony/diagnostics` | Oxygen, food, heat, and other diagnostics |
+| `oni://colony/alerts` | Current alerts and notifications |
+| `oni://colony/summary` | Action-oriented colony summary |
+| `oni://resources/inventory` | Resource inventory |
+| `oni://resources/food` | Food inventory and spoilage data |
+| `oni://dupes` | Duplicant list |
+| `oni://dupes/status-check` | Position, errands, needs, and stuck-risk signals |
+| `oni://power/summary` | Power network and battery summary |
+| `oni://rooms/list` | Room system state |
+| `oni://thermal/overheat-risk` | Building overheat risks |
+| `oni://world/text-map` | Text map |
+| `oni://buildings/defs` | Buildable building definitions |
+| `oni://tools/manifest` | Tool manifest |
+| `oni://tools/guide` | Goal-oriented tool-chain guide |
 
-- `oni://colony/status` — Colony status
-- `oni://power/summary` — Power summary
-- `oni://rooms/list` — Room list
-- `oni://thermal/overheat-risk` — Overheat risk
-- `oni://resources/inventory` — Resource inventory
-- `oni://dupes` — Duplicant list
-- `oni://rockets/status` — Rocket status
-- `oni://world/text-map` — Text map
-- And 100+ more resources...
+### Built-In Prompts
 
-### Risk Levels
+- `colony_triage`: quick colony triage
+- `next_cycle_plan`: next-cycle plan
+- `inspect_area`: area inspection
+- `dupe_care_review`: Duplicant care review
+- `power_audit`: power audit
+- `rooms_overview`: rooms overview
+- `thermal_audit`: thermal management audit
 
-- **read** (Read-only): Query state without modifying the save
-- **write** (Write): Modify settings, priorities, filters
-- **execute** (Execute): Issue action commands
-- **dangerous** (Dangerous): Digging, deconstruction, and other large-scale changes; requires `confirm: true`
+## Recommended Workflow
 
-## Technical Details
+1. Read state first: `oni://colony/status`, `oni://colony/diagnostics`, `oni://resources/food`, and `oni://dupes/status-check`.
+2. Find tools: use `tools_search` or `oni://tools/guide` for the user's goal.
+3. Work in small areas: define an area with `area_define`, then use `*_area` tools to avoid coordinate mistakes.
+4. Plan before batches: use the plan gate for multi-step building, digging, or deconstruction.
+5. Verify after changes: reread the relevant resources and confirm the game state changed as expected.
 
-- **Transport**: Streamable HTTP (JSON-RPC 2.0), default port 8787
-- **Serialization**: Newtonsoft.Json (bundled with the game)
-- **HTTP Server**: System.Net.HttpListener (built into .NET Framework)
-- **Code Injection**: Harmony (bundled with the game)
-- **All game API calls** execute on the Unity main thread for stability
+## Risk Levels
 
-## Building
+| Risk | Meaning |
+|------|---------|
+| `read` | Query only, no save mutation |
+| `write` | Change settings, filters, priorities, or assignments |
+| `execute` | Issue in-game actions or trigger UI behavior |
+| `dangerous` | Digging, deconstruction, sandbox, irreversible, or large-area changes. Usually requires `confirm: true` |
+
+## Troubleshooting
+
+- AI cannot connect: make sure the mod is enabled, the game is running, and the port is `8787`.
+- Tools return empty data: load a colony first; many game systems do not exist in the main menu.
+- LAN access fails after setting `0.0.0.0`: check the system firewall and network isolation.
+- Authentication returns 401: make sure the client sends `Authorization: Bearer <token>` or `X-Oni-Mcp-Token`.
+- Port conflict: change `Port`, save options, then restart the server or restart the game.
+
+## Development
+
+Build:
 
 ```bash
 onim build -m oni_mcp
 ```
 
-The release package only contains `OniMcp.dll`, metadata, preview images, and resource files — no extra runtime libraries needed.
+Install for development:
 
-## Development
-
-Project structure:
-
+```bash
+onim dev -m oni_mcp
 ```
+
+Project layout:
+
+```text
 mods/oni_mcp/
-├── Core/           - MCP protocol type definitions
-├── Server/         - HTTP server + main thread bridge
-├── Tools/          - Game action tool implementations
-├── ModInfo.cs      - Mod entry point
-└── OniMcp.csproj   - Project config
+├── Core/                 # MCP protocol types
+├── Server/               # HTTP server and Unity main-thread bridge
+├── Tools/                # MCP tools, resources, and prompt registries
+├── Config/               # Mod configuration
+├── Support/              # Paths, logging, reflection, and JSON helpers
+├── Localization/         # Localization strings
+├── assets/               # Tool icons and resources
+├── ModInfo.cs            # Mod entry point
+└── OniMcp.csproj         # Project configuration and packaging logic
 ```
 
-To add a new tool: create a new `McpTool` under `Tools/` and register it in `OniToolRegistry.Initialize()`.
+Typical new-tool flow:
 
-## Credits & Testing
+1. Implement a method under `Tools/` that returns an `McpTool`.
+2. Register it in `OniToolRegistry.Initialize()`.
+3. If a read-only entry is useful, add an `oni://` resource or resource template in `OniResourceRegistry`.
+4. Add confirmation parameters and an appropriate risk level for dangerous tools.
+5. Use `tools_static_audit` or `tools_manifest` to verify runtime registration.
 
-This mod was co-developed and tested by **gpt5.5** (approx. 500M tokens consumed), **Kimi k2.6**, and player **LIghtJUNction**. The full source code is open — feel free to inspect and contribute.
+The release package includes `OniMcp.dll`, mod metadata, preview image, README files, and required assets.
+
+## Credits
+
+This mod was developed and tested by **gpt5.5**, **Kimi k2.6**, and player **LIghtJUNction**. The source code is fully open for inspection, modification, and contribution.

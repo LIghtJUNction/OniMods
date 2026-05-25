@@ -35,7 +35,7 @@ namespace OniMcp.Tools
                     bool includeUnavailable = ToolUtil.GetBool(args, "includeUnavailable", false);
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 30, 100));
                     var defs = Assets.BuildingDefs
-                        .Where(def => def != null && (includeUnavailable || def.IsAvailable()))
+                        .Where(def => def != null && (includeUnavailable || IsUnlockedAndAvailable(def)))
                         .Where(def => string.IsNullOrWhiteSpace(category) || MatchesCategory(def, category))
                         .Where(def => string.IsNullOrWhiteSpace(query) || Matches(def, query))
                         .OrderBy(def => def.PrefabID)
@@ -98,9 +98,153 @@ namespace OniMcp.Tools
                         ["materialCategories"] = def.MaterialCategory,
                         ["resolvedMaterialCategories"] = MaterialCategoryTags(def).Select(tag => tag.Name).ToList(),
                         ["defaultMaterials"] = DefaultBuildElements(def).Select(tag => tag.Name).ToList(),
-                        ["autoMaterial"] = materials.Count > 0 ? materials[0]["tag"] : null,
+                        ["autoMaterial"] = materials.Count > 0 ? materials[0]["tag"] : (object)"unavailable",
+                        ["autoMaterialReason"] = materials.Count > 0 ? null : "no currently available material in this world/inventory",
                         ["returned"] = materials.Count,
                         ["materials"] = materials
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool PreviewBuild()
+        {
+            return new McpTool
+            {
+                Name = "build_preview",
+                Group = "buildings",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "build_validate", "building_preview" },
+                Tags = new List<string> { "buildings", "preview", "footprint", "placement", "建造", "预检" },
+                Description = "预检指定 prefabId 在 x/y anchor 的建造 footprint、材料、支撑和明显碰撞；不生成蓝图。anchor 是 lowerLeftCell。",
+                Parameters = BuildPlacementParameters(includeConfirm: false, includeArea: false),
+                Handler = args =>
+                {
+                    string error;
+                    int x;
+                    int y;
+                    if (!TryResolvePoint(args, out x, out y, out error))
+                        return CallToolResult.Error(error);
+
+                    var previewArgs = (JObject)args.DeepClone();
+                    previewArgs["dryRun"] = true;
+                    var result = TryPlanOne(args["prefabId"]?.ToString(), x, y, previewArgs);
+                    return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool BuildArea()
+        {
+            var parameters = BuildPlacementParameters(includeConfirm: true, includeArea: true);
+            parameters["anchors"] = new McpToolParameter { Type = "array", Description = "可选 anchor 列表。每项可为 {x,y} 或 [x,y]；优先于 x/y 与 x1/y1/x2/y2", Required = false };
+            parameters["x1"] = new McpToolParameter { Type = "integer", Description = "区域左下/起点 X；无 anchors 时生成 anchor 网格", Required = false };
+            parameters["y1"] = new McpToolParameter { Type = "integer", Description = "区域左下/起点 Y；无 anchors 时生成 anchor 网格", Required = false };
+            parameters["x2"] = new McpToolParameter { Type = "integer", Description = "区域右上/终点 X；无 anchors 时生成 anchor 网格", Required = false };
+            parameters["y2"] = new McpToolParameter { Type = "integer", Description = "区域右上/终点 Y；无 anchors 时生成 anchor 网格", Required = false };
+            parameters["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；relative=true 时 x/y 或 x1/y1/x2/y2 按 rx/ry 解释", Required = false };
+            parameters["relative"] = new McpToolParameter { Type = "boolean", Description = "配合 areaId 使用相对坐标", Required = false };
+            parameters["dense"] = new McpToolParameter { Type = "boolean", Description = "无 anchors 时是否每格都放一个 anchor。默认：1x1 建筑为 true，多格建筑按 footprint 尺寸步进", Required = false };
+            parameters["stepX"] = new McpToolParameter { Type = "integer", Description = "无 anchors 时的 anchor X 步长；默认 1 或建筑宽度", Required = false };
+            parameters["stepY"] = new McpToolParameter { Type = "integer", Description = "无 anchors 时的 anchor Y 步长；默认 1 或建筑高度", Required = false };
+            parameters["maxAnchors"] = new McpToolParameter { Type = "integer", Description = "最多处理多少个 anchors，默认 100，最大 500", Required = false };
+            parameters["allowPartial"] = new McpToolParameter { Type = "boolean", Description = "默认 false。实际建造前若任何 anchor 预检失败则整批拒绝；true 时跳过失败 anchor", Required = false };
+
+            return new McpTool
+            {
+                Name = "build_area",
+                Group = "buildings",
+                Mode = "execute",
+                Risk = "medium",
+                Hidden = true,
+                Aliases = new List<string> { "build_place_area", "build_blueprints" },
+                Tags = new List<string> { "buildings", "batch", "area", "footprint", "建造", "批量" },
+                Description = "按 anchor 列表或区域批量放置建造蓝图。执行前会预检 footprint、支撑、材料和明显碰撞；dryRun=true 只返回预览。",
+                Parameters = parameters,
+                Handler = args =>
+                {
+                    if (!ToolUtil.GetBool(args, "confirm", false) && !ToolUtil.GetBool(args, "dryRun", false))
+                        return CallToolResult.Error("confirm=true is required unless dryRun=true");
+
+                    string prefabId = args["prefabId"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(prefabId))
+                        return CallToolResult.Error("prefabId is required");
+                    var def = Assets.GetBuildingDef(prefabId);
+                    if (def == null)
+                        return CallToolResult.Error("Building def not found");
+
+                    string error;
+                    var anchors = ResolveAnchors(args, def, out error);
+                    if (error != null)
+                        return CallToolResult.Error(error);
+
+                    int maxAnchors = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxAnchors") ?? 100, 500));
+                    if (anchors.Count > maxAnchors)
+                        return CallToolResult.Error($"Refusing to process {anchors.Count} anchors; maxAnchors={maxAnchors}");
+
+                    bool dryRun = IsDryRun(args);
+                    bool allowPartial = ToolUtil.GetBool(args, "allowPartial", false);
+                    var preflightArgs = (JObject)args.DeepClone();
+                    preflightArgs["dryRun"] = true;
+                    preflightArgs["confirm"] = true;
+
+                    var preflightSupport = new HashSet<int>();
+                    var previews = new List<Dictionary<string, object>>();
+                    var validAnchors = new List<CellCoord>();
+                    foreach (var anchor in anchors)
+                    {
+                        var preview = TryPlanOne(prefabId, anchor.x, anchor.y, preflightArgs, preflightSupport);
+                        bool valid = preview.ContainsKey("valid") && (bool)preview["valid"];
+                        if (valid)
+                            validAnchors.Add(anchor);
+                        previews.Add(preview);
+                    }
+
+                    var failedPreviews = previews.Where(item => !(item.ContainsKey("valid") && (bool)item["valid"])).ToList();
+                    if (dryRun || (failedPreviews.Count > 0 && !allowPartial))
+                    {
+                        return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        {
+                            ["prefabId"] = prefabId,
+                            ["dryRun"] = dryRun,
+                            ["committed"] = false,
+                            ["valid"] = failedPreviews.Count == 0,
+                            ["anchorCount"] = anchors.Count,
+                            ["validAnchors"] = validAnchors.Count,
+                            ["failed"] = failedPreviews.Count,
+                            ["errors"] = failedPreviews.Take(50).ToList(),
+                            ["previews"] = previews
+                        }, McpJsonUtil.Settings));
+                    }
+
+                    var actualSupport = new HashSet<int>();
+                    var results = new List<Dictionary<string, object>>();
+                    int planned = 0;
+                    int failed = 0;
+                    foreach (var anchor in allowPartial ? validAnchors : anchors)
+                    {
+                        var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport);
+                        bool ok = result.ContainsKey("planned") && (bool)result["planned"];
+                        if (ok)
+                            planned++;
+                        else
+                            failed++;
+                        results.Add(result);
+                    }
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["prefabId"] = prefabId,
+                        ["dryRun"] = false,
+                        ["committed"] = planned > 0,
+                        ["allowPartial"] = allowPartial,
+                        ["anchorCount"] = anchors.Count,
+                        ["attempted"] = allowPartial ? validAnchors.Count : anchors.Count,
+                        ["planned"] = planned,
+                        ["failed"] = failed + (allowPartial ? failedPreviews.Count : 0),
+                        ["preflightErrors"] = failedPreviews.Take(50).ToList(),
+                        ["results"] = results
                     }, McpJsonUtil.Settings));
                 }
             };
@@ -257,6 +401,8 @@ namespace OniMcp.Tools
                 return new Dictionary<string, object>
                 {
                     ["planned"] = false,
+                    ["blueprintPlaced"] = false,
+                    ["actualAnchor"] = null,
                     ["valid"] = true,
                     ["dryRun"] = true,
                     ["prefabId"] = prefabId,
@@ -276,14 +422,15 @@ namespace OniMcp.Tools
             var pos = BuildPlacementPosition(cell, def);
             var go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
             if (go == null)
-                return ErrorResult(prefabId, x, y, "Placement failed", materialResult.ToDictionary());
+                return ErrorResult(prefabId, x, y, "Placement failed", BuildPlacementFailureDetails(placement, materialResult));
 
             SetPriority(go, ToolUtil.GetInt(args, "priority") ?? 5);
             RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
-            var actualPlacement = ActualPlacementDetails(go, def);
+            var actualPlacement = ActualPlacementDetails(go, def, x, y);
             return new Dictionary<string, object>
             {
                 ["planned"] = true,
+                ["blueprintPlaced"] = true,
                 ["valid"] = true,
                 ["prefabId"] = prefabId,
                 ["name"] = ToolUtil.CleanName(def.Name),
@@ -293,6 +440,7 @@ namespace OniMcp.Tools
                 ["placement"] = placement.ToDictionary(),
                 ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
                 ["actualPlacement"] = actualPlacement,
+                ["actualAnchor"] = ActualAnchorArray(actualPlacement),
                 ["placementCheck"] = ComparePlacement(placement, actualPlacement),
                 ["support"] = supportResult.ToDictionary(),
                 ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
@@ -365,12 +513,160 @@ namespace OniMcp.Tools
             return ToolUtil.GetBool(args, "dryRun", false) || ToolUtil.GetBool(args, "validateOnly", false);
         }
 
+        private static Dictionary<string, McpToolParameter> BuildPlacementParameters(bool includeConfirm, bool includeArea)
+        {
+            var parameters = new Dictionary<string, McpToolParameter>
+            {
+                ["prefabId"] = new McpToolParameter { Type = "string", Description = "建筑 prefabId，例如 MedicalCot、Tile、Wire", Required = true },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "lowerLeftCell anchor X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "lowerLeftCell anchor Y", Required = false },
+                ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界或 areaId 绑定世界", Required = false },
+                ["material"] = new McpToolParameter { Type = "string", Description = "建造材料 tag；auto/default 自动选择", Required = false },
+                ["facade"] = new McpToolParameter { Type = "string", Description = "可选建筑外观/permit id", Required = false },
+                ["orientation"] = new McpToolParameter { Type = "string", Description = "可选朝向，默认 Neutral", Required = false },
+                ["priority"] = new McpToolParameter { Type = "integer", Description = "建造优先级 1..9，默认 5", Required = false },
+                ["allowUnsupported"] = new McpToolParameter { Type = "boolean", Description = "默认 false；OnFloor 建筑无支撑时拒绝", Required = false },
+                ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，不生成蓝图", Required = false }
+            };
+
+            if (includeConfirm)
+                parameters["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行修改必须为 true；dryRun=true 时可省略", Required = false };
+            if (includeArea)
+            {
+                parameters["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；relative=true 时坐标按区域 rx/ry 解释", Required = false };
+                parameters["relative"] = new McpToolParameter { Type = "boolean", Description = "配合 areaId 使用相对坐标", Required = false };
+            }
+
+            return parameters;
+        }
+
+        private static bool TryResolvePoint(JObject args, out int x, out int y, out string error)
+        {
+            x = 0;
+            y = 0;
+            error = null;
+            int? requestedX = ToolUtil.GetInt(args, "x");
+            int? requestedY = ToolUtil.GetInt(args, "y");
+            if (!requestedX.HasValue || !requestedY.HasValue)
+            {
+                error = "x and y are required";
+                return false;
+            }
+
+            var area = WorldEditor.ResolveRelativeArea(args);
+            if (area != null)
+            {
+                var absolute = WorldEditor.ToAbsoluteCell(requestedX.Value, requestedY.Value, area);
+                x = absolute.x;
+                y = absolute.y;
+            }
+            else
+            {
+                x = requestedX.Value;
+                y = requestedY.Value;
+            }
+
+            return true;
+        }
+
+        private static List<CellCoord> ResolveAnchors(JObject args, BuildingDef def, out string error)
+        {
+            error = null;
+            var anchors = ParseAnchorArray(args, out error);
+            if (error != null)
+                return anchors;
+            if (anchors.Count > 0)
+                return anchors;
+
+            int x;
+            int y;
+            if (TryResolvePoint(args, out x, out y, out error))
+                return new List<CellCoord> { new CellCoord(x, y) };
+            error = null;
+
+            bool hasRect = !string.IsNullOrWhiteSpace(args["areaId"]?.ToString())
+                || ToolUtil.GetInt(args, "x1").HasValue
+                || ToolUtil.GetInt(args, "y1").HasValue
+                || ToolUtil.GetInt(args, "x2").HasValue
+                || ToolUtil.GetInt(args, "y2").HasValue;
+            if (!hasRect)
+            {
+                error = "anchors, x/y, areaId, or x1/y1/x2/y2 are required";
+                return anchors;
+            }
+
+            var rect = ToolUtil.GetRect(args);
+            int width = Math.Max(1, def.WidthInCells);
+            int height = Math.Max(1, def.HeightInCells);
+            bool dense = ToolUtil.GetBool(args, "dense", width == 1 && height == 1);
+            int stepX = Math.Max(1, ToolUtil.GetInt(args, "stepX") ?? (dense ? 1 : width));
+            int stepY = Math.Max(1, ToolUtil.GetInt(args, "stepY") ?? (dense ? 1 : height));
+
+            for (int ay = rect["y1"]; ay <= rect["y2"]; ay += stepY)
+                for (int ax = rect["x1"]; ax <= rect["x2"]; ax += stepX)
+                    anchors.Add(new CellCoord(ax, ay));
+
+            return anchors;
+        }
+
+        private static List<CellCoord> ParseAnchorArray(JObject args, out string error)
+        {
+            error = null;
+            var result = new List<CellCoord>();
+            var anchors = args["anchors"] as JArray;
+            if (anchors == null)
+                return result;
+
+            var area = WorldEditor.ResolveRelativeArea(args);
+            foreach (var item in anchors)
+            {
+                int? x = null;
+                int? y = null;
+                var obj = item as JObject;
+                if (obj != null)
+                {
+                    x = ParseInt(obj["x"]);
+                    y = ParseInt(obj["y"]);
+                }
+                else
+                {
+                    var pair = item as JArray;
+                    if (pair != null && pair.Count >= 2)
+                    {
+                        x = ParseInt(pair[0]);
+                        y = ParseInt(pair[1]);
+                    }
+                }
+
+                if (!x.HasValue || !y.HasValue)
+                {
+                    error = "Each anchors item must be {x,y} or [x,y]";
+                    return result;
+                }
+
+                if (area != null)
+                {
+                    var absolute = WorldEditor.ToAbsoluteCell(x.Value, y.Value, area);
+                    result.Add(new CellCoord(absolute.x, absolute.y));
+                }
+                else
+                {
+                    result.Add(new CellCoord(x.Value, y.Value));
+                }
+            }
+
+            return result;
+        }
+
+        private static int? ParseInt(JToken token)
+        {
+            int value;
+            return token != null && int.TryParse(token.ToString(), out value) ? value : (int?)null;
+        }
+
         private static Vector3 BuildPlacementPosition(int cell, BuildingDef def)
         {
-            var pos = Grid.CellToPosCBC(cell, def.SceneLayer);
-            pos.x += (Math.Max(1, def.WidthInCells) - 1) * 0.5f;
-            pos.y += (Math.Max(1, def.HeightInCells) - 1) * 0.5f;
-            return pos;
+            return Grid.CellToPosCBC(cell, def.SceneLayer);
         }
 
         private static Dictionary<string, object> BuildDefPlacementToDictionary(BuildingDef def)
@@ -387,7 +683,7 @@ namespace OniMcp.Tools
                 ["singleCellDragSafe"] = width == 1 && height == 1,
                 ["dragGuidance"] = width == 1 && height == 1
                     ? "May be placed with agent_pointer_hold_left for straight lines."
-                    : "Use agent_pointer_left_click once per anchor cell; drag is rejected by default to avoid shifted furniture or machines."
+                    : "Recommended: use agent_pointer_left_click on each lower-left anchor. agent_pointer_left_click works but is less predictable for multi-cell footprints."
             };
         }
 
@@ -439,21 +735,36 @@ namespace OniMcp.Tools
                 .Select(cell => cell.ToDictionary())
                 .ToList();
 
-            if (invalid.Count == 0)
+            var obstructions = FindFootprintObstructions(placement);
+
+            if (invalid.Count == 0 && obstructions.Count == 0)
                 return FootprintValidation.Success();
 
-            return FootprintValidation.Invalid("Invalid footprint: every occupied cell must be visible, valid, and inside the selected world", invalid);
+            string error = invalid.Count > 0
+                ? "Invalid footprint: every occupied cell must be visible, valid, and inside the selected world"
+                : "Obstructed footprint: occupied terrain, building, or blueprint overlaps the requested cells";
+            return FootprintValidation.Invalid(error, invalid, obstructions);
         }
 
-        private static Dictionary<string, object> ActualPlacementDetails(GameObject go, BuildingDef def)
+        private static Dictionary<string, object> ActualPlacementDetails(GameObject go, BuildingDef def, int expectedX, int expectedY)
         {
-            int width = Math.Max(1, def.WidthInCells);
-            int height = Math.Max(1, def.HeightInCells);
             int cell = Grid.PosToCell(go);
             int x = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1;
             int y = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1;
-            int originX = x >= 0 ? x - width / 2 : -1;
-            int originY = y >= 0 ? y - height / 2 : -1;
+            int originX = x >= 0 ? x : expectedX;
+            int originY = y >= 0 ? y : expectedY;
+
+            var building = go.GetComponent<Building>();
+            if (building != null)
+            {
+                int anchorCell = building.GetBottomLeftCell();
+                if (Grid.IsValidCell(anchorCell))
+                {
+                    originX = Grid.CellColumn(anchorCell);
+                    originY = Grid.CellRow(anchorCell);
+                }
+            }
+
             int worldId = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell) ? Grid.WorldIdx[cell] : -1;
 
             return new Dictionary<string, object>
@@ -464,7 +775,7 @@ namespace OniMcp.Tools
                 ["derivedAnchorX"] = originX,
                 ["derivedAnchorY"] = originY,
                 ["worldId"] = worldId,
-                ["note"] = "objectX/objectY may be the visual center cell for multi-cell buildings; compare derivedAnchor to requested anchor"
+                ["note"] = "derivedAnchor is Building.GetBottomLeftCell when available; placement uses the requested anchor cell directly"
             };
         }
 
@@ -475,19 +786,154 @@ namespace OniMcp.Tools
             int actualWorld = actual.ContainsKey("worldId") ? Convert.ToInt32(actual["worldId"]) : -1;
             bool anchorMatches = actualX == expected.AnchorX && actualY == expected.AnchorY;
             bool worldMatches = actualWorld < 0 || expected.WorldId < 0 || actualWorld == expected.WorldId;
+            bool valid = anchorMatches && worldMatches;
             return new Dictionary<string, object>
             {
-                ["valid"] = anchorMatches && worldMatches,
+                ["valid"] = valid,
                 ["anchorMatches"] = anchorMatches,
                 ["worldMatches"] = worldMatches,
                 ["expectedAnchor"] = new { x = expected.AnchorX, y = expected.AnchorY },
                 ["actualDerivedAnchor"] = new { x = actualX, y = actualY },
                 ["expectedWorldId"] = expected.WorldId,
                 ["actualWorldId"] = actualWorld,
-                ["next"] = anchorMatches && worldMatches
+                ["next"] = valid
                     ? "Verify with world_area_snapshot/world_text_map before placing the next footprint batch."
                     : "Cancel the misplaced blueprint before retrying from the expected anchor."
             };
+        }
+
+        private static Dictionary<string, object> BuildPlacementFailureDetails(PlacementDetails placement, MaterialSelection materialResult)
+        {
+            return new Dictionary<string, object>
+            {
+                ["placement"] = placement.ToDictionary(),
+                ["obstructions"] = FindFootprintObstructions(placement).Take(50).ToList(),
+                ["materialSelection"] = materialResult.ToDictionary(),
+                ["reasonHint"] = "TryPlace returned null after preflight; inspect obstructions/support/materialSelection for likely cause."
+            };
+        }
+
+        private static List<Dictionary<string, object>> FindFootprintObstructions(PlacementDetails placement)
+        {
+            var result = new List<Dictionary<string, object>>();
+            var footprintCells = new HashSet<int>(placement.Footprint.Where(cell => cell.Valid).Select(cell => cell.Cell));
+            bool utility = IsUtilityPrefab(placement.PrefabId);
+
+            foreach (var cellInfo in placement.Footprint)
+            {
+                if (!cellInfo.Valid)
+                    continue;
+                if (!utility && Grid.Solid[cellInfo.Cell])
+                {
+                    result.Add(new Dictionary<string, object>
+                    {
+                        ["kind"] = "solid_cell",
+                        ["x"] = cellInfo.X,
+                        ["y"] = cellInfo.Y,
+                        ["reason"] = "target footprint contains solid terrain or constructed tile"
+                    });
+                }
+            }
+
+            var seen = new HashSet<string>();
+            foreach (var obstruction in ExistingBuildingFootprintObstructions(placement.WorldId, footprintCells))
+            {
+                string id = obstruction.ContainsKey("id") ? obstruction["id"]?.ToString() : "";
+                if (IsUtilityPrefab(id))
+                    continue;
+                string key = obstruction["kind"] + "|" + id + "|" + obstruction["objectX"] + "|" + obstruction["objectY"] + "|" + obstruction["x"] + "|" + obstruction["y"];
+                if (seen.Add(key))
+                    result.Add(obstruction);
+            }
+
+            return result;
+        }
+
+        private static IEnumerable<Dictionary<string, object>> ExistingBuildingFootprintObstructions(int worldId, HashSet<int> footprintCells)
+        {
+            foreach (var building in Components.BuildingCompletes.Items)
+            {
+                if (building == null || building.gameObject == null || !ToolUtil.GameObjectMatchesWorld(building.gameObject, worldId))
+                    continue;
+                foreach (var item in ExistingObjectFootprint(building.gameObject, building.Def, "building", footprintCells))
+                    yield return item;
+            }
+
+            foreach (var constructable in FindConstructables(worldId))
+            {
+                var go = constructable?.gameObject;
+                if (go == null)
+                    continue;
+                var building = go.GetComponent<Building>();
+                foreach (var item in ExistingObjectFootprint(go, building?.Def, "blueprint", footprintCells))
+                    yield return item;
+            }
+        }
+
+        private static IEnumerable<Dictionary<string, object>> ExistingObjectFootprint(GameObject go, BuildingDef def, string kind, HashSet<int> footprintCells)
+        {
+            if (go == null)
+                yield break;
+            int objectCell = Grid.PosToCell(go);
+            if (!Grid.IsValidCell(objectCell))
+                yield break;
+
+            int objectX = Grid.CellColumn(objectCell);
+            int objectY = Grid.CellRow(objectCell);
+            int width = Math.Max(1, def?.WidthInCells ?? 1);
+            int height = Math.Max(1, def?.HeightInCells ?? 1);
+            var building = go.GetComponent<Building>();
+            int anchorCell = building != null ? building.GetBottomLeftCell() : objectCell;
+            int anchorX = Grid.IsValidCell(anchorCell) ? Grid.CellColumn(anchorCell) : objectX - width / 2;
+            int anchorY = Grid.IsValidCell(anchorCell) ? Grid.CellRow(anchorCell) : objectY - height / 2;
+            var kpid = go.GetComponent<KPrefabID>();
+            string id = def?.PrefabID ?? kpid?.PrefabTag.Name ?? go.name;
+
+            for (int dy = 0; dy < height; dy++)
+            {
+                for (int dx = 0; dx < width; dx++)
+                {
+                    int x = anchorX + dx;
+                    int y = anchorY + dy;
+                    int cell = Grid.XYToCell(x, y);
+                    if (!Grid.IsValidCell(cell) || !footprintCells.Contains(cell))
+                        continue;
+                    yield return new Dictionary<string, object>
+                    {
+                        ["kind"] = kind,
+                        ["id"] = id,
+                        ["name"] = ToolUtil.CleanName(go.GetProperName()),
+                        ["x"] = x,
+                        ["y"] = y,
+                        ["objectX"] = objectX,
+                        ["objectY"] = objectY,
+                        ["anchorX"] = anchorX,
+                        ["anchorY"] = anchorY
+                    };
+                }
+            }
+        }
+
+        private static IEnumerable<Constructable> FindConstructables(int worldId)
+        {
+            Constructable[] constructables;
+            try
+            {
+                constructables = UnityEngine.Object.FindObjectsByType<Constructable>(FindObjectsSortMode.None);
+            }
+            catch
+            {
+                yield break;
+            }
+
+            foreach (var constructable in constructables)
+            {
+                if (constructable == null || constructable.gameObject == null)
+                    continue;
+                if (!ToolUtil.GameObjectMatchesWorld(constructable.gameObject, worldId))
+                    continue;
+                yield return constructable;
+            }
         }
 
         private static BuildDragPolicyResult BuildDragPolicy(BuildingDef def, JObject args)
@@ -526,6 +972,25 @@ namespace OniMcp.Tools
                 || EqualsIgnoreCase(prefabId, "PlasticTile")
                 || EqualsIgnoreCase(prefabId, "MetalTile")
                 || EqualsIgnoreCase(prefabId, "CarpetTile");
+        }
+
+        private static bool IsUtilityPrefab(string prefabId)
+        {
+            if (string.IsNullOrWhiteSpace(prefabId))
+                return false;
+
+            string id = prefabId.Trim();
+            return id.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) >= 0
+                || id.IndexOf("Conduit", StringComparison.OrdinalIgnoreCase) >= 0
+                || id.IndexOf("Logic", StringComparison.OrdinalIgnoreCase) >= 0
+                || id.IndexOf("TravelTube", StringComparison.OrdinalIgnoreCase) >= 0
+                || EqualsIgnoreCase(id, "GasConduit")
+                || EqualsIgnoreCase(id, "LiquidConduit")
+                || EqualsIgnoreCase(id, "SolidConduit")
+                || EqualsIgnoreCase(id, "SolidConduitBridge")
+                || EqualsIgnoreCase(id, "WireBridge")
+                || EqualsIgnoreCase(id, "LogicWire")
+                || EqualsIgnoreCase(id, "LogicWireBridge");
         }
 
         private static SupportValidation ValidateSupport(BuildingDef def, int x, int y, bool allowUnsupported, HashSet<int> plannedSupportCells)
@@ -916,6 +1381,20 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> BuildingDefToDictionary(BuildingDef def)
         {
+            int worldId = ClusterManager.Instance?.activeWorldId ?? -1;
+            var availableMaterials = AvailableMaterials(def, worldId, includeUnavailable: false).ToList();
+            var defaultElements = DefaultBuildElements(def);
+            var availableTags = new HashSet<Tag>(availableMaterials.Select(m => m.Tag));
+            var filteredDefaults = defaultElements
+                .Where(tag => availableTags.Contains(tag))
+                .ToList();
+            if (filteredDefaults.Count == 0 && defaultElements.Count > 0)
+                filteredDefaults = defaultElements;
+
+            string recommendedMaterial = availableMaterials.Count > 0
+                ? availableMaterials[0].Tag.Name
+                : null;
+
             return new Dictionary<string, object>
             {
                 ["prefabId"] = def.PrefabID,
@@ -927,14 +1406,43 @@ namespace OniMcp.Tools
                 ["categories"] = BuildingCategories(def),
                 ["materialCategories"] = def.MaterialCategory,
                 ["resolvedMaterialCategories"] = MaterialCategoryTags(def).Select(tag => tag.Name).ToList(),
-                ["defaultMaterials"] = DefaultBuildElements(def).Select(tag => tag.Name).ToList(),
-                ["availableMaterials"] = AvailableMaterials(def, ClusterManager.Instance?.activeWorldId ?? -1, includeUnavailable: false).Take(20).Select(item => item.ToDictionary()).ToList(),
-                ["autoMaterial"] = AvailableMaterials(def, ClusterManager.Instance?.activeWorldId ?? -1, includeUnavailable: false).FirstOrDefault()?.Tag.Name,
+                ["defaultMaterials"] = filteredDefaults.Select(tag => tag.Name).ToList(),
+                ["availableMaterials"] = availableMaterials.Take(20).Select(item => item.ToDictionary()).ToList(),
+                ["recommendedMaterial"] = recommendedMaterial,
+                ["autoMaterial"] = AutoMaterialValue(def, worldId),
+                ["autoMaterialReason"] = AutoMaterialReason(def, worldId),
                 ["facades"] = BuildingFacades(def),
                 ["requiresPower"] = def.RequiresPowerInput,
                 ["powerWatts"] = Math.Round(def.EnergyConsumptionWhenActive, 1),
-                ["unlocked"] = Db.Get().Techs.IsTechItemComplete(def.PrefabID)
+                ["unlocked"] = IsTechUnlocked(def),
+                ["availableNow"] = IsUnlockedAndAvailable(def)
             };
+        }
+
+        private static bool IsUnlockedAndAvailable(BuildingDef def)
+        {
+            return def != null && def.IsAvailable() && IsTechUnlocked(def);
+        }
+
+        private static bool IsTechUnlocked(BuildingDef def)
+        {
+            return def != null && Db.Get().Techs.IsTechItemComplete(def.PrefabID);
+        }
+
+        private static object AutoMaterialValue(BuildingDef def, int worldId)
+        {
+            var material = AvailableMaterials(def, worldId, includeUnavailable: false).FirstOrDefault();
+            return material != null ? (object)material.Tag.Name : "unavailable";
+        }
+
+        private static object AutoMaterialReason(BuildingDef def, int worldId)
+        {
+            if (!IsTechUnlocked(def))
+                return "building_locked_by_research";
+            if (!def.IsAvailable())
+                return "building_not_available_in_current_context";
+            var material = AvailableMaterials(def, worldId, includeUnavailable: false).FirstOrDefault();
+            return material != null ? null : "no_currently_available_material";
         }
 
         private static List<string> BuildingCategories(BuildingDef def)
@@ -1024,11 +1532,14 @@ namespace OniMcp.Tools
             var result = new Dictionary<string, object>
             {
                 ["planned"] = false,
+                ["blueprintPlaced"] = false,
+                ["actualAnchor"] = null,
                 ["valid"] = false,
                 ["prefabId"] = prefabId,
                 ["x"] = x,
                 ["y"] = y,
-                ["error"] = error
+                ["error"] = error,
+                ["failureReason"] = ClassifyBuildFailure(error, details)
             };
             if (details != null)
                 result["details"] = details;
@@ -1038,6 +1549,32 @@ namespace OniMcp.Tools
         private static bool Contains(string value, string query)
         {
             return !string.IsNullOrEmpty(value) && value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static object ActualAnchorArray(Dictionary<string, object> actualPlacement)
+        {
+            if (actualPlacement == null)
+                return null;
+            int x = actualPlacement.ContainsKey("derivedAnchorX") ? Convert.ToInt32(actualPlacement["derivedAnchorX"]) : -1;
+            int y = actualPlacement.ContainsKey("derivedAnchorY") ? Convert.ToInt32(actualPlacement["derivedAnchorY"]) : -1;
+            return new[] { x, y };
+        }
+
+        private static string ClassifyBuildFailure(string error, Dictionary<string, object> details)
+        {
+            string text = (error ?? "") + " " + (details != null ? JsonConvert.SerializeObject(details, Formatting.None) : "");
+            if (text.IndexOf("Unsupported", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "unsupported";
+            if (text.IndexOf("Obstructed", StringComparison.OrdinalIgnoreCase) >= 0
+                || text.IndexOf("obstructions", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "obstructed";
+            if (text.IndexOf("Invalid footprint", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "invalidFloor";
+            if (text.IndexOf("material", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "unavailableMaterial";
+            if (text.IndexOf("locked", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "locked";
+            return "failed";
         }
 
         private static bool EqualsIgnoreCase(string value, string query)
@@ -1111,19 +1648,21 @@ namespace OniMcp.Tools
             public bool Valid;
             public string Error;
             public List<Dictionary<string, object>> InvalidCells = new List<Dictionary<string, object>>();
+            public List<Dictionary<string, object>> Obstructions = new List<Dictionary<string, object>>();
 
             public static FootprintValidation Success()
             {
                 return new FootprintValidation { Valid = true };
             }
 
-            public static FootprintValidation Invalid(string error, List<Dictionary<string, object>> invalidCells)
+            public static FootprintValidation Invalid(string error, List<Dictionary<string, object>> invalidCells, List<Dictionary<string, object>> obstructions = null)
             {
                 return new FootprintValidation
                 {
                     Valid = false,
                     Error = error,
-                    InvalidCells = invalidCells ?? new List<Dictionary<string, object>>()
+                    InvalidCells = invalidCells ?? new List<Dictionary<string, object>>(),
+                    Obstructions = obstructions ?? new List<Dictionary<string, object>>()
                 };
             }
 
@@ -1134,7 +1673,8 @@ namespace OniMcp.Tools
                     ["valid"] = Valid,
                     ["error"] = Error,
                     ["placement"] = placement.ToDictionary(),
-                    ["invalidCells"] = InvalidCells
+                    ["invalidCells"] = InvalidCells,
+                    ["obstructions"] = Obstructions
                 };
             }
         }

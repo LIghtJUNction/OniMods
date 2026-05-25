@@ -4,6 +4,8 @@ using OniMcp.Config;
 using OniMcp.Server;
 using OniMcp.Support;
 using OniMcp.Tools;
+using PeterHan.PLib.Core;
+using PeterHan.PLib.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,18 +19,14 @@ namespace OniMcp
     /// </summary>
     public class ModInfo : UserMod2
     {
-        private const string StaticId = "LIghtJUNction.OniMcp";
-        private static KMod.Mod loadedMod;
-        private static readonly HashSet<string> ReportedManagementPhases = new HashSet<string>();
-
         public override void OnLoad(Harmony harmony)
         {
             base.OnLoad(harmony);
 
             OniMcpPaths.Initialize(path, assembly);
             OniMcpOptions.Reload();
-            loadedMod = mod;
-            ConfigureModManagementButton(loadedMod, "OnLoad");
+            PUtil.InitLibrary();
+            new POptions().RegisterOptions(this, typeof(OniMcpOptions));
 
             // 注册 Harmony Patch
             harmony.PatchAll();
@@ -47,98 +45,6 @@ namespace OniMcp
 
             OniMcpLog.Debug("[OniMcp] Mod loaded. MCP Server is starting...");
         }
-
-        internal static void EnsureModManagementButton(string phase)
-        {
-            int configured = 0;
-            if (ConfigureModManagementButton(loadedMod, phase))
-                configured++;
-
-            var manager = Global.Instance?.modManager;
-            if (manager != null && manager.mods != null)
-            {
-                foreach (var currentMod in manager.mods)
-                {
-                    if (currentMod != null && currentMod != loadedMod && IsOniMcpMod(currentMod) && ConfigureModManagementButton(currentMod, phase))
-                        configured++;
-                }
-            }
-
-            if (configured == 0 && ReportedManagementPhases.Add(phase))
-                OniMcpLog.Warning("[OniMcp] Cannot register mod options button at " + phase + ": no ONI MCP mod entry was available.");
-        }
-
-        private static bool ConfigureModManagementButton(KMod.Mod mod, string phase)
-        {
-            if (mod == null)
-                return false;
-
-            try
-            {
-                SetModMember(mod, "manage_tooltip", new LocString("Configure ONI MCP Server host, port, and optional token authentication."));
-                SetModMember(mod, "on_managed", (System.Action)OniMcpOptionsDialog.Show);
-                if (ReportedManagementPhases.Add(phase + ":" + ModKey(mod)))
-                    OniMcpLog.Debug("[OniMcp] Registered mod options button at " + phase + " for " + ModKey(mod) + ".");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                OniMcpLog.Warning("[OniMcp] Failed to register mod options button at " + phase + ": " + ex.Message);
-                return false;
-            }
-        }
-
-        private static bool IsOniMcpMod(KMod.Mod mod)
-        {
-            try
-            {
-                return mod.staticID == StaticId || mod.label.id == "oni_mcp" || mod.title == "ONI MCP Server";
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static string ModKey(KMod.Mod mod)
-        {
-            try
-            {
-                return mod.label.id + "/" + mod.staticID;
-            }
-            catch
-            {
-                return "<unknown>";
-            }
-        }
-
-        private static void SetModMember(KMod.Mod mod, string name, object value)
-        {
-            var type = mod.GetType();
-            var property = type.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            var setter = property?.GetSetMethod(true);
-            if (setter != null)
-            {
-                setter.Invoke(mod, new[] { value });
-                return;
-            }
-
-            var backingField = type.GetField("<" + name + ">k__BackingField", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (backingField != null)
-            {
-                backingField.SetValue(mod, value);
-                return;
-            }
-
-            var field = type.GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (field != null)
-            {
-                field.SetValue(mod, value);
-                return;
-            }
-
-            throw new MissingFieldException(type.FullName, name);
-        }
     }
 
     /// <summary>
@@ -153,7 +59,6 @@ namespace OniMcp
             InputSafetyPatchVerifier.EnsureInstalled(null, "Db.Initialize");
             AutoDisinfectPolicy.EnsureInstalled(null, "Db.Initialize");
             AutoDisinfectPolicy.ApplyToExisting();
-            ModInfo.EnsureModManagementButton("Db.Initialize");
             OniMcpLog.Debug("[OniMcp] Db.Initialize - Initializing game-specific components...");
 
             // 创建框选编辑工具运行时实例
@@ -164,47 +69,6 @@ namespace OniMcp
             OniMcpLog.Debug("[OniMcp] Game-specific components initialized.");
         }
     }
-
-    [HarmonyPatch(typeof(ModsScreen), "BuildDisplay")]
-    public static class ModsScreen_BuildDisplay_Patch
-    {
-        public static void Prefix()
-        {
-            ModInfo.EnsureModManagementButton("ModsScreen.BuildDisplay");
-        }
-
-        public static void Postfix(Transform ___entryParent)
-        {
-            if (___entryParent == null)
-                return;
-
-            foreach (Transform child in ___entryParent)
-            {
-                if (child == null || child.name != "ONI MCP Server")
-                    continue;
-
-                var references = child.GetComponent<HierarchyReferences>();
-                if (references == null)
-                    continue;
-
-                var button = references.GetReference<KButton>("ManageButton");
-                if (button == null)
-                    continue;
-
-                button.isInteractable = true;
-                button.onClick += OniMcpOptionsDialog.Show;
-
-                var label = button.GetComponentInChildren<LocText>();
-                if (label != null)
-                    label.text = "Options";
-
-                var tooltip = button.GetComponent<ToolTip>();
-                if (tooltip != null)
-                    tooltip.toolTip = "Configure ONI MCP Server host, port, and optional token authentication.";
-            }
-        }
-    }
-
     internal static class AutoDisinfectPolicy
     {
         private const string HarmonyId = "LIghtJUNction.OniMcp";

@@ -241,6 +241,7 @@ namespace OniMcp.Tools
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选区域短标签；返回的 areaId 会记住这个标签和 origin", Required = false },
                     ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大导出格子数，默认 1600，硬上限 2500", Required = false },
                     ["chunksOnly"] = new McpToolParameter { Type = "boolean", Description = "只返回分块计划，不展开地图；适合大范围扫描", Required = false },
+                    ["includeChunks"] = new McpToolParameter { Type = "boolean", Description = "大区域分块时内联每块的少量内容预览，避免只拿到 areaId 列表；默认 false", Required = false },
                     ["chunkMaxCells"] = new McpToolParameter { Type = "integer", Description = "每块目标最大格子数，默认沿用 maxCells，硬上限 2500", Required = false },
                     ["chunkLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个块详情，默认 200，最大 1000", Required = false }
                 },
@@ -279,6 +280,7 @@ namespace OniMcp.Tools
                     int objectLimit = ClampInt(args, "objectLimit", 120, 0, 500);
                     int maxCells = Math.Max(1, Math.Min(TryGetInt(args, "maxCells", 1600), MaxTextMapCells));
                     bool chunksOnly = TryGetBool(args, "chunksOnly", false);
+                    bool includeChunks = TryGetBool(args, "includeChunks", false);
                     int chunkMaxCells = Math.Max(64, Math.Min(TryGetInt(args, "chunkMaxCells", maxCells), MaxTextMapCells));
                     int chunkLimit = Math.Max(1, Math.Min(TryGetInt(args, "chunkLimit", 200), 1000));
 
@@ -290,6 +292,8 @@ namespace OniMcp.Tools
                     if (chunksOnly || cells > maxCells)
                     {
                         var chunkPlan = BuildChunkPlan(area, rect, worldId, width, height, cells, maxCells, chunkMaxCells, chunkLimit);
+                        if (includeChunks)
+                            AddChunkPreviews(chunkPlan, worldId, view, visibleOnly, includeBuildings, includeItems, includeDupes);
                         return CallToolResult.Text(JsonConvert.SerializeObject(chunkPlan, McpJsonUtil.Settings));
                     }
 
@@ -379,7 +383,7 @@ namespace OniMcp.Tools
 
                     text.AppendLine(minimal ? $"rx 0..{width - 1} origin={rect["x1"]},{rect["y1"]}" : $"ranges: rx 0..{width - 1}; absX {rect["x1"]}..{rect["x2"]}; origin {rect["x1"]},{rect["y1"]}");
                     if (includeSummary)
-                        text.AppendLine(minimal ? $"sum valid={validCells} visible={visibleCells} obj={overlays.Count} sparse={sparseCells.Count} runs={sparseRuns.Count}" : $"summary: valid {validCells}; visible {visibleCells}; objects {overlays.Count}; sparseCells {sparseCells.Count}; sparseRuns {sparseRuns.Count}");
+                        text.AppendLine(minimal ? $"sum valid={validCells} visible={visibleCells} obj={DistinctOverlayObjects(overlays).Count()} sparse={sparseCells.Count} runs={sparseRuns.Count}" : $"summary: valid {validCells}; visible {visibleCells}; objects {DistinctOverlayObjects(overlays).Count()}; sparseCells {sparseCells.Count}; sparseRuns {sparseRuns.Count}");
 
                     if (includeElements && elementLimit > 0)
                     {
@@ -395,12 +399,12 @@ namespace OniMcp.Tools
 
                     if (!sparse && overlays.Count > 0 && objectLimit > 0)
                     {
-                        text.AppendLine(minimal ? "obj" : "objects (token kind id name rxy abs extra):");
-                        foreach (var overlay in overlays.Values.OrderBy(item => item.Y).ThenBy(item => item.X).ThenBy(item => item.Kind).Take(objectLimit))
+                        text.AppendLine(minimal ? "obj" : "objects (token kind id name anchor footprint size supported obstructed extra):");
+                        foreach (var overlay in DistinctOverlayObjects(overlays).OrderBy(item => item.AnchorY).ThenBy(item => item.AnchorX).ThenBy(item => item.Kind).Take(objectLimit))
                         {
                             text.AppendLine(minimal
-                                ? $"- {overlay.Symbol} {overlay.Kind} {overlay.Id} @{overlay.X},{overlay.Y}"
-                                : $"- {TokenForSymbol(overlay.Symbol, view)} {overlay.Kind} {overlay.Id} \"{overlay.Name}\" {overlay.X - rect["x1"]},{overlay.Y - rect["y1"]} {overlay.X},{overlay.Y}{(string.IsNullOrWhiteSpace(overlay.Extra) ? "" : " " + overlay.Extra)}");
+                                ? $"- {overlay.ObjectSymbol} {overlay.Kind} {overlay.Id} anchor={overlay.AnchorX},{overlay.AnchorY} fp={FootprintText(overlay)} supported={SupportedText(overlay)}"
+                                : $"- {TokenForSymbol(overlay.ObjectSymbol, view)} {overlay.Kind} {overlay.Id} \"{overlay.Name}\" anchor={overlay.AnchorX},{overlay.AnchorY} footprint={FootprintText(overlay)} size={overlay.Width}x{overlay.Height} supported={SupportedText(overlay)} obstructed={ObstructedText(overlay)}{(string.IsNullOrWhiteSpace(overlay.Extra) ? "" : " " + overlay.Extra)}");
                         }
                     }
 
@@ -412,7 +416,7 @@ namespace OniMcp.Tools
                     }
 
                     if (format == "json")
-                        return CallToolResult.Text(JsonConvert.SerializeObject(BuildTextMapJson(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, overlays, legend, jsonRows, sparseCells, elementCounts, includeElements, elementLimit, objectLimit), McpJsonUtil.Settings));
+                        return CallToolResult.Text(JsonConvert.SerializeObject(BuildTextMapJson(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, overlays, legend, jsonRows, sparseCells, elementCounts, includeElements, elementLimit, objectLimit, compact: false, includeRows: true, includeObjects: true), McpJsonUtil.Settings));
 
                     return CallToolResult.Text(BuildTextMapMarkdown(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, overlays, legend, markdownRows, sparseRuns, elementCounts, includeElements, elementLimit, objectLimit, detail == "full" ? fullLines : null));
                 }
@@ -453,8 +457,12 @@ namespace OniMcp.Tools
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选区域短标签；返回的 areaId 会记住这个标签", Required = false },
                     ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大导出格子数，默认 1600，硬上限 2500", Required = false },
                     ["chunksOnly"] = new McpToolParameter { Type = "boolean", Description = "只返回分块计划，不展开地图；适合大范围扫描", Required = false },
+                    ["includeChunks"] = new McpToolParameter { Type = "boolean", Description = "大区域分块时内联每块的少量 base 内容预览，避免只拿到 areaId 列表；默认 false", Required = false },
                     ["chunkMaxCells"] = new McpToolParameter { Type = "integer", Description = "每块目标最大格子数，默认沿用 maxCells，硬上限 2500", Required = false },
-                    ["chunkLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个块详情，默认 200，最大 1000", Required = false }
+                    ["chunkLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个块详情，默认 200，最大 1000", Required = false },
+                    ["compact"] = new McpToolParameter { Type = "boolean", Description = "是否紧凑输出；默认 false；开启后对象省略 null/空数组字段，图例为空时省略", Required = false },
+                    ["includeRows"] = new McpToolParameter { Type = "boolean", Description = "是否包含地图行数据；默认 true", Required = false },
+                    ["includeObjects"] = new McpToolParameter { Type = "boolean", Description = "是否包含对象列表；默认 true", Required = false }
                 },
                 Handler = args =>
                 {
@@ -470,6 +478,7 @@ namespace OniMcp.Tools
 
                     int maxCells = Math.Max(1, Math.Min(TryGetInt(args, "maxCells", 1600), MaxTextMapCells));
                     bool chunksOnly = TryGetBool(args, "chunksOnly", false);
+                    bool includeChunks = TryGetBool(args, "includeChunks", false);
                     int chunkMaxCells = Math.Max(64, Math.Min(TryGetInt(args, "chunkMaxCells", maxCells), MaxTextMapCells));
                     int chunkLimit = Math.Max(1, Math.Min(TryGetInt(args, "chunkLimit", 200), 1000));
                     var rect = ResolveTextMapRect(args, maxCells);
@@ -481,6 +490,8 @@ namespace OniMcp.Tools
                     if (chunksOnly || cells > maxCells)
                     {
                         var chunkPlan = BuildChunkPlan(area, rect, worldId, width, height, cells, maxCells, chunkMaxCells, chunkLimit);
+                        if (includeChunks)
+                            AddChunkPreviews(chunkPlan, worldId, "base", TryGetBool(args, "visibleOnly", true), TryGetBool(args, "includeBuildings", true), TryGetBool(args, "includeItems", false), TryGetBool(args, "includeDupes", true));
                         return CallToolResult.Text(JsonConvert.SerializeObject(chunkPlan, McpJsonUtil.Settings));
                     }
 
@@ -497,10 +508,14 @@ namespace OniMcp.Tools
                     if (profile == "scan" && args["encoding"] == null)
                         encoding = "rle";
                     int objectLimit = ClampInt(args, "objectLimit", 120, 0, 500);
+                    bool compact = TryGetBool(args, "compact", false);
+                    bool includeRows = TryGetBool(args, "includeRows", true);
+                    bool includeObjects = TryGetBool(args, "includeObjects", true);
 
                     var overlayViews = ResolveSnapshotOverlays(args["overlays"], preset);
                     bool sparseOverlays = profile == "scan";
-                    var maps = BuildSnapshotMapsSinglePass(area, rect, worldId, width, height, includeBase, overlayViews, sparseOverlays, visibleOnly, includeBuildings, includeItems, includeDupes, includeElements, encoding, objectLimit);
+                    var maps = BuildSnapshotMapsSinglePass(area, rect, worldId, width, height, includeBase, overlayViews, sparseOverlays, visibleOnly, includeBuildings, includeItems, includeDupes, includeElements, encoding, objectLimit, compact, includeRows, includeObjects);
+                    var snapshotSummary = BuildAreaSnapshotSummary(maps);
 
                     var result = new Dictionary<string, object>
                     {
@@ -512,14 +527,19 @@ namespace OniMcp.Tools
                         ["cells"] = cells,
                         ["visibleOnly"] = visibleOnly,
                         ["preset"] = preset,
-                        ["maps"] = maps,
-                        ["comparison"] = new Dictionary<string, object>
+                        ["summary"] = snapshotSummary,
+                        ["maps"] = maps
+                    };
+
+                    if (!compact)
+                    {
+                        result["comparison"] = new Dictionary<string, object>
                         {
-                            ["textMapStrength"] = "coordinate-accurate Markdown terrain, elements, buildings, dupes, wires and conduits; use for planning and validation",
+                            ["textMapStrength"] = "coordinate-accurate terrain, elements, buildings, dupes, wires and conduits; use for planning and validation",
                             ["screenshotStrength"] = "human visual confirmation of current camera view, UI overlays, decor/room/crop visuals; not reliable for exact coordinates by itself",
                             ["defaultRule"] = "plan from maps; use screenshot only as supplementary visual evidence"
-                        }
-                    };
+                        };
+                    }
 
                     if (preset == "planning")
                     {
@@ -561,7 +581,8 @@ namespace OniMcp.Tools
                     ["height"] = new McpToolParameter { Type = "integer", Description = "目标房间高度；留空按 purpose 默认", Required = false },
                     ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只考虑已揭示格子，默认 true", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回候选数量，默认 10，最大 50", Required = false },
-                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大扫描格子数，默认 2500，硬上限 2500", Required = false }
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大扫描格子数，默认 2500，硬上限 2500", Required = false },
+                    ["detailHazards"] = new McpToolParameter { Type = "boolean", Description = "是否返回每格危险详情；默认 false，仅返回坐标和元素计数", Required = false }
                 },
                 Handler = args =>
                 {
@@ -591,7 +612,8 @@ namespace OniMcp.Tools
                     int candidateWidth = ClampInt(args, "width", defaults.Width, 4, Math.Min(64, width));
                     int candidateHeight = ClampInt(args, "height", defaults.Height, 3, Math.Min(16, height));
                     var area = AreaHandleRegistry.Define(rect, worldId, args["label"]?.ToString());
-                    var summary = BuildPlanningSummary(rect, worldId, visibleOnly, purpose, limit, candidateWidth, candidateHeight);
+                    bool detailHazards = TryGetBool(args, "detailHazards", false);
+                    var summary = BuildPlanningSummary(rect, worldId, visibleOnly, purpose, limit, candidateWidth, candidateHeight, detailHazards);
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
@@ -889,7 +911,10 @@ namespace OniMcp.Tools
             bool includeDupes,
             bool includeElements,
             string encoding,
-            int objectLimit)
+            int objectLimit,
+            bool compact = false,
+            bool includeRows = true,
+            bool includeObjects = true)
         {
             var maps = new List<SnapshotMapAccumulator>();
             if (includeBase)
@@ -947,7 +972,7 @@ namespace OniMcp.Tools
 
             return maps.ToDictionary(
                 map => map.View,
-                map => (object)BuildTextMapJson(area, rect, worldId, width, height, map.View, map.Sparse, visibleOnly, encoding, map.ValidCells, map.VisibleCells, map.Overlays, BuildLegend(map.View), map.Rows, map.SparseCells, map.ElementCounts, map.IncludeElements, map.ElementLimit, map.ObjectLimit));
+                map => (object)BuildTextMapJson(area, rect, worldId, width, height, map.View, map.Sparse, visibleOnly, encoding, map.ValidCells, map.VisibleCells, map.Overlays, BuildLegend(map.View), map.Rows, map.SparseCells, map.ElementCounts, map.IncludeElements, map.ElementLimit, map.ObjectLimit, compact, includeRows, includeObjects));
         }
 
         private static object ToolResultToToken(CallToolResult result)
@@ -1037,7 +1062,9 @@ namespace OniMcp.Tools
                 case 'L': return "liq";
                 case 'S': return "solid";
                 case 'T': return "tile";
+                case '@': return "bp_anchor";
                 case 'b': return "blueprint";
+                case 'A': return "bld_anchor";
                 case 'B': return "bld";
                 case 'D': return "dupe";
                 case 'i': return "item";
@@ -1096,8 +1123,10 @@ namespace OniMcp.Tools
                 ['L'] = "liquid",
                 ['S'] = "solid natural tile",
                 ['T'] = "constructed tile/foundation",
-                ['b'] = "construction blueprint overlay",
-                ['B'] = "building overlay",
+                ['@'] = "construction blueprint anchor/lower-left footprint cell",
+                ['b'] = "construction blueprint footprint overlay",
+                ['A'] = "building anchor/lower-left footprint cell",
+                ['B'] = "building footprint overlay",
                 ['D'] = "duplicant overlay",
                 ['i'] = "loose item/debris overlay"
             };
@@ -1188,8 +1217,10 @@ namespace OniMcp.Tools
                 ["liq"] = "liquid",
                 ["sol"] = "solid natural tile",
                 ["tile"] = "constructed tile/foundation",
-                ["bp"] = "construction blueprint overlay",
-                ["bld"] = "building overlay",
+                ["bp_anchor"] = "construction blueprint anchor/lower-left footprint cell",
+                ["bp"] = "construction blueprint footprint overlay",
+                ["bld_anchor"] = "building anchor/lower-left footprint cell",
+                ["bld"] = "building footprint overlay",
                 ["dup"] = "duplicant overlay",
                 ["itm"] = "loose item/debris overlay"
             };
@@ -1223,7 +1254,9 @@ namespace OniMcp.Tools
                 case 'L': return "liq";
                 case 'S': return "sol";
                 case 'T': return "tile";
+                case '@': return "bp_anchor";
                 case 'b': return "bp";
+                case 'A': return "bld_anchor";
                 case 'B': return "bld";
                 case 'D': return "dup";
                 case 'i': return "itm";
@@ -1441,7 +1474,7 @@ namespace OniMcp.Tools
             md.AppendLine();
             md.AppendLine("- Valid cells: `" + validCells + "`");
             md.AppendLine("- Visible cells: `" + visibleCells + "`");
-            md.AppendLine("- Objects: `" + overlays.Count + "`");
+            md.AppendLine("- Objects: `" + DistinctOverlayObjects(overlays).Count() + "`");
             md.AppendLine("- Sparse runs: `" + sparseRuns.Count + "`");
             md.AppendLine();
 
@@ -1463,12 +1496,32 @@ namespace OniMcp.Tools
             {
                 md.AppendLine("## Objects");
                 md.AppendLine();
-                md.AppendLine("| Token | Kind | Id | Name | RXY | XY | Extra |");
-                md.AppendLine("|---|---|---|---|---|---|---|");
-                foreach (var overlay in overlays.Values.OrderBy(item => item.Y).ThenBy(item => item.X).ThenBy(item => item.Kind).Take(objectLimit))
+                md.AppendLine("| Token | Kind | Id | Name | Anchor | Footprint | Size | Supported | Obstructed By | Extra |");
+                md.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
+                foreach (var overlay in DistinctOverlayObjects(overlays).OrderBy(item => item.AnchorY).ThenBy(item => item.AnchorX).ThenBy(item => item.Kind).Take(objectLimit))
                 {
-                    md.AppendLine("| `" + EscapeMarkdown(TokenForSymbol(overlay.Symbol, view)) + "` | `" + EscapeMarkdown(overlay.Kind) + "` | `" + EscapeMarkdown(overlay.Id) + "` | " + EscapeMarkdown(overlay.Name) + " | `" + (overlay.X - rect["x1"]) + "," + (overlay.Y - rect["y1"]) + "` | `" + overlay.X + "," + overlay.Y + "` | " + EscapeMarkdown(overlay.Extra ?? "") + " |");
+                    md.AppendLine("| `" + EscapeMarkdown(TokenForSymbol(overlay.ObjectSymbol, view)) + "` | `" + EscapeMarkdown(overlay.Kind) + "` | `" + EscapeMarkdown(overlay.Id) + "` | " + EscapeMarkdown(overlay.Name) + " | `" + overlay.AnchorX + "," + overlay.AnchorY + "` | `" + FootprintText(overlay) + "` | `" + overlay.Width + "x" + overlay.Height + "` | `" + SupportedText(overlay) + "` | " + EscapeMarkdown(ObstructedText(overlay)) + " | " + EscapeMarkdown(overlay.Extra ?? "") + " |");
                 }
+                md.AppendLine();
+            }
+
+            var unsupported = UnsupportedOverlayObjects(overlays).Take(objectLimit > 0 ? objectLimit : 500).ToList();
+            if (unsupported.Count > 0)
+            {
+                md.AppendLine("## Unsupported Footprints");
+                md.AppendLine();
+                foreach (var overlay in unsupported)
+                    md.AppendLine("- `" + EscapeMarkdown(overlay.Id) + "` at `" + overlay.AnchorX + "," + overlay.AnchorY + "`: " + EscapeMarkdown(UnsupportedReason(overlay)));
+                md.AppendLine();
+            }
+
+            var conflicts = BuildConflictSummaries(overlays);
+            if (conflicts.Count > 0)
+            {
+                md.AppendLine("## Conflicts");
+                md.AppendLine();
+                foreach (var conflict in conflicts.Take(objectLimit > 0 ? objectLimit : 500))
+                    md.AppendLine("- `" + EscapeMarkdown(conflict["type"]?.ToString() ?? "conflict") + "` " + EscapeMarkdown(conflict["id"]?.ToString() ?? "") + " at `" + string.Join(",", ((IEnumerable<int>)conflict["anchor"]).ToArray()) + "`: " + EscapeMarkdown(conflict.ContainsKey("reason") ? conflict["reason"]?.ToString() : conflict.ContainsKey("conflictsWith") ? "conflicts with " + conflict["conflictsWith"] : ""));
                 md.AppendLine();
             }
 
@@ -1528,7 +1581,10 @@ namespace OniMcp.Tools
             Dictionary<string, ElementAggregate> elementCounts,
             bool includeElements,
             int elementLimit,
-            int objectLimit)
+            int objectLimit,
+            bool compact = false,
+            bool includeRows = true,
+            bool includeObjects = true)
         {
             var result = new Dictionary<string, object>
             {
@@ -1539,27 +1595,35 @@ namespace OniMcp.Tools
                 ["origin"] = new[] { rect["x1"], rect["y1"] },
                 ["anchor"] = new[] { rect["x1"], rect["y1"] },
                 ["relativeRect"] = new[] { 0, 0, width - 1, height - 1 },
-                ["coordMode"] = "map includes rx/ry for reading; use world absolute x/y for edit calls",
                 ["size"] = new[] { width, height },
                 ["view"] = view,
                 ["sparse"] = sparse,
                 ["visibleOnly"] = visibleOnly,
                 ["encoding"] = encoding,
-                ["legend"] = legend.ToDictionary(kv => kv.Key.ToString(), kv => ShortLegend(kv.Key)),
                 ["summary"] = new Dictionary<string, object>
                 {
                     ["valid"] = validCells,
                     ["visible"] = visibleCells,
-                    ["objects"] = overlays.Count,
+                    ["objects"] = DistinctOverlayObjects(overlays).Count(),
                     ["sparseCells"] = sparseCells.Count
                 }
             };
+
+            if (!compact || legend.Count > 0)
+                result["legend"] = legend.ToDictionary(kv => kv.Key.ToString(), kv => ShortLegend(kv.Key));
+
             var sparseRuns = sparse ? SparseRuns(sparseCells) : new List<Dictionary<string, object>>();
             if (sparse)
                 result["sparseRuns"] = sparseRuns.Take(objectLimit > 0 ? objectLimit : 500).ToList();
-            else
+            else if (includeRows)
                 result["rows"] = rows;
             ((Dictionary<string, object>)result["summary"])["sparseRuns"] = sparseRuns.Count;
+            var unsupported = UnsupportedOverlayObjects(overlays).ToList();
+            var conflicts = BuildConflictSummaries(overlays);
+            ((Dictionary<string, object>)result["summary"])["unsupportedFootprints"] = unsupported.Count;
+            ((Dictionary<string, object>)result["summary"])["conflicts"] = conflicts;
+            if (unsupported.Count > 0)
+                result["unsupportedFootprints"] = unsupported.Select(UnsupportedFootprintDictionary).Take(objectLimit > 0 ? objectLimit : 500).ToList();
 
             if (includeElements && elementLimit > 0)
             {
@@ -1582,21 +1646,14 @@ namespace OniMcp.Tools
                     .ToList();
             }
 
-            if (!sparse && objectLimit > 0)
+            if (!sparse && objectLimit > 0 && includeObjects)
             {
-                result["objects"] = overlays.Values
-                    .OrderBy(item => item.Y)
-                    .ThenBy(item => item.X)
+                result["objects"] = DistinctOverlayObjects(overlays)
+                    .OrderBy(item => item.AnchorY)
+                    .ThenBy(item => item.AnchorX)
                     .ThenBy(item => item.Kind)
                     .Take(objectLimit)
-                    .Select(item => new Dictionary<string, object>
-                    {
-                        ["s"] = item.Symbol.ToString(),
-                        ["k"] = item.Kind,
-                        ["id"] = item.Id,
-                        ["xy"] = new[] { item.X, item.Y },
-                        ["rxy"] = new[] { item.X - rect["x1"], item.Y - rect["y1"] }
-                    })
+                    .Select(item => OverlayObjectDictionary(item, rect, compact))
                     .ToList();
             }
 
@@ -1654,7 +1711,7 @@ namespace OniMcp.Tools
                         ["x2"] = Math.Min(x + blockWidth - 1, rect["x2"]),
                         ["y2"] = Math.Min(y + blockHeight - 1, rect["y2"])
                     };
-                    blocks.Add(AreaHandleRegistry.DefineBlock(blockRect, worldId, col, row, blockWidth, blockHeight, "snapshot_block_" + col + "_" + row));
+                    blocks.Add(AreaHandleRegistry.DefineBlock(blockRect, worldId, col, row, blockWidth, blockHeight, "snapshot_block_" + col + "_" + row, "snap"));
                 }
             }
 
@@ -1684,9 +1741,103 @@ namespace OniMcp.Tools
                 ["generated"] = blocks.Count,
                 ["returned"] = returned.Count,
                 ["truncated"] = Math.Max(0, blocks.Count - returned.Count),
+                ["idPrefix"] = "snap",
                 ["blocks"] = returned,
-                ["next"] = "Call world_text_map or world_area_snapshot with one returned block areaId; use profile=scan encoding=rle for broad first pass."
+                ["next"] = "Call world_text_map or world_area_snapshot with one returned snap* areaId; use includeChunks=true for inline previews or profile=scan encoding=rle for broad first pass."
             };
+        }
+
+        private static void AddChunkPreviews(
+            Dictionary<string, object> chunkPlan,
+            int worldId,
+            string view,
+            bool visibleOnly,
+            bool includeBuildings,
+            bool includeItems,
+            bool includeDupes)
+        {
+            var blocks = chunkPlan.ContainsKey("blocks") ? chunkPlan["blocks"] as IEnumerable<Dictionary<string, object>> : null;
+            if (blocks == null)
+                return;
+
+            chunkPlan["chunkPreviewRows"] = blocks
+                .Select(block => BuildChunkPreview(block, worldId, view, visibleOnly, includeBuildings, includeItems, includeDupes))
+                .Where(item => item != null)
+                .ToList();
+            chunkPlan["previewNote"] = "chunkPreviewRows contains the top few rows per returned chunk only; call the chunk areaId for full rows.";
+        }
+
+        private static Dictionary<string, object> BuildChunkPreview(
+            Dictionary<string, object> block,
+            int worldId,
+            string view,
+            bool visibleOnly,
+            bool includeBuildings,
+            bool includeItems,
+            bool includeDupes)
+        {
+            if (block == null || !block.ContainsKey("rect"))
+                return null;
+            var rectObj = block["rect"] as Dictionary<string, int>;
+            if (rectObj == null)
+                return null;
+
+            var overlays = IsUtilityOverlayView(view)
+                ? BuildViewOverlayIndex(rectObj, worldId, view)
+                : BuildOverlayIndex(rectObj, worldId, includeBuildings, includeItems, includeDupes);
+            bool overlayView = IsUtilityOverlayView(view);
+            var rows = new List<Dictionary<string, object>>();
+            int rowCount = 0;
+            for (int y = rectObj["y2"]; y >= rectObj["y1"] && rowCount < 6; y--, rowCount++)
+            {
+                var tokens = new List<string>();
+                for (int x = rectObj["x1"]; x <= rectObj["x2"]; x++)
+                {
+                    int cell = Grid.XYToCell(x, y);
+                    var summary = GetCellSummary(cell, x, y, worldId, visibleOnly, overlays, overlayView, view);
+                    tokens.Add(TokenForCell(summary, view).Trim());
+                }
+                rows.Add(new Dictionary<string, object>
+                {
+                    ["y"] = y,
+                    ["ry"] = y - rectObj["y1"],
+                    ["runs"] = RunTokens(tokens)
+                });
+            }
+
+            return new Dictionary<string, object>
+            {
+                ["areaId"] = block["areaId"],
+                ["rect"] = block["rect"],
+                ["rows"] = rows,
+                ["objects"] = DistinctOverlayObjects(overlays).Take(12).Select(item => OverlayObjectDictionary(item, rectObj, compact: false)).ToList()
+            };
+        }
+
+        private static List<Dictionary<string, object>> RunTokens(List<string> tokens)
+        {
+            var runs = new List<Dictionary<string, object>>();
+            if (tokens == null || tokens.Count == 0)
+                return runs;
+            int start = 0;
+            string current = tokens[0];
+            for (int i = 1; i <= tokens.Count; i++)
+            {
+                if (i < tokens.Count && tokens[i] == current)
+                    continue;
+                runs.Add(new Dictionary<string, object>
+                {
+                    ["rx1"] = start,
+                    ["rx2"] = i - 1,
+                    ["token"] = current
+                });
+                if (i < tokens.Count)
+                {
+                    start = i;
+                    current = tokens[i];
+                }
+            }
+            return runs;
         }
 
         private static Dictionary<int, OverlaySummary> BuildOverlayIndex(Dictionary<string, int> rect, int worldId, bool includeBuildings, bool includeItems, bool includeDupes)
@@ -1703,26 +1854,17 @@ namespace OniMcp.Tools
                     int cell = Grid.PosToCell(building.gameObject);
                     if (!Grid.IsValidCell(cell))
                         continue;
-                    int x = Grid.CellColumn(cell);
-                    int y = Grid.CellRow(cell);
-                    if (!InRect(rect, x, y))
-                        continue;
                     var def = building.Def;
                     string id = def?.PrefabID ?? building.name;
                     if (IsTerrainSupportPrefab(id))
                         continue;
-                    string key = "building|" + id + "|" + x + "|" + y + "|" + worldId;
+                    var footprint = BuildFootprintObject(worldId, def, building.gameObject, "building", id, ToolUtil.CleanName(def?.Name ?? id), 'B', 'A');
+                    if (footprint == null || !FootprintIntersectsRect(footprint, rect))
+                        continue;
+                    string key = footprint.Key;
                     if (!seen.Add(key))
                         continue;
-                    overlays[cell] = new OverlaySummary
-                    {
-                        Kind = "building",
-                        Id = id,
-                        Name = ToolUtil.CleanName(def?.Name ?? id),
-                        X = x,
-                        Y = y,
-                        Symbol = 'B'
-                    };
+                    AddBuildingFootprintOverlay(overlays, rect, footprint);
                 }
 
                 foreach (var constructable in FindConstructables(worldId))
@@ -1733,28 +1875,16 @@ namespace OniMcp.Tools
                     int cell = Grid.PosToCell(go);
                     if (!Grid.IsValidCell(cell))
                         continue;
-                    int x = Grid.CellColumn(cell);
-                    int y = Grid.CellRow(cell);
-                    if (!InRect(rect, x, y))
-                        continue;
-                    if (overlays.ContainsKey(cell))
-                        continue;
-
                     var building = go.GetComponent<Building>();
                     var kpid = go.GetComponent<KPrefabID>();
                     string id = building?.Def?.PrefabID ?? kpid?.PrefabTag.Name ?? go.name;
-                    string key = "blueprint|" + id + "|" + x + "|" + y + "|" + worldId;
+                    var footprint = BuildFootprintObject(worldId, building?.Def ?? Assets.GetBuildingDef(id), go, "blueprint", id, ToolUtil.CleanName(go.GetProperName()), 'b', '@');
+                    if (footprint == null || !FootprintIntersectsRect(footprint, rect))
+                        continue;
+                    string key = footprint.Key;
                     if (!seen.Add(key))
                         continue;
-                    overlays[cell] = new OverlaySummary
-                    {
-                        Kind = "blueprint",
-                        Id = id,
-                        Name = ToolUtil.CleanName(go.GetProperName()),
-                        X = x,
-                        Y = y,
-                        Symbol = 'b'
-                    };
+                    AddBuildingFootprintOverlay(overlays, rect, footprint);
                 }
             }
 
@@ -1771,12 +1901,27 @@ namespace OniMcp.Tools
                         continue;
                     overlays[Grid.XYToCell(x, y)] = new OverlaySummary
                     {
+                        Key = "duplicant|" + (dupe.GetComponent<KPrefabID>()?.InstanceID.ToString() ?? "unknown"),
                         Kind = "duplicant",
                         Id = dupe.GetComponent<KPrefabID>()?.InstanceID.ToString() ?? "unknown",
                         Name = dupe.GetProperName(),
                         X = x,
                         Y = y,
-                        Symbol = 'D'
+                        ObjectX = x,
+                        ObjectY = y,
+                        AnchorX = x,
+                        AnchorY = y,
+                        Width = 1,
+                        Height = 1,
+                        FootprintX1 = x,
+                        FootprintY1 = y,
+                        FootprintX2 = x,
+                        FootprintY2 = y,
+                        Symbol = 'D',
+                        ObjectSymbol = 'D',
+                        FootprintSymbol = 'D',
+                        AnchorSymbol = 'D',
+                        Priority = 80
                     };
                 }
             }
@@ -1799,18 +1944,166 @@ namespace OniMcp.Tools
                     var pe = pickupable.GetComponent<PrimaryElement>();
                     overlays[cell] = new OverlaySummary
                     {
+                        Key = "item|" + (kpid != null ? kpid.PrefabTag.Name : pickupable.name) + "|" + x + "|" + y,
                         Kind = "item",
                         Id = kpid != null ? kpid.PrefabTag.Name : pickupable.name,
                         Name = ToolUtil.CleanName(pickupable.GetProperName()),
                         X = x,
                         Y = y,
+                        ObjectX = x,
+                        ObjectY = y,
+                        AnchorX = x,
+                        AnchorY = y,
+                        Width = 1,
+                        Height = 1,
+                        FootprintX1 = x,
+                        FootprintY1 = y,
+                        FootprintX2 = x,
+                        FootprintY2 = y,
                         Symbol = 'i',
+                        ObjectSymbol = 'i',
+                        FootprintSymbol = 'i',
+                        AnchorSymbol = 'i',
+                        Priority = 10,
                         Extra = pe != null ? Math.Round(SafeFloat(pe.Mass), 2) + "kg" : null
                     };
                 }
             }
 
             return overlays;
+        }
+
+        private static OverlaySummary BuildFootprintObject(int worldId, BuildingDef def, GameObject go, string kind, string id, string name, char footprintSymbol, char anchorSymbol)
+        {
+            int objectCell = Grid.PosToCell(go);
+            if (!Grid.IsValidCell(objectCell) || !ToolUtil.CellMatchesWorld(objectCell, worldId))
+                return null;
+
+            int objectX = Grid.CellColumn(objectCell);
+            int objectY = Grid.CellRow(objectCell);
+            int width = Math.Max(1, def?.WidthInCells ?? 1);
+            int height = Math.Max(1, def?.HeightInCells ?? 1);
+            int anchorX = objectX - width / 2;
+            int anchorY = objectY - height / 2;
+            string key = kind + "|" + id + "|" + anchorX + "|" + anchorY + "|" + worldId;
+            string rule = def?.BuildLocationRule.ToString();
+            var missingSupport = MissingSupportCells(def, anchorX, anchorY, worldId).ToList();
+            bool supportRequired = IsOnFloor(def);
+            bool? supported = def == null ? (bool?)null : (supportRequired ? missingSupport.Count == 0 : true);
+            return new OverlaySummary
+            {
+                Key = key,
+                Kind = kind,
+                Id = id,
+                Name = name,
+                X = anchorX,
+                Y = anchorY,
+                ObjectX = objectX,
+                ObjectY = objectY,
+                AnchorX = anchorX,
+                AnchorY = anchorY,
+                Width = width,
+                Height = height,
+                FootprintX1 = anchorX,
+                FootprintY1 = anchorY,
+                FootprintX2 = anchorX + width - 1,
+                FootprintY2 = anchorY + height - 1,
+                Symbol = anchorSymbol,
+                ObjectSymbol = footprintSymbol,
+                FootprintSymbol = footprintSymbol,
+                AnchorSymbol = anchorSymbol,
+                IsAnchor = true,
+                IsFootprint = true,
+                Priority = kind == "building" ? 60 : 50,
+                BuildLocationRule = rule,
+                SupportRequired = supportRequired,
+                Supported = supported,
+                MissingSupportCells = missingSupport,
+                ObstructedBy = FootprintObstructions(def, anchorX, anchorY, width, height, worldId),
+                Extra = "object=" + objectX + "," + objectY
+            };
+        }
+
+        private static void AddBuildingFootprintOverlay(Dictionary<int, OverlaySummary> overlays, Dictionary<string, int> rect, OverlaySummary source)
+        {
+            int added = 0;
+            for (int dy = 0; dy < source.Height; dy++)
+            {
+                for (int dx = 0; dx < source.Width; dx++)
+                {
+                    int x = source.AnchorX + dx;
+                    int y = source.AnchorY + dy;
+                    if (!InRect(rect, x, y))
+                        continue;
+                    int cell = Grid.XYToCell(x, y);
+                    if (!Grid.IsValidCell(cell))
+                        continue;
+                    OverlaySummary existing;
+                    if (overlays.TryGetValue(cell, out existing) && existing.Key != source.Key && existing.Priority >= source.Priority)
+                    {
+                        AddObjectObstruction(source, existing.Kind + ":" + existing.Id + "@" + x + "," + y);
+                        continue;
+                    }
+
+                    overlays[cell] = new OverlaySummary
+                    {
+                        Key = source.Key,
+                        Kind = source.Kind,
+                        Id = source.Id,
+                        Name = source.Name,
+                        X = x,
+                        Y = y,
+                        ObjectX = source.ObjectX,
+                        ObjectY = source.ObjectY,
+                        AnchorX = source.AnchorX,
+                        AnchorY = source.AnchorY,
+                        Width = source.Width,
+                        Height = source.Height,
+                        FootprintX1 = source.FootprintX1,
+                        FootprintY1 = source.FootprintY1,
+                        FootprintX2 = source.FootprintX2,
+                        FootprintY2 = source.FootprintY2,
+                        Symbol = x == source.AnchorX && y == source.AnchorY ? source.AnchorSymbol : source.FootprintSymbol,
+                        ObjectSymbol = source.ObjectSymbol,
+                        FootprintSymbol = source.FootprintSymbol,
+                        AnchorSymbol = source.AnchorSymbol,
+                        IsAnchor = x == source.AnchorX && y == source.AnchorY,
+                        IsFootprint = true,
+                        Priority = source.Priority,
+                        BuildLocationRule = source.BuildLocationRule,
+                        SupportRequired = source.SupportRequired,
+                        Supported = source.Supported,
+                        MissingSupportCells = source.MissingSupportCells,
+                        ObstructedBy = source.ObstructedBy,
+                        Extra = source.Extra
+                    };
+                    added++;
+                }
+            }
+
+            if (added == 0)
+                overlays[HiddenOverlayKey(source.Key)] = source;
+        }
+
+        private static IEnumerable<Dictionary<string, object>> MissingSupportCells(BuildingDef def, int anchorX, int anchorY, int worldId)
+        {
+            if (!IsOnFloor(def))
+                yield break;
+
+            int width = Math.Max(1, def.WidthInCells);
+            int supportY = anchorY - 1;
+            for (int dx = 0; dx < width; dx++)
+            {
+                int x = anchorX + dx;
+                int cell = Grid.XYToCell(x, supportY);
+                if (IsSupportCell(cell, worldId))
+                    continue;
+                yield return new Dictionary<string, object>
+                {
+                    ["x"] = x,
+                    ["y"] = supportY
+                };
+            }
         }
 
         private static IEnumerable<Constructable> FindConstructables(int worldId)
@@ -1982,14 +2275,282 @@ namespace OniMcp.Tools
             var kpid = go.GetComponent<KPrefabID>();
             overlays[cell] = new OverlaySummary
             {
+                Key = kind + "|" + (building?.Def?.PrefabID ?? kpid?.PrefabTag.Name ?? go.name) + "|" + x + "|" + y,
                 Kind = kind,
                 Id = building?.Def?.PrefabID ?? kpid?.PrefabTag.Name ?? go.name,
                 Name = ToolUtil.CleanName(go.GetProperName()),
                 X = x,
                 Y = y,
+                ObjectX = x,
+                ObjectY = y,
+                AnchorX = x,
+                AnchorY = y,
+                Width = 1,
+                Height = 1,
+                FootprintX1 = x,
+                FootprintY1 = y,
+                FootprintX2 = x,
+                FootprintY2 = y,
                 Symbol = symbol,
+                ObjectSymbol = symbol,
+                FootprintSymbol = symbol,
+                AnchorSymbol = symbol,
+                Priority = 30,
                 Extra = extra
             };
+        }
+
+        private static IEnumerable<OverlaySummary> DistinctOverlayObjects(Dictionary<int, OverlaySummary> overlays)
+        {
+            return overlays == null ? Enumerable.Empty<OverlaySummary>() : DistinctOverlayObjects(overlays.Values);
+        }
+
+        private static IEnumerable<OverlaySummary> DistinctOverlayObjects(IEnumerable<OverlaySummary> overlays)
+        {
+            if (overlays == null)
+                return Enumerable.Empty<OverlaySummary>();
+
+            return overlays
+                .Where(item => item != null)
+                .GroupBy(item => string.IsNullOrWhiteSpace(item.Key) ? item.Kind + "|" + item.Id + "|" + item.AnchorX + "|" + item.AnchorY : item.Key)
+                .Select(group => group.OrderByDescending(item => item.IsAnchor).ThenBy(item => item.Y).ThenBy(item => item.X).First());
+        }
+
+        private static IEnumerable<OverlaySummary> UnsupportedOverlayObjects(Dictionary<int, OverlaySummary> overlays)
+        {
+            return DistinctOverlayObjects(overlays).Where(item => item.SupportRequired && item.Supported.HasValue && !item.Supported.Value);
+        }
+
+        private static string FootprintText(OverlaySummary overlay)
+        {
+            if (overlay == null)
+                return "";
+            return overlay.FootprintX1 == overlay.FootprintX2 && overlay.FootprintY1 == overlay.FootprintY2
+                ? overlay.FootprintX1 + "," + overlay.FootprintY1
+                : overlay.FootprintX1 + "," + overlay.FootprintY1 + ".." + overlay.FootprintX2 + "," + overlay.FootprintY2;
+        }
+
+        private static string SupportedText(OverlaySummary overlay)
+        {
+            if (overlay == null || !overlay.SupportRequired)
+                return "n/a";
+            if (!overlay.Supported.HasValue)
+                return "unknown";
+            return overlay.Supported.Value ? "true" : "false";
+        }
+
+        private static string ObstructedText(OverlaySummary overlay)
+        {
+            if (overlay == null || overlay.ObstructedBy == null || overlay.ObstructedBy.Count == 0)
+                return "null";
+            return string.Join(",", overlay.ObstructedBy.ToArray());
+        }
+
+        private static string UnsupportedReason(OverlaySummary overlay)
+        {
+            if (overlay == null || overlay.MissingSupportCells == null || overlay.MissingSupportCells.Count == 0)
+                return "no missing support cells reported";
+            var first = overlay.MissingSupportCells[0];
+            return "missing floor/support at " + first["x"] + "," + first["y"];
+        }
+
+        private static Dictionary<string, object> UnsupportedFootprintDictionary(OverlaySummary overlay)
+        {
+            return new Dictionary<string, object>
+            {
+                ["kind"] = overlay.Kind,
+                ["id"] = overlay.Id,
+                ["anchor"] = new[] { overlay.AnchorX, overlay.AnchorY },
+                ["footprint"] = new[] { overlay.FootprintX1, overlay.FootprintY1, overlay.FootprintX2, overlay.FootprintY2 },
+                ["missingSupportCells"] = overlay.MissingSupportCells ?? new List<Dictionary<string, object>>()
+            };
+        }
+
+        private static Dictionary<string, object> OverlayObjectDictionary(OverlaySummary overlay, Dictionary<string, int> rect, bool compact = false)
+        {
+            var dict = new Dictionary<string, object>
+            {
+                ["s"] = overlay.ObjectSymbol == '\0' ? overlay.Symbol.ToString() : overlay.ObjectSymbol.ToString(),
+                ["k"] = overlay.Kind,
+                ["id"] = overlay.Id,
+                ["name"] = overlay.Name,
+                ["anchor"] = new[] { overlay.AnchorX, overlay.AnchorY },
+                ["rAnchor"] = new[] { overlay.AnchorX - rect["x1"], overlay.AnchorY - rect["y1"] },
+                ["object"] = new[] { overlay.ObjectX, overlay.ObjectY },
+                ["footprint"] = new[] { overlay.FootprintX1, overlay.FootprintY1, overlay.FootprintX2, overlay.FootprintY2 },
+                ["size"] = new[] { overlay.Width, overlay.Height },
+                ["supportRequired"] = overlay.SupportRequired,
+                ["supported"] = overlay.Supported,
+                ["missingSupportCells"] = overlay.MissingSupportCells ?? new List<Dictionary<string, object>>(),
+                ["obstructedBy"] = overlay.ObstructedBy != null && overlay.ObstructedBy.Count > 0 ? (object)overlay.ObstructedBy : null
+            };
+
+            if (!compact)
+                return dict;
+
+            var cleaned = new Dictionary<string, object>();
+            foreach (var kv in dict)
+            {
+                if (kv.Value == null)
+                    continue;
+                var list = kv.Value as System.Collections.IList;
+                if (list != null && list.Count == 0)
+                    continue;
+                cleaned[kv.Key] = kv.Value;
+            }
+            return cleaned;
+        }
+
+        private static List<Dictionary<string, object>> BuildConflictSummaries(Dictionary<int, OverlaySummary> overlays)
+        {
+            var conflicts = new List<Dictionary<string, object>>();
+            foreach (var item in DistinctOverlayObjects(overlays))
+            {
+                if (item.SupportRequired && item.Supported.HasValue && !item.Supported.Value)
+                {
+                    conflicts.Add(new Dictionary<string, object>
+                    {
+                        ["type"] = "unsupported",
+                        ["kind"] = item.Kind,
+                        ["id"] = item.Id,
+                        ["anchor"] = new[] { item.AnchorX, item.AnchorY },
+                        ["reason"] = UnsupportedReason(item),
+                        ["missingSupportCells"] = item.MissingSupportCells ?? new List<Dictionary<string, object>>()
+                    });
+                }
+
+                if (item.ObstructedBy != null && item.ObstructedBy.Count > 0)
+                {
+                    conflicts.Add(new Dictionary<string, object>
+                    {
+                        ["type"] = "overlap",
+                        ["kind"] = item.Kind,
+                        ["id"] = item.Id,
+                        ["anchor"] = new[] { item.AnchorX, item.AnchorY },
+                        ["conflictsWith"] = string.Join(",", item.ObstructedBy.ToArray())
+                    });
+                }
+            }
+            return conflicts;
+        }
+
+        private static Dictionary<string, object> BuildAreaSnapshotSummary(Dictionary<string, object> maps)
+        {
+            var result = new Dictionary<string, object>
+            {
+                ["conflicts"] = new List<Dictionary<string, object>>(),
+                ["unsupportedFootprints"] = 0
+            };
+            object baseMapObject;
+            if (maps == null || !maps.TryGetValue("base", out baseMapObject))
+                return result;
+
+            var baseMap = baseMapObject as Dictionary<string, object>;
+            if (baseMap == null)
+                return result;
+
+            object summaryObject;
+            if (baseMap.TryGetValue("summary", out summaryObject))
+            {
+                var summary = summaryObject as Dictionary<string, object>;
+                if (summary != null)
+                {
+                    CopyIfPresent(summary, result, "valid");
+                    CopyIfPresent(summary, result, "visible");
+                    CopyIfPresent(summary, result, "objects");
+                    CopyIfPresent(summary, result, "unsupportedFootprints");
+                    CopyIfPresent(summary, result, "conflicts");
+                }
+            }
+
+            return result;
+        }
+
+        private static void CopyIfPresent(Dictionary<string, object> source, Dictionary<string, object> target, string key)
+        {
+            object value;
+            if (source != null && source.TryGetValue(key, out value))
+                target[key] = value;
+        }
+
+        private static bool FootprintIntersectsRect(OverlaySummary overlay, Dictionary<string, int> rect)
+        {
+            return overlay != null
+                && overlay.FootprintX2 >= rect["x1"]
+                && overlay.FootprintX1 <= rect["x2"]
+                && overlay.FootprintY2 >= rect["y1"]
+                && overlay.FootprintY1 <= rect["y2"];
+        }
+
+        private static int HiddenOverlayKey(string key)
+        {
+            return int.MinValue + Math.Abs((key ?? "").GetHashCode() % 1000000);
+        }
+
+        private static void AddObjectObstruction(OverlaySummary overlay, string obstruction)
+        {
+            if (overlay == null || string.IsNullOrWhiteSpace(obstruction))
+                return;
+            if (overlay.ObstructedBy == null)
+                overlay.ObstructedBy = new List<string>();
+            if (!overlay.ObstructedBy.Contains(obstruction))
+                overlay.ObstructedBy.Add(obstruction);
+        }
+
+        private static bool IsOnFloor(BuildingDef def)
+        {
+            return def != null && string.Equals(def.BuildLocationRule.ToString(), "OnFloor", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsSupportCell(int cell, int worldId)
+        {
+            if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                return false;
+            if (Grid.Solid[cell] || Grid.Foundation[cell])
+                return true;
+
+            for (int layer = 0; layer < (int)ObjectLayer.NumLayers; layer++)
+            {
+                var go = Grid.Objects[cell, layer];
+                if (go == null)
+                    continue;
+                var building = go.GetComponent<Building>();
+                string prefabId = building?.Def?.PrefabID ?? go.GetComponent<KPrefabID>()?.PrefabTag.Name;
+                if (IsTerrainSupportPrefab(prefabId))
+                    return true;
+            }
+            return false;
+        }
+
+        private static List<string> FootprintObstructions(BuildingDef def, int anchorX, int anchorY, int width, int height, int worldId)
+        {
+            var obstructions = new List<string>();
+            if (def == null)
+                return obstructions;
+
+            string prefabId = def.PrefabID;
+            if (IsTerrainSupportPrefab(prefabId))
+                return obstructions;
+
+            for (int dy = 0; dy < height; dy++)
+            {
+                for (int dx = 0; dx < width; dx++)
+                {
+                    int x = anchorX + dx;
+                    int y = anchorY + dy;
+                    int cell = Grid.XYToCell(x, y);
+                    if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                    {
+                        obstructions.Add("invalid@" + x + "," + y);
+                        continue;
+                    }
+                    if (Grid.Foundation[cell])
+                        obstructions.Add("tile@" + x + "," + y);
+                    else if (Grid.Solid[cell])
+                        obstructions.Add("solid@" + x + "," + y);
+                }
+            }
+            return obstructions.Distinct().Take(20).ToList();
         }
 
         private static bool InRect(Dictionary<string, int> rect, int x, int y)
@@ -2245,13 +2806,16 @@ namespace OniMcp.Tools
             }
         }
 
-        private static Dictionary<string, object> BuildPlanningSummary(Dictionary<string, int> rect, int worldId, bool visibleOnly, string purpose, int limit, int? candidateWidth = null, int? candidateHeight = null)
+        private static Dictionary<string, object> BuildPlanningSummary(Dictionary<string, int> rect, int worldId, bool visibleOnly, string purpose, int limit, int? candidateWidth = null, int? candidateHeight = null, bool detailHazards = false)
         {
             var defaults = LayoutDefaults(NormalizeLayoutPurpose(purpose));
             int roomWidth = Math.Max(4, candidateWidth ?? defaults.Width);
             int roomHeight = Math.Max(3, candidateHeight ?? defaults.Height);
             var occupied = BuildOccupiedCells(rect, worldId);
             var hazards = new List<Dictionary<string, object>>();
+            var hazardCells = new List<int[]>();
+            var hazardByElement = new Dictionary<string, int>();
+            int hazardCount = 0;
             var floorRuns = new List<Dictionary<string, object>>();
             var digRuns = new List<Dictionary<string, object>>();
             var candidates = new List<LayoutCandidate>();
@@ -2267,7 +2831,23 @@ namespace OniMcp.Tools
                 {
                     int cell = Grid.XYToCell(x, y);
                     if (IsHazardCell(cell, visibleOnly))
-                        hazards.Add(HazardInfo(cell, x, y));
+                    {
+                        hazardCount++;
+                        var element = Grid.Element[cell];
+                        string elemName = element?.id.ToString() ?? "Unknown";
+                        if (!hazardByElement.ContainsKey(elemName))
+                            hazardByElement[elemName] = 0;
+                        hazardByElement[elemName]++;
+
+                        if (detailHazards)
+                        {
+                            hazards.Add(HazardInfo(cell, x, y));
+                        }
+                        else
+                        {
+                            hazardCells.Add(new[] { x, y });
+                        }
+                    }
                 }
             }
 
@@ -2303,12 +2883,20 @@ namespace OniMcp.Tools
                 {
                     ["floorRuns"] = floorRuns.Count,
                     ["digRuns"] = digRuns.Count,
-                    ["hazards"] = hazards.Count,
+                    ["hazards"] = hazardCount,
                     ["candidates"] = candidates.Count
                 },
                 ["floorRuns"] = floorRuns.Take(30).ToList(),
                 ["digRuns"] = digRuns.Take(30).ToList(),
-                ["hazards"] = hazards.Take(40).ToList(),
+                ["hazards"] = detailHazards
+                    ? (object)hazards.Take(40).ToList()
+                    : new Dictionary<string, object>
+                    {
+                        ["totalCount"] = hazardCount,
+                        ["byElement"] = hazardByElement.OrderBy(pair => pair.Key).ToDictionary(pair => pair.Key, pair => pair.Value),
+                        ["cells"] = hazardCells.Take(200).ToList(),
+                        ["truncatedCells"] = Math.Max(0, hazardCells.Count - 200)
+                    },
                 ["candidates"] = top
             };
         }
@@ -2550,12 +3138,34 @@ namespace OniMcp.Tools
 
         private class OverlaySummary
         {
+            public string Key;
             public string Kind;
             public string Id;
             public string Name;
             public int X;
             public int Y;
+            public int ObjectX;
+            public int ObjectY;
+            public int AnchorX;
+            public int AnchorY;
+            public int Width;
+            public int Height;
+            public int FootprintX1;
+            public int FootprintY1;
+            public int FootprintX2;
+            public int FootprintY2;
             public char Symbol;
+            public char ObjectSymbol;
+            public char FootprintSymbol;
+            public char AnchorSymbol;
+            public bool IsAnchor;
+            public bool IsFootprint;
+            public int Priority;
+            public string BuildLocationRule;
+            public bool SupportRequired;
+            public bool? Supported;
+            public List<Dictionary<string, object>> MissingSupportCells;
+            public List<string> ObstructedBy;
             public string Extra;
         }
 
@@ -2798,7 +3408,9 @@ namespace OniMcp.Tools
                     ["rect"] = new[] { X1, Y1, X2, Y2 },
                     ["size"] = new[] { Width, Height },
                     ["score"] = Score,
+                    ["scoreExplanation"] = "Starts at 100, subtracts requiredDig*2, requiredTiles*3, hazardCells*12, occupiedCells*10, unknownCells*4, then adds reachability/purpose bonuses.",
                     ["classification"] = Classification,
+                    ["classificationDescription"] = ClassificationDescription(Classification),
                     ["reachable"] = Reachable,
                     ["requiredDig"] = RequiredDig,
                     ["requiredTiles"] = RequiredTiles,
@@ -2811,6 +3423,21 @@ namespace OniMcp.Tools
                     ["suggestedFloorLine"] = new[] { X1, Y1, X2, Y1 },
                     ["suggestedDigRect"] = RequiredDig > 0 ? (object)new[] { X1, Y1, X2, Y2 } : null
                 };
+            }
+
+            private static string ClassificationDescription(string classification)
+            {
+                switch (classification)
+                {
+                    case "open_ready":
+                        return "Already open and has enough support/floor cells; likely ready for placement with little or no digging.";
+                    case "excavate_room":
+                        return "Mostly solid compared with open cells; plan a dig pass before using it as a room.";
+                    case "mixed_platform":
+                        return "Part open, part solid or missing floor; needs a mixed dig/build-floor plan.";
+                    default:
+                        return "Unclassified candidate.";
+                }
             }
         }
     }

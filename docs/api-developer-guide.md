@@ -2,6 +2,8 @@
 
 本文档面向开发者和高级用户，描述如何通过 HTTP JSON-RPC 2.0 与缺氧（Oxygen Not Included）MCP 服务器进行协议级交互。
 
+> **API 稳定性警告**：在 `oni_mcp` 发布 `1.0.0` 之前，HTTP 行为、工具名称、参数结构、资源路径和返回字段都可能发生不兼容变更。二创、插件、脚本和第三方客户端请锁定目标版本，运行时读取 `tools_manifest` 或 `oni://tools/manifest`，并为字段缺失、重命名和语义调整预留兼容逻辑。
+
 ---
 
 ## 快速开始
@@ -257,9 +259,48 @@ curl -X POST http://localhost:8787/mcp/ \
 
 预检通过后去掉 `dryRun` 再次请求即可执行。`stopOnError: true` 会在首个执行错误处停止。需要完整子工具返回时传 `responseMode: "full"`；只关心失败项时传 `responseMode: "errors"`。
 
-建造蓝图不再暴露直接坐标规划工具。先用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，再用可视 agent 指针执行：`agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left`。
+### Agent 程序 DSL
 
-`buildings_search_defs` 会返回 `placement`，其中 `anchor=lowerLeftCell` 表示指针格是建筑 footprint 的左下锚点，不是视觉中心。`agent_pointer_left_click dryRun=true` 会返回预期 footprint；实际执行后返回 `placementCheck`，后续必须用 `world_area_snapshot` / `world_text_map` 复核。
+需要 `if` / `while` / `repeat` 这类控制流时，用 `agent_program_execute`，不要把大量单步判断硬塞进 `tools_call_many`。它接受受限 JSON DSL，只能通过现有 MCP 工具执行游戏动作；子工具仍然遵守自己的 `confirm` 和风险校验。
+
+```json
+{
+  "program": {
+    "vars": { "limit": 6 },
+    "steps": [
+      { "op": "jump", "x": 80, "y": 135 },
+      {
+        "op": "repeat",
+        "count": "$limit",
+        "as": "i",
+        "do": [
+          { "op": "readCell", "saveAs": "cell" },
+          {
+            "op": "if",
+            "when": { "eq": [ "$cell.state", "liquid" ] },
+            "then": [
+              { "op": "select", "tool": "mop" },
+              { "op": "click", "confirm": true }
+            ],
+            "else": [
+              { "op": "nudge", "direction": "right", "steps": 1 }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "maxSteps": 100
+}
+```
+
+核心语义：`saveAs` 保存工具返回 JSON；`$name.path` 读取变量路径；表达式支持 `eq/ne/lt/lte/gt/gte/and/or/not/add/sub/mul/div/mod/contains/exists`；`dryRun=true` 只验证结构和工具名，不执行子调用。
+
+建造蓝图优先使用可视 agent 指针：先用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，再用 `build_preview` 预检单个 anchor；确认后用 `agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left`。可用 `agent_pointer_user_mouse_get` 读取玩家鼠标所在格，或 `agent_pointer_jump code=mouse` 直接跳到该格；指针移动不会默认移动相机，确实需要跟镜头时传 `moveCamera=true`。需要给玩家解释意图时，用 `agent_pointer_say message=...` 在指针旁显示聊天气泡。
+
+`agentId` 是当前 MCP session 内的逻辑指针名；省略时使用本 session 的默认 `agent` 指针。不同 MCP session 的同名 `agentId` 不共享状态，默认标签会带客户端名和 session 短前缀，客户端信息可用 `mcp_client_capabilities` 查看。需要同一客户端内复用指针时，持续传同一个 `agentId`；需要第二个指针时，换一个 `agentId`。不再需要某个指针时，用 `agent_pointer_clear agentId=...` 删除它及其跳转点。
+
+`buildings_search_defs` 会返回 `placement`，其中 `anchor=lowerLeftCell` 表示 x/y 或指针格是建筑 footprint 的左下锚点，不是视觉中心。`build_preview` 会返回 footprint、支撑、材料和明显碰撞诊断；实际执行后返回 `actualPlacement` / `placementCheck`，必要时再用 `world_area_snapshot` / `world_text_map` 复核。
 
 对 `BuildLocationRule=OnFloor` 的建筑，必须先通过指针放置或确认下方已有实体地板/支撑。电线、管道、梯子和砖块的水平/垂直路线使用多段 `agent_pointer_hold_left`。床、厕所、机器等宽/高大于 1 的建筑默认拒绝拖拽建造，必须逐个 anchor 用 `agent_pointer_left_click` 放置；只有明确需要重复 footprint 时才传 `allowFootprintDrag=true`。
 
@@ -418,41 +459,6 @@ curl -X POST http://localhost:8787/mcp/ \
   }'
 ```
 
-### 示例 3：批量执行建造计划
-
-```bash
-# 1. 创建计划
-curl -X POST http://localhost:8787/mcp/ \
-  -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
-  -d '{
-    "jsonrpc": "2.0", "id": 30,
-    "method": "tools/call",
-    "params": {
-      "name": "plan_harness_create",
-      "arguments": {
-        "goal": "Expand oxygen production",
-        "plannedCalls": [
-          { "name": "agent_pointer_jump", "arguments": { "x": 120, "y": 60 } },
-          { "name": "agent_pointer_select_tool", "arguments": { "tool": "build", "prefabId": "Electrolyzer", "material": "auto" } },
-          { "name": "agent_pointer_left_click", "arguments": { "confirm": true } }
-        ]
-      }
-    }
-  }'
-
-# 2. 验证（替换 PLAN_ID）
-curl -X POST http://localhost:8787/mcp/ \
-  -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
-  -d '{"jsonrpc":"2.0","id":31,"method":"tools/call","params":{"name":"plan_harness_validate","arguments":{"planId":"PLAN_ID"}}}'
-
-# 3. 执行
-curl -X POST http://localhost:8787/mcp/ \
-  -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
-  -d '{"jsonrpc":"2.0","id":32,"method":"tools/call","params":{"name":"plan_harness_execute","arguments":{"planId":"PLAN_ID","confirm":true}}}'
-```
-
----
-
 ## 进阶主题
 
 ### 低 Token 模式
@@ -474,8 +480,6 @@ curl -X POST http://localhost:8787/mcp/ \
   -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
   -d '{"jsonrpc":"2.0","id":50,"method":"tools/call","params":{"name":"buildings_deconstruct","arguments":{"buildingId":"B123","confirm":true}}}'
 ```
-
-建议通过 `plan_harness_create` → `plan_harness_validate` → `plan_harness_execute` 对危险操作进行计划、验证和门禁执行。
 
 ### 性能优化
 

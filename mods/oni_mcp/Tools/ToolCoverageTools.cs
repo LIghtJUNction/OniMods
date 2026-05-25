@@ -565,8 +565,6 @@ namespace OniMcp.Tools
                 case "tools":
                 case "server":
                 case "database":
-                case "planning":
-                    return false;
                 default:
                     return true;
             }

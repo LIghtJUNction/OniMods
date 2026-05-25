@@ -100,6 +100,14 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.45">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="PLib" Version="4.24.0" GeneratePathProperty="true" />
+  </ItemGroup>
+
   <!-- 构建后生成元数据文件 -->
   <Target Name="GenerateModFiles" AfterTargets="Build">
     <!-- mod.yaml: 游戏运行时读取 -->

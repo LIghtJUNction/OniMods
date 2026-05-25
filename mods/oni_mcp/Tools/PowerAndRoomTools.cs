@@ -197,6 +197,7 @@ namespace OniMcp.Tools
                     ["type"] = new McpToolParameter { Type = "string", Description = "按房间类型 id/name 过滤，例如 Barracks、GreatHall、PowerPlant", Required = false },
                     ["includeBuildings"] = new McpToolParameter { Type = "boolean", Description = "是否返回房间内建筑明细，默认 false", Required = false },
                     ["includeCriteria"] = new McpToolParameter { Type = "boolean", Description = "是否返回房间条件文本，默认 false", Required = false },
+                    ["includeNeutral"] = new McpToolParameter { Type = "boolean", Description = "是否返回 Neutral/杂间；默认 false，type 明确过滤时不强制隐藏", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回房间数量，默认 80，最大 300", Required = false }
                 },
                 Handler = args =>
@@ -208,6 +209,7 @@ namespace OniMcp.Tools
                     string typeFilter = args["type"]?.ToString();
                     bool includeBuildings = ToolUtil.GetBool(args, "includeBuildings", false);
                     bool includeCriteria = ToolUtil.GetBool(args, "includeCriteria", false);
+                    bool includeNeutral = ToolUtil.GetBool(args, "includeNeutral", false) || !string.IsNullOrWhiteSpace(typeFilter);
                     int limit = ToolUtil.ClampLimit(args, 80, 300);
 
                     var rooms = new List<Dictionary<string, object>>();
@@ -228,19 +230,26 @@ namespace OniMcp.Tools
                         if (!typeCounts.ContainsKey(typeId))
                             typeCounts[typeId] = 0;
                         typeCounts[typeId]++;
+                        if (!includeNeutral && IsNeutralRoom(typeId))
+                            continue;
 
                         if (rooms.Count < limit)
                             rooms.Add(RoomInfo(room, roomWorldId, includeBuildings, includeCriteria));
                     }
 
+                    int matched = typeCounts.Values.Sum();
                     var result = new Dictionary<string, object>
                     {
                         ["worldId"] = worldId,
                         ["returned"] = rooms.Count,
-                        ["matched"] = typeCounts.Values.Sum(),
+                        ["matched"] = matched,
                         ["typeCounts"] = typeCounts.OrderBy(pair => pair.Key).ToDictionary(pair => pair.Key, pair => pair.Value),
+                        ["defaultFilter"] = includeNeutral ? "none" : "neutral rooms hidden; pass includeNeutral=true to list them",
                         ["rooms"] = rooms
                     };
+
+                    if (rooms.Count == 0 && matched > 0)
+                        result["note"] = "Neutral rooms are hidden by default; set includeNeutral=true to see all rooms.";
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
@@ -268,7 +277,7 @@ namespace OniMcp.Tools
             int y;
             CellXY(cell, out x, out y);
 
-            return new Dictionary<string, object>
+            var result = new Dictionary<string, object>
             {
                 ["id"] = kpid?.InstanceID ?? go?.GetInstanceID() ?? -1,
                 ["name"] = go != null ? ToolUtil.CleanName(go.GetProperName()) : null,
@@ -278,7 +287,8 @@ namespace OniMcp.Tools
                 ["x"] = x,
                 ["y"] = y,
                 ["worldId"] = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell) ? (object)Grid.WorldIdx[cell] : null,
-                ["circuitId"] = circuitId,
+                ["circuitId"] = IsUnconnectedCircuit(circuitId) ? "-1" : circuitId.ToString(),
+                ["circuitKey"] = IsUnconnectedCircuit(circuitId) ? "-1" : circuitId.ToString(),
                 ["capacityJ"] = capacityJ.HasValue ? (object)Round(capacityJ.Value, 1) : null,
                 ["storedJ"] = storedJ.HasValue ? (object)Round(storedJ.Value, 1) : null,
                 ["storedPercent"] = capacityJ.HasValue && capacityJ.Value > 0f && storedJ.HasValue ? (object)Round(storedJ.Value / capacityJ.Value * 100f, 2) : null,
@@ -286,8 +296,20 @@ namespace OniMcp.Tools
                 ["wattsRating"] = wattsRating.HasValue ? (object)Round(wattsRating.Value, 1) : null,
                 ["operational"] = operational,
                 ["empty"] = empty,
-                ["powered"] = powered
+                ["powered"] = powered,
+                ["isConnected"] = !IsUnconnectedCircuit(circuitId)
             };
+            return result;
+        }
+
+        private static bool IsNeutralRoom(string typeId)
+        {
+            return string.Equals(typeId, "Neutral", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsUnconnectedCircuit(ushort circuitId)
+        {
+            return circuitId == ushort.MaxValue;
         }
 
         private static bool IsOperational(GameObject go)
@@ -446,7 +468,9 @@ namespace OniMcp.Tools
             {
                 return new Dictionary<string, object>
                 {
-                    ["circuitId"] = CircuitId,
+                    ["circuitId"] = IsUnconnectedCircuit(CircuitId) ? "-1" : CircuitId.ToString(),
+                    ["circuitKey"] = IsUnconnectedCircuit(CircuitId) ? "-1" : CircuitId.ToString(),
+                    ["isConnected"] = !IsUnconnectedCircuit(CircuitId),
                     ["batteryCount"] = BatteryCount,
                     ["batteryCapacityJ"] = Round(BatteryCapacityJ, 1),
                     ["batteryStoredJ"] = Round(BatteryStoredJ, 1),
