@@ -216,7 +216,7 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "duplicant_priority_set", "jobs_priority_set", "personal_priority_set" },
+                Aliases = new List<string> { "duplicant_priority_set", "jobs_priority_set", "personal_priority_set", "set_personal_priority" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "chore-groups" },
                 Description = "设置 Priorities/Jobs 管理屏中单个复制人的某个 ChoreGroup 个人优先级；priority 0-5，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -391,7 +391,9 @@ namespace OniMcp.Tools
                 Name = "dupes_rename",
                 Group = "dupes",
                 Mode = "write",
-                Risk = "medium",
+                Risk = "low",
+                Aliases = new List<string> { "rename_dupe", "dupe_rename", "duplicant_rename", "rename_duplicant" },
+                Tags = new List<string> { "dupes", "dupe", "duplicants", "duplicant", "rename", "name", "复制人", "改名", "命名", "名字" },
                 Description = "修改指定复制人的名字",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -472,7 +474,7 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "dupe_move", "duplicant_move_to" },
+                Aliases = new List<string> { "dupe_move", "move_dupe", "duplicant_move_to" },
                 Description = "对复制人下达“移动到这里”命令，使用游戏原生 MoveToLocationMonitor/MoveChore",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -523,7 +525,7 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "dupes_move_many", "duplicants_move_batch", "batch_move_dupes" },
+                Aliases = new List<string> { "dupes_move_many", "move_dupes_batch", "duplicants_move_batch", "batch_move_dupes" },
                 Tags = new List<string> { "dupes", "commands", "move", "batch", "direct" },
                 Description = "批量下达复制人“移动到这里”命令。items 支持 {id|i,name|n,x,y,worldId|w}，顶层 x/y/worldId 可作为默认目标",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -694,7 +696,7 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "skills_list" },
+                Aliases = new List<string> { "dupes_skills", "skills_list" },
                 Description = "列出复制人技能树中的技能、前置技能、技能组、士气期望和可学习状态",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -737,7 +739,7 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "dupe_skill_learn", "skills_learn" },
+                Aliases = new List<string> { "learn_skill", "dupe_skill_learn", "skills_learn" },
                 Description = "让复制人学习一个技能；默认遵守技能点、前置技能和职业限制，force=true 可用 GrantSkill 作为外部授予",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -823,7 +825,7 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "skills_hat_set", "dupe_hat_set" },
+                Aliases = new List<string> { "set_hat", "skills_hat_set", "dupe_hat_set" },
                 Tags = new List<string> { "dupes", "skills", "hats", "cosmetic", "management" },
                 Description = "设置复制人的目标帽子或清空帽子；与 SkillsScreen 的帽子下拉选择一致，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

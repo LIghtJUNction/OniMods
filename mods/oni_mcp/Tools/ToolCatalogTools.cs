@@ -18,15 +18,15 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
-                Description = "获取 ONI MCP 工具分组、读写模式、风险等级和参数摘要；支持按 group/query/mode/risk/detail 过滤以节省 token",
+                Description = "获取 ONI MCP 工具分组、读写模式、风险等级和参数摘要；默认 brief 低 token 输出，按需传 detail=full 查看完整参数",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["group"] = new McpToolParameter { Type = "string", Description = "工具分组过滤，如 game、dupes、resources、orders", Required = false },
                     ["query"] = new McpToolParameter { Type = "string", Description = "关键词或目标意图，匹配工具名、描述、标签、别名和参数", Required = false },
                     ["mode"] = new McpToolParameter { Type = "string", Description = "read、write、execute 或 any", Required = false },
                     ["risk"] = new McpToolParameter { Type = "string", Description = "none、low、medium、dangerous 或 any", Required = false },
-                    ["detail"] = new McpToolParameter { Type = "string", Description = "full 保持原完整分组；compact 返回摘要；brief 极简；默认 full", Required = false, EnumValues = new List<string> { "brief", "compact", "full" } },
-                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个工具；默认不过滤时全部，过滤时默认 80，最大 320", Required = false }
+                    ["detail"] = new McpToolParameter { Type = "string", Description = "brief 极简；compact 返回摘要；full 返回完整参数 schema；默认 brief", Required = false, EnumValues = new List<string> { "brief", "compact", "full" } },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个工具；默认 80，最大 320。需要完整清单时显式传 limit=320", Required = false }
                 },
                 Handler = args =>
                 {
@@ -35,9 +35,8 @@ namespace OniMcp.Tools
                     string groupFilter = (args["group"]?.ToString() ?? "").ToLowerInvariant();
                     string mode = (args["mode"]?.ToString() ?? "any").ToLowerInvariant();
                     string risk = (args["risk"]?.ToString() ?? "any").ToLowerInvariant();
-                    string detail = string.IsNullOrWhiteSpace(args["detail"]?.ToString()) ? "full" : NormalizeDetail(args["detail"]?.ToString().ToLowerInvariant());
-                    bool filtered = !string.IsNullOrEmpty(query) || !string.IsNullOrEmpty(groupFilter) || (mode != "any" && !string.IsNullOrEmpty(mode)) || (risk != "any" && !string.IsNullOrEmpty(risk)) || detail != "full";
-                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? (filtered ? 80 : 320), 320));
+                    string detail = string.IsNullOrWhiteSpace(args["detail"]?.ToString()) ? "brief" : NormalizeDetail(args["detail"]?.ToString().ToLowerInvariant());
+                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 80, 320));
 
                     var matchedTools = OniToolRegistry.GetVisibleTools()
                         .Where(tool => string.IsNullOrEmpty(groupFilter) || tool.Group.ToLowerInvariant() == groupFilter)
@@ -536,7 +535,7 @@ namespace OniMcp.Tools
                 new ToolGuide("dupes_and_assignments",
                     new[] { "dupe", "duplicant", "schedule", "skill", "bed", "assign", "stuck", "trapped", "rescue", "复制人", "日程", "技能", "分配", "被困", "卡住", "救援" },
                     new[] { "oni://dupes", "oni://dupes/status-check", "oni://dupes/direct-commands", "oni://dupes/priorities", "oni://dupes/priority-settings", "oni://dupes/equipment", "oni://assignables", "oni://schedules" },
-                    new[] { "dupes_status_check", "dupes_list", "dupes_detail", "dupes_move_to", "dupes_move_batch_to", "dupes_skills_list", "dupes_learn_skill", "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "dupes_priority_settings_list", "dupes_priority_settings_get", "dupes_priority_settings_set", "dupes_equipment_list", "assignables_list", "assignables_set", "assignable_slot_item_set", "schedule_set_block" },
+                    new[] { "dupes_status_check", "dupes_list", "dupes_detail", "dupes_move_to", "dupes_move_batch_to", "dupes_skills_list", "dupes_learn_skill", "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "dupes_priority_settings_get", "dupes_priority_settings_set", "dupes_equipment_list", "assignables_list", "assignables_set", "assignable_slot_item_set", "schedule_set_block" },
                     new[] { "dupes_status_check", "dupe stuck trapped rescue schedule skill assign bed move priority jobs" },
                     "Use dupes_status_check first for duplicant health, location, navigation, and suspected trapped cases. Use dupes_move_batch_to only after reading status and confirming reachable rescue targets. Schedule/assignment changes can be grouped via tools_call_many.",
                     new[] { "read dupes_status_check", "inspect flagged scanRect if needed", "choose safe rescue/config action", "dry-run construction if needed", "execute only after confirmation", "verify" }),

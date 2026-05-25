@@ -49,6 +49,8 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
+                Aliases = new List<string> { "set_schedule_block", "schedule_block_set", "change_schedule_block" },
+                Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "blocks", "日程", "作息", "轮班", "时间段" },
                 Description = "设置某个日程在指定小时的区块类型",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -82,6 +84,8 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
+                Aliases = new List<string> { "create_schedule", "schedule_add", "add_schedule" },
+                Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "create", "日程", "作息", "轮班", "创建" },
                 Description = "创建一个日程，并可按 sleepStart 自动生成 1 小时洗漱、3 小时睡眠、2 小时娱乐的基础模板",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -124,6 +128,8 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
+                Aliases = new List<string> { "assign_dupe_schedule", "schedule_assign_duplicant", "assign_duplicant_schedule" },
+                Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "assign", "shift", "日程", "复制人", "分配", "轮班" },
                 Description = "把复制人分配到指定日程",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -160,6 +166,8 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
+                Aliases = new List<string> { "optimize_schedules", "schedule_stagger_shifts", "stagger_dupe_schedules" },
+                Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "shift", "stagger", "optimize", "日程", "复制人", "错峰", "轮班", "优化" },
                 Description = "为当前复制人创建并分配错峰轮班日程，减少厕所/床/娱乐设施拥挤",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {

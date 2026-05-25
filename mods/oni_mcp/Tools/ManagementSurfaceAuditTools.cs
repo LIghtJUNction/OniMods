@@ -24,14 +24,14 @@ namespace OniMcp.Tools
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按 screen、Action、玩家操作、工具名或备注筛选", Required = false },
                     ["status"] = new McpToolParameter { Type = "string", Description = "过滤状态：all、covered、review、no_action，默认 all", Required = false, EnumValues = new List<string> { "all", "covered", "review", "no_action" } },
-                    ["detail"] = new McpToolParameter { Type = "string", Description = "brief 或 full，默认 full", Required = false, EnumValues = new List<string> { "brief", "full" } },
+                    ["detail"] = new McpToolParameter { Type = "string", Description = "brief 或 full，默认 brief", Required = false, EnumValues = new List<string> { "brief", "full" } },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量，默认 80，最大 200", Required = false }
                 },
                 Handler = args =>
                 {
                     string query = (args["query"]?.ToString() ?? "").Trim();
                     string status = (args["status"]?.ToString() ?? "all").Trim().ToLowerInvariant();
-                    string detail = (args["detail"]?.ToString() ?? "full").Trim().ToLowerInvariant();
+                    string detail = (args["detail"]?.ToString() ?? "brief").Trim().ToLowerInvariant();
                     int limit = ToolUtil.ClampLimit(args, 80, 200);
                     var toolNames = new HashSet<string>(OniToolRegistry.GetTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceNames = new HashSet<string>(
@@ -115,8 +115,8 @@ namespace OniMcp.Tools
                 "priority_settings",
                 "ManagePriorities",
                 "Toggle advanced personal priority mode and reset personal priorities using the same semantics as the screen's Reset button",
-                new[] { "dupes_priority_settings_list", "dupes_priority_settings_get", "dupes_priority_settings_set", "ui_management_open" },
-                new[] { "dupes_priority_settings_list" });
+                new[] { "dupes_priority_settings_get", "dupes_priority_settings_set", "ui_management_open" },
+                new[] { "dupes_priority_settings_get" });
 
             yield return Covered(
                 "ScheduleScreen",

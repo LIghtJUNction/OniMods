@@ -4,7 +4,7 @@
 
 - **MCP 服务器地址**：`http://localhost:8787/mcp/`
 - **协议版本**：2025-11-25
-- **工具总数**：~320 个（`tools/list` 默认暴露约 60–80 个核心入口）
+- **工具总数**：~320 个（`tools/list` 默认暴露约 25–30 个核心入口；完整目录用 `tools_search` / `tools_manifest`）
 - **会话要求**：非 `initialize` 请求必须携带 `Mcp-Session-Id` 和协商后的 `Mcp-Protocol-Version`
 
 > **API 稳定性警告**：`oni_mcp` 在 `1.0.0` 之前不承诺工具、参数、资源和返回字段稳定。二创或第三方集成请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 作为实际兼容依据。
@@ -53,11 +53,11 @@
 
 | 工具 | 模式 | 风险 | 用途 |
 |------|------|------|------|
-| `schedules_list` | read | none | 所有日程与复制人分配 |
-| `create_schedule` | write | medium | 创建新日程 |
-| `set_schedule_block` | write | medium | 设置日程时间段 |
-| `assign_dupe_schedule` | write | medium | 给复制人分配日程 |
-| `optimize_schedules` | write | medium | 自动优化日程 |
+| `schedule_list` | read | none | 所有日程与复制人分配 |
+| `schedule_create` | write | medium | 创建新日程 |
+| `schedule_set_block` | write | medium | 设置日程时间段 |
+| `schedule_assign_dupe` | write | medium | 给复制人分配日程 |
+| `schedule_optimize` | write | medium | 自动优化日程 |
 
 ### 资源与库存 (resources)
 
@@ -100,7 +100,7 @@
 | `agent_pointer_clear` | execute | low | 删除当前 session 内指定 agent 指针及其跳转点 |
 | `deconstruct_building` | write | **dangerous** | 拆除建筑（需 `confirm=true`）|
 | `sweep_area` / `dig_area` | write | **dangerous** | 固体散落物清扫/挖掘区域（大区域需 `confirm=true`）；清扫支持 `dryRun` 诊断，挖地必须使用 `orders_dig_area`；水/液体不能 sweep |
-| `mop_area` / `disinfect_area` | write | medium | 拖地/消毒；地上的水、污水、液体必须使用 `orders_mop_area` |
+| `orders_mop_area` / `orders_disinfect_area` | execute | medium | 拖地/消毒；地上的水、污水、液体必须使用 `orders_mop_area` |
 | `orders_attack` | execute | **dangerous** | 仅攻击小动物/敌对目标；不能用于挖掘；区域攻击需额外 `attackAreaConfirm="attack area"` |
 | `cancel_area` / `harvest_area` / `capture_critters` | write | medium | 取消/收获/捕捉 |
 | `empty_conduits` / `cut_conduits` | write | medium/**dangerous** | 倒空/切断管道 |
@@ -497,7 +497,7 @@
 | `get_buildings` | `buildings_list` |
 | `get_building_summary` | `buildings_summary` |
 | `thermal_risk_scan` / `overheat_risk_scan` | `thermal_overheat_risk_scan` |
-| `schedule_list` | `schedules_list` |
+| `disinfect_area` | `orders_disinfect_area` |
 | `power_circuits_summary` / `power_status` | `power_summary` |
 | `room_list` / `rooms_overview` | `rooms_list` |
 | `priorities_list` | `orders_priorities_list` |

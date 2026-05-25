@@ -96,7 +96,7 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "diagnostic_settings_set", "all_diagnostics_settings_set" },
+                Aliases = new List<string> { "set_diagnostic_settings", "diagnostic_settings_set", "all_diagnostics_settings_set" },
                 Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria" },
                 Description = "设置 AllDiagnosticsScreen 诊断显示模式、子条件启用状态或 Debug 通知禁用状态；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -238,7 +238,7 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "resources_notifications_list", "resource_pins_list" },
+                Aliases = new List<string> { "resources_pins", "resources_notifications_list", "resource_pins_list" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
                 Description = "读取 AllResourcesScreen 资源行的固定显示和通知开关状态",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -285,7 +285,7 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "resources_notification_set", "resource_pin_set" },
+                Aliases = new List<string> { "set_resource_pin", "resources_notification_set", "resource_pin_set" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
                 Description = "设置 AllResourcesScreen 资源行的固定显示和通知开关；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

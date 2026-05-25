@@ -19,7 +19,7 @@ namespace OniMcp.Tools
                 Name = ToolName,
                 Group = "tools",
                 Mode = "execute",
-                Risk = "dangerous",
+                Risk = "medium",
                 Description = "万能批量工具：按顺序一次调用多个 ONI MCP 工具，默认返回紧凑摘要；支持 dryRun 预检、重复调用预警、requireAllValid 全量有效才执行和默认参数合并",
                 Tags = new List<string> { "batch", "multi", "universal", "aggregate", "万能", "批量" },
                 Parameters = new Dictionary<string, McpToolParameter>

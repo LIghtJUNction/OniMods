@@ -384,9 +384,9 @@ namespace OniMcp.Tools
                     {
                         ["planFirst"] = true,
                         ["executeOnlyAfterPlan"] = true,
-                        ["contextRule"] = "Use textMap first. Call world_text_map for more detail if needed. Use screenshotPath/camera_screenshot only for visual confirmation.",
+                        ["contextRule"] = "Use textMap first. Call world_text_map for more detail if needed. Use screenshotPath/game_screenshot only for visual confirmation.",
                         ["planRule"] = "Write a concise executable plan in the response, then use dryRun/validateOnly where available before execution. If a planned call is invalid, report the issue and revise before executing.",
-                        ["recommendedTools"] = new[] { "world_text_map", "tools_search", "tools_call_many", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "orders_dig_area", "orders_sweep_area", "camera_screenshot" }
+                        ["recommendedTools"] = new[] { "world_text_map", "tools_search", "tools_call_many", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "orders_dig_area", "orders_sweep_area", "game_screenshot" }
                     }
                 };
 
@@ -401,7 +401,7 @@ namespace OniMcp.Tools
                 string agentPrompt =
                     "你是 ONI MCP 客户端 agent。用户框选了一个游戏区域并给出修改提示词。\n" +
                     "必须先输出计划，列出将读取的上下文、预期改动和风险；计划完成后再调用 MCP 工具执行。不要跳过计划。\n" +
-                    "优先使用下面的 textMap 文本地图理解区域；只有文本地图无法表达的视觉细节才使用 screenshotPath 或 camera_screenshot。\n\n" +
+                    "优先使用下面的 textMap 文本地图理解区域；只有文本地图无法表达的视觉细节才使用 screenshotPath 或 game_screenshot。\n\n" +
                     "规划必须列出将调用的工具、关键参数、dryRun/验证步骤和风险；如果发现参数无效，先反馈并修正规划再执行。\n\n" +
                     "areaId: " + AreaId + "\n" +
                     "worldId: " + WorldId + "\n" +

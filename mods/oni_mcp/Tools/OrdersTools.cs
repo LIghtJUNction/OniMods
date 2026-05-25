@@ -21,6 +21,7 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "read",
                 Risk = "none",
+                Aliases = new List<string> { "orders_priorities_list" },
                 Description = "列出可设置优先级的对象，可按区域、世界和名称筛选",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -102,6 +103,7 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "write",
                 Risk = "medium",
+                Aliases = new List<string> { "orders_set_priority_area", "set_priority_area" },
                 Description = "批量设置矩形区域内可优先级对象的差事优先级",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -753,6 +755,7 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
+                Aliases = new List<string> { "orders_cut_conduits", "cut_conduits" },
                 Description = "按格子或矩形区域剪断管路/电线/运输轨道，实际下达拆除对应段的命令，需要 confirm=true",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {

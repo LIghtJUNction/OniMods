@@ -58,6 +58,7 @@ namespace OniMcp.Tools
                 Group = "diet",
                 Mode = "write",
                 Risk = "medium",
+                Aliases = new List<string> { "set_diet_food" },
                 Description = "允许或禁用某个复制人食用指定食物。可用 allDupes=true 应用到全部复制人",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -104,6 +105,7 @@ namespace OniMcp.Tools
                 Group = "diet",
                 Mode = "write",
                 Risk = "medium",
+                Aliases = new List<string> { "apply_diet_policy" },
                 Description = "按食物品质批量配置饮食。常用：minQuality=-1 允许全部基础食物，minQuality=0 禁用营养棒等低品质食物",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {

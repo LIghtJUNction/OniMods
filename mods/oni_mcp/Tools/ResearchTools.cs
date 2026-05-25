@@ -47,6 +47,7 @@ namespace OniMcp.Tools
                 Group = "research",
                 Mode = "read",
                 Risk = "none",
+                Aliases = new List<string> { "list_research" },
                 Description = "列出或搜索可研究科技。query 可匹配科技 ID、名称、解锁建筑 ID/名称或搜索词",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -93,6 +94,7 @@ namespace OniMcp.Tools
                 Group = "research",
                 Mode = "write",
                 Risk = "medium",
+                Aliases = new List<string> { "set_research" },
                 Description = "选择当前研究目标。优先用 id 精确指定，也可用 query 搜索科技或解锁建筑",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -162,7 +164,7 @@ namespace OniMcp.Tools
                 Group = "research",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "research_cancel", "research_queue_clear" },
+                Aliases = new List<string> { "clear_research", "research_cancel", "research_queue_clear" },
                 Tags = new List<string> { "research", "queue", "cancel", "clear", "management", "researchscreen" },
                 Description = "取消当前研究队列，等价于 ResearchScreen 的取消研究按钮；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -97,7 +97,7 @@ namespace OniMcp.Tools
             Resource("oni://schedules", "schedule_list", "日程", "复制人日程。", "schedule_list"),
             Resource("oni://dupes", "dupes_list", "复制人", "复制人列表和基本状态。", "dupes_list"),
             Resource("oni://dupes/priorities", "dupes_priorities_list", "复制人个人优先级", "Priorities/Jobs 管理屏中复制人对各 ChoreGroup 的个人工作优先级。", "dupes_priorities_list"),
-            Resource("oni://dupes/priority-settings", "dupes_priority_settings_list", "复制人优先级设置", "Jobs/Priorities 管理屏全局高级模式开关、默认重置行为和重置后优先级状态。", "dupes_priority_settings_get"),
+            Resource("oni://dupes/priority-settings", "dupes_priority_settings_get", "复制人优先级设置", "Jobs/Priorities 管理屏全局高级模式开关、默认重置行为和重置后优先级状态。", "dupes_priority_settings_get"),
             Resource("oni://dupes/skills", "dupes_skills_list", "复制人技能", "Skills 管理屏中的复制人技能点、已学技能和可学习技能。", "dupes_skills_list"),
             Resource("oni://dupes/hats", "dupes_hats_list", "复制人帽子", "Skills 管理屏中的当前帽子、目标帽子和可选帽子列表。", "dupes_hats_list"),
             Resource("oni://dupes/status-check", "dupes_status_check", "复制人状态检查", "复制人位置、当前差事、关键需求、周边可达格和疑似被困风险；只读。", "dupes_status_check"),
@@ -929,7 +929,7 @@ namespace OniMcp.Tools
             new McpResourceTemplateInfo
             {
                 UriTemplate = "oni://dupes/priority-settings",
-                Name = "dupes_priority_settings_list",
+                Name = "dupes_priority_settings_get",
                 Title = "复制人优先级设置",
                 Description = "读取 Jobs/Priorities 管理屏全局高级模式开关和重置行为。",
                 MimeType = "application/json"
@@ -1572,7 +1572,7 @@ namespace OniMcp.Tools
             if (parsed.Host == "dupes" && parsed.AbsolutePath == "/priority-settings")
             {
                 var query = ParseQuery(parsed.Query);
-                return ReadToolResource(uri, "dupes_priority_settings_list", query, "application/json");
+                return ReadToolResource(uri, "dupes_priority_settings_get", query, "application/json");
             }
 
             if (parsed.Host == "ui" && parsed.AbsolutePath == "/actions")

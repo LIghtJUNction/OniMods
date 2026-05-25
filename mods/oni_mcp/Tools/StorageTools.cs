@@ -18,6 +18,7 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
+                Aliases = new List<string> { "storage_list" },
                 Description = "列出储物箱/储液库/储气库等储存建筑，包含容量、已存质量和过滤器摘要",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -56,6 +57,7 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
+                Aliases = new List<string> { "storage_detail" },
                 Description = "读取单个储存建筑的过滤标签、库存物品和容量信息",
                 Parameters = StorageLookupParams(),
                 Handler = args =>
