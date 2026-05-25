@@ -25,6 +25,7 @@ namespace OniMcp.Tools
             "tools_guide",
             "tools_player_action_coverage",
             "tools_static_audit",
+            "guide_mechanics_query",
             "tools_call_many",
             "agent_program_execute",
             "agent_pointer_get",
@@ -95,6 +96,7 @@ namespace OniMcp.Tools
             Register(ToolCatalogTools.GetToolsGuide());
             Register(ToolCoverageTools.GetPlayerActionCoverage());
             Register(ToolCoverageTools.GetStaticAudit());
+            Register(GuideMechanicsTools.QueryGuideMechanics());
             Register(SideScreenSurfaceTools.AuditSideScreenSurfaces());
             Register(UserMenuSurfaceAuditTools.AuditUserMenuSurfaces());
             Register(ManagementSurfaceAuditTools.AuditManagementSurfaces());

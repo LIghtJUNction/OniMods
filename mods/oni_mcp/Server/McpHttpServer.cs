@@ -533,55 +533,55 @@ namespace OniMcp.Server
         {
             using (PushSessionContext(sessionId))
             {
-            switch (request.Method)
-            {
-                case "initialize":
-                    return HandleInitialize(request.Id, request.Params?.ToObject<InitializeParams>(), sessionId);
+                switch (request.Method)
+                {
+                    case "initialize":
+                        return HandleInitialize(request.Id, request.Params?.ToObject<InitializeParams>(), sessionId);
 
-                case "notifications/initialized":
-                    return null;
+                    case "notifications/initialized":
+                        return null;
 
-                case "tools/list":
-                    return new ListToolsResult { Tools = OniToolRegistry.GetToolInfos() };
+                    case "tools/list":
+                        return new ListToolsResult { Tools = OniToolRegistry.GetToolInfos() };
 
-                case "tools/call":
-                    var callParams = request.Params?.ToObject<CallToolParams>();
-                    if (callParams == null || string.IsNullOrEmpty(callParams.Name))
-                        return CallToolResult.Error("Missing tool name");
-                    if (callParams.Task != null)
-                        return CreateToolTask(callParams, sessionId);
-                    return OniToolRegistry.CallTool(callParams.Name, callParams.Arguments);
+                    case "tools/call":
+                        var callParams = request.Params?.ToObject<CallToolParams>();
+                        if (callParams == null || string.IsNullOrEmpty(callParams.Name))
+                            return CallToolResult.Error("Missing tool name");
+                        if (callParams.Task != null)
+                            return CreateToolTask(callParams, sessionId);
+                        return OniToolRegistry.CallTool(callParams.Name, callParams.Arguments);
 
-                case "prompts/list":
-                    return new ListPromptsResult { Prompts = OniPromptRegistry.GetPromptInfos() };
+                    case "prompts/list":
+                        return new ListPromptsResult { Prompts = OniPromptRegistry.GetPromptInfos() };
 
-                case "prompts/get":
-                    return HandleGetPrompt(request);
+                    case "prompts/get":
+                        return HandleGetPrompt(request);
 
-                case "resources/list":
-                    return new ListResourcesResult { Resources = OniResourceRegistry.GetResourceInfos() };
+                    case "resources/list":
+                        return new ListResourcesResult { Resources = OniResourceRegistry.GetResourceInfos() };
 
-                case "resources/templates/list":
-                    return new ListResourceTemplatesResult { ResourceTemplates = OniResourceRegistry.GetResourceTemplateInfos() };
+                    case "resources/templates/list":
+                        return new ListResourceTemplatesResult { ResourceTemplates = OniResourceRegistry.GetResourceTemplateInfos() };
 
-                case "resources/read":
-                    return HandleReadResource(request);
+                    case "resources/read":
+                        return HandleReadResource(request);
 
-                case "tasks/list":
-                    return HandleListTasks();
+                    case "tasks/list":
+                        return HandleListTasks();
 
-                case "tasks/get":
-                    return HandleGetTask(request);
+                    case "tasks/get":
+                        return HandleGetTask(request);
 
-                case "tasks/result":
-                    return HandleGetTaskResult(request);
+                    case "tasks/result":
+                        return HandleGetTaskResult(request);
 
-                case "tasks/cancel":
-                    return HandleCancelTask(request);
+                    case "tasks/cancel":
+                        return HandleCancelTask(request);
 
-                default:
-                    return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound, $"Unknown method: {request.Method}");
-            }
+                    default:
+                        return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound, $"Unknown method: {request.Method}");
+                }
             }
         }
 
@@ -653,7 +653,7 @@ namespace OniMcp.Server
                 ServerInfo = new Implementation
                 {
                     Name = "OniMcp",
-                    Version = "0.1.4"
+                    Version = "0.1.5"
                 }
             };
         }

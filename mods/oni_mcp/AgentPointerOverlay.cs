@@ -45,6 +45,17 @@ namespace OniMcp
         private void LateUpdate()
         {
             EnsureCanvas();
+            if (!ShouldRenderPointers())
+            {
+                if (canvas != null)
+                    canvas.enabled = false;
+                HideVisuals();
+                return;
+            }
+
+            if (canvas != null)
+                canvas.enabled = true;
+
             var pointers = AgentPointerRegistry.States();
             int visibleCount = 0;
 
@@ -90,16 +101,7 @@ namespace OniMcp
                 UpdateDragSelection(visual, pointer, accent);
             }
 
-            for (int i = visibleCount; i < visuals.Count; i++)
-            {
-                visuals[i].Root.SetActive(false);
-                visuals[i].LabelRoot.SetActive(false);
-                visuals[i].BadgeRoot.SetActive(false);
-                visuals[i].BubbleRoot.SetActive(false);
-                if (visuals[i].DragRoot != null)
-                    visuals[i].DragRoot.SetActive(false);
-                visuals[i].DragAnimActive = false;
-            }
+            HideVisuals(visibleCount);
         }
 
         private void EnsureCanvas()
@@ -129,6 +131,29 @@ namespace OniMcp
             while (visuals.Count <= index)
                 visuals.Add(CreateVisual());
             return visuals[index];
+        }
+
+        private void HideVisuals(int startIndex = 0)
+        {
+            for (int i = startIndex; i < visuals.Count; i++)
+            {
+                visuals[i].Root.SetActive(false);
+                visuals[i].LabelRoot.SetActive(false);
+                visuals[i].BadgeRoot.SetActive(false);
+                visuals[i].BubbleRoot.SetActive(false);
+                if (visuals[i].DragRoot != null)
+                    visuals[i].DragRoot.SetActive(false);
+                visuals[i].DragAnimActive = false;
+            }
+        }
+
+        private static bool ShouldRenderPointers()
+        {
+            return Game.Instance != null
+                && global::SaveGame.Instance != null
+                && ClusterManager.Instance != null
+                && ClusterManager.Instance.worldCount > 0
+                && Camera.main != null;
         }
 
         private PointerVisual CreateVisual()

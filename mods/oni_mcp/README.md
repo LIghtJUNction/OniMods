@@ -142,8 +142,9 @@ http://localhost:8787/mcp/
 | 范围 | 代表工具 | 用途 |
 |------|----------|------|
 | 服务与目录 | `server_status`, `tools_manifest`, `tools_search`, `tools_guide` | 检查服务、搜索工具、按目标生成工具指南 |
+| 机制知识 | `guide_mechanics_query`, `database_query` | 查询玩家机制/公式速查，并对照游戏内置百科 |
 | 游戏控制 | `game_pause`, `game_resume`, `game_set_speed`, `game_save` | 暂停、恢复、调速、存档 |
-| 相机与截图 | `camera_move`, `camera_switch_view`, `game_screenshot` | 移动视角、切换覆盖层、截图 |
+| 相机与截图 | `camera_move`, `camera_switch_view`, `game_screenshot` | 移动视角、切换覆盖层；覆盖层截图会排队等待渲染完成 |
 | 世界读取 | `world_text_map`, `world_area_snapshot`, `world_cell_info` | 文本地图、区域快照、格子详情 |
 | 区域管理 | `area_define`, `area_get`, `area_blocks`, `area_merge` | 定义和复用地图区域 |
 | 指针操作 | `agent_pointer_aim_cell`, `agent_pointer_user_mouse_get`, `agent_pointer_say`, `agent_pointer_left_click` | 用可视 agent 指针执行点击类操作、读取玩家鼠标格和显示气泡 |
@@ -155,7 +156,7 @@ http://localhost:8787/mcp/
 | 审计与覆盖 | `tools_player_action_coverage`, `tools_static_audit`, `side_screen_surfaces_audit` | 检查工具覆盖面和缺口 |
 | 批量与规划 | `tools_call_many`, `agent_program_execute`, `edit_mark_request_list` | 批量调用、条件/循环流程脚本、读取玩家标记 |
 
-`agent_pointer_*` 的 `agentId` 是当前 MCP session 内的逻辑指针名；不传时使用本 session 的默认 `agent` 指针。不同客户端 session 的同名 `agentId` 不共享状态，默认标签会带客户端名和 session 短前缀；可用 `mcp_client_capabilities` 查看当前 session 和客户端信息。不再需要某个指针时，用 `agent_pointer_clear` 删除它及其跳转点。
+`agent_pointer_*` 使用全局逻辑指针名；不传 `agentId` 时使用默认 `agent` 指针。相同 `agentId` 跨 MCP session 复用同一个指针，避免客户端重连后留下重复指针；建议多步操作第一步创建/读取一个短名指针（如 `planner`、`builder`），之后持续传同一个 `agentId`。可见指针动作尽量传 `displayText`，在指针旁用短句告诉玩家正在定位、选工具或执行什么。需要多个并行指针时传不同 `agentId`。不再需要某个指针时，用 `agent_pointer_clear` 删除它及其跳转点。回到主菜单或游戏世界未加载时，指针会自动隐藏。
 
 ### 常用资源
 
@@ -176,6 +177,7 @@ http://localhost:8787/mcp/
 | `oni://buildings/defs` | 可建造建筑定义 |
 | `oni://tools/manifest` | 工具清单 |
 | `oni://tools/guide` | 按目标推荐工具链 |
+| `oni://guide/mechanics` | 机制、公式、边界条件速查 |
 
 ### 内置 Prompts
 

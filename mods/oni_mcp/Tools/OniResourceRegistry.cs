@@ -124,6 +124,7 @@ namespace OniMcp.Tools
             Resource("oni://ui/actions", "ui_actions_list", "UI Action 白名单", "可安全触发的管理菜单、覆盖层、建造分类和导航 Action。", "ui_actions_list"),
             Resource("oni://tools/manifest", "tools_manifest", "工具清单", "ONI MCP 工具目录。", "tools_manifest"),
             Resource("oni://tools/guide", "tools_guide", "工具意图指南", "按玩家目标推荐资源、工具链和批量策略。", "tools_guide"),
+            Resource("oni://guide/mechanics", "guide_mechanics_query", "缺氧机制速查", "结构化缺氧机制、公式、边界条件和工程注意事项；不包含攻略长文本。", "guide_mechanics_query"),
             Resource("oni://tools/player-action-coverage", "tools_player_action_coverage", "玩家操作覆盖审计", "玩家可执行操作面、对应 MCP 工具和缺口状态。", "tools_player_action_coverage"),
             Resource("oni://tools/side-screen-surfaces", "side_screen_surfaces_audit", "侧屏 surface 审计", "运行时 SideScreenContent 类型到 MCP 工具/资源覆盖的映射审计。", "side_screen_surfaces_audit"),
             Resource("oni://tools/user-menu-surfaces", "user_menu_surfaces_audit", "用户菜单 surface 审计", "源码 UserMenu/context-menu 按钮来源到 MCP 工具/资源覆盖的映射审计。", "user_menu_surfaces_audit"),
@@ -203,6 +204,14 @@ namespace OniMcp.Tools
                 Name = "tools_guide",
                 Title = "工具意图指南",
                 Description = "按目标生成低 token 工具使用指南，推荐资源、搜索词、工具链、批量策略和规划 harness 流程。",
+                MimeType = "application/json"
+            },
+            new McpResourceTemplateInfo
+            {
+                UriTemplate = "oni://guide/mechanics{?query,category,detail,limit}",
+                Name = "guide_mechanics_query",
+                Title = "缺氧机制速查",
+                Description = "查询结构化缺氧机制/公式：热量、制氧、保鲜、养殖、电力、自动化、太空等；detail=brief/full。",
                 MimeType = "application/json"
             },
             new McpResourceTemplateInfo
@@ -1012,6 +1021,12 @@ namespace OniMcp.Tools
             {
                 var query = ParseQuery(parsed.Query);
                 return ReadToolResource(uri, "tools_guide", query, "application/json");
+            }
+
+            if (parsed.Host == "guide" && parsed.AbsolutePath == "/mechanics")
+            {
+                var query = ParseQuery(parsed.Query);
+                return ReadToolResource(uri, "guide_mechanics_query", query, "application/json");
             }
 
             if (parsed.Host == "tools" && parsed.AbsolutePath == "/manifest")

@@ -178,10 +178,13 @@ namespace OniMcp.Tools
                         ["defaultFlow"] = new[]
                         {
                             "1. Read recommended resources first; tools/list is intentionally core-only, so use oni://... resources, tools_search detail=brief/full, or tools_manifest for discovery.",
-                            "2. If the player action surface is unclear, call tools_player_action_coverage with detail=brief and query=<goal>; then call tools_search with detail=brief for exact schemas.",
-                            "3. For player-like map actions, use the visible agent pointer: agent_pointer_jump/aim_cell, agent_pointer_select_tool, then agent_pointer_left_click or agent_pointer_hold_left. Multi-cell buildings use lower-left anchors and should be placed with one left_click per anchor.",
-                            "4. For risky or multi-step work, write the plan in the response and use dryRun/validateOnly where available before executing.",
-                            "5. Do not repeat the same write/execute call after a zero-effect result; re-read state or choose the correct tool. Verify with read resources after execution."
+                            "2. For gameplay formulas or edge-case mechanics, read oni://guide/mechanics or call guide_mechanics_query; combine it with database_query for current in-game codex facts.",
+                            "3. If the player action surface is unclear, call tools_player_action_coverage with detail=brief and query=<goal>; then call tools_search with detail=brief for exact schemas.",
+                            "4. Before player-like map actions, create or reuse a visible agent pointer with a stable agentId such as planner or builder; pass that same agentId through every agent_pointer_* call so the model remembers one pointer across the whole task.",
+                            "5. Use displayText on visible pointer actions whenever useful: jump/aim/select/click/drag can show short player-facing status like '准备铺线' or '标记挖掘'. Prefer displayText over a separate say call unless you need a longer bubble.",
+                            "6. For player-like map actions, use the visible agent pointer flow: agent_pointer_get or agent_pointer_jump/aim_cell with agentId+displayText, agent_pointer_select_tool with the same agentId, then agent_pointer_left_click or agent_pointer_hold_left with confirm/dryRun and displayText. Multi-cell buildings use lower-left anchors and should be placed with one left_click per anchor.",
+                            "7. For risky or multi-step work, write the plan in the response and use dryRun/validateOnly where available before executing.",
+                            "8. Do not repeat the same write/execute call after a zero-effect result; re-read state or choose the correct tool. Verify with read resources after execution."
                         },
                         ["batch"] = new Dictionary<string, object>
                         {
@@ -497,18 +500,25 @@ namespace OniMcp.Tools
             {
                 new ToolGuide("general",
                     new[] { "general", "help", "unknown", "工具", "帮助" },
-                    new[] { "oni://tools/manifest", "oni://tools/player-action-coverage", "oni://colony/summary" },
-                    new[] { "colony_state_snapshot", "tools_search", "tools_manifest", "tools_call_many" },
-                    new[] { "colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts", "tools_search detail=brief query=<goal>", "tools_guide goal=<goal>" },
+                    new[] { "oni://tools/manifest", "oni://tools/player-action-coverage", "oni://guide/mechanics", "oni://colony/summary" },
+                    new[] { "colony_state_snapshot", "tools_search", "tools_manifest", "guide_mechanics_query", "tools_call_many" },
+                    new[] { "colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts", "guide_mechanics_query query=<mechanic>", "tools_search detail=brief query=<goal>", "tools_guide goal=<goal>" },
                     "Use colony_state_snapshot profile=minimal or delta=true for loop polling. Use tools_call_many for independent reads and simple low-risk writes. For complex/risky/player-marked plans, write the plan in the response and dry-run exact actions before execution.",
                     new[] { "read minimal/delta colony_state_snapshot", "search tools", "dry-run actions", "execute", "verify" }),
+                new ToolGuide("mechanics_advice",
+                    new[] { "mechanics", "formula", "heat", "oxygen", "food preservation", "ranching", "power", "automation", "机制", "公式", "热量", "制氧", "保鲜", "养殖", "电力", "自动化", "缺氧机制速查" },
+                    new[] { "oni://guide/mechanics{?query,category,detail,limit}", "oni://tools/read/database_query{?query}", "oni://colony/summary", "oni://world/text-map{?profile=standard}" },
+                    new[] { "guide_mechanics_query", "database_query", "colony_state_snapshot", "world_area_snapshot", "world_text_map", "power_summary", "thermal_overheat_risk_scan" },
+                    new[] { "guide_mechanics_query query=电解器入水温度", "guide_mechanics_query category=thermal query=隔热砖", "database_query query=<building_or_element>", "colony_state_snapshot profile=standard" },
+                    "Use guide_mechanics_query for distilled player-tested formulas and edge cases; use database_query for the game's current codex/building/element facts; read live resources before applying advice to the current save.",
+                    new[] { "query guide mechanics", "query in-game database if exact object stats matter", "read live save state", "calculate/adapt recommendation", "verify after any action" }),
                 new ToolGuide("map_area_orders",
                     new[] { "dig", "sweep", "mop", "water", "liquid", "spill", "disinfect", "cancel", "harvest", "地图", "挖掘", "清扫", "拖地", "地上的水", "液体", "区域" },
                     new[] { "oni://world/text-map{?profile=scan,format=json}", "oni://tools/read/priorities_list" },
-                    new[] { "world_area_snapshot", "layout_candidates", "world_text_map", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_cancel_area", "orders_harvest_area", "tools_call_many" },
-                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=... chunksOnly=true includeChunks=true for large areas", "world_text_map areaId=blk1 profile=scan encoding=rle", "agent_pointer_jump x=... y=...", "agent_pointer_select_tool tool=dig|mop|sweep|cancel|harvest", "agent_pointer_hold_left direction=right length=... confirm=true" },
-                    "Use world_area_snapshot preset=planning or layout_candidates before terrain/base layout work. Prefer pointer actions for orders so the game shows the agent mouse and tool badge. Use orders_mop_area for water/liquid on the floor; never use sweep for liquids. Do not use orders_attack for digging.",
-                    new[] { "read planning snapshot", "jump/aim pointer", "select order tool", "left-click or hold-left", "verify with text map" }),
+                    new[] { "world_area_snapshot", "layout_candidates", "world_text_map", "agent_pointer_get", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_cancel_area", "orders_harvest_area", "tools_call_many" },
+                    new[] { "agent_pointer_get agentId=planner", "world_area_snapshot preset=planning x1=... y1=... x2=... y2=... chunksOnly=true includeChunks=true for large areas", "world_text_map areaId=blk1 profile=scan encoding=rle", "agent_pointer_jump agentId=planner x=... y=... displayText=移动到施工起点", "agent_pointer_select_tool agentId=planner tool=dig|mop|sweep|cancel|harvest displayText=选择区域命令", "agent_pointer_hold_left agentId=planner direction=right length=... confirm=true displayText=标记这条直线" },
+                    "Use world_area_snapshot preset=planning or layout_candidates before terrain/base layout work. Prefer pointer actions for orders so the game shows the agent mouse and tool badge. Create/reuse one stable agentId and pass displayText on visible actions to keep the player oriented. Use orders_mop_area for water/liquid on the floor; never use sweep for liquids. Do not use orders_attack for digging.",
+                    new[] { "read planning snapshot", "create/reuse pointer agentId=planner", "jump/aim pointer with displayText", "select order tool with displayText", "left-click or hold-left with displayText", "verify with text map" }),
                 new ToolGuide("critter_removal",
                     new[] { "kill", "attack", "critter", "creature", "crab", "hermit", "杀", "杀死", "攻击", "小动物", "寄居蟹" },
                     new[] { "oni://ranching/critters", "oni://world/text-map{?profile=scan,format=json}" },
@@ -519,10 +529,10 @@ namespace OniMcp.Tools
                 new ToolGuide("build_and_configure",
                     new[] { "build", "building", "construct", "config", "toilet", "outhouse", "plumbing", "建造", "建筑", "配置", "厕所", "茅厕", "卫生间", "洗手间" },
                     new[] { "oni://buildings/defs{?query}", "oni://buildings/materials{?prefabId}", "oni://buildings/configurables", "oni://automation/controls", "oni://world/text-map{?profile=scan,format=json}" },
-                    new[] { "world_area_snapshot", "layout_candidates", "buildings_search_defs", "buildings_materials", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
-                    new[] { "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "buildings_search_defs query=wire|toilet", "buildings_materials prefabId=Wire", "agent_pointer_select_tool tool=build prefabId=Wire material=auto", "agent_pointer_hold_left direction=right length=12 confirm=true" },
-                    "Use world_area_snapshot/layout_candidates first for base layout. Use buildings_search_defs to choose prefab/facade and material=auto unless explicit material is justified. Build through the pointer flow: jump/aim, select build tool with prefab/material, then left-click or hold-left for 1x1 lines. For multi-cell furniture/machines, treat placement.anchor=lowerLeftCell as the anchor, dry-run if uncertain, and use one left_click per anchor.",
-                    new[] { "snapshot planning area", "choose target", "search defs/materials", "jump/aim pointer", "select build tool", "left-click or hold-left", "verify placement", "batch config if needed" }),
+                    new[] { "world_area_snapshot", "layout_candidates", "buildings_search_defs", "buildings_materials", "agent_pointer_get", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
+                    new[] { "agent_pointer_get agentId=builder", "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "buildings_search_defs query=wire|toilet", "buildings_materials prefabId=Wire", "agent_pointer_jump agentId=builder x=... y=... displayText=移动到蓝图起点", "agent_pointer_select_tool agentId=builder tool=build prefabId=Wire material=auto displayText=选择电线蓝图", "agent_pointer_hold_left agentId=builder direction=right length=12 confirm=true displayText=铺设这段电线" },
+                    "Use world_area_snapshot/layout_candidates first for base layout. Use buildings_search_defs to choose prefab/facade and material=auto unless explicit material is justified. Build through the pointer flow: create/reuse one stable agentId, jump/aim with displayText, select build tool with prefab/material and displayText, then left-click or hold-left for 1x1 lines. For multi-cell furniture/machines, treat placement.anchor=lowerLeftCell as the anchor, dry-run if uncertain, and use one left_click per anchor.",
+                    new[] { "snapshot planning area", "choose target", "search defs/materials", "create/reuse pointer agentId=builder", "jump/aim pointer with displayText", "select build tool with displayText", "left-click or hold-left with displayText", "verify placement", "batch config if needed" }),
                 new ToolGuide("dupes_and_assignments",
                     new[] { "dupe", "duplicant", "schedule", "skill", "bed", "assign", "stuck", "trapped", "rescue", "复制人", "日程", "技能", "分配", "被困", "卡住", "救援" },
                     new[] { "oni://dupes", "oni://dupes/status-check", "oni://dupes/direct-commands", "oni://dupes/priorities", "oni://dupes/priority-settings", "oni://dupes/equipment", "oni://assignables", "oni://schedules" },
@@ -630,7 +640,48 @@ namespace OniMcp.Tools
                         break;
                 }
             }
+            AddPointerExampleArguments(tool, example);
             return example;
+        }
+
+        private static void AddPointerExampleArguments(McpTool tool, Dictionary<string, object> example)
+        {
+            if (tool == null || string.IsNullOrWhiteSpace(tool.Name) || !tool.Name.StartsWith("agent_pointer_", StringComparison.Ordinal))
+                return;
+
+            if (tool.Parameters.ContainsKey("agentId") && !example.ContainsKey("agentId"))
+                example["agentId"] = tool.Name == "agent_pointer_select_tool" ? "builder" : "planner";
+            if (tool.Parameters.ContainsKey("displayText") && !example.ContainsKey("displayText"))
+                example["displayText"] = PointerDisplayTextExample(tool.Name);
+            if (tool.Name == "agent_pointer_select_tool")
+                example["tool"] = "build";
+            if (tool.Name == "agent_pointer_select_tool" && !example.ContainsKey("prefabId"))
+                example["prefabId"] = "Ladder";
+            if ((tool.Name == "agent_pointer_left_click" || tool.Name == "agent_pointer_hold_left") && !example.ContainsKey("dryRun") && !example.ContainsKey("confirm"))
+                example["dryRun"] = true;
+        }
+
+        private static string PointerDisplayTextExample(string toolName)
+        {
+            switch (toolName)
+            {
+                case "agent_pointer_aim_cell":
+                case "agent_pointer_aim_world":
+                case "agent_pointer_jump":
+                    return "移动到目标位置";
+                case "agent_pointer_nudge":
+                    return "微调指针位置";
+                case "agent_pointer_select_tool":
+                    return "选择操作工具";
+                case "agent_pointer_left_click":
+                    return "确认这个格子";
+                case "agent_pointer_hold_left":
+                    return "拖拽标记直线";
+                case "agent_pointer_jump_point_set":
+                    return "记住这个位置";
+                default:
+                    return "正在操作指针";
+            }
         }
 
         private static string GroupDescription(string group)
@@ -638,7 +689,7 @@ namespace OniMcp.Tools
             switch (group)
             {
                 case "tools": return "工具目录、搜索和能力发现。";
-                case "database": return "游戏内置 Database/百科条目查询。";
+                case "database": return "游戏内置 Database/百科条目查询，以及结构化玩家机制/公式速查。";
                 case "server": return "MCP 服务状态和连接信息。";
                 case "game": return "游戏时间、暂停、速度、红色警戒/紧急模式和截图。";
                 case "camera": return "相机视角、聚焦和观察控制。";

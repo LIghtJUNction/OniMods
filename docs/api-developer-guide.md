@@ -66,7 +66,7 @@ curl -X POST http://localhost:8787/mcp/ \
       "resources": { "subscribe": false, "listChanged": false },
       "tasks": { "list": {}, "cancel": {}, "requests": { "tools": { "call": {} } } }
     },
-    "serverInfo": { "name": "OniMcp", "version": "0.1.4" }
+    "serverInfo": { "name": "OniMcp", "version": "0.1.5" }
   }
 }
 ```
@@ -298,7 +298,7 @@ curl -X POST http://localhost:8787/mcp/ \
 
 建造蓝图优先使用可视 agent 指针：先用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，再用 `build_preview` 预检单个 anchor；确认后用 `agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left`。可用 `agent_pointer_user_mouse_get` 读取玩家鼠标所在格，或 `agent_pointer_jump code=mouse` 直接跳到该格；指针移动不会默认移动相机，确实需要跟镜头时传 `moveCamera=true`。需要给玩家解释意图时，用 `agent_pointer_say message=...` 在指针旁显示聊天气泡。
 
-`agentId` 是当前 MCP session 内的逻辑指针名；省略时使用本 session 的默认 `agent` 指针。不同 MCP session 的同名 `agentId` 不共享状态，默认标签会带客户端名和 session 短前缀，客户端信息可用 `mcp_client_capabilities` 查看。需要同一客户端内复用指针时，持续传同一个 `agentId`；需要第二个指针时，换一个 `agentId`。不再需要某个指针时，用 `agent_pointer_clear agentId=...` 删除它及其跳转点。
+省略 `agentId` 时使用全局默认 `agent` 指针；显式传入 `agentId` 时跨 session 复用同一指针，适合多步定位、选工具、点击链路。多步操作建议第一步用 `agent_pointer_get agentId=planner` 或 `agent_pointer_jump/aim_cell agentId=builder` 建立指针，之后每次 `agent_pointer_*` 都传同一个 `agentId`。可见动作尽量传 `displayText`，用 6-40 字给玩家说明当前位置、已选工具或即将执行的操作。需要第二个并行指针时，换一个 `agentId`。不再需要某个指针时，用 `agent_pointer_clear agentId=...` 删除它及其跳转点。回到主菜单或游戏世界未加载时，指针会自动隐藏。
 
 `buildings_search_defs` 会返回 `placement`，其中 `anchor=lowerLeftCell` 表示 x/y 或指针格是建筑 footprint 的左下锚点，不是视觉中心。`build_preview` 会返回 footprint、支撑、材料和明显碰撞诊断；实际执行后返回 `actualPlacement` / `placementCheck`，必要时再用 `world_area_snapshot` / `world_text_map` 复核。
 

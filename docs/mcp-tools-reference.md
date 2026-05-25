@@ -210,7 +210,7 @@
 |------|------|------|------|
 | `camera_get_view` | read | none | 当前相机位置、缩放、激活世界 |
 | `camera_set_view` / `camera_move` | execute | low | 设置/平移/跳转相机 |
-| `camera_switch_view` | execute | low | 切换覆盖层（氧气/电力/温度/房间等）|
+| `camera_switch_view` | execute | low | 切换覆盖层（氧气/电力/温度/房间等）；`screenshot=true` 会排队等覆盖层渲染后截图 |
 | `camera_focus_cell` / `camera_focus_dupe` | execute | low | 聚焦到格子或复制人；不会移动 agent 指针 |
 | `game_screenshot` | execute | low | 截图并返回 PNG 路径 |
 
@@ -311,6 +311,7 @@
 | `tools_call_many` | execute | medium | 批量顺序调用（最多 20 个）|
 | `agent_program_execute` | execute | medium | 受限流程 DSL：变量、if/while/repeat、条件调用工具 |
 | `database_query` | read | none | 查询游戏内置 Database/百科 |
+| `guide_mechanics_query` | read | none | 查询结构化玩家机制/公式速查（热量、制氧、保鲜、养殖、电力、自动化等）|
 | `edit_mark_request_create` / `list` / `clear` | read/write | low | 框选区域编辑请求管理 |
 
 ### 服务器与 MCP (server)
@@ -421,7 +422,7 @@
 
 建造蓝图优先使用可视 agent 指针。使用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，然后 `build_preview` 预检单个 lower-left anchor；确认后用 `agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left` 放置。`agent_pointer_jump code=mouse` 可把指针跳到玩家当前鼠标所在格；指针移动不会默认移动相机，确实需要跟镜头时传 `moveCamera=true`。`buildings_search_defs` 的 `placement.anchor=lowerLeftCell` 表示 x/y 或指针格是 footprint 左下锚点，不是视觉中心。
 
-`agentId` 是当前 MCP session 内的逻辑指针名；省略时使用本 session 的默认 `agent` 指针。不同 MCP session 的同名 `agentId` 不共享状态，默认标签会带客户端名和 session 短前缀，客户端信息可用 `mcp_client_capabilities` 查看。需要同一客户端内复用指针时，持续传同一个 `agentId`；需要第二个指针时，换一个 `agentId`。不再需要某个指针时，用 `agent_pointer_clear agentId=...` 删除它及其跳转点。
+省略 `agentId` 时使用全局默认 `agent` 指针；显式传入 `agentId` 时跨 session 复用同一指针，适合多步定位、选工具、点击链路。多步操作建议第一步用 `agent_pointer_get agentId=planner` 或 `agent_pointer_jump/aim_cell agentId=builder` 建立指针，之后每次 `agent_pointer_*` 都传同一个 `agentId`。可见动作尽量传 `displayText`，用 6-40 字给玩家说明当前位置、已选工具或即将执行的操作。需要第二个并行指针时，换一个 `agentId`。不再需要某个指针时，用 `agent_pointer_clear agentId=...` 删除它及其跳转点。回到主菜单或游戏世界未加载时，指针会自动隐藏。
 
 这些指针动作大多都支持可选 `displayText`，传入后会立刻在 agent 指针旁短暂显示该文本。
 
@@ -462,6 +463,7 @@
 | 工具搜索 | `tools_search detail=brief` |
 | 工具清单 | `oni://tools/manifest?detail=brief` |
 | 玩家操作查找 | `tools_player_action_coverage query=...&detail=brief` |
+| 机制/公式速查 | `oni://guide/mechanics?query=电解器&detail=brief` |
 | 批量调用 | `items: [{t:"name",a:{}}]` + `defaults` + 默认 `responseMode=summary` |
 | 常规观察 | `colony_state_snapshot profile=brief` |
 | 文本地图初扫 | `world_text_map profile=standard encoding=plain` |
@@ -534,6 +536,7 @@
 | `oni://mcp/sessions` | `mcp_client_capabilities` | MCP 会话与能力 |
 | `oni://tools/manifest` | `tools_manifest` | 工具清单 |
 | `oni://tools/guide` | `tools_guide` | 工具意图指南 |
+| `oni://guide/mechanics` | `guide_mechanics_query` | 机制公式速查 |
 | `oni://tools/player-action-coverage` | `tools_player_action_coverage` | 玩家操作覆盖审计 |
 | `oni://tools/static-audit` | `tools_static_audit` | 静态接口审计 |
 | `oni://game/time` | `game_time` | 游戏时间 |
@@ -552,6 +555,7 @@
 | `oni://tools/manifest{?query,group,mode,risk,detail,limit}` | `tools_manifest` | 过滤后工具清单 |
 | `oni://tools/search{?query,group,mode,risk,detail,limit}` | `tools_search` | 低 token 工具搜索 |
 | `oni://tools/guide{?goal,detail}` | `tools_guide` | 按目标生成指南 |
+| `oni://guide/mechanics{?query,category,detail,limit}` | `guide_mechanics_query` | 按关键词/分类查询机制、公式和边界条件 |
 | `oni://tools/read/{name}{?...}` | 任意 read 工具 | 将只读工具作为 resource 读取 |
 ---
 

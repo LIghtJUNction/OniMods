@@ -13,6 +13,7 @@ namespace OniMcp.Tools
     {
         public string SessionId { get; set; }
         public string AgentId { get; set; }
+        public string Scope { get; set; } = "agent";
         public bool Visible { get; set; } = true;
         public string Label { get; set; } = "agent";
         public Color Color { get; set; } = new Color(0.2f, 0.95f, 1f, 1f);
@@ -52,7 +53,7 @@ namespace OniMcp.Tools
             {
                 ["sessionId"] = SessionId,
                 ["agentId"] = AgentId,
-                ["scope"] = "session",
+                ["scope"] = Scope,
                 ["visible"] = Visible,
                 ["label"] = Label,
                 ["color"] = new { r = Math.Round(Color.r, 3), g = Math.Round(Color.g, 3), b = Math.Round(Color.b, 3), a = Math.Round(Color.a, 3) },
@@ -127,9 +128,14 @@ namespace OniMcp.Tools
     {
         private const string DefaultSessionId = "global";
         private const string DefaultAgentId = "agent";
+        private const string AgentScope = "agent";
+        private const int MaxAgentPointers = 16;
+        private static readonly System.TimeSpan PointerPruneInterval = System.TimeSpan.FromSeconds(15);
+        private static readonly System.TimeSpan UnpositionedPointerTtl = System.TimeSpan.FromMinutes(2);
         private static readonly object Lock = new object();
         private static readonly Dictionary<string, AgentPointerState> SessionPointers = new Dictionary<string, AgentPointerState>(StringComparer.Ordinal);
         private static readonly Dictionary<string, Dictionary<string, AgentPointerJumpPoint>> JumpPoints = new Dictionary<string, Dictionary<string, AgentPointerJumpPoint>>(StringComparer.Ordinal);
+        private static System.DateTime LastPrunedAt;
         private static readonly Color[] Palette =
         {
             new Color(0.16f, 0.92f, 1f, 1f),
@@ -146,13 +152,19 @@ namespace OniMcp.Tools
             string key = ResolveKey(sessionId, agentId);
             string normalizedSessionId = NormalizeSessionId(sessionId);
             string normalizedAgentId = NormalizeAgentId(agentId);
+            string scope = PointerScope(agentId);
             lock (Lock)
             {
+                RecyclePointersLocked(System.DateTime.UtcNow);
                 AgentPointerState pointer;
                 if (SessionPointers.TryGetValue(key, out pointer))
                 {
-                    if (string.IsNullOrWhiteSpace(pointer.SessionId))
-                        pointer.SessionId = normalizedSessionId;
+                    pointer.SessionId = normalizedSessionId;
+                    pointer.Scope = scope;
+                    if (string.IsNullOrWhiteSpace(pointer.AgentId))
+                        pointer.AgentId = normalizedAgentId;
+                    if (scope == AgentScope && IsSessionPrefixedLabel(pointer.Label, pointer.AgentId))
+                        pointer.Label = pointer.AgentId;
                     return pointer;
                 }
 
@@ -160,7 +172,8 @@ namespace OniMcp.Tools
                 {
                     SessionId = normalizedSessionId,
                     AgentId = normalizedAgentId,
-                    Label = DefaultLabel(normalizedSessionId, normalizedAgentId),
+                    Scope = scope,
+                    Label = DefaultLabel(normalizedSessionId, normalizedAgentId, scope),
                     Color = Palette[SessionPointers.Count % Palette.Length],
                     UpdatedAt = System.DateTime.UtcNow
                 };
@@ -252,6 +265,7 @@ namespace OniMcp.Tools
         {
             lock (Lock)
             {
+                RecyclePointersLocked(System.DateTime.UtcNow);
                 AgentPointerState pointer;
                 return SessionPointers.TryGetValue(ResolveKey(sessionId, agentId), out pointer) ? pointer : null;
             }
@@ -271,6 +285,7 @@ namespace OniMcp.Tools
         {
             lock (Lock)
             {
+                RecyclePointersLocked(System.DateTime.UtcNow);
                 var pointers = new List<Dictionary<string, object>>();
                 foreach (var pointer in SessionPointers.Values)
                     pointers.Add(pointer.ToDictionary());
@@ -282,6 +297,7 @@ namespace OniMcp.Tools
         {
             lock (Lock)
             {
+                RecyclePointersLocked(System.DateTime.UtcNow);
                 return new List<AgentPointerState>(SessionPointers.Values);
             }
         }
@@ -400,7 +416,17 @@ namespace OniMcp.Tools
 
         private static string ResolveKey(string sessionId, string agentId)
         {
-            return "session:" + NormalizeSessionId(sessionId) + ":agent:" + NormalizeAgentId(agentId);
+            return CanonicalAgentKey(agentId);
+        }
+
+        private static string CanonicalAgentKey(string agentId)
+        {
+            return "agent:" + NormalizeAgentId(agentId);
+        }
+
+        private static string PointerScope(string agentId)
+        {
+            return AgentScope;
         }
 
         private static string NormalizeSessionId(string sessionId)
@@ -418,10 +444,147 @@ namespace OniMcp.Tools
             return NormalizeAgentId(agentId);
         }
 
-        private static string DefaultLabel(string sessionId, string agentId)
+        private static string DefaultLabel(string sessionId, string agentId, string scope)
         {
+            if (scope == AgentScope)
+                return agentId;
             string prefix = ClientLabelPrefix(sessionId);
             return string.IsNullOrWhiteSpace(prefix) ? agentId : prefix + ":" + agentId;
+        }
+
+        private static void RecyclePointersLocked(System.DateTime now)
+        {
+            if (LastPrunedAt != default(System.DateTime) && now - LastPrunedAt < PointerPruneInterval)
+                return;
+
+            LastPrunedAt = now;
+            MigrateLegacySessionPointersLocked();
+            RemoveStaleUnpositionedPointersLocked(now);
+            EnforcePointerLimitLocked();
+        }
+
+        private static void MigrateLegacySessionPointersLocked()
+        {
+            var keys = new List<string>(SessionPointers.Keys);
+            foreach (string key in keys)
+            {
+                AgentPointerState pointer;
+                if (!SessionPointers.TryGetValue(key, out pointer))
+                    continue;
+                string canonicalKey = CanonicalAgentKey(pointer.AgentId);
+                NormalizeAgentPointer(pointer);
+                if (string.Equals(key, canonicalKey, StringComparison.Ordinal))
+                    continue;
+
+                AgentPointerState existing;
+                if (!SessionPointers.TryGetValue(canonicalKey, out existing))
+                {
+                    SessionPointers.Remove(key);
+                    SessionPointers[canonicalKey] = pointer;
+                    MoveJumpPoints(key, canonicalKey);
+                    continue;
+                }
+
+                NormalizeAgentPointer(existing);
+                if (pointer.UpdatedAt > existing.UpdatedAt)
+                    SessionPointers[canonicalKey] = pointer;
+                MergeJumpPoints(key, canonicalKey);
+                SessionPointers.Remove(key);
+            }
+        }
+
+        private static void NormalizeAgentPointer(AgentPointerState pointer)
+        {
+            if (pointer == null)
+                return;
+            pointer.AgentId = NormalizeAgentId(pointer.AgentId);
+            pointer.Scope = AgentScope;
+            if (string.IsNullOrWhiteSpace(pointer.Label) || IsSessionPrefixedLabel(pointer.Label, pointer.AgentId))
+                pointer.Label = pointer.AgentId;
+        }
+
+        private static bool IsSessionPrefixedLabel(string label, string agentId)
+        {
+            if (string.IsNullOrWhiteSpace(label))
+                return false;
+            string normalizedAgentId = NormalizeAgentId(agentId);
+            return label.EndsWith(":" + normalizedAgentId, StringComparison.Ordinal);
+        }
+
+        private static void MoveJumpPoints(string fromKey, string toKey)
+        {
+            Dictionary<string, AgentPointerJumpPoint> points;
+            if (!JumpPoints.TryGetValue(fromKey, out points))
+                return;
+            JumpPoints.Remove(fromKey);
+            JumpPoints[toKey] = points;
+        }
+
+        private static void MergeJumpPoints(string fromKey, string toKey)
+        {
+            Dictionary<string, AgentPointerJumpPoint> source;
+            if (!JumpPoints.TryGetValue(fromKey, out source))
+                return;
+
+            Dictionary<string, AgentPointerJumpPoint> target;
+            if (!JumpPoints.TryGetValue(toKey, out target))
+            {
+                JumpPoints[toKey] = source;
+                JumpPoints.Remove(fromKey);
+                return;
+            }
+
+            foreach (var item in source)
+            {
+                AgentPointerJumpPoint existing;
+                if (!target.TryGetValue(item.Key, out existing) || item.Value.UpdatedAt > existing.UpdatedAt)
+                    target[item.Key] = item.Value;
+            }
+            JumpPoints.Remove(fromKey);
+        }
+
+        private static void RemoveStaleUnpositionedPointersLocked(System.DateTime now)
+        {
+            var keysToRemove = new List<string>();
+            foreach (var item in SessionPointers)
+            {
+                var pointer = item.Value;
+                if (pointer == null || pointer.IsDragging || Grid.IsValidCell(pointer.Cell))
+                    continue;
+                if (pointer.UpdatedAt != default(System.DateTime) && now - pointer.UpdatedAt > UnpositionedPointerTtl)
+                    keysToRemove.Add(item.Key);
+            }
+            RemovePointerKeys(keysToRemove);
+        }
+
+        private static void EnforcePointerLimitLocked()
+        {
+            int overflow = SessionPointers.Count - MaxAgentPointers;
+            if (overflow <= 0)
+                return;
+
+            var candidates = new List<KeyValuePair<string, AgentPointerState>>();
+            foreach (var item in SessionPointers)
+            {
+                if (item.Value == null || item.Value.IsDragging)
+                    continue;
+                candidates.Add(item);
+            }
+
+            candidates.Sort((left, right) => left.Value.UpdatedAt.CompareTo(right.Value.UpdatedAt));
+            var keysToRemove = new List<string>();
+            for (int i = 0; i < candidates.Count && keysToRemove.Count < overflow; i++)
+                keysToRemove.Add(candidates[i].Key);
+            RemovePointerKeys(keysToRemove);
+        }
+
+        private static void RemovePointerKeys(List<string> keys)
+        {
+            foreach (string key in keys)
+            {
+                SessionPointers.Remove(key);
+                JumpPoints.Remove(key);
+            }
         }
 
         private static string ClientLabelPrefix(string sessionId)
@@ -530,7 +693,8 @@ namespace OniMcp.Tools
     public static class AgentPointerTools
     {
         private const float DisplayTextDurationSeconds = 8f;
-        private const string AgentIdDescription = "可选逻辑指针名，作用域为当前 MCP session；省略时使用本 session 的默认 agent 指针。不同 session 的同名 agentId 不共享状态。";
+        private const string AgentIdDescription = "可选逻辑指针名；建议首次指针操作就选一个短而稳定的 agentId（如 planner、builder），并在后续所有 agent_pointer_* 调用中持续传入，让模型记住并复用同一个可视指针。省略时使用全局默认 agent 指针；不同 agentId 可并行显示多个指针。";
+        private const string DisplayTextDescription = "可选显示文本，会立刻在指针旁短暂显示。建议在移动、选工具、点击、拖拽等可见动作中传入 6-40 字给玩家看的状态说明，例如“准备铺线”“标记挖掘”。";
 
         public static McpTool GetPointerState()
         {
@@ -540,7 +704,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "read",
                 Risk = "none",
-                Description = "读取当前 agent 的指针状态",
+                Description = "读取或创建当前 agent 的可视指针状态；适合作为多步操作前的第一步，用稳定 agentId 建立并记住后续要复用的指针",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false }
@@ -584,7 +748,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "把指针对准一个格子中心，后续所有动作都围绕这个指针进行",
+                Description = "把可视 agent 指针对准一个格子中心，后续所有动作都围绕这个指针进行；多步操作请传稳定 agentId，并用 displayText 告诉玩家你正在指向哪里",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X", Required = true },
@@ -592,7 +756,7 @@ namespace OniMcp.Tools
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false },
-                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -629,7 +793,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "把指针对准一个世界坐标",
+                Description = "把可视 agent 指针对准一个世界坐标；多步操作请传稳定 agentId，并用 displayText 给玩家一个短提示",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter { Type = "number", Description = "世界 X 坐标", Required = true },
@@ -637,7 +801,7 @@ namespace OniMcp.Tools
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false },
-                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -669,7 +833,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "按相对方向移动当前 agent 指针，适合像鼠标一样逐格微调",
+                Description = "按相对方向移动当前 agent 指针，适合像鼠标一样逐格微调；继续传同一个 agentId，并用 displayText 说明微调意图",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["direction"] = new McpToolParameter { Type = "string", Description = "方向：right、left、up、down；也可省略并直接传 dx/dy", Required = false, EnumValues = new List<string> { "right", "left", "up", "down" } },
@@ -678,7 +842,7 @@ namespace OniMcp.Tools
                     ["dy"] = new McpToolParameter { Type = "integer", Description = "相对 Y 偏移；direction 为空时使用", Required = false },
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选指针标签", Required = false },
-                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -733,7 +897,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "切换当前 agent 指针选中的工具；build 工具可同时选择建筑蓝图、材料、外观和优先级，并会在鼠标旁可视化显示",
+                Description = "切换当前 agent 指针选中的工具；build 工具可同时选择建筑蓝图、材料、外观和优先级，并会在鼠标旁可视化显示。继续传同一个 agentId，并用 displayText 告诉玩家已切到什么工具",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["tool"] = new McpToolParameter { Type = "string", Description = "工具类型：inspect、build、dig、cancel、sweep、mop、disinfect、harvest、deconstruct", Required = true, EnumValues = new List<string> { "inspect", "build", "dig", "cancel", "sweep", "mop", "disinfect", "harvest", "deconstruct" } },
@@ -742,7 +906,7 @@ namespace OniMcp.Tools
                     ["facade"] = new McpToolParameter { Type = "string", Description = "tool=build 时的外观 ID", Required = false },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "优先级 1-9，默认 5", Required = false },
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
-                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -775,7 +939,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "在当前 agent 指针旁显示一条聊天气泡消息；只影响画面提示，不执行游戏操作",
+                Description = "在当前 agent 指针旁显示一条聊天气泡消息；只影响画面提示，不执行游戏操作。适合在执行前解释计划、等待玩家确认或标注风险",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["message"] = new McpToolParameter { Type = "string", Description = "要显示的短消息，最长 160 字符；留空或 clear=true 会清除气泡", Required = false },
@@ -819,13 +983,13 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "medium",
-                Description = "在当前指针格子执行一次左键确认，按当前选中工具触发建造/挖掘/取消/清扫等操作",
+                Description = "在当前指针格子执行一次左键确认，按当前选中工具触发建造/挖掘/取消/清扫等操作；执行时继续传同一个 agentId，并尽量传 displayText 让玩家看到这次点击的目的",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行修改必须为 true；dryRun=true 时可省略", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，传给支持 dryRun 的子工具", Required = false },
-                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -853,7 +1017,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "medium",
-                Description = "模拟按住左键向上下左右拖拽若干格，并按当前选中工具执行直线操作",
+                Description = "模拟按住左键向上下左右拖拽若干格，并按当前选中工具执行直线操作；执行时继续传同一个 agentId，并尽量传 displayText 说明拖拽范围/目的",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["direction"] = new McpToolParameter { Type = "string", Description = "方向：right、left、up、down", Required = true, EnumValues = new List<string> { "right", "left", "up", "down" } },
@@ -862,7 +1026,7 @@ namespace OniMcp.Tools
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行修改必须为 true；dryRun=true 时可省略", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，传给支持 dryRun 的子工具", Required = false },
                     ["allowFootprintDrag"] = new McpToolParameter { Type = "boolean", Description = "默认 false。拖拽建造只允许 1x1 footprint；床、厕所、机器等多格建筑需逐个 left_click，除非显式设为 true", Required = false },
-                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -904,7 +1068,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "跳转 agent 指针，不默认移动相机。支持绝对 x/y、相对 dx/dy、方向 steps，或跳转到 p1/p2 等标点",
+                Description = "跳转 agent 指针，不默认移动相机。支持绝对 x/y、相对 dx/dy、方向 steps，或跳转到 p1/p2 等标点；多步操作请传稳定 agentId，并用 displayText 说明跳转目标",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["code"] = new McpToolParameter { Type = "string", Description = "跳转点代号，如 p1、p2；提供时优先使用", Required = false },
@@ -918,7 +1082,7 @@ namespace OniMcp.Tools
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
                     ["moveCamera"] = new McpToolParameter { Type = "boolean", Description = "是否同时把相机移动到指针，默认 false", Required = false },
                     ["zoom"] = new McpToolParameter { Type = "number", Description = "moveCamera=true 时的相机缩放，默认保持当前缩放", Required = false },
-                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -935,7 +1099,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "设置 AI 跳转点，代号为 p1、p2、p+数字；未给 x/y 时保存当前指针位置",
+                Description = "设置 AI 跳转点，代号为 p1、p2、p+数字；未给 x/y 时保存当前指针位置。建议配合同一个 agentId 记住常用施工/观察点",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["code"] = new McpToolParameter { Type = "string", Description = "跳转点代号，如 p1、p2；p 等价 p1", Required = true },
@@ -944,7 +1108,7 @@ namespace OniMcp.Tools
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "可选世界 ID；默认当前或指针世界", Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "可选标签", Required = false },
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
-                    ["displayText"] = new McpToolParameter { Type = "string", Description = "可选显示文本，会立刻在指针旁显示一小段时间", Required = false }
+                    ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
                 {
@@ -1033,7 +1197,7 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "删除当前 MCP session 内指定 agentId 的可视 agent 指针，并同时清除该指针的 AI 跳转点；不影响其他 session 的同名指针",
+                Description = "删除指定 agent 指针及其 AI 跳转点；省略 agentId 时删除全局默认 agent 指针",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false }
@@ -1046,7 +1210,7 @@ namespace OniMcp.Tools
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
                         ["removed"] = removed,
-                        ["scope"] = "session",
+                        ["scope"] = "agent",
                         ["sessionId"] = ToolSessionContext.SessionId,
                         ["agentId"] = AgentPointerRegistry.PublicAgentId(agentId),
                         ["jumpPointsCleared"] = jumpPointsRemoved
@@ -1125,6 +1289,7 @@ namespace OniMcp.Tools
                 if (string.IsNullOrWhiteSpace(pointer.BuildPrefabId))
                     return CallToolResult.Error("Current pointer tool is build but no prefabId is selected; call agent_pointer_select_tool first");
 
+                args["agentId"] = pointer.AgentId;
                 args["prefabId"] = pointer.BuildPrefabId;
                 if (args["material"] == null && !string.IsNullOrWhiteSpace(pointer.BuildMaterial))
                     args["material"] = pointer.BuildMaterial;

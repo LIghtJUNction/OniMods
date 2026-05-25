@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -273,6 +274,7 @@ namespace OniMcp.Tools
                     },
                     ["screenshot"] = new McpToolParameter { Type = "boolean", Description = "是否保存切换后的截图，默认 true", Required = false },
                     ["filename"] = new McpToolParameter { Type = "string", Description = "截图文件名，仅 screenshot=true 时使用", Required = false },
+                    ["waitFrames"] = new McpToolParameter { Type = "integer", Description = "截图前等待的 Unity 帧数，默认 2，确保覆盖层完成渲染", Required = false },
                     ["allowSound"] = new McpToolParameter { Type = "boolean", Description = "是否播放游戏视图切换音效，默认 false", Required = false }
                 },
                 Handler = args =>
@@ -294,14 +296,25 @@ namespace OniMcp.Tools
                     }
 
                     bool allowSound = ToolUtil.GetBool(args, "allowSound", false);
-                    overlay.ToggleOverlay(mode, allowSound);
+                    bool screenshot = ToolUtil.GetBool(args, "screenshot", true);
+                    int waitFrames = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "waitFrames") ?? 2, 30));
+                    var queued = OverlaySwitchQueue.Enqueue(
+                        viewName,
+                        mode,
+                        allowSound,
+                        screenshot,
+                        args["filename"]?.ToString(),
+                        waitFrames);
 
                     var camera = CameraController.Instance;
                     var pos = camera != null ? camera.transform.GetPosition() : Vector3.zero;
                     var result = new Dictionary<string, object>
                     {
                         ["view"] = viewName,
-                        ["activeOverlay"] = overlay.GetMode().ToString(),
+                        ["requestedOverlay"] = mode.ToString(),
+                        ["activeOverlayAtEnqueue"] = overlay.GetMode().ToString(),
+                        ["queued"] = true,
+                        ["queue"] = queued,
                         ["activeWorldId"] = ClusterManager.Instance?.activeWorldId ?? -1,
                         ["camera"] = new
                         {
@@ -310,10 +323,6 @@ namespace OniMcp.Tools
                         },
                         ["screen"] = new { width = Screen.width, height = Screen.height }
                     };
-
-                    bool screenshot = ToolUtil.GetBool(args, "screenshot", true);
-                    if (screenshot)
-                        result["screenshot"] = WorldEditor.SaveScreenshot(args["filename"]?.ToString());
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
@@ -536,6 +545,130 @@ namespace OniMcp.Tools
         private static string NormalizeViewName(string view)
         {
             return view.Trim().ToLowerInvariant().Replace("-", "_").Replace(" ", "_");
+        }
+
+        private sealed class OverlaySwitchRequest
+        {
+            public string Id;
+            public string ViewName;
+            public HashedString Mode;
+            public bool AllowSound;
+            public bool Screenshot;
+            public string ScreenshotPath;
+            public Dictionary<string, object> Cleanup;
+            public int WaitFrames;
+        }
+
+        private sealed class OverlaySwitchQueue : MonoBehaviour
+        {
+            private static OverlaySwitchQueue instance;
+            private readonly Queue<OverlaySwitchRequest> requests = new Queue<OverlaySwitchRequest>();
+            private bool running;
+
+            public static Dictionary<string, object> Enqueue(string viewName, HashedString mode, bool allowSound, bool screenshot, string fileName, int waitFrames)
+            {
+                EnsureInstance();
+                var request = new OverlaySwitchRequest
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    ViewName = viewName,
+                    Mode = mode,
+                    AllowSound = allowSound,
+                    Screenshot = screenshot,
+                    WaitFrames = waitFrames
+                };
+                if (screenshot)
+                {
+                    request.Cleanup = CleanupTemporaryScreenshots(1);
+                    request.ScreenshotPath = PrepareScreenshotPath(fileName, viewName);
+                }
+
+                int queuePosition = instance.requests.Count + 1;
+                instance.requests.Enqueue(request);
+                if (!instance.running)
+                    instance.StartCoroutine(instance.ProcessQueue());
+
+                return new Dictionary<string, object>
+                {
+                    ["id"] = request.Id,
+                    ["position"] = queuePosition,
+                    ["running"] = instance.running,
+                    ["screenshot"] = screenshot ? (object)new Dictionary<string, object>
+                    {
+                        ["path"] = request.ScreenshotPath,
+                        ["readyAfterFrames"] = waitFrames + 1,
+                        ["cycle"] = GameUtil.GetCurrentCycle(),
+                        ["screen"] = new { width = Screen.width, height = Screen.height },
+                        ["cleanup"] = request.Cleanup
+                    } : null
+                };
+            }
+
+            private static void EnsureInstance()
+            {
+                if (instance != null)
+                    return;
+
+                var obj = new GameObject("OniMcp_OverlaySwitchQueue");
+                UnityEngine.Object.DontDestroyOnLoad(obj);
+                instance = obj.AddComponent<OverlaySwitchQueue>();
+            }
+
+            private IEnumerator ProcessQueue()
+            {
+                running = true;
+                while (requests.Count > 0)
+                {
+                    var request = requests.Dequeue();
+                    ApplyOverlayMode(request.Mode, request.AllowSound);
+
+                    if (request.Screenshot)
+                    {
+                        for (int i = 0; i < request.WaitFrames; i++)
+                            yield return null;
+                        ScreenCapture.CaptureScreenshot(request.ScreenshotPath);
+                        yield return null;
+                    }
+                    else
+                    {
+                        yield return null;
+                    }
+                }
+                running = false;
+            }
+        }
+
+        private static void ApplyOverlayMode(HashedString mode, bool allowSound)
+        {
+            var overlay = OverlayScreen.Instance;
+            if (overlay == null)
+                return;
+
+            overlay.ToggleOverlay(mode, allowSound);
+            if (Game.Instance != null)
+                Game.Instance.ForceOverlayUpdate(true);
+        }
+
+        private static string PrepareScreenshotPath(string fileName, string viewName)
+        {
+            string dir = ScreenshotDirectory;
+            Directory.CreateDirectory(dir);
+            if (string.IsNullOrEmpty(fileName))
+                fileName = $"cycle_{GameUtil.GetCurrentCycle()}_{NormalizeScreenshotName(viewName)}_{System.DateTime.UtcNow:yyyyMMdd_HHmmss_fff}_{Guid.NewGuid().ToString("N").Substring(0, 8)}.png";
+            string path = Path.Combine(dir, Path.GetFileName(fileName));
+            if (!path.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                path += ".png";
+            return path;
+        }
+
+        private static string NormalizeScreenshotName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "overlay";
+            var chars = value.Trim().ToLowerInvariant()
+                .Select(c => char.IsLetterOrDigit(c) ? c : '_')
+                .ToArray();
+            return new string(chars);
         }
 
         private static Dictionary<string, object> SaveScreenshot(string fileName)

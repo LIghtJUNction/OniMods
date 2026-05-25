@@ -142,8 +142,9 @@ The current implementation includes 330+ tools, 120+ fixed resources, and 100+ r
 | Area | Example tools | Purpose |
 |------|---------------|---------|
 | Server and catalog | `server_status`, `tools_manifest`, `tools_search`, `tools_guide` | Check service state, search tools, route goals to tool chains |
+| Mechanics knowledge | `guide_mechanics_query`, `database_query` | Query curated player-tested formulas and cross-check the in-game codex |
 | Game control | `game_pause`, `game_resume`, `game_set_speed`, `game_save` | Pause, resume, change speed, save |
-| Camera and screenshots | `camera_move`, `camera_switch_view`, `game_screenshot` | Move camera, switch overlays, capture screenshots |
+| Camera and screenshots | `camera_move`, `camera_switch_view`, `game_screenshot` | Move camera and switch overlays; overlay screenshots are queued until rendering catches up |
 | World reading | `world_text_map`, `world_area_snapshot`, `world_cell_info` | Text maps, area snapshots, cell details |
 | Area management | `area_define`, `area_get`, `area_blocks`, `area_merge` | Define and reuse map regions |
 | Agent pointer | `agent_pointer_aim_cell`, `agent_pointer_user_mouse_get`, `agent_pointer_say`, `agent_pointer_left_click` | Execute click-based actions, read the user's mouse cell, and show pointer speech bubbles |
@@ -155,7 +156,7 @@ The current implementation includes 330+ tools, 120+ fixed resources, and 100+ r
 | Audit and coverage | `tools_player_action_coverage`, `tools_static_audit`, `side_screen_surfaces_audit` | Inspect tool coverage and gaps |
 | Batch and planning | `tools_call_many`, `agent_program_execute`, `edit_mark_request_list` | Batch calls, conditional/loop flow scripts, and player edit marks |
 
-For `agent_pointer_*`, `agentId` is a logical pointer name scoped to the current MCP session. If omitted, the session's default `agent` pointer is used. The same `agentId` in different client sessions does not share state; default labels include the client name and a short session prefix. Use `mcp_client_capabilities` to inspect current sessions and client info. Use `agent_pointer_clear` to delete a pointer and its jump points when it is no longer needed.
+For `agent_pointer_*`, `agentId` is a global logical pointer name. Omitting it uses the default `agent` pointer. The same `agentId` reuses one pointer across MCP sessions, so client reconnects do not leave duplicate pointers. For multi-step work, create/read a short stable pointer first, such as `planner` or `builder`, then pass the same `agentId` on every pointer call. For visible pointer actions, prefer adding `displayText` so the pointer tells the player what is being aimed, selected, or executed. Use different `agentId` values for parallel pointers. Use `agent_pointer_clear` to delete a pointer and its jump points when it is no longer needed. Pointers are hidden automatically on the main menu or while no game world is loaded.
 
 ### Common Resources
 
@@ -176,6 +177,7 @@ For `agent_pointer_*`, `agentId` is a logical pointer name scoped to the current
 | `oni://buildings/defs` | Buildable building definitions |
 | `oni://tools/manifest` | Tool manifest |
 | `oni://tools/guide` | Goal-oriented tool-chain guide |
+| `oni://guide/mechanics` | Mechanics, formulas, and edge-condition notes |
 
 ### Built-In Prompts
 

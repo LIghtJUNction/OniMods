@@ -25,8 +25,8 @@ fn pascal_case(input: &str) -> String {
 }
 
 fn replace_in_file(path: &PathBuf, replacements: &[(String, String)]) -> Result<()> {
-    let content = fs::read_to_string(path)
-        .with_context(|| format!("读取文件失败：{}", path.display()))?;
+    let content =
+        fs::read_to_string(path).with_context(|| format!("读取文件失败：{}", path.display()))?;
     let mut new_content = content.clone();
     for (old, new) in replacements {
         new_content = new_content.replace(old, new);
@@ -78,8 +78,7 @@ pub fn run(
     let old_csproj = mod_dir.join("OniModTemplate.csproj");
     let new_csproj = mod_dir.join(format!("{}.csproj", namespace));
     if old_csproj.exists() {
-        fs::rename(&old_csproj, &new_csproj)
-            .with_context(|| format!("重命名 .csproj 失败"))?;
+        fs::rename(&old_csproj, &new_csproj).with_context(|| format!("重命名 .csproj 失败"))?;
     }
 
     // 3. 修改 .csproj（先替换完整特定字符串，再替换通用名称）
@@ -97,7 +96,7 @@ pub fn run(
             format!("<ModStaticID>{}</ModStaticID>", static_id),
         ),
         (
-            "<ModVersion>0.1.4</ModVersion>".to_string(),
+            "<ModVersion>0.1.5</ModVersion>".to_string(),
             format!("<ModVersion>{}</ModVersion>", mod_version),
         ),
         (
@@ -134,7 +133,10 @@ pub fn run(
             &[
                 ("# OniModTemplate".to_string(), format!("# {}", name)),
                 ("OniModTemplate/".to_string(), format!("{}/", namespace)),
-                ("OniModTemplate.csproj".to_string(), format!("{}.csproj", namespace)),
+                (
+                    "OniModTemplate.csproj".to_string(),
+                    format!("{}.csproj", namespace),
+                ),
             ],
         )?;
     }
@@ -143,10 +145,7 @@ pub fn run(
     let config_path = cwd.join(CONFIG_FILE);
     if config_path.exists() {
         let content = fs::read_to_string(&config_path)?;
-        let entry = format!(
-            "\n[mods.{}]\npath = \"mods/{}\"\n",
-            name, name
-        );
+        let entry = format!("\n[mods.{}]\npath = \"mods/{}\"\n", name, name);
         let new_content = format!("{}{}", content.trim_end(), entry);
         fs::write(&config_path, new_content)
             .with_context(|| format!("更新 {} 失败", CONFIG_FILE))?;
@@ -174,8 +173,9 @@ fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<()> {
         if path.is_dir() {
             copy_dir_all(&path, &dest)?;
         } else {
-            fs::copy(&path, &dest)
-                .with_context(|| format!("复制文件失败：{} -> {}", path.display(), dest.display()))?;
+            fs::copy(&path, &dest).with_context(|| {
+                format!("复制文件失败：{} -> {}", path.display(), dest.display())
+            })?;
         }
     }
     Ok(())
