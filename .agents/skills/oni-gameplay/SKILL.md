@@ -60,7 +60,7 @@ Mode transitions: Diagnostic → Planning → Execution → Monitoring. If Execu
 ### Read vs Write vs Execute
 
 - **Read** (`colony_*`, `dupes_*`, `resources_*`, `world_*`, `power_summary`, `rooms_list`) → 获取状态，无副作用，可缓存
-- **Write** (`set_personal_priority`, `set_schedule_block`, `set_storage_filter`) → 修改配置，需 `confirm=true`（medium risk）
+- **Write** (`set_personal_priority`, `schedule_set_block`, `set_storage_filter`) → 修改配置，需 `confirm=true`（medium risk）
 - **Execute** (`game_pause`, `camera_move`, `orders_dig`, `buildings_deconstruct`) → 对游戏下达动作，dangerous 需 `confirm=true`
 
 Mode is inferred from tool name: `get_*` / `list_*` → read; `set_*` / `configure_*` → write; `move_*` / `pause_*` / `focus_*` → execute.
@@ -83,6 +83,14 @@ Resource URIs are idempotent and cacheable. Tools with parameters are not. Promp
 | "Is this tool safe?" | `tools_static_audit` |
 
 `tools_manifest` exposes ~60 core tools by default; `tools_search detail=full` reveals the complete ~320 tool registry. Use `detail=brief` for low-token discovery.
+
+### Anti-Loop Guardrails
+
+- Do not call the same read tool with identical arguments twice in a row. If the first result is insufficient, name the missing field and switch to a targeted tool, `tools_search`, or a user question.
+- Do not substitute a nearby-sounding tool for a different job. Example: `dupes_status_check` is for health/pathing, not names, attributes, or batch rename.
+- Before using a tool name that is not visible in the current tool set, call `tools_search query=<action>` or `tools_manifest group=<category>` and follow the returned schema.
+- Keep simple requests simple: a one-step configuration task should not trigger colony snapshots, maps, screenshots, or unrelated audits unless the result depends on them.
+- After any zero-effect write/execute result (`marked=0`, no changed rows, missing target), do not repeat the same call. Read the result hint, re-read the smallest relevant context, then change tool or parameters.
 
 ## Observation: Camera, Views, Screenshots, Maps
 
@@ -277,7 +285,7 @@ tools_call_many
   items:
     - { t: set_personal_priority, a: { id: 1, choreGroup: Dig, priority: 4 } }
     - { t: set_personal_priority, a: { id: 2, choreGroup: Build, priority: 4 } }
-    - { t: set_schedule_block,   a: { scheduleId: 0, blockIndex: 3, activity: Sleep } }
+    - { t: schedule_set_block,   a: { schedule: "Default", hour: 3, group: Sleep } }
     ...
   requireAllValid: true
   stopOnError: true
@@ -369,9 +377,9 @@ Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools 
 Always read current state before modifying:
 
 ```
-BAD:  directly call set_schedule_block with new values
-GOOD: schedules_list → identify target scheduleId/blockIndex
-      set_schedule_block → schedules_list to verify
+BAD:  directly call schedule_set_block with new values
+GOOD: schedule_list → identify target schedule name/hour/group
+      schedule_set_block → schedule_list to verify
 ```
 
 ### Pattern B: Area-Based Operations
@@ -386,7 +394,7 @@ GOOD: schedules_list → identify target scheduleId/blockIndex
 
 ### Pattern C: Differential Updates
 
-1. Read full list (`dupes_list`, `schedules_list`, `buildings_summary`)
+1. Read full list (`dupes_list`, `schedule_list`, `buildings_summary`)
 2. Compute delta locally (don't diff on server)
 3. Send only changes via `tools_call_many`
 
@@ -443,7 +451,7 @@ For construction, choose prefab/material with read tools, aim the pointer at the
 ### Tool Risk Levels
 - **none**: read-only, cacheable, retry-safe (`colony_status`, `dupes_list`, `world_text_map`)
 - **low**: minor state change (`camera_move`, `game_pause`, `set_light_color`)
-- **medium**: config changes (`set_personal_priority`, `set_schedule_block`, `set_threshold`) — confirm recommended
+- **medium**: config changes (`set_personal_priority`, `schedule_set_block`, `set_threshold`) — confirm recommended
 - **dangerous**: map-altering (`orders_dig`, `orders_deconstruct`, `orders_sweep`, `orders_cut_conduits`) — confirm required
 - `orders_sweep_area` is solid debris/storage cleanup only; liquid cleanup is `orders_mop_area`.
 
@@ -485,8 +493,8 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 | Category | Read | Write | Execute |
 |----------|------|-------|---------|
 | **colony** | `colony_status`, `colony_diagnostics`, `colony_alerts`, `colony_report`, `colony_summary`, `diagnostic_settings_list`, `notifications_list` | `set_diagnostic_settings` | `click_notification`, `dismiss_notification` |
-| **dupes** | `dupes_list`, `dupes_detail`, `dupes_attributes`, `dupes_needs`, `dupes_priorities_list`, `dupes_skills`, `equipment`, `direct_commands`, `todos` | `set_personal_priority`, `batchSetPersonalPriorities`, `learn_skill`, `set_hat`, `rename_dupe`, `set_assignable`, `set_assignable_slot_item` | `move_dupe`, `move_dupes_batch` |
-| **schedules** | `schedules_list` | `create_schedule`, `set_schedule_block`, `assign_dupe_schedule`, `optimize_schedules` | — |
+| **dupes** | `dupes_list`, `dupes_detail`, `dupes_attributes`, `dupes_needs`, `dupes_priorities_list`, `dupes_skills`, `equipment`, `direct_commands`, `todos` | `set_personal_priority`, `batchSetPersonalPriorities`, `learn_skill`, `set_hat`, `dupes_rename`/`rename_dupe`, `dupes_auto_rename`, `set_assignable`, `set_assignable_slot_item` | `move_dupe`, `move_dupes_batch` |
+| **schedules** | `schedule_list` | `schedule_create`, `schedule_set_block`, `schedule_assign_dupe`, `schedule_optimize` | — |
 | **resources** | `resources_inventory`, `resources_food`, `resources_pins`, `storage_list`, `storage_detail`, `diet_status` | `set_resource_pin`, `set_storage_filter`, `set_diet_food`, `apply_diet_policy` | — |
 | **buildings** | `buildings_list`, `buildings_summary`, `buildings_search_defs`, `buildings_config_list`, `artables_list`, `lights_list`, `pixel_packs_list` | `set_building_enabled`, `configure_manual_delivery`, `copy_settings`, `set_artable_stage`, `set_light_color`, `set_pixel_pack_color` | — |
 | **orders** | `priorities_list` | `set_building_priority`, `set_priority_area`, `set_building_toggle` | `agent_pointer_left_click`, `agent_pointer_hold_left`, `buildings_deconstruct`, `orders_sweep_area`, `orders_dig_area`, `orders_mop_area`, `orders_disinfect_area`, `orders_cancel_area`, `orders_harvest_area`, `critters_capture`, `conduits_empty_area`, `conduits_cut` |
@@ -528,7 +536,7 @@ Prompts return a structured text that tells you which resources and tools to cal
 | `oni://world/elements` | `world_element_summary` | Element mass/temp |
 | `oni://world/text-map` | `world_text_map` | Terrain scan |
 | `oni://dupes` | `dupes_list` | Duplicant roster |
-| `oni://schedules` | `schedules_list` | Schedule definitions |
+| `oni://schedules` | `schedule_list` | Schedule definitions |
 | `oni://research/status` | `research_status` | Tech progress |
 | `oni://tools/manifest` | `tools_manifest` | Tool catalog |
 | `oni://tools/search` | `tools_search` | Filtered discovery |

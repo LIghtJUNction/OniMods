@@ -33,7 +33,7 @@ game_pause
 
 ## 必问用户问题
 
-重命名复制人前，询问用户命名风格。
+重命名复制人前，询问用户命名风格。独立的“批量重命名复制人”请求走重命名快路径，不执行完整开局快照、日程、消毒或环境侦察。
 
 只简短询问一次。示例：
 
@@ -47,6 +47,13 @@ game_pause
 ```
 dupes_auto_rename style=<candidate> apply=false
 ```
+
+## 工具调用纪律
+
+- 同一个只读工具不要用同一参数连续调用两次。第二次前必须说明缺失了什么，并改用更合适的工具或停止询问用户。
+- 不要用 `dupes_status_check` 代替名单、属性或重命名工具；它只用于健康/可达性分诊。
+- 如果当前工具列表里没有看到目标工具，先用 `tools_search query=<tool or action>` 或 `tools_manifest group=<group>` 发现 schema，再调用；不要猜旧工具名。
+- 简单配置任务只读取完成该任务必需的信息。不要为了重命名读取地图、截图、食物、电力或环境。
 
 ## 开局流程
 
@@ -86,7 +93,24 @@ schedule_list
 
 ### 3. 按属性重命名复制人
 
-读取足够的复制人上下文：
+独立批量重命名请求使用快路径：
+
+```
+game_pause
+# 如果用户还没选风格，先问一次并停止等待回答。
+dupes_auto_rename style=<user style> apply=false
+# 用户确认预览后：
+dupes_auto_rename style=<user style> apply=true
+dupes_list
+```
+
+默认不先调用 `dupes_list`、`dupes_attributes` 或 `dupes_skills_list`，因为 `dupes_auto_rename apply=false` 会给出预览。只有这些情况才补读上下文：
+
+- 用户要求解释每个岗位判断。
+- 预览结果明显不合理或缺少复制人。
+- 用户要求手动指定某些复制人的名字。
+
+需要解释岗位或手动命名时，读取足够的复制人上下文：
 
 ```
 dupes_list
@@ -111,6 +135,7 @@ dupes_auto_rename style=<user style> apply=true
 或显式重命名：
 
 ```
+# 先用 tools_search 确认可用工具名；当前常见名称是 dupes_rename 或 rename_dupe。
 dupes_rename id=<dupeId> newName=<name>
 ```
 

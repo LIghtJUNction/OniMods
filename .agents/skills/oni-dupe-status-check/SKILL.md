@@ -31,6 +31,13 @@ dupes_status_check targetX=<x> targetY=<y> targetWorldId=<worldId> radius=10
 
 除非 `dupes_status_check` 缺少必要细节，否则不要从 `dupes_detail`、`dupes_needs`、截图或大范围地图扫描开始。
 
+## 边界和防循环
+
+- 本技能只处理健康、路径、被困、任务阻塞和救援分诊；复制人重命名、属性分工、日程设置不使用本技能。
+- 不要把 `dupes_status_check` 当作通用复制人列表工具。需要名单用 `dupes_list`，需要属性用 `dupes_attributes`，需要重命名用 `dupes_auto_rename`/`dupes_rename`（先 `tools_search` 确认 schema）。
+- 同一参数的 `dupes_status_check` 最多调用一次。若结果不够，按返回的 `scanRect`、`nextRead` 或缺失字段改用针对性读取。
+- 如果没有复制人被标记，直接报告“未发现风险”，不要追加地图、截图或属性读取。
+
 ## 后续读取
 
 如果 `flagged > 0`，只检查被标记的复制人：
