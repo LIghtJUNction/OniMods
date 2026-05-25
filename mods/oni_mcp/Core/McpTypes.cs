@@ -253,7 +253,7 @@ namespace OniMcp.Core
         public string Description { get; set; }
 
         [JsonProperty("enum")]
-        public List<string> Enum { get; set; }
+        public List<object> Enum { get; set; }
     }
 
     /// <summary>

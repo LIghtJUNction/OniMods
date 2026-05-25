@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
@@ -488,7 +489,7 @@ namespace OniMcp.Tools
                         {
                             Type = param.Value.Type,
                             Description = param.Value.Description,
-                            Enum = param.Value.EnumValues
+                            Enum = param.Value.SchemaEnumValues
                         };
                         if (param.Value.Required)
                             required.Add(param.Key);
@@ -559,6 +560,42 @@ namespace OniMcp.Tools
         public string Description { get; set; }
         public bool Required { get; set; }
         public List<string> EnumValues { get; set; }
+
+        public List<object> SchemaEnumValues
+        {
+            get
+            {
+                if (EnumValues == null)
+                    return null;
+
+                var values = new List<object>();
+                foreach (var value in EnumValues)
+                {
+                    if (Type == "integer")
+                    {
+                        int intValue;
+                        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
+                        {
+                            values.Add(intValue);
+                            continue;
+                        }
+                    }
+                    else if (Type == "number")
+                    {
+                        double numberValue;
+                        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out numberValue))
+                        {
+                            values.Add(numberValue);
+                            continue;
+                        }
+                    }
+
+                    values.Add(value);
+                }
+
+                return values;
+            }
+        }
     }
 
     internal static class ToolMetadata

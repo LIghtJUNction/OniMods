@@ -97,7 +97,7 @@ pub fn run(
             format!("<ModStaticID>{}</ModStaticID>", static_id),
         ),
         (
-            "<ModVersion>0.1.0</ModVersion>".to_string(),
+            "<ModVersion>0.1.4</ModVersion>".to_string(),
             format!("<ModVersion>{}</ModVersion>", mod_version),
         ),
         (

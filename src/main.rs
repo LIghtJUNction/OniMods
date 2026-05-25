@@ -44,7 +44,7 @@ enum Commands {
         #[arg(short, long)]
         desc: Option<String>,
         /// Mod 版本号
-        #[arg(long, default_value = "0.1.0")]
+        #[arg(long, default_value = "0.1.4")]
         mod_version: String,
     },
     /// 构建 Mod（默认 Debug，加 --release 为 Release）

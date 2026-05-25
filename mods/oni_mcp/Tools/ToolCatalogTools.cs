@@ -260,7 +260,7 @@ namespace OniMcp.Tools
                             ["type"] = kv.Value.Type,
                             ["description"] = kv.Value.Description,
                             ["required"] = kv.Value.Required,
-                            ["enum"] = kv.Value.EnumValues
+                            ["enum"] = kv.Value.SchemaEnumValues
                         }),
                 ["exampleArguments"] = ExampleArguments(tool)
             };
