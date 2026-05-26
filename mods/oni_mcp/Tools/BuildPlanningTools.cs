@@ -135,6 +135,149 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool FindPlacementCandidates()
+        {
+            return new McpTool
+            {
+                Name = "build_placement_candidates",
+                Group = "buildings",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "placement_candidates", "footprint_candidates", "anchor_candidates", "build_anchor_candidates" },
+                Tags = new List<string> { "buildings", "preview", "footprint", "placement", "anchor", "candidate", "layout", "建造", "候选", "空位", "支撑", "碰撞" },
+                Description = "在指定区域内扫描某个建筑的可放置锚点，直接返回候选坐标、footprint 预检、支撑、冲突和优先级评分；只读。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["prefabId"] = new McpToolParameter { Type = "string", Description = "建筑 prefabId，例如 MedicalCot、Tile、Wire", Required = true },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；提供后可省略 x1/y1/x2/y2/worldId", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "区域起点/左下 X；留空时默认当前相机视野附近", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "区域起点/左下 Y；留空时默认当前相机视野附近", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "区域终点/右上 X；留空时默认当前相机视野附近", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "区域终点/右上 Y；留空时默认当前相机视野附近", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只考虑已揭示格子，默认 true", Required = false },
+                    ["allowUnsupported"] = new McpToolParameter { Type = "boolean", Description = "是否允许 OnFloor 建筑缺少支撑时仍返回候选，默认 false", Required = false },
+                    ["material"] = new McpToolParameter { Type = "string", Description = "可选建材；留空或 auto 时使用自动选择", Required = false },
+                    ["facade"] = new McpToolParameter { Type = "string", Description = "可选建筑外观/permit id", Required = false },
+                    ["orientation"] = new McpToolParameter { Type = "string", Description = "可选朝向，默认 Neutral", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "建造优先级 1..9，默认 5", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个候选，默认 8，最大 50", Required = false },
+                    ["includeRejected"] = new McpToolParameter { Type = "boolean", Description = "是否在没有足够可行候选时补充失败候选，默认 false", Required = false },
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最大扫描格子数，默认 2500，硬上限 2500", Required = false }
+                },
+                Handler = args =>
+                {
+                    if (Game.Instance == null)
+                        return CallToolResult.Error("Game not initialized");
+
+                    string prefabId = args["prefabId"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(prefabId))
+                        return CallToolResult.Error("prefabId is required");
+
+                    var def = Assets.GetBuildingDef(prefabId);
+                    if (def == null)
+                        return CallToolResult.Error("Building def not found");
+
+                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 2500, 2500));
+                    var rect = ToolUtil.GetRect(args);
+                    int width = rect["x2"] - rect["x1"] + 1;
+                    int height = rect["y2"] - rect["y1"] + 1;
+                    int cells = width * height;
+                    if (cells > maxCells)
+                        return CallToolResult.Error($"Area too large: {width}x{height}={cells} cells, maxCells={maxCells}");
+
+                    int worldId = ToolUtil.ResolveWorldId(args);
+                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 8, 50));
+                    bool visibleOnly = ToolUtil.GetBool(args, "visibleOnly", true);
+                    bool allowUnsupported = ToolUtil.GetBool(args, "allowUnsupported", false);
+                    bool includeRejected = ToolUtil.GetBool(args, "includeRejected", false);
+
+                    var scanArgs = (JObject)args.DeepClone();
+                    scanArgs["dryRun"] = true;
+                    scanArgs["worldId"] = worldId;
+                    scanArgs["allowUnsupported"] = allowUnsupported;
+
+                    var validCandidates = new List<PlacementCandidate>();
+                    var rejectedCandidates = new List<PlacementCandidate>();
+                    int scannedAnchors = 0;
+                    int validCount = 0;
+                    int warningCount = 0;
+                    int rejectedCount = 0;
+
+                    for (int y = rect["y1"]; y <= rect["y2"]; y++)
+                    {
+                        for (int x = rect["x1"]; x <= rect["x2"]; x++)
+                        {
+                            scannedAnchors++;
+                            var previewArgs = (JObject)scanArgs.DeepClone();
+                            var preview = TryPlanOne(prefabId, x, y, previewArgs);
+                            bool valid = GetDictionaryBool(preview, "valid");
+                            bool warningOnly = valid && GetNestedBool(preview, "support", "warningOnly");
+                            int score = ScorePlacementCandidate(preview, valid, warningOnly);
+
+                            var candidate = new PlacementCandidate
+                            {
+                                Score = score,
+                                Status = valid ? (warningOnly ? "warning" : "valid") : "invalid",
+                                Preview = preview
+                            };
+                            AddAnchorInfo(candidate.Anchor, args, x, y);
+
+                            if (valid)
+                            {
+                                validCount++;
+                                if (warningOnly)
+                                    warningCount++;
+                                validCandidates.Add(candidate);
+                            }
+                            else
+                            {
+                                rejectedCount++;
+                                rejectedCandidates.Add(candidate);
+                            }
+                        }
+                    }
+
+                    var selected = validCandidates
+                        .OrderByDescending(item => item.Score)
+                        .ThenBy(item => item.AnchorY)
+                        .ThenBy(item => item.AnchorX)
+                        .Take(limit)
+                        .ToList();
+
+                    if (selected.Count < limit && (includeRejected || validCandidates.Count == 0))
+                    {
+                        selected.AddRange(rejectedCandidates
+                            .OrderByDescending(item => item.Score)
+                            .ThenBy(item => item.AnchorY)
+                            .ThenBy(item => item.AnchorX)
+                            .Take(limit - selected.Count));
+                    }
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["v"] = 1,
+                        ["prefabId"] = prefabId,
+                        ["name"] = ToolUtil.CleanName(def.Name),
+                        ["worldId"] = worldId,
+                        ["rect"] = new[] { rect["x1"], rect["y1"], rect["x2"], rect["y2"] },
+                        ["size"] = new[] { width, height },
+                        ["scannedAnchors"] = scannedAnchors,
+                        ["validCount"] = validCount,
+                        ["warningCount"] = warningCount,
+                        ["rejectedCount"] = rejectedCount,
+                        ["limit"] = limit,
+                        ["includeRejected"] = includeRejected,
+                        ["candidates"] = selected.Select(item => item.ToDictionary()).ToList(),
+                        ["bestCandidate"] = selected.Count > 0 ? (object)selected[0].ToDictionary() : null,
+                        ["next"] = selected.Count == 0
+                            ? "No viable anchor found. Use build_preview on a tighter rect or raise allowUnsupported/material settings."
+                            : "Use build_preview on the top candidate, then build_area with dryRun=true or confirm=true if you want to place it."
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
         public static McpTool BuildArea()
         {
             var parameters = BuildPlacementParameters(includeConfirm: true, includeArea: true);
@@ -160,7 +303,7 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "build_place_area", "build_blueprints" },
                 Tags = new List<string> { "buildings", "batch", "area", "footprint", "建造", "批量" },
-                Description = "按 anchor 列表或区域批量放置建造蓝图。执行前会预检 footprint、支撑、材料和明显碰撞；dryRun=true 只返回预览。",
+                Description = "按 anchor 列表或区域批量放置建造蓝图。执行前会预检 footprint、支撑、材料和明显碰撞；遇到可挖自然固体时默认先标记挖掘，dryRun=true 只返回预览。",
                 Parameters = parameters,
                 Handler = args =>
                 {
@@ -192,17 +335,28 @@ namespace OniMcp.Tools
                     var preflightSupport = new HashSet<int>();
                     var previews = new List<Dictionary<string, object>>();
                     var validAnchors = new List<CellCoord>();
+                    var actionableAnchors = new List<CellCoord>();
+                    var autoDigAnchors = new List<CellCoord>();
                     foreach (var anchor in anchors)
                     {
                         var preview = TryPlanOne(prefabId, anchor.x, anchor.y, preflightArgs, preflightSupport);
                         bool valid = preview.ContainsKey("valid") && (bool)preview["valid"];
                         if (valid)
+                        {
                             validAnchors.Add(anchor);
+                            actionableAnchors.Add(anchor);
+                        }
+                        else if (IsAutoDiggableFailure(preview))
+                        {
+                            autoDigAnchors.Add(anchor);
+                            actionableAnchors.Add(anchor);
+                        }
                         previews.Add(preview);
                     }
 
                     var failedPreviews = previews.Where(item => !(item.ContainsKey("valid") && (bool)item["valid"])).ToList();
-                    if (dryRun || (failedPreviews.Count > 0 && !allowPartial))
+                    var hardFailedPreviews = previews.Where(item => !(item.ContainsKey("valid") && (bool)item["valid"]) && !IsAutoDiggableFailure(item)).ToList();
+                    if (dryRun || (hardFailedPreviews.Count > 0 && !allowPartial))
                     {
                         return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                         {
@@ -210,24 +364,35 @@ namespace OniMcp.Tools
                             ["dryRun"] = dryRun,
                             ["committed"] = false,
                             ["valid"] = failedPreviews.Count == 0,
+                            ["actionable"] = hardFailedPreviews.Count == 0,
                             ["anchorCount"] = anchors.Count,
                             ["validAnchors"] = validAnchors.Count,
+                            ["autoDiggableAnchors"] = autoDigAnchors.Count,
                             ["failed"] = failedPreviews.Count,
+                            ["hardFailed"] = hardFailedPreviews.Count,
                             ["errors"] = failedPreviews.Take(50).ToList(),
                             ["previews"] = previews
                         }, McpJsonUtil.Settings));
                     }
 
                     var actualSupport = new HashSet<int>();
+                    var autoDigContext = AutoDigContext.FromArgs(args);
                     var results = new List<Dictionary<string, object>>();
                     int planned = 0;
                     int failed = 0;
-                    foreach (var anchor in allowPartial ? validAnchors : anchors)
+                    int autoDigQueued = 0;
+                    int autoDigAlreadyMarked = 0;
+                    foreach (var anchor in allowPartial ? actionableAnchors : anchors)
                     {
-                        var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport);
+                        var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport, autoDigContext);
                         bool ok = result.ContainsKey("planned") && (bool)result["planned"];
                         if (ok)
                             planned++;
+                        else if (IsAutoDigResult(result))
+                        {
+                            autoDigQueued += GetAutoDigInt(result, "marked");
+                            autoDigAlreadyMarked += GetAutoDigInt(result, "alreadyMarked");
+                        }
                         else
                             failed++;
                         results.Add(result);
@@ -237,17 +402,165 @@ namespace OniMcp.Tools
                     {
                         ["prefabId"] = prefabId,
                         ["dryRun"] = false,
-                        ["committed"] = planned > 0,
+                        ["committed"] = planned > 0 || autoDigQueued > 0,
                         ["allowPartial"] = allowPartial,
                         ["anchorCount"] = anchors.Count,
-                        ["attempted"] = allowPartial ? validAnchors.Count : anchors.Count,
+                        ["attempted"] = allowPartial ? actionableAnchors.Count : anchors.Count,
                         ["planned"] = planned,
-                        ["failed"] = failed + (allowPartial ? failedPreviews.Count : 0),
-                        ["preflightErrors"] = failedPreviews.Take(50).ToList(),
+                        ["autoDigQueued"] = autoDigQueued,
+                        ["autoDigAlreadyMarked"] = autoDigAlreadyMarked,
+                        ["autoDigLimitReached"] = autoDigContext.LimitReached,
+                        ["pendingBuildAfterDig"] = autoDigQueued + autoDigAlreadyMarked,
+                        ["failed"] = failed + (allowPartial ? hardFailedPreviews.Count : 0),
+                        ["preflightErrors"] = hardFailedPreviews.Take(50).ToList(),
                         ["results"] = results
                     }, McpJsonUtil.Settings));
                 }
             };
+        }
+
+        private static Dictionary<string, object> BuildPlacementCandidate(Dictionary<string, object> preview, int x, int y, JObject args, int score, string status)
+        {
+            var candidate = new Dictionary<string, object>
+            {
+                ["score"] = score,
+                ["status"] = status,
+                ["anchor"] = new Dictionary<string, object>
+                {
+                    ["x"] = x,
+                    ["y"] = y
+                },
+                ["preview"] = preview,
+                ["placement"] = GetObject(preview, "placement"),
+                ["footprint"] = GetObjectList(preview, "footprint"),
+                ["support"] = GetObject(preview, "support"),
+                ["materialSelection"] = GetObject(preview, "materialSelection"),
+                ["facade"] = preview.ContainsKey("facade") ? preview["facade"] : null,
+                ["error"] = preview.ContainsKey("error") ? preview["error"] : null
+            };
+
+            WorldEditor.AddRelativeInfo(candidate["anchor"] as Dictionary<string, object>, args, x, y);
+            return candidate;
+        }
+
+        private static int ScorePlacementCandidate(Dictionary<string, object> preview, bool valid, bool warningOnly)
+        {
+            if (!valid)
+            {
+                int invalidPenalty = 200;
+                if (preview != null && preview.ContainsKey("failureReason"))
+                {
+                    string reason = preview["failureReason"]?.ToString() ?? "";
+                    if (reason == "unsupported")
+                        invalidPenalty = 140;
+                    else if (reason == "unavailableMaterial")
+                        invalidPenalty = 160;
+                    else if (reason == "obstructed")
+                        invalidPenalty = 180;
+                }
+                return -invalidPenalty;
+            }
+
+            int score = 100;
+            var support = GetObject(preview, "support");
+            var footprint = GetObjectList(preview, "footprint");
+            var placement = GetObject(preview, "placement");
+            int width = GetInt(placement, "width");
+            int height = GetInt(placement, "height");
+
+            score -= Math.Max(0, footprint.Count - Math.Max(1, width * height)) * 2;
+
+            if (warningOnly)
+                score -= 10;
+
+            var missingSupport = GetObjectList(support, "missingSupportCells");
+            score -= missingSupport.Count * 12;
+
+            var obstructions = GetObjectList(preview, "obstructions");
+            score -= obstructions.Count * 25;
+
+            if (GetBool(support, "valid"))
+                score += 10;
+            if (!GetBool(support, "warningOnly"))
+                score += 5;
+
+            return score;
+        }
+
+        private static Dictionary<string, object> GetObject(Dictionary<string, object> dict, string key)
+        {
+            object value;
+            return dict != null && dict.TryGetValue(key, out value) ? value as Dictionary<string, object> : null;
+        }
+
+        private static List<Dictionary<string, object>> GetObjectList(Dictionary<string, object> dict, string key)
+        {
+            object value;
+            return dict != null && dict.TryGetValue(key, out value) ? value as List<Dictionary<string, object>> : null ?? new List<Dictionary<string, object>>();
+        }
+
+        private static bool GetBool(Dictionary<string, object> dict, string key)
+        {
+            object value;
+            if (dict == null || !dict.TryGetValue(key, out value) || value == null)
+                return false;
+            bool parsed;
+            return bool.TryParse(value.ToString(), out parsed) && parsed;
+        }
+
+        private static bool GetDictionaryBool(Dictionary<string, object> dict, string key)
+        {
+            object value;
+            if (dict == null || !dict.TryGetValue(key, out value) || value == null)
+                return false;
+            bool parsed;
+            return bool.TryParse(value.ToString(), out parsed) && parsed;
+        }
+
+        private static bool GetNestedBool(Dictionary<string, object> dict, string parentKey, string childKey)
+        {
+            var parent = GetObject(dict, parentKey);
+            return GetBool(parent, childKey);
+        }
+
+        private static int GetInt(Dictionary<string, object> dict, string key)
+        {
+            object value;
+            if (dict == null || !dict.TryGetValue(key, out value) || value == null)
+                return 0;
+            int parsed;
+            return int.TryParse(value.ToString(), out parsed) ? parsed : 0;
+        }
+
+        private static bool IsAutoDiggableFailure(Dictionary<string, object> result)
+        {
+            var autoDig = GetObject(result, "autoDig");
+            return GetBool(autoDig, "available") && GetBool(autoDig, "needsRetryAfterDig");
+        }
+
+        private static bool IsAutoDigResult(Dictionary<string, object> result)
+        {
+            var autoDig = GetObject(result, "autoDig");
+            return GetBool(autoDig, "needsRetryAfterDig")
+                && (GetInt(autoDig, "marked") > 0 || GetInt(autoDig, "alreadyMarked") > 0);
+        }
+
+        private static int GetAutoDigInt(Dictionary<string, object> result, string key)
+        {
+            return GetInt(GetObject(result, "autoDig"), key);
+        }
+
+        private static void AddAnchorInfo(Dictionary<string, object> anchor, JObject args, int x, int y)
+        {
+            var area = WorldEditor.ResolveRelativeArea(args);
+            if (area == null)
+                return;
+
+            anchor["areaId"] = area.Id;
+            anchor["rx"] = x - area.X1;
+            anchor["ry"] = y - area.Y1;
+            anchor["origin"] = new[] { area.X1, area.Y1 };
+            anchor["coordMode"] = "relative";
         }
 
         internal static CallToolResult PlanAtPointer(JObject args)
@@ -315,14 +628,16 @@ namespace OniMcp.Tools
             var results = new List<Dictionary<string, object>>();
             var errors = new List<Dictionary<string, object>>();
             var plannedSupportCells = new HashSet<int>();
+            var autoDigContext = AutoDigContext.FromArgs(args);
             AgentPointerRegistry.BeginDrag(ToolSessionContext.SessionId, args["agentId"]?.ToString(), worldId, pointer.Cell, prefabId);
 
             int planned = 0;
             int valid = 0;
+            int autoDigQueued = 0;
             foreach (var cell in StraightLineCells(startX, startY, endX, endY))
             {
                 AgentPointerRegistry.UpdateDrag(ToolSessionContext.SessionId, args["agentId"]?.ToString(), Grid.XYToCell(cell.x, cell.y));
-                var result = TryPlanOne(prefabId, cell.x, cell.y, args, plannedSupportCells);
+                var result = TryPlanOne(prefabId, cell.x, cell.y, args, plannedSupportCells, autoDigContext);
                 bool ok = result.ContainsKey("planned") && (bool)result["planned"];
                 bool validPlacement = result.ContainsKey("valid") && (bool)result["valid"];
                 if (ok || (IsDryRun(args) && validPlacement))
@@ -331,6 +646,11 @@ namespace OniMcp.Tools
                     if (ok)
                         planned++;
                     RegisterSupportBlueprint(prefabId, cell.x, cell.y, plannedSupportCells);
+                }
+                else if (IsAutoDigResult(result))
+                {
+                    autoDigQueued += GetAutoDigInt(result, "marked");
+                    valid++;
                 }
                 else
                 {
@@ -356,6 +676,8 @@ namespace OniMcp.Tools
                 },
                 ["valid"] = valid,
                 ["planned"] = planned,
+                ["autoDigQueued"] = autoDigQueued,
+                ["autoDigLimitReached"] = autoDigContext.LimitReached,
                 ["failed"] = errors.Count,
                 ["errors"] = errors.Take(50).ToList(),
                 ["pointer"] = finalPointer.ToDictionary(),
@@ -363,7 +685,7 @@ namespace OniMcp.Tools
             }, McpJsonUtil.Settings));
         }
 
-        private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args, HashSet<int> plannedSupportCells = null)
+        private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args, HashSet<int> plannedSupportCells = null, AutoDigContext autoDigContext = null)
         {
             var def = Assets.GetBuildingDef(prefabId);
             if (def == null)
@@ -393,7 +715,13 @@ namespace OniMcp.Tools
             var placement = BuildPlacementDetails(def, x, y, worldId);
             var footprintResult = ValidateFootprint(placement);
             if (!footprintResult.Valid)
-                return ErrorResult(prefabId, x, y, footprintResult.Error, footprintResult.ToDictionary(placement));
+            {
+                var details = footprintResult.ToDictionary(placement);
+                var autoDig = TryAutoDigObstructions(placement, footprintResult, args, autoDigContext);
+                if (autoDig != null)
+                    details["autoDig"] = autoDig;
+                return ErrorResult(prefabId, x, y, footprintResult.Error, details);
+            }
 
             if (IsDryRun(args))
             {
@@ -409,6 +737,7 @@ namespace OniMcp.Tools
                     ["name"] = ToolUtil.CleanName(def.Name),
                     ["x"] = x,
                     ["y"] = y,
+                    ["anchor"] = AnchorDictionary(x, y, worldId),
                     ["worldId"] = worldId,
                     ["placement"] = placement.ToDictionary(),
                     ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
@@ -436,6 +765,7 @@ namespace OniMcp.Tools
                 ["name"] = ToolUtil.CleanName(def.Name),
                 ["x"] = x,
                 ["y"] = y,
+                ["anchor"] = AnchorDictionary(x, y, worldId),
                 ["worldId"] = worldId,
                 ["placement"] = placement.ToDictionary(),
                 ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
@@ -526,6 +856,8 @@ namespace OniMcp.Tools
                 ["orientation"] = new McpToolParameter { Type = "string", Description = "可选朝向，默认 Neutral", Required = false },
                 ["priority"] = new McpToolParameter { Type = "integer", Description = "建造优先级 1..9，默认 5", Required = false },
                 ["allowUnsupported"] = new McpToolParameter { Type = "boolean", Description = "默认 false；OnFloor 建筑无支撑时拒绝", Required = false },
+                ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true。建造 footprint 遇到可挖自然固体时，执行建造会先自动标记挖掘；挖完后需重试建造", Required = false },
+                ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "单次命令最多自动标记多少个挖掘格，默认 100，最大 500", Required = false },
                 ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，不生成蓝图", Required = false }
             };
 
@@ -825,12 +1157,20 @@ namespace OniMcp.Tools
                     continue;
                 if (!utility && Grid.Solid[cellInfo.Cell])
                 {
+                    bool diggable = IsNaturalDiggableSolidCell(cellInfo.Cell, placement.WorldId);
+                    bool alreadyMarked = Grid.Objects[cellInfo.Cell, (int)ObjectLayer.DigPlacer] != null;
                     result.Add(new Dictionary<string, object>
                     {
                         ["kind"] = "solid_cell",
                         ["x"] = cellInfo.X,
                         ["y"] = cellInfo.Y,
-                        ["reason"] = "target footprint contains solid terrain or constructed tile"
+                        ["cell"] = cellInfo.Cell,
+                        ["diggable"] = diggable,
+                        ["alreadyMarkedForDig"] = alreadyMarked,
+                        ["reasonCode"] = "solid_cell",
+                        ["reason"] = diggable
+                            ? "target footprint contains natural solid terrain that can be marked for digging"
+                            : "target footprint contains solid terrain or constructed tile that cannot be auto-dug"
                     });
                 }
             }
@@ -839,7 +1179,7 @@ namespace OniMcp.Tools
             foreach (var obstruction in ExistingBuildingFootprintObstructions(placement.WorldId, footprintCells))
             {
                 string id = obstruction.ContainsKey("id") ? obstruction["id"]?.ToString() : "";
-                if (IsUtilityPrefab(id))
+                if (utility || IsUtilityPrefab(id))
                     continue;
                 string key = obstruction["kind"] + "|" + id + "|" + obstruction["objectX"] + "|" + obstruction["objectY"] + "|" + obstruction["x"] + "|" + obstruction["y"];
                 if (seen.Add(key))
@@ -847,6 +1187,138 @@ namespace OniMcp.Tools
             }
 
             return result;
+        }
+
+        private static Dictionary<string, object> TryAutoDigObstructions(PlacementDetails placement, FootprintValidation footprintResult, JObject args, AutoDigContext context)
+        {
+            bool enabled = ToolUtil.GetBool(args, "autoDigObstructions", true);
+            if (!enabled || placement == null || footprintResult == null)
+                return null;
+            if (footprintResult.InvalidCells.Count > 0)
+                return null;
+
+            foreach (var obstruction in footprintResult.Obstructions)
+            {
+                if (!EqualsIgnoreCase(obstruction.ContainsKey("kind") ? obstruction["kind"]?.ToString() : null, "solid_cell"))
+                    return null;
+                object diggableValue;
+                bool diggable = obstruction.TryGetValue("diggable", out diggableValue)
+                    && diggableValue != null
+                    && bool.TryParse(diggableValue.ToString(), out bool parsed)
+                    && parsed;
+                if (!diggable)
+                    return null;
+            }
+
+            var targets = placement.Footprint
+                .Where(cell => IsNaturalDiggableSolidCell(cell.Cell, placement.WorldId))
+                .ToList();
+            if (targets.Count == 0)
+                return null;
+
+            bool dryRun = IsDryRun(args);
+            context = context ?? AutoDigContext.FromArgs(args);
+            var targetResults = new List<Dictionary<string, object>>();
+            int wouldMark = 0;
+            int marked = 0;
+            int alreadyMarked = 0;
+            int skipped = 0;
+            int failed = 0;
+            double kgTotal = 0;
+
+            if (!dryRun && DigTool.Instance == null)
+            {
+                return new Dictionary<string, object>
+                {
+                    ["enabled"] = true,
+                    ["available"] = false,
+                    ["dryRun"] = false,
+                    ["needsRetryAfterDig"] = true,
+                    ["targetCount"] = targets.Count,
+                    ["error"] = "DigTool is not initialized; open a loaded colony UI before issuing automatic dig orders"
+                };
+            }
+
+            foreach (var target in targets)
+            {
+                bool already = Grid.Objects[target.Cell, (int)ObjectLayer.DigPlacer] != null;
+                kgTotal += ToolUtil.SafeFloat(Grid.Mass[target.Cell]);
+
+                if (already)
+                {
+                    alreadyMarked++;
+                    targetResults.Add(AutoDigTarget(target, "already_marked"));
+                    continue;
+                }
+
+                if (dryRun)
+                {
+                    wouldMark++;
+                    targetResults.Add(AutoDigTarget(target, "would_dig"));
+                    continue;
+                }
+
+                if (!context.TryReserve(target.Cell))
+                {
+                    skipped++;
+                    targetResults.Add(AutoDigTarget(target, context.LimitReached ? "limit_skipped" : "duplicate_skipped"));
+                    continue;
+                }
+
+                if (DigTool.PlaceDig(target.Cell, context.NextDistance()) != null)
+                {
+                    marked++;
+                    context.Marked++;
+                    targetResults.Add(AutoDigTarget(target, "marked"));
+                }
+                else
+                {
+                    failed++;
+                    targetResults.Add(AutoDigTarget(target, "failed"));
+                }
+            }
+
+            return new Dictionary<string, object>
+            {
+                ["enabled"] = true,
+                ["available"] = true,
+                ["dryRun"] = dryRun,
+                ["needsRetryAfterDig"] = true,
+                ["action"] = dryRun ? "would_mark_dig_before_build" : "queued_dig_before_build",
+                ["targetCount"] = targets.Count,
+                ["wouldMark"] = dryRun ? wouldMark : (object)null,
+                ["marked"] = marked,
+                ["alreadyMarked"] = alreadyMarked,
+                ["skipped"] = skipped,
+                ["failed"] = failed,
+                ["limitReached"] = context.LimitReached,
+                ["maxCells"] = context.MaxCells,
+                ["kgTotal"] = Math.Round(kgTotal, 3),
+                ["targets"] = targetResults.Take(50).ToList(),
+                ["truncatedTargets"] = Math.Max(0, targetResults.Count - 50),
+                ["note"] = "Build blueprint was not placed because natural solid cells occupy the footprint. Dig was queued first; retry this build after excavation completes."
+            };
+        }
+
+        private static bool IsNaturalDiggableSolidCell(int cell, int worldId)
+        {
+            return Grid.IsValidCell(cell)
+                && Grid.IsVisible(cell)
+                && ToolUtil.CellMatchesWorld(cell, worldId)
+                && Grid.Solid[cell]
+                && !Grid.Foundation[cell];
+        }
+
+        private static Dictionary<string, object> AutoDigTarget(FootprintCell cell, string status)
+        {
+            return new Dictionary<string, object>
+            {
+                ["x"] = cell.X,
+                ["y"] = cell.Y,
+                ["cell"] = cell.Cell,
+                ["worldId"] = cell.WorldId,
+                ["status"] = status
+            };
         }
 
         private static IEnumerable<Dictionary<string, object>> ExistingBuildingFootprintObstructions(int worldId, HashSet<int> footprintCells)
@@ -905,10 +1377,13 @@ namespace OniMcp.Tools
                         ["name"] = ToolUtil.CleanName(go.GetProperName()),
                         ["x"] = x,
                         ["y"] = y,
+                        ["cell"] = cell,
                         ["objectX"] = objectX,
                         ["objectY"] = objectY,
                         ["anchorX"] = anchorX,
-                        ["anchorY"] = anchorY
+                        ["anchorY"] = anchorY,
+                        ["reasonCode"] = "occupied_by_" + kind,
+                        ["reason"] = "requested footprint overlaps an existing " + kind + " footprint"
                     };
                 }
             }
@@ -1013,7 +1488,10 @@ namespace OniMcp.Tools
                     missing.Add(new Dictionary<string, object>
                     {
                         ["x"] = supportCell.X,
-                        ["y"] = supportCell.Y
+                        ["y"] = supportCell.Y,
+                        ["cell"] = supportCell.Cell,
+                        ["reasonCode"] = "missing_support",
+                        ["reason"] = "OnFloor building requires solid terrain, a constructed support tile, or a support blueprint below this cell."
                     });
             }
 
@@ -1529,6 +2007,7 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> ErrorResult(string prefabId, int x, int y, string error, Dictionary<string, object> details = null)
         {
+            string reasonCode = ClassifyBuildFailure(error, details);
             var result = new Dictionary<string, object>
             {
                 ["planned"] = false,
@@ -1538,12 +2017,61 @@ namespace OniMcp.Tools
                 ["prefabId"] = prefabId,
                 ["x"] = x,
                 ["y"] = y,
+                ["anchor"] = AnchorDictionary(x, y, ExtractWorldId(details)),
                 ["error"] = error,
-                ["failureReason"] = ClassifyBuildFailure(error, details)
+                ["failureReason"] = reasonCode,
+                ["reasonCode"] = reasonCode,
+                ["coordinateContract"] = "x/y and anchor are the requested lower-left footprint cell; footprint/obstruction/support cells are absolute world cells when present."
             };
             if (details != null)
+            {
                 result["details"] = details;
+                result["diagnostics"] = BuildFailureDiagnostics(reasonCode, error, details);
+                CopyFailureField(details, result, "placement");
+                CopyFailureField(details, result, "support");
+                CopyFailureField(details, result, "materialSelection");
+                CopyFailureField(details, result, "invalidCells");
+                CopyFailureField(details, result, "obstructions");
+                CopyFailureField(details, result, "missingSupportCells");
+                CopyFailureField(details, result, "autoDig");
+            }
             return result;
+        }
+
+        private static int ExtractWorldId(Dictionary<string, object> details)
+        {
+            var placement = GetObject(details, "placement");
+            if (placement != null && placement.ContainsKey("worldId"))
+                return Convert.ToInt32(placement["worldId"]);
+            object value;
+            if (details != null && details.TryGetValue("worldId", out value) && value != null)
+                return Convert.ToInt32(value);
+            return -1;
+        }
+
+        private static Dictionary<string, object> BuildFailureDiagnostics(string reasonCode, string error, Dictionary<string, object> details)
+        {
+            var diagnostics = new Dictionary<string, object>
+            {
+                ["reasonCode"] = reasonCode,
+                ["message"] = error
+            };
+            CopyFailureField(details, diagnostics, "placement");
+            CopyFailureField(details, diagnostics, "support");
+            CopyFailureField(details, diagnostics, "materialSelection");
+            CopyFailureField(details, diagnostics, "invalidCells");
+            CopyFailureField(details, diagnostics, "obstructions");
+            CopyFailureField(details, diagnostics, "missingSupportCells");
+            CopyFailureField(details, diagnostics, "autoDig");
+            CopyFailureField(details, diagnostics, "reasonHint");
+            return diagnostics;
+        }
+
+        private static void CopyFailureField(Dictionary<string, object> source, Dictionary<string, object> target, string key)
+        {
+            object value;
+            if (source != null && target != null && source.TryGetValue(key, out value))
+                target[key] = value;
         }
 
         private static bool Contains(string value, string query)
@@ -1558,6 +2086,18 @@ namespace OniMcp.Tools
             int x = actualPlacement.ContainsKey("derivedAnchorX") ? Convert.ToInt32(actualPlacement["derivedAnchorX"]) : -1;
             int y = actualPlacement.ContainsKey("derivedAnchorY") ? Convert.ToInt32(actualPlacement["derivedAnchorY"]) : -1;
             return new[] { x, y };
+        }
+
+        private static Dictionary<string, object> AnchorDictionary(int x, int y, int worldId)
+        {
+            return new Dictionary<string, object>
+            {
+                ["x"] = x,
+                ["y"] = y,
+                ["worldId"] = worldId,
+                ["coordRole"] = "lowerLeftCell",
+                ["note"] = "Anchor is the lower-left footprint cell used by build_preview/build_area/agent pointer placement."
+            };
         }
 
         private static string ClassifyBuildFailure(string error, Dictionary<string, object> details)
@@ -1638,7 +2178,8 @@ namespace OniMcp.Tools
                     ["worldId"] = WorldId,
                     ["valid"] = Valid,
                     ["visible"] = Visible,
-                    ["inWorld"] = InWorld
+                    ["inWorld"] = InWorld,
+                    ["reasonCode"] = Valid && Visible && InWorld ? null : (!Valid ? "invalid_cell" : (!Visible ? "unrevealed" : "wrong_world"))
                 };
             }
         }
@@ -1730,6 +2271,41 @@ namespace OniMcp.Tools
                     ["reason"] = Reason,
                     ["next"] = Allowed ? null : "Use agent_pointer_left_click for each lower-left anchor cell, or retry with allowFootprintDrag=true if this repeated footprint is intentional."
                 };
+            }
+        }
+
+        private sealed class AutoDigContext
+        {
+            private readonly HashSet<int> reservedCells = new HashSet<int>();
+            private int distance;
+
+            public int MaxCells;
+            public int Marked;
+            public bool LimitReached;
+
+            public static AutoDigContext FromArgs(JObject args)
+            {
+                return new AutoDigContext
+                {
+                    MaxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxAutoDigCells") ?? 100, 500))
+                };
+            }
+
+            public bool TryReserve(int cell)
+            {
+                if (!reservedCells.Add(cell))
+                    return false;
+                if (Marked >= MaxCells)
+                {
+                    LimitReached = true;
+                    return false;
+                }
+                return true;
+            }
+
+            public int NextDistance()
+            {
+                return distance++;
             }
         }
 
@@ -1891,6 +2467,34 @@ namespace OniMcp.Tools
                     ["buildLocationRule"] = Rule,
                     ["missingSupportCells"] = MissingSupportCells,
                     ["error"] = Error
+                };
+            }
+        }
+
+        private sealed class PlacementCandidate
+        {
+            public int Score;
+            public string Status;
+            public Dictionary<string, object> Anchor = new Dictionary<string, object>();
+            public Dictionary<string, object> Preview = new Dictionary<string, object>();
+
+            public int AnchorX => GetInt(Anchor, "x");
+            public int AnchorY => GetInt(Anchor, "y");
+
+            public Dictionary<string, object> ToDictionary()
+            {
+                return new Dictionary<string, object>
+                {
+                    ["score"] = Score,
+                    ["status"] = Status,
+                    ["anchor"] = Anchor,
+                    ["preview"] = Preview,
+                    ["placement"] = GetObject(Preview, "placement"),
+                    ["footprint"] = GetObjectList(Preview, "footprint"),
+                    ["support"] = GetObject(Preview, "support"),
+                    ["materialSelection"] = GetObject(Preview, "materialSelection"),
+                    ["facade"] = Preview != null && Preview.ContainsKey("facade") ? Preview["facade"] : null,
+                    ["error"] = Preview != null && Preview.ContainsKey("error") ? Preview["error"] : null
                 };
             }
         }

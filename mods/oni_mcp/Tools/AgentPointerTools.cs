@@ -989,6 +989,8 @@ namespace OniMcp.Tools
                     ["agentId"] = new McpToolParameter { Type = "string", Description = AgentIdDescription, Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行修改必须为 true；dryRun=true 时可省略", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，传给支持 dryRun 的子工具", Required = false },
+                    ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "build 工具默认 true。建造 footprint 遇到可挖自然固体时，先自动标记挖掘；挖完后需重试建造", Required = false },
+                    ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "build 工具单次最多自动标记多少个挖掘格，默认 100，最大 500", Required = false },
                     ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>
@@ -1026,6 +1028,8 @@ namespace OniMcp.Tools
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行修改必须为 true；dryRun=true 时可省略", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，传给支持 dryRun 的子工具", Required = false },
                     ["allowFootprintDrag"] = new McpToolParameter { Type = "boolean", Description = "默认 false。拖拽建造只允许 1x1 footprint；床、厕所、机器等多格建筑需逐个 left_click，除非显式设为 true", Required = false },
+                    ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "build 工具默认 true。建造 footprint 遇到可挖自然固体时，先自动标记挖掘；挖完后需重试建造", Required = false },
+                    ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "build 工具单次最多自动标记多少个挖掘格，默认 100，最大 500", Required = false },
                     ["displayText"] = new McpToolParameter { Type = "string", Description = DisplayTextDescription, Required = false }
                 },
                 Handler = args =>

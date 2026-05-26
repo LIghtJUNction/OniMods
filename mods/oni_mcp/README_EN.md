@@ -148,8 +148,8 @@ The current implementation includes 330+ tools, 120+ fixed resources, and 100+ r
 | World reading | `world_text_map`, `world_area_snapshot`, `world_cell_info` | Text maps, area snapshots, cell details |
 | Area management | `area_define`, `area_get`, `area_blocks`, `area_merge` | Define and reuse map regions |
 | Agent pointer | `agent_pointer_aim_cell`, `agent_pointer_user_mouse_get`, `agent_pointer_say`, `agent_pointer_left_click` | Execute click-based actions, read the user's mouse cell, and show pointer speech bubbles |
-| Buildings and orders | `buildings_search_defs`, `buildings_materials`, `build_preview`, `build_area`, `orders_dig_area`, `orders_sweep_area` | Find buildings, choose materials, preview/batch-place blueprints, create dig and sweep orders |
-| Duplicants | `dupes_status_check`, `dupes_detail`, `dupes_needs`, `dupes_priority_set`, `dupes_rename` | Check status, needs, priorities, and names |
+| Buildings and orders | `buildings_search_defs`, `buildings_materials`, `build_placement_candidates`, `build_preview`, `build_area`, `orders_dig_area`, `orders_sweep_area` | Find buildings, locate valid anchors, choose materials, preview/batch-place blueprints, create dig and sweep orders |
+| Duplicants | `dupes_status_check`, `dupes_detail`, `dupes_needs`, `dupes_priority_set`, `dupes_rename`, `dupes_auto_rename` | Check status, needs, priorities, single-duplicant names, and role-based auto-naming |
 | Management screens | `schedule_list`, `schedule_set_block`, `diet_status`, `resources_storage_set_filter` | Schedules, diet, storage filters, and management screen settings |
 | Side screens | `filters_list`, `state_controls_list`, `automation_controls_list`, `lights_color_set` | Common building side-screen configuration |
 | Rockets and space | `rockets_status`, `rocket_modules_list`, `rocket_crew_requests_list` | Rocket state, modules, crew, and space systems |
@@ -171,10 +171,12 @@ For `agent_pointer_*`, `agentId` is a global logical pointer name. Omitting it u
 | `oni://dupes` | Duplicant list |
 | `oni://dupes/status-check` | Position, errands, needs, and stuck-risk signals |
 | `oni://power/summary` | Power network and battery summary |
+| `oni://power/ports` | Power connection points, anchors, wiring cells, and whether each port already has wire |
 | `oni://rooms/list` | Room system state |
 | `oni://thermal/overheat-risk` | Building overheat risks |
 | `oni://world/text-map` | Text map |
 | `oni://buildings/defs` | Buildable building definitions |
+| `oni://story/poi-tech-unlocks` | Research Portal unlock chores and POI tech items |
 | `oni://tools/manifest` | Tool manifest |
 | `oni://tools/guide` | Goal-oriented tool-chain guide |
 | `oni://guide/mechanics` | Mechanics, formulas, and edge-condition notes |

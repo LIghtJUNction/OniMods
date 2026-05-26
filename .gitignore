@@ -34,3 +34,5 @@ dist/
 
 /target
 deps/
+
+__pycache__

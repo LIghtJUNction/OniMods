@@ -86,6 +86,128 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ListPoiTechUnlocks()
+        {
+            return new McpTool
+            {
+                Name = "poi_tech_unlocks_list",
+                Group = "story",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "research_portals_list", "information_transmission_channels_list", "info_transmission_channels_list" },
+                Tags = new List<string> { "story", "poi", "tech", "unlock", "research-portal", "information-transmission-channel", "信息传送通道", "信息传输通道", "解锁信息传输通道" },
+                Description = "列出 Research Portal/信息传送通道（信息传输通道）状态、解锁差事、工作进度和完成后解锁的 POI 科技项",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["query"] = new McpToolParameter { Type = "string", Description = "按对象、prefabId、按钮文本或解锁科技筛选", Required = false },
+                    ["pendingOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只返回已有解锁差事的通道，默认 false", Required = false },
+                    ["lockedOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只返回尚未解锁的通道，默认 false", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量，默认 100，最大 500", Required = false }
+                }),
+                Handler = args =>
+                {
+                    if (Game.Instance == null)
+                        return CallToolResult.Error("Game not initialized");
+
+                    bool hasRect = HasRectInput(args);
+                    var rect = hasRect ? ToolUtil.GetRect(args) : null;
+                    int worldId = hasRect || ToolUtil.GetInt(args, "worldId").HasValue ? ToolUtil.ResolveWorldId(args) : -1;
+                    string query = args["query"]?.ToString();
+                    bool pendingOnly = ToolUtil.GetBool(args, "pendingOnly", false);
+                    bool lockedOnly = ToolUtil.GetBool(args, "lockedOnly", false);
+                    int limit = ToolUtil.ClampLimit(args, 100, 500);
+
+                    var items = AllCandidateObjects()
+                        .Where(go => MatchesTarget(go, rect, worldId))
+                        .Select(go => go.GetSMI<POITechItemUnlocks.Instance>())
+                        .Where(portal => portal != null)
+                        .Where(portal => !pendingOnly || portal.sm.pendingChore.Get(portal))
+                        .Where(portal => !lockedOnly || !portal.sm.isUnlocked.Get(portal))
+                        .Select(PoiTechUnlockInfo)
+                        .Where(info => MatchesQuery(info, query))
+                        .OrderBy(info => info["name"].ToString())
+                        .Take(limit)
+                        .ToList();
+
+                    return JsonResult(new Dictionary<string, object>
+                    {
+                        ["returned"] = items.Count,
+                        ["worldId"] = worldId >= 0 ? (object)worldId : null,
+                        ["poiTechUnlocks"] = items
+                    });
+                }
+            };
+        }
+
+        public static McpTool ControlPoiTechUnlock()
+        {
+            return new McpTool
+            {
+                Name = "poi_tech_unlock_control",
+                Group = "story",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "research_portal_control", "information_transmission_channel_control", "info_transmission_channel_control" },
+                Tags = new List<string> { "story", "poi", "tech", "unlock", "research-portal", "information-transmission-channel", "信息传送通道", "信息传输通道", "解锁信息传输通道" },
+                Description = "控制 Research Portal/信息传送通道（信息传输通道）：start 开始解锁研究，cancel 取消解锁研究，toggle 切换当前命令；需 confirm=true",
+                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "start、cancel 或 toggle", Required = true, EnumValues = new List<string> { "start", "cancel", "toggle" } },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认修改信息传送通道解锁差事", Required = true }
+                }),
+                Handler = args =>
+                {
+                    if (!ToolUtil.GetBool(args, "confirm", false))
+                        return CallToolResult.Error("confirm=true is required to control a POI tech unlock portal");
+
+                    var go = FindObjectTarget(args, target => target.GetSMI<POITechItemUnlocks.Instance>() != null);
+                    if (go == null)
+                        return CallToolResult.Error("Target POI tech unlock portal not found");
+
+                    var portal = go.GetSMI<POITechItemUnlocks.Instance>();
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    bool unlocked = portal.sm.isUnlocked.Get(portal);
+                    bool pending = portal.sm.pendingChore.Get(portal);
+                    var before = PoiTechUnlockInfo(portal);
+
+                    if (action == "start")
+                    {
+                        if (unlocked)
+                            return CallToolResult.Error("Portal is already unlocked");
+                        if (pending)
+                            return CallToolResult.Error("Portal unlock chore is already pending");
+                        portal.OnSidescreenButtonPressed();
+                    }
+                    else if (action == "cancel")
+                    {
+                        if (unlocked)
+                            return CallToolResult.Error("Portal is already unlocked");
+                        if (!pending)
+                            return CallToolResult.Error("Portal unlock chore is not pending");
+                        portal.OnSidescreenButtonPressed();
+                    }
+                    else if (action == "toggle")
+                    {
+                        if (unlocked)
+                            return CallToolResult.Error("Portal is already unlocked");
+                        portal.OnSidescreenButtonPressed();
+                    }
+                    else
+                    {
+                        return CallToolResult.Error("action must be start, cancel, or toggle");
+                    }
+
+                    return JsonResult(new Dictionary<string, object>
+                    {
+                        ["target"] = TargetInfo(go),
+                        ["action"] = action,
+                        ["before"] = before,
+                        ["poiTechUnlock"] = PoiTechUnlockInfo(portal)
+                    });
+                }
+            };
+        }
+
         public static McpTool ListRemoteWorkTerminals()
         {
             return new McpTool
@@ -245,6 +367,42 @@ namespace OniMcp.Tools
                    || printer.IsInsideState(printer.sm.operational.readyToPrint.loop);
         }
 
+        private static Dictionary<string, object> PoiTechUnlockInfo(POITechItemUnlocks.Instance portal)
+        {
+            var result = TargetInfo(portal.gameObject);
+            var workable = portal.GetComponent<POITechItemUnlockWorkable>();
+            float percent = workable == null ? -1f : workable.GetPercentComplete();
+            result["isUnlocked"] = portal.sm.isUnlocked.Get(portal);
+            result["pendingChore"] = portal.sm.pendingChore.Get(portal);
+            result["seenNotification"] = portal.sm.seenNotification.Get(portal);
+            result["sideScreenEnabled"] = portal.SidescreenEnabled();
+            result["interactable"] = portal.SidescreenButtonInteractable();
+            result["buttonText"] = portal.SidescreenButtonText;
+            result["buttonTooltip"] = portal.SidescreenButtonTooltip;
+            result["workPercent"] = percent < 0f ? null : (object)Math.Round(ToolUtil.SafeFloat(percent), 4);
+            result["workTimeSeconds"] = workable == null ? null : (object)Math.Round(ToolUtil.SafeFloat(workable.GetWorkTime()), 2);
+            result["workTimeRemainingSeconds"] = workable == null ? null : (object)Math.Round(ToolUtil.SafeFloat(workable.WorkTimeRemaining), 2);
+            result["popupName"] = portal.def.PopUpName.ToString();
+            result["loreUnlockId"] = portal.def.loreUnlockId;
+            result["unlockTechItems"] = portal.unlockTechItems.Select(PoiTechItemInfo).ToList();
+            result["canStart"] = !portal.sm.isUnlocked.Get(portal) && !portal.sm.pendingChore.Get(portal);
+            result["canCancel"] = !portal.sm.isUnlocked.Get(portal) && portal.sm.pendingChore.Get(portal);
+            return result;
+        }
+
+        private static Dictionary<string, object> PoiTechItemInfo(TechItem item)
+        {
+            return new Dictionary<string, object>
+            {
+                ["id"] = item.Id,
+                ["name"] = item.Name,
+                ["description"] = item.description,
+                ["parentTechId"] = item.parentTechId,
+                ["isPOIUnlock"] = item.isPOIUnlock,
+                ["complete"] = item.IsComplete()
+            };
+        }
+
         private static Dictionary<string, object> RemoteWorkTerminalInfo(RemoteWorkTerminal terminal, bool includeDocks)
         {
             var result = TargetInfo(terminal.gameObject);
@@ -380,6 +538,39 @@ namespace OniMcp.Tools
                     return go;
             }
             return null;
+        }
+
+        private static GameObject FindObjectTarget(JObject args, Func<GameObject, bool> predicate)
+        {
+            int? id = ToolUtil.GetInt(args, "id");
+            int? x = ToolUtil.GetInt(args, "x");
+            int? y = ToolUtil.GetInt(args, "y");
+            int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
+            int worldId = cell.HasValue ? ToolUtil.ResolveWorldId(args) : (ToolUtil.GetInt(args, "worldId") ?? -1);
+            foreach (var go in AllCandidateObjects())
+            {
+                if (go == null || !ToolUtil.GameObjectMatchesWorld(go, worldId) || !predicate(go))
+                    continue;
+                var kpid = go.GetComponent<KPrefabID>();
+                if (id.HasValue && kpid != null && kpid.InstanceID == id.Value)
+                    return go;
+                if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
+                    return go;
+            }
+            return null;
+        }
+
+        private static IEnumerable<GameObject> AllCandidateObjects()
+        {
+            var seen = new HashSet<int>();
+            foreach (var kpid in UnityEngine.Object.FindObjectsByType<KPrefabID>(FindObjectsSortMode.None))
+            {
+                if (kpid == null || kpid.gameObject == null)
+                    continue;
+                int id = kpid.gameObject.GetInstanceID();
+                if (seen.Add(id))
+                    yield return kpid.gameObject;
+            }
         }
 
         private static bool MatchesTarget(GameObject go, Dictionary<string, int> rect, int worldId)

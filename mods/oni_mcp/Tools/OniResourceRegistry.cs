@@ -57,6 +57,7 @@ namespace OniMcp.Tools
             Resource("oni://ranching/lures", "creature_lures_list", "生物诱饵站", "生物诱饵站当前诱饵、可选诱饵和库存。", "creature_lures_list"),
             Resource("oni://buildings/gene-shufflers", "gene_shufflers_list", "Gene Shuffler", "Gene Shuffler 分配、工作完成、消耗和充能请求状态。", "gene_shufflers_list"),
             Resource("oni://story/printerceptors", "printerceptors_list", "Printerceptor", "Printerceptor passcode、拦截充能、打印界面和 databank 状态。", "printerceptors_list"),
+            Resource("oni://story/poi-tech-unlocks", "poi_tech_unlocks_list", "信息传送通道", "Research Portal/信息传送通道解锁差事、进度和 POI 科技项。", "poi_tech_unlocks_list"),
             Resource("oni://buildings/remote-work-terminals", "remote_work_terminals_list", "远程工作终端", "Remote Work Terminal 当前/未来 dock 和同世界可选 dock。", "remote_work_terminals_list"),
             Resource("oni://farming/genetic-analysis-stations", "genetic_analysis_stations_list", "Botanical Analyzer", "Botanical Analyzer 可分析种子、允许/禁用状态和库存。", "genetic_analysis_stations_list"),
             Resource("oni://buildings/dispensers", "dispensers_list", "分发器", "DispenserSideScreen 可分发物品、当前选择和分发请求状态。", "dispensers_list"),
@@ -135,6 +136,7 @@ namespace OniMcp.Tools
             Resource("oni://tools/notification-surfaces", "notification_surfaces_audit", "通知 surface 审计", "源码 NotificationScreen/NotificationManager/消息通知到 MCP 覆盖的映射审计。", "notification_surfaces_audit"),
             Resource("oni://tools/static-audit", "tools_static_audit", "静态接口审计", "工具注册、玩家操作覆盖、资源入口和危险工具确认参数的静态自检。", "tools_static_audit"),
             Resource("oni://power/summary", "power_summary", "电力摘要", "当前世界电力系统摘要：发电机额定功率、消费者负载、电池容量和电量，按 circuitId 聚合。", "power_summary"),
+            Resource("oni://power/ports", "building_power_ports", "电力接口", "指定区域内建筑的电力接口格：锚点、输入/输出端口、相对偏移和可接线状态。", "building_power_ports"),
             Resource("oni://rooms/list", "rooms_list", "房间列表", "房间系统状态：房间类型、大小、边界、对象计数和房间效果，适合检查士气房间是否成型。", "rooms_list"),
             Resource("oni://thermal/overheat-risk", "thermal_overheat_risk_scan", "过热风险扫描", "建筑过热风险扫描：按当前格温和建筑过热温度差排序，发现即将过热或已经过热的设备。", "thermal_overheat_risk_scan"),
             Resource("oni://world/layout-candidates", "layout_candidates", "平面布局候选", "按用途扫描区域，返回房间/平台候选矩形、评分、需挖掘、需铺砖、危险格和连通性。", "layout_candidates")
@@ -164,6 +166,14 @@ namespace OniMcp.Tools
                 Name = "power_summary",
                 Title = "电力摘要",
                 Description = "读取指定世界电力系统摘要；支持按世界 ID、明细开关和数量限制过滤。",
+                MimeType = "application/json"
+            },
+            new McpResourceTemplateInfo
+            {
+                UriTemplate = "oni://power/ports{?worldId,areaId,x1,y1,x2,y2,query,limit}",
+                Name = "building_power_ports",
+                Title = "电力接口",
+                Description = "读取指定区域内建筑的电力接口格；支持按世界 ID、区域和关键词过滤。",
                 MimeType = "application/json"
             },
             new McpResourceTemplateInfo
@@ -444,6 +454,14 @@ namespace OniMcp.Tools
                 Name = "suit_lockers_list",
                 Title = "太空服柜",
                 Description = "按区域和关键词读取 SuitLockerSideScreen 状态。",
+                MimeType = "application/json"
+            },
+            new McpResourceTemplateInfo
+            {
+                UriTemplate = "oni://story/poi-tech-unlocks{?areaId,x1,y1,x2,y2,worldId,query,pendingOnly,lockedOnly,limit}",
+                Name = "poi_tech_unlocks_list",
+                Title = "信息传送通道",
+                Description = "按区域和关键词读取 Research Portal/信息传送通道解锁差事、进度和解锁项。",
                 MimeType = "application/json"
             },
             new McpResourceTemplateInfo

@@ -315,6 +315,7 @@ namespace OniMcp.Tools
                         text.AppendLine($"world_text_map v2 area {area.Id} world {worldId} origin {rect["x1"]},{rect["y1"]} rel 0,0..{width - 1},{height - 1} abs {rect["x1"]},{rect["y1"]}..{rect["x2"]},{rect["y2"]} size {width}x{height} view {view} sparse {sparse} visibleOnly {visibleOnly} encoding {encoding}");
                         text.AppendLine("coords: rx/ry are offsets from origin; rows descend; abs=(origin.x+rx,origin.y+ry)");
                         text.AppendLine("edit: use world absolute x/y coordinates for build/order tools");
+                        text.AppendLine("planning: open/gas cells are not guaranteed buildable; use buildable1x1 only as a direct obstruction hint, then validate real footprints with build_preview.");
                         text.AppendLine("tokens: " + string.Join(" ", BuildTokenLegend(view).Select(kv => kv.Key + "=" + kv.Value).ToArray()));
                         if (view == "base" && overlays.Count > 0)
                             text.AppendLine("note: bld/dup/itm are object overlays; object table gives exact rxy and abs coordinates.");
@@ -328,6 +329,10 @@ namespace OniMcp.Tools
                     var elementCounts = new Dictionary<string, ElementAggregate>();
                     int validCells = 0;
                     int visibleCells = 0;
+                    int openCells = 0;
+                    int occupiedCells = 0;
+                    int blockedCells = 0;
+                    int buildableCells = 0;
                     var fullLines = new List<string>();
                     var jsonRows = new List<Dictionary<string, object>>();
                     var sparseCells = new List<Dictionary<string, object>>();
@@ -346,7 +351,17 @@ namespace OniMcp.Tools
                             rowTokens.Add(TokenForCell(summary, view));
 
                             if (summary.Valid)
+                            {
                                 validCells++;
+                                if (!summary.Solid && summary.Overlay == null)
+                                    openCells++;
+                                if (!summary.Solid && summary.Overlay != null)
+                                    blockedCells++;
+                                if (summary.Overlay != null)
+                                    occupiedCells++;
+                                if (summary.Valid && !summary.Solid && summary.Overlay == null)
+                                    buildableCells++;
+                            }
                             if (summary.Visible)
                                 visibleCells++;
                             AddElementAggregate(elementCounts, summary);
@@ -383,7 +398,7 @@ namespace OniMcp.Tools
 
                     text.AppendLine(minimal ? $"rx 0..{width - 1} origin={rect["x1"]},{rect["y1"]}" : $"ranges: rx 0..{width - 1}; absX {rect["x1"]}..{rect["x2"]}; origin {rect["x1"]},{rect["y1"]}");
                     if (includeSummary)
-                        text.AppendLine(minimal ? $"sum valid={validCells} visible={visibleCells} obj={DistinctOverlayObjects(overlays).Count()} sparse={sparseCells.Count} runs={sparseRuns.Count}" : $"summary: valid {validCells}; visible {visibleCells}; objects {DistinctOverlayObjects(overlays).Count()}; sparseCells {sparseCells.Count}; sparseRuns {sparseRuns.Count}");
+                        text.AppendLine(minimal ? $"sum valid={validCells} visible={visibleCells} open={openCells} occupied={occupiedCells} blocked={blockedCells} buildable1x1={buildableCells} obj={DistinctOverlayObjects(overlays).Count()} sparse={sparseCells.Count} runs={sparseRuns.Count}" : $"summary: valid {validCells}; visible {visibleCells}; open {openCells}; occupied {occupiedCells}; blocked {blockedCells}; buildable1x1 {buildableCells}; objects {DistinctOverlayObjects(overlays).Count()}; sparseCells {sparseCells.Count}; sparseRuns {sparseRuns.Count}");
 
                     if (includeElements && elementLimit > 0)
                     {
@@ -416,9 +431,9 @@ namespace OniMcp.Tools
                     }
 
                     if (format == "json")
-                        return CallToolResult.Text(JsonConvert.SerializeObject(BuildTextMapJson(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, overlays, legend, jsonRows, sparseCells, elementCounts, includeElements, elementLimit, objectLimit, compact: false, includeRows: true, includeObjects: true), McpJsonUtil.Settings));
+                        return CallToolResult.Text(JsonConvert.SerializeObject(BuildTextMapJson(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, openCells, occupiedCells, blockedCells, buildableCells, overlays, legend, jsonRows, sparseCells, elementCounts, includeElements, elementLimit, objectLimit, compact: false, includeRows: true, includeObjects: true), McpJsonUtil.Settings));
 
-                    return CallToolResult.Text(BuildTextMapMarkdown(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, overlays, legend, markdownRows, sparseRuns, elementCounts, includeElements, elementLimit, objectLimit, detail == "full" ? fullLines : null));
+                    return CallToolResult.Text(BuildTextMapMarkdown(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, openCells, occupiedCells, blockedCells, buildableCells, overlays, legend, markdownRows, sparseRuns, elementCounts, includeElements, elementLimit, objectLimit, detail == "full" ? fullLines : null));
                 }
             };
         }
@@ -461,8 +476,9 @@ namespace OniMcp.Tools
                     ["chunkMaxCells"] = new McpToolParameter { Type = "integer", Description = "每块目标最大格子数，默认沿用 maxCells，硬上限 2500", Required = false },
                     ["chunkLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个块详情，默认 200，最大 1000", Required = false },
                     ["compact"] = new McpToolParameter { Type = "boolean", Description = "是否紧凑输出；默认 false；开启后对象省略 null/空数组字段，图例为空时省略", Required = false },
-                    ["includeRows"] = new McpToolParameter { Type = "boolean", Description = "是否包含地图行数据；默认 true", Required = false },
-                    ["includeObjects"] = new McpToolParameter { Type = "boolean", Description = "是否包含对象列表；默认 true", Required = false }
+                    ["includeRows"] = new McpToolParameter { Type = "boolean", Description = "是否包含地图行数据；terrain/construction 默认 true，utilities/planning/all 默认 false", Required = false },
+                    ["includeObjects"] = new McpToolParameter { Type = "boolean", Description = "是否包含对象列表；默认 true", Required = false },
+                    ["includeAreaDescription"] = new McpToolParameter { Type = "boolean", Description = "是否包含自然语言区域描述和主要地形/液体区段，默认 true", Required = false }
                 },
                 Handler = args =>
                 {
@@ -509,8 +525,9 @@ namespace OniMcp.Tools
                         encoding = "rle";
                     int objectLimit = ClampInt(args, "objectLimit", 120, 0, 500);
                     bool compact = TryGetBool(args, "compact", false);
-                    bool includeRows = TryGetBool(args, "includeRows", true);
+                    bool includeRows = TryGetBool(args, "includeRows", preset == "terrain" || preset == "construction");
                     bool includeObjects = TryGetBool(args, "includeObjects", true);
+                    bool includeAreaDescription = TryGetBool(args, "includeAreaDescription", true);
 
                     var overlayViews = ResolveSnapshotOverlays(args["overlays"], preset);
                     bool sparseOverlays = profile == "scan";
@@ -530,6 +547,9 @@ namespace OniMcp.Tools
                         ["summary"] = snapshotSummary,
                         ["maps"] = maps
                     };
+
+                    if (includeAreaDescription)
+                        result["areaDescription"] = BuildAreaDescription(rect, worldId, visibleOnly);
 
                     if (!compact)
                     {
@@ -972,7 +992,7 @@ namespace OniMcp.Tools
 
             return maps.ToDictionary(
                 map => map.View,
-                map => (object)BuildTextMapJson(area, rect, worldId, width, height, map.View, map.Sparse, visibleOnly, encoding, map.ValidCells, map.VisibleCells, map.Overlays, BuildLegend(map.View), map.Rows, map.SparseCells, map.ElementCounts, map.IncludeElements, map.ElementLimit, map.ObjectLimit, compact, includeRows, includeObjects));
+                map => (object)BuildTextMapJson(area, rect, worldId, width, height, map.View, map.Sparse, visibleOnly, encoding, map.ValidCells, map.VisibleCells, map.OpenCells, map.OccupiedCells, map.BlockedCells, map.BuildableCells, map.Overlays, BuildLegend(map.View), map.Rows, map.SparseCells, map.ElementCounts, map.IncludeElements, map.ElementLimit, map.ObjectLimit, compact, includeRows, includeObjects));
         }
 
         private static object ToolResultToToken(CallToolResult result)
@@ -1404,6 +1424,10 @@ namespace OniMcp.Tools
             string encoding,
             int validCells,
             int visibleCells,
+            int openCells,
+            int occupiedCells,
+            int blockedCells,
+            int buildableCells,
             Dictionary<int, OverlaySummary> overlays,
             Dictionary<char, string> legend,
             List<string> markdownRows,
@@ -1432,6 +1456,7 @@ namespace OniMcp.Tools
             md.AppendLine("| Encoding Source | `" + EscapeMarkdown(encoding) + "` |");
             md.AppendLine();
             md.AppendLine("Coordinates are normal world cells. Use absolute `x,y` from this document when calling build/order tools. `rx,ry` are offsets from the origin.");
+            md.AppendLine("Open/gas cells are not a build contract. `buildable1x1` only means no direct terrain/object obstruction for a single-cell footprint; validate real buildings with `build_preview`.");
             md.AppendLine();
 
             md.AppendLine("## Legend");
@@ -1474,6 +1499,10 @@ namespace OniMcp.Tools
             md.AppendLine();
             md.AppendLine("- Valid cells: `" + validCells + "`");
             md.AppendLine("- Visible cells: `" + visibleCells + "`");
+            md.AppendLine("- Open cells: `" + openCells + "`");
+            md.AppendLine("- Occupied cells: `" + occupiedCells + "`");
+            md.AppendLine("- Blocked cells: `" + blockedCells + "`");
+            md.AppendLine("- Direct 1x1 buildable cells: `" + buildableCells + "`");
             md.AppendLine("- Objects: `" + DistinctOverlayObjects(overlays).Count() + "`");
             md.AppendLine("- Sparse runs: `" + sparseRuns.Count + "`");
             md.AppendLine();
@@ -1574,6 +1603,10 @@ namespace OniMcp.Tools
             string encoding,
             int validCells,
             int visibleCells,
+            int openCells,
+            int occupiedCells,
+            int blockedCells,
+            int buildableCells,
             Dictionary<int, OverlaySummary> overlays,
             Dictionary<char, string> legend,
             List<Dictionary<string, object>> rows,
@@ -1604,6 +1637,10 @@ namespace OniMcp.Tools
                 {
                     ["valid"] = validCells,
                     ["visible"] = visibleCells,
+                    ["open"] = openCells,
+                    ["occupied"] = occupiedCells,
+                    ["blocked"] = blockedCells,
+                    ["buildable1x1"] = buildableCells,
                     ["objects"] = DistinctOverlayObjects(overlays).Count(),
                     ["sparseCells"] = sparseCells.Count
                 }
@@ -1983,8 +2020,21 @@ namespace OniMcp.Tools
             int objectY = Grid.CellRow(objectCell);
             int width = Math.Max(1, def?.WidthInCells ?? 1);
             int height = Math.Max(1, def?.HeightInCells ?? 1);
-            int anchorX = objectX - width / 2;
-            int anchorY = objectY - height / 2;
+            var building = go.GetComponent<Building>();
+            int anchorCell = building != null ? building.GetBottomLeftCell() : Grid.InvalidCell;
+            int anchorX;
+            int anchorY;
+            if (Grid.IsValidCell(anchorCell))
+            {
+                anchorX = Grid.CellColumn(anchorCell);
+                anchorY = Grid.CellRow(anchorCell);
+            }
+            else
+            {
+                anchorX = objectX - width / 2;
+                anchorY = objectY - height / 2;
+                anchorCell = Grid.XYToCell(anchorX, anchorY);
+            }
             string key = kind + "|" + id + "|" + anchorX + "|" + anchorY + "|" + worldId;
             string rule = def?.BuildLocationRule.ToString();
             var missingSupport = MissingSupportCells(def, anchorX, anchorY, worldId).ToList();
@@ -2000,8 +2050,10 @@ namespace OniMcp.Tools
                 Y = anchorY,
                 ObjectX = objectX,
                 ObjectY = objectY,
+                ObjectCell = objectCell,
                 AnchorX = anchorX,
                 AnchorY = anchorY,
+                AnchorCell = anchorCell,
                 Width = width,
                 Height = height,
                 FootprintX1 = anchorX,
@@ -2055,8 +2107,10 @@ namespace OniMcp.Tools
                         Y = y,
                         ObjectX = source.ObjectX,
                         ObjectY = source.ObjectY,
+                        ObjectCell = source.ObjectCell,
                         AnchorX = source.AnchorX,
                         AnchorY = source.AnchorY,
+                        AnchorCell = source.AnchorCell,
                         Width = source.Width,
                         Height = source.Height,
                         FootprintX1 = source.FootprintX1,
@@ -2283,8 +2337,10 @@ namespace OniMcp.Tools
                 Y = y,
                 ObjectX = x,
                 ObjectY = y,
+                ObjectCell = cell,
                 AnchorX = x,
                 AnchorY = y,
+                AnchorCell = cell,
                 Width = 1,
                 Height = 1,
                 FootprintX1 = x,
@@ -2361,7 +2417,11 @@ namespace OniMcp.Tools
                 ["kind"] = overlay.Kind,
                 ["id"] = overlay.Id,
                 ["anchor"] = new[] { overlay.AnchorX, overlay.AnchorY },
+                ["anchorCell"] = overlay.AnchorCell,
+                ["object"] = new[] { overlay.ObjectX, overlay.ObjectY },
+                ["objectCell"] = overlay.ObjectCell,
                 ["footprint"] = new[] { overlay.FootprintX1, overlay.FootprintY1, overlay.FootprintX2, overlay.FootprintY2 },
+                ["footprintCellCount"] = overlay.Width * overlay.Height,
                 ["missingSupportCells"] = overlay.MissingSupportCells ?? new List<Dictionary<string, object>>()
             };
         }
@@ -2376,8 +2436,12 @@ namespace OniMcp.Tools
                 ["name"] = overlay.Name,
                 ["anchor"] = new[] { overlay.AnchorX, overlay.AnchorY },
                 ["rAnchor"] = new[] { overlay.AnchorX - rect["x1"], overlay.AnchorY - rect["y1"] },
+                ["anchorCell"] = overlay.AnchorCell,
                 ["object"] = new[] { overlay.ObjectX, overlay.ObjectY },
+                ["objectCell"] = overlay.ObjectCell,
                 ["footprint"] = new[] { overlay.FootprintX1, overlay.FootprintY1, overlay.FootprintX2, overlay.FootprintY2 },
+                ["rFootprint"] = new[] { overlay.FootprintX1 - rect["x1"], overlay.FootprintY1 - rect["y1"], overlay.FootprintX2 - rect["x1"], overlay.FootprintY2 - rect["y1"] },
+                ["footprintCellCount"] = overlay.Width * overlay.Height,
                 ["size"] = new[] { overlay.Width, overlay.Height },
                 ["supportRequired"] = overlay.SupportRequired,
                 ["supported"] = overlay.Supported,
@@ -2414,6 +2478,9 @@ namespace OniMcp.Tools
                         ["kind"] = item.Kind,
                         ["id"] = item.Id,
                         ["anchor"] = new[] { item.AnchorX, item.AnchorY },
+                        ["anchorCell"] = item.AnchorCell,
+                        ["object"] = new[] { item.ObjectX, item.ObjectY },
+                        ["objectCell"] = item.ObjectCell,
                         ["reason"] = UnsupportedReason(item),
                         ["missingSupportCells"] = item.MissingSupportCells ?? new List<Dictionary<string, object>>()
                     });
@@ -2427,6 +2494,9 @@ namespace OniMcp.Tools
                         ["kind"] = item.Kind,
                         ["id"] = item.Id,
                         ["anchor"] = new[] { item.AnchorX, item.AnchorY },
+                        ["anchorCell"] = item.AnchorCell,
+                        ["object"] = new[] { item.ObjectX, item.ObjectY },
+                        ["objectCell"] = item.ObjectCell,
                         ["conflictsWith"] = string.Join(",", item.ObstructedBy.ToArray())
                     });
                 }
@@ -2457,6 +2527,10 @@ namespace OniMcp.Tools
                 {
                     CopyIfPresent(summary, result, "valid");
                     CopyIfPresent(summary, result, "visible");
+                    CopyIfPresent(summary, result, "open");
+                    CopyIfPresent(summary, result, "occupied");
+                    CopyIfPresent(summary, result, "blocked");
+                    CopyIfPresent(summary, result, "buildable1x1");
                     CopyIfPresent(summary, result, "objects");
                     CopyIfPresent(summary, result, "unsupportedFootprints");
                     CopyIfPresent(summary, result, "conflicts");
@@ -2464,6 +2538,202 @@ namespace OniMcp.Tools
             }
 
             return result;
+        }
+
+        private static Dictionary<string, object> BuildAreaDescription(Dictionary<string, int> rect, int worldId, bool visibleOnly)
+        {
+            var counts = new Dictionary<string, int>
+            {
+                ["outsideWorld"] = 0,
+                ["unrevealed"] = 0,
+                ["naturalSolid"] = 0,
+                ["constructedTile"] = 0,
+                ["liquid"] = 0,
+                ["gas"] = 0,
+                ["vacuum"] = 0,
+                ["other"] = 0
+            };
+            var elements = new Dictionary<string, int>();
+            int width = rect["x2"] - rect["x1"] + 1;
+            int height = rect["y2"] - rect["y1"] + 1;
+
+            for (int y = rect["y1"]; y <= rect["y2"]; y++)
+            {
+                for (int x = rect["x1"]; x <= rect["x2"]; x++)
+                {
+                    int cell = Grid.XYToCell(x, y);
+                    string category = AreaCellCategory(cell, worldId, visibleOnly);
+                    counts[category] = counts.ContainsKey(category) ? counts[category] + 1 : 1;
+                    if (category == "outsideWorld" || category == "unrevealed")
+                        continue;
+
+                    string elementId = AreaCellElementId(cell);
+                    if (!elements.ContainsKey(elementId))
+                        elements[elementId] = 0;
+                    elements[elementId]++;
+                }
+            }
+
+            var regions = FindAreaDescriptionRegions(rect, worldId, visibleOnly)
+                .OrderByDescending(region => region.Count)
+                .Take(8)
+                .Select(region => RegionToDictionary(region, rect))
+                .ToList();
+
+            var text = new List<string>
+            {
+                $"Area {width}x{height}: {counts["naturalSolid"]} natural solid cells, {counts["constructedTile"]} constructed tiles, {counts["liquid"]} liquid cells, {counts["gas"]} gas cells, {counts["vacuum"]} vacuum cells, {counts["unrevealed"]} unrevealed cells."
+            };
+            foreach (var region in regions.Take(5))
+                text.Add(region["text"].ToString());
+
+            return new Dictionary<string, object>
+            {
+                ["text"] = text,
+                ["counts"] = counts,
+                ["topElements"] = elements
+                    .OrderByDescending(kv => kv.Value)
+                    .ThenBy(kv => kv.Key)
+                    .Take(12)
+                    .ToDictionary(kv => kv.Key, kv => kv.Value),
+                ["regions"] = regions
+            };
+        }
+
+        private static string AreaCellCategory(int cell, int worldId, bool visibleOnly)
+        {
+            if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                return "outsideWorld";
+            if (visibleOnly && !Grid.IsVisible(cell))
+                return "unrevealed";
+            if (Grid.Foundation[cell])
+                return "constructedTile";
+            var element = Grid.Element[cell];
+            if (Grid.Solid[cell] || (element != null && element.IsSolid))
+                return "naturalSolid";
+            if (element != null && element.IsLiquid)
+                return "liquid";
+            if (element != null && element.IsVacuum)
+                return "vacuum";
+            if (element != null && element.IsGas)
+                return "gas";
+            return "other";
+        }
+
+        private static string AreaCellElementId(int cell)
+        {
+            if (!Grid.IsValidCell(cell))
+                return "Invalid";
+            var element = Grid.Element[cell];
+            return element?.id.ToString() ?? "Unknown";
+        }
+
+        private static List<AreaDescriptionRegion> FindAreaDescriptionRegions(Dictionary<string, int> rect, int worldId, bool visibleOnly)
+        {
+            var regions = new List<AreaDescriptionRegion>();
+            var visited = new HashSet<int>();
+            for (int y = rect["y1"]; y <= rect["y2"]; y++)
+            {
+                for (int x = rect["x1"]; x <= rect["x2"]; x++)
+                {
+                    int cell = Grid.XYToCell(x, y);
+                    if (visited.Contains(cell))
+                        continue;
+
+                    string category = AreaCellCategory(cell, worldId, visibleOnly);
+                    if (category != "liquid" && category != "naturalSolid")
+                    {
+                        visited.Add(cell);
+                        continue;
+                    }
+
+                    string elementId = AreaCellElementId(cell);
+                    var region = FloodAreaDescriptionRegion(rect, worldId, visibleOnly, x, y, category, elementId, visited);
+                    int minimumSize = category == "liquid" ? 2 : 8;
+                    if (region.Count >= minimumSize)
+                        regions.Add(region);
+                }
+            }
+            return regions;
+        }
+
+        private static AreaDescriptionRegion FloodAreaDescriptionRegion(Dictionary<string, int> rect, int worldId, bool visibleOnly, int startX, int startY, string category, string elementId, HashSet<int> visited)
+        {
+            var region = new AreaDescriptionRegion
+            {
+                Category = category,
+                ElementId = elementId,
+                MinX = startX,
+                MaxX = startX,
+                MinY = startY,
+                MaxY = startY
+            };
+            var queue = new Queue<int>();
+            int startCell = Grid.XYToCell(startX, startY);
+            queue.Enqueue(startCell);
+            visited.Add(startCell);
+
+            while (queue.Count > 0)
+            {
+                int cell = queue.Dequeue();
+                int x = Grid.CellColumn(cell);
+                int y = Grid.CellRow(cell);
+                region.Count++;
+                region.MinX = Math.Min(region.MinX, x);
+                region.MaxX = Math.Max(region.MaxX, x);
+                region.MinY = Math.Min(region.MinY, y);
+                region.MaxY = Math.Max(region.MaxY, y);
+
+                AddAreaRegionNeighbor(rect, worldId, visibleOnly, category, elementId, visited, queue, x + 1, y);
+                AddAreaRegionNeighbor(rect, worldId, visibleOnly, category, elementId, visited, queue, x - 1, y);
+                AddAreaRegionNeighbor(rect, worldId, visibleOnly, category, elementId, visited, queue, x, y + 1);
+                AddAreaRegionNeighbor(rect, worldId, visibleOnly, category, elementId, visited, queue, x, y - 1);
+            }
+
+            return region;
+        }
+
+        private static void AddAreaRegionNeighbor(Dictionary<string, int> rect, int worldId, bool visibleOnly, string category, string elementId, HashSet<int> visited, Queue<int> queue, int x, int y)
+        {
+            if (!InRect(rect, x, y))
+                return;
+            int cell = Grid.XYToCell(x, y);
+            if (visited.Contains(cell))
+                return;
+            if (AreaCellCategory(cell, worldId, visibleOnly) != category || AreaCellElementId(cell) != elementId)
+                return;
+            visited.Add(cell);
+            queue.Enqueue(cell);
+        }
+
+        private static Dictionary<string, object> RegionToDictionary(AreaDescriptionRegion region, Dictionary<string, int> rect)
+        {
+            int width = region.MaxX - region.MinX + 1;
+            int height = region.MaxY - region.MinY + 1;
+            string type = region.Category == "liquid" ? "liquid pool" : "natural solid mass";
+            string location = RelativeLocation(region, rect);
+            string text = $"{type} {region.ElementId}: {region.Count} cells, approx {width}x{height}, {location}, bounds {region.MinX},{region.MinY}..{region.MaxX},{region.MaxY}.";
+            return new Dictionary<string, object>
+            {
+                ["type"] = region.Category,
+                ["element"] = region.ElementId,
+                ["count"] = region.Count,
+                ["bounds"] = new[] { region.MinX, region.MinY, region.MaxX, region.MaxY },
+                ["size"] = new[] { width, height },
+                ["location"] = location,
+                ["text"] = text
+            };
+        }
+
+        private static string RelativeLocation(AreaDescriptionRegion region, Dictionary<string, int> rect)
+        {
+            double cx = (region.MinX + region.MaxX) / 2.0d;
+            double cy = (region.MinY + region.MaxY) / 2.0d;
+            double xThird = (rect["x2"] - rect["x1"] + 1) / 3.0d;
+            double yThird = (rect["y2"] - rect["y1"] + 1) / 3.0d;
+            string horizontal = cx < rect["x1"] + xThird ? "left" : cx > rect["x2"] - xThird ? "right" : "center";
+            string vertical = cy < rect["y1"] + yThird ? "bottom" : cy > rect["y2"] - yThird ? "top" : "middle";
+            return vertical + "-" + horizontal;
         }
 
         private static void CopyIfPresent(Dictionary<string, object> source, Dictionary<string, object> target, string key)
@@ -2544,9 +2814,7 @@ namespace OniMcp.Tools
                         obstructions.Add("invalid@" + x + "," + y);
                         continue;
                     }
-                    if (Grid.Foundation[cell])
-                        obstructions.Add("tile@" + x + "," + y);
-                    else if (Grid.Solid[cell])
+                    if (Grid.Solid[cell] && !Grid.Foundation[cell])
                         obstructions.Add("solid@" + x + "," + y);
                 }
             }
@@ -2564,6 +2832,8 @@ namespace OniMcp.Tools
             if (!Grid.IsValidCell(cell) || !Grid.IsWorldValidCell(cell) || Grid.WorldIdx[cell] != worldId)
             {
                 summary.Symbol = '?';
+                summary.Occupancy = "outside_world";
+                summary.BlockReason = "outside_world";
                 return summary;
             }
 
@@ -2572,6 +2842,8 @@ namespace OniMcp.Tools
             if (visibleOnly && !summary.Visible)
             {
                 summary.Symbol = '?';
+                summary.Occupancy = "unrevealed";
+                summary.BlockReason = "unrevealed";
                 return summary;
             }
 
@@ -2581,11 +2853,14 @@ namespace OniMcp.Tools
                 summary.ElementName = "OverlayEmpty";
                 summary.State = "overlay";
                 summary.Symbol = '.';
+                summary.Occupancy = "empty";
                 OverlaySummary overlayOnly;
                 if (overlays.TryGetValue(cell, out overlayOnly))
                 {
                     summary.Overlay = overlayOnly;
                     summary.Symbol = overlayOnly.Symbol;
+                    summary.Occupancy = overlayOnly.Kind;
+                    summary.BlockReason = "occupied_by_" + overlayOnly.Kind;
                 }
                 return summary;
             }
@@ -2609,7 +2884,55 @@ namespace OniMcp.Tools
                 summary.Symbol = overlay.Symbol;
             }
 
+            SetCellPlanningState(summary, element);
             return summary;
+        }
+
+        private static void SetCellPlanningState(CellSummary summary, Element element)
+        {
+            if (summary.Overlay != null)
+            {
+                summary.Occupancy = summary.Overlay.Kind;
+                summary.BlockReason = "occupied_by_" + summary.Overlay.Kind;
+                summary.Buildable1x1 = false;
+                return;
+            }
+
+            if (!summary.Visible)
+            {
+                summary.Occupancy = "unrevealed";
+                summary.BlockReason = "unrevealed";
+                summary.Buildable1x1 = false;
+                return;
+            }
+
+            if (summary.Foundation)
+            {
+                summary.Occupancy = "foundation";
+                summary.BlockReason = "constructed_tile";
+                summary.Buildable1x1 = false;
+                return;
+            }
+
+            if (summary.Solid || (element != null && element.IsSolid))
+            {
+                summary.Occupancy = "solid";
+                summary.BlockReason = "solid_cell";
+                summary.Buildable1x1 = false;
+                return;
+            }
+
+            if (element != null && element.IsLiquid)
+            {
+                summary.Occupancy = "liquid";
+                summary.BlockReason = "liquid_cell";
+                summary.Buildable1x1 = false;
+                return;
+            }
+
+            summary.Occupancy = "open";
+            summary.BlockReason = null;
+            summary.Buildable1x1 = true;
         }
 
         private static bool IsSparseRelevant(CellSummary summary, bool overlayView)
@@ -2645,6 +2968,10 @@ namespace OniMcp.Tools
                 result["kg"] = Math.Round(summary.MassKg, 2);
                 result["c"] = Math.Round(summary.TemperatureK - 273.15f, 1);
             }
+            result["occ"] = summary.Occupancy;
+            if (!string.IsNullOrWhiteSpace(summary.BlockReason))
+                result["block"] = summary.BlockReason;
+            result["buildable1x1"] = summary.Buildable1x1;
             return result;
         }
 
@@ -2683,7 +3010,9 @@ namespace OniMcp.Tools
                 item.ContainsKey("id") ? item["id"]?.ToString() ?? "" : "",
                 item.ContainsKey("extra") ? item["extra"]?.ToString() ?? "" : "",
                 item.ContainsKey("element") ? item["element"]?.ToString() ?? "" : "",
-                item.ContainsKey("state") ? item["state"]?.ToString() ?? "" : ""
+                item.ContainsKey("state") ? item["state"]?.ToString() ?? "" : "",
+                item.ContainsKey("occ") ? item["occ"]?.ToString() ?? "" : "",
+                item.ContainsKey("block") ? item["block"]?.ToString() ?? "" : ""
             });
         }
 
@@ -2738,7 +3067,8 @@ namespace OniMcp.Tools
                 return $"rxy={summary.X - originX},{summary.Y - originY} abs={summary.X},{summary.Y} token=unk";
 
             string overlay = summary.Overlay != null ? $" obj={summary.Overlay.Kind}:{summary.Overlay.Id}" : "";
-            return $"rxy={summary.X - originX},{summary.Y - originY} abs={summary.X},{summary.Y} token={TokenForSymbol(summary.Symbol, view, summary)} elem={summary.ElementId} state={summary.State} kg={Math.Round(summary.MassKg, 3)} C={Math.Round(summary.TemperatureK - 273.15f, 1)} visible={summary.Visible} disease={summary.DiseaseIdx}:{summary.DiseaseCount}{overlay}";
+            string block = string.IsNullOrWhiteSpace(summary.BlockReason) ? "" : $" block={summary.BlockReason}";
+            return $"rxy={summary.X - originX},{summary.Y - originY} abs={summary.X},{summary.Y} token={TokenForSymbol(summary.Symbol, view, summary)} occ={summary.Occupancy} buildable1x1={summary.Buildable1x1}{block} elem={summary.ElementId} state={summary.State} kg={Math.Round(summary.MassKg, 3)} C={Math.Round(summary.TemperatureK - 273.15f, 1)} visible={summary.Visible} disease={summary.DiseaseIdx}:{summary.DiseaseCount}{overlay}";
         }
 
         private static int ToInt(Dictionary<string, object> item, string key)
@@ -2894,8 +3224,10 @@ namespace OniMcp.Tools
                     {
                         ["totalCount"] = hazardCount,
                         ["byElement"] = hazardByElement.OrderBy(pair => pair.Key).ToDictionary(pair => pair.Key, pair => pair.Value),
-                        ["cells"] = hazardCells.Take(200).ToList(),
-                        ["truncatedCells"] = Math.Max(0, hazardCells.Count - 200)
+                        ["runs"] = CoordinateRuns(hazardCells, 80),
+                        ["sampleCells"] = hazardCells.Take(40).ToList(),
+                        ["truncatedSampleCells"] = Math.Max(0, hazardCells.Count - 40),
+                        ["note"] = "runs are compact row spans [x1,y,x2,y]; sampleCells is intentionally capped for token efficiency"
                     },
                 ["candidates"] = top
             };
@@ -3089,6 +3421,44 @@ namespace OniMcp.Tools
             };
         }
 
+        private static List<int[]> CoordinateRuns(List<int[]> cells, int limit)
+        {
+            var runs = new List<int[]>();
+            if (cells == null || cells.Count == 0 || limit <= 0)
+                return runs;
+
+            var ordered = cells
+                .OrderBy(cell => cell[1])
+                .ThenBy(cell => cell[0])
+                .ToList();
+            int startX = ordered[0][0];
+            int endX = startX;
+            int y = ordered[0][1];
+
+            for (int i = 1; i < ordered.Count; i++)
+            {
+                int x = ordered[i][0];
+                int nextY = ordered[i][1];
+                if (nextY == y && x == endX + 1)
+                {
+                    endX = x;
+                    continue;
+                }
+
+                runs.Add(new[] { startX, y, endX, y });
+                if (runs.Count >= limit)
+                    return runs;
+                startX = x;
+                endX = x;
+                y = nextY;
+            }
+
+            runs.Add(new[] { startX, y, endX, y });
+            if (runs.Count > limit)
+                return runs.Take(limit).ToList();
+            return runs;
+        }
+
         private static HashSet<int> BuildOccupiedCells(Dictionary<string, int> rect, int worldId)
         {
             var occupied = new HashSet<int>();
@@ -3146,8 +3516,10 @@ namespace OniMcp.Tools
             public int Y;
             public int ObjectX;
             public int ObjectY;
+            public int ObjectCell;
             public int AnchorX;
             public int AnchorY;
+            public int AnchorCell;
             public int Width;
             public int Height;
             public int FootprintX1;
@@ -3186,6 +3558,10 @@ namespace OniMcp.Tools
             public readonly Dictionary<string, ElementAggregate> ElementCounts = new Dictionary<string, ElementAggregate>();
             public int ValidCells;
             public int VisibleCells;
+            public int OpenCells;
+            public int OccupiedCells;
+            public int BlockedCells;
+            public int BuildableCells;
             private readonly StringBuilder rowSymbols = new StringBuilder();
             private int currentY;
 
@@ -3213,7 +3589,17 @@ namespace OniMcp.Tools
             {
                 rowSymbols.Append(summary.Symbol);
                 if (summary.Valid)
+                {
                     ValidCells++;
+                    if (summary.Occupancy == "open")
+                        OpenCells++;
+                    if (!string.IsNullOrWhiteSpace(summary.BlockReason))
+                        BlockedCells++;
+                    if (summary.Overlay != null)
+                        OccupiedCells++;
+                    if (summary.Buildable1x1)
+                        BuildableCells++;
+                }
                 if (summary.Visible)
                     VisibleCells++;
                 AddElementAggregate(ElementCounts, summary);
@@ -3246,6 +3632,9 @@ namespace OniMcp.Tools
             public bool Foundation;
             public char Symbol;
             public OverlaySummary Overlay;
+            public string Occupancy;
+            public string BlockReason;
+            public bool Buildable1x1;
 
             public string ToDetailLine()
             {
@@ -3253,8 +3642,20 @@ namespace OniMcp.Tools
                     return $"({X},{Y}) ?";
 
                 string overlay = Overlay != null ? $" obj={Overlay.Kind}:{Overlay.Id}" : "";
-                return $"({X},{Y}) {Symbol} elem={ElementId} state={State} massKg={Math.Round(MassKg, 3)} tempC={Math.Round(TemperatureK - 273.15f, 1)} visible={Visible} disease={DiseaseIdx}:{DiseaseCount}{overlay}";
+                string block = string.IsNullOrWhiteSpace(BlockReason) ? "" : $" block={BlockReason}";
+                return $"({X},{Y}) {Symbol} occ={Occupancy} buildable1x1={Buildable1x1}{block} elem={ElementId} state={State} massKg={Math.Round(MassKg, 3)} tempC={Math.Round(TemperatureK - 273.15f, 1)} visible={Visible} disease={DiseaseIdx}:{DiseaseCount}{overlay}";
             }
+        }
+
+        private class AreaDescriptionRegion
+        {
+            public string Category;
+            public string ElementId;
+            public int Count;
+            public int MinX;
+            public int MinY;
+            public int MaxX;
+            public int MaxY;
         }
 
         private sealed class SparseRunBuilder

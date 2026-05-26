@@ -35,10 +35,13 @@ namespace OniMcp.Tools
             "game_resume",
             "game_set_speed",
             "power_summary",
+            "building_power_ports",
             "world_text_map",
             "world_area_snapshot",
             "layout_candidates",
             "dupes_status_check",
+            "dupes_auto_rename",
+            "dupes_rename",
             "orders_dig_area",
             "orders_sweep_area",
             "buildings_search_defs",
@@ -211,6 +214,8 @@ namespace OniMcp.Tools
             Register(SpecialBuildingTools.ControlGeneShuffler());
             Register(StoryFacilityTools.ListPrinterceptors());
             Register(StoryFacilityTools.ControlPrinterceptor());
+            Register(StoryFacilityTools.ListPoiTechUnlocks());
+            Register(StoryFacilityTools.ControlPoiTechUnlock());
             Register(StoryFacilityTools.ListRemoteWorkTerminals());
             Register(StoryFacilityTools.SetRemoteWorkDock());
             Register(StoryFacilityTools.ListGeneticAnalysisStations());
@@ -304,6 +309,7 @@ namespace OniMcp.Tools
             Register(BuildPlanningTools.SearchBuildables());
             Register(BuildPlanningTools.ListBuildMaterials());
             Register(BuildPlanningTools.PreviewBuild());
+            Register(BuildPlanningTools.FindPlacementCandidates());
             Register(BuildPlanningTools.BuildArea());
             Register(RocketTools.ListRockets());
             Register(RocketTools.GetRocketStatus());
@@ -367,6 +373,7 @@ namespace OniMcp.Tools
             Register(OrdersTools.EmptyConduits());
             Register(OrdersTools.CutConduits());
             Register(PowerAndRoomTools.GetPowerSummary());
+            Register(PowerAndRoomTools.GetBuildingPowerPorts());
             Register(PowerAndRoomTools.ListRooms());
             Register(WorldAnalysisTools.GetCellInfo());
             Register(WorldAnalysisTools.GetWorldElementSummary());

@@ -393,7 +393,15 @@ namespace OniMcp.Tools
                 case "duplicant":
                 case "复制人":
                 case "小人":
-                    return new[] { "dupes", "duplicant", "schedule", "skills", "assignables" };
+                    return new[] { "dupes", "duplicant", "schedule", "skills", "assignables", "rename", "auto_rename", "dupes_auto_rename" };
+                case "rename":
+                case "name":
+                case "renaming":
+                case "改名":
+                case "重命名":
+                case "命名":
+                case "名字":
+                    return new[] { "rename", "name", "dupes_rename", "dupes_auto_rename", "duplicant", "dupes", "apply" };
                 case "rocket":
                 case "火箭":
                 case "太空":
@@ -507,7 +515,7 @@ namespace OniMcp.Tools
                 new ToolGuide("mechanics_advice",
                     new[] { "mechanics", "formula", "heat", "oxygen", "food preservation", "ranching", "power", "automation", "机制", "公式", "热量", "制氧", "保鲜", "养殖", "电力", "自动化", "缺氧机制速查" },
                     new[] { "oni://guide/mechanics{?query,category,detail,limit}", "oni://tools/read/database_query{?query}", "oni://colony/summary", "oni://world/text-map{?profile=standard}" },
-                    new[] { "guide_mechanics_query", "database_query", "colony_state_snapshot", "world_area_snapshot", "world_text_map", "power_summary", "thermal_overheat_risk_scan" },
+                    new[] { "guide_mechanics_query", "database_query", "colony_state_snapshot", "world_area_snapshot", "world_text_map", "power_summary", "building_power_ports", "thermal_overheat_risk_scan" },
                     new[] { "guide_mechanics_query query=电解器入水温度", "guide_mechanics_query category=thermal query=隔热砖", "database_query query=<building_or_element>", "colony_state_snapshot profile=standard" },
                     "Use guide_mechanics_query for distilled player-tested formulas and edge cases; use database_query for the game's current codex/building/element facts; read live resources before applying advice to the current save.",
                     new[] { "query guide mechanics", "query in-game database if exact object stats matter", "read live save state", "calculate/adapt recommendation", "verify after any action" }),
@@ -526,19 +534,19 @@ namespace OniMcp.Tools
                     "Resolve exact critter InstanceIDs with critters_list first; then call orders_attack per target or batch via tools_call_many. Attack is dangerous and requires confirm=true.",
                     new[] { "list critters with query/species", "select target ids", "mark attack with confirm=true", "verify critters_list or pending errands" }),
                 new ToolGuide("build_and_configure",
-                    new[] { "build", "building", "construct", "config", "toilet", "outhouse", "plumbing", "建造", "建筑", "配置", "厕所", "茅厕", "卫生间", "洗手间" },
-                    new[] { "oni://buildings/defs{?query}", "oni://buildings/materials{?prefabId}", "oni://buildings/configurables", "oni://automation/controls", "oni://world/text-map{?profile=scan,format=json}" },
-                    new[] { "world_area_snapshot", "layout_candidates", "buildings_search_defs", "buildings_materials", "agent_pointer_get", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
-                    new[] { "agent_pointer_get agentId=builder", "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "buildings_search_defs query=wire|toilet", "buildings_materials prefabId=Wire", "agent_pointer_jump agentId=builder x=... y=... displayText=移动到蓝图起点", "agent_pointer_select_tool agentId=builder tool=build prefabId=Wire material=auto displayText=选择电线蓝图", "agent_pointer_hold_left agentId=builder direction=right length=12 confirm=true displayText=铺设这段电线" },
-                    "Use world_area_snapshot/layout_candidates first for base layout. Use buildings_search_defs to choose prefab/facade and material=auto unless explicit material is justified. Build through the pointer flow: create/reuse one stable agentId, jump/aim with displayText, select build tool with prefab/material and displayText, then left-click or hold-left for 1x1 lines. For multi-cell furniture/machines, treat placement.anchor=lowerLeftCell as the anchor, dry-run if uncertain, and use one left_click per anchor.",
-                    new[] { "snapshot planning area", "choose target", "search defs/materials", "create/reuse pointer agentId=builder", "jump/aim pointer with displayText", "select build tool with displayText", "left-click or hold-left with displayText", "verify placement", "batch config if needed" }),
+                    new[] { "build", "building", "construct", "config", "toilet", "outhouse", "plumbing", "wire", "power", "placement", "footprint", "anchor", "建造", "建筑", "配置", "厕所", "茅厕", "卫生间", "洗手间", "电线", "接线", "供电", "空位", "候选", "footprint" },
+                    new[] { "oni://buildings/defs{?query}", "oni://buildings/materials{?prefabId}", "oni://power/ports{?x1,y1,x2,y2,query}", "oni://buildings/configurables", "oni://automation/controls", "oni://world/text-map{?profile=scan,format=json}" },
+                    new[] { "build_placement_candidates", "build_preview", "building_power_ports", "world_area_snapshot", "layout_candidates", "buildings_search_defs", "buildings_materials", "agent_pointer_get", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
+                    new[] { "building_power_ports x1=... y1=... x2=... y2=... query=<battery|generator|consumer>", "build_placement_candidates prefabId=<building> areaId=<area> limit=8", "build_preview prefabId=<building> x=<anchorX> y=<anchorY>", "world_area_snapshot preset=planning x1=... y1=... x2=... y2=...", "buildings_search_defs query=wire|toilet", "buildings_materials prefabId=Wire", "agent_pointer_jump agentId=builder x=<portX> y=<portY> displayText=移动到电力接口格", "agent_pointer_select_tool agentId=builder tool=build prefabId=Wire material=auto displayText=选择电线蓝图", "agent_pointer_hold_left agentId=builder direction=right length=12 confirm=true displayText=从接口格开始铺线" },
+                    "Use building_power_ports before power wiring so the line starts or ends on the exact input/output port cell; verify the returned port hasWire after placement. Use build_placement_candidates first when the task is to find where a building can fit. Use build_preview for one anchor and world_area_snapshot/layout_candidates only for broader terrain context. Use buildings_search_defs to choose prefab/facade and material=auto unless explicit material is justified. Build through the pointer flow: create/reuse one stable agentId, jump/aim with displayText, select build tool with prefab/material and displayText, then left-click or hold-left for 1x1 lines. For multi-cell furniture/machines, treat placement.anchor=lowerLeftCell as the anchor, dry-run if uncertain, and use one left_click per anchor.",
+                    new[] { "scan area for anchors", "pick top candidate", "preview one anchor", "create/reuse pointer agentId=builder", "jump/aim pointer with displayText", "select build tool with displayText", "left-click or hold-left with displayText", "verify placement", "batch config if needed" }),
                 new ToolGuide("dupes_and_assignments",
-                    new[] { "dupe", "duplicant", "schedule", "skill", "bed", "assign", "stuck", "trapped", "rescue", "复制人", "日程", "技能", "分配", "被困", "卡住", "救援" },
+                    new[] { "dupe", "duplicant", "schedule", "skill", "bed", "assign", "stuck", "trapped", "rescue", "rename", "name", "auto_rename", "复制人", "日程", "技能", "分配", "被困", "卡住", "救援", "改名", "重命名", "命名", "名字" },
                     new[] { "oni://dupes", "oni://dupes/status-check", "oni://dupes/direct-commands", "oni://dupes/priorities", "oni://dupes/priority-settings", "oni://dupes/equipment", "oni://assignables", "oni://schedules" },
-                    new[] { "dupes_status_check", "dupes_list", "dupes_detail", "dupes_move_to", "dupes_move_batch_to", "dupes_skills_list", "dupes_learn_skill", "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "dupes_priority_settings_get", "dupes_priority_settings_set", "dupes_equipment_list", "assignables_list", "assignables_set", "assignable_slot_item_set", "schedule_set_block" },
-                    new[] { "dupes_status_check", "dupe stuck trapped rescue schedule skill assign bed move priority jobs" },
-                    "Use dupes_status_check first for duplicant health, location, navigation, and suspected trapped cases. Use dupes_move_batch_to only after reading status and confirming reachable rescue targets. Schedule/assignment changes can be grouped via tools_call_many.",
-                    new[] { "read dupes_status_check", "inspect flagged scanRect if needed", "choose safe rescue/config action", "dry-run construction if needed", "execute only after confirmation", "verify" }),
+                    new[] { "dupes_status_check", "dupes_list", "dupes_detail", "dupes_rename", "dupes_auto_rename", "dupes_move_to", "dupes_move_batch_to", "dupes_skills_list", "dupes_learn_skill", "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "dupes_priority_settings_get", "dupes_priority_settings_set", "dupes_equipment_list", "assignables_list", "assignables_set", "assignable_slot_item_set", "schedule_set_block" },
+                    new[] { "dupes_auto_rename apply=true style=role_prefix", "dupes_rename name=<current> newName=<new>", "dupe stuck trapped rescue schedule skill assign bed move priority jobs" },
+                    "Use dupes_auto_rename for batch role-based naming and dupes_rename for one duplicant. Use dupes_status_check first only for health, location, navigation, and suspected trapped cases. Schedule/assignment changes can be grouped via tools_call_many.",
+                    new[] { "choose rename/status/assignment intent", "for naming use dupes_auto_rename apply=false to preview or apply=true to execute", "for rescue read dupes_status_check", "execute selected write/execute tool", "verify" }),
                 new ToolGuide("resources_food_storage",
                     new[] { "resources", "food", "storage", "filter", "diet", "diagnostics", "alerts", "资源", "食物", "储存", "过滤" },
                     new[] { "oni://resources/inventory", "oni://resources/food", "oni://resources/pins", "oni://colony/diagnostic-settings", "oni://storage/list", "oni://filters/controls" },
@@ -575,12 +583,12 @@ namespace OniMcp.Tools
                     "Use production_recipes_list to choose the exact material-variant recipeId, then production_queue_batch_set with defaults for shared mode/count.",
                     new[] { "read fabricators and recipes", "choose exact recipe ids", "set queue", "verify queue" }),
                 new ToolGuide("research",
-                    new[] { "research", "tech", "technology", "queue", "cancel research", "clear research", "研究", "科技", "取消研究" },
-                    new[] { "oni://research/status" },
-                    new[] { "research_status", "research_list", "research_set", "research_clear", "ui_management_open" },
-                    new[] { "research tech queue cancel clear" },
-                    "Use research_list to resolve an exact tech id; research_clear requires confirm=true because it cancels the active queue.",
-                    new[] { "read research_status", "search research_list if selecting", "set or clear research", "verify research_status" }),
+                    new[] { "research", "tech", "technology", "queue", "cancel research", "clear research", "research portal", "unlock portal", "information transmission", "研究", "科技", "取消研究", "信息传送通道", "信息传输通道", "解锁信息传送通道", "解锁信息传输通道" },
+                    new[] { "oni://research/status", "oni://story/poi-tech-unlocks" },
+                    new[] { "research_status", "research_list", "research_set", "research_clear", "poi_tech_unlocks_list", "poi_tech_unlock_control", "ui_management_open" },
+                    new[] { "research tech queue cancel clear portal poi tech unlock information transmission" },
+                    "Use research_list for normal tech research. Use poi_tech_unlocks_list/control for Research Portal 信息传送通道 unlock chores; control requires confirm=true.",
+                    new[] { "read research_status or poi_tech_unlocks_list", "resolve exact tech or portal target", "set research queue or start/cancel portal chore", "verify status" }),
                 new ToolGuide("rockets",
                     new[] { "rocket", "space", "launch", "crew", "cargo", "module", "火箭", "太空", "发射", "乘员" },
                     new[] { "oni://rockets/status", "oni://rockets/modules", "oni://rockets/launch-pads", "oni://rockets/crew-requests", "oni://rockets/assignment-groups", "oni://rockets/flight-utilities" },
@@ -710,7 +718,7 @@ namespace OniMcp.Tools
                 case "ranching": return "小动物抓捕、放生和牧场相关命令。";
                 case "farming": return "植物收获、铲除、种植选择和种植槽状态。";
                 case "medical": return "医疗床、诊疗阈值和护理相关分配。";
-                case "power": return "电力网络、电池、发电/耗电统计。";
+                case "power": return "电力网络、电池、发电/耗电统计和电力接口格。";
                 case "rooms": return "房间识别、房间类型和士气相关概览。";
                 case "rockets": return "火箭、发射台、舱组、乘员货物和飞行控制。";
                 case "space": return "星图、望远镜、太空目标和裂隙相关操作。";

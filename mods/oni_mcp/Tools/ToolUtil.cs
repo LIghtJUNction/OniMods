@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -7,6 +8,9 @@ namespace OniMcp.Tools
 {
     internal static class ToolUtil
     {
+        private static readonly Regex RichTextTagRegex = new Regex("<[^>]+>", RegexOptions.Compiled);
+        private static readonly Regex WhitespaceRegex = new Regex("\\s+", RegexOptions.Compiled);
+
         public static string CleanName(string name)
         {
             if (string.IsNullOrEmpty(name))
@@ -15,9 +19,11 @@ namespace OniMcp.Tools
             int start = name.IndexOf('>');
             int end = name.LastIndexOf("</", StringComparison.Ordinal);
             if (start >= 0 && end > start)
-                return name.Substring(start + 1, end - start - 1);
+                name = name.Substring(start + 1, end - start - 1);
 
-            return name;
+            name = RichTextTagRegex.Replace(name, "");
+            name = WhitespaceRegex.Replace(name, " ");
+            return name.Trim();
         }
 
         public static string GetElementState(Element element)

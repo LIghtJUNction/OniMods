@@ -148,8 +148,8 @@ http://localhost:8787/mcp/
 | 世界读取 | `world_text_map`, `world_area_snapshot`, `world_cell_info` | 文本地图、区域快照、格子详情 |
 | 区域管理 | `area_define`, `area_get`, `area_blocks`, `area_merge` | 定义和复用地图区域 |
 | 指针操作 | `agent_pointer_aim_cell`, `agent_pointer_user_mouse_get`, `agent_pointer_say`, `agent_pointer_left_click` | 用可视 agent 指针执行点击类操作、读取玩家鼠标格和显示气泡 |
-| 建筑与订单 | `buildings_search_defs`, `buildings_materials`, `build_preview`, `orders_dig_area`, `orders_sweep_area` | 搜建筑、选材料、预检蓝图、下达挖掘和清扫订单 |
-| 复制人 | `dupes_status_check`, `dupes_detail`, `dupes_needs`, `dupes_priority_set`, `dupes_rename` | 状态检查、需求、优先级、命名 |
+| 建筑与订单 | `buildings_search_defs`, `buildings_materials`, `build_placement_candidates`, `build_preview`, `orders_dig_area`, `orders_sweep_area` | 搜建筑、找可放锚点、选材料、预检蓝图、下达挖掘和清扫订单 |
+| 复制人 | `dupes_status_check`, `dupes_detail`, `dupes_needs`, `dupes_priority_set`, `dupes_rename`, `dupes_auto_rename` | 状态检查、需求、优先级、单人改名和按职业自动命名 |
 | 管理界面 | `schedule_list`, `schedule_set_block`, `diet_status`, `resources_storage_set_filter` | 日程、饮食、储存过滤和管理屏设置 |
 | 设施侧屏 | `filters_list`, `state_controls_list`, `automation_controls_list`, `lights_color_set` | 常见建筑侧屏配置 |
 | 火箭与太空 | `rockets_status`, `rocket_modules_list`, `rocket_crew_requests_list` | 火箭状态、模块、乘员和太空设施 |
@@ -171,10 +171,12 @@ http://localhost:8787/mcp/
 | `oni://dupes` | 复制人列表 |
 | `oni://dupes/status-check` | 复制人位置、差事、需求和疑似被困风险 |
 | `oni://power/summary` | 电网摘要和电池状态 |
+| `oni://power/ports` | 电力接口格、锚点、接线点和端口是否已有电线 |
 | `oni://rooms/list` | 房间系统状态 |
 | `oni://thermal/overheat-risk` | 建筑过热风险 |
 | `oni://world/text-map` | 文本地图 |
 | `oni://buildings/defs` | 可建造建筑定义 |
+| `oni://story/poi-tech-unlocks` | 信息传送通道解锁差事和 POI 科技项 |
 | `oni://tools/manifest` | 工具清单 |
 | `oni://tools/guide` | 按目标推荐工具链 |
 | `oni://guide/mechanics` | 机制、公式、边界条件速查 |

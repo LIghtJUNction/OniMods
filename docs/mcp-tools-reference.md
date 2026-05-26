@@ -36,7 +36,7 @@
 | 工具 | 模式 | 风险 | 用途 |
 |------|------|------|------|
 | `dupes_list` | read | none | 列出所有复制人基本状态 |
-| `dupes_status_check` | read | none | 复制人状态/被困检查：位置、差事、需求、周边可达格 |
+| `dupes_status_check` | read | none | 复制人状态/被困检查：位置、差事、需求、周边可达格；`includeDetails=true` 默认 compact |
 | `dupes_detail` | read | none | 单个复制人详情 |
 | `dupes_attributes` | read | none | 属性与特性 |
 | `dupes_needs` | read | none | 需求、压力和士气 |
@@ -186,6 +186,7 @@
 | 工具 | 模式 | 风险 | 用途 |
 |------|------|------|------|
 | `printerceptors_list` / `control` | read/write | medium | Printerceptor 拦截控制 |
+| `poi_tech_unlocks_list` / `control` | read/write | medium | 信息传送通道/Research Portal 解锁研究 |
 | `remote_work_terminals_list` / `set` | read/write | low | 远程工作终端 dock |
 | `lore_bearers_list` / `press` | read/execute | low | 阅读传说 |
 | `artifacts_list` / `open` | read/execute | low | 文物分析 |
@@ -232,7 +233,7 @@
 
 多个区域可以临时拼接：`areaId=blk1+blk2+blk3` 会按同一世界内这些区域的外接矩形读取或编辑。需要长期复用时，用 `area_merge areaIds=["blk1","blk2","blk3"]` 生成新的 `a*` 句柄。拼接不是多边形裁剪；非相邻区域会包含中间空隙，`area_merge dryRun=true` 会返回 `continuity=false`、`gapCellsPercent` 和 warning。
 
-`world_text_map view=temperature` 输出温度 token：`frz/cold/mild/hot/xhot`。`world_area_snapshot` 默认返回 JSON，`maps.base` 是基础地形/对象，`maps.power` 等 overlay 默认也是逐格行。`profile=scan` 才会把 overlay 改成稀疏输出。`includeScreenshot=true` 会保存当前相机画面路径，但截图不自动保证覆盖传入矩形，除非调用前先移动相机。
+`world_text_map view=temperature` 输出温度 token：`frz/cold/mild/hot/xhot`。`world_area_snapshot` 默认返回 JSON，`maps.base` 是基础地形/对象，并额外返回 `areaDescription` 概括主要固体/液体区段。`terrain/construction` 默认包含地图行；`utilities/planning/all` 默认省略地图行，只保留摘要、对象和规划信息，需要原始网格时显式传 `includeRows=true`。`profile=scan` 会把 overlay 改成稀疏输出。`planning.hazards` 默认返回按行区段和少量坐标样本，避免把大面积危险格完整 dump 出来。`includeScreenshot=true` 会保存当前相机画面路径，但截图不自动保证覆盖传入矩形，除非调用前先移动相机。
 
 ### 游戏控制 (game)
 
@@ -467,6 +468,7 @@
 | 批量调用 | `items: [{t:"name",a:{}}]` + `defaults` + 默认 `responseMode=summary` |
 | 常规观察 | `colony_state_snapshot profile=brief` |
 | 文本地图初扫 | `world_text_map profile=standard encoding=plain` |
+| 区域规划快照 | `world_area_snapshot preset=construction includeRows=false` |
 | 区域建筑速查 | `oni://buildings/configurables?areaId=xxx&limit=20` |
 
 ---
@@ -532,6 +534,7 @@
 | `oni://dupes/skills` | `dupes_skills_list` | 技能 |
 | `oni://schedules` | `schedule_list` | 日程 |
 | `oni://research/status` | `research_status` | 研究状态 |
+| `oni://story/poi-tech-unlocks` | `poi_tech_unlocks_list` | 信息传送通道 |
 | `oni://rockets/status` | `rockets_status` | 火箭状态 |
 | `oni://mcp/sessions` | `mcp_client_capabilities` | MCP 会话与能力 |
 | `oni://tools/manifest` | `tools_manifest` | 工具清单 |

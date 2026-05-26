@@ -385,6 +385,7 @@ namespace OniMcp.Tools
                 Row("medical", "medical_and_care_assignments", "患者清单、床位、医疗床单点/批量阈值、床位分配、医生站药品/可治疗疾病、诊疗、护理、制药相关分配", "covered", "medical_patients_list", "assignables_list", "assignables_set", "medical_clinics_list", "medical_clinic_threshold_set", "medical_clinics_threshold_batch_set", "medical_bed_assign", "doctor_stations_list", "buildings_manual_delivery"),
                 Row("combat", "combat_targeting", "攻击标记、取消攻击和优先级", "covered", "world_text_map", "critters_list", "orders_attack"),
                 Row("story", "printerceptor_operations", "PrinterceptorSideScreen 打开打印选择界面、拦截打印舱候选和 databank/充能状态", "covered", "printerceptors_list", "printerceptor_control"),
+                Row("story", "poi_tech_unlock_portals", "Research Portal/信息传送通道：查看解锁差事、进度、会解锁的 POI 科技项，开始或取消解锁研究", "covered", "poi_tech_unlocks_list", "poi_tech_unlock_control"),
                 Row("story", "lore_bearer_reading", "LoreBearerSideScreen 阅读/检查按钮、已读状态、tooltip 和弹窗触发", "covered", "lore_bearers_list", "lore_bearer_press"),
                 Row("story", "telepad_side_screen", "TelepadSideScreen 查看移民倒计时、打开移民选择、殖民地摘要、技能和研究界面、胜利条件状态", "covered", "telepads_list", "telepad_control"),
                 Row("story", "artifact_analysis_display", "ArtifactAnalysisSideScreen 已分析 artifact 列表、分析站状态、场上 artifact 和 reveal/lore 弹窗", "covered", "artifacts_list", "artifact_reveal_open"),

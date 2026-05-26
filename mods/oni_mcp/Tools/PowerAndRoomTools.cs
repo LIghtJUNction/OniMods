@@ -11,6 +11,72 @@ namespace OniMcp.Tools
 {
     public static class PowerAndRoomTools
     {
+        public static McpTool GetBuildingPowerPorts()
+        {
+            return new McpTool
+            {
+                Name = "building_power_ports",
+                Group = "power",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "power_ports_list", "building_power_connection_points", "power_connection_points" },
+                Tags = new List<string> { "power", "electricity", "ports", "connector", "wire", "电力", "接口", "接线" },
+                Description = "列出指定区域内建筑的电力接口格：锚点、输入/输出端口、相对偏移和可接线状态，方便直接接线而不是猜文本地图",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；默认当前激活世界", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "按名称或 prefabId 关键词筛选，例如 battery、generator、transformer、wire", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量，默认 120，最大 500", Required = false }
+                }),
+                Handler = args =>
+                {
+                    if (Game.Instance == null)
+                        return CallToolResult.Error("Game not initialized");
+
+                    bool hasRect = HasRectInput(args);
+                    var rect = hasRect ? ToolUtil.GetRect(args) : null;
+                    int worldId = hasRect || ToolUtil.GetInt(args, "worldId").HasValue ? ToolUtil.ResolveWorldId(args) : -1;
+                    string query = args["query"]?.ToString();
+                    int limit = ToolUtil.ClampLimit(args, 120, 500);
+
+                    var results = new List<Dictionary<string, object>>();
+                    foreach (var building in Components.BuildingCompletes.Items)
+                    {
+                        var go = building?.gameObject;
+                        if (go == null || !ToolUtil.GameObjectMatchesWorld(go, worldId))
+                            continue;
+                        int cell = Grid.PosToCell(go);
+                        if (rect != null && !CellInRect(cell, rect, worldId))
+                            continue;
+                        if (!MatchesQuery(go, query))
+                            continue;
+
+                        var def = building.Def;
+                        if (def == null)
+                            continue;
+
+                        bool hasInput = def.RequiresPowerInput;
+                        bool hasOutput = def.RequiresPowerOutput;
+                        if (!hasInput && !hasOutput)
+                            continue;
+
+                        results.Add(BuildingPowerPortInfo(go, def, hasInput, hasOutput));
+                        if (results.Count >= limit)
+                            break;
+                    }
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["returned"] = results.Count,
+                        ["worldId"] = worldId >= 0 ? (object)worldId : null,
+                        ["query"] = string.IsNullOrWhiteSpace(query) ? null : query,
+                        ["rect"] = rect,
+                        ["buildings"] = results
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
         public static McpTool GetPowerSummary()
         {
             return new McpTool
@@ -41,6 +107,7 @@ namespace OniMcp.Tools
                     var batteries = new List<Dictionary<string, object>>();
                     var generators = new List<Dictionary<string, object>>();
                     var consumers = new List<Dictionary<string, object>>();
+                    var diagnostics = new List<Dictionary<string, object>>();
 
                     int batteryCount = 0;
                     float batteryCapacityJ = 0f;
@@ -136,6 +203,8 @@ namespace OniMcp.Tools
 
                         if (includeDetails && consumers.Count < limit)
                             consumers.Add(PowerDeviceInfo(consumer.gameObject, "consumer", consumer.CircuitID, null, null, usedWatts, baseWatts, operational, false, consumer.IsPowered));
+                        if (IsUnconnectedCircuit(consumer.CircuitID) && diagnostics.Count < limit)
+                            diagnostics.Add(PowerIssueInfo(consumer.gameObject, "consumer_unconnected", "Consumer is on circuit -1; check its power input port cell for a built wire/blueprint and verify the wire is connected to a powered circuit."));
                     }
 
                     var result = new Dictionary<string, object>
@@ -166,6 +235,14 @@ namespace OniMcp.Tools
                             .OrderByDescending(item => item.ConsumerBaseWatts + item.GeneratorWatts + item.BatteryCapacityJ)
                             .Select(item => item.ToDictionary())
                             .ToList()
+                    };
+                    result["diagnostics"] = new Dictionary<string, object>
+                    {
+                        ["issueCount"] = diagnostics.Count,
+                        ["items"] = diagnostics,
+                        ["next"] = diagnostics.Count == 0
+                            ? "No unconnected consumers detected in this summary."
+                            : "Use building_power_ports on the returned coordinates or a small rect around the device to verify exact port cells and missing wires."
                     };
 
                     if (includeDetails)
@@ -302,6 +379,158 @@ namespace OniMcp.Tools
             return result;
         }
 
+        private static Dictionary<string, object> PowerIssueInfo(GameObject go, string reasonCode, string reason)
+        {
+            var building = go != null ? go.GetComponent<Building>() : null;
+            var def = building?.Def;
+            var info = TargetInfo(go);
+            info["reasonCode"] = reasonCode;
+            info["reason"] = reason;
+            info["ports"] = def != null
+                ? BuildingPowerPortInfo(go, def, def.RequiresPowerInput, def.RequiresPowerOutput)["ports"]
+                : null;
+            return info;
+        }
+
+        private static Dictionary<string, object> BuildingPowerPortInfo(GameObject go, BuildingDef def, bool hasInput, bool hasOutput)
+        {
+            int anchorCell = Grid.PosToCell(go);
+            int anchorX;
+            int anchorY;
+            CellXY(anchorCell, out anchorX, out anchorY);
+
+            var building = go.GetComponent<Building>();
+            var rotatable = go.GetComponent<Rotatable>();
+            Orientation orientation = rotatable != null ? rotatable.GetOrientation() : Orientation.Neutral;
+
+            var inputPort = BuildPortInfo(def, anchorCell, anchorX, anchorY, orientation, def.PowerInputOffset, "input", hasInput, hasInput ? building?.GetPowerInputCell() ?? Grid.InvalidCell : Grid.InvalidCell);
+            var outputPort = BuildPortInfo(def, anchorCell, anchorX, anchorY, orientation, def.PowerOutputOffset, "output", hasOutput, hasOutput ? building?.GetPowerOutputCell() ?? Grid.InvalidCell : Grid.InvalidCell);
+
+            var ports = new List<Dictionary<string, object>>();
+            if (inputPort != null)
+                ports.Add(inputPort);
+            if (outputPort != null)
+                ports.Add(outputPort);
+
+            var result = TargetInfo(go);
+            result["worldId"] = Grid.IsValidCell(anchorCell) && Grid.IsWorldValidCell(anchorCell) ? (object)Grid.WorldIdx[anchorCell] : null;
+            result["anchorCell"] = anchorCell;
+            result["anchorX"] = anchorX;
+            result["anchorY"] = anchorY;
+            result["orientation"] = orientation.ToString();
+            result["requiresPowerInput"] = def.RequiresPowerInput;
+            result["requiresPowerOutput"] = def.RequiresPowerOutput;
+            result["powerWatts"] = Math.Round(def.EnergyConsumptionWhenActive, 1);
+            result["ports"] = ports;
+            return result;
+        }
+
+        private static Dictionary<string, object> TargetInfo(GameObject go)
+        {
+            int cell = Grid.PosToCell(go);
+            var kpid = go.GetComponent<KPrefabID>();
+            var building = go.GetComponent<Building>();
+            return new Dictionary<string, object>
+            {
+                ["id"] = kpid?.InstanceID ?? go.GetInstanceID(),
+                ["prefabId"] = building?.Def?.PrefabID ?? kpid?.PrefabTag.Name ?? go.name,
+                ["name"] = ToolUtil.CleanName(go.GetProperName()),
+                ["x"] = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
+                ["y"] = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1,
+                ["worldId"] = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell) ? Grid.WorldIdx[cell] : -1
+            };
+        }
+
+        private static Dictionary<string, object> BuildPortInfo(BuildingDef def, int anchorCell, int anchorX, int anchorY, Orientation orientation, CellOffset offset, string role, bool required, int absoluteCell)
+        {
+            if (!required)
+                return null;
+
+            CellOffset rotated = RotatedOffset(def, orientation, offset);
+            int computedCell = Grid.IsValidCell(anchorCell) ? Grid.OffsetCell(anchorCell, rotated) : Grid.InvalidCell;
+            int cell = Grid.IsValidCell(absoluteCell) ? absoluteCell : computedCell;
+            int x;
+            int y;
+            CellXY(cell, out x, out y);
+            var wire = PowerWireAtCell(cell);
+
+            return new Dictionary<string, object>
+            {
+                ["role"] = role,
+                ["required"] = true,
+                ["offset"] = new Dictionary<string, object>
+                {
+                    ["x"] = rotated.x,
+                    ["y"] = rotated.y
+                },
+                ["cell"] = cell,
+                ["x"] = x,
+                ["y"] = y,
+                ["dx"] = x - anchorX,
+                ["dy"] = y - anchorY,
+                ["hasWire"] = wire != null,
+                ["wire"] = wire
+            };
+        }
+
+        private static Dictionary<string, object> PowerWireAtCell(int cell)
+        {
+            if (!Grid.IsValidCell(cell))
+                return null;
+
+            return LayerObjectInfo(cell, ObjectLayer.Wire, "wire")
+                ?? LayerObjectInfo(cell, ObjectLayer.WireTile, "wire_tile")
+                ?? LayerObjectInfo(cell, ObjectLayer.ReplacementWire, "replacement_wire");
+        }
+
+        private static Dictionary<string, object> LayerObjectInfo(int cell, ObjectLayer layer, string kind)
+        {
+            var go = Grid.Objects[cell, (int)layer];
+            if (go == null)
+                return null;
+
+            var building = go.GetComponent<Building>();
+            var kpid = go.GetComponent<KPrefabID>();
+            string prefabId = building?.Def?.PrefabID ?? kpid?.PrefabTag.Name ?? go.name;
+            return new Dictionary<string, object>
+            {
+                ["kind"] = kind,
+                ["layer"] = layer.ToString(),
+                ["id"] = kpid?.InstanceID ?? go.GetInstanceID(),
+                ["prefabId"] = prefabId,
+                ["name"] = ToolUtil.CleanName(go.GetProperName()),
+                ["ratingW"] = InferWireRating(prefabId),
+                ["ratingNote"] = "ratingW is inferred from prefab id; use as overload triage, not an exact circuit simulation."
+            };
+        }
+
+        private static int? InferWireRating(string prefabId)
+        {
+            if (string.IsNullOrWhiteSpace(prefabId))
+                return null;
+            if (prefabId.IndexOf("HighWattage", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 20000;
+            if (prefabId.IndexOf("Conductive", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 2000;
+            if (prefabId.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 1000;
+            return null;
+        }
+
+        private static CellOffset RotatedOffset(BuildingDef def, Orientation orientation, CellOffset offset)
+        {
+            if (def == null)
+                return offset;
+            try
+            {
+                return Rotatable.GetRotatedCellOffset(offset, orientation);
+            }
+            catch
+            {
+                return offset;
+            }
+        }
+
         private static bool IsNeutralRoom(string typeId)
         {
             return string.Equals(typeId, "Neutral", StringComparison.OrdinalIgnoreCase);
@@ -316,6 +545,61 @@ namespace OniMcp.Tools
         {
             var operational = go != null ? go.GetComponent<Operational>() : null;
             return operational != null && operational.IsOperational;
+        }
+
+        private static bool HasRectInput(JObject args)
+        {
+            return !string.IsNullOrWhiteSpace(args["areaId"]?.ToString())
+                || (args["x1"] != null && args["y1"] != null && args["x2"] != null && args["y2"] != null);
+        }
+
+        private static bool CellInRect(int cell, Dictionary<string, int> rect, int worldId)
+        {
+            if (!Grid.IsValidCell(cell))
+                return false;
+            if (!ToolUtil.CellMatchesWorld(cell, worldId))
+                return false;
+            int x = Grid.CellColumn(cell);
+            int y = Grid.CellRow(cell);
+            return x >= rect["x1"] && x <= rect["x2"] && y >= rect["y1"] && y <= rect["y2"];
+        }
+
+        private static bool MatchesQuery(GameObject go, string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return true;
+
+            string q = query.Trim();
+            var kpid = go.GetComponent<KPrefabID>();
+            var building = go.GetComponent<Building>();
+            string prefabId = building?.Def?.PrefabID ?? kpid?.PrefabTag.Name ?? go.name;
+            string name = ToolUtil.CleanName(go.GetProperName());
+            return Contains(name, q) || Contains(prefabId, q) || Contains(go.name, q);
+        }
+
+        private static bool Contains(string value, string query)
+        {
+            return !string.IsNullOrWhiteSpace(value)
+                && !string.IsNullOrWhiteSpace(query)
+                && value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static Dictionary<string, McpToolParameter> RectParams(Dictionary<string, McpToolParameter> extra)
+        {
+            var parameters = new Dictionary<string, McpToolParameter>
+            {
+                ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；提供后可省略 x1/y1/x2/y2/worldId", Required = false },
+                ["x1"] = new McpToolParameter { Type = "integer", Description = "区域起点/左下 X", Required = false },
+                ["y1"] = new McpToolParameter { Type = "integer", Description = "区域起点/左下 Y", Required = false },
+                ["x2"] = new McpToolParameter { Type = "integer", Description = "区域终点/右上 X", Required = false },
+                ["y2"] = new McpToolParameter { Type = "integer", Description = "区域终点/右上 Y", Required = false }
+            };
+            if (extra != null)
+            {
+                foreach (var pair in extra)
+                    parameters[pair.Key] = pair.Value;
+            }
+            return parameters;
         }
 
         private static Dictionary<string, object> RoomInfo(Room room, int worldId, bool includeBuildings, bool includeCriteria)
@@ -413,13 +697,6 @@ namespace OniMcp.Tools
             return Contains(RoomTypeId(room.roomType), needle)
                 || Contains(RoomTypeName(room.roomType), needle)
                 || Contains(room.GetProperName(), needle);
-        }
-
-        private static bool Contains(string value, string query)
-        {
-            return !string.IsNullOrWhiteSpace(value)
-                && !string.IsNullOrWhiteSpace(query)
-                && value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static string RoomTypeId(Resource resource)

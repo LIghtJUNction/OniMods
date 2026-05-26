@@ -99,6 +99,8 @@ namespace OniMcp.Tools
                     ["targetY"] = new McpToolParameter { Type = "integer", Description = "可选目标格 Y；提供 targetX/targetY 后检查每个复制人是否能到达", Required = false },
                     ["targetWorldId"] = new McpToolParameter { Type = "integer", Description = "目标格世界 ID，默认 worldId 或当前激活世界", Required = false },
                     ["includeReachableSamples"] = new McpToolParameter { Type = "boolean", Description = "是否返回少量可达格样本，默认 true", Required = false },
+                    ["includeDetails"] = new McpToolParameter { Type = "boolean", Description = "是否附加属性、技能、日程和完整 needs 摘要，默认 false，排查空闲/优先级/技能问题时打开", Required = false },
+                    ["detailMode"] = new McpToolParameter { Type = "string", Description = "详情模式：compact=过滤零值/缺失本地化字符串，full=完整旧式明细；默认 compact", Required = false, EnumValues = new List<string> { "compact", "full" } },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回复制人数，默认 50，最大 100", Required = false }
                 },
                 Handler = args =>
@@ -110,6 +112,8 @@ namespace OniMcp.Tools
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 50, 100));
                     int worldId = ToolUtil.GetInt(args, "worldId") ?? -1;
                     bool includeReachableSamples = ToolUtil.GetBool(args, "includeReachableSamples", true);
+                    bool includeDetails = ToolUtil.GetBool(args, "includeDetails", false);
+                    string detailMode = NormalizeDupeDetailMode(args["detailMode"]?.ToString());
                     int? targetX = ToolUtil.GetInt(args, "targetX");
                     int? targetY = ToolUtil.GetInt(args, "targetY");
                     int targetWorldId = ToolUtil.GetInt(args, "targetWorldId") ?? (worldId >= 0 ? worldId : ClusterManager.Instance?.activeWorldId ?? 0);
@@ -142,7 +146,7 @@ namespace OniMcp.Tools
                     }
 
                     var checks = dupes
-                        .Select(dupe => DupeStatusCheck(dupe, radius, targetCell, includeReachableSamples))
+                        .Select(dupe => DupeStatusCheck(dupe, radius, targetCell, includeReachableSamples, includeDetails, detailMode))
                         .ToList();
                     var flagged = checks.Where(item => item["risk"].ToString() != "ok").ToList();
 
@@ -151,6 +155,7 @@ namespace OniMcp.Tools
                         ["v"] = 1,
                         ["readOnly"] = true,
                         ["radius"] = radius,
+                        ["detailMode"] = includeDetails ? detailMode : null,
                         ["target"] = target,
                         ["count"] = checks.Count,
                         ["flagged"] = flagged.Count,
@@ -424,7 +429,9 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Description = "按复制人属性/兴趣自动生成并应用职业化名字",
+                Aliases = new List<string> { "auto_rename_dupes", "duplicants_auto_rename", "dupes_rename_by_role", "duplicants_rename_by_role" },
+                Tags = new List<string> { "dupes", "duplicants", "rename", "auto-rename", "name", "role", "job", "apply", "复制人", "改名", "重命名", "命名", "职业", "属性" },
+                Description = "按复制人属性/兴趣自动生成职业化名字；apply=false 只预览，apply=true 立即应用重命名",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["style"] = new McpToolParameter { Type = "string", Description = "命名风格：role_prefix、cn_job、short，默认 role_prefix", Required = false },
@@ -1107,7 +1114,7 @@ namespace OniMcp.Tools
             };
         }
 
-        private static Dictionary<string, object> DupeStatusCheck(MinionIdentity dupe, int radius, int? targetCell, bool includeReachableSamples)
+        private static Dictionary<string, object> DupeStatusCheck(MinionIdentity dupe, int radius, int? targetCell, bool includeReachableSamples, bool includeDetails, string detailMode)
         {
             var pos = dupe.transform.GetPosition();
             int cell = Grid.PosToCell(dupe);
@@ -1146,6 +1153,9 @@ namespace OniMcp.Tools
                 reasons.Add("dangerous_temperature");
             if (environment.TryGetValue("state", out var stateObj) && stateObj?.ToString() == "liquid")
                 reasons.Add("standing_in_liquid");
+            var idle = current == null ? IdleDiagnostics(dupe, reachable, needs, canReceiveMove) : null;
+            if (idle != null && idle.ContainsKey("reasonCode"))
+                reasons.Add("idle_" + idle["reasonCode"]);
 
             string risk = "ok";
             if (reasons.Contains("invalid_current_cell") || reasons.Contains("no_reachable_nearby_cells") || reasons.Contains("low_breath"))
@@ -1153,7 +1163,7 @@ namespace OniMcp.Tools
             else if (reasons.Count > 0)
                 risk = "warning";
 
-            return new Dictionary<string, object>
+            var result = new Dictionary<string, object>
             {
                 ["dupe"] = DupeRef(dupe),
                 ["position"] = new Dictionary<string, object>
@@ -1167,6 +1177,7 @@ namespace OniMcp.Tools
                 ["risk"] = risk,
                 ["reasons"] = reasons,
                 ["currentChore"] = current,
+                ["idle"] = idle,
                 ["navigation"] = new Dictionary<string, object>
                 {
                     ["hasNavigator"] = navigator != null,
@@ -1182,6 +1193,178 @@ namespace OniMcp.Tools
                 ["environment"] = environment,
                 ["scanRect"] = new[] { x - radius, y - radius, x + radius, y + radius },
                 ["nextRead"] = risk == "ok" ? null : $"world_area_snapshot x1={x - radius} y1={y - radius} x2={x + radius} y2={y + radius} worldId={worldId} preset=construction encoding=rle"
+            };
+            if (includeDetails)
+            {
+                if (detailMode == "full")
+                {
+                    result["attributes"] = GetAttributeSummary(dupe);
+                    result["needsDetail"] = GetNeedsSummary(dupe);
+                }
+                else
+                {
+                    result["details"] = GetCompactDupeDiagnosticDetails(dupe);
+                }
+                result["detailNote"] = detailMode == "full"
+                    ? "detailMode=full returns verbose legacy fields and can be token-heavy."
+                    : "compact details filter zero-value stats and missing localization names; use detailMode=full only for exhaustive stat dumps.";
+            }
+            return result;
+        }
+
+        private static string NormalizeDupeDetailMode(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "compact";
+            string mode = value.Trim().ToLowerInvariant();
+            return mode == "full" || mode == "verbose" || mode == "legacy" ? "full" : "compact";
+        }
+
+        private static Dictionary<string, object> GetCompactDupeDiagnosticDetails(MinionIdentity dupe)
+        {
+            var resume = dupe.GetComponent<MinionResume>();
+            var attrs = dupe.GetAttributes();
+            var mastered = resume != null
+                ? resume.MasteryBySkillID.Where(kv => kv.Value).Select(kv => kv.Key).OrderBy(x => x).ToList()
+                : new List<string>();
+
+            var result = new Dictionary<string, object>
+            {
+                ["profession"] = CleanStatName(attrs?.GetProfession()?.Name, null),
+                ["suggestedRole"] = GuessRole(dupe),
+                ["availableSkillPoints"] = resume?.AvailableSkillpoints ?? 0,
+                ["skillsMasteredCount"] = mastered.Count,
+                ["skillsMastered"] = mastered.Take(20).ToList(),
+                ["truncatedSkillsMastered"] = Math.Max(0, mastered.Count - 20),
+                ["aptitudes"] = CompactAptitudes(resume),
+                ["attributes"] = CompactAttributes(dupe),
+                ["nonZeroAmounts"] = CompactAmounts(dupe)
+            };
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CompactAttributes(MinionIdentity dupe)
+        {
+            var result = new List<Dictionary<string, object>>();
+            var attrs = dupe.GetAttributes();
+            if (attrs == null)
+                return result;
+
+            foreach (AttributeInstance attr in attrs)
+            {
+                if (attr == null || attr.hide)
+                    continue;
+                double value = Math.Round(attr.GetTotalValue(), 2);
+                double baseValue = Math.Round(attr.GetBaseValue(), 2);
+                if (Math.Abs(value) < 0.005d && Math.Abs(baseValue) < 0.005d)
+                    continue;
+
+                string id = attr.Id;
+                string name = CleanStatName(attr.Name, id);
+                result.Add(new Dictionary<string, object>
+                {
+                    ["id"] = id,
+                    ["name"] = name,
+                    ["value"] = value,
+                    ["baseValue"] = baseValue
+                });
+            }
+
+            return result
+                .OrderByDescending(item => Math.Abs(Convert.ToDouble(item["value"])))
+                .ThenBy(item => item["id"]?.ToString())
+                .Take(24)
+                .ToList();
+        }
+
+        private static Dictionary<string, double> CompactAptitudes(MinionResume resume)
+        {
+            if (resume == null)
+                return new Dictionary<string, double>();
+
+            return resume.AptitudeBySkillGroup
+                .Select(kv => new { Key = kv.Key.ToString(), Value = Math.Round(kv.Value, 2) })
+                .Where(kv => Math.Abs(kv.Value) >= 0.005d)
+                .OrderByDescending(kv => Math.Abs(kv.Value))
+                .ThenBy(kv => kv.Key)
+                .Take(12)
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+        }
+
+        private static Dictionary<string, object> CompactAmounts(MinionIdentity dupe)
+        {
+            var result = new Dictionary<string, object>();
+            var amounts = dupe.GetComponent<Amounts>();
+            if (amounts == null)
+                return result;
+
+            foreach (var amount in amounts.ModifierList)
+            {
+                if (amount == null || amount.amount == null)
+                    continue;
+                double value = Math.Round(ToolUtil.SafeFloat(amount.value), 2);
+                if (Math.Abs(value) < 0.005d)
+                    continue;
+                string key = CleanStatName(amount.amount.Name, amount.amount.Id);
+                if (string.IsNullOrWhiteSpace(key))
+                    continue;
+                result[key] = value;
+            }
+
+            return result
+                .OrderByDescending(kv => Math.Abs(Convert.ToDouble(kv.Value)))
+                .ThenBy(kv => kv.Key)
+                .Take(20)
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+        }
+
+        private static string CleanStatName(string name, string fallback)
+        {
+            string cleaned = ToolUtil.CleanName(name);
+            if (IsMissingLocalizationName(cleaned))
+                cleaned = fallback;
+            if (string.IsNullOrWhiteSpace(cleaned))
+                cleaned = fallback;
+            return cleaned;
+        }
+
+        private static bool IsMissingLocalizationName(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value)
+                && value.IndexOf("MISSING.STRINGS", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static Dictionary<string, object> IdleDiagnostics(MinionIdentity dupe, ReachabilitySummary reachable, KeyNeeds needs, bool canReceiveMove)
+        {
+            string reason = "no_current_chore";
+            var schedulable = dupe.GetComponent<Schedulable>();
+            string scheduleBlock = null;
+            try
+            {
+                scheduleBlock = schedulable?.GetSchedule()?.GetCurrentScheduleBlock()?.GroupId;
+            }
+            catch { }
+
+            if (!canReceiveMove)
+                reason = "cannot_receive_move_command";
+            else if (reachable.ReachableCells == 0)
+                reason = "no_reachable_nearby_cells";
+            else if (needs.Stamina >= 0f && needs.Stamina < 15f)
+                reason = "low_stamina";
+            else if (needs.Calories > 0f && needs.Calories < 1000f)
+                reason = "low_calories";
+            else if (!string.IsNullOrWhiteSpace(scheduleBlock) && !string.Equals(scheduleBlock, "Work", StringComparison.OrdinalIgnoreCase))
+                reason = "schedule_block_" + scheduleBlock;
+
+            return new Dictionary<string, object>
+            {
+                ["isIdle"] = true,
+                ["reasonCode"] = reason,
+                ["scheduleBlock"] = scheduleBlock,
+                ["reachableCells"] = reachable.ReachableCells,
+                ["next"] = reason == "no_current_chore"
+                    ? "Check personal priorities and available errands; use dupes_priorities_list or inspect nearby build/dig/supply errands."
+                    : "Inspect the returned reasonCode before issuing rescue or priority changes."
             };
         }
 

@@ -112,6 +112,8 @@ namespace OniMcp.Tools
                         ["replaces"] = new[] { "game_time", "colony_status", "colony_diagnostics", "colony_alerts", "resources_food", "dupes_list", "research_status" },
                         ["fullGridScan"] = needAtmosphere
                     };
+                    if (needAtmosphere)
+                        ((Dictionary<string, object>)snapshot["cost"])["atmosphereNote"] = "Atmosphere is a full visible-grid aggregate and can mask local pockets; use world_area_snapshot on suspected rooms for local oxygen/temperature.";
 
                     if (ToolUtil.GetBool(args, "delta", false))
                     {
@@ -251,6 +253,7 @@ namespace OniMcp.Tools
                 totalKcal += kcal;
                 aggregate.Count++;
                 aggregate.Kcal += kcal;
+                aggregate.AddLocation(edible.gameObject, cell, kcal);
             }
 
             return new FoodSnapshot
@@ -779,6 +782,24 @@ namespace OniMcp.Tools
             public int Quality;
             public int Count;
             public float Kcal;
+            public List<Dictionary<string, object>> Locations = new List<Dictionary<string, object>>();
+
+            public void AddLocation(GameObject go, int cell, float kcal)
+            {
+                if (Locations.Count >= 8)
+                    return;
+                int x = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1;
+                int y = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1;
+                Locations.Add(new Dictionary<string, object>
+                {
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["cell"] = cell,
+                    ["worldId"] = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell) ? (object)Grid.WorldIdx[cell] : null,
+                    ["kcal"] = Math.Round(kcal, 1),
+                    ["name"] = go != null ? ToolUtil.CleanName(go.GetProperName()) : null
+                });
+            }
 
             public Dictionary<string, object> ToDictionary()
             {
@@ -788,7 +809,9 @@ namespace OniMcp.Tools
                     ["name"] = Name,
                     ["quality"] = Quality,
                     ["count"] = Count,
-                    ["kcal"] = Math.Round(Kcal, 1)
+                    ["kcal"] = Math.Round(Kcal, 1),
+                    ["locationSamples"] = Locations,
+                    ["truncatedLocations"] = Math.Max(0, Count - Locations.Count)
                 };
             }
         }

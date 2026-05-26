@@ -1,0 +1,19 @@
+{
+  "tasks": [
+    {
+      "id": "082079bb",
+      "cron": "*/5 * * * *",
+      "prompt": "读取 oni://colony/summary（mcp__oni__colony_state_snapshot profile=minimal watch=stress,food_kcal,red_alert,alerts watchOnly=true）和 oni://research/status，然后输出紧凑的下一周期计划三栏：立即处理、可排队、暂缓。格式：Markdown 表格，简短说明原因。监控 alertLevel 变化和新增红色告警。",
+      "createdAt": 1779722495176,
+      "lastFiredAt": 1779723837125,
+      "recurring": true
+    },
+    {
+      "id": "bbe5684d",
+      "cron": "*/5 * * * *",
+      "prompt": "读取 oni://colony/summary (mcp__oni__colony_state_snapshot profile=minimal watch=stress,food_kcal,red_alert,alerts watchOnly=true) 和 oni://research/status，然后分析当前状态，输出下一周期计划三栏：立即处理、可排队、暂缓。格式：Markdown 表格，简短说明原因。监控 alertLevel 变化和新增红色告警。如果基地框架（梯子通向打印舱）已完成，优先建造床、厕所、研究终端等基础设施。",
+      "createdAt": 1779724002601,
+      "recurring": true
+    }
+  ]
+}
