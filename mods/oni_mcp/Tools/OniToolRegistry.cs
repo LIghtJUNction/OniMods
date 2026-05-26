@@ -158,6 +158,7 @@ namespace OniMcp.Tools
             Register(NotificationTools.DismissNotification());
             Register(InventoryTools.GetInventory());
             Register(InventoryTools.GetFoodInventory());
+            Register(InventoryTools.SearchItems());
             Register(InventoryTools.ListResourcePins());
             Register(InventoryTools.SetResourcePin());
             Register(DietTools.GetDietStatus());

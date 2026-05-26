@@ -2488,20 +2488,50 @@ namespace OniMcp.Tools
 
                 if (item.ObstructedBy != null && item.ObstructedBy.Count > 0)
                 {
-                    conflicts.Add(new Dictionary<string, object>
+                    bool utilityOverlap = IsUtilityPrefab(item.Id) && item.ObstructedBy.Any(IsBuildingOverlapObstruction);
+                    var conflict = new Dictionary<string, object>
                     {
-                        ["type"] = "overlap",
+                        ["type"] = utilityOverlap ? "utility_overlap" : "overlap",
                         ["kind"] = item.Kind,
                         ["id"] = item.Id,
                         ["anchor"] = new[] { item.AnchorX, item.AnchorY },
                         ["anchorCell"] = item.AnchorCell,
                         ["object"] = new[] { item.ObjectX, item.ObjectY },
                         ["objectCell"] = item.ObjectCell,
-                        ["conflictsWith"] = string.Join(",", item.ObstructedBy.ToArray())
-                    });
+                        ["conflictsWith"] = string.Join(",", item.ObstructedBy.ToArray()),
+                        ["normalOverlap"] = utilityOverlap,
+                        ["reason"] = utilityOverlap
+                            ? "wire/pipe/logic utility overlaps a building footprint; this is normal in ONI and should not be treated as a build conflict"
+                            : null
+                    };
+                    conflicts.Add(CleanNulls(conflict));
                 }
             }
             return conflicts;
+        }
+
+        private static bool IsBuildingOverlapObstruction(string obstruction)
+        {
+            if (string.IsNullOrWhiteSpace(obstruction))
+                return false;
+            return obstruction.StartsWith("building:", StringComparison.OrdinalIgnoreCase)
+                || obstruction.StartsWith("blueprint:", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsUtilityPrefab(string prefabId)
+        {
+            if (string.IsNullOrWhiteSpace(prefabId))
+                return false;
+            string id = prefabId.Trim();
+            return id.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) >= 0
+                || id.IndexOf("Conduit", StringComparison.OrdinalIgnoreCase) >= 0
+                || id.IndexOf("Logic", StringComparison.OrdinalIgnoreCase) >= 0
+                || id.IndexOf("TravelTube", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static Dictionary<string, object> CleanNulls(Dictionary<string, object> source)
+        {
+            return source.Where(kv => kv.Value != null).ToDictionary(kv => kv.Key, kv => kv.Value);
         }
 
         private static Dictionary<string, object> BuildAreaSnapshotSummary(Dictionary<string, object> maps)

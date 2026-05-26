@@ -386,14 +386,11 @@ namespace OniMcp.Tools
                     {
                         var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport, autoDigContext);
                         bool ok = result.ContainsKey("planned") && (bool)result["planned"];
+                        autoDigQueued += GetAutoDigInt(result, "marked");
+                        autoDigAlreadyMarked += GetAutoDigInt(result, "alreadyMarked");
                         if (ok)
                             planned++;
-                        else if (IsAutoDigResult(result))
-                        {
-                            autoDigQueued += GetAutoDigInt(result, "marked");
-                            autoDigAlreadyMarked += GetAutoDigInt(result, "alreadyMarked");
-                        }
-                        else
+                        else if (!IsAutoDigResult(result))
                             failed++;
                         results.Add(result);
                     }
@@ -535,14 +532,13 @@ namespace OniMcp.Tools
         private static bool IsAutoDiggableFailure(Dictionary<string, object> result)
         {
             var autoDig = GetObject(result, "autoDig");
-            return GetBool(autoDig, "available") && GetBool(autoDig, "needsRetryAfterDig");
+            return GetBool(autoDig, "available") && GetInt(autoDig, "targetCount") > 0;
         }
 
         private static bool IsAutoDigResult(Dictionary<string, object> result)
         {
             var autoDig = GetObject(result, "autoDig");
-            return GetBool(autoDig, "needsRetryAfterDig")
-                && (GetInt(autoDig, "marked") > 0 || GetInt(autoDig, "alreadyMarked") > 0);
+            return GetInt(autoDig, "marked") > 0 || GetInt(autoDig, "alreadyMarked") > 0;
         }
 
         private static int GetAutoDigInt(Dictionary<string, object> result, string key)
@@ -640,6 +636,7 @@ namespace OniMcp.Tools
                 var result = TryPlanOne(prefabId, cell.x, cell.y, args, plannedSupportCells, autoDigContext);
                 bool ok = result.ContainsKey("planned") && (bool)result["planned"];
                 bool validPlacement = result.ContainsKey("valid") && (bool)result["valid"];
+                autoDigQueued += GetAutoDigInt(result, "marked");
                 if (ok || (IsDryRun(args) && validPlacement))
                 {
                     valid++;
@@ -649,7 +646,6 @@ namespace OniMcp.Tools
                 }
                 else if (IsAutoDigResult(result))
                 {
-                    autoDigQueued += GetAutoDigInt(result, "marked");
                     valid++;
                 }
                 else
@@ -714,13 +710,16 @@ namespace OniMcp.Tools
 
             var placement = BuildPlacementDetails(def, x, y, worldId);
             var footprintResult = ValidateFootprint(placement);
+            Dictionary<string, object> autoDig = null;
             if (!footprintResult.Valid)
             {
                 var details = footprintResult.ToDictionary(placement);
-                var autoDig = TryAutoDigObstructions(placement, footprintResult, args, autoDigContext);
-                if (autoDig != null)
-                    details["autoDig"] = autoDig;
-                return ErrorResult(prefabId, x, y, footprintResult.Error, details);
+                autoDig = TryAutoDigObstructions(placement, footprintResult, args, autoDigContext);
+                if (autoDig == null)
+                    return ErrorResult(prefabId, x, y, footprintResult.Error, details);
+                details["autoDig"] = autoDig;
+                if (!GetBool(autoDig, "available"))
+                    return ErrorResult(prefabId, x, y, footprintResult.Error, details);
             }
 
             if (IsDryRun(args))
@@ -744,14 +743,52 @@ namespace OniMcp.Tools
                     ["support"] = supportResult.ToDictionary(),
                     ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
                     ["materialSelection"] = materialResult.ToDictionary(),
-                    ["facade"] = facadeResult.ResponseId
+                    ["facade"] = facadeResult.ResponseId,
+                    ["autoDig"] = autoDig
+                };
+            }
+
+            var existingUtility = ExistingMatchingUtilityAtPlacement(def, placement);
+            if (existingUtility != null)
+            {
+                RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
+                return new Dictionary<string, object>
+                {
+                    ["planned"] = true,
+                    ["blueprintPlaced"] = false,
+                    ["alreadyConnected"] = true,
+                    ["valid"] = true,
+                    ["prefabId"] = prefabId,
+                    ["name"] = ToolUtil.CleanName(def.Name),
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["anchor"] = AnchorDictionary(x, y, worldId),
+                    ["worldId"] = worldId,
+                    ["placement"] = placement.ToDictionary(),
+                    ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
+                    ["existingUtility"] = existingUtility,
+                    ["support"] = supportResult.ToDictionary(),
+                    ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
+                    ["materialSelection"] = materialResult.ToDictionary(),
+                    ["facade"] = facadeResult.ResponseId,
+                    ["autoDig"] = autoDig
                 };
             }
 
             var pos = BuildPlacementPosition(cell, def);
             var go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
+            Dictionary<string, object> fallbackPlacement = null;
+            if (go == null && autoDig != null)
+                go = TryPlaceWithBuildTool(def, cell, orientation, materialResult.Elements, facadeResult.ResponseId, placement, out fallbackPlacement);
             if (go == null)
-                return ErrorResult(prefabId, x, y, "Placement failed", BuildPlacementFailureDetails(placement, materialResult));
+            {
+                var failureDetails = BuildPlacementFailureDetails(placement, materialResult);
+                if (autoDig != null)
+                    failureDetails["autoDig"] = autoDig;
+                if (fallbackPlacement != null)
+                    failureDetails["fallbackPlacement"] = fallbackPlacement;
+                return ErrorResult(prefabId, x, y, "Placement failed", failureDetails);
+            }
 
             SetPriority(go, ToolUtil.GetInt(args, "priority") ?? 5);
             RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
@@ -772,10 +809,12 @@ namespace OniMcp.Tools
                 ["actualPlacement"] = actualPlacement,
                 ["actualAnchor"] = ActualAnchorArray(actualPlacement),
                 ["placementCheck"] = ComparePlacement(placement, actualPlacement),
+                ["fallbackPlacement"] = fallbackPlacement,
                 ["support"] = supportResult.ToDictionary(),
                 ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
                 ["materialSelection"] = materialResult.ToDictionary(),
                 ["facade"] = facadeResult.ResponseId,
+                ["autoDig"] = autoDig,
                 ["id"] = go.GetComponent<KPrefabID>()?.InstanceID ?? -1
             };
         }
@@ -856,7 +895,7 @@ namespace OniMcp.Tools
                 ["orientation"] = new McpToolParameter { Type = "string", Description = "可选朝向，默认 Neutral", Required = false },
                 ["priority"] = new McpToolParameter { Type = "integer", Description = "建造优先级 1..9，默认 5", Required = false },
                 ["allowUnsupported"] = new McpToolParameter { Type = "boolean", Description = "默认 false；OnFloor 建筑无支撑时拒绝", Required = false },
-                ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true。建造 footprint 遇到可挖自然固体时，执行建造会先自动标记挖掘；挖完后需重试建造", Required = false },
+                ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true。建造 footprint 遇到可挖自然固体时，执行建造会先自动标记挖掘，并继续尝试在同一格放置建造蓝图", Required = false },
                 ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "单次命令最多自动标记多少个挖掘格，默认 100，最大 500", Required = false },
                 ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，不生成蓝图", Required = false }
             };
@@ -1283,8 +1322,8 @@ namespace OniMcp.Tools
                 ["enabled"] = true,
                 ["available"] = true,
                 ["dryRun"] = dryRun,
-                ["needsRetryAfterDig"] = true,
-                ["action"] = dryRun ? "would_mark_dig_before_build" : "queued_dig_before_build",
+                ["needsRetryAfterDig"] = false,
+                ["action"] = dryRun ? "would_mark_dig_for_build" : "queued_dig_for_build",
                 ["targetCount"] = targets.Count,
                 ["wouldMark"] = dryRun ? wouldMark : (object)null,
                 ["marked"] = marked,
@@ -1296,7 +1335,7 @@ namespace OniMcp.Tools
                 ["kgTotal"] = Math.Round(kgTotal, 3),
                 ["targets"] = targetResults.Take(50).ToList(),
                 ["truncatedTargets"] = Math.Max(0, targetResults.Count - 50),
-                ["note"] = "Build blueprint was not placed because natural solid cells occupy the footprint. Dig was queued first; retry this build after excavation completes."
+                ["note"] = "Natural solid cells in the footprint were marked for digging; the build planner will still attempt to place the build blueprint on the same cells."
             };
         }
 
@@ -1340,6 +1379,132 @@ namespace OniMcp.Tools
                 foreach (var item in ExistingObjectFootprint(go, building?.Def, "blueprint", footprintCells))
                     yield return item;
             }
+        }
+
+        private static GameObject TryPlaceWithBuildTool(BuildingDef def, int cell, Orientation orientation, IList<Tag> selectedElements, string facadeId, PlacementDetails placement, out Dictionary<string, object> details)
+        {
+            details = new Dictionary<string, object>
+            {
+                ["attempted"] = true,
+                ["path"] = "BuildTool.TryBuild",
+                ["reason"] = "direct BuildingDef.TryPlace returned null while natural solid footprint cells were auto-dig queued"
+            };
+
+            if (BuildTool.Instance == null)
+            {
+                details["available"] = false;
+                details["error"] = "BuildTool.Instance is not initialized";
+                return null;
+            }
+
+            try
+            {
+                BuildTool.Instance.Activate(def, selectedElements, facadeId);
+                BuildTool.Instance.SetToolOrientation(orientation);
+                var tryBuild = typeof(BuildTool).GetMethod("TryBuild", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (tryBuild == null)
+                {
+                    details["available"] = false;
+                    details["error"] = "BuildTool.TryBuild method was not found";
+                    return null;
+                }
+
+                tryBuild.Invoke(BuildTool.Instance, new object[] { cell });
+                var placed = FindConstructableAtPlacement(def, placement);
+                details["available"] = true;
+                details["placed"] = placed != null;
+                if (placed != null)
+                {
+                    details["id"] = placed.GetComponent<KPrefabID>()?.InstanceID ?? -1;
+                    details["actualPlacement"] = ActualPlacementDetails(placed, def, placement.AnchorX, placement.AnchorY);
+                }
+                return placed;
+            }
+            catch (Exception ex)
+            {
+                details["available"] = false;
+                details["error"] = ex.GetType().Name + ": " + ex.Message;
+                return null;
+            }
+        }
+
+        private static GameObject FindConstructableAtPlacement(BuildingDef def, PlacementDetails placement)
+        {
+            if (def == null || placement == null)
+                return null;
+
+            foreach (var constructable in FindConstructables(placement.WorldId))
+            {
+                var go = constructable?.gameObject;
+                if (go == null)
+                    continue;
+
+                var building = go.GetComponent<Building>();
+                string prefabId = building?.Def?.PrefabID ?? go.GetComponent<KPrefabID>()?.PrefabTag.Name ?? go.name;
+                if (!EqualsIgnoreCase(prefabId, def.PrefabID))
+                    continue;
+
+                var actual = ActualPlacementDetails(go, def, placement.AnchorX, placement.AnchorY);
+                var check = ComparePlacement(placement, actual);
+                if (GetBool(check, "valid"))
+                    return go;
+            }
+
+            return null;
+        }
+
+        private static Dictionary<string, object> ExistingMatchingUtilityAtPlacement(BuildingDef def, PlacementDetails placement)
+        {
+            if (def == null || placement == null || !IsLinearUtilityPrefab(def.PrefabID))
+                return null;
+
+            var layers = UtilityLayersForPrefab(def.PrefabID);
+            if (layers.Count == 0)
+                return null;
+
+            var existing = new List<Dictionary<string, object>>();
+            foreach (var cellInfo in placement.Footprint)
+            {
+                if (!cellInfo.Valid || !cellInfo.Visible || !cellInfo.InWorld)
+                    return null;
+
+                var found = ExistingUtilityAtCell(cellInfo, layers);
+                if (found == null)
+                    return null;
+                existing.Add(found);
+            }
+
+            return new Dictionary<string, object>
+            {
+                ["prefabId"] = def.PrefabID,
+                ["mode"] = "reuse_existing_same_utility_layer",
+                ["cells"] = existing,
+                ["note"] = "A matching wire/pipe already exists on this utility layer, so this cell is treated as connected instead of placing a duplicate blueprint."
+            };
+        }
+
+        private static Dictionary<string, object> ExistingUtilityAtCell(FootprintCell cellInfo, List<ObjectLayer> layers)
+        {
+            foreach (var layer in layers)
+            {
+                var go = Grid.Objects[cellInfo.Cell, (int)layer];
+                if (go == null)
+                    continue;
+
+                var building = go.GetComponent<Building>();
+                string prefabId = building?.Def?.PrefabID ?? go.GetComponent<KPrefabID>()?.PrefabTag.Name ?? go.name;
+                return new Dictionary<string, object>
+                {
+                    ["x"] = cellInfo.X,
+                    ["y"] = cellInfo.Y,
+                    ["cell"] = cellInfo.Cell,
+                    ["layer"] = layer.ToString(),
+                    ["id"] = prefabId,
+                    ["name"] = ToolUtil.CleanName(go.GetProperName())
+                };
+            }
+
+            return null;
         }
 
         private static IEnumerable<Dictionary<string, object>> ExistingObjectFootprint(GameObject go, BuildingDef def, string kind, HashSet<int> footprintCells)
@@ -1466,6 +1631,36 @@ namespace OniMcp.Tools
                 || EqualsIgnoreCase(id, "WireBridge")
                 || EqualsIgnoreCase(id, "LogicWire")
                 || EqualsIgnoreCase(id, "LogicWireBridge");
+        }
+
+        private static bool IsLinearUtilityPrefab(string prefabId)
+        {
+            if (!IsUtilityPrefab(prefabId))
+                return false;
+            string id = prefabId.Trim();
+            return id.IndexOf("Bridge", StringComparison.OrdinalIgnoreCase) < 0
+                && id.IndexOf("TravelTube", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+
+        private static List<ObjectLayer> UtilityLayersForPrefab(string prefabId)
+        {
+            var layers = new List<ObjectLayer>();
+            if (string.IsNullOrWhiteSpace(prefabId))
+                return layers;
+
+            string id = prefabId.Trim();
+            if (id.IndexOf("GasConduit", StringComparison.OrdinalIgnoreCase) >= 0)
+                layers.AddRange(new[] { ObjectLayer.GasConduit, ObjectLayer.GasConduitTile, ObjectLayer.ReplacementGasConduit });
+            else if (id.IndexOf("LiquidConduit", StringComparison.OrdinalIgnoreCase) >= 0)
+                layers.AddRange(new[] { ObjectLayer.LiquidConduit, ObjectLayer.LiquidConduitTile, ObjectLayer.ReplacementLiquidConduit });
+            else if (id.IndexOf("SolidConduit", StringComparison.OrdinalIgnoreCase) >= 0 || id.IndexOf("Conveyor", StringComparison.OrdinalIgnoreCase) >= 0)
+                layers.AddRange(new[] { ObjectLayer.SolidConduit, ObjectLayer.SolidConduitTile, ObjectLayer.ReplacementSolidConduit });
+            else if (id.IndexOf("Logic", StringComparison.OrdinalIgnoreCase) >= 0)
+                layers.AddRange(new[] { ObjectLayer.LogicWire, ObjectLayer.LogicWireTile, ObjectLayer.ReplacementLogicWire });
+            else if (id.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) >= 0)
+                layers.AddRange(new[] { ObjectLayer.Wire, ObjectLayer.WireTile, ObjectLayer.ReplacementWire });
+
+            return layers;
         }
 
         private static SupportValidation ValidateSupport(BuildingDef def, int x, int y, bool allowUnsupported, HashSet<int> plannedSupportCells)

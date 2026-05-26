@@ -1,5 +1,5 @@
 [mcp_servers.oni]
-url = "http://127.0.0.1:8787/mcp/"
+url = "http://localhost:8787/mcp/"
 
 [mcp_servers.oni.tools.get_duplicants]
 approval_mode = "approve"
@@ -23,4 +23,70 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.oni.tools.get_world_element_summary]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.tools_call_many]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.dupes_status_check]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.world_area_snapshot]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.orders_dig_area]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.game_resume]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.colony_state_snapshot]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.buildings_search_defs]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.build_preview]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.agent_pointer_get]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.agent_pointer_select_tool]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.agent_pointer_jump]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.agent_pointer_left_click]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.dupes_auto_rename]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.agent_pointer_hold_left]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.world_text_map]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.edit_mark_request_list]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.building_power_ports]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.power_summary]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.layout_candidates]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.tools_search]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.guide_mechanics_query]
+approval_mode = "approve"
+
+[mcp_servers.oni.tools.tools_manifest]
 approval_mode = "approve"

@@ -21,7 +21,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "power_ports_list", "building_power_connection_points", "power_connection_points" },
                 Tags = new List<string> { "power", "electricity", "ports", "connector", "wire", "电力", "接口", "接线" },
-                Description = "列出指定区域内建筑的电力接口格：锚点、输入/输出端口、相对偏移和可接线状态，方便直接接线而不是猜文本地图",
+                Description = "列出指定区域内已建建筑和蓝图建筑的电力接口格：锚点、输入/输出端口、相对偏移和可接线状态，方便直接接线而不是猜文本地图",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；默认当前激活世界", Required = false },
@@ -40,6 +40,7 @@ namespace OniMcp.Tools
                     int limit = ToolUtil.ClampLimit(args, 120, 500);
 
                     var results = new List<Dictionary<string, object>>();
+                    var seen = new HashSet<string>();
                     foreach (var building in Components.BuildingCompletes.Items)
                     {
                         var go = building?.gameObject;
@@ -60,9 +61,42 @@ namespace OniMcp.Tools
                         if (!hasInput && !hasOutput)
                             continue;
 
-                        results.Add(BuildingPowerPortInfo(go, def, hasInput, hasOutput));
+                        results.Add(BuildingPowerPortInfo(go, def, hasInput, hasOutput, "built"));
+                        seen.Add(BuildingPortKey(go, def));
                         if (results.Count >= limit)
                             break;
+                    }
+
+                    if (results.Count < limit)
+                    {
+                        foreach (var constructable in FindConstructables(worldId))
+                        {
+                            var go = constructable?.gameObject;
+                            if (go == null)
+                                continue;
+                            int cell = Grid.PosToCell(go);
+                            if (rect != null && !CellInRect(cell, rect, worldId))
+                                continue;
+                            if (!MatchesQuery(go, query))
+                                continue;
+
+                            var building = go.GetComponent<Building>();
+                            var kpid = go.GetComponent<KPrefabID>();
+                            var def = building?.Def ?? Assets.GetBuildingDef(kpid?.PrefabTag.Name ?? go.name);
+                            if (def == null)
+                                continue;
+                            if (seen.Contains(BuildingPortKey(go, def)))
+                                continue;
+
+                            bool hasInput = def.RequiresPowerInput;
+                            bool hasOutput = def.RequiresPowerOutput;
+                            if (!hasInput && !hasOutput)
+                                continue;
+
+                            results.Add(BuildingPowerPortInfo(go, def, hasInput, hasOutput, "blueprint"));
+                            if (results.Count >= limit)
+                                break;
+                        }
                     }
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
@@ -392,14 +426,18 @@ namespace OniMcp.Tools
             return info;
         }
 
-        private static Dictionary<string, object> BuildingPowerPortInfo(GameObject go, BuildingDef def, bool hasInput, bool hasOutput)
+        private static Dictionary<string, object> BuildingPowerPortInfo(GameObject go, BuildingDef def, bool hasInput, bool hasOutput, string state = "built")
         {
             int anchorCell = Grid.PosToCell(go);
             int anchorX;
             int anchorY;
-            CellXY(anchorCell, out anchorX, out anchorY);
 
             var building = go.GetComponent<Building>();
+            int bottomLeft = building != null ? building.GetBottomLeftCell() : Grid.InvalidCell;
+            if (Grid.IsValidCell(bottomLeft))
+                anchorCell = bottomLeft;
+            CellXY(anchorCell, out anchorX, out anchorY);
+
             var rotatable = go.GetComponent<Rotatable>();
             Orientation orientation = rotatable != null ? rotatable.GetOrientation() : Orientation.Neutral;
 
@@ -413,6 +451,8 @@ namespace OniMcp.Tools
                 ports.Add(outputPort);
 
             var result = TargetInfo(go);
+            result["state"] = state;
+            result["isBlueprint"] = state == "blueprint";
             result["worldId"] = Grid.IsValidCell(anchorCell) && Grid.IsWorldValidCell(anchorCell) ? (object)Grid.WorldIdx[anchorCell] : null;
             result["anchorCell"] = anchorCell;
             result["anchorX"] = anchorX;
@@ -423,6 +463,38 @@ namespace OniMcp.Tools
             result["powerWatts"] = Math.Round(def.EnergyConsumptionWhenActive, 1);
             result["ports"] = ports;
             return result;
+        }
+
+        private static string BuildingPortKey(GameObject go, BuildingDef def)
+        {
+            if (go == null)
+                return "";
+            var building = go.GetComponent<Building>();
+            int anchorCell = building != null ? building.GetBottomLeftCell() : Grid.PosToCell(go);
+            int worldId = Grid.IsValidCell(anchorCell) && Grid.IsWorldValidCell(anchorCell) ? Grid.WorldIdx[anchorCell] : -1;
+            return (def?.PrefabID ?? go.name) + "|" + anchorCell + "|" + worldId;
+        }
+
+        private static IEnumerable<Constructable> FindConstructables(int worldId)
+        {
+            Constructable[] constructables;
+            try
+            {
+                constructables = UnityEngine.Object.FindObjectsByType<Constructable>(FindObjectsSortMode.None);
+            }
+            catch
+            {
+                yield break;
+            }
+
+            foreach (var constructable in constructables)
+            {
+                if (constructable == null || constructable.gameObject == null)
+                    continue;
+                if (!ToolUtil.GameObjectMatchesWorld(constructable.gameObject, worldId))
+                    continue;
+                yield return constructable;
+            }
         }
 
         private static Dictionary<string, object> TargetInfo(GameObject go)

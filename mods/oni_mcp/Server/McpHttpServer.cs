@@ -163,7 +163,7 @@ namespace OniMcp.Server
             {
                 // CORS
                 response.Headers.Add("Access-Control-Allow-Origin", "*");
-                response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+                response.Headers.Add("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS");
                 response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Accept, Authorization, X-Oni-Mcp-Token");
                 response.Headers.Add("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
 
@@ -180,6 +180,31 @@ namespace OniMcp.Server
                 string sessionId = request.Headers["Mcp-Session-Id"];
                 string protocolVersion = request.Headers["Mcp-Protocol-Version"];
 
+                if (request.HttpMethod == "HEAD")
+                {
+                    SetResponseProtocolVersion(response, sessionId);
+                    if (string.IsNullOrEmpty(response.Headers["Mcp-Protocol-Version"]))
+                        response.Headers["Mcp-Protocol-Version"] = CurrentProtocolVersion;
+                    response.StatusCode = 200;
+                    response.ContentLength64 = 0;
+                    response.Close();
+                    return;
+                }
+
+                if (request.HttpMethod == "GET"
+                    && string.IsNullOrEmpty(sessionId)
+                    && !AcceptsEventStream(request))
+                {
+                    SendJson(response, new
+                    {
+                        status = "ok",
+                        server = "OniMcp",
+                        protocolVersion = CurrentProtocolVersion,
+                        endpoint = EndpointUrl
+                    }, 200);
+                    return;
+                }
+
                 switch (request.HttpMethod)
                 {
                     case "POST":
@@ -188,6 +213,7 @@ namespace OniMcp.Server
                     case "GET":
                         if (ValidateNonInitRequest(response, sessionId, protocolVersion))
                         {
+                            SetResponseSessionId(response, sessionId);
                             SetResponseProtocolVersion(response, sessionId);
                             HandleGet(request, response, sessionId);
                         }
@@ -195,6 +221,7 @@ namespace OniMcp.Server
                     case "DELETE":
                         if (ValidateNonInitRequest(response, sessionId, protocolVersion))
                         {
+                            SetResponseSessionId(response, sessionId);
                             SetResponseProtocolVersion(response, sessionId);
                             HandleDelete(response, sessionId);
                         }
@@ -248,7 +275,10 @@ namespace OniMcp.Server
                     return;
 
                 HandleClientResponse(rawMessage, sessionId);
+                SetResponseSessionId(response, sessionId);
+                SetResponseProtocolVersion(response, sessionId);
                 response.StatusCode = 202;
+                response.ContentLength64 = 0;
                 response.Close();
                 return;
             }
@@ -289,7 +319,10 @@ namespace OniMcp.Server
             {
                 // 在后台处理通知
                 MainThreadBridge.Enqueue(new System.Action(() => ProcessMethod(rpcRequest, sessionId)));
+                SetResponseSessionId(response, sessionId);
+                SetResponseProtocolVersion(response, sessionId);
                 response.StatusCode = 202;
+                response.ContentLength64 = 0;
                 response.Close();
                 return;
             }
@@ -370,6 +403,7 @@ namespace OniMcp.Server
                     return;
                 }
 
+                SetResponseSessionId(response, sessionId);
                 SetResponseProtocolVersion(response, sessionId);
                 if (result is JsonRpcResponse rpcResponse)
                     SendJson(response, rpcResponse, 200);
@@ -390,8 +424,7 @@ namespace OniMcp.Server
 
         private void HandleGet(HttpListenerRequest request, HttpListenerResponse response, string sessionId)
         {
-            string accept = request.Headers["Accept"] ?? "";
-            if (accept.IndexOf("text/event-stream", StringComparison.OrdinalIgnoreCase) < 0)
+            if (!AcceptsEventStream(request))
             {
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "GET requires Accept: text/event-stream for server-initiated MCP messages."), 406);
                 return;
@@ -445,6 +478,12 @@ namespace OniMcp.Server
             }
         }
 
+        private static bool AcceptsEventStream(HttpListenerRequest request)
+        {
+            string accept = request.Headers["Accept"] ?? "";
+            return accept.IndexOf("text/event-stream", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private void HandleDelete(HttpListenerResponse response, string sessionId)
         {
             lock (_sessionLock)
@@ -494,16 +533,6 @@ namespace OniMcp.Server
         /// </summary>
         private bool ValidateNonInitRequest(HttpListenerResponse response, string sessionId, string protocolVersion)
         {
-            if (string.IsNullOrEmpty(protocolVersion))
-            {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Missing Mcp-Protocol-Version header"), 400);
-                return false;
-            }
-            if (!IsSupportedProtocolVersion(protocolVersion))
-            {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, $"Unsupported protocol version: {protocolVersion}. Supported: {string.Join(", ", SupportedProtocolVersions)}"), 400);
-                return false;
-            }
             if (string.IsNullOrEmpty(sessionId))
             {
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Missing Mcp-Session-Id header"), 400);
@@ -515,6 +544,14 @@ namespace OniMcp.Server
                 if (!_sessions.TryGetValue(sessionId, out session))
                 {
                     SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
+                    return false;
+                }
+                if (string.IsNullOrEmpty(protocolVersion))
+                    return true;
+
+                if (!IsSupportedProtocolVersion(protocolVersion))
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, $"Unsupported protocol version: {protocolVersion}. Supported: {string.Join(", ", SupportedProtocolVersions)}"), 400);
                     return false;
                 }
                 if (!string.Equals(session.ProtocolVersion, protocolVersion, StringComparison.Ordinal))
@@ -585,8 +622,9 @@ namespace OniMcp.Server
             }
         }
 
-        private static readonly string[] SupportedProtocolVersions = { CurrentProtocolVersion };
         private const string CurrentProtocolVersion = "2025-11-25";
+        private const string LegacyProtocolVersion = "2025-06-18";
+        private static readonly string[] SupportedProtocolVersions = { CurrentProtocolVersion, LegacyProtocolVersion };
 
         private static bool IsSupportedProtocolVersion(string protocolVersion)
         {
@@ -978,6 +1016,12 @@ namespace OniMcp.Server
                 if (_sessions.TryGetValue(sessionId, out session) && !string.IsNullOrEmpty(session.ProtocolVersion))
                     response.Headers["Mcp-Protocol-Version"] = session.ProtocolVersion;
             }
+        }
+
+        private static void SetResponseSessionId(HttpListenerResponse response, string sessionId)
+        {
+            if (!string.IsNullOrEmpty(sessionId))
+                response.Headers["Mcp-Session-Id"] = sessionId;
         }
 
         private string EnsureSession(HttpListenerResponse response, string sessionId)

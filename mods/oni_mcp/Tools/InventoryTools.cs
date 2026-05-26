@@ -230,6 +230,79 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool SearchItems()
+        {
+            return new McpTool
+            {
+                Name = "items_search",
+                Group = "resources",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "find_items", "resources_find_items", "pickupables_search", "map_items_search" },
+                Tags = new List<string> { "items", "pickupables", "resources", "search", "map", "物品", "搜索", "全图" },
+                Description = "全地图搜索可拾取物品/资源实例，按名称、prefabId 或元素过滤，返回坐标、质量、储存状态和容器信息",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["query"] = new McpToolParameter { Type = "string", Description = "按物品名、prefabId、元素或 tag 模糊搜索；留空返回全部", Required = false },
+                    ["resource"] = new McpToolParameter { Type = "string", Description = "query 的别名，适合搜索 Dirt、Water、CopperOre 等资源 tag", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "按世界 ID 过滤；留空搜索全部世界", Required = false },
+                    ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "是否包含储物箱/复制人/建筑内物品，默认 true", Required = false },
+                    ["looseOnly"] = new McpToolParameter { Type = "boolean", Description = "仅返回地上散落物；等价于 includeStored=false", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回实例数，默认 120，最大 1000", Required = false }
+                },
+                Handler = args =>
+                {
+                    if (Game.Instance == null)
+                        return CallToolResult.Error("Game not initialized");
+
+                    string query = (args["query"] ?? args["resource"])?.ToString();
+                    int? worldId = TryGetInt(args, "worldId");
+                    bool looseOnly = TryGetBool(args, "looseOnly", false);
+                    bool includeStored = !looseOnly && TryGetBool(args, "includeStored", true);
+                    int limit = ClampLimit(args, 120, 1000);
+
+                    int scanned = 0;
+                    int matched = 0;
+                    var results = new List<Dictionary<string, object>>();
+
+                    foreach (var pickupable in Components.Pickupables.Items)
+                    {
+                        if (pickupable == null || pickupable.gameObject == null)
+                            continue;
+                        scanned++;
+
+                        bool stored = pickupable.storage != null || (pickupable.KPrefabID != null && pickupable.KPrefabID.HasTag(GameTags.Stored));
+                        if (!includeStored && stored)
+                            continue;
+
+                        var info = ItemSearchInfo(pickupable);
+                        int itemWorldId = info.ContainsKey("worldId") && info["worldId"] != null ? Convert.ToInt32(info["worldId"]) : pickupable.GetMyWorldId();
+                        if (worldId.HasValue && itemWorldId != worldId.Value)
+                            continue;
+
+                        if (!ItemMatches(info, query))
+                            continue;
+
+                        matched++;
+                        if (results.Count < limit)
+                            results.Add(info);
+                    }
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["query"] = string.IsNullOrWhiteSpace(query) ? null : query,
+                        ["worldId"] = worldId.HasValue ? (object)worldId.Value : null,
+                        ["includeStored"] = includeStored,
+                        ["scannedPickupables"] = scanned,
+                        ["matched"] = matched,
+                        ["returned"] = results.Count,
+                        ["truncated"] = Math.Max(0, matched - results.Count),
+                        ["items"] = results
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
         public static McpTool ListResourcePins()
         {
             return new McpTool
@@ -336,6 +409,81 @@ namespace OniMcp.Tools
         {
             int value;
             return args[key] != null && int.TryParse(args[key].ToString(), out value) ? value : (int?)null;
+        }
+
+        private static Dictionary<string, object> ItemSearchInfo(Pickupable pickupable)
+        {
+            var go = pickupable.gameObject;
+            var kpid = pickupable.KPrefabID ?? go.GetComponent<KPrefabID>();
+            var primary = pickupable.PrimaryElement ?? go.GetComponent<PrimaryElement>();
+            var edible = go.GetComponent<Edible>();
+            var storage = pickupable.storage;
+            int cell = pickupable.cachedCell;
+            if (!Grid.IsValidCell(cell))
+                cell = Grid.PosToCell(go);
+            int x = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1;
+            int y = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1;
+            int worldId = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell) ? Grid.WorldIdx[cell] : pickupable.GetMyWorldId();
+            bool stored = storage != null || (kpid != null && kpid.HasTag(GameTags.Stored));
+
+            var result = new Dictionary<string, object>
+            {
+                ["id"] = kpid?.InstanceID ?? go.GetInstanceID(),
+                ["prefabId"] = kpid?.PrefabTag.Name ?? go.name,
+                ["name"] = ToolUtil.CleanName(pickupable.GetProperName()),
+                ["elementId"] = primary != null ? primary.ElementID.ToString() : null,
+                ["massKg"] = primary != null ? (object)Math.Round(SafeFloat(primary.Mass), 3) : null,
+                ["units"] = primary != null ? (object)Math.Round(SafeFloat(primary.Units), 3) : null,
+                ["cell"] = Grid.IsValidCell(cell) ? (object)cell : null,
+                ["x"] = x,
+                ["y"] = y,
+                ["worldId"] = worldId,
+                ["stored"] = stored,
+                ["storage"] = storage != null ? StorageInfo(storage) : null
+            };
+
+            if (edible != null)
+            {
+                result["caloriesKcal"] = Math.Round(SafeFloat(edible.Calories) / 1000f, 1);
+                result["foodQuality"] = edible.GetQuality();
+            }
+
+            return result.Where(kv => kv.Value != null).ToDictionary(kv => kv.Key, kv => kv.Value);
+        }
+
+        private static Dictionary<string, object> StorageInfo(Storage storage)
+        {
+            var go = storage?.gameObject;
+            if (go == null)
+                return null;
+            int cell = Grid.PosToCell(go);
+            var kpid = go.GetComponent<KPrefabID>();
+            return new Dictionary<string, object>
+            {
+                ["id"] = kpid?.InstanceID ?? go.GetInstanceID(),
+                ["prefabId"] = kpid?.PrefabTag.Name ?? go.name,
+                ["name"] = ToolUtil.CleanName(go.GetProperName()),
+                ["cell"] = Grid.IsValidCell(cell) ? (object)cell : null,
+                ["x"] = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
+                ["y"] = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1
+            }.Where(kv => kv.Value != null).ToDictionary(kv => kv.Key, kv => kv.Value);
+        }
+
+        private static bool ItemMatches(Dictionary<string, object> info, string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return true;
+
+            string q = query.Trim();
+            return Contains(Value(info, "prefabId"), q)
+                || Contains(Value(info, "name"), q)
+                || Contains(Value(info, "elementId"), q);
+        }
+
+        private static string Value(Dictionary<string, object> info, string key)
+        {
+            object value;
+            return info != null && info.TryGetValue(key, out value) && value != null ? value.ToString() : null;
         }
 
         private static bool TryGetBool(JObject args, string key, bool defaultValue)
