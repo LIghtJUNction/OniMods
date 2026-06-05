@@ -135,6 +135,120 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool AutoConnectUtility()
+        {
+            return new McpTool
+            {
+                Name = "utility_auto_connect",
+                Group = "buildings",
+                Mode = "execute",
+                Risk = "medium",
+                Aliases = new List<string> { "build_auto_connect", "wire_auto_connect", "pipe_auto_connect", "logic_auto_connect" },
+                Tags = new List<string> { "buildings", "utility", "wire", "pipe", "logic", "connect", "电线", "水管", "气管", "信号线" },
+                Description = "自动铺设电线/水管/气管/运输管/信号线。给 from/to 或 points，工具会按曼哈顿路径逐格放置蓝图，已有同层线缆/管道会当作已连接复用，默认自动挖自然土块并标记铲除植物。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["type"] = new McpToolParameter { Type = "string", Description = "utility 类型：wire、liquid、gas、solid、logic；prefabId 留空时用它选择默认建筑", Required = false, EnumValues = new List<string> { "wire", "liquid", "gas", "solid", "logic" } },
+                    ["prefabId"] = new McpToolParameter { Type = "string", Description = "可选建筑 prefabId，默认按 type 选择 Wire/LiquidConduit/GasConduit/SolidConduit/LogicWire", Required = false },
+                    ["fromX"] = new McpToolParameter { Type = "integer", Description = "起点 X", Required = false },
+                    ["fromY"] = new McpToolParameter { Type = "integer", Description = "起点 Y", Required = false },
+                    ["toX"] = new McpToolParameter { Type = "integer", Description = "终点 X", Required = false },
+                    ["toY"] = new McpToolParameter { Type = "integer", Description = "终点 Y", Required = false },
+                    ["points"] = new McpToolParameter { Type = "array", Description = "可选折线路径点数组，支持 [[x,y],...] 或 [{x,y},...]；提供后优先使用", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
+                    ["material"] = new McpToolParameter { Type = "string", Description = "建造材料 tag；auto/default 自动选择", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "建造优先级 1..9，默认 5", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，不生成蓝图", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行修改必须为 true；dryRun=true 时可省略", Required = false },
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "最多处理路径格数，默认 200，最大 500", Required = false },
+                    ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true，遇到自然固体自动标记挖掘", Required = false },
+                    ["autoUprootObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true，遇到可铲植物自动标记铲除", Required = false },
+                    ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "最多自动标记挖掘/铲除格，默认 100，最大 500", Required = false }
+                },
+                Handler = args =>
+                {
+                    bool dryRun = IsDryRun(args);
+                    if (!dryRun && !ToolUtil.GetBool(args, "confirm", false))
+                        return CallToolResult.Error("confirm=true is required unless dryRun=true");
+
+                    string prefabId = args["prefabId"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(prefabId))
+                        prefabId = DefaultUtilityPrefab(args["type"]?.ToString());
+                    var def = Assets.GetBuildingDef(prefabId);
+                    if (def == null)
+                        return CallToolResult.Error("Building def not found: " + prefabId);
+                    if (!IsLinearUtilityPrefab(def.PrefabID))
+                        return CallToolResult.Error("utility_auto_connect only supports linear utility prefabs such as Wire, LiquidConduit, GasConduit, SolidConduit and LogicWire");
+
+                    string error;
+                    var path = ResolveUtilityPath(args, out error);
+                    if (error != null)
+                        return CallToolResult.Error(error);
+
+                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
+                    if (path.Count > maxCells)
+                        return CallToolResult.Error($"Path too large: {path.Count} cells, maxCells={maxCells}");
+
+                    if (args["worldId"] == null)
+                        args["worldId"] = ToolUtil.ResolveWorldId(args);
+                    if (args["material"] == null)
+                        args["material"] = "auto";
+                    if (args["autoDigObstructions"] == null)
+                        args["autoDigObstructions"] = true;
+                    if (args["autoUprootObstructions"] == null)
+                        args["autoUprootObstructions"] = true;
+
+                    var results = new List<Dictionary<string, object>>();
+                    var errors = new List<Dictionary<string, object>>();
+                    var plannedSupportCells = new HashSet<int>();
+                    var autoDigContext = AutoDigContext.FromArgs(args);
+                    int planned = 0;
+                    int reused = 0;
+                    int valid = 0;
+                    int autoMarked = 0;
+
+                    foreach (var point in path)
+                    {
+                        var result = TryPlanOne(def.PrefabID, point.x, point.y, args, plannedSupportCells, autoDigContext);
+                        bool ok = result.ContainsKey("planned") && (bool)result["planned"];
+                        bool validPlacement = result.ContainsKey("valid") && (bool)result["valid"];
+                        bool alreadyConnected = result.ContainsKey("alreadyConnected") && (bool)result["alreadyConnected"];
+                        autoMarked += GetAutoDigInt(result, "marked") + GetAutoDigInt(result, "uprootMarked") + GetAutoDigInt(result, "alreadyMarked") + GetAutoDigInt(result, "alreadyUprootMarked");
+                        if (ok || (dryRun && validPlacement) || IsAutoDigResult(result))
+                        {
+                            valid++;
+                            if (ok)
+                                planned++;
+                            if (alreadyConnected)
+                                reused++;
+                        }
+                        else
+                        {
+                            errors.Add(result);
+                        }
+                        results.Add(result);
+                    }
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["prefabId"] = def.PrefabID,
+                        ["dryRun"] = dryRun,
+                        ["committed"] = !dryRun && (planned > 0 || reused > 0 || autoMarked > 0),
+                        ["pathCells"] = path.Count,
+                        ["planned"] = planned,
+                        ["reusedExisting"] = reused,
+                        ["valid"] = valid,
+                        ["autoMarkedObstructions"] = autoMarked,
+                        ["failed"] = errors.Count,
+                        ["autoDigLimitReached"] = autoDigContext.LimitReached,
+                        ["path"] = path.Select(p => new { x = p.x, y = p.y }).ToList(),
+                        ["errors"] = errors.Take(50).ToList(),
+                        ["results"] = results
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
         public static McpTool FindPlacementCandidates()
         {
             return new McpTool
@@ -538,7 +652,10 @@ namespace OniMcp.Tools
         private static bool IsAutoDigResult(Dictionary<string, object> result)
         {
             var autoDig = GetObject(result, "autoDig");
-            return GetInt(autoDig, "marked") > 0 || GetInt(autoDig, "alreadyMarked") > 0;
+            return GetInt(autoDig, "marked") > 0
+                || GetInt(autoDig, "alreadyMarked") > 0
+                || GetInt(autoDig, "uprootMarked") > 0
+                || GetInt(autoDig, "alreadyUprootMarked") > 0;
         }
 
         private static int GetAutoDigInt(Dictionary<string, object> result, string key)
@@ -557,6 +674,127 @@ namespace OniMcp.Tools
             anchor["ry"] = y - area.Y1;
             anchor["origin"] = new[] { area.X1, area.Y1 };
             anchor["coordMode"] = "relative";
+        }
+
+        private static string DefaultUtilityPrefab(string type)
+        {
+            switch ((type ?? "wire").Trim().ToLowerInvariant())
+            {
+                case "liquid":
+                case "water":
+                case "pipe":
+                    return "LiquidConduit";
+                case "gas":
+                    return "GasConduit";
+                case "solid":
+                case "conveyor":
+                case "shipping":
+                    return "SolidConduit";
+                case "logic":
+                case "automation":
+                case "signal":
+                    return "LogicWire";
+                default:
+                    return "Wire";
+            }
+        }
+
+        private static List<CellCoord> ResolveUtilityPath(JObject args, out string error)
+        {
+            error = null;
+            var points = ParsePathPoints(args["points"]);
+            if (points.Count == 0)
+            {
+                int? fromX = ToolUtil.GetInt(args, "fromX");
+                int? fromY = ToolUtil.GetInt(args, "fromY");
+                int? toX = ToolUtil.GetInt(args, "toX");
+                int? toY = ToolUtil.GetInt(args, "toY");
+                if (!fromX.HasValue || !fromY.HasValue || !toX.HasValue || !toY.HasValue)
+                {
+                    error = "Provide either points or fromX/fromY/toX/toY";
+                    return new List<CellCoord>();
+                }
+                points.Add(new CellCoord(fromX.Value, fromY.Value));
+                points.Add(new CellCoord(toX.Value, toY.Value));
+            }
+
+            if (points.Count < 2)
+            {
+                error = "At least two path points are required";
+                return new List<CellCoord>();
+            }
+
+            var path = new List<CellCoord>();
+            for (int i = 0; i < points.Count - 1; i++)
+                AddManhattanSegment(path, points[i], points[i + 1]);
+            return path;
+        }
+
+        private static List<CellCoord> ParsePathPoints(JToken token)
+        {
+            var result = new List<CellCoord>();
+            var array = token as JArray;
+            if (array == null)
+                return result;
+
+            foreach (var item in array)
+            {
+                int? x = null;
+                int? y = null;
+                var pair = item as JArray;
+                if (pair != null && pair.Count >= 2)
+                {
+                    int parsedX;
+                    int parsedY;
+                    if (int.TryParse(pair[0]?.ToString(), out parsedX) && int.TryParse(pair[1]?.ToString(), out parsedY))
+                    {
+                        x = parsedX;
+                        y = parsedY;
+                    }
+                }
+                else
+                {
+                    var obj = item as JObject;
+                    if (obj != null)
+                    {
+                        int parsedX;
+                        int parsedY;
+                        if (int.TryParse(obj["x"]?.ToString(), out parsedX) && int.TryParse(obj["y"]?.ToString(), out parsedY))
+                        {
+                            x = parsedX;
+                            y = parsedY;
+                        }
+                    }
+                }
+
+                if (x.HasValue && y.HasValue)
+                    result.Add(new CellCoord(x.Value, y.Value));
+            }
+            return result;
+        }
+
+        private static void AddManhattanSegment(List<CellCoord> path, CellCoord from, CellCoord to)
+        {
+            int x = from.x;
+            int y = from.y;
+            AddPathPoint(path, x, y);
+            while (x != to.x)
+            {
+                x += Math.Sign(to.x - x);
+                AddPathPoint(path, x, y);
+            }
+            while (y != to.y)
+            {
+                y += Math.Sign(to.y - y);
+                AddPathPoint(path, x, y);
+            }
+        }
+
+        private static void AddPathPoint(List<CellCoord> path, int x, int y)
+        {
+            if (path.Count > 0 && path[path.Count - 1].x == x && path[path.Count - 1].y == y)
+                return;
+            path.Add(new CellCoord(x, y));
         }
 
         internal static CallToolResult PlanAtPointer(JObject args)
@@ -896,7 +1134,8 @@ namespace OniMcp.Tools
                 ["priority"] = new McpToolParameter { Type = "integer", Description = "建造优先级 1..9，默认 5", Required = false },
                 ["allowUnsupported"] = new McpToolParameter { Type = "boolean", Description = "默认 false；OnFloor 建筑无支撑时拒绝", Required = false },
                 ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true。建造 footprint 遇到可挖自然固体时，执行建造会先自动标记挖掘，并继续尝试在同一格放置建造蓝图", Required = false },
-                ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "单次命令最多自动标记多少个挖掘格，默认 100，最大 500", Required = false },
+                ["autoUprootObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true。建造 footprint 遇到可铲植物时自动标记铲除，并继续尝试放置建造蓝图", Required = false },
+                ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "单次命令最多自动标记多少个挖掘/铲除格，默认 100，最大 500", Required = false },
                 ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预检，不生成蓝图", Required = false }
             };
 
@@ -1212,6 +1451,14 @@ namespace OniMcp.Tools
                             : "target footprint contains solid terrain or constructed tile that cannot be auto-dug"
                     });
                 }
+
+                foreach (var uproot in UprootableObstructionsAtCell(cellInfo.Cell, placement.WorldId))
+                {
+                    uproot["x"] = cellInfo.X;
+                    uproot["y"] = cellInfo.Y;
+                    uproot["cell"] = cellInfo.Cell;
+                    result.Add(uproot);
+                }
             }
 
             var seen = new HashSet<string>();
@@ -1238,21 +1485,44 @@ namespace OniMcp.Tools
 
             foreach (var obstruction in footprintResult.Obstructions)
             {
-                if (!EqualsIgnoreCase(obstruction.ContainsKey("kind") ? obstruction["kind"]?.ToString() : null, "solid_cell"))
-                    return null;
-                object diggableValue;
-                bool diggable = obstruction.TryGetValue("diggable", out diggableValue)
-                    && diggableValue != null
-                    && bool.TryParse(diggableValue.ToString(), out bool parsed)
-                    && parsed;
-                if (!diggable)
+                string kind = obstruction.ContainsKey("kind") ? obstruction["kind"]?.ToString() : null;
+                if (EqualsIgnoreCase(kind, "solid_cell"))
+                {
+                    object diggableValue;
+                    bool diggable = obstruction.TryGetValue("diggable", out diggableValue)
+                        && diggableValue != null
+                        && bool.TryParse(diggableValue.ToString(), out bool parsed)
+                        && parsed;
+                    if (!diggable)
+                        return null;
+                    continue;
+                }
+
+                if (EqualsIgnoreCase(kind, "uprootable"))
+                {
+                    bool uprootEnabled = ToolUtil.GetBool(args, "autoUprootObstructions", true);
+                    object canUprootValue;
+                    bool canUproot = obstruction.TryGetValue("canUproot", out canUprootValue)
+                        && canUprootValue != null
+                        && bool.TryParse(canUprootValue.ToString(), out bool parsed)
+                        && parsed;
+                    if (!uprootEnabled || !canUproot)
+                        return null;
+                    continue;
+                }
+
                     return null;
             }
 
-            var targets = placement.Footprint
+            var digTargets = placement.Footprint
                 .Where(cell => IsNaturalDiggableSolidCell(cell.Cell, placement.WorldId))
                 .ToList();
-            if (targets.Count == 0)
+            var uprootTargets = placement.Footprint
+                .SelectMany(cell => UprootablesAtCell(cell.Cell, placement.WorldId).Select(uprootable => new { cell, uprootable }))
+                .GroupBy(item => item.uprootable.gameObject.GetInstanceID())
+                .Select(group => group.First())
+                .ToList();
+            if (digTargets.Count == 0 && uprootTargets.Count == 0)
                 return null;
 
             bool dryRun = IsDryRun(args);
@@ -1273,12 +1543,16 @@ namespace OniMcp.Tools
                     ["available"] = false,
                     ["dryRun"] = false,
                     ["needsRetryAfterDig"] = true,
-                    ["targetCount"] = targets.Count,
+                    ["targetCount"] = digTargets.Count + uprootTargets.Count,
                     ["error"] = "DigTool is not initialized; open a loaded colony UI before issuing automatic dig orders"
                 };
             }
 
-            foreach (var target in targets)
+            int uprootWouldMark = 0;
+            int uprootMarked = 0;
+            int alreadyUprootMarked = 0;
+
+            foreach (var target in digTargets)
             {
                 bool already = Grid.Objects[target.Cell, (int)ObjectLayer.DigPlacer] != null;
                 kgTotal += ToolUtil.SafeFloat(Grid.Mass[target.Cell]);
@@ -1317,17 +1591,62 @@ namespace OniMcp.Tools
                 }
             }
 
+            foreach (var target in uprootTargets)
+            {
+                var uprootable = target.uprootable;
+                var go = uprootable.gameObject;
+                bool already = uprootable.IsMarkedForUproot;
+                if (already)
+                {
+                    alreadyUprootMarked++;
+                    targetResults.Add(AutoDigTarget(target.cell, "already_uproot_marked"));
+                    continue;
+                }
+
+                if (dryRun)
+                {
+                    uprootWouldMark++;
+                    targetResults.Add(AutoDigTarget(target.cell, "would_uproot"));
+                    continue;
+                }
+
+                if (!uprootable.CanUproot())
+                {
+                    skipped++;
+                    targetResults.Add(AutoDigTarget(target.cell, "uproot_unavailable"));
+                    continue;
+                }
+
+                if (!context.TryReserve(target.cell.Cell))
+                {
+                    skipped++;
+                    targetResults.Add(AutoDigTarget(target.cell, context.LimitReached ? "limit_skipped" : "duplicate_skipped"));
+                    continue;
+                }
+
+                uprootable.MarkForUproot();
+                SetPriority(go, ToolUtil.GetInt(args, "priority") ?? 5);
+                uprootMarked++;
+                context.Marked++;
+                targetResults.Add(AutoDigTarget(target.cell, "uproot_marked"));
+            }
+
             return new Dictionary<string, object>
             {
                 ["enabled"] = true,
                 ["available"] = true,
                 ["dryRun"] = dryRun,
                 ["needsRetryAfterDig"] = false,
-                ["action"] = dryRun ? "would_mark_dig_for_build" : "queued_dig_for_build",
-                ["targetCount"] = targets.Count,
+                ["action"] = dryRun ? "would_clear_obstructions_for_build" : "queued_clear_obstructions_for_build",
+                ["targetCount"] = digTargets.Count + uprootTargets.Count,
+                ["digTargets"] = digTargets.Count,
+                ["uprootTargets"] = uprootTargets.Count,
                 ["wouldMark"] = dryRun ? wouldMark : (object)null,
+                ["uprootWouldMark"] = dryRun ? uprootWouldMark : (object)null,
                 ["marked"] = marked,
                 ["alreadyMarked"] = alreadyMarked,
+                ["uprootMarked"] = uprootMarked,
+                ["alreadyUprootMarked"] = alreadyUprootMarked,
                 ["skipped"] = skipped,
                 ["failed"] = failed,
                 ["limitReached"] = context.LimitReached,
@@ -1335,8 +1654,40 @@ namespace OniMcp.Tools
                 ["kgTotal"] = Math.Round(kgTotal, 3),
                 ["targets"] = targetResults.Take(50).ToList(),
                 ["truncatedTargets"] = Math.Max(0, targetResults.Count - 50),
-                ["note"] = "Natural solid cells in the footprint were marked for digging; the build planner will still attempt to place the build blueprint on the same cells."
+                ["note"] = "Natural solid cells were marked for digging and uprootable plants were marked for removal; the build planner will still attempt to place the build blueprint on the same cells."
             };
+        }
+
+        private static IEnumerable<Dictionary<string, object>> UprootableObstructionsAtCell(int cell, int worldId)
+        {
+            foreach (var uprootable in UprootablesAtCell(cell, worldId))
+            {
+                var go = uprootable.gameObject;
+                var kpid = go.GetComponent<KPrefabID>();
+                yield return new Dictionary<string, object>
+                {
+                    ["kind"] = "uprootable",
+                    ["id"] = kpid?.InstanceID ?? go.GetInstanceID(),
+                    ["prefabId"] = kpid?.PrefabTag.Name ?? go.name,
+                    ["name"] = ToolUtil.CleanName(go.GetProperName()),
+                    ["canUproot"] = uprootable.CanUproot(),
+                    ["alreadyMarkedForUproot"] = uprootable.IsMarkedForUproot,
+                    ["reasonCode"] = "uprootable_plant",
+                    ["reason"] = "target footprint contains a plant or uprootable object that can be marked for uproot"
+                };
+            }
+        }
+
+        private static IEnumerable<Uprootable> UprootablesAtCell(int cell, int worldId)
+        {
+            foreach (var uprootable in Components.Uprootables.Items)
+            {
+                var go = uprootable?.gameObject;
+                if (go == null || !ToolUtil.GameObjectMatchesWorld(go, worldId))
+                    continue;
+                if (Grid.PosToCell(go) == cell)
+                    yield return uprootable;
+            }
         }
 
         private static bool IsNaturalDiggableSolidCell(int cell, int worldId)

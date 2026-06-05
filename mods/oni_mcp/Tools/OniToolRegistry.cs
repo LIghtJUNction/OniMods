@@ -38,6 +38,11 @@ namespace OniMcp.Tools
             "building_power_ports",
             "world_text_map",
             "world_area_snapshot",
+            "camera_coordinate_screenshot",
+            "world_search",
+            "world_search_cells",
+            "world_search_objects",
+            "utility_auto_connect",
             "layout_candidates",
             "dupes_status_check",
             "dupes_auto_rename",
@@ -94,6 +99,7 @@ namespace OniMcp.Tools
             Register(CameraTools.FocusCell());
             Register(CameraTools.FocusDupe());
             Register(CameraTools.TakeScreenshot());
+            Register(CameraTools.TakeCoordinateScreenshot());
             Register(AgentPointerTools.GetPointerState());
             Register(AgentPointerTools.GetUserMouse());
             Register(AgentPointerTools.AimCell());
@@ -310,6 +316,7 @@ namespace OniMcp.Tools
             Register(BuildPlanningTools.SearchBuildables());
             Register(BuildPlanningTools.ListBuildMaterials());
             Register(BuildPlanningTools.PreviewBuild());
+            Register(BuildPlanningTools.AutoConnectUtility());
             Register(BuildPlanningTools.FindPlacementCandidates());
             Register(BuildPlanningTools.BuildArea());
             Register(RocketTools.ListRockets());
@@ -380,6 +387,9 @@ namespace OniMcp.Tools
             Register(WorldAnalysisTools.GetWorldElementSummary());
             Register(WorldAnalysisTools.GetWorldTextMap());
             Register(WorldAnalysisTools.GetWorldAreaSnapshot());
+            Register(WorldSearchTools.SearchWorld());
+            Register(WorldSearchTools.SearchCells());
+            Register(WorldSearchTools.SearchObjects());
             Register(WorldAnalysisTools.GetLayoutCandidates());
             Register(WorldAnalysisTools.ScanOverheatRisk());
             Register(SandboxTools.ListSandboxActions());

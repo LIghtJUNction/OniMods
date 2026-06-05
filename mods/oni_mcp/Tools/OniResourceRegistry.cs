@@ -139,6 +139,8 @@ namespace OniMcp.Tools
             Resource("oni://power/ports", "building_power_ports", "电力接口", "指定区域内建筑的电力接口格：锚点、输入/输出端口、相对偏移和可接线状态。", "building_power_ports"),
             Resource("oni://rooms/list", "rooms_list", "房间列表", "房间系统状态：房间类型、大小、边界、对象计数和房间效果，适合检查士气房间是否成型。", "rooms_list"),
             Resource("oni://thermal/overheat-risk", "thermal_overheat_risk_scan", "过热风险扫描", "建筑过热风险扫描：按当前格温和建筑过热温度差排序，发现即将过热或已经过热的设备。", "thermal_overheat_risk_scan"),
+            Resource("oni://world/search", "world_search", "地图搜索", "按 query/条件在地图上搜索元素格、建筑、散落物和复制人，支持区域过滤和最近排序。", "world_search"),
+            Resource("oni://world/coordinate-screenshot", "camera_coordinate_screenshot", "坐标截图", "保存带 ONI 世界坐标网格和坐标文本的截图，返回本地路径和 HTTP URL，适合视觉模型直接识别坐标。", "camera_coordinate_screenshot"),
             Resource("oni://world/layout-candidates", "layout_candidates", "平面布局候选", "按用途扫描区域，返回房间/平台候选矩形、评分、需挖掘、需铺砖、危险格和连通性。", "layout_candidates")
         };
 
@@ -154,10 +156,26 @@ namespace OniMcp.Tools
             },
             new McpResourceTemplateInfo
             {
+                UriTemplate = "oni://world/search{?query,kinds,areaId,x1,y1,x2,y2,worldId,visibleOnly,state,solid,minMassKg,maxMassKg,minTempC,maxTempC,nearX,nearY,sort,limit,maxCells}",
+                Name = "world_search",
+                Title = "地图搜索",
+                Description = "按 query/条件搜索地图元素格、建筑、散落物和复制人；支持 areaId/矩形/世界过滤、温度/质量/状态过滤和 nearX/nearY 最近排序。",
+                MimeType = "application/json"
+            },
+            new McpResourceTemplateInfo
+            {
+                UriTemplate = "oni://world/coordinate-screenshot{?areaId,x1,y1,x2,y2,worldId,view,focusCamera,paddingCells,showGrid,showCoordinates,includeCellLabels,step,waitFrames,filename}",
+                Name = "camera_coordinate_screenshot",
+                Title = "坐标截图",
+                Description = "移动相机到指定区域，叠加世界坐标格线和坐标文本并截图；返回 screenshot.url/latestUrl，供视觉模型直接读坐标。",
+                MimeType = "application/json"
+            },
+            new McpResourceTemplateInfo
+            {
                 UriTemplate = "oni://world/text-map{?areaId,x1,y1,x2,y2,worldId,visibleOnly,view,sparse,includeBuildings,includeItems,includeDupes,includeElements,includeSummary,detail,encoding,profile,format,elementLimit,objectLimit,maxCells}",
                 Name = "world_text_map",
                 Title = "世界文本地图",
-                Description = "读取指定矩形区域或 areaId 的文本地图；默认 plain 逐格输出便于 agent 直接读图。返回 areaId、origin、relativeRect、rx/ry 以及世界绝对坐标；后续建造/订单编辑使用世界绝对 x/y。view=temperature 输出温度分级图，view=power/gas_conduits/liquid_conduits/solid_conveyor/logic 输出对应 overlay；sparse/profile=scan 仅用于很大范围的低 token 初扫，format=json 用于规划 harness 结构化校验。",
+                Description = "读取指定矩形区域或 areaId 的文本地图；作为低 token 扫描/无视觉能力兜底。需要图像坐标上下文时优先用 oni://world/coordinate-screenshot。",
                 MimeType = "text/plain"
             },
             new McpResourceTemplateInfo
@@ -1018,6 +1036,18 @@ namespace OniMcp.Tools
             {
                 var query = ParseQuery(parsed.Query);
                 return ReadToolResource(uri, "world_text_map", query, "text/plain");
+            }
+
+            if (parsed.Host == "world" && parsed.AbsolutePath == "/search")
+            {
+                var query = ParseQuery(parsed.Query);
+                return ReadToolResource(uri, "world_search", query, "application/json");
+            }
+
+            if (parsed.Host == "world" && parsed.AbsolutePath == "/coordinate-screenshot")
+            {
+                var query = ParseQuery(parsed.Query);
+                return ReadToolResource(uri, "camera_coordinate_screenshot", query, "application/json");
             }
 
             if (parsed.Host == "tools" && parsed.AbsolutePath.StartsWith("/read/"))

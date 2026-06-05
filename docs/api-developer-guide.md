@@ -66,7 +66,7 @@ curl -X POST http://localhost:8787/mcp/ \
       "resources": { "subscribe": false, "listChanged": false },
       "tasks": { "list": {}, "cancel": {}, "requests": { "tools": { "call": {} } } }
     },
-    "serverInfo": { "name": "OniMcp", "version": "0.1.6" }
+    "serverInfo": { "name": "OniMcp", "version": "0.1.7" }
   }
 }
 ```

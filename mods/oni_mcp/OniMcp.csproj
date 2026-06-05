@@ -21,7 +21,7 @@
     <ModTitle>ONI MCP Server</ModTitle>
     <ModDescription>Oxygen Not Included MCP Server - 将游戏操作封装为 Model Context Protocol 服务，使用 Streamable HTTP 传输层</ModDescription>
     <ModStaticID>LIghtJUNction.OniMcp</ModStaticID>
-    <ModVersion>0.1.6</ModVersion>
+    <ModVersion>0.1.7</ModVersion>
 
     <!-- mod_info.yaml 元数据 -->
     <ModApiVersion>2</ModApiVersion>

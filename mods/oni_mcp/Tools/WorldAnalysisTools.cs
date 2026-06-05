@@ -87,12 +87,241 @@ namespace OniMcp.Tools
                         ["isFoundation"] = Grid.Foundation[cell],
                         ["diseaseIdx"] = Grid.DiseaseIdx[cell],
                         ["diseaseCount"] = Grid.DiseaseCount[cell],
-                        ["lightIntensity"] = Grid.LightIntensity[cell]
+                        ["lightIntensity"] = Grid.LightIntensity[cell],
+                        ["objectsByLayer"] = CellLayerObjects(cell),
+                        ["buildings"] = CellBuildings(cell, requestedWorldId),
+                        ["blueprints"] = CellBlueprints(cell, requestedWorldId),
+                        ["pickupables"] = CellPickupables(cell, requestedWorldId),
+                        ["dupes"] = CellDupes(cell, requestedWorldId),
+                        ["plants"] = CellPlants(cell, requestedWorldId),
+                        ["utilities"] = CellUtilities(cell),
+                        ["buildability"] = CellBuildability(cell, requestedWorldId)
                     };
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
             };
+        }
+
+        private static List<Dictionary<string, object>> CellLayerObjects(int cell)
+        {
+            var result = new List<Dictionary<string, object>>();
+            foreach (ObjectLayer layer in Enum.GetValues(typeof(ObjectLayer)))
+            {
+                int index = (int)layer;
+                if (index < 0)
+                    continue;
+                GameObject go = null;
+                try
+                {
+                    go = Grid.Objects[cell, index];
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (go == null)
+                    continue;
+                result.Add(ObjectInfo(go, layer.ToString(), cell));
+            }
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CellBuildings(int cell, int worldId)
+        {
+            var result = new List<Dictionary<string, object>>();
+            foreach (var building in Components.BuildingCompletes.Items)
+            {
+                if (building == null || building.gameObject == null || !MatchesWorld(building.gameObject, worldId))
+                    continue;
+                if (!ObjectFootprintContains(building.gameObject, building.Def, cell))
+                    continue;
+                var info = ObjectInfo(building.gameObject, "building", cell);
+                info["operational"] = building.GetComponent<Operational>()?.IsOperational;
+                info["anchorCell"] = building.GetBottomLeftCell();
+                if (Grid.IsValidCell(building.GetBottomLeftCell()))
+                {
+                    info["anchorX"] = Grid.CellColumn(building.GetBottomLeftCell());
+                    info["anchorY"] = Grid.CellRow(building.GetBottomLeftCell());
+                }
+                result.Add(info);
+            }
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CellBlueprints(int cell, int worldId)
+        {
+            var result = new List<Dictionary<string, object>>();
+            Constructable[] constructables;
+            try
+            {
+                constructables = UnityEngine.Object.FindObjectsByType<Constructable>(FindObjectsSortMode.None);
+            }
+            catch
+            {
+                return result;
+            }
+
+            foreach (var constructable in constructables)
+            {
+                if (constructable == null || constructable.gameObject == null || !MatchesWorld(constructable.gameObject, worldId))
+                    continue;
+                var building = constructable.GetComponent<Building>();
+                if (!ObjectFootprintContains(constructable.gameObject, building?.Def, cell))
+                    continue;
+                result.Add(ObjectInfo(constructable.gameObject, "blueprint", cell));
+            }
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CellPickupables(int cell, int worldId)
+        {
+            var result = new List<Dictionary<string, object>>();
+            foreach (var pickupable in Components.Pickupables.Items)
+            {
+                if (pickupable == null || pickupable.gameObject == null)
+                    continue;
+                int itemCell = pickupable.cachedCell;
+                if (itemCell != cell || !MatchesWorld(pickupable.gameObject, worldId))
+                    continue;
+                var info = ObjectInfo(pickupable.gameObject, "pickupable", cell);
+                var primary = pickupable.PrimaryElement ?? pickupable.GetComponent<PrimaryElement>();
+                if (primary != null)
+                {
+                    info["element"] = primary.ElementID.ToString();
+                    info["massKg"] = Math.Round(SafeFloat(primary.Mass), 3);
+                    info["temperatureC"] = Math.Round(SafeFloat(primary.Temperature) - 273.15f, 2);
+                }
+                info["stored"] = pickupable.storage != null || pickupable.KPrefabID != null && pickupable.KPrefabID.HasTag(GameTags.Stored);
+                result.Add(info);
+            }
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CellDupes(int cell, int worldId)
+        {
+            var result = new List<Dictionary<string, object>>();
+            foreach (var dupe in Components.LiveMinionIdentities.Items)
+            {
+                if (dupe == null || dupe.gameObject == null || !MatchesWorld(dupe.gameObject, worldId))
+                    continue;
+                int dupeCell = Grid.PosToCell(dupe.gameObject);
+                if (dupeCell != cell)
+                    continue;
+                result.Add(ObjectInfo(dupe.gameObject, "dupe", cell));
+            }
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CellPlants(int cell, int worldId)
+        {
+            var result = new List<Dictionary<string, object>>();
+            foreach (var uprootable in Components.Uprootables.Items)
+            {
+                var go = uprootable?.gameObject;
+                if (go == null || !MatchesWorld(go, worldId))
+                    continue;
+                int plantCell = Grid.PosToCell(go);
+                if (plantCell != cell)
+                    continue;
+                var info = ObjectInfo(go, "plant_or_uprootable", cell);
+                info["canUproot"] = uprootable.CanUproot();
+                info["markedForUproot"] = uprootable.IsMarkedForUproot;
+                result.Add(info);
+            }
+            return result;
+        }
+
+        private static Dictionary<string, object> CellUtilities(int cell)
+        {
+            var layers = new[]
+            {
+                ObjectLayer.Wire,
+                ObjectLayer.WireTile,
+                ObjectLayer.ReplacementWire,
+                ObjectLayer.LiquidConduit,
+                ObjectLayer.LiquidConduitTile,
+                ObjectLayer.ReplacementLiquidConduit,
+                ObjectLayer.GasConduit,
+                ObjectLayer.GasConduitTile,
+                ObjectLayer.ReplacementGasConduit,
+                ObjectLayer.SolidConduit,
+                ObjectLayer.SolidConduitTile,
+                ObjectLayer.ReplacementSolidConduit,
+                ObjectLayer.LogicWire,
+                ObjectLayer.LogicWireTile,
+                ObjectLayer.ReplacementLogicWire
+            };
+            var result = new Dictionary<string, object>();
+            foreach (var layer in layers)
+            {
+                var go = Grid.Objects[cell, (int)layer];
+                if (go != null)
+                    result[layer.ToString()] = ObjectInfo(go, layer.ToString(), cell);
+            }
+            return result;
+        }
+
+        private static Dictionary<string, object> CellBuildability(int cell, int worldId)
+        {
+            bool naturalSolid = Grid.IsValidCell(cell)
+                && Grid.IsVisible(cell)
+                && ToolUtil.CellMatchesWorld(cell, worldId)
+                && Grid.Solid[cell]
+                && !Grid.Foundation[cell];
+            bool hasUprootable = CellPlants(cell, worldId).Any(item => item.ContainsKey("canUproot") && item["canUproot"] is bool && (bool)item["canUproot"]);
+            return new Dictionary<string, object>
+            {
+                ["naturalSolid"] = naturalSolid,
+                ["canAutoDig"] = naturalSolid,
+                ["plantPresent"] = CellPlants(cell, worldId).Count > 0,
+                ["canAutoUproot"] = hasUprootable,
+                ["notes"] = "Build planner can auto-mark natural solid dig and uprootable plants when autoDigObstructions/autoUprootObstructions are enabled."
+            };
+        }
+
+        private static Dictionary<string, object> ObjectInfo(GameObject go, string kind, int selectedCell)
+        {
+            var kpid = go.GetComponent<KPrefabID>();
+            int objectCell = Grid.PosToCell(go);
+            var info = new Dictionary<string, object>
+            {
+                ["kind"] = kind,
+                ["id"] = kpid?.InstanceID ?? go.GetInstanceID(),
+                ["prefabId"] = kpid?.PrefabTag.Name ?? go.name,
+                ["name"] = ToolUtil.CleanName(go.GetProperName()),
+                ["cell"] = objectCell,
+                ["x"] = Grid.IsValidCell(objectCell) ? Grid.CellColumn(objectCell) : -1,
+                ["y"] = Grid.IsValidCell(objectCell) ? Grid.CellRow(objectCell) : -1,
+                ["selectedCell"] = selectedCell
+            };
+            if (Grid.IsWorldValidCell(objectCell))
+                info["worldId"] = Grid.WorldIdx[objectCell];
+            return info;
+        }
+
+        private static bool ObjectFootprintContains(GameObject go, BuildingDef def, int targetCell)
+        {
+            if (go == null || !Grid.IsValidCell(targetCell))
+                return false;
+            int objectCell = Grid.PosToCell(go);
+            if (!Grid.IsValidCell(objectCell))
+                return false;
+            int width = Math.Max(1, def?.WidthInCells ?? 1);
+            int height = Math.Max(1, def?.HeightInCells ?? 1);
+            var building = go.GetComponent<Building>();
+            int anchorCell = building != null ? building.GetBottomLeftCell() : objectCell;
+            int anchorX = Grid.IsValidCell(anchorCell) ? Grid.CellColumn(anchorCell) : Grid.CellColumn(objectCell);
+            int anchorY = Grid.IsValidCell(anchorCell) ? Grid.CellRow(anchorCell) : Grid.CellRow(objectCell);
+            int targetX = Grid.CellColumn(targetCell);
+            int targetY = Grid.CellRow(targetCell);
+            return targetX >= anchorX && targetX < anchorX + width && targetY >= anchorY && targetY < anchorY + height;
+        }
+
+        private static bool MatchesWorld(GameObject go, int worldId)
+        {
+            return worldId < 0 || ToolUtil.GameObjectMatchesWorld(go, worldId);
         }
 
         public static McpTool GetWorldElementSummary()
@@ -215,7 +444,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_world_text_map", "world_serialize_area" },
                 Tags = new List<string> { "map", "text", "markdown", "sequence", "world", "地图", "格子" },
-                Description = "【地形分析首选】把指定矩形地图序列化为 Markdown 文档。当需要分析地形、气液固分布、建筑位置、复制人位置或资源布局时，优先使用此工具而非截图。默认把地图视为一个可读页面：元信息、图例、按行连续区段、元素统计和对象表；不用像素式密集网格。",
+                Description = "把指定矩形地图序列化为 Markdown/JSON 文档。默认作为低 token 扫描或无视觉能力客户端的兜底；需要让视觉模型判断坐标时优先用 camera_coordinate_screenshot，把坐标网格直接叠加到截图上。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；返回结果会把该区域左下角作为 origin，并同时显示世界绝对坐标", Required = false },
@@ -448,7 +677,7 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "area_snapshot", "world_snapshot_area" },
                 Tags = new List<string> { "map", "snapshot", "text", "grid", "screenshot", "overlay", "地图", "截图", "快照" },
-                Description = "【区域上下文首选】一次返回同一区域的结构化文本地图、对象摘要和可选 utility overlay（电力/气管/液管/运输/逻辑）。默认不截图；includeScreenshot=true 时附当前屏幕截图路径，仅用于视觉确认。做挖掘、建造、电线/管路规划时优先用本工具或 world_text_map，不要只依赖截图。",
+                Description = "一次返回同一区域的结构化文本地图、对象摘要和可选 utility overlay（电力/气管/液管/运输/逻辑）。默认用于结构化兜底/批量扫描；视觉坐标上下文优先用 camera_coordinate_screenshot。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；返回结果包含 origin/relativeRect 和世界绝对坐标范围", Required = false },

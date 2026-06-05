@@ -65,6 +65,7 @@ namespace OniMcp
             EditMarkerTool.EnsureInstance();
             PlanningViewOverlay.EnsureInstance();
             AgentPointerOverlay.EnsureInstance();
+            CoordinateGridOverlay.EnsureInstance();
 
             OniMcpLog.Debug("[OniMcp] Game-specific components initialized.");
         }
