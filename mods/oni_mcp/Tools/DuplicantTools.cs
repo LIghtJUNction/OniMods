@@ -1470,6 +1470,9 @@ namespace OniMcp.Tools
             if (amounts == null)
                 return result;
 
+            if (DupeAmountUtil.TryGetStressValue(dupe, out var stress))
+                result.Stress = stress;
+
             foreach (var amount in amounts.ModifierList)
             {
                 if (amount == null || amount.amount == null)
@@ -1479,7 +1482,7 @@ namespace OniMcp.Tools
                 float value = ToolUtil.SafeFloat(amount.value);
                 if (Contains(id, "Stamina") || Contains(name, "Stamina")) result.Stamina = value;
                 else if (Contains(id, "Calories") || Contains(name, "Calories")) result.Calories = value;
-                else if (Contains(id, "Stress") || Contains(name, "Stress")) result.Stress = value;
+                else if (result.Stress < 0f && (Contains(id, "Stress") || Contains(name, "Stress"))) result.Stress = value;
                 else if (Contains(id, "Bladder") || Contains(name, "Bladder")) result.Bladder = value;
                 else if (Contains(id, "Breath") || Contains(name, "Breath")) result.Breath = value;
                 else if (Contains(id, "Temperature") || Contains(name, "Temperature")) result.BodyTemperature = value;
@@ -1929,6 +1932,8 @@ namespace OniMcp.Tools
                     amounts[amount.amount.Name] = Math.Round(ToolUtil.SafeFloat(amount.value), 2);
                 }
             }
+            if (DupeAmountUtil.TryGetStressValue(dupe, out var stress))
+                amounts["Stress"] = Math.Round(stress, 2);
 
             return new Dictionary<string, object>
             {

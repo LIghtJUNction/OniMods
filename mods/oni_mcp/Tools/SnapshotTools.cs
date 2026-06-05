@@ -168,9 +168,9 @@ namespace OniMcp.Tools
                 if (worldId >= 0 && dupeWorld != worldId)
                     continue;
 
-                float stress = AmountValue(dupe, "Stress");
-                float stamina = AmountValue(dupe, "Stamina");
-                float calories = AmountValue(dupe, "Calories");
+                float stress = DupeAmountUtil.StressValue(dupe);
+                float stamina = DupeAmountUtil.AmountValueByName(dupe, "Stamina");
+                float calories = DupeAmountUtil.AmountValueByName(dupe, "Calories");
                 var resume = dupe.GetComponent<MinionResume>();
                 int cell = Grid.PosToCell(dupe);
                 result.Add(new DupeSnapshot
@@ -187,19 +187,6 @@ namespace OniMcp.Tools
                 });
             }
             return result.OrderBy(item => item.Name).ToList();
-        }
-
-        private static float AmountValue(MinionIdentity dupe, string id)
-        {
-            var amounts = dupe?.GetComponent<Klei.AI.Amounts>();
-            if (amounts == null)
-                return 0f;
-            foreach (var amount in amounts.ModifierList)
-            {
-                if (amount != null && amount.amount.Id == id)
-                    return ToolUtil.SafeFloat(amount.value);
-            }
-            return 0f;
         }
 
         private static Dictionary<string, object> BuildDupeResult(List<DupeSnapshot> dupes, int limit, string profile)

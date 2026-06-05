@@ -596,6 +596,8 @@ namespace OniMcp.Tools
                     ["screenshot"] = screenshot ? (object)new Dictionary<string, object>
                     {
                         ["path"] = request.ScreenshotPath,
+                        ["url"] = WorldEditor.ScreenshotUrl(request.ScreenshotPath),
+                        ["latestUrl"] = OniMcpOptions.Current.ScreenshotLatestUrl,
                         ["readyAfterFrames"] = waitFrames + 1,
                         ["cycle"] = GameUtil.GetCurrentCycle(),
                         ["screen"] = new { width = Screen.width, height = Screen.height },

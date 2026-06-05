@@ -177,6 +177,13 @@ namespace OniMcp.Server
                 if (!ValidateAuth(request, response))
                     return;
 
+                if (request.Url != null
+                    && request.Url.AbsolutePath.StartsWith("/screenshots/", StringComparison.OrdinalIgnoreCase))
+                {
+                    HandleScreenshotRequest(request, response);
+                    return;
+                }
+
                 string sessionId = request.Headers["Mcp-Session-Id"];
                 string protocolVersion = request.Headers["Mcp-Protocol-Version"];
 
@@ -498,6 +505,45 @@ namespace OniMcp.Server
             response.Close();
         }
 
+        private static void HandleScreenshotRequest(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            if (request.HttpMethod != "GET" && request.HttpMethod != "HEAD")
+            {
+                response.StatusCode = 405;
+                response.Close();
+                return;
+            }
+
+            string fileName = Path.GetFileName(request.Url.AbsolutePath);
+            string path = string.Equals(fileName, "latest.png", StringComparison.OrdinalIgnoreCase)
+                ? WorldEditor.LatestScreenshotPath()
+                : WorldEditor.ScreenshotPathForFile(fileName);
+
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                response.StatusCode = 404;
+                response.Close();
+                return;
+            }
+
+            var info = new FileInfo(path);
+            response.StatusCode = 200;
+            response.ContentType = "image/png";
+            response.ContentLength64 = info.Length;
+            response.Headers["Cache-Control"] = "no-cache";
+            if (request.HttpMethod == "HEAD")
+            {
+                response.Close();
+                return;
+            }
+
+            using (var stream = File.OpenRead(path))
+            {
+                stream.CopyTo(response.OutputStream);
+            }
+            response.Close();
+        }
+
         private bool IsSessionActive(string sessionId)
         {
             lock (_sessionLock)
@@ -691,7 +737,7 @@ namespace OniMcp.Server
                 ServerInfo = new Implementation
                 {
                     Name = "OniMcp",
-                    Version = "0.1.5"
+                    Version = "0.1.6"
                 }
             };
         }

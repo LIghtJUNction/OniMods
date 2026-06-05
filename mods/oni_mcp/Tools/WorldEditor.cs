@@ -124,6 +124,8 @@ namespace OniMcp.Tools
             return new Dictionary<string, object>
             {
                 ["path"] = path,
+                ["url"] = ScreenshotUrl(path),
+                ["latestUrl"] = OniMcpOptions.Current.ScreenshotLatestUrl,
                 ["cycle"] = GameUtil.GetCurrentCycle(),
                 ["screen"] = new { width = Screen.width, height = Screen.height },
                 ["cleanup"] = cleanup
@@ -224,6 +226,36 @@ namespace OniMcp.Tools
         {
             bool value;
             return args != null && args[key] != null && bool.TryParse(args[key].ToString(), out value) ? value : defaultValue;
+        }
+
+        public static string ScreenshotPathForFile(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return null;
+            string safeName = Path.GetFileName(fileName);
+            if (!safeName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                return null;
+            string path = Path.Combine(ScreenshotDirectory, safeName);
+            return File.Exists(path) ? path : null;
+        }
+
+        public static string LatestScreenshotPath()
+        {
+            var errors = new List<string>();
+            return ListScreenshotFiles(ScreenshotDirectory, errors)
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .Select(file => file.FullName)
+                .FirstOrDefault();
+        }
+
+        public static string ScreenshotUrl(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+            string fileName = Path.GetFileName(path);
+            if (string.IsNullOrWhiteSpace(fileName))
+                return null;
+            return OniMcpOptions.Current.ScreenshotBaseUrl + Uri.EscapeDataString(fileName);
         }
 
         private static string ScreenshotDirectory => Path.Combine(Path.GetTempPath(), "oni-mcp", "screenshots");

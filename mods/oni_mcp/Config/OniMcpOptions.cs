@@ -58,6 +58,12 @@ namespace OniMcp.Config
         public string EndpointUrl => $"http://{DisplayHost}:{Port}/mcp/";
 
         [JsonIgnore]
+        public string ScreenshotLatestUrl => $"http://{DisplayHost}:{Port}/screenshots/latest.png";
+
+        [JsonIgnore]
+        public string ScreenshotBaseUrl => $"http://{DisplayHost}:{Port}/screenshots/";
+
+        [JsonIgnore]
         public IEnumerable<string> ListenPrefixes
         {
             get
@@ -66,10 +72,13 @@ namespace OniMcp.Config
                 {
                     yield return $"http://localhost:{Port}/mcp/";
                     yield return $"http://127.0.0.1:{Port}/mcp/";
+                    yield return $"http://localhost:{Port}/screenshots/";
+                    yield return $"http://127.0.0.1:{Port}/screenshots/";
                 }
                 else
                 {
                     yield return $"http://{ListenHost}:{Port}/mcp/";
+                    yield return $"http://{ListenHost}:{Port}/screenshots/";
                 }
             }
         }
