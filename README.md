@@ -1,9 +1,46 @@
 # OniMods
 
+<div align="center">
+  <p>
+    <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust-2024-f46623?logo=rust&logoColor=white" /></a>
+    <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-green.svg" /></a>
+    <a href="mods/oni_mcp/README.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-docs-2f80ed" /></a>
+    <a href="docs/mcp-tools-reference.md"><img alt="Tools reference" src="https://img.shields.io/badge/Tools-reference-8b5cf6" /></a>
+  </p>
+</div>
+
+<p align="center">
+  <a href="#overview">Overview</a>
+  · <a href="#quick-start">Quick Start</a>
+  · <a href="#简体中文速览">简体中文</a>
+  · <a href="#oni-mcp-server">ONI MCP</a>
+</p>
+
 Oxygen Not Included Mod 仓库，包含：
 
 - `onim`：本仓库内置的缺氧 Mod 开发 CLI，用于初始化、构建、安装、卸载和发布 Mod。
 - `oni_mcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地的 Mod。
+
+## Overview
+
+`OniMods` is the home for both the local mod development CLI and the ONI MCP mod. It is designed to support a practical workflow: develop mods, inspect colony state, and expose a controlled tool surface for agent assistance.
+
+## Quick Start
+
+```bash
+cargo install --path .
+onim setup
+onim init MyMod
+onim dev -m MyMod
+```
+
+## 简体中文速览
+
+这是缺氧（Oxygen Not Included）的 Mod 工程仓库，既提供开发 CLI `onim`，也提供面向 AI 的 `oni_mcp`。
+
+- `onim` 负责初始化、构建、安装、卸载和发布。
+- `oni_mcp` 负责把殖民地数据和受控操作暴露给 MCP 客户端。
+- 适合 Mod 开发、AI 辅助游玩和工具集成。
 
 > **兼容性警告**：`oni_mcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
 
