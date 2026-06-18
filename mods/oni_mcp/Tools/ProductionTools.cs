@@ -104,7 +104,7 @@ namespace OniMcp.Tools
                                 continue;
                             if (queuedOnly && fabricator.GetRecipeQueueCount(recipe) == 0)
                                 continue;
-                            if (!includeLocked && !recipe.IsRequiredTechOrPOIUnlocked())
+                            if (!includeLocked && !recipe.IsRequiredTechUnlocked())
                                 continue;
                             if (!RecipeMatches(recipe, query))
                                 continue;
@@ -472,7 +472,7 @@ namespace OniMcp.Tools
             result["timeSeconds"] = ToolUtil.SafeFloat(recipe.time);
             result["requiredTech"] = recipe.requiredTech;
             result["requiresTechUnlock"] = recipe.RequiresTechUnlock();
-            result["techOrPoiUnlocked"] = recipe.IsRequiredTechOrPOIUnlocked();
+            result["techUnlocked"] = recipe.IsRequiredTechUnlocked();
             result["requiresAllIngredientsDiscovered"] = recipe.RequiresAllIngredientsDiscovered;
             result["consumedHEP"] = recipe.consumedHEP;
             result["producedHEP"] = recipe.producedHEP;

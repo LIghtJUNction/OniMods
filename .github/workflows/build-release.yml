@@ -1,0 +1,111 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: "Runner label with Oxygen Not Included installed"
+        required: true
+        default: "self-hosted"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  ONI_GAME_PATH: ${{ vars.ONI_GAME_PATH || secrets.ONI_GAME_PATH }}
+
+jobs:
+  build:
+    name: Build OniMcp
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner || 'self-hosted' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('mods/oni_mcp/OniMcp.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Configure ONI paths
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ONI_GAME_PATH}" ]; then
+            echo "::error::Set repository variable or secret ONI_GAME_PATH to the Oxygen Not Included install directory on this runner."
+            exit 1
+          fi
+
+          managed_path="${ONI_GAME_PATH}/OxygenNotIncluded_Data/Managed"
+          if [ ! -d "${managed_path}" ]; then
+            echo "::error::ONI managed DLL directory not found: ${managed_path}"
+            exit 1
+          fi
+
+          cat > Directory.Build.props <<EOF
+          <Project>
+            <PropertyGroup>
+              <OniGamePath>${ONI_GAME_PATH}</OniGamePath>
+              <OniManagedPath>\$(OniGamePath)/OxygenNotIncluded_Data/Managed</OniManagedPath>
+            </PropertyGroup>
+            <Target Name="ValidateOniGamePath" BeforeTargets="BeforeBuild">
+              <Error Text="游戏路径未配置！" Condition="'\$(OniGamePath)' == ''" />
+            </Target>
+          </Project>
+          EOF
+
+      - name: Build onim
+        run: cargo build --release --locked
+
+      - name: Build mod package
+        run: ./target/release/onim -m oni_mcp build --release
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oni-mcp-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            dist/OniMcp.zip
+            dist/OniMcp-src.tar.gz
+            dist/OniMcp/**
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/OniMcp.zip
+            dist/OniMcp-src.tar.gz

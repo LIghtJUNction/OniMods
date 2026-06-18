@@ -633,7 +633,7 @@ namespace OniMcp.Tools
         private static bool IsValidLoreBearer(GameObject go)
         {
             var lore = go?.GetComponent<LoreBearer>();
-            return lore != null && !lore.hideLore && (lore.useDefaultLore || !lore.poiOverrideLoreUnlockId.IsNullOrWhiteSpace());
+            return lore != null;
         }
 
         private static Dictionary<string, object> LoreBearerInfo(GameObject go)
@@ -643,9 +643,7 @@ namespace OniMcp.Tools
             result["interactable"] = lore.SidescreenButtonInteractable();
             result["buttonText"] = lore.SidescreenButtonText;
             result["buttonTooltip"] = lore.SidescreenButtonTooltip;
-            result["hideLore"] = lore.hideLore;
-            result["useDefaultLore"] = lore.useDefaultLore;
-            result["overrideLoreUnlockId"] = lore.poiOverrideLoreUnlockId;
+            result["content"] = lore.content;
             result["sortOrder"] = lore.GetSideScreenSortOrder();
             return result;
         }

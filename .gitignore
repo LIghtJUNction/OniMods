@@ -12,6 +12,9 @@ obj/
 *.suo
 *.csproj.user
 
+# Local MSBuild config
+Directory.Build.props
+
 # OS
 .DS_Store
 Thumbs.db
@@ -21,7 +24,6 @@ oni/
 
 # Rust build
 target/
-Cargo.lock
 
 # Mod output
 mods/*/publish/

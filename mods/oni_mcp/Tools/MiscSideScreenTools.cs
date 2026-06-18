@@ -390,7 +390,7 @@ namespace OniMcp.Tools
             result["currentPowerW"] = Math.Round(ToolUtil.SafeFloat(heater.CurrentPowerConsumption), 3);
             result["minPowerW"] = Math.Round(ToolUtil.SafeFloat(heater.minPower), 3);
             result["maxPowerW"] = Math.Round(ToolUtil.SafeFloat(heater.maxPower), 3);
-            result["heatLiquid"] = heater.heatLiquid;
+            result["heatTargetTemperature"] = Math.Round(ToolUtil.SafeFloat(heater.TargetTemperature), 3);
             return result;
         }
 
@@ -472,7 +472,7 @@ namespace OniMcp.Tools
         private static bool IsTurboHeater(GameObject go)
         {
             var heater = go?.GetComponent<SpaceHeater>();
-            return heater != null && heater.heatLiquid;
+            return heater != null && heater.produceHeat;
         }
 
         private static bool IsSelfDestructTarget(GameObject go)

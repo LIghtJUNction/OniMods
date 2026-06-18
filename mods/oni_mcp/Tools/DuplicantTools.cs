@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Klei.AI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -12,6 +13,13 @@ namespace OniMcp.Tools
 {
     public static class DuplicantTools
     {
+        private static readonly MethodInfo ConsumerStopChoreMethod = typeof(ChoreConsumer).GetMethod("StopChore", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        private static readonly MethodInfo ChoreCancelWithStringMethod = typeof(Chore).GetMethod("Cancel", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(string) }, null);
+        private static readonly MethodInfo ChoreCancelNoArgsMethod = typeof(Chore).GetMethod("Cancel", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+        private static readonly MethodInfo BrainCancelChoreMethod = typeof(MinionBrain).GetMethod("CancelChore", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(string) }, null);
+        private static readonly MethodInfo BrainCancelFetchesMethod = typeof(MinionBrain).GetMethod("CancelFetches", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(string) }, null);
+        private static readonly MethodInfo MoveMonitorCancelMethod = typeof(MoveToLocationMonitor.Instance).GetMethod("CancelChore", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+
         public static McpTool GetDupeDetails()
         {
             return new McpTool
@@ -520,6 +528,79 @@ namespace OniMcp.Tools
                         ["dupe"] = moved["dupe"],
                         ["target"] = moved["target"]
                     }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ForceDupeAction()
+        {
+            return new McpTool
+            {
+                Name = "dupes_force_action",
+                Group = "dupes",
+                Mode = "execute",
+                Risk = "medium",
+                Aliases = new List<string> { "dupe_force_action", "duplicant_force_action", "dupe_cancel_all" },
+                Tags = new List<string> { "dupes", "force", "cancel", "move", "direct", "rescue" },
+                Description = "对复制人执行强制动作：取消全部当前/挂起工作，或取消后立刻强制移动到指定坐标；需 confirm=true",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称", Required = false },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "强制动作：cancel_all、move_to、cancel_all_and_move", Required = true, EnumValues = new List<string> { "cancel_all", "move_to", "cancel_all_and_move" } },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "move_to / cancel_all_and_move 目标格子 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "move_to / cancel_all_and_move 目标格子 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认复制人当前世界", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认执行强制动作，必须为 true", Required = true }
+                },
+                Handler = args =>
+                {
+                    if (!ToolUtil.GetBool(args, "confirm", false))
+                        return CallToolResult.Error("confirm=true is required");
+
+                    var dupe = ToolUtil.FindDupe(args);
+                    if (dupe == null)
+                        return CallToolResult.Error("Duplicant not found");
+
+                    string action = args["action"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(action))
+                        return CallToolResult.Error("action is required");
+
+                    action = action.Trim().ToLowerInvariant();
+                    var response = new Dictionary<string, object>
+                    {
+                        ["dupe"] = DupeRef(dupe),
+                        ["action"] = action
+                    };
+
+                    switch (action)
+                    {
+                        case "cancel_all":
+                            response["cancelled"] = ForceCancelAllDupeWork(dupe, "MCP force action");
+                            return CallToolResult.Text(JsonConvert.SerializeObject(response, McpJsonUtil.Settings));
+
+                        case "move_to":
+                        case "cancel_all_and_move":
+                            int? x = ToolUtil.GetInt(args, "x");
+                            int? y = ToolUtil.GetInt(args, "y");
+                            if (!x.HasValue || !y.HasValue)
+                                return CallToolResult.Error("x and y are required for move actions");
+
+                            if (action == "cancel_all_and_move")
+                                response["cancelled"] = ForceCancelAllDupeWork(dupe, "MCP force action before move");
+
+                            int worldId = ToolUtil.ResolveWorldId(args, dupe.GetMyWorldId());
+                            Dictionary<string, object> moved;
+                            string error = TryMoveDupeToCell(dupe, x.Value, y.Value, worldId, out moved);
+                            if (error != null)
+                                return CallToolResult.Error(error);
+
+                            response["moved"] = moved;
+                            return CallToolResult.Text(JsonConvert.SerializeObject(response, McpJsonUtil.Settings));
+
+                        default:
+                            return CallToolResult.Error("Unsupported action; use cancel_all, move_to, or cancel_all_and_move");
+                    }
                 }
             };
         }
@@ -1527,6 +1608,80 @@ namespace OniMcp.Tools
                 ["target"] = new { x, y, cell, worldId }
             };
             return null;
+        }
+
+        private static Dictionary<string, object> ForceCancelAllDupeWork(MinionIdentity dupe, string reason)
+        {
+            var result = new Dictionary<string, object>
+            {
+                ["reason"] = reason,
+                ["stoppedConsumer"] = false,
+                ["stoppedDriver"] = false,
+                ["cancelledCurrentChore"] = false,
+                ["cancelledBrainChore"] = false,
+                ["cancelledBrainFetches"] = false,
+                ["cancelledMoveCommand"] = false
+            };
+
+            var consumer = dupe.GetComponent<ChoreConsumer>();
+            var driver = dupe.GetComponent<ChoreDriver>();
+            var currentChore = driver?.GetCurrentChore();
+            if (TryCancelChore(currentChore, reason))
+                result["cancelledCurrentChore"] = true;
+
+            if (consumer != null && ConsumerStopChoreMethod != null)
+            {
+                ConsumerStopChoreMethod.Invoke(consumer, null);
+                result["stoppedConsumer"] = true;
+            }
+
+            if (driver != null)
+            {
+                driver.StopChore();
+                result["stoppedDriver"] = true;
+            }
+
+            var brain = dupe.GetComponent<MinionBrain>();
+            if (brain != null && BrainCancelFetchesMethod != null)
+            {
+                BrainCancelFetchesMethod.Invoke(brain, new object[] { reason });
+                result["cancelledBrainFetches"] = true;
+            }
+            if (brain != null && BrainCancelChoreMethod != null)
+            {
+                BrainCancelChoreMethod.Invoke(brain, new object[] { reason });
+                result["cancelledBrainChore"] = true;
+            }
+
+            var navigator = dupe.GetComponent<Navigator>();
+            var moveMonitor = navigator?.GetSMI<MoveToLocationMonitor.Instance>();
+            if (moveMonitor != null && MoveMonitorCancelMethod != null)
+            {
+                MoveMonitorCancelMethod.Invoke(moveMonitor, null);
+                result["cancelledMoveCommand"] = true;
+            }
+
+            return result;
+        }
+
+        private static bool TryCancelChore(Chore chore, string reason)
+        {
+            if (chore == null)
+                return false;
+
+            if (ChoreCancelWithStringMethod != null)
+            {
+                ChoreCancelWithStringMethod.Invoke(chore, new object[] { reason });
+                return true;
+            }
+
+            if (ChoreCancelNoArgsMethod != null)
+            {
+                ChoreCancelNoArgsMethod.Invoke(chore, null);
+                return true;
+            }
+
+            return false;
         }
 
         private static int? GetIntValue(JObject obj, string name, string shortName)

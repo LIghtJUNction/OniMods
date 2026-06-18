@@ -737,7 +737,7 @@ namespace OniMcp.Server
                 ServerInfo = new Implementation
                 {
                     Name = "OniMcp",
-                    Version = "0.1.7"
+                    Version = "0.1.8"
                 }
             };
         }

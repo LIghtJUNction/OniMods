@@ -3,10 +3,10 @@ msgstr ""
 "Project-Id-Version: OniMcp\n"
 "Application: Oxygen Not Included\n"
 "POT Version: 2.0\n"
-"PO-Revision-Date: 2026-06-07 00:00+0800\n"
+"PO-Revision-Date: 2026-06-07 00:00+0000\n"
 "Last-Translator: Automatically generated\n"
-"Language-Team: Chinese (Simplified)\n"
-"Language: zh_hans\n"
+"Language-Team: English\n"
+"Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -14,94 +14,94 @@ msgstr ""
 #. OniMcp.STRINGS.MOD.TITLE
 msgctxt "OniMcp.STRINGS.MOD.TITLE"
 msgid "OniMcp.STRINGS.MOD.TITLE"
-msgstr "ONI MCP 服务器"
+msgstr "ONI MCP Server"
 
 #. OniMcp.STRINGS.MOD.DESCRIPTION
 msgctxt "OniMcp.STRINGS.MOD.DESCRIPTION"
 msgid "OniMcp.STRINGS.MOD.DESCRIPTION"
-msgstr "缺氧 MCP 服务器 - 通过模型上下文协议提供游戏状态和操作。"
+msgstr "Oxygen Not Included MCP Server - exposes game state and actions through Model Context Protocol."
 
 #. OniMcp.STRINGS.OPTIONS.CATEGORIES.SERVER
 msgctxt "OniMcp.STRINGS.OPTIONS.CATEGORIES.SERVER"
 msgid "OniMcp.STRINGS.OPTIONS.CATEGORIES.SERVER"
-msgstr "服务器"
+msgstr "Server"
 
 #. OniMcp.STRINGS.OPTIONS.CATEGORIES.SECURITY
 msgctxt "OniMcp.STRINGS.OPTIONS.CATEGORIES.SECURITY"
 msgid "OniMcp.STRINGS.OPTIONS.CATEGORIES.SECURITY"
-msgstr "安全"
+msgstr "Security"
 
 #. OniMcp.STRINGS.OPTIONS.CATEGORIES.SCREENSHOTS
 msgctxt "OniMcp.STRINGS.OPTIONS.CATEGORIES.SCREENSHOTS"
 msgid "OniMcp.STRINGS.OPTIONS.CATEGORIES.SCREENSHOTS"
-msgstr "截图"
+msgstr "Screenshots"
 
 #. OniMcp.STRINGS.OPTIONS.HOST.NAME
 msgctxt "OniMcp.STRINGS.OPTIONS.HOST.NAME"
 msgid "OniMcp.STRINGS.OPTIONS.HOST.NAME"
-msgstr "主机"
+msgstr "Host"
 
 #. OniMcp.STRINGS.OPTIONS.HOST.TOOLTIP
 msgctxt "OniMcp.STRINGS.OPTIONS.HOST.TOOLTIP"
 msgid "OniMcp.STRINGS.OPTIONS.HOST.TOOLTIP"
-msgstr "HTTP 监听主机。使用 localhost 表示仅本机访问，使用 0.0.0.0 表示监听所有网卡。"
+msgstr "HTTP listen host. Use localhost for local-only access, or 0.0.0.0 to listen on all interfaces."
 
 #. OniMcp.STRINGS.OPTIONS.PORT.NAME
 msgctxt "OniMcp.STRINGS.OPTIONS.PORT.NAME"
 msgid "OniMcp.STRINGS.OPTIONS.PORT.NAME"
-msgstr "端口"
+msgstr "Port"
 
 #. OniMcp.STRINGS.OPTIONS.PORT.TOOLTIP
 msgctxt "OniMcp.STRINGS.OPTIONS.PORT.TOOLTIP"
 msgid "OniMcp.STRINGS.OPTIONS.PORT.TOOLTIP"
-msgstr "MCP 端点的 HTTP 监听端口。"
+msgstr "HTTP listen port for the MCP endpoint."
 
 #. OniMcp.STRINGS.OPTIONS.AUTH_ENABLED.NAME
 msgctxt "OniMcp.STRINGS.OPTIONS.AUTH_ENABLED.NAME"
 msgid "OniMcp.STRINGS.OPTIONS.AUTH_ENABLED.NAME"
-msgstr "需要令牌"
+msgstr "Require token"
 
 #. OniMcp.STRINGS.OPTIONS.AUTH_ENABLED.TOOLTIP
 msgctxt "OniMcp.STRINGS.OPTIONS.AUTH_ENABLED.TOOLTIP"
 msgid "OniMcp.STRINGS.OPTIONS.AUTH_ENABLED.TOOLTIP"
-msgstr "要求客户端发送 Authorization: Bearer <token> 或 X-Oni-Mcp-Token。"
+msgstr "Require clients to send Authorization: Bearer <token> or X-Oni-Mcp-Token."
 
 #. OniMcp.STRINGS.OPTIONS.AUTH_TOKEN.NAME
 msgctxt "OniMcp.STRINGS.OPTIONS.AUTH_TOKEN.NAME"
 msgid "OniMcp.STRINGS.OPTIONS.AUTH_TOKEN.NAME"
-msgstr "令牌"
+msgstr "Token"
 
 #. OniMcp.STRINGS.OPTIONS.AUTH_TOKEN.TOOLTIP
 msgctxt "OniMcp.STRINGS.OPTIONS.AUTH_TOKEN.TOOLTIP"
 msgid "OniMcp.STRINGS.OPTIONS.AUTH_TOKEN.TOOLTIP"
-msgstr "启用令牌鉴权时使用的共享令牌。"
+msgstr "Shared token used when token authentication is enabled."
 
 #. OniMcp.STRINGS.OPTIONS.SCREENSHOT_CLEANUP_ENABLED.NAME
 msgctxt "OniMcp.STRINGS.OPTIONS.SCREENSHOT_CLEANUP_ENABLED.NAME"
 msgid "OniMcp.STRINGS.OPTIONS.SCREENSHOT_CLEANUP_ENABLED.NAME"
-msgstr "自动清理截图"
+msgstr "Auto-clean screenshots"
 
 #. OniMcp.STRINGS.OPTIONS.SCREENSHOT_CLEANUP_ENABLED.TOOLTIP
 msgctxt "OniMcp.STRINGS.OPTIONS.SCREENSHOT_CLEANUP_ENABLED.TOOLTIP"
 msgid "OniMcp.STRINGS.OPTIONS.SCREENSHOT_CLEANUP_ENABLED.TOOLTIP"
-msgstr "自动删除 MCP 相机工具创建的旧临时截图。"
+msgstr "Automatically delete old temporary screenshots created by MCP camera tools."
 
 #. OniMcp.STRINGS.OPTIONS.SCREENSHOT_RETENTION_MINUTES.NAME
 msgctxt "OniMcp.STRINGS.OPTIONS.SCREENSHOT_RETENTION_MINUTES.NAME"
 msgid "OniMcp.STRINGS.OPTIONS.SCREENSHOT_RETENTION_MINUTES.NAME"
-msgstr "截图保留分钟数"
+msgstr "Screenshot retention minutes"
 
 #. OniMcp.STRINGS.OPTIONS.SCREENSHOT_RETENTION_MINUTES.TOOLTIP
 msgctxt "OniMcp.STRINGS.OPTIONS.SCREENSHOT_RETENTION_MINUTES.TOOLTIP"
 msgid "OniMcp.STRINGS.OPTIONS.SCREENSHOT_RETENTION_MINUTES.TOOLTIP"
-msgstr "删除超过指定分钟数的 MCP 临时截图。"
+msgstr "Delete MCP temporary screenshots older than this many minutes."
 
 #. OniMcp.STRINGS.OPTIONS.SCREENSHOT_MAX_FILES.NAME
 msgctxt "OniMcp.STRINGS.OPTIONS.SCREENSHOT_MAX_FILES.NAME"
 msgid "OniMcp.STRINGS.OPTIONS.SCREENSHOT_MAX_FILES.NAME"
-msgstr "最大截图数量"
+msgstr "Maximum screenshots"
 
 #. OniMcp.STRINGS.OPTIONS.SCREENSHOT_MAX_FILES.TOOLTIP
 msgctxt "OniMcp.STRINGS.OPTIONS.SCREENSHOT_MAX_FILES.TOOLTIP"
 msgid "OniMcp.STRINGS.OPTIONS.SCREENSHOT_MAX_FILES.TOOLTIP"
-msgstr "最多保留指定数量的 MCP 临时截图。"
+msgstr "Keep at most this many MCP temporary screenshots."

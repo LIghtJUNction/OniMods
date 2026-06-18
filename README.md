@@ -124,6 +124,15 @@ onim uninstall -m MyMod    # 从游戏目录卸载
 
 `-m <name>` 用于指定 Mod。不指定时，`onim` 使用 [oni-mods.toml](oni-mods.toml) 中的 `default_mod`。
 
+首次构建前需要生成本机 MSBuild 配置：
+
+```bash
+cp Directory.Build.props.example Directory.Build.props
+# 然后把 Directory.Build.props 里的 OniGamePath 改为本机缺氧安装目录
+```
+
+也可以运行 `onim setup` 自动检测并写入配置。
+
 ## 命令速查
 
 | 命令 | 作用 |
@@ -143,7 +152,8 @@ onim uninstall -m MyMod    # 从游戏目录卸载
 ```text
 .
 ├── oni-mods.toml          # onim 配置文件，记录默认 Mod 和 Mod 列表
-├── Directory.Build.props  # MSBuild 全局配置，记录游戏 DLL 引用路径
+├── Directory.Build.props.example  # 本机 MSBuild 配置模板
+├── Directory.Build.props          # 本机生成配置，不提交
 ├── Cargo.toml             # onim CLI
 ├── src/                   # onim 源码
 ├── mods/                  # Mod 项目目录

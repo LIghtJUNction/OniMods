@@ -5,6 +5,7 @@ using OniMcp.Server;
 using OniMcp.Support;
 using OniMcp.Tools;
 using PeterHan.PLib.Core;
+using PeterHan.PLib.Database;
 using PeterHan.PLib.Options;
 using System;
 using System.Collections.Generic;
@@ -23,16 +24,27 @@ namespace OniMcp
         {
             base.OnLoad(harmony);
 
-            OniMcpPaths.Initialize(path, assembly);
+            var modAssembly = assembly ?? typeof(ModInfo).Assembly;
+
+            OniMcpPaths.Initialize(path, modAssembly);
             OniMcpOptions.Reload();
             PUtil.InitLibrary();
-            new POptions().RegisterOptions(this, typeof(OniMcpOptions));
+            Localization.RegisterForTranslation(typeof(STRINGS));
+            try
+            {
+                new PLocalization().Register(modAssembly);
+                new POptions().RegisterOptions(this, typeof(OniMcpOptions));
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[OniMcp] PLib registration skipped during OnLoad: {e}");
+            }
 
             // 注册 Harmony Patch
             harmony.PatchAll();
             InputSafetyPatchVerifier.EnsureInstalled(harmony, "OnLoad");
             AutoDisinfectPolicy.EnsureInstalled(harmony, "OnLoad");
-            OniMcpLog.Debug($"[OniMcp] Loaded assembly {assembly.GetName().Version} from {assembly.Location}");
+            OniMcpLog.Debug($"[OniMcp] Loaded assembly {modAssembly.GetName().Version} from {modAssembly.Location}");
 
             // 初始化 Tool 注册表
             OniToolRegistry.Initialize();

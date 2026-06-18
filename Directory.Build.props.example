@@ -1,0 +1,20 @@
+<Project>
+
+  <!--
+    复制为 Directory.Build.props，并把 OniGamePath 设置为本机缺氧安装目录。
+    也可以运行 `onim setup` 自动生成。
+  -->
+
+  <PropertyGroup>
+    <OniGamePath></OniGamePath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OniManagedPath>$(OniGamePath)/OxygenNotIncluded_Data/Managed</OniManagedPath>
+  </PropertyGroup>
+
+  <Target Name="ValidateOniGamePath" BeforeTargets="BeforeBuild">
+    <Error Text="游戏路径未配置！请复制 Directory.Build.props.example 为 Directory.Build.props，并设置 OniGamePath。" Condition="'$(OniGamePath)' == ''" />
+  </Target>
+
+</Project>

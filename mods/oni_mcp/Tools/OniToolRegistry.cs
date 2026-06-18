@@ -47,6 +47,7 @@ namespace OniMcp.Tools
             "dupes_status_check",
             "dupes_auto_rename",
             "dupes_rename",
+            "dupes_force_action",
             "orders_dig_area",
             "orders_sweep_area",
             "buildings_search_defs",
@@ -140,6 +141,7 @@ namespace OniMcp.Tools
             Register(DuplicantTools.AutoRenameDupes());
             Register(DuplicantTools.MoveDupe());
             Register(DuplicantTools.MoveDupesBatch());
+            Register(DuplicantTools.ForceDupeAction());
             Register(DuplicantTools.ListDirectCommands());
             Register(DuplicantTools.ListEquipment());
             Register(DuplicantTools.ListSkills());
