@@ -1,94 +1,60 @@
 # OniMods
 
-<div align="center">
-  <p>
-    <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust-2024-f46623?logo=rust&logoColor=white" /></a>
-    <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-green.svg" /></a>
-    <a href="mods/oni_mcp/README.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-docs-2f80ed" /></a>
-    <a href="docs/mcp-tools-reference.md"><img alt="Tools reference" src="https://img.shields.io/badge/Tools-reference-8b5cf6" /></a>
-  </p>
-</div>
+[简体中文](README_ZH.md)
 
-<p align="center">
-  <a href="#overview">Overview</a>
-  · <a href="#quick-start">Quick Start</a>
-  · <a href="#简体中文速览">简体中文</a>
-  · <a href="#oni-mcp-server">ONI MCP</a>
-</p>
+An Oxygen Not Included mod repository containing:
 
-Oxygen Not Included Mod 仓库，包含：
+- `onim`: the built-in ONI mod development CLI in this repo, used to initialize, build, install, uninstall, and publish mods.
+- `oni_mcp`: a mod that lets AI assistants read and operate an ONI colony through MCP.
 
-- `onim`：本仓库内置的缺氧 Mod 开发 CLI，用于初始化、构建、安装、卸载和发布 Mod。
-- `oni_mcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地的 Mod。
+> **Compatibility warning**: before `1.0.0`, the `oni_mcp` API may still introduce breaking changes. If you build derivatives, plugins, scripts, or third-party clients, pin an exact version and use the runtime `tools_manifest` / `oni://tools/manifest` as the source of truth for compatibility.
 
-## Overview
+## Quick Links
 
-`OniMods` is the home for both the local mod development CLI and the ONI MCP mod. It is designed to support a practical workflow: develop mods, inspect colony state, and expose a controlled tool surface for agent assistance.
-
-## Quick Start
-
-```bash
-cargo install --path .
-onim setup
-onim init MyMod
-onim dev -m MyMod
-```
-
-## 简体中文速览
-
-这是缺氧（Oxygen Not Included）的 Mod 工程仓库，既提供开发 CLI `onim`，也提供面向 AI 的 `oni_mcp`。
-
-- `onim` 负责初始化、构建、安装、卸载和发布。
-- `oni_mcp` 负责把殖民地数据和受控操作暴露给 MCP 客户端。
-- 适合 Mod 开发、AI 辅助游玩和工具集成。
-
-> **兼容性警告**：`oni_mcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
-
-## 快速入口
-
-| 项目 | 路径 | 说明 |
+| Project | Path | Description |
 |------|------|------|
-| `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
-| `oni_mcp` | [mods/oni_mcp/](mods/oni_mcp/) | ONI MCP Server Mod |
-| `oni_mcp` 中文文档 | [mods/oni_mcp/README.md](mods/oni_mcp/README.md) | 安装、连接和功能说明 |
+| `onim` | [src/](src/) | Rust-based mod development toolchain |
+| `oni_mcp` | [mods/oni_mcp/](mods/oni_mcp/) | ONI MCP Server mod |
+| Chinese README | [README_ZH.md](README_ZH.md) | Chinese project overview |
+| `oni_mcp` Chinese docs | [mods/oni_mcp/README.md](mods/oni_mcp/README.md) | Chinese installation, connection, and feature guide |
 | `oni_mcp` English docs | [mods/oni_mcp/README_EN.md](mods/oni_mcp/README_EN.md) | English installation and usage guide |
 
 ## ONI MCP Server
 
-[ONI MCP Server 文档](mods/oni_mcp/README.md)
+[ONI MCP Server docs](mods/oni_mcp/README_EN.md)
 
 <details>
-<summary>展开 Mod 介绍</summary>
+<summary>Expand Mod Overview</summary>
 
-`oni_mcp` 是为缺氧量身定制的 MCP 服务器 Mod。安装后，支持 MCP 的 AI 客户端可以通过本地 HTTP 接口读取殖民地状态、分析局势，并在授权后执行部分游戏操作。
+`oni_mcp` is an MCP server mod tailored for Oxygen Not Included. After installation, MCP-capable AI clients can use a local HTTP interface to read colony state, analyze situations, and, with authorization, perform selected in-game actions.
 
-它目前更适合作为“AI 殖民顾问”和“半自动操作助手”：
+Right now it is best suited as an "AI colony advisor" and a "semi-automated operations assistant":
 
-- 读取殖民地状态、资源库存、复制人需求、电力、房间、温度和火箭等数据。
-- 执行简单明确的操作，例如暂停游戏、截图、调整日程、修改建筑设置、设置门禁权限、重命名复制人。
-- 通过工具分组、搜索工具和 `.agents/skills` 中的技能说明，帮助 agent 学会使用大量 MCP 工具。
-- 对挖掘、拆除等高风险操作提供风险分级和确认机制。
+- Read colony state, resource inventory, duplicant needs, power, rooms, temperature, rockets, and more.
+- Perform simple, explicit actions such as pausing the game, taking screenshots, adjusting schedules, changing building settings, setting door permissions, and renaming duplicants.
+- Help agents learn the large MCP tool surface through tool grouping, tool search, and skill docs in `.agents/skills`.
+- Provide risk levels and confirmation requirements for dangerous actions such as digging and deconstruction.
 
-它不是完整的游戏 agent 实现。复杂世界规划、长期自治游玩和高质量战术决策仍然需要大量约束、验证和人工监督。
+It is not a full autonomous gameplay agent. Complex world planning, long-term autonomous colony play, and high-quality tactical decision-making still require significant constraints, validation, and human supervision.
 
-相关 AI Skill 实现参考：[zhuiyun.skill](https://github.com/LIghtJUNction/zhuiyun.skill)
+Related AI Skill reference: [zhuiyun.skill](https://github.com/LIghtJUNction/zhuiyun.skill)
 
 </details>
 
 <details>
-<summary>展开开发备忘</summary>
+<summary>Expand Development Notes</summary>
 
-想法备忘：实现第二个“agent 指针”，始终指向格子中心并渲染到屏幕上，让 AI 的所有操作基于这个可视指针执行。相比直接基于坐标下命令，这可能更稳定，也更容易观察和调试。
+Idea note: implement a second "agent pointer" that always snaps to cell centers and renders on screen, so all AI actions can be executed through a visible pointer. Compared with issuing direct coordinate commands, this may be more stable and easier to observe and debug.
 
-省流结论：不要指望当前 AI 能长期自主玩好缺氧这类复杂模拟游戏。现阶段更现实的方向是让 AI 读取更多游戏数据、执行明确的小任务，并在玩家确认下辅助完成局部规划。
+Short version: do not expect current AI systems to play a complex simulation game like ONI well over long autonomous sessions. A more realistic direction for now is letting AI read more game data, execute small explicit tasks, and assist with local planning after player confirmation.
 
 </details>
 
 ## onim
 
-`onim` 是缺氧 Mod 开发工具链，覆盖从项目初始化到 Steam 创意工坊发布的常用流程。
+`onim` is an ONI mod development toolchain covering the usual workflow from project initialization to Steam Workshop publishing.
 
-## 一句话开始
+## One-Line Start
 
 ```bash
 cargo install --path .
@@ -97,76 +63,76 @@ onim init MyMod
 onim dev -m MyMod
 ```
 
-## 常用工作流
+## Common Workflow
 
 ```bash
-# 1. 安装 onim CLI
+# 1. Install the onim CLI
 cargo install --path .
 
-# 2. 交互式初始化：检测游戏路径、检查依赖、写入配置
+# 2. Interactive setup: detect game path, check dependencies, write config
 onim setup
 
-# 3. 创建新 Mod
-onim init MyMod --author YourName --desc "Mod 描述"
+# 3. Create a new mod
+onim init MyMod --author YourName --desc "Mod description"
 
-# 4. 开发迭代
-onim dev -m MyMod          # 构建并安装到游戏 Dev 目录
-onim build -m MyMod        # 仅构建
-onim info                  # 查看已安装的 Mod
+# 4. Development iteration
+onim dev -m MyMod          # build and install into the game Dev folder
+onim build -m MyMod        # build only
+onim info                  # inspect installed mods
 
-# 5. 正式发布
-onim install -m MyMod      # Release 构建并安装到 Local 目录
-onim publish -m MyMod      # 上传到 Steam 创意工坊
+# 5. Formal release
+onim install -m MyMod      # Release build and install into the Local folder
+onim publish -m MyMod      # upload to Steam Workshop
 
-# 6. 清理
-onim uninstall -m MyMod    # 从游戏目录卸载
+# 6. Cleanup
+onim uninstall -m MyMod    # uninstall from the game directory
 ```
 
-`-m <name>` 用于指定 Mod。不指定时，`onim` 使用 [oni-mods.toml](oni-mods.toml) 中的 `default_mod`。
+`-m <name>` selects the mod. If omitted, `onim` uses `default_mod` from [oni-mods.toml](oni-mods.toml).
 
-首次构建前需要生成本机 MSBuild 配置：
+Before the first build, create the local MSBuild config:
 
 ```bash
 cp Directory.Build.props.example Directory.Build.props
-# 然后把 Directory.Build.props 里的 OniGamePath 改为本机缺氧安装目录
+# Then edit OniGamePath in Directory.Build.props to your local ONI install path.
 ```
 
-也可以运行 `onim setup` 自动检测并写入配置。
+You can also run `onim setup` to detect and write the config automatically.
 
-## 命令速查
+## Command Reference
 
-| 命令 | 作用 |
+| Command | Purpose |
 |------|------|
-| `onim setup` | 初始化项目配置，检测游戏路径和依赖 |
-| `onim init <name>` | 从模板创建新 Mod |
-| `onim build` | 构建 Mod，`--release` 为 Release 构建 |
-| `onim dev` | 构建并安装到游戏 `mods/Dev/` |
-| `onim install` | Release 构建并安装到 `mods/Local/` |
-| `onim uninstall` | 卸载 Mod，支持 `--scope dev/local/all` |
-| `onim info` | 查看已安装的 Dev、Local 和 Steam Mod |
-| `onim publish` | 发布到 Steam 创意工坊，支持 `--gui` |
-| `onim list` | 列出配置文件中的 Mod |
+| `onim setup` | Initialize project config and detect game path/dependencies |
+| `onim init <name>` | Create a new mod from the template |
+| `onim build` | Build the mod, with `--release` for a Release build |
+| `onim dev` | Build and install into the game `mods/Dev/` directory |
+| `onim install` | Release build and install into `mods/Local/` |
+| `onim uninstall` | Uninstall a mod, supports `--scope dev/local/all` |
+| `onim info` | Show installed Dev, Local, and Steam mods |
+| `onim publish` | Publish to the Steam Workshop, supports `--gui` |
+| `onim list` | List mods from the config file |
 
-## 目录结构
+## Repository Layout
 
 ```text
 .
-├── oni-mods.toml          # onim 配置文件，记录默认 Mod 和 Mod 列表
-├── Directory.Build.props.example  # 本机 MSBuild 配置模板
-├── Directory.Build.props          # 本机生成配置，不提交
+├── oni-mods.toml          # onim config file, stores default mod and mod list
+├── Directory.Build.props.example  # local MSBuild config template
+├── Directory.Build.props          # generated local config, not committed
 ├── Cargo.toml             # onim CLI
-├── src/                   # onim 源码
-├── mods/                  # Mod 项目目录
-│   ├── OniModTemplate/    # Mod 模板
+├── src/                   # onim source code
+├── mods/                  # mod project directory
+│   ├── OniModTemplate/    # mod template
 │   └── oni_mcp/           # ONI MCP Server
-└── oni/src/               # 游戏反编译源码参考
+└── oni/src/               # decompiled game source reference
 ```
 
-## 依赖
+## Dependencies
 
-- [Rust](https://rustup.rs/)：编译 `onim`
-- [.NET SDK](https://dotnet.microsoft.com/download)：构建 Mod
-- `unzip`：安装构建产物时解压
-- `tar`：打包源码
+- [Rust](https://rustup.rs/): compile `onim`
+- [.NET SDK](https://dotnet.microsoft.com/download): build mods
+- `unzip`: extract build outputs during install
+- `tar`: package source archives
 
-`onim setup` 会自动检查依赖并提示安装方式。
+`onim setup` checks dependencies automatically and suggests how to install missing ones.
