@@ -17,6 +17,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "context_menu_surfaces_audit", "user_menu_coverage_audit" },
                 Tags = new List<string> { "coverage", "audit", "user-menu", "context-menu", "tools", "resources" },
                 Description = "审计 ONI 源码中玩家 UserMenu/context-menu 按钮来源与 MCP 工具/资源覆盖映射，并标注是否来自 U59 OnRefreshUserMenuDelegate 元数据",
@@ -33,7 +34,7 @@ namespace OniMcp.Tools
                     string status = (args["status"]?.ToString() ?? "all").Trim().ToLowerInvariant();
                     string detail = (args["detail"]?.ToString() ?? "brief").Trim().ToLowerInvariant();
                     int limit = ToolUtil.ClampLimit(args, 120, 300);
-                    var toolNames = new HashSet<string>(OniToolRegistry.GetTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
+                    var toolNames = new HashSet<string>(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceNames = new HashSet<string>(
                         OniResourceRegistry.GetResourceInfos().Select(info => info.Name)
                             .Concat(OniResourceRegistry.GetResourceTemplateInfos().Select(info => info.Name)),
@@ -82,49 +83,49 @@ namespace OniMcp.Tools
 
         private static IEnumerable<UserMenuSurfaceRow> KnownRows()
         {
-            yield return Covered("AutoDisinfectable", "Enable/disable auto-disinfect", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("BottleEmptier", "Allow/deny manual pump delivery", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("BuildingEnabledButton", "Enable/disable building", "buildings_config_list", "buildings_set_enabled");
-            yield return Covered("Butcherable", "Meatify/cancel meatify critter", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("CancellableMove", "Cancel grouped pickupable move delivery", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Capturable", "Capture/cancel capture critter", "critters_list", "critters_capture");
-            yield return Covered("CargoBay", "Empty cargo bay storage", "maintenance_actions_list", "maintenance_action_execute");
-            yield return Covered("CargoBayCluster", "Empty cluster cargo bay storage", "maintenance_actions_list", "maintenance_action_execute");
-            yield return Covered("Carvable", "Carve/cancel carve", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Clearable", "Sweep-to-storage/cancel sweep", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("ComplexFabricator", "Accept/reject mutant seeds", "mutant_seed_controls_list", "mutant_seed_control_set");
-            yield return Covered("Compostable", "Compost/cancel compost", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("ConnectionManager", "Reconnect/disconnect geothermal controller", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Constructable", "Cancel construction", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("CopyBuildingSettings", "Copy building settings", "buildings_config_list", "buildings_copy_settings");
-            yield return Covered("Deconstructable", "Mark/cancel deconstruction", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Demolishable", "Demolish/cancel demolition", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Desalinator", "Early empty salt", "maintenance_actions_list", "maintenance_action_execute");
-            yield return Covered("Diggable", "Cancel dig", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("DirectionControl", "Change allowed workable direction", "side_options_list", "direction_control_set");
-            yield return Covered("DropAllWorkable", "Empty storage/cancel empty storage", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Dumpable", "Dump/cancel dump", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("FactionAlignment", "Attack/cancel attack", "world_text_map", "orders_attack");
-            yield return Covered("FishFeeder", "Accept/reject mutant seeds", "mutant_seed_controls_list", "mutant_seed_control_set");
-            yield return Covered("HarvestDesignatable", "Harvest when ready/cancel harvest when ready", "farming_harvestables_list", "farming_harvestable_set");
-            yield return Covered("HiveHarvestMonitor", "Empty/cancel Beeta hive harvest", "maintenance_actions_list", "maintenance_action_execute");
-            yield return Covered("LightColorMenu", "Set light color", "lights_list", "lights_color_set");
-            yield return Covered("ManualDeliveryKG", "Pause/resume manual delivery", "buildings_config_list", "buildings_manual_delivery");
-            yield return Covered("Moppable", "Cancel mop", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Movable", "Move/cancel pickupable move", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("MoveToLocationMonitor", "Move duplicant to location", "dupes_direct_commands_list", "dupes_move_to");
-            yield return Covered("Navigator", "Draw navigation paths and follow camera", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Repairable", "Allow/cancel auto-repair", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("RocketUsageRestriction", "Rocket interior building controlled/uncontrolled", "rocket_usage_controls_list", "rocket_usage_control_set");
-            yield return Covered("SpiceGrinder", "Accept/reject mutant seeds", "mutant_seed_controls_list", "mutant_seed_control_set");
-            yield return Covered("SubstanceChunk", "Release element", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("SuitEquipper", "Unequip duplicant equipment", "maintenance_actions_list", "maintenance_action_execute");
-            yield return Covered("SuitMarker", "Suit checkpoint traversal policy", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Switch", "Toggle manual switch", "buildings_config_list", "buildings_set_toggle");
-            yield return Covered("Tinkerable", "Allow/disallow tinker operation", "user_menu_actions_list", "user_menu_action_press");
-            yield return Covered("Toilet", "Early clean toilet", "maintenance_actions_list", "maintenance_action_execute");
-            yield return Covered("TravelTubeEntrance", "Set transit tube wax use", "maintenance_actions_list", "maintenance_action_execute");
-            yield return Covered("Uprootable", "Uproot/cancel uproot", "user_menu_actions_list", "user_menu_action_press");
+            yield return Covered("AutoDisinfectable", "Enable/disable auto-disinfect", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("BottleEmptier", "Allow/deny manual pump delivery", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("BuildingEnabledButton", "Enable/disable building", "building_config_control", "building_config_control");
+            yield return Covered("Butcherable", "Meatify/cancel meatify critter", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("CancellableMove", "Cancel grouped pickupable move delivery", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Capturable", "Capture/cancel capture critter", "colony_control domain=bio bioDomain=ranching action=critters", "orders_control domain=designation action=capture");
+            yield return Covered("CargoBay", "Empty cargo bay storage", "building_control domain=side_surface surface=maintenance", "building_control domain=side_surface surface=maintenance");
+            yield return Covered("CargoBayCluster", "Empty cluster cargo bay storage", "building_control domain=side_surface surface=maintenance", "building_control domain=side_surface surface=maintenance");
+            yield return Covered("Carvable", "Carve/cancel carve", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Clearable", "Sweep-to-storage/cancel sweep", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("ComplexFabricator", "Accept/reject mutant seeds", "building_control domain=production action=mutant_seed_list", "building_control domain=production action=mutant_seed_set");
+            yield return Covered("Compostable", "Compost/cancel compost", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("ConnectionManager", "Reconnect/disconnect geothermal controller", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Constructable", "Cancel construction", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("CopyBuildingSettings", "Copy building settings", "building_config_control", "building_config_control");
+            yield return Covered("Deconstructable", "Mark/cancel deconstruction", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Demolishable", "Demolish/cancel demolition", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Desalinator", "Early empty salt", "building_control domain=side_surface surface=maintenance", "building_control domain=side_surface surface=maintenance");
+            yield return Covered("Diggable", "Cancel dig", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("DirectionControl", "Change allowed workable direction", "building_control domain=side_surface surface=option", "building_control domain=side_surface surface=option");
+            yield return Covered("DropAllWorkable", "Empty storage/cancel empty storage", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Dumpable", "Dump/cancel dump", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("FactionAlignment", "Attack/cancel attack", "read_control domain=world action=text_map", "orders_control domain=designation action=attack");
+            yield return Covered("FishFeeder", "Accept/reject mutant seeds", "building_control domain=production action=mutant_seed_list", "building_control domain=production action=mutant_seed_set");
+            yield return Covered("HarvestDesignatable", "Harvest when ready/cancel harvest when ready", "colony_control domain=bio bioDomain=farming", "colony_control domain=bio bioDomain=farming");
+            yield return Covered("HiveHarvestMonitor", "Empty/cancel Beeta hive harvest", "building_control domain=side_surface surface=maintenance", "building_control domain=side_surface surface=maintenance");
+            yield return Covered("LightColorMenu", "Set light color", "light_control", "light_control");
+            yield return Covered("ManualDeliveryKG", "Pause/resume manual delivery", "building_config_control", "orders_control domain=designation action=manual_delivery");
+            yield return Covered("Moppable", "Cancel mop", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Movable", "Move/cancel pickupable move", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("MoveToLocationMonitor", "Move duplicant to location", "dupes_control domain=side_screen", "dupes_control domain=command");
+            yield return Covered("Navigator", "Draw navigation paths and follow camera", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Repairable", "Allow/cancel auto-repair", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("RocketUsageRestriction", "Rocket interior building controlled/uncontrolled", "building_control domain=rocket rocketDomain=usage", "building_control domain=rocket rocketDomain=usage");
+            yield return Covered("SpiceGrinder", "Accept/reject mutant seeds", "building_control domain=production action=mutant_seed_list", "building_control domain=production action=mutant_seed_set");
+            yield return Covered("SubstanceChunk", "Release element", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("SuitEquipper", "Unequip duplicant equipment", "building_control domain=side_surface surface=maintenance", "building_control domain=side_surface surface=maintenance");
+            yield return Covered("SuitMarker", "Suit checkpoint traversal policy", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Switch", "Toggle manual switch", "building_config_control", "building_config_control");
+            yield return Covered("Tinkerable", "Allow/disallow tinker operation", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
+            yield return Covered("Toilet", "Early clean toilet", "building_control domain=side_surface surface=maintenance", "building_control domain=side_surface surface=maintenance");
+            yield return Covered("TravelTubeEntrance", "Set transit tube wax use", "building_control domain=side_surface surface=maintenance", "building_control domain=side_surface surface=maintenance");
+            yield return Covered("Uprootable", "Uproot/cancel uproot", "building_control domain=side_surface surface=user_menu", "building_control domain=side_surface surface=user_menu");
         }
 
         private static readonly HashSet<string> U59RefreshUserMenuDelegateSources = new HashSet<string>(StringComparer.Ordinal)

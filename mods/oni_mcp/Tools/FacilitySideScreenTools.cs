@@ -13,6 +13,52 @@ namespace OniMcp.Tools
 {
     public static class FacilitySideScreenTools
     {
+        public static McpTool ControlFacilitySideScreen()
+        {
+            return new McpTool
+            {
+                Name = "facility_sidescreen_control",
+                Hidden = true,
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "facility_control", "story_facility_sidescreen_control" },
+                Tags = new List<string> { "building", "story", "side-screen", "facility" },
+                Description = "设施侧屏组合工具。kind=dispenser/suit_locker/lore_bearer/telepad/artifact；action=list 或对应操作",
+                Parameters = FacilitySideScreenControlParams(),
+                Handler = args =>
+                {
+                    string kind = (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    string action = (args["action"]?.ToString() ?? "list").Trim().ToLowerInvariant();
+                    bool list = string.IsNullOrWhiteSpace(action) || action == "list" || action == "status";
+
+                    switch (kind)
+                    {
+                        case "dispenser":
+                        case "dispensers":
+                            return list ? ListDispensers().Handler(args) : ControlDispenser().Handler(args);
+                        case "suit_locker":
+                        case "suit_lockers":
+                        case "locker":
+                            return list ? ListSuitLockers().Handler(args) : ControlSuitLocker().Handler(args);
+                        case "lore":
+                        case "lore_bearer":
+                        case "lore_bearers":
+                            return list ? ListLoreBearers().Handler(args) : PressLoreBearer().Handler(args);
+                        case "telepad":
+                        case "telepads":
+                        case "printing_pod":
+                            return list ? ListTelepads().Handler(args) : ControlTelepad().Handler(args);
+                        case "artifact":
+                        case "artifacts":
+                            return list ? ListArtifacts().Handler(args) : OpenArtifactReveal().Handler(args);
+                        default:
+                            return CallToolResult.Error("kind must be dispenser, suit_locker, lore_bearer, telepad, or artifact");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListDispensers()
         {
             return new McpTool
@@ -23,7 +69,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "dispenser_side_screens_list", "pajama_dispensers_list" },
                 Tags = new List<string> { "building", "dispenser", "side-screen", "pajamas" },
-                Description = "列出 DispenserSideScreen / IDispenser 对象、当前选中物品、可分发物品和是否已有分发请求",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=dispenser action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId、物品名或 itemId 筛选", Required = false },
@@ -43,7 +90,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "dispenser_order", "pajama_dispenser_control" },
                 Tags = new List<string> { "building", "dispenser", "side-screen", "pajamas" },
-                Description = "执行 DispenserSideScreen 操作：select_item 选择分发物品，order 创建分发请求，cancel 取消请求",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=dispenser action=select_item/order/cancel",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "select_item、order 或 cancel", Required = true, EnumValues = new List<string> { "select_item", "order", "cancel" } },
@@ -102,7 +150,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "suit_locker_side_screens_list", "atmo_suit_lockers_list" },
                 Tags = new List<string> { "building", "suit", "checkpoint", "side-screen" },
-                Description = "列出 SuitLockerSideScreen 状态：是否配置、是否请求太空服、存储装备、氧气/电量和可执行操作",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=suit_locker action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId、服装类型或状态筛选", Required = false },
@@ -122,7 +171,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "suit_locker_config", "suit_locker_drop_suit" },
                 Tags = new List<string> { "building", "suit", "checkpoint", "side-screen" },
-                Description = "执行 SuitLockerSideScreen 操作：request_suit 请求送服，no_suit 设为无需服装，drop_suit 掉出已存装备",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=suit_locker action=request_suit/no_suit/drop_suit",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "request_suit、no_suit 或 drop_suit", Required = true, EnumValues = new List<string> { "request_suit", "no_suit", "drop_suit" } },
@@ -179,7 +229,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "readable_lore_list", "inspect_lore_list" },
                 Tags = new List<string> { "story", "lore", "inspect", "side-screen" },
-                Description = "列出 LoreBearerSideScreen 可阅读/已阅读对象、按钮文本、tooltip 和排序",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=lore_bearer action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按对象、prefabId、按钮文本或 tooltip 筛选", Required = false },
@@ -207,7 +258,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "lore_read", "inspect_lore" },
                 Tags = new List<string> { "story", "lore", "inspect", "side-screen" },
-                Description = "按下 LoreBearerSideScreen 的阅读/检查按钮；会打开弹窗并可能产生 databank，需 confirm=true",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=lore_bearer action=press",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认触发阅读/检查", Required = true },
@@ -247,7 +299,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "printing_pods_list", "immigration_telepads_list" },
                 Tags = new List<string> { "story", "telepad", "printing-pod", "immigration", "side-screen" },
-                Description = "列出 TelepadSideScreen 状态：移民是否可用、剩余时间、传送门运行状态、研究/技能提示和胜利条件进度",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=telepad action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId、状态或胜利条件筛选", Required = false },
@@ -291,7 +344,8 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "printing_pod_control", "telepad_open_screen" },
                 Tags = new List<string> { "story", "telepad", "printing-pod", "immigration", "side-screen" },
-                Description = "执行 TelepadSideScreen 导航按钮：open_immigrants、open_colony_summary、open_skills、open_research",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=telepad action=open_immigrants/open_colony_summary/open_skills/open_research",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "open_immigrants、open_colony_summary、open_skills 或 open_research", Required = true, EnumValues = new List<string> { "open_immigrants", "open_colony_summary", "open_skills", "open_research" } },
@@ -359,9 +413,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "bionic_slots_list", "bionic_side_screen_list" },
                 Tags = new List<string> { "dupe", "bionic", "upgrade", "assignable", "side-screen" },
-                Description = "列出 BionicSideScreen 升级槽：锁定/空/已分配/已安装状态、升级组件和功耗；槽位分配/清空使用 assignable_slot_item_set",
+                Description = "兼容入口：请使用 dupes_control domain=side_screen action=bionic_upgrades。列出 BionicSideScreen 升级槽：锁定/空/已分配/已安装状态、升级组件和功耗；槽位分配/清空使用 assignable_slot_item_set",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "可选仿生复制人 InstanceID", Required = false },
@@ -402,9 +457,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "dupe_todos_list", "minion_chore_queue_list" },
                 Tags = new List<string> { "dupe", "todo", "chore", "priority", "side-screen" },
-                Description = "读取 MinionTodoSideScreen 数据：当前差事、可执行差事、阻塞差事、优先级和目标位置",
+                Description = "兼容入口：请使用 dupes_control domain=side_screen action=todos。读取 MinionTodoSideScreen 数据：当前差事、可执行差事、阻塞差事、优先级和目标位置",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "可选复制人 InstanceID", Required = false },
@@ -452,7 +508,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "analyzed_artifacts_list", "artifact_analysis_list" },
                 Tags = new List<string> { "story", "artifact", "analysis", "space" },
-                Description = "列出 ArtifactAnalysisSideScreen 数据：已分析 artifact、场上 artifact、分析站存储/可工作状态",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=artifact action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按 artifact id、名称、类型或分析站筛选", Required = false },
@@ -498,7 +555,8 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "artifact_lore_open", "artifact_analysis_reveal_open" },
                 Tags = new List<string> { "story", "artifact", "analysis", "popup" },
-                Description = "打开 ArtifactAnalysisSideScreen 已分析 artifact 的 reveal/lore 弹窗",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=artifact action=open",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["artifactId"] = new McpToolParameter { Type = "string", Description = "已分析 artifact prefab id，例如 artifact_officemug", Required = true },
@@ -1123,6 +1181,26 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> FacilitySideScreenControlParams()
+        {
+            return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["kind"] = new McpToolParameter { Type = "string", Description = "dispenser、suit_locker、lore_bearer、telepad 或 artifact", Required = true },
+                ["action"] = new McpToolParameter { Type = "string", Description = "list/status 或对应操作：select_item/order/cancel、request_suit/no_suit/drop_suit、press、open_immigrants/open_colony_summary/open_skills/open_research、open", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按名称、prefabId、状态或物品筛选；artifact 也可筛选 artifact id", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 返回上限", Required = false },
+                ["itemId"] = new McpToolParameter { Type = "string", Description = "kind=dispenser action=select_item 时的目标 Tag/prefab id", Required = false },
+                ["itemIndex"] = new McpToolParameter { Type = "integer", Description = "kind=dispenser action=select_item 时的可分发物品序号", Required = false },
+                ["artifactId"] = new McpToolParameter { Type = "string", Description = "kind=artifact action=open 时的已分析 artifact prefab id", Required = false },
+                ["interactableOnly"] = new McpToolParameter { Type = "boolean", Description = "kind=lore_bearer action=list 时只返回可交互对象", Required = false },
+                ["includeVictory"] = new McpToolParameter { Type = "boolean", Description = "kind=telepad action=list 时是否包含胜利条件 checklist，默认 true", Required = false },
+                ["includeStations"] = new McpToolParameter { Type = "boolean", Description = "kind=artifact action=list 时是否包含分析站状态，默认 true", Required = false },
+                ["includeWorldArtifacts"] = new McpToolParameter { Type = "boolean", Description = "kind=artifact action=list 时是否包含场上 artifact，默认 true", Required = false },
+                ["force"] = new McpToolParameter { Type = "boolean", Description = "kind=lore_bearer action=press 时跳过 interactable 检查", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "执行写入/打开 UI/弹窗动作时按旧工具要求传 true", Required = false }
+            }));
         }
 
         private static Dictionary<string, McpToolParameter> RectParams(Dictionary<string, McpToolParameter> extra)

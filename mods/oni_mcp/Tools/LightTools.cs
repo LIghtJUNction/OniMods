@@ -11,17 +11,42 @@ namespace OniMcp.Tools
 {
     public static class LightTools
     {
+        public static McpTool ControlLight()
+        {
+            return new McpTool
+            {
+                Name = "light_control",
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "lights_control", "light_color_control" },
+                Tags = new List<string> { "lights", "color", "user-menu", "buildings" },
+                Description = "灯光颜色聚合工具：action=list 查询灯光和颜色预设；action=set_color 选择 LightColorMenu 预设颜色",
+                Parameters = LightControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListLights().Handler(args);
+                    if (action == "set_color" || action == "set")
+                        return SetLightColor().Handler(args);
+                    return CallToolResult.Error("action must be list or set_color");
+                }
+            };
+        }
+
         public static McpTool ListLights()
         {
             return new McpTool
             {
                 Name = "lights_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "light_color_controls_list" },
                 Tags = new List<string> { "lights", "color", "user-menu", "buildings" },
-                Description = "列出灯光建筑和 LightColorMenu 预设颜色，对应用户菜单中的灯光颜色选择",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=light action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId 或颜色名筛选", Required = false },
@@ -66,15 +91,16 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "lights_color_set",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "light_color_set" },
                 Tags = new List<string> { "lights", "color", "user-menu", "buildings" },
-                Description = "选择 LightColorMenu 预设颜色，等同于灯光建筑用户菜单中的颜色按钮",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=light action=set_color",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["colorIndex"] = new McpToolParameter { Type = "integer", Description = "颜色预设索引；可先用 lights_list 查询", Required = false },
+                    ["colorIndex"] = new McpToolParameter { Type = "integer", Description = "颜色预设索引；可先用 building_control domain=special kind=light action=list 查询", Required = false },
                     ["colorName"] = new McpToolParameter { Type = "string", Description = "颜色预设名称；colorIndex 为空时使用", Required = false }
                 }),
                 Handler = args =>
@@ -252,6 +278,23 @@ namespace OniMcp.Tools
             };
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
+            return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> LightControlParams()
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_color", Required = true, EnumValues = new List<string> { "list", "set_color" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId 或颜色名筛选", Required = false },
+                ["configurableOnly"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否只返回带 LightColorMenu 的灯，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["id"] = new McpToolParameter { Type = "integer", Description = "action=set_color 时的目标灯光建筑 InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "action=set_color 时的目标格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "action=set_color 时的目标格子 Y", Required = false },
+                ["colorIndex"] = new McpToolParameter { Type = "integer", Description = "action=set_color 时的颜色预设索引；可先用 action=list 查询", Required = false },
+                ["colorName"] = new McpToolParameter { Type = "string", Description = "action=set_color 时的颜色预设名称；colorIndex 为空时使用", Required = false }
+            });
             return parameters;
         }
 

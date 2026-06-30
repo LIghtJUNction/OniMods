@@ -17,6 +17,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "toolbar_surfaces_audit", "sandbox_toolbar_audit" },
                 Tags = new List<string> { "coverage", "audit", "toolbar", "tool-menu", "orders", "sandbox", "tools", "resources" },
                 Description = "审计 ONI 主工具栏和沙盒工具栏按钮与 MCP 工具/资源覆盖映射",
@@ -33,7 +34,7 @@ namespace OniMcp.Tools
                     string status = (args["status"]?.ToString() ?? "all").Trim().ToLowerInvariant();
                     string detail = (args["detail"]?.ToString() ?? "brief").Trim().ToLowerInvariant();
                     int limit = ToolUtil.ClampLimit(args, 80, 200);
-                    var toolNames = new HashSet<string>(OniToolRegistry.GetTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
+                    var toolNames = new HashSet<string>(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceNames = new HashSet<string>(
                         OniResourceRegistry.GetResourceInfos().Select(info => info.Name)
                             .Concat(OniResourceRegistry.GetResourceTemplateInfos().Select(info => info.Name)),
@@ -80,33 +81,33 @@ namespace OniMcp.Tools
         private static IEnumerable<ToolMenuSurfaceRow> KnownRows()
         {
             int order = 0;
-            yield return Covered(order++, "basic", "DigTool", "Dig", "Designate dig over an area", new[] { "world_text_map", "orders_dig_area" }, new[] { "world_text_map" });
-            yield return Covered(order++, "basic", "CancelTool", "BuildingCancel", "Cancel dig/build/sweep/harvest/attack/capture and other errands over an area", new[] { "world_text_map", "orders_cancel_area" }, new[] { "world_text_map" });
-            yield return Covered(order++, "basic", "DeconstructTool", "BuildingDeconstruct", "Designate buildings and conduits for deconstruction", new[] { "buildings_list", "buildings_deconstruct", "conduits_cut" }, new[] { "buildings_list" });
-            yield return Covered(order++, "basic", "PrioritizeTool", "Prioritize", "Set priority on buildings, chores and areas", new[] { "priorities_list", "priorities_set_area", "buildings_set_priority" }, new[] { "priorities_list" });
-            yield return Covered(order++, "basic", "DisinfectTool", "Disinfect", "Designate disinfect errands over an area", new[] { "world_text_map", "orders_disinfect_area" }, new[] { "world_text_map" });
-            yield return Covered(order++, "basic", "ClearTool", "Clear", "Designate sweep-to-storage errands over an area", new[] { "world_text_map", "orders_sweep_area" }, new[] { "world_text_map" });
-            yield return Covered(order++, "basic", "AttackTool", "Attack", "Designate attack targets over an area", new[] { "world_text_map", "critters_list", "orders_attack" }, new[] { "world_text_map", "critters_list" });
-            yield return Covered(order++, "basic", "MopTool", "Mop", "Designate mop errands over an area", new[] { "world_text_map", "orders_mop_area" }, new[] { "world_text_map" });
-            yield return Covered(order++, "basic", "CaptureTool", "Capture", "Designate critter capture/wrangle errands", new[] { "critters_list", "critters_capture" }, new[] { "critters_list" });
-            yield return Covered(order++, "basic", "HarvestTool", "Harvest", "Designate harvest errands over an area", new[] { "farming_harvestables_list", "orders_harvest_area" }, new[] { "farming_harvestables_list" });
-            yield return Covered(order++, "basic", "EmptyPipeTool", "EmptyPipe", "Empty pipe/duct/conveyor contents over an area", new[] { "world_text_map", "conduits_empty_area" }, new[] { "world_text_map" });
-            yield return Covered(order++, "basic", "DisconnectTool", "Disconnect", "Cut wire/pipe/duct/conveyor/travel tube connections over an area", new[] { "world_text_map", "conduits_cut" }, new[] { "world_text_map" });
-            yield return Covered(order++, "basic", "OniMcpEditMarker", "Invalid", "Create an MCP edit marker request from a selected area", new[] { "edit_mark_request_create", "edit_mark_request_list", "edit_mark_request_clear" }, new[] { "tools_read_resource" });
+            yield return Covered(order++, "basic", "DigTool", "Dig", "Designate dig over an area", new[] { "world_text_map", "orders_control" }, new[] { "world_text_map" });
+            yield return Covered(order++, "basic", "CancelTool", "BuildingCancel", "Cancel dig/build/sweep/harvest/attack/capture and other errands over an area", new[] { "world_text_map", "orders_control" }, new[] { "world_text_map" });
+            yield return Covered(order++, "basic", "DeconstructTool", "BuildingDeconstruct", "Designate buildings and conduits for deconstruction", new[] { "read_control domain=buildings action=list", "orders_control domain=designation action=deconstruct", "orders_control domain=designation action=cut_conduits" }, new[] { "read_control domain=buildings action=list" });
+            yield return Covered(order++, "basic", "PrioritizeTool", "Prioritize", "Set priority on buildings, chores and areas", new[] { "orders_control" }, new[] { "orders_control" });
+            yield return Covered(order++, "basic", "DisinfectTool", "Disinfect", "Designate disinfect errands over an area", new[] { "world_text_map", "orders_control" }, new[] { "world_text_map" });
+            yield return Covered(order++, "basic", "ClearTool", "Clear", "Designate sweep-to-storage errands over an area", new[] { "world_text_map", "orders_control" }, new[] { "world_text_map" });
+            yield return Covered(order++, "basic", "AttackTool", "Attack", "Designate attack targets over an area", new[] { "read_control domain=world action=text_map", "colony_control domain=bio bioDomain=ranching action=critters", "orders_control domain=designation action=attack" }, new[] { "read_control domain=world action=text_map", "colony_control domain=bio bioDomain=ranching action=critters" });
+            yield return Covered(order++, "basic", "MopTool", "Mop", "Designate mop errands over an area", new[] { "world_text_map", "orders_control" }, new[] { "world_text_map" });
+            yield return Covered(order++, "basic", "CaptureTool", "Capture", "Designate critter capture/wrangle errands", new[] { "colony_control domain=bio bioDomain=ranching action=critters", "orders_control domain=designation action=capture" }, new[] { "colony_control domain=bio bioDomain=ranching action=critters" });
+            yield return Covered(order++, "basic", "HarvestTool", "Harvest", "Designate harvest errands over an area", new[] { "colony_control domain=bio bioDomain=farming", "orders_control" }, new[] { "colony_control domain=bio bioDomain=farming" });
+            yield return Covered(order++, "basic", "EmptyPipeTool", "EmptyPipe", "Empty pipe/duct/conveyor contents over an area", new[] { "read_control domain=world action=text_map", "orders_control domain=designation action=empty_conduits" }, new[] { "read_control domain=world action=text_map" });
+            yield return Covered(order++, "basic", "DisconnectTool", "Disconnect", "Cut wire/pipe/duct/conveyor/travel tube connections over an area", new[] { "read_control domain=world action=text_map", "orders_control domain=designation action=cut_conduits" }, new[] { "read_control domain=world action=text_map" });
+            yield return Covered(order++, "basic", "OniMcpEditMarker", "Invalid", "Create an MCP edit marker request from a selected area", new[] { "game_control domain=ui uiDomain=edit_mark" }, new[] { "tools_read_resource" });
 
             order = 0;
-            yield return Covered(order++, "sandbox", "SandboxBrushTool", "SandboxBrush", "Replace cells with selected element, mass, temperature and disease", new[] { "sandbox_actions_list", "sandbox_paint_element", "sandbox_sample_cell" }, new[] { "sandbox_actions_list", "sandbox_sample_cell" });
-            yield return Covered(order++, "sandbox", "SandboxSprinkleTool", "SandboxSprinkle", "Noise-scattered replace cells with selected element settings", new[] { "sandbox_actions_list", "sandbox_paint_element", "sandbox_sample_cell" }, new[] { "sandbox_actions_list", "sandbox_sample_cell" });
-            yield return Covered(order++, "sandbox", "SandboxFloodTool", "SandboxFlood", "Flood-fill connected cells with selected element settings", new[] { "sandbox_actions_list", "sandbox_flood_fill_element", "sandbox_sample_cell" }, new[] { "sandbox_actions_list", "sandbox_sample_cell" });
-            yield return Covered(order++, "sandbox", "SandboxSampleTool", "SandboxSample", "Sample a cell for element/mass/temperature/disease settings", new[] { "sandbox_actions_list", "sandbox_sample_cell" }, new[] { "sandbox_actions_list", "sandbox_sample_cell" });
-            yield return Covered(order++, "sandbox", "SandboxHeatTool", "SandboxHeatGun", "Set or add temperature over an area", new[] { "sandbox_actions_list", "sandbox_temperature_area" }, new[] { "sandbox_actions_list" });
-            yield return Covered(order++, "sandbox", "SandboxStressTool", "SandboxStressTool", "Add or remove stress from duplicants in an area", new[] { "sandbox_actions_list", "sandbox_stress_area" }, new[] { "sandbox_actions_list" });
-            yield return Covered(order++, "sandbox", "SandboxSpawnerTool", "SandboxSpawnEntity", "Spawn entities, items, critters, duplicants or completed buildings", new[] { "sandbox_actions_list", "sandbox_spawn_entity" }, new[] { "sandbox_actions_list" });
-            yield return Covered(order++, "sandbox", "SandboxClearFloorTool", "SandboxClearFloor", "Remove floor pickupables over an area", new[] { "sandbox_actions_list", "sandbox_clear_floor_area" }, new[] { "sandbox_actions_list" });
-            yield return Covered(order++, "sandbox", "SandboxDestroyerTool", "SandboxDestroy", "Destroy cell contents over an area", new[] { "sandbox_actions_list", "sandbox_destroy_area" }, new[] { "sandbox_actions_list" });
-            yield return Covered(order++, "sandbox", "SandboxFOWTool", "SandboxReveal", "Reveal fog of war over an area", new[] { "sandbox_actions_list", "sandbox_reveal_area" }, new[] { "sandbox_actions_list" });
-            yield return Covered(order++, "sandbox", "SandboxCritterTool", "SandboxCritterTool", "Remove critters over an area", new[] { "sandbox_actions_list", "sandbox_clear_critters_area" }, new[] { "sandbox_actions_list" });
-            yield return Covered(order++, "sandbox", "SandboxStoryTraitTool", "SandboxStoryTraitTool", "Stamp story trait retrofit templates", new[] { "sandbox_actions_list", "sandbox_story_traits_list", "sandbox_story_trait_stamp" }, new[] { "sandbox_actions_list", "sandbox_story_traits_list" });
+            yield return Covered(order++, "sandbox", "SandboxBrushTool", "SandboxBrush", "Replace cells with selected element, mass, temperature and disease", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxSprinkleTool", "SandboxSprinkle", "Noise-scattered replace cells with selected element settings", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxFloodTool", "SandboxFlood", "Flood-fill connected cells with selected element settings", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxSampleTool", "SandboxSample", "Sample a cell for element/mass/temperature/disease settings", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxHeatTool", "SandboxHeatGun", "Set or add temperature over an area", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxStressTool", "SandboxStressTool", "Add or remove stress from duplicants in an area", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxSpawnerTool", "SandboxSpawnEntity", "Spawn entities, items, critters, duplicants or completed buildings", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxClearFloorTool", "SandboxClearFloor", "Remove floor pickupables over an area", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxDestroyerTool", "SandboxDestroy", "Destroy cell contents over an area", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxFOWTool", "SandboxReveal", "Reveal fog of war over an area", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxCritterTool", "SandboxCritterTool", "Remove critters over an area", new[] { "game_control" }, new[] { "game_control" });
+            yield return Covered(order++, "sandbox", "SandboxStoryTraitTool", "SandboxStoryTraitTool", "Stamp story trait retrofit templates", new[] { "game_control" }, new[] { "game_control" });
         }
 
         private static ToolMenuSurfaceRow Covered(int order, string toolbar, string toolName, string action, string playerSurface, string[] tools, string[] resources)

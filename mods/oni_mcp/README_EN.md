@@ -10,7 +10,7 @@ Default endpoint:
 http://localhost:8787/mcp/
 ```
 
-> **API stability warning**: Before `oni_mcp` reaches `1.0.0`, tool names, parameters, resource paths, and response fields may change incompatibly. Derivative mods, plugins, scripts, and third-party clients should pin a specific version and use the runtime `tools_manifest` / `oni://tools/manifest` as the compatibility source of truth.
+> **API stability warning**: Before `oni_mcp` reaches `1.0.0`, tool names, parameters, resource paths, and response fields may change incompatibly. Derivative mods, plugins, scripts, and third-party clients should pin a specific version and use the runtime `server_control domain=catalog action=manifest` / `oni://tools/manifest` as the compatibility source of truth.
 
 ## What It Is Good For
 
@@ -135,28 +135,26 @@ After changing `Host`, `Port`, or authentication settings, restart the game or s
 
 ## MCP Capabilities
 
-The current implementation includes 330+ tools, 120+ fixed resources, and 100+ resource templates. The exact list may change with the code; use the runtime `tools_manifest` tool or `oni://tools/manifest` resource as the source of truth.
+The current implementation includes 330+ tools, 120+ fixed resources, and 100+ resource templates. The exact list may change with the code; use the runtime `server_control domain=catalog action=manifest` tool or `oni://tools/manifest` resource as the source of truth.
 
 ### Core Tools
 
 | Area | Example tools | Purpose |
 |------|---------------|---------|
-| Server and catalog | `server_status`, `tools_manifest`, `tools_search`, `tools_guide` | Check service state, search tools, route goals to tool chains |
-| Mechanics knowledge | `guide_mechanics_query`, `database_query` | Query curated player-tested formulas and cross-check the in-game codex |
-| Game control | `game_pause`, `game_resume`, `game_set_speed`, `game_save` | Pause, resume, change speed, save |
-| Camera and screenshots | `camera_move`, `camera_switch_view`, `game_screenshot` | Move camera and switch overlays; overlay screenshots are queued until rendering catches up |
-| World reading | `world_text_map`, `world_area_snapshot`, `world_cell_info` | Text maps, area snapshots, cell details |
-| Area management | `area_define`, `area_get`, `area_blocks`, `area_merge` | Define and reuse map regions |
-| Agent pointer | `agent_pointer_aim_cell`, `agent_pointer_user_mouse_get`, `agent_pointer_say`, `agent_pointer_left_click` | Execute click-based actions, read the user's mouse cell, and show pointer speech bubbles |
-| Buildings and orders | `buildings_search_defs`, `buildings_materials`, `build_placement_candidates`, `build_preview`, `build_area`, `orders_dig_area`, `orders_sweep_area` | Find buildings, locate valid anchors, choose materials, preview/batch-place blueprints, create dig and sweep orders |
-| Duplicants | `dupes_status_check`, `dupes_detail`, `dupes_needs`, `dupes_priority_set`, `dupes_rename`, `dupes_auto_rename` | Check status, needs, priorities, single-duplicant names, and role-based auto-naming |
-| Management screens | `schedule_list`, `schedule_set_block`, `diet_status`, `resources_storage_set_filter` | Schedules, diet, storage filters, and management screen settings |
-| Side screens | `filters_list`, `state_controls_list`, `automation_controls_list`, `lights_color_set` | Common building side-screen configuration |
-| Rockets and space | `rockets_status`, `rocket_modules_list`, `rocket_crew_requests_list` | Rocket state, modules, crew, and space systems |
-| Audit and coverage | `tools_player_action_coverage`, `tools_static_audit`, `side_screen_surfaces_audit` | Inspect tool coverage and gaps |
-| Batch and planning | `tools_call_many`, `agent_program_execute`, `edit_mark_request_list` | Batch calls, conditional/loop flow scripts, and player edit marks |
+| Server and catalog | `server_control`, `server_control domain=catalog action=manifest`, `server_control domain=catalog action=search`, `server_control domain=catalog action=guide` | Check service state, search tools, route goals to tool chains |
+| Mechanics knowledge | `read_control domain=knowledge kind=guide action=query`, `read_control domain=knowledge kind=database action=query` | Query curated player-tested formulas and cross-check the in-game codex |
+| Game control | `game_control domain=speed`, `game_control domain=save` | Pause, resume, change speed, save |
+| World and area reading | `read_control domain=world action=text_map`, `read_control domain=world action=area_snapshot`, `read_control domain=world action=cell_info`, `read_control domain=area` | Text maps, area snapshots, cell details; define, read, block, merge, and reuse map regions |
+| Navigation, screenshots, and pointer | `navigation_control` | Move camera, switch overlays, take screenshots; aim, select tools, click/drag, and read the user's mouse cell with the visible agent pointer |
+| Buildings and orders | `building_control domain=planning`, `orders_control` | Find buildings, locate valid anchors, choose materials, preview blueprints, auto-connect utilities, and create area orders |
+| Duplicants | `dupes_control domain=info`, `dupes_control domain=priority`, `dupes_control domain=command action=rename`, `dupes_control domain=command action=auto_rename` | Check status, details, attributes, needs, priorities, single-duplicant names, and role-based auto-naming |
+| Management screens | `colony_control domain=management`, `building_control domain=storage` | Schedules, diet, research, medical care, storage filters, and management screen settings |
+| Side screens | `building_control domain=config`, `building_control domain=filter`, `building_control domain=config action=state_list`, `building_control domain=side_surface surface=option`, `building_control domain=config action=visual kind=light` | Common building side-screen configuration |
+| Rockets and space | `building_control domain=rocket rocketDomain=ops`, `building_control domain=rocket rocketDomain=module`, `building_control domain=rocket rocketDomain=restriction`, `building_control domain=rocket rocketDomain=crew_request` | Rocket state, modules, restrictions, crew, and space systems |
+| Audit and coverage | `server_control domain=catalog action=coverage`, `server_control domain=catalog action=static_audit`, `server_control domain=catalog action=surface_audit surface=side_screen` | Inspect tool coverage and gaps |
+| Batch and planning | `server_control domain=batch action=call_many`, `server_control domain=program action=execute`, `game_control domain=ui uiDomain=edit_mark` | Batch calls, conditional/loop flow scripts, and player edit marks |
 
-For `agent_pointer_*`, `agentId` is a global logical pointer name. Omitting it uses the default `agent` pointer. The same `agentId` reuses one pointer across MCP sessions, so client reconnects do not leave duplicate pointers. For multi-step work, create/read a short stable pointer first, such as `planner` or `builder`, then pass the same `agentId` on every pointer call. For visible pointer actions, prefer adding `displayText` so the pointer tells the player what is being aimed, selected, or executed. Use different `agentId` values for parallel pointers. Use `agent_pointer_clear` to delete a pointer and its jump points when it is no longer needed. Pointers are hidden automatically on the main menu or while no game world is loaded.
+For `navigation_control`, `agentId` is a global logical pointer name. Omitting it uses the default `agent` pointer. The same `agentId` reuses one pointer across MCP sessions, so client reconnects do not leave duplicate pointers. For multi-step work, call `action=get` with a short stable pointer first, such as `planner` or `builder`, then pass the same `agentId` on every pointer call. For visible pointer actions, prefer adding `displayText` so the pointer tells the player what is being aimed, selected, or executed. Use different `agentId` values for parallel pointers. Use `navigation_control action=clear` to delete a pointer and its jump points when it is no longer needed. Pointers are hidden automatically on the main menu or while no game world is loaded.
 
 ### Common Resources
 
@@ -194,8 +192,8 @@ For `agent_pointer_*`, `agentId` is a global logical pointer name. Omitting it u
 ## Recommended Workflow
 
 1. Read state first: `oni://colony/status`, `oni://colony/diagnostics`, `oni://resources/food`, and `oni://dupes/status-check`.
-2. Find tools: use `tools_search` or `oni://tools/guide` for the user's goal.
-3. Work in small areas: define an area with `area_define`, then use `*_area` tools to avoid coordinate mistakes.
+2. Find tools: use `server_control domain=catalog action=search` or `oni://tools/guide` for the user's goal.
+3. Work in small areas: define an area with `read_control domain=area action=define`, then use tools that accept `areaId` to avoid coordinate mistakes.
 4. Plan before batches: use the plan gate for multi-step building, digging, or deconstruction.
 5. Verify after changes: reread the relevant resources and confirm the game state changed as expected.
 
@@ -251,7 +249,7 @@ Typical new-tool flow:
 2. Register it in `OniToolRegistry.Initialize()`.
 3. If a read-only entry is useful, add an `oni://` resource or resource template in `OniResourceRegistry`.
 4. Add confirmation parameters and an appropriate risk level for dangerous tools.
-5. Use `tools_static_audit` or `tools_manifest` to verify runtime registration.
+5. Use `server_control domain=catalog action=static_audit` or `server_control domain=catalog action=manifest` to verify runtime registration.
 
 The release package includes `OniMcp.dll`, mod metadata, preview image, README files, and required assets.
 

@@ -19,9 +19,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "progress_bar_side_screens_list", "side_progress_bars_list" },
                 Tags = new List<string> { "controls", "side-screen", "progress", "status", "radbolt", "read-only" },
-                Description = "列出 ProgressBarSideScreen / IProgressBarSideScreen 只读进度条状态，例如辐射粒子收集器蓄能进度",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface kind=progress action=list。列出 ProgressBarSideScreen / IProgressBarSideScreen 只读进度条状态",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按对象名、prefabId、标题、标签或 tooltip 筛选", Required = false },

@@ -12,30 +12,44 @@ namespace OniMcp.Tools
     {
         private static readonly HashSet<string> BuildingTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            "building_config_control",
             "buildings_set_enabled",
             "buildings_set_toggle",
             "buildings_slider_set",
             "buildings_threshold_set",
+            "side_option_control",
+            "side_option_set",
             "direction_control_set",
             "few_option_set",
             "radbolt_direction_set",
+            "state_control",
             "state_controls_list",
+            "state_control_set",
             "capacity_control_set",
             "checkbox_control_set",
+            "light_control",
             "lights_color_set",
+            "pixel_pack_control",
             "pixel_pack_color_set",
             "pixel_pack_colors_copy",
             "doors_set_state",
             "access_control_set",
             "buildings_manual_delivery",
+            "storage_system_control",
+            "storage_control",
             "resources_storage_set_filter",
+            "filter_control",
+            "filter_set",
             "filters_single_set",
             "filters_tree_set",
             "storage_tile_selection_set",
             "receptacle_control",
+            "automation_side_control",
             "user_menu_action_press",
             "maintenance_action_execute",
+            "mutant_seed_control",
             "mutant_seed_control_set",
+            "rocket_usage_control",
             "rocket_usage_control_set",
             "automatable_control_set",
             "valves_flow_set",
@@ -49,17 +63,27 @@ namespace OniMcp.Tools
         {
             "buildings_set_toggle",
             "buildings_threshold_set",
+            "storage_system_control",
+            "filter_control",
+            "filter_set",
             "filters_single_set",
+            "side_option_control",
+            "side_option_set",
             "direction_control_set",
             "few_option_set",
             "logic_broadcast_channel_set",
+            "state_control",
+            "state_control_set",
             "logic_counter_set",
+            "automation_side_control",
             "critter_sensor_counting_set",
             "time_range_set",
             "logic_timer_set",
             "logic_ribbon_bit_set",
+            "logic_alarm_control",
             "logic_alarm_set",
             "cluster_location_sensor_set",
+            "comet_detector_control",
             "comet_detector_target_set",
             "automatable_control_set",
             "buildings_slider_set",
@@ -100,7 +124,8 @@ namespace OniMcp.Tools
                 Risk = "dangerous",
                 Aliases = aliases,
                 Tags = tags,
-                Description = description,
+                Description = $"兼容入口：请使用 building_control domain=config action={(name == "automation_controls_batch_set" ? "batch_set_automation" : "batch_set")}。{description}",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "批量操作数组。每项：tool/t 为工具名，args/a 为该工具参数对象；最多 50 项", Required = true },
@@ -149,11 +174,14 @@ namespace OniMcp.Tools
                     continue;
                 }
 
-                string tool = item["tool"]?.ToString() ?? item["t"]?.ToString();
-                if (string.IsNullOrWhiteSpace(tool) || !allowedTools.Contains(tool.Trim()))
+                string requestedTool = item["tool"]?.ToString() ?? item["t"]?.ToString();
+                var toolArgsToken = item["args"] ?? item["a"];
+                var toolArgs = MergeDefaults(toolArgsToken as JObject, defaults);
+                string tool = NormalizeBatchTool(requestedTool, toolArgs);
+                if (string.IsNullOrWhiteSpace(tool) || !allowedTools.Contains(tool))
                 {
                     failed++;
-                    results.Add(ErrorResult(i, tool, "tool is not allowed for this batch surface"));
+                    results.Add(ErrorResult(i, requestedTool, "tool is not allowed for this batch surface"));
                     if (stopOnError)
                     {
                         stopped = i < items.Count - 1;
@@ -162,9 +190,7 @@ namespace OniMcp.Tools
                     continue;
                 }
 
-                var toolArgsToken = item["args"] ?? item["a"];
-                var toolArgs = MergeDefaults(toolArgsToken as JObject, defaults);
-                var result = OniToolRegistry.CallTool(tool.Trim(), toolArgs);
+                var result = OniToolRegistry.CallTool(tool, toolArgs);
                 bool isError = result.IsError;
                 if (isError)
                     failed++;
@@ -174,7 +200,8 @@ namespace OniMcp.Tools
                 results.Add(new Dictionary<string, object>
                 {
                     ["index"] = i,
-                    ["tool"] = tool.Trim(),
+                    ["tool"] = tool,
+                    ["requestedTool"] = requestedTool?.Trim(),
                     ["isError"] = isError,
                     ["text"] = ResultText(result, summaryOnly, maxTextChars)
                 });
@@ -195,6 +222,45 @@ namespace OniMcp.Tools
                 ["stopped"] = stopped,
                 ["results"] = results
             }, McpJsonUtil.Settings));
+        }
+
+        private static string NormalizeBatchTool(string tool, JObject args)
+        {
+            string normalized = tool?.Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+                return normalized;
+
+            if (normalized.Equals("buildings_set_enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                SetDefaultAction(args, "set_enabled");
+                return "building_config_control";
+            }
+
+            if (normalized.Equals("buildings_set_toggle", StringComparison.OrdinalIgnoreCase))
+            {
+                SetDefaultAction(args, "set_toggle");
+                return "building_config_control";
+            }
+
+            if (normalized.Equals("lights_color_set", StringComparison.OrdinalIgnoreCase))
+            {
+                SetDefaultAction(args, "set_color");
+                return "light_control";
+            }
+
+            if (normalized.Equals("comet_detector_target_set", StringComparison.OrdinalIgnoreCase))
+            {
+                SetDefaultAction(args, "set_target");
+                return "comet_detector_control";
+            }
+
+            return normalized;
+        }
+
+        private static void SetDefaultAction(JObject args, string action)
+        {
+            if (args != null && args["action"] == null)
+                args["action"] = action;
         }
 
         private static Dictionary<string, object> ErrorResult(int index, string tool, string reason)

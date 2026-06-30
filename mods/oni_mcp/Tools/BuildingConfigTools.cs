@@ -11,6 +11,106 @@ namespace OniMcp.Tools
 {
     public static class BuildingConfigTools
     {
+        public static McpTool ControlBuildingConfig()
+        {
+            return new McpTool
+            {
+                Name = "building_config_control",
+                Group = "buildings",
+                Mode = "write",
+                Risk = "dangerous",
+                Aliases = new List<string> { "buildings_config_control", "building_side_screen_control" },
+                Tags = new List<string> { "buildings", "config", "automation", "side-screen", "door", "access", "visual", "colors" },
+                Description = "建筑配置组合工具：action=list/list_automation/set_enabled/set_toggle/set_threshold/set_slider/set_valve_flow/set_limit_valve/set_logic_timer/set_logic_ribbon_bit/set_door_state/get_access/set_access/copy_settings/batch_set/batch_set_automation/visual",
+                Parameters = BuildingConfigControlParams(),
+                Handler = args =>
+                {
+                    string operation = (args["action"]?.ToString() ?? args["operation"]?.ToString() ?? "list").Trim().ToLowerInvariant();
+                    switch (operation)
+                    {
+                        case "list":
+                        case "status":
+                            return ListConfigurableBuildings().Handler(args);
+                        case "list_automation":
+                        case "automation":
+                            return ListAutomationControls().Handler(args);
+                        case "set_enabled":
+                        case "enabled":
+                            return OrdersTools.SetBuildingEnabled().Handler(args);
+                        case "set_toggle":
+                        case "toggle":
+                            return OrdersTools.SetBuildingToggle().Handler(args);
+                        case "set_threshold":
+                        case "threshold":
+                            return SetThreshold().Handler(args);
+                        case "set_slider":
+                        case "slider":
+                            return SetSlider().Handler(args);
+                        case "set_valve_flow":
+                        case "valve_flow":
+                            return SetValveFlow().Handler(args);
+                        case "set_limit_valve":
+                        case "limit_valve":
+                            return SetLimitValve().Handler(args);
+                        case "set_logic_timer":
+                        case "logic_timer":
+                            return SetLogicTimer().Handler(args);
+                        case "set_logic_ribbon_bit":
+                        case "logic_ribbon_bit":
+                            return SetLogicRibbonBit().Handler(args);
+                        case "set_door_state":
+                        case "door_state":
+                            return SetDoorState().Handler(args);
+                        case "get_access":
+                        case "access_get":
+                            return GetAccessControl().Handler(args);
+                        case "set_access":
+                        case "access_set":
+                            return SetAccessControl().Handler(args);
+                        case "copy_settings":
+                        case "copy":
+                            return CopySettings().Handler(args);
+                        case "batch_set":
+                        case "batch":
+                            return ConfigBatchTools.BatchSetBuildingConfigs().Handler(args);
+                        case "batch_set_automation":
+                        case "automation_batch":
+                            return ConfigBatchTools.BatchSetAutomationControls().Handler(args);
+                        case "state_list":
+                        case "list_state":
+                            return ForwardStateControl(args, "list");
+                        case "state_set":
+                        case "set_state_control":
+                            return ForwardStateControl(args, "set");
+                        case "visual":
+                        case "visual_control":
+                            return ForwardVisualControl(args);
+                        default:
+                            return CallToolResult.Error("action must be list, list_automation, set_enabled, set_toggle, set_threshold, set_slider, set_valve_flow, set_limit_valve, set_logic_timer, set_logic_ribbon_bit, set_door_state, get_access, set_access, copy_settings, batch_set, batch_set_automation, state_list, state_set, or visual");
+                    }
+                }
+            };
+        }
+
+        private static CallToolResult ForwardVisualControl(JObject args)
+        {
+            var forwarded = args == null ? new JObject() : (JObject)args.DeepClone();
+            var visualAction = forwarded["visualAction"] ?? forwarded["visual_action"] ?? forwarded["visualOperation"] ?? forwarded["visual_operation"];
+            forwarded["action"] = visualAction ?? "list";
+            forwarded.Remove("visualAction");
+            forwarded.Remove("visual_action");
+            forwarded.Remove("visualOperation");
+            forwarded.Remove("visual_operation");
+            return VisualControlTools.ControlVisual().Handler(forwarded);
+        }
+
+        private static CallToolResult ForwardStateControl(JObject args, string action)
+        {
+            var forwarded = args == null ? new JObject() : (JObject)args.DeepClone();
+            forwarded["action"] = action;
+            return StateControlTools.ControlState().Handler(forwarded);
+        }
+
         public static McpTool ListConfigurableBuildings()
         {
             return new McpTool
@@ -21,7 +121,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "buildings_controls_list", "building_configurables" },
                 Tags = new List<string> { "buildings", "config", "threshold", "door", "access", "automation", "side-screen" },
-                Description = "列出支持玩家侧屏配置的建筑：启用开关、手动开关、阈值传感器、门状态、门禁、阀门、计时器、ribbon bit 和手动补料",
+                Description = "兼容入口：请使用 building_control domain=config action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["capability"] = new McpToolParameter
@@ -91,7 +192,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "automation_threshold_set", "sensor_threshold_set" },
                 Tags = new List<string> { "buildings", "automation", "sensor", "threshold", "slider" },
-                Description = "设置实现 IThresholdSwitch 的建筑阈值和高于/低于阈值触发方向，例如温度、压力、气液元素传感器",
+                Description = "兼容入口：请使用 building_control domain=config action=set_threshold",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["threshold"] = new McpToolParameter { Type = "number", Description = "阈值输入；按目标组件的 ProcessedInputValue 和范围处理", Required = true },
@@ -144,7 +246,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "logic_controls_list", "power_controls_list" },
                 Tags = new List<string> { "automation", "logic", "power", "controls", "side-screen" },
-                Description = "列出自动化/电力相关玩家可配置控件：逻辑端口、手动开关、传感器阈值、阀门、计时器、ribbon bit、滤波/缓冲 slider",
+                Description = "兼容入口：请使用 building_control domain=config action=list_automation",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按名称或 prefabId 关键词筛选", Required = false },
@@ -198,7 +301,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "automation_slider_set", "logic_gate_delay_set", "building_side_screen_slider_set" },
                 Tags = new List<string> { "buildings", "automation", "slider", "side-screen", "logic" },
-                Description = "设置实现 ISliderControl 的建筑侧屏 slider，例如逻辑滤波门/缓冲门延迟",
+                Description = "兼容入口：请使用 building_control domain=config action=set_slider",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["value"] = new McpToolParameter { Type = "number", Description = "slider 目标值，按目标控件 min/max 夹取", Required = true },
@@ -243,7 +347,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "valve_flow_set", "conduit_valve_set" },
                 Tags = new List<string> { "automation", "valve", "conduit", "flow" },
-                Description = "设置普通气体/液体阀门流量，单位 kg/s，对应 Valve 侧屏",
+                Description = "兼容入口：请使用 building_control domain=config action=set_valve_flow",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["flowKgPerSecond"] = new McpToolParameter { Type = "number", Description = "目标流量 kg/s，按阀门最大流量夹取", Required = true }
@@ -283,7 +388,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "meter_valve_set", "limit_valve_set" },
                 Tags = new List<string> { "automation", "valve", "limit", "conduit" },
-                Description = "设置计量阀/限制阀通过上限并可重置已通过计数，对应 LimitValve 侧屏",
+                Description = "兼容入口：请使用 building_control domain=config action=set_limit_valve",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["limit"] = new McpToolParameter { Type = "number", Description = "目标上限 kg 或单位数，按建筑 maxLimitKg 夹取", Required = false },
@@ -328,7 +434,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "automation_timer_set", "timer_sensor_set" },
                 Tags = new List<string> { "automation", "logic", "timer" },
-                Description = "设置自动化计时器开/关持续时间、周期显示模式，并可重置计时",
+                Description = "兼容入口：请使用 building_control domain=config action=set_logic_timer",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["onSeconds"] = new McpToolParameter { Type = "number", Description = "绿色信号持续秒数，非负", Required = false },
@@ -378,7 +485,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "ribbon_bit_select", "logic_bit_selector_set" },
                 Tags = new List<string> { "automation", "logic", "ribbon", "bit" },
-                Description = "设置自动化 ribbon reader/writer 侧屏选择的 bit，玩家 UI 中显示为 1-4，这里输入 bitIndex 从 0 开始",
+                Description = "兼容入口：请使用 building_control domain=config action=set_logic_ribbon_bit",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["bitIndex"] = new McpToolParameter { Type = "integer", Description = "bit 索引，从 0 开始；4-bit ribbon 可用 0..3", Required = true }
@@ -420,7 +528,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "door_control_set", "buildings_door_set" },
                 Tags = new List<string> { "buildings", "door", "access", "open", "lock" },
-                Description = "设置门的玩家控制状态：auto 自动、opened 常开、locked 锁定；正常情况下会排队复制人开关差事",
+                Description = "兼容入口：请使用 building_control domain=config action=set_door_state",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["state"] = new McpToolParameter
@@ -471,7 +580,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "door_access_get", "access_permissions_get" },
                 Tags = new List<string> { "buildings", "door", "access", "permissions", "dupes" },
-                Description = "读取门禁/通行权限建筑的默认权限和复制人权限",
+                Description = "兼容入口：请使用 building_control domain=config action=get_access",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["includeDupes"] = new McpToolParameter { Type = "boolean", Description = "是否列出每个复制人的有效权限，默认 true", Required = false }
@@ -500,7 +610,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "door_access_set", "access_permissions_set" },
                 Tags = new List<string> { "buildings", "door", "access", "permissions", "dupes" },
-                Description = "设置门禁/通行权限：默认标准复制人、仿生复制人、机器人，或指定复制人的覆盖权限",
+                Description = "兼容入口：请使用 building_control domain=config action=set_access",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["scope"] = new McpToolParameter
@@ -573,7 +684,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "copy_building_settings", "settings_copy" },
                 Tags = new List<string> { "buildings", "copy", "settings", "side-screen", "batch" },
-                Description = "把一个建筑的玩家可复制设置应用到指定建筑或区域内同类/同复制组建筑，对应游戏 Copy Settings 工具",
+                Description = "兼容入口：请使用 building_control domain=config action=copy_settings",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["sourceId"] = new McpToolParameter { Type = "integer", Description = "源建筑 InstanceID；优先于 sourceX/sourceY", Required = false },
@@ -696,6 +808,62 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> BuildingConfigControlParams()
+        {
+            return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list/list_automation/set_enabled/set_toggle/set_threshold/set_slider/set_valve_flow/set_limit_valve/set_logic_timer/set_logic_ribbon_bit/set_door_state/get_access/set_access/copy_settings/batch_set/batch_set_automation/state_list/state_set/visual；兼容 operation", Required = false },
+                ["operation"] = new McpToolParameter { Type = "string", Description = "兼容旧参数；优先使用 action", Required = false },
+                ["items"] = new McpToolParameter { Type = "array", Description = "action=batch_set/batch_set_automation 的批量操作数组", Required = false },
+                ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch_set/batch_set_automation 合并到每个子项的默认参数", Required = false },
+                ["capability"] = new McpToolParameter { Type = "string", Description = "action=list 时过滤配置能力", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list/list_automation 时按名称或 prefabId 筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "number", Description = "action=list/list_automation 时为返回上限；action=set_limit_valve 时为目标通过上限", Required = false },
+                ["enabled"] = new McpToolParameter { Type = "boolean", Description = "action=set_enabled 时 true 启用建筑，false 禁用建筑", Required = false },
+                ["on"] = new McpToolParameter { Type = "boolean", Description = "action=set_toggle 时 true 打开玩家手动开关，false 关闭", Required = false },
+                ["component"] = new McpToolParameter { Type = "string", Description = "阈值/slider 目标组件类型名筛选", Required = false },
+                ["threshold"] = new McpToolParameter { Type = "number", Description = "action=set_threshold 阈值", Required = false },
+                ["activateAbove"] = new McpToolParameter { Type = "boolean", Description = "action=set_threshold 高于阈值激活", Required = false },
+                ["value"] = new McpToolParameter { Type = "number", Description = "action=set_slider 目标 slider 值；action=state_set kind=checkbox 时为 boolean", Required = false },
+                ["index"] = new McpToolParameter { Type = "integer", Description = "action=set_slider slider 索引", Required = false },
+                ["flowKgPerSecond"] = new McpToolParameter { Type = "number", Description = "action=set_valve_flow 流量 kg/s", Required = false },
+                ["resetAmount"] = new McpToolParameter { Type = "boolean", Description = "action=set_limit_valve 是否重置已通过计数", Required = false },
+                ["onSeconds"] = new McpToolParameter { Type = "number", Description = "action=set_logic_timer 绿色信号持续秒数", Required = false },
+                ["offSeconds"] = new McpToolParameter { Type = "number", Description = "action=set_logic_timer 红色信号持续秒数", Required = false },
+                ["displayCyclesMode"] = new McpToolParameter { Type = "boolean", Description = "action=set_logic_timer 是否按周期显示", Required = false },
+                ["reset"] = new McpToolParameter { Type = "boolean", Description = "action=set_logic_timer 是否重置计时器", Required = false },
+                ["bitIndex"] = new McpToolParameter { Type = "integer", Description = "action=set_logic_ribbon_bit bit 索引 0..3", Required = false },
+                ["state"] = new McpToolParameter { Type = "string", Description = "action=set_door_state：auto/opened/locked", Required = false },
+                ["kind"] = new McpToolParameter { Type = "string", Description = "action=state_list/state_set 时为 any/capacity/checkbox/counter/time_range；action=visual 时为 light/pixel_pack", Required = false },
+                ["visualAction"] = new McpToolParameter { Type = "string", Description = "action=visual 时的子动作：light 支持 list/set_color；pixel_pack 支持 list/set_color/copy_colors", Required = false },
+                ["colorIndex"] = new McpToolParameter { Type = "integer", Description = "action=visual 写颜色时的目标颜色预设索引", Required = false },
+                ["colorName"] = new McpToolParameter { Type = "string", Description = "action=visual 写颜色时的目标颜色预设名称", Required = false },
+                ["panel"] = new McpToolParameter { Type = "string", Description = "action=visual kind=pixel_pack 时的目标面板", Required = false },
+                ["sourcePanel"] = new McpToolParameter { Type = "string", Description = "action=visual kind=pixel_pack visualAction=copy_colors 时源面板", Required = false },
+                ["sourceState"] = new McpToolParameter { Type = "string", Description = "action=visual kind=pixel_pack visualAction=copy_colors 时源状态", Required = false },
+                ["targetPanel"] = new McpToolParameter { Type = "string", Description = "action=visual kind=pixel_pack visualAction=copy_colors 时目标面板", Required = false },
+                ["targetState"] = new McpToolParameter { Type = "string", Description = "action=visual kind=pixel_pack visualAction=copy_colors 时目标状态", Required = false },
+                ["capacity"] = new McpToolParameter { Type = "number", Description = "action=state_set kind=capacity 时目标容量", Required = false },
+                ["maxCount"] = new McpToolParameter { Type = "integer", Description = "action=state_set kind=counter 时目标最大计数", Required = false },
+                ["advancedMode"] = new McpToolParameter { Type = "boolean", Description = "action=state_set kind=counter 时是否启用高级模式", Required = false },
+                ["start"] = new McpToolParameter { Type = "number", Description = "action=state_set kind=time_range 时开始时间，周期百分比 0-1", Required = false },
+                ["duration"] = new McpToolParameter { Type = "number", Description = "action=state_set kind=time_range 时持续时间，周期百分比 0-1", Required = false },
+                ["includeDupes"] = new McpToolParameter { Type = "boolean", Description = "action=get_access 是否包含复制人权限", Required = false },
+                ["scope"] = new McpToolParameter { Type = "string", Description = "action=set_access：default_standard/default_bionic/default_robot/dupe", Required = false },
+                ["permission"] = new McpToolParameter { Type = "string", Description = "action=set_access：both/go_left/go_right/neither", Required = false },
+                ["dupeId"] = new McpToolParameter { Type = "integer", Description = "action=set_access scope=dupe 的复制人或 proxy InstanceID", Required = false },
+                ["dupeName"] = new McpToolParameter { Type = "string", Description = "action=set_access scope=dupe 的复制人名称", Required = false },
+                ["clear"] = new McpToolParameter { Type = "boolean", Description = "action=set_access scope=dupe 时清除覆盖权限", Required = false },
+                ["sourceId"] = new McpToolParameter { Type = "integer", Description = "action=copy_settings 源建筑 InstanceID", Required = false },
+                ["sourceX"] = new McpToolParameter { Type = "integer", Description = "action=copy_settings 源建筑 X", Required = false },
+                ["sourceY"] = new McpToolParameter { Type = "integer", Description = "action=copy_settings 源建筑 Y", Required = false },
+                ["targetId"] = new McpToolParameter { Type = "integer", Description = "action=copy_settings 单个目标建筑 InstanceID", Required = false },
+                ["targetX"] = new McpToolParameter { Type = "integer", Description = "action=copy_settings 单个目标建筑 X", Required = false },
+                ["targetY"] = new McpToolParameter { Type = "integer", Description = "action=copy_settings 单个目标建筑 Y", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=copy_settings 大区域复制时可能要求 true", Required = false }
+            }));
         }
 
         private static Dictionary<string, McpToolParameter> RectParams(Dictionary<string, McpToolParameter> extra)

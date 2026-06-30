@@ -16,6 +16,74 @@ namespace OniMcp.Tools
     {
         private const int MaxSandboxCells = 1000;
 
+        public static McpTool ControlSandbox()
+        {
+            return new McpTool
+            {
+                Name = "sandbox_control",
+                Group = "sandbox",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "sandbox", "sandbox_debug_control", "map_edit_control" },
+                Tags = new List<string> { "sandbox", "debug", "map", "designate", "area", "entity", "search" },
+                Description = "沙盒/地图编辑组合入口：kind=read/area/entity/map_designate。地图编辑使用 search/designate 文本片段自动定位，避免手算坐标偏移；危险写操作保留 confirm/force/沙盒模式校验。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "read、area、entity 或 map_designate，默认 read", Required = false, EnumValues = new List<string> { "read", "area", "entity", "map_designate" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "kind=read: list_actions/sample_cell/list_story_traits；kind=area: paint/flood_fill/temperature/reveal/clear_floor/clear_critters/destroy/stress；kind=entity: spawn_entity/story_trait_stamp/auto_plumb_building", Required = false },
+                    ["search"] = new McpToolParameter { Type = "string", Description = "kind=map_designate 时要查找的文本地图片段", Required = false },
+                    ["designate"] = new McpToolParameter { Type = "string", Description = "kind=map_designate 时指定片段；_、same、keep 保留原格", Required = false },
+                    ["replace"] = new McpToolParameter { Type = "string", Description = "兼容旧参数：请改用 designate", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "起点/目标格 X，按 action 解释", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "起点/目标格 Y，按 action 解释", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "矩形/搜索区域左下 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "矩形/搜索区域左下 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "矩形/搜索区域右上 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "矩形/搜索区域右上 Y", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
+                    ["element"] = new McpToolParameter { Type = "string", Description = "paint/flood_fill 或 map_designate 默认元素", Required = false },
+                    ["prefabId"] = new McpToolParameter { Type = "string", Description = "kind=entity action=spawn_entity 时 Prefab ID", Required = false },
+                    ["storyId"] = new McpToolParameter { Type = "string", Description = "kind=entity action=story_trait_stamp 时故事 ID", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID，按 action 解释", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "kind=read action=list_story_traits 时搜索词", Required = false },
+                    ["massKg"] = new McpToolParameter { Type = "number", Description = "元素质量 kg，按 action 解释", Required = false },
+                    ["temperatureK"] = new McpToolParameter { Type = "number", Description = "温度 K，按 action 解释", Required = false },
+                    ["disease"] = new McpToolParameter { Type = "string", Description = "病菌 ID，默认无", Required = false },
+                    ["diseaseCount"] = new McpToolParameter { Type = "integer", Description = "每格病菌数量，默认 0", Required = false },
+                    ["matchMode"] = new McpToolParameter { Type = "string", Description = "kind=map_designate 匹配处理：unique/first/all，默认 unique", Required = false, EnumValues = new List<string> { "unique", "first", "all" } },
+                    ["matchIndex"] = new McpToolParameter { Type = "integer", Description = "kind=map_designate 多匹配时选择第几个，0 基", Required = false },
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "区域/搜索安全上限", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "kind=map_designate 只预览不修改，默认 true", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "kind=map_designate 搜索时是否把未揭示格视为 unk，默认 false", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "允许绕过对应底层工具的沙盒模式或 InstantBuild 要求，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险写操作确认", Required = false }
+                },
+                Handler = args =>
+                {
+                    string kind = (args["kind"]?.ToString() ?? "read").Trim().ToLowerInvariant();
+                    switch (kind)
+                    {
+                        case "read":
+                        case "info":
+                            return ReadControl().Handler(args);
+                        case "area":
+                            return AreaControl().Handler(args);
+                        case "entity":
+                        case "entities":
+                            return EntityControl().Handler(args);
+                        case "map_designate":
+                        case "designate":
+                        case "search_designate":
+                        case "map":
+                            return ReplaceMapPattern().Handler(args);
+                        default:
+                            return CallToolResult.Error("kind must be read, area, entity, or map_designate");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListSandboxActions()
         {
             return new McpTool
@@ -24,27 +92,20 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_tools_list", "debug_actions_list" },
                 Tags = new List<string> { "sandbox", "debug", "actions", "tools" },
-                Description = "列出 MCP 暴露的沙盒/Debug 操作、风险和当前沙盒模式状态",
+                Description = "兼容入口：列出 MCP 暴露的沙盒/Debug 操作、风险和当前沙盒模式状态。新调用请使用 game_control domain=sandbox kind=read action=list_actions。",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {
                     var actions = new List<Dictionary<string, object>>
                     {
-                        ActionInfo("sandbox_sample_cell", "read", "none", "读取格子元素/质量/温度/病菌，并返回可直接用于 paint/flood 的参数。"),
-                        ActionInfo("sandbox_paint_element", "execute", "dangerous", "把矩形区域替换为指定元素、质量、温度和病菌。"),
-                        ActionInfo("sandbox_flood_fill_element", "execute", "dangerous", "从起点开始替换同世界、同元素的连通区域。"),
-                        ActionInfo("sandbox_temperature_area", "execute", "dangerous", "按 set/add 模式修改区域格子温度，保留元素、质量和病菌。"),
-                        ActionInfo("sandbox_reveal_area", "execute", "dangerous", "揭示战争迷雾/未探索格子。"),
-                        ActionInfo("sandbox_clear_floor_area", "execute", "dangerous", "删除区域内地面可拾取物，不删除复制人。"),
-                        ActionInfo("sandbox_clear_critters_area", "execute", "dangerous", "删除区域内小动物，等价于沙盒 Critter Tool。"),
-                        ActionInfo("sandbox_destroy_area", "execute", "dangerous", "销毁区域内格子内容。"),
-                        ActionInfo("sandbox_spawn_entity", "execute", "dangerous", "生成实体、物品、动物或已完成建筑。"),
-                        ActionInfo("sandbox_story_traits_list", "read", "none", "列出可由沙盒 Story Trait Tool 盖章的故事特质模板。"),
-                        ActionInfo("sandbox_story_trait_stamp", "execute", "dangerous", "在指定位置盖章故事特质 retrofit 模板。"),
-                        ActionInfo("debug_auto_plumb_building", "execute", "dangerous", "Debug/InstantBuild 专用：对目标建筑执行 AutoPlumber 电力/管道/固体配送/全部自动连接，或生成 debug 复制人。"),
-                        ActionInfo("sandbox_stress_area", "execute", "dangerous", "对区域内复制人或指定复制人增减压力。")
+                        ActionInfo("game_control", "read", "none", "kind=read action=sample_cell：读取格子元素/质量/温度/病菌，并返回可直接用于 paint/flood 的参数。"),
+                        ActionInfo("game_control", "execute", "dangerous", "kind=map_designate：用 search/designate 文本地图片段查找并指定格子元素，避免手工计算坐标偏移。"),
+                        ActionInfo("game_control", "execute", "dangerous", "kind=area：action=paint/flood_fill/temperature/reveal/clear_floor/clear_critters/destroy/stress。"),
+                        ActionInfo("game_control", "execute", "dangerous", "kind=entity：action=spawn_entity/story_trait_stamp/auto_plumb_building；auto_plumb_building 用 plumbAction=auto_plumb/power/pipes/solids/spawn_minion。"),
+                        ActionInfo("game_control", "read", "none", "kind=read action=list_story_traits：列出可由沙盒 Story Trait Tool 盖章的故事特质模板。"),
                     };
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
@@ -58,6 +119,266 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool AreaControl()
+        {
+            return new McpTool
+            {
+                Name = "sandbox_area_control",
+                Group = "sandbox",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "sandbox_area", "debug_sandbox_area_control" },
+                Tags = new List<string> { "sandbox", "area", "paint", "flood", "temperature", "reveal", "destroy", "stress" },
+                Description = "统一沙盒区域控制。action=paint/flood_fill/temperature/reveal/clear_floor/clear_critters/destroy/stress；危险写操作仍由现有 handler 校验 confirm、force 和沙盒模式。",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "paint、flood_fill、temperature、reveal、clear_floor、clear_critters、destroy、stress", Required = true, EnumValues = new List<string> { "paint", "flood_fill", "temperature", "reveal", "clear_floor", "clear_critters", "destroy", "stress" } },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=flood_fill 时起点 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=flood_fill 时起点 Y", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=stress 时复制人 InstanceID；提供后可省略区域", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "action=stress 时复制人名称；提供后可省略区域", Required = false },
+                    ["element"] = new McpToolParameter { Type = "string", Description = "action=paint/flood_fill 时目标元素 ID", Required = false },
+                    ["massKg"] = new McpToolParameter { Type = "number", Description = "action=paint/flood_fill 时每格质量 kg", Required = false },
+                    ["temperatureK"] = new McpToolParameter { Type = "number", Description = "action=paint/flood_fill/temperature 时温度 K", Required = false },
+                    ["disease"] = new McpToolParameter { Type = "string", Description = "action=paint/flood_fill 时病菌 ID", Required = false },
+                    ["diseaseCount"] = new McpToolParameter { Type = "integer", Description = "action=paint/flood_fill 时每格病菌数量", Required = false },
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "action=flood_fill 时安全上限，默认/最大 1000", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "action=temperature 时 set/add，默认 set", Required = false, EnumValues = new List<string> { "set", "add" } },
+                    ["deltaK"] = new McpToolParameter { Type = "number", Description = "action=temperature 且 mode=add 时温度增量 K", Required = false },
+                    ["delta"] = new McpToolParameter { Type = "number", Description = "action=stress 时压力变化量", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "允许非沙盒模式执行，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认，必须为 true", Required = true }
+                }),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "paint":
+                            return PaintElement().Handler(args);
+                        case "flood_fill":
+                            return FloodFillElement().Handler(args);
+                        case "temperature":
+                            return SetTemperatureArea().Handler(args);
+                        case "reveal":
+                            return RevealArea().Handler(args);
+                        case "clear_floor":
+                            return ClearFloorArea().Handler(args);
+                        case "clear_critters":
+                            return ClearCrittersArea().Handler(args);
+                        case "destroy":
+                            return DestroyArea().Handler(args);
+                        case "stress":
+                            return StressArea().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be paint, flood_fill, temperature, reveal, clear_floor, clear_critters, destroy, or stress");
+                    }
+                }
+            };
+        }
+
+        public static McpTool ReadControl()
+        {
+            return new McpTool
+            {
+                Name = "sandbox_read_control",
+                Group = "sandbox",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "sandbox_info", "sandbox_read" },
+                Tags = new List<string> { "sandbox", "debug", "actions", "sample", "story", "traits" },
+                Description = "统一读取沙盒信息。action=list_actions/sample_cell/list_story_traits。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list_actions、sample_cell、list_story_traits，默认 list_actions", Required = false, EnumValues = new List<string> { "list_actions", "sample_cell", "list_story_traits" } },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=sample_cell 时目标格子 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=sample_cell 时目标格子 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "action=sample_cell 时目标世界 ID，默认当前激活世界", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list_story_traits 时按 storyId、trait 名称或模板 ID 搜索", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "list_actions").Trim().ToLowerInvariant();
+                    if (action == "list_actions")
+                        return ListSandboxActions().Handler(args);
+                    if (action == "sample_cell")
+                        return SampleCell().Handler(args);
+                    if (action == "list_story_traits")
+                        return ListStoryTraits().Handler(args);
+                    return CallToolResult.Error("action must be list_actions, sample_cell, or list_story_traits");
+                }
+            };
+        }
+
+        public static McpTool EntityControl()
+        {
+            return new McpTool
+            {
+                Name = "sandbox_entity_control",
+                Group = "sandbox",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "sandbox_entities", "sandbox_debug_entity_control" },
+                Tags = new List<string> { "sandbox", "entity", "spawn", "story", "trait", "auto-plumber", "debug" },
+                Description = "统一实体/故事/Debug 建筑控制。action=spawn_entity/story_trait_stamp/auto_plumb_building；auto_plumb_building 使用 plumbAction=auto_plumb/power/pipes/solids/spawn_minion，保留原 confirm、Sandbox/InstantBuild/force 校验。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "spawn_entity、story_trait_stamp 或 auto_plumb_building", Required = true, EnumValues = new List<string> { "spawn_entity", "story_trait_stamp", "auto_plumb_building" } },
+                    ["prefabId"] = new McpToolParameter { Type = "string", Description = "action=spawn_entity 时的 Prefab ID，例如 Hatch、BasicPlantBar、Tile、OxygenDiffuser", Required = false },
+                    ["storyId"] = new McpToolParameter { Type = "string", Description = "action=story_trait_stamp 时的故事 ID，例如 MegaBrainTank、CreatureManipulator、LonelyMinion", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=auto_plumb_building 时目标建筑 InstanceID；spawn_minion 也用该建筑定位", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；spawn_entity/story_trait_stamp 必填，auto_plumb_building 可用坐标查找建筑", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y；spawn_entity/story_trait_stamp 必填，auto_plumb_building 可用坐标查找建筑", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
+                    ["massKg"] = new McpToolParameter { Type = "number", Description = "action=spawn_entity 生成 ElementChunk 时的质量 kg，默认 100", Required = false },
+                    ["temperatureK"] = new McpToolParameter { Type = "number", Description = "action=spawn_entity 生成 ElementChunk 时的温度 K，默认元素默认温度", Required = false },
+                    ["allowExisting"] = new McpToolParameter { Type = "boolean", Description = "action=story_trait_stamp 时允许同一故事实例已存在仍盖章，默认 false", Required = false },
+                    ["plumbAction"] = new McpToolParameter { Type = "string", Description = "action=auto_plumb_building 时执行 auto_plumb、power、pipes、solids 或 spawn_minion", Required = false, EnumValues = new List<string> { "auto_plumb", "power", "pipes", "solids", "spawn_minion" } },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "允许绕过对应底层工具的沙盒模式或 InstantBuild 要求，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认，必须为 true", Required = true }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "spawn_entity":
+                            return SpawnEntity().Handler(args);
+                        case "story_trait_stamp":
+                            return StampStoryTrait().Handler(args);
+                        case "auto_plumb_building":
+                            var forwardArgs = (JObject)args.DeepClone();
+                            string plumbAction = (forwardArgs["plumbAction"]?.ToString() ?? "").Trim();
+                            forwardArgs["action"] = plumbAction;
+                            return AutoPlumbBuilding().Handler(forwardArgs);
+                        default:
+                            return CallToolResult.Error("action must be spawn_entity, story_trait_stamp, or auto_plumb_building");
+                    }
+                }
+            };
+        }
+
+        public static McpTool ReplaceMapPattern()
+        {
+            return new McpTool
+            {
+                Name = "sandbox_map_designate",
+                Group = "sandbox",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "map_designate", "sandbox_search_designate", "sandbox_map_replace", "map_replace", "sandbox_search_replace", "debug_map_replace" },
+                Tags = new List<string> { "sandbox", "map", "designate", "search", "text-map" },
+                Description = "基于 search/designate 文本地图片段编辑地图：在区域或当前镜头附近查找 token 矩阵，自动定位匹配区域并指定为元素 token。默认 dryRun=true；实际修改要求 confirm=true 且沙盒模式开启或 force=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["search"] = new McpToolParameter { Type = "string", Description = "要查找的文本地图片段。行用换行分隔，格子 token 用空格/逗号分隔；支持 * 或 any 通配，支持 vac/oxy/po2/co2/hyd/gas/liq/sol/tile 和元素 ID。", Required = true },
+                    ["designate"] = new McpToolParameter { Type = "string", Description = "指定片段，尺寸必须与 search 相同。token 可为元素 ID 或 vac/oxy/po2/co2/hyd/gas/liq/water/steam/rock；_、same、keep 表示保留原格。不能直接指定为 tile/bld/dup 等对象 token。", Required = false },
+                    ["replace"] = new McpToolParameter { Type = "string", Description = "兼容旧参数：请改用 designate。语义等同于指定片段。", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "可选搜索区域句柄；省略区域参数时默认当前相机附近", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "搜索区域起点/左下 X；可省略", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "搜索区域起点/左下 Y；可省略", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "搜索区域终点/右上 X；可省略", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "搜索区域终点/右上 Y；可省略", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界或 areaId 绑定世界", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "搜索时是否把未揭示格视为 unk，默认 false", Required = false },
+                    ["matchMode"] = new McpToolParameter { Type = "string", Description = "匹配处理：unique 要求唯一；first 取第一个；all 替换全部。默认 unique", Required = false, EnumValues = new List<string> { "unique", "first", "all" } },
+                    ["matchIndex"] = new McpToolParameter { Type = "integer", Description = "当有多个匹配时选择第几个，0 基；优先于 matchMode=unique/first", Required = false },
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "默认搜索范围最大格数 1600，硬上限 2500；实际替换仍受沙盒 max 1000 限制", Required = false },
+                    ["massKg"] = new McpToolParameter { Type = "number", Description = "替换后每格质量 kg；省略时按元素状态给默认值：气体 1、液体 1000、固体 1840、真空 0", Required = false },
+                    ["temperatureK"] = new McpToolParameter { Type = "number", Description = "替换后温度 K；省略时用元素默认温度", Required = false },
+                    ["disease"] = new McpToolParameter { Type = "string", Description = "病菌 ID，默认无", Required = false },
+                    ["diseaseCount"] = new McpToolParameter { Type = "integer", Description = "每格病菌数量，默认 0", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只预览匹配和变更，不修改地图。默认 true", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "允许非沙盒模式执行，默认 false；dryRun 时不需要", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认；dryRun=false 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    if (Game.Instance == null)
+                        return CallToolResult.Error("Game not initialized");
+
+                    bool dryRun = ToolUtil.GetBool(args, "dryRun", true);
+                    if (!dryRun && !ValidateSandbox(args, out string error))
+                        return CallToolResult.Error(error);
+
+                    var search = ParseTokenGrid(args["search"]?.ToString());
+                    string designateText = args["designate"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(designateText))
+                        designateText = args["replace"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(designateText))
+                        return CallToolResult.Error("designate is required");
+
+                    var designate = ParseTokenGrid(designateText);
+                    if (search.Error != null)
+                        return CallToolResult.Error("Invalid search pattern: " + search.Error);
+                    if (designate.Error != null)
+                        return CallToolResult.Error("Invalid designate pattern: " + designate.Error);
+                    if (search.Width != designate.Width || search.Height != designate.Height)
+                        return CallToolResult.Error($"search and designate sizes differ: search={search.Width}x{search.Height}, designate={designate.Width}x{designate.Height}");
+
+                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 1600, 2500));
+                    var rect = WorldEditor.ResolveRectOrCamera(args, maxCells);
+                    int scanCells = RectCellCount(rect);
+                    if (scanCells > maxCells)
+                        return CallToolResult.Error($"Search area has {scanCells} cells; maxCells={maxCells}. Use areaId or a smaller x1/y1/x2/y2 rectangle.");
+
+                    int worldId = ToolUtil.ResolveWorldId(args);
+                    bool visibleOnly = ToolUtil.GetBool(args, "visibleOnly", false);
+                    var matches = FindPatternMatches(search, rect, worldId, visibleOnly);
+                    if (matches.Count == 0)
+                    {
+                        return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        {
+                            ["dryRun"] = true,
+                            ["matched"] = 0,
+                            ["worldId"] = worldId,
+                            ["rect"] = rect,
+                            ["searchSize"] = new[] { search.Width, search.Height },
+                            ["hint"] = "No matching token pattern found. Use world_text_map format=json/profile=standard to inspect the search area."
+                        }, McpJsonUtil.Settings));
+                    }
+
+                    var selected = SelectMatches(matches, args);
+                    if (selected.Error != null)
+                    {
+                        return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        {
+                            ["dryRun"] = true,
+                            ["matched"] = matches.Count,
+                            ["error"] = selected.Error,
+                            ["matches"] = MatchPreviews(matches, 20)
+                        }, McpJsonUtil.Settings));
+                    }
+
+                    var changes = BuildReplacementChanges(selected.Matches, designate, worldId, args);
+                    if (changes.Error != null)
+                        return CallToolResult.Error(changes.Error);
+                    if (changes.Items.Count > MaxSandboxCells)
+                        return CallToolResult.Error($"Refusing to designate {changes.Items.Count} cells; max={MaxSandboxCells}");
+
+                    if (!dryRun)
+                    {
+                        foreach (var change in changes.Items)
+                            SimMessages.ReplaceElement(change.Cell, change.Element.id, CellEventLogger.Instance.SandBoxTool, change.MassKg, change.TemperatureK, change.DiseaseIdx, change.DiseaseCount);
+                    }
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["dryRun"] = dryRun,
+                        ["matched"] = matches.Count,
+                        ["selectedMatches"] = selected.Matches.Count,
+                        ["changed"] = dryRun ? 0 : changes.Items.Count,
+                        ["wouldChange"] = changes.Items.Count,
+                        ["worldId"] = worldId,
+                        ["rect"] = rect,
+                        ["patternSize"] = new[] { search.Width, search.Height },
+                        ["matches"] = MatchPreviews(selected.Matches, 20),
+                        ["changes"] = ChangePreviews(changes.Items, 80)
+                    }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
         public static McpTool SampleCell()
         {
             return new McpTool
@@ -66,9 +387,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_copy_element", "debug_sample_cell" },
                 Tags = new List<string> { "sandbox", "sample", "cell", "element" },
-                Description = "沙盒取样器：读取指定格子的元素、质量、温度、病菌，并返回可直接用于沙盒刷子/填充的参数",
+                Description = "兼容入口：读取指定格子的元素、质量、温度、病菌，并返回可直接用于沙盒刷子/填充的参数。新调用请使用 game_control domain=sandbox kind=read action=sample_cell。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X", Required = true },
@@ -105,8 +427,9 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_brush", "debug_paint_element" },
-                Description = "沙盒刷子：把区域内格子替换为指定元素、质量、温度和病菌；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒刷子。新调用请使用 game_control domain=sandbox kind=area action=paint。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["element"] = new McpToolParameter { Type = "string", Description = "元素 ID，例如 Oxygen、Water、IgneousRock、Vacuum", Required = true },
@@ -172,8 +495,9 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_clear", "debug_destroy_area" },
-                Description = "沙盒删除：销毁区域内格子内容，等价于沙盒 Destroy 工具；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒删除。新调用请使用 game_control domain=sandbox kind=area action=destroy。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "允许非沙盒模式执行，默认 false", Required = false },
@@ -219,8 +543,9 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "debug_spawn_entity", "sandbox_spawn" },
-                Description = "沙盒生成实体或已完成建筑；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒生成实体或已完成建筑。新调用请使用 game_control domain=sandbox kind=entity action=spawn_entity；默认要求沙盒模式开启。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["prefabId"] = new McpToolParameter { Type = "string", Description = "Prefab ID，例如 Hatch、BasicPlantBar、Tile、OxygenDiffuser", Required = true },
@@ -297,9 +622,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_story_trait_templates_list", "story_trait_stamp_templates_list" },
                 Tags = new List<string> { "sandbox", "story", "trait", "stamp", "template" },
-                Description = "列出可由沙盒 Story Trait Tool 放置的故事特质模板及当前是否已存在",
+                Description = "兼容入口：列出可由沙盒 Story Trait Tool 放置的故事特质模板及当前是否已存在。新调用请使用 game_control domain=sandbox kind=read action=list_story_traits。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按 storyId、trait 名称或模板 ID 搜索", Required = false }
@@ -331,9 +657,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_spawn_story_trait", "story_trait_stamp" },
                 Tags = new List<string> { "sandbox", "story", "trait", "stamp", "template" },
-                Description = "沙盒故事特质盖章：放置指定 storyId 的 retrofit 模板；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒故事特质盖章，放置指定 storyId 的 retrofit 模板。新调用请使用 game_control domain=sandbox kind=entity action=story_trait_stamp；默认要求沙盒模式开启。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["storyId"] = new McpToolParameter { Type = "string", Description = "故事 ID，例如 MegaBrainTank、CreatureManipulator、LonelyMinion、FossilHunt、MorbRoverMaker、HijackHeadquarters", Required = true },
@@ -409,9 +736,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "auto_plumber_control", "debug_auto_plumber", "instant_build_auto_plumb" },
                 Tags = new List<string> { "sandbox", "debug", "auto-plumber", "instant-build", "building" },
-                Description = "执行 AutoPlumberSideScreen 的 Debug 操作：auto_plumb、power、pipes、solids 或 spawn_minion；要求 InstantBuild 或 force=true，且 confirm=true",
+                Description = "兼容入口：执行 AutoPlumberSideScreen 的 Debug 操作。新调用请使用 game_control domain=sandbox kind=entity action=auto_plumb_building，并用 plumbAction=auto_plumb/power/pipes/solids/spawn_minion；要求 InstantBuild 或 force=true，且 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "目标建筑 InstanceID；spawn_minion 也用该建筑定位", Required = false },
@@ -481,9 +809,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_bucket_fill", "debug_flood_fill_element" },
                 Tags = new List<string> { "sandbox", "flood", "bucket", "element" },
-                Description = "沙盒桶填充：从起点开始替换同世界、同元素连通区域；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒桶填充。新调用请使用 game_control domain=sandbox kind=area action=flood_fill。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter { Type = "integer", Description = "起点格子 X", Required = true },
@@ -555,9 +884,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_heat_area", "sandbox_cool_area", "debug_temperature_area" },
                 Tags = new List<string> { "sandbox", "temperature", "heat", "cool" },
-                Description = "沙盒温度枪：按 set/add 模式修改区域温度，保留当前元素、质量和病菌；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒温度枪。新调用请使用 game_control domain=sandbox kind=area action=temperature。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["mode"] = new McpToolParameter { Type = "string", Description = "set 设为 temperatureK；add 增加 deltaK，默认 set", Required = false, EnumValues = new List<string> { "set", "add" } },
@@ -624,9 +954,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_reveal_fog", "debug_reveal_area" },
                 Tags = new List<string> { "sandbox", "fog", "reveal", "explore" },
-                Description = "沙盒揭示：清除区域战争迷雾/未探索状态；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒揭示。新调用请使用 game_control domain=sandbox kind=area action=reveal。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "允许非沙盒模式执行，默认 false", Required = false },
@@ -677,9 +1008,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_delete_items_area", "debug_clear_floor_area" },
                 Tags = new List<string> { "sandbox", "items", "pickupables", "clear" },
-                Description = "沙盒清地面：删除区域内未存储的可拾取物，不删除复制人；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒清地面。新调用请使用 game_control domain=sandbox kind=area action=clear_floor。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "允许非沙盒模式执行，默认 false", Required = false },
@@ -741,9 +1073,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_critter_tool", "debug_clear_critters_area" },
                 Tags = new List<string> { "sandbox", "critters", "creatures", "clear" },
-                Description = "沙盒小动物工具：删除区域内小动物，不删除复制人或机器人；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒小动物工具。新调用请使用 game_control domain=sandbox kind=area action=clear_critters。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "允许非沙盒模式执行，默认 false", Required = false },
@@ -809,9 +1142,10 @@ namespace OniMcp.Tools
                 Group = "sandbox",
                 Mode = "execute",
                 Risk = "dangerous",
+                Hidden = true,
                 Aliases = new List<string> { "sandbox_dupe_stress", "debug_stress_area" },
                 Tags = new List<string> { "sandbox", "duplicant", "stress" },
-                Description = "沙盒压力工具：对区域内复制人或指定复制人增减压力；默认要求沙盒模式开启",
+                Description = "兼容入口：沙盒压力工具。新调用请使用 game_control domain=sandbox kind=area action=stress。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；提供后可省略区域", Required = false },
@@ -1007,6 +1341,282 @@ namespace OniMcp.Tools
             return false;
         }
 
+        private static TokenGrid ParseTokenGrid(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return TokenGrid.Fail("empty pattern");
+
+            var rows = new List<string[]>();
+            foreach (string rawLine in value.Replace("\r", "").Split('\n'))
+            {
+                string line = rawLine.Trim();
+                if (line.Length == 0 || line == "```" || line.StartsWith("```", StringComparison.Ordinal))
+                    continue;
+
+                line = line.Replace(",", " ").Replace("|", " ");
+                string[] tokens = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(token => token.Trim())
+                    .Where(token => token.Length > 0)
+                    .ToArray();
+                if (tokens.Length > 0)
+                    rows.Add(tokens);
+            }
+
+            if (rows.Count == 0)
+                return TokenGrid.Fail("no token rows");
+
+            int width = rows[0].Length;
+            for (int i = 1; i < rows.Count; i++)
+            {
+                if (rows[i].Length != width)
+                    return TokenGrid.Fail($"row {i} width {rows[i].Length} differs from first row width {width}");
+            }
+
+            return new TokenGrid(rows);
+        }
+
+        private static List<MapPatternMatch> FindPatternMatches(TokenGrid search, Dictionary<string, int> rect, int worldId, bool visibleOnly)
+        {
+            var matches = new List<MapPatternMatch>();
+            int maxTopY = rect["y2"];
+            int minTopY = rect["y1"] + search.Height - 1;
+            int maxLeftX = rect["x2"] - search.Width + 1;
+            if (maxLeftX < rect["x1"] || minTopY > maxTopY)
+                return matches;
+
+            for (int topY = maxTopY; topY >= minTopY; topY--)
+            {
+                for (int leftX = rect["x1"]; leftX <= maxLeftX; leftX++)
+                {
+                    if (PatternMatchesAt(search, leftX, topY, worldId, visibleOnly))
+                        matches.Add(new MapPatternMatch(leftX, topY, search.Width, search.Height));
+                }
+            }
+
+            return matches;
+        }
+
+        private static bool PatternMatchesAt(TokenGrid search, int leftX, int topY, int worldId, bool visibleOnly)
+        {
+            for (int row = 0; row < search.Height; row++)
+            {
+                int y = topY - row;
+                for (int col = 0; col < search.Width; col++)
+                {
+                    int x = leftX + col;
+                    int cell = Grid.XYToCell(x, y);
+                    if (!SearchTokenMatches(search.Rows[row][col], cell, worldId, visibleOnly))
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool SearchTokenMatches(string token, int cell, int worldId, bool visibleOnly)
+        {
+            token = NormalizeToken(token);
+            if (token == "*" || token == "any")
+                return Grid.IsValidCell(cell) && ToolUtil.CellMatchesWorld(cell, worldId);
+            if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                return token == "unk" || token == "unknown" || token == "outside";
+            if (visibleOnly && !Grid.IsVisible(cell))
+                return token == "unk" || token == "unknown" || token == "?";
+            if (token == "tile")
+                return Grid.Foundation[cell];
+
+            var element = Grid.Element[cell];
+            string current = BaseMapToken(cell, element);
+            if (token == current)
+                return true;
+            if (token == "gas")
+                return element != null && element.IsGas;
+            if (token == "liquid")
+                return element != null && element.IsLiquid;
+            if (token == "solid")
+                return element != null && element.IsSolid && !Grid.Foundation[cell];
+
+            var requested = ResolveElementToken(token);
+            return requested != null && element != null && requested.id == element.id;
+        }
+
+        private static string BaseMapToken(int cell, Element element)
+        {
+            if (Grid.Foundation[cell])
+                return "tile";
+            if (element == null)
+                return "unk";
+            if (element.IsVacuum)
+                return "vac";
+            switch (element.id)
+            {
+                case SimHashes.Oxygen: return "oxy";
+                case SimHashes.ContaminatedOxygen: return "po2";
+                case SimHashes.CarbonDioxide: return "co2";
+                case SimHashes.Hydrogen: return "hyd";
+            }
+            if (element.IsLiquid)
+                return "liq";
+            if (element.IsSolid)
+                return "sol";
+            if (element.IsGas)
+                return "gas";
+            return NormalizeToken(element.id.ToString());
+        }
+
+        private static SelectedMapMatches SelectMatches(List<MapPatternMatch> matches, JObject args)
+        {
+            int? matchIndex = ToolUtil.GetInt(args, "matchIndex");
+            if (matchIndex.HasValue)
+            {
+                if (matchIndex.Value < 0 || matchIndex.Value >= matches.Count)
+                    return SelectedMapMatches.Fail($"matchIndex {matchIndex.Value} is out of range; matched={matches.Count}");
+                return new SelectedMapMatches(new List<MapPatternMatch> { matches[matchIndex.Value] });
+            }
+
+            string mode = (args["matchMode"]?.ToString() ?? "unique").Trim().ToLowerInvariant();
+            if (mode == "first")
+                return new SelectedMapMatches(new List<MapPatternMatch> { matches[0] });
+            if (mode == "all")
+                return new SelectedMapMatches(matches);
+            if (mode != "unique")
+                return SelectedMapMatches.Fail("matchMode must be unique, first, or all");
+            if (matches.Count != 1)
+                return SelectedMapMatches.Fail($"Expected exactly one match but found {matches.Count}; set matchIndex, matchMode=first, or matchMode=all.");
+            return new SelectedMapMatches(new List<MapPatternMatch> { matches[0] });
+        }
+
+        private static ReplacementChangeSet BuildReplacementChanges(List<MapPatternMatch> matches, TokenGrid designate, int worldId, JObject args)
+        {
+            var changes = new List<MapReplacementChange>();
+            var seen = new HashSet<int>();
+            foreach (var match in matches)
+            {
+                for (int row = 0; row < designate.Height; row++)
+                {
+                    int y = match.TopY - row;
+                    for (int col = 0; col < designate.Width; col++)
+                    {
+                        string rawToken = designate.Rows[row][col];
+                        string token = NormalizeToken(rawToken);
+                        string keepToken = string.IsNullOrWhiteSpace(rawToken) ? "" : rawToken.Trim().Trim('`').Trim().ToLowerInvariant();
+                        if (keepToken == "_" || keepToken == "-" || token == "same" || token == "keep")
+                            continue;
+
+                        int x = match.LeftX + col;
+                        int cell = Grid.XYToCell(x, y);
+                        if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                            continue;
+                        if (!seen.Add(cell))
+                            continue;
+
+                        var element = ResolveElementToken(token);
+                        if (element == null)
+                            return ReplacementChangeSet.Fail("Designate token cannot be painted as an element: " + rawToken);
+
+                        byte diseaseIdx = ResolveDiseaseIndex(args["disease"]?.ToString());
+                        int diseaseCount = Math.Max(0, ToolUtil.GetInt(args, "diseaseCount") ?? 0);
+                        float mass = ResolveReplacementMass(element, args);
+                        float temp = ToolUtil.GetFloat(args, "temperatureK") ?? element.defaultValues.temperature;
+                        changes.Add(new MapReplacementChange(cell, x, y, BaseMapToken(cell, Grid.Element[cell]), element, mass, temp, diseaseIdx, diseaseCount));
+                    }
+                }
+            }
+
+            return new ReplacementChangeSet(changes);
+        }
+
+        private static float ResolveReplacementMass(Element element, JObject args)
+        {
+            float? requested = ToolUtil.GetFloat(args, "massKg");
+            if (requested.HasValue)
+                return Math.Max(0f, requested.Value);
+            if (element.IsVacuum)
+                return 0f;
+            if (element.IsGas)
+                return 1f;
+            if (element.IsLiquid)
+                return 1000f;
+            if (element.IsSolid)
+                return 1840f;
+            return 1f;
+        }
+
+        private static Element ResolveElementToken(string token)
+        {
+            token = NormalizeToken(token);
+            switch (token)
+            {
+                case "vac":
+                case "vacuum":
+                case "empty":
+                    return ElementLoader.FindElementByHash(SimHashes.Vacuum);
+                case "oxy":
+                case "oxygen":
+                case "gas":
+                    return ElementLoader.FindElementByHash(SimHashes.Oxygen);
+                case "po2":
+                case "pollutedoxygen":
+                case "contaminatedoxygen":
+                    return ElementLoader.FindElementByHash(SimHashes.ContaminatedOxygen);
+                case "co2":
+                case "carbondioxide":
+                    return ElementLoader.FindElementByHash(SimHashes.CarbonDioxide);
+                case "hyd":
+                case "h2":
+                case "hydrogen":
+                    return ElementLoader.FindElementByHash(SimHashes.Hydrogen);
+                case "water":
+                case "liq":
+                case "liquid":
+                    return ElementLoader.FindElementByHash(SimHashes.Water);
+                case "steam":
+                    return ElementLoader.FindElementByHash(SimHashes.Steam);
+                case "rock":
+                case "sol":
+                case "solid":
+                    return ElementLoader.FindElementByHash(SimHashes.IgneousRock);
+            }
+
+            SimHashes hash;
+            if (!Enum.TryParse(token, true, out hash))
+                return null;
+            return ElementLoader.FindElementByHash(hash);
+        }
+
+        private static string NormalizeToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return "";
+            return token.Trim().Trim('`').Trim().Replace("-", "").Replace("_", "").ToLowerInvariant();
+        }
+
+        private static List<Dictionary<string, object>> MatchPreviews(List<MapPatternMatch> matches, int limit)
+        {
+            return matches.Take(limit).Select((match, index) => new Dictionary<string, object>
+            {
+                ["index"] = index,
+                ["topLeft"] = new[] { match.LeftX, match.TopY },
+                ["bottomLeft"] = new[] { match.LeftX, match.BottomY },
+                ["rect"] = new[] { match.LeftX, match.BottomY, match.RightX, match.TopY },
+                ["size"] = new[] { match.Width, match.Height }
+            }).ToList();
+        }
+
+        private static List<Dictionary<string, object>> ChangePreviews(List<MapReplacementChange> changes, int limit)
+        {
+            return changes.Take(limit).Select(change => new Dictionary<string, object>
+            {
+                ["x"] = change.X,
+                ["y"] = change.Y,
+                ["cell"] = change.Cell,
+                ["from"] = change.FromToken,
+                ["to"] = change.Element.id.ToString(),
+                ["massKg"] = change.MassKg,
+                ["temperatureK"] = change.TemperatureK
+            }).ToList();
+        }
+
         private static Dictionary<string, object> CellSample(int cell)
         {
             var element = Grid.Element[cell];
@@ -1149,6 +1759,121 @@ namespace OniMcp.Tools
                 ["risk"] = risk,
                 ["description"] = description
             };
+        }
+
+        private class TokenGrid
+        {
+            public readonly List<string[]> Rows;
+            public readonly int Width;
+            public readonly int Height;
+            public readonly string Error;
+
+            public TokenGrid(List<string[]> rows)
+            {
+                Rows = rows;
+                Height = rows.Count;
+                Width = rows[0].Length;
+            }
+
+            private TokenGrid(string error)
+            {
+                Rows = new List<string[]>();
+                Error = error;
+            }
+
+            public static TokenGrid Fail(string error)
+            {
+                return new TokenGrid(error);
+            }
+        }
+
+        private class MapPatternMatch
+        {
+            public readonly int LeftX;
+            public readonly int TopY;
+            public readonly int Width;
+            public readonly int Height;
+
+            public MapPatternMatch(int leftX, int topY, int width, int height)
+            {
+                LeftX = leftX;
+                TopY = topY;
+                Width = width;
+                Height = height;
+            }
+
+            public int RightX { get { return LeftX + Width - 1; } }
+            public int BottomY { get { return TopY - Height + 1; } }
+        }
+
+        private class SelectedMapMatches
+        {
+            public readonly List<MapPatternMatch> Matches;
+            public readonly string Error;
+
+            public SelectedMapMatches(List<MapPatternMatch> matches)
+            {
+                Matches = matches;
+            }
+
+            private SelectedMapMatches(string error)
+            {
+                Matches = new List<MapPatternMatch>();
+                Error = error;
+            }
+
+            public static SelectedMapMatches Fail(string error)
+            {
+                return new SelectedMapMatches(error);
+            }
+        }
+
+        private class ReplacementChangeSet
+        {
+            public readonly List<MapReplacementChange> Items;
+            public readonly string Error;
+
+            public ReplacementChangeSet(List<MapReplacementChange> items)
+            {
+                Items = items;
+            }
+
+            private ReplacementChangeSet(string error)
+            {
+                Items = new List<MapReplacementChange>();
+                Error = error;
+            }
+
+            public static ReplacementChangeSet Fail(string error)
+            {
+                return new ReplacementChangeSet(error);
+            }
+        }
+
+        private class MapReplacementChange
+        {
+            public readonly int Cell;
+            public readonly int X;
+            public readonly int Y;
+            public readonly string FromToken;
+            public readonly Element Element;
+            public readonly float MassKg;
+            public readonly float TemperatureK;
+            public readonly byte DiseaseIdx;
+            public readonly int DiseaseCount;
+
+            public MapReplacementChange(int cell, int x, int y, string fromToken, Element element, float massKg, float temperatureK, byte diseaseIdx, int diseaseCount)
+            {
+                Cell = cell;
+                X = x;
+                Y = y;
+                FromToken = fromToken;
+                Element = element;
+                MassKg = massKg;
+                TemperatureK = temperatureK;
+                DiseaseIdx = diseaseIdx;
+                DiseaseCount = diseaseCount;
+            }
         }
     }
 }

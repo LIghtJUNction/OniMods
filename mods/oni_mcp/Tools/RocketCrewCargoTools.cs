@@ -19,9 +19,10 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "summon_crew_list", "rocket_passenger_requests_list" },
                 Tags = new List<string> { "rocket", "crew", "passenger", "summon", "side-screen" },
-                Description = "列出 SummonCrewSideScreen 乘员召集/释放状态、登船人数和驾驶员状态",
+                Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=crew_request action=list。列出 SummonCrewSideScreen 乘员召集/释放状态、登船人数和驾驶员状态",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["rocketId"] = new McpToolParameter { Type = "integer", Description = "可选火箭 InstanceID", Required = false },
@@ -61,9 +62,10 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "summon_crew_set", "rocket_passenger_request_set" },
                 Tags = new List<string> { "rocket", "crew", "passenger", "summon", "side-screen" },
-                Description = "设置 SummonCrewSideScreen 按钮状态：request=召集乘员登船，release=开放/释放乘员",
+                Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=crew_request action=set。设置 SummonCrewSideScreen 按钮状态：request=召集乘员登船，release=开放/释放乘员",
                 Parameters = PassengerLookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["state"] = new McpToolParameter { Type = "string", Description = "request 或 release", Required = true, EnumValues = new List<string> { "request", "release" } },
@@ -95,6 +97,37 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlCrewRequest()
+        {
+            return new McpTool
+            {
+                Name = "rocket_crew_request_control",
+                Group = "rockets",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "summon_crew_control", "rocket_passenger_request_control" },
+                Tags = new List<string> { "rocket", "crew", "passenger", "summon", "side-screen" },
+                Description = "统一读取和设置火箭乘员召集/释放状态。action=list/set；set 需 confirm=true。",
+                Parameters = PassengerLookupParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list、set", Required = true },
+                    ["state"] = new McpToolParameter { Type = "string", Description = "action=set 时为 request 或 release", Required = false, EnumValues = new List<string> { "request", "release" } },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按火箭名、模块名或状态筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set 时必须为 true", Required = false }
+                }),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListCrewRequests().Handler(args);
+                    if (action == "set")
+                        return SetCrewRequest().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
+                }
+            };
+        }
+
         public static McpTool ListAssignmentGroups()
         {
             return new McpTool
@@ -103,9 +136,10 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "rocket_assignment_groups_list", "crew_assignment_groups_list" },
                 Tags = new List<string> { "rocket", "crew", "assignment", "group", "side-screen" },
-                Description = "列出 AssignmentGroupControllerSideScreen 分配组，以及每个复制人的成员状态、同世界状态和驾驶员资格",
+                Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=assignment_group action=list。列出 AssignmentGroupControllerSideScreen 分配组，以及每个复制人的成员状态、同世界状态和驾驶员资格",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["groupId"] = new McpToolParameter { Type = "string", Description = "可选 AssignmentGroupID 精确匹配", Required = false },
@@ -149,9 +183,10 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "rocket_assignment_group_member_set", "crew_assignment_group_member_set" },
                 Tags = new List<string> { "rocket", "crew", "assignment", "group", "side-screen" },
-                Description = "设置 AssignmentGroupControllerSideScreen 中单个复制人是否属于指定分配组，等价于点击该复制人的成员开关",
+                Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=assignment_group action=set。设置 AssignmentGroupControllerSideScreen 中单个复制人是否属于指定分配组，等价于点击该复制人的成员开关",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["groupId"] = new McpToolParameter { Type = "string", Description = "AssignmentGroupID；controllerId 为空时使用", Required = false },
@@ -170,7 +205,7 @@ namespace OniMcp.Tools
 
                     var group = FindAssignmentGroupController(args);
                     if (group == null)
-                        return CallToolResult.Error("Assignment group controller not found; use assignment_groups_list first");
+                        return CallToolResult.Error("Assignment group controller not found; use building_control domain=rocket rocketDomain=assignment_group action=list first");
 
                     var proxy = FindAssignableProxy(args);
                     if (proxy == null)
@@ -191,6 +226,73 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlAssignmentGroup()
+        {
+            return new McpTool
+            {
+                Name = "assignment_group_control",
+                Group = "rockets",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "rocket_assignment_group_control", "crew_assignment_group_control" },
+                Tags = new List<string> { "rocket", "crew", "assignment", "group", "side-screen" },
+                Description = "统一读取和设置火箭/分配组成员。action=list/set；set 需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list、set", Required = true },
+                    ["groupId"] = new McpToolParameter { Type = "string", Description = "AssignmentGroupID；controllerId 为空时使用", Required = false },
+                    ["controllerId"] = new McpToolParameter { Type = "integer", Description = "分配组控制器对象 InstanceID；groupId 为空时使用", Required = false },
+                    ["dupeId"] = new McpToolParameter { Type = "integer", Description = "action=set 时复制人或 MinionAssignablesProxy InstanceID；dupeName 为空时使用", Required = false },
+                    ["dupeName"] = new McpToolParameter { Type = "string", Description = "action=set 时复制人名称；dupeId 为空时使用", Required = false },
+                    ["isMember"] = new McpToolParameter { Type = "boolean", Description = "action=set 时 true 加入分配组，false 移出分配组", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按对象名、prefabId、groupId 或复制人名筛选", Required = false },
+                    ["includeDupes"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回每个复制人的成员状态，默认 true", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListAssignmentGroups().Handler(args);
+                    if (action == "set")
+                        return SetAssignmentGroupMember().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
+                }
+            };
+        }
+
+        public static McpTool ControlCargoStatus()
+        {
+            return new McpTool
+            {
+                Name = "rocket_cargo_status_control",
+                Group = "rockets",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "rocket_cargo_and_harvest_status", "rocket_cargo_harvest_control" },
+                Tags = new List<string> { "rocket", "cargo", "collector", "harvest", "diamond", "side-screen" },
+                Description = "读取火箭货舱收集器和太空钻探模块状态：action=collectors 或 harvest_modules",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：collectors、harvest_modules", Required = true, EnumValues = new List<string> { "collectors", "harvest_modules" } },
+                    ["rocketId"] = new McpToolParameter { Type = "integer", Description = "可选火箭 InstanceID", Required = false },
+                    ["rocketName"] = new McpToolParameter { Type = "string", Description = "可选火箭名称", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "按火箭、模块、prefabId 或状态筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量，默认 100，最大 500", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "collectors")
+                        return ListCargoCollectors().Handler(args);
+                    if (action == "harvest_modules")
+                        return ListHarvestModules().Handler(args);
+                    return CallToolResult.Error("action must be collectors or harvest_modules");
+                }
+            };
+        }
+
         public static McpTool ListCargoCollectors()
         {
             return new McpTool
@@ -199,9 +301,10 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "cargo_module_status_list", "hex_cell_collectors_list" },
                 Tags = new List<string> { "rocket", "cargo", "collector", "side-screen" },
-                Description = "列出 CargoModuleSideScreen 星图货舱收集模块容量、库存和收集进度",
+                Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=cargo_status action=collectors。列出 CargoModuleSideScreen 星图货舱收集模块容量、库存和收集进度",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["rocketId"] = new McpToolParameter { Type = "integer", Description = "可选火箭 InstanceID", Required = false },
@@ -340,9 +443,10 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "space_miner_modules_list", "harvest_module_status_list" },
                 Tags = new List<string> { "rocket", "harvest", "diamond", "poi", "side-screen" },
-                Description = "列出 HarvestModuleSideScreen 太空钻探模块钻探状态、钻石库存和容量",
+                Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=cargo_status action=harvest_modules。列出 HarvestModuleSideScreen 太空钻探模块钻探状态、钻石库存和容量",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["rocketId"] = new McpToolParameter { Type = "integer", Description = "可选火箭 InstanceID", Required = false },

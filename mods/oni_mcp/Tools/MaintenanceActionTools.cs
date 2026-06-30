@@ -22,9 +22,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "focused_user_menu_actions_list", "service_actions_list" },
                 Tags = new List<string> { "controls", "maintenance", "user-menu", "toilet", "desalinator", "equipment", "hive", "cargo", "travel-tube" },
-                Description = "列出需要状态机/槽位参数的玩家维护类 UserMenu 操作：厕所清洁、淡化器清空、运输管蜡、蜂巢清空、货仓倒空、复制人卸装",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=maintenance action=list。列出需要状态机/槽位参数的玩家维护类 UserMenu 操作：厕所清洁、淡化器清空、运输管蜡、蜂巢清空、货仓倒空、复制人卸装",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按对象名、prefabId、actionKey、组件或说明筛选", Required = false },
@@ -67,8 +68,8 @@ namespace OniMcp.Tools
                         ["worldId"] = worldId >= 0 ? (object)worldId : null,
                         ["targets"] = targets,
                         ["dupes"] = dupes,
-                        ["executeTool"] = "maintenance_action_execute",
-                        ["batchTool"] = "maintenance_actions_batch_execute"
+                        ["executeTool"] = "building_control domain=side_surface surface=maintenance action=execute",
+                        ["batchTool"] = "building_control domain=side_surface surface=maintenance action=batch"
                     });
                 }
             };
@@ -82,9 +83,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "high",
+                Hidden = true,
                 Aliases = new List<string> { "focused_user_menu_action_execute", "service_action_execute" },
                 Tags = new List<string> { "controls", "maintenance", "user-menu", "state-machine", "equipment" },
-                Description = "执行维护类玩家操作。actionKey 支持 clean_toilet、empty_desalinator、set_transit_tube_wax、set_hive_harvest、empty_cargo_bay、unequip_dupe_equipment，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=maintenance action=execute。执行维护类玩家操作。actionKey 支持 clean_toilet、empty_desalinator、set_transit_tube_wax、set_hive_harvest、empty_cargo_bay、unequip_dupe_equipment，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["actionKey"] = new McpToolParameter { Type = "string", Description = "维护操作 key", Required = true },
@@ -125,9 +127,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "high",
+                Hidden = true,
                 Aliases = new List<string> { "focused_user_menu_actions_batch_execute", "service_actions_batch_execute" },
                 Tags = new List<string> { "controls", "maintenance", "user-menu", "batch" },
-                Description = "批量执行维护类玩家操作；items 支持 {actionKey,id/x/y/worldId/...} 或短字段 {a,id/x/y/w/...}，defaults 可共享 actionKey/worldId/enabled/slotId，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=maintenance action=batch。批量执行维护类玩家操作；items 支持 {actionKey,id/x/y/worldId/...} 或短字段 {a,id/x/y/w/...}，defaults 可共享 actionKey/worldId/enabled/slotId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "操作数组，每项提供 actionKey 或 a", Required = true },
@@ -171,6 +174,54 @@ namespace OniMcp.Tools
                         ["failed"] = results.Count(item => !(bool)item["ok"]),
                         ["results"] = results
                     });
+                }
+            };
+        }
+
+        public static McpTool ControlMaintenanceAction()
+        {
+            return new McpTool
+            {
+                Name = "maintenance_action_control",
+                Group = "controls",
+                Mode = "write",
+                Risk = "high",
+                Aliases = new List<string> { "focused_user_menu_action_control", "service_action_control" },
+                Tags = new List<string> { "controls", "maintenance", "user-menu", "state-machine", "equipment", "batch" },
+                Description = "统一读取、执行和批量执行维护类玩家操作。action=list/execute/batch；execute/batch 需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list、execute、batch", Required = true },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 或 unequip_dupe_equipment 时的筛选词", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回对象数量，默认 100，最大 500", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=execute 时目标 KPrefabID InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标 Y", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前或目标格所在世界", Required = false },
+                    ["actionKey"] = new McpToolParameter { Type = "string", Description = "action=execute 时维护操作 key；批量项可用 actionKey 或 a", Required = false },
+                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "set_transit_tube_wax / set_hive_harvest 的目标状态", Required = false },
+                    ["slotId"] = new McpToolParameter { Type = "string", Description = "unequip_dupe_equipment 的装备槽 ID，例如 Suit/Outfit/Shoes", Required = false },
+                    ["equipmentId"] = new McpToolParameter { Type = "integer", Description = "unequip_dupe_equipment 的装备 KPrefabID.InstanceID", Required = false },
+                    ["equipmentPrefab"] = new McpToolParameter { Type = "string", Description = "unequip_dupe_equipment 的装备 prefabId", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "action=batch 时操作数组，每项提供 actionKey 或 a", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch 时合并到每项的默认参数", Required = false },
+                    ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=execute/batch 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListMaintenanceActions().Handler(args);
+                    if (action == "execute")
+                        return ExecuteMaintenanceAction().Handler(args);
+                    if (action == "batch")
+                        return BatchExecuteMaintenanceActions().Handler(args);
+                    return CallToolResult.Error("action must be one of list, execute, batch");
                 }
             };
         }

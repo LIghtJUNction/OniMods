@@ -78,7 +78,7 @@ namespace OniMcp.Tools
                     bool includeHotkeys = ToolUtil.GetBool(args, "includeHotkeys", string.IsNullOrEmpty(query));
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 80, 200));
 
-                    var tools = OniToolRegistry.GetTools();
+                    var tools = OniToolRegistry.GetVisibleTools();
                     var toolNames = new HashSet<string>(tools.Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceUrisByName = BuildResourceUriIndex();
                     bool hasGenericReadResource = OniResourceRegistry.GetResourceTemplateInfos()
@@ -153,7 +153,7 @@ namespace OniMcp.Tools
                 Handler = args =>
                 {
                     bool includeWarnings = ToolUtil.GetBool(args, "includeWarnings", true);
-                    var tools = OniToolRegistry.GetTools();
+                    var tools = OniToolRegistry.GetVisibleTools();
                     var toolNames = new HashSet<string>(tools.Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceNames = new HashSet<string>(
                         OniResourceRegistry.GetResourceInfos().Select(info => info.Name)
@@ -331,68 +331,68 @@ namespace OniMcp.Tools
         {
             return new List<CoverageRow>
             {
-                Row("game", "pause_resume_speed_sandbox_save_load_quit_dlc", "暂停、继续、调速、沙盒模式开关、列出存档、保存/另存为、确认载入存档、退出到主菜单或桌面、读取并激活当前存档可编辑 DLC", "covered", "game_pause", "game_resume", "game_set_speed", "game_time", "game_sandbox_mode_set", "sandbox_actions_list", "game_saves_list", "game_save", "game_load_save", "game_quit", "game_dlc_activation_list", "game_dlc_activate"),
-                Row("camera", "camera_navigation", "移动/聚焦/切换世界/切换视图/截图", "covered", "camera_get_view", "camera_set_active_world", "camera_set_view", "camera_move", "camera_focus_cell", "camera_focus_dupe", "camera_switch_view", "game_screenshot"),
-                Row("world", "inspect_world_cells", "检查格子、元素统计、文本地图", "covered", "world_cell_info", "world_element_summary", "world_text_map"),
-                Row("areas", "area_handles", "定义、读取、列出和遗忘地图区域句柄", "covered", "area_define", "area_get", "area_list", "area_forget"),
-                Row("orders", "dig_sweep_mop_disinfect_attack_priority", "挖掘、清扫、拖地、消毒、攻击、区域优先级", "covered", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_disinfect_area", "orders_attack", "priorities_set_area", "priorities_list"),
-                Row("orders", "cancel_orders", "取消建筑/挖掘/清扫/收获/攻击/抓捕等差事", "covered", "world_text_map", "orders_cancel_area"),
-                Row("buildings", "build_plan_place", "搜索可建造物、材料和建筑外观，并通过可视 agent 指针点击/拖拽放置蓝图", "covered", "buildings_search_defs", "buildings_materials", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left"),
-                Row("buildings", "deconstruct_priority_conduit_jobs", "设置建筑优先级、拆除建筑/管线、清空管线/运输轨道", "covered", "buildings_list", "buildings_config_list", "priorities_list", "buildings_set_priority", "buildings_deconstruct", "conduits_cut", "conduits_empty_area"),
-                Row("buildings", "building_toggles_sliders_copy_settings", "建筑启用、玩家手动开关、通用 slider、阈值传感器、启停双阈值、方向/少量选项、容量、checkbox、灯光颜色、Pixel Pack 颜色、门状态、门禁、补料阈值、储存/元素/树形过滤器、储存砖单物品目标、通用实体插槽请求/移除（含特殊火箭货舱）、只允许自动化搬运、阀门、计时器、ribbon bit、复制设置和受限批量配置", "covered", "buildings_config_list", "buildings_set_enabled", "buildings_set_toggle", "buildings_slider_set", "buildings_threshold_set", "activation_ranges_list", "activation_range_set", "activation_ranges_batch_set", "side_options_list", "direction_control_set", "few_option_set", "radbolt_direction_set", "state_controls_list", "capacity_control_set", "checkbox_control_set", "lights_list", "lights_color_set", "pixel_packs_list", "pixel_pack_color_set", "pixel_pack_colors_copy", "doors_set_state", "access_control_get", "access_control_set", "buildings_manual_delivery", "resources_storage_set_filter", "filters_list", "filters_single_set", "filters_tree_set", "storage_tile_selections_list", "storage_tile_selection_set", "storage_tile_selections_batch_set", "receptacles_list", "receptacle_control", "receptacles_batch_control", "automatable_controls_list", "automatable_control_set", "automatable_controls_batch_set", "valves_flow_set", "limit_valves_set", "logic_timer_set", "logic_ribbon_bit_set", "buildings_copy_settings", "buildings_config_batch_set"),
-                Row("buildings", "geotuner_target_assignment", "GeoTuner 目标喷泉查看、可选喷泉列表、清空和分配未来目标喷泉", "covered", "geo_tuners_list", "geo_tuner_geysers_list", "geo_tuner_assign"),
-                Row("buildings", "art_and_monument_facades", "艺术建筑外观选择、清空重做、纪念碑部件外观和翻转", "covered", "artables_list", "artable_stage_set", "monument_parts_list", "monument_part_set"),
-                Row("buildings", "gene_shuffler_operations", "Gene Shuffler 完成按钮、请求充能和取消充能", "covered", "gene_shufflers_list", "gene_shuffler_control"),
-                Row("buildings", "liquid_heater_turbo_mode", "Liquid Tepidizer 涡轮模式开关和功耗状态", "covered", "turbo_heaters_list", "turbo_heater_set"),
-                Row("buildings", "remote_work_terminal_dock_selection", "RemoteWorkTerminalSidescreen 远程工作 dock 选择、清空选择和可选 dock 列表", "covered", "remote_work_terminals_list", "remote_work_terminal_dock_set"),
-                Row("buildings", "dispenser_operations", "DispenserSideScreen / IDispenser：查看可分发物品、选择物品、请求分发和取消分发", "covered", "dispensers_list", "dispenser_control"),
-                Row("buildings", "suit_locker_configuration", "SuitLockerSideScreen：初始配置、请求太空服、取消请求/设为无需服装、掉出已存装备", "covered", "suit_lockers_list", "suit_locker_control"),
-                Row("controls", "generic_sidescreen_buttons", "ISidescreenButtonControl 通用按钮：Studyable、Activatable、ExcavateButton、CryoTank、GeothermalController、POI 解锁等", "covered", "side_buttons_list", "side_button_press"),
-                Row("controls", "generic_user_menu_actions", "对象 UserMenu/context-menu 按钮：取消建造/挖掘/拖地、移动/清扫、自动消毒、维修、堆肥、倒空、倾倒、屠宰、雕刻、拆毁、元素释放、太空服检查点通行、Tinker 等映射操作", "covered", "user_menu_actions_list", "user_menu_action_press", "user_menu_actions_batch_press"),
-                Row("controls", "focused_maintenance_user_menu_actions", "状态机/槽位参数 UserMenu 操作：厕所提前清洁、淡化器提前清空、运输管入口蜡启用/取消、蜂巢清空/取消、货仓倒空、复制人逐槽卸装", "covered", "maintenance_actions_list", "maintenance_action_execute", "maintenance_actions_batch_execute"),
-                Row("controls", "generic_sidescreen_checklists", "ICheckboxListGroupControl 只读侧屏清单：故事任务、化石挖掘、地热设施、孤独复制人房屋等条件/进度清单", "covered", "side_checklists_list"),
-                Row("controls", "generic_sidescreen_progress_bars", "ProgressBarSideScreen / IProgressBarSideScreen 只读进度条：读取标题、标签、tooltip、最大值和填充百分比", "covered", "progress_bars_list"),
-                Row("controls", "related_entities_navigation", "RelatedEntitiesSideScreen / IRelatedEntities：读取关联对象列表，并执行玩家点击关联行时的选择和镜头聚焦", "covered", "related_entities_list", "related_entity_focus"),
-                Row("controls", "generic_n_toggle_controls", "INToggleSideScreenControl 多选侧屏控件：显示选项、当前/排队状态和排队选择", "covered", "n_toggles_list", "n_toggle_set"),
-                Row("automation", "space_detector_targets", "彗星探测器/Space Scanner 目标选择：流星、玩家发射物和指定火箭", "covered", "comet_detectors_list", "comet_detector_target_set"),
-                Row("automation", "cluster_location_sensor_filters", "星图位置传感器过滤：空太空和指定星图坐标/星体/POI", "covered", "cluster_location_sensors_list", "cluster_location_sensor_set"),
-                Row("automation", "logic_alarm_notifications", "Logic Alarm 通知名称、提示文案、通知类型、触发暂停和触发镜头跳转", "covered", "logic_alarms_list", "logic_alarm_set"),
-                Row("production", "fabricator_recipe_queue", "制作站/精炼/厨房/制药/服装/碎石/窑炉等 ComplexFabricator 配方查看、材料变体 recipeId 选择、排队、批量排队、清空、无限制作和突变种子设置", "covered", "production_fabricators_list", "production_recipes_list", "production_queue_set", "production_queue_batch_set", "production_mutant_seeds_set"),
-                Row("production", "mutant_seed_acceptance_controls", "玩家菜单接受/拒收突变种子开关：ComplexFabricator、FishFeeder、SpiceGrinder", "covered", "mutant_seed_controls_list", "mutant_seed_control_set"),
-                Row("production", "configurable_consumer_options", "ConfigureConsumerSideScreen 选项型消费者：查看当前选项、材料需求并切换选项", "covered", "configurable_consumers_list", "configurable_consumer_option_set"),
-                Row("storage", "storage_filters", "储存箱、StorageTile 单物品选择和 TreeFilterable/FlatTagFilterable 过滤器", "covered", "resources_storage_list", "resources_storage_detail", "resources_storage_set_filter", "storage_tile_selections_list", "storage_tile_selection_set", "storage_tile_selections_batch_set", "filters_list", "filters_tree_set"),
-                Row("dupes", "duplicant_info_and_names", "复制人列表、属性、需求、改名", "covered", "dupes_detail", "dupes_attributes", "dupes_needs", "dupes_rename", "dupes_auto_rename"),
-                Row("dupes", "duplicant_direct_commands", "移动到这里单点/批量命令、可分配对象、装备/Ownables 槽位选择、卸下当前装备、技能点分配、个人工作优先级、帽子和直接命令入口", "covered", "dupes_direct_commands_list", "dupes_move_to", "dupes_move_batch_to", "dupes_equipment_list", "assignables_list", "assignables_set", "assignable_slot_item_set", "maintenance_actions_list", "maintenance_action_execute", "dupes_skills_list", "dupes_learn_skill", "dupes_hats_list", "dupes_hat_set", "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "dupes_priority_settings_get", "dupes_priority_settings_set"),
-                Row("dupes", "bionic_upgrade_slots", "BionicSideScreen 仿生人升级槽查看、锁定/空/已分配/已安装状态；槽位分配/取消分配由 assignable_slot_item_set 覆盖", "covered", "bionic_upgrades_list", "assignables_list", "assignable_slot_item_set"),
-                Row("dupes", "minion_todo_side_screen", "MinionTodoSideScreen 当前差事、可执行差事、阻塞差事、优先级、目标和当前日程块", "covered", "minion_todos_list"),
-                Row("schedules", "schedule_management", "创建日程、改区块、分配复制人", "covered", "schedule_list", "schedule_create", "schedule_set_block", "schedule_assign_dupe", "schedule_optimize"),
-                Row("diet", "consumable_permissions", "饮食/可食用项权限", "covered", "diet_status", "diet_set", "diet_policy"),
-                Row("research", "research_management", "查看/设置/取消研究队列", "covered", "research_status", "research_list", "research_set", "research_clear"),
-                Row("space", "telescope_starmap_analysis", "TelescopeSideScreen 打开星图、查看/设置/清除星图目的地分析目标", "covered", "telescopes_list", "telescope_control", "starmap_analysis_targets_list", "starmap_analysis_target_set"),
-                Row("rockets", "rocket_operations", "火箭状态、目的地、往返/单程、发射、取消发射、发射台降落/取消降落、控制台限制、火箭内部建筑受控/不受控、乘员召集/释放、分配组逐复制人成员开关、导弹发射器弹药选择", "covered", "rockets_list", "rockets_status", "rockets_detail", "space_destinations_list", "launch_pads_list", "rockets_set_destination", "rocket_round_trip_set", "rocket_landing_pad_set", "rockets_request_launch", "rockets_cancel_launch", "rocket_restrictions_list", "rocket_restriction_set", "rocket_usage_controls_list", "rocket_usage_control_set", "rocket_crew_requests_list", "rocket_crew_request_set", "assignment_groups_list", "assignment_group_member_set", "missile_launchers_list", "missile_ammunition_set"),
-                Row("rockets", "rocket_module_reordering", "火箭模块添加、替换、上下移动、标记移除和取消移除", "covered", "rocket_modules_list", "rocket_module_defs_list", "rocket_module_control"),
-                Row("rockets", "rocket_flight_utility_modules", "ModuleFlightUtilitySideScreen：飞行模块清空/投放、自动投放、星图目标选择、复制人选择", "covered", "rocket_flight_utilities_list", "rocket_flight_utility_control"),
-                Row("rockets", "rocket_cargo_and_harvest_progress", "CargoModuleSideScreen/HarvestModuleSideScreen：星图货舱收集进度、容量、太空钻探和钻石库存", "covered", "rocket_cargo_collectors_list", "rocket_harvest_modules_list"),
-                Row("rockets", "railgun_launch_mass", "轨道炮发射质量 slider/数字输入、库存和辐射粒子能量状态", "covered", "railguns_list", "railgun_launch_mass_set"),
-                Row("rockets", "rocket_self_destruct", "在途火箭 SelfDestructButtonSideScreen 自毁操作，高风险确认后触发", "covered", "rocket_self_destruct_list", "rocket_self_destruct_trigger"),
-                Row("resources", "inventory_and_reports", "资源、食物、AllResourcesScreen 固定/通知开关、殖民地报告和诊断设置", "covered", "resources_inventory", "resources_food", "resources_pins_list", "resources_pin_set", "colony_report", "colony_summary", "colony_diagnostics", "colony_alerts", "colony_diagnostic_settings_list", "colony_diagnostic_settings_set"),
-                Row("ui", "notifications_and_markers", "通知读取、点击聚焦、dismiss、弹字、地图标记、编辑标记请求", "covered", "notifications_list", "notification_click", "notification_dismiss", "game_notification_create", "map_popup_text", "map_marker_create", "map_marker_list", "map_marker_clear", "edit_mark_request_create"),
-                Row("ui", "management_screens", "打开/切换管理面板、覆盖视图、百科、查找、建造分类 UI 入口", "covered", "ui_actions_list", "ui_management_open", "ui_action_trigger", "camera_switch_view", "database_query", "dupes_priority_settings_get", "dupes_hats_list"),
-                Row("automation", "logic_and_power_controls", "自动化开关、电闸、信号阈值、元素过滤/传感器、逻辑广播频道、计数器、Critter Sensor 小动物/蛋计数、时间范围、滤波/缓冲延迟、计时器、ribbon bit、阀门、逻辑报警器、星图传感器、彗星探测器、自动化专用搬运、逻辑端口状态和受限批量控制", "covered", "automation_controls_list", "automation_controls_batch_set", "buildings_config_list", "buildings_set_toggle", "buildings_threshold_set", "filters_list", "filters_single_set", "side_options_list", "logic_broadcast_channel_set", "state_controls_list", "logic_counter_set", "critter_sensors_list", "critter_sensor_counting_set", "critter_sensors_batch_set", "time_range_set", "logic_alarms_list", "logic_alarm_set", "cluster_location_sensors_list", "cluster_location_sensor_set", "comet_detectors_list", "comet_detector_target_set", "automatable_controls_list", "automatable_control_set", "automatable_controls_batch_set", "buildings_slider_set", "valves_flow_set", "limit_valves_set", "logic_timer_set", "logic_ribbon_bit_set", "doors_set_state"),
-                Row("ranching", "critter_and_egg_operations", "小动物清单、抓捕、放生、投放点单点/批量过滤和容量、孵化器单点/批量蛋请求与连续孵化、生物诱饵站、牧场/蛋/鱼相关操作", "covered", "critters_list", "critters_capture", "critters_dropoff_list", "critters_dropoff_configure", "critters_dropoff_batch_configure", "incubators_list", "incubator_configure", "incubators_batch_configure", "creature_lures_list", "creature_lure_bait_set", "orders_attack"),
-                Row("farming", "harvest_and_planting", "种子目录、收获状态、自动收获、区域收获、铲除、单点/批量种植选择和种植请求", "covered", "farming_seed_catalog", "farming_harvestables_list", "farming_harvestable_set", "orders_harvest_area", "plants_uproot_area", "farming_planting_list", "farming_planting_set", "farming_planting_batch_set"),
-                Row("farming", "genetic_analysis_seed_permissions", "GeneticAnalysisStationSideScreen / Botanical Analyzer 突变种子允许/禁用分析", "covered", "genetic_analysis_stations_list", "genetic_analysis_seed_set"),
-                Row("medical", "medical_and_care_assignments", "患者清单、床位、医疗床单点/批量阈值、床位分配、医生站药品/可治疗疾病、诊疗、护理、制药相关分配", "covered", "medical_patients_list", "assignables_list", "assignables_set", "medical_clinics_list", "medical_clinic_threshold_set", "medical_clinics_threshold_batch_set", "medical_bed_assign", "doctor_stations_list", "buildings_manual_delivery"),
-                Row("combat", "combat_targeting", "攻击标记、取消攻击和优先级", "covered", "world_text_map", "critters_list", "orders_attack"),
-                Row("story", "printerceptor_operations", "PrinterceptorSideScreen 打开打印选择界面、拦截打印舱候选和 databank/充能状态", "covered", "printerceptors_list", "printerceptor_control"),
-                Row("story", "poi_tech_unlock_portals", "Research Portal/信息传送通道：查看解锁差事、进度、会解锁的 POI 科技项，开始或取消解锁研究", "covered", "poi_tech_unlocks_list", "poi_tech_unlock_control"),
-                Row("story", "lore_bearer_reading", "LoreBearerSideScreen 阅读/检查按钮、已读状态、tooltip 和弹窗触发", "covered", "lore_bearers_list", "lore_bearer_press"),
-                Row("story", "telepad_side_screen", "TelepadSideScreen 查看移民倒计时、打开移民选择、殖民地摘要、技能和研究界面、胜利条件状态", "covered", "telepads_list", "telepad_control"),
-                Row("story", "artifact_analysis_display", "ArtifactAnalysisSideScreen 已分析 artifact 列表、分析站状态、场上 artifact 和 reveal/lore 弹窗", "covered", "artifacts_list", "artifact_reveal_open"),
-                Row("story", "warp_portal_side_screen", "WarpPortalSideScreen 等待复制人后开始传送、取消分配/传送准备和冷却状态读取", "covered", "warp_portals_list", "warp_portal_control"),
-                Row("story", "temporal_tear_side_screen", "TemporalTearSideScreen 查看裂隙开启/消耗状态并在双重确认后消耗当前位置火箭", "covered", "temporal_tears_list", "temporal_tear_consume_craft"),
-                Row("diagnostics", "generic_process_conditions", "ConditionListSideScreen / IProcessConditionSet 通用条件状态读取，包括火箭发射/储存/飞行条件", "covered", "process_conditions_list"),
-                Row("sandbox", "sandbox_tools", "沙盒刷子、桶填充、取样、生成、清地面、清小动物、揭示、温度、压力、故事特质盖章和 Debug AutoPlumber/InstantBuild 操作", "covered", "sandbox_actions_list", "sandbox_sample_cell", "sandbox_paint_element", "sandbox_flood_fill_element", "sandbox_temperature_area", "sandbox_reveal_area", "sandbox_clear_floor_area", "sandbox_clear_critters_area", "sandbox_destroy_area", "sandbox_spawn_entity", "sandbox_story_traits_list", "sandbox_story_trait_stamp", "sandbox_stress_area", "debug_auto_plumb_building")
+                Row("game", "pause_resume_speed_sandbox_save_load_quit_dlc", "暂停、继续、调速、沙盒模式开关、列出存档、保存/另存为、确认载入存档、退出到主菜单或桌面、读取并激活当前存档可编辑 DLC", "covered", "game_control domain=speed", "game_control domain=speed action=time", "game_control domain=state", "game_control", "game_control domain=save", "game_control domain=dlc"),
+                Row("camera", "camera_navigation", "移动/聚焦/切换世界/切换视图/截图", "covered", "navigation_control"),
+                Row("world", "inspect_world_cells", "检查格子、元素统计、文本地图", "covered", "read_control domain=world action=cell_info", "read_control domain=world action=element_summary", "read_control domain=world action=text_map"),
+                Row("areas", "area_handles", "定义、读取、列出、分块、拼接和遗忘地图区域句柄", "covered", "read_control domain=area"),
+                Row("orders", "dig_sweep_mop_disinfect_attack_priority", "挖掘、清扫、拖地、消毒、取消、收获、攻击、区域优先级", "covered", "orders_control domain=area", "orders_control domain=designation action=attack", "orders_control domain=priority"),
+                Row("orders", "cancel_orders", "取消建筑/挖掘/清扫/收获/攻击/抓捕等差事", "covered", "read_control domain=world action=text_map", "orders_control domain=area action=cancel"),
+                Row("buildings", "build_plan_place", "搜索可建造物、材料和建筑外观，并通过可视 agent 指针点击/拖拽放置蓝图", "covered", "building_control domain=planning", "navigation_control"),
+                Row("buildings", "deconstruct_priority_conduit_jobs", "设置建筑优先级、拆除建筑/管线、清空管线/运输轨道", "covered", "read_control domain=buildings action=list", "building_control domain=config", "orders_control domain=priority", "orders_control domain=designation action=deconstruct", "orders_control domain=designation action=cut_conduits", "orders_control domain=designation action=empty_conduits"),
+                Row("buildings", "building_toggles_sliders_copy_settings", "建筑启用、玩家手动开关、通用 slider、阈值传感器、启停双阈值、方向/少量选项、容量、checkbox、灯光颜色、Pixel Pack 颜色、门状态、门禁、补料阈值、储存/元素/树形过滤器、储存砖单物品目标、通用实体插槽请求/移除（含特殊火箭货舱）、只允许自动化搬运、阀门、计时器、ribbon bit、复制设置和受限批量配置", "covered", "building_control domain=config", "building_control domain=side_surface surface=activation", "building_control domain=side_surface surface=option", "building_control domain=config", "building_control domain=config action=visual kind=light", "building_control domain=config action=visual kind=pixel_pack", "orders_control domain=designation action=manual_delivery", "building_control domain=storage", "building_control domain=filter", "building_control domain=tile_selection", "building_control domain=receptacle", "building_control domain=side_surface surface=automation"),
+                Row("buildings", "geotuner_target_assignment", "GeoTuner 目标喷泉查看、可选喷泉列表、清空和分配未来目标喷泉", "covered", "building_control domain=side_surface surface=geo_tuner"),
+                Row("buildings", "art_and_monument_facades", "艺术建筑外观选择、清空重做、纪念碑部件外观和翻转", "covered", "building_control domain=special kind=artable", "building_control domain=special kind=monument_part"),
+                Row("buildings", "gene_shuffler_operations", "Gene Shuffler 完成按钮、请求充能和取消充能", "covered", "building_control domain=special kind=gene_shuffler"),
+                Row("buildings", "liquid_heater_turbo_mode", "Liquid Tepidizer 涡轮模式开关和功耗状态", "covered", "building_control domain=side_surface surface=misc kind=turbo_heater"),
+                Row("buildings", "remote_work_terminal_dock_selection", "RemoteWorkTerminalSidescreen 远程工作 dock 选择、清空选择和可选 dock 列表", "covered", "building_control domain=story_facility kind=remote_work_terminal"),
+                Row("buildings", "dispenser_operations", "DispenserSideScreen / IDispenser：查看可分发物品、选择物品、请求分发和取消分发", "covered", "building_control domain=side_surface surface=facility"),
+                Row("buildings", "suit_locker_configuration", "SuitLockerSideScreen：初始配置、请求太空服、取消请求/设为无需服装、掉出已存装备", "covered", "building_control domain=side_surface surface=facility"),
+                Row("controls", "generic_sidescreen_buttons", "ISidescreenButtonControl 通用按钮：Studyable、Activatable、ExcavateButton、CryoTank、GeothermalController、POI 解锁等", "covered", "building_control"),
+                Row("controls", "generic_user_menu_actions", "对象 UserMenu/context-menu 按钮：取消建造/挖掘/拖地、移动/清扫、自动消毒、维修、堆肥、倒空、倾倒、屠宰、雕刻、拆毁、元素释放、太空服检查点通行、Tinker 等映射操作", "covered", "building_control domain=side_surface surface=user_menu"),
+                Row("controls", "focused_maintenance_user_menu_actions", "状态机/槽位参数 UserMenu 操作：厕所提前清洁、淡化器提前清空、运输管入口蜡启用/取消、蜂巢清空/取消、货仓倒空、复制人逐槽卸装", "covered", "building_control domain=side_surface surface=maintenance"),
+                Row("controls", "generic_sidescreen_checklists", "ICheckboxListGroupControl 只读侧屏清单：故事任务、化石挖掘、地热设施、孤独复制人房屋等条件/进度清单", "covered", "building_control"),
+                Row("controls", "generic_sidescreen_progress_bars", "ProgressBarSideScreen / IProgressBarSideScreen 只读进度条：读取标题、标签、tooltip、最大值和填充百分比", "covered", "building_control"),
+                Row("controls", "related_entities_navigation", "RelatedEntitiesSideScreen / IRelatedEntities：读取关联对象列表，并执行玩家点击关联行时的选择和镜头聚焦", "covered", "building_control"),
+                Row("controls", "generic_n_toggle_controls", "INToggleSideScreenControl 多选侧屏控件：显示选项、当前/排队状态和排队选择", "covered", "building_control domain=side_surface surface=misc kind=n_toggle"),
+                Row("automation", "space_detector_targets", "彗星探测器/Space Scanner 目标选择：流星、玩家发射物和指定火箭", "covered", "building_control domain=space_building kind=comet_detector"),
+                Row("automation", "cluster_location_sensor_filters", "星图位置传感器过滤：空太空和指定星图坐标/星体/POI", "covered", "building_control domain=space_building kind=cluster_location_sensor"),
+                Row("automation", "logic_alarm_notifications", "Logic Alarm 通知名称、提示文案、通知类型、触发暂停和触发镜头跳转", "covered", "building_control domain=side_surface surface=misc kind=logic_alarm"),
+                Row("production", "fabricator_recipe_queue", "制作站/精炼/厨房/制药/服装/碎石/窑炉等 ComplexFabricator 配方查看、材料变体 recipeId 选择、排队、批量排队、清空、无限制作和突变种子设置", "covered", "building_control domain=production"),
+                Row("production", "mutant_seed_acceptance_controls", "玩家菜单接受/拒收突变种子开关：ComplexFabricator、FishFeeder、SpiceGrinder", "covered", "building_control domain=production action=mutant_seed_list", "building_control domain=production action=mutant_seed_set"),
+                Row("production", "configurable_consumer_options", "ConfigureConsumerSideScreen 选项型消费者：查看当前选项、材料需求并切换选项", "covered", "building_control domain=side_surface surface=misc kind=configurable_consumer"),
+                Row("storage", "storage_filters", "储存箱、StorageTile 单物品选择和 TreeFilterable/FlatTagFilterable 过滤器", "covered", "building_control domain=storage", "building_control domain=tile_selection", "building_control domain=filter"),
+                Row("dupes", "duplicant_info_and_names", "复制人列表、属性、需求、改名", "covered", "dupes_control domain=info", "dupes_control domain=command action=rename", "dupes_control domain=command action=auto_rename"),
+                Row("dupes", "duplicant_direct_commands", "移动到这里单点/批量命令、强制动作、可分配对象、装备/Ownables 槽位选择、卸下当前装备、技能点分配、个人工作优先级、帽子和直接命令入口", "covered", "dupes_control domain=side_screen", "dupes_control domain=command", "dupes_control domain=assignable", "building_control domain=side_surface surface=maintenance", "dupes_control domain=skill", "dupes_control domain=hat", "dupes_control domain=priority"),
+                Row("dupes", "bionic_upgrade_slots", "BionicSideScreen 仿生人升级槽查看、锁定/空/已分配/已安装状态；槽位分配/取消分配由 dupes_control domain=assignable action=set_slot 覆盖", "covered", "dupes_control domain=side_screen", "dupes_control domain=assignable"),
+                Row("dupes", "minion_todo_side_screen", "MinionTodoSideScreen 当前差事、可执行差事、阻塞差事、优先级、目标和当前日程块", "covered", "dupes_control domain=side_screen"),
+                Row("schedules", "schedule_management", "创建日程、改区块、分配复制人", "covered", "colony_control domain=management kind=schedule"),
+                Row("diet", "consumable_permissions", "饮食/可食用项权限", "covered", "colony_control domain=management kind=diet"),
+                Row("research", "research_management", "查看/搜索/设置/取消研究队列", "covered", "colony_control domain=management kind=research action=status", "colony_control domain=management kind=research action=list", "colony_control domain=management kind=research"),
+                Row("space", "telescope_starmap_analysis", "TelescopeSideScreen 打开星图、查看/设置/清除星图目的地分析目标", "covered", "building_control domain=space_story"),
+                Row("rockets", "rocket_operations", "火箭状态、目的地、往返/单程、发射、取消发射、发射台降落/取消降落、控制台限制、火箭内部建筑受控/不受控、乘员召集/释放、分配组逐复制人成员开关、导弹发射器弹药选择", "covered", "building_control domain=rocket rocketDomain=ops", "building_control domain=rocket rocketDomain=restriction", "building_control domain=rocket rocketDomain=usage", "building_control domain=rocket rocketDomain=crew_request", "building_control domain=rocket rocketDomain=assignment_group", "building_control domain=special kind=missile_launcher"),
+                Row("rockets", "rocket_module_reordering", "火箭模块添加、替换、上下移动、标记移除和取消移除", "covered", "building_control domain=rocket rocketDomain=module"),
+                Row("rockets", "rocket_flight_utility_modules", "ModuleFlightUtilitySideScreen：飞行模块清空/投放、自动投放、星图目标选择、复制人选择", "covered", "building_control domain=rocket rocketDomain=flight_utility"),
+                Row("rockets", "rocket_cargo_and_harvest_progress", "CargoModuleSideScreen/HarvestModuleSideScreen：星图货舱收集进度、容量、太空钻探和钻石库存", "covered", "building_control domain=rocket rocketDomain=cargo_status action=collectors", "building_control domain=rocket rocketDomain=cargo_status action=harvest_modules"),
+                Row("rockets", "railgun_launch_mass", "轨道炮发射质量 slider/数字输入、库存和辐射粒子能量状态", "covered", "building_control domain=space_building kind=railgun"),
+                Row("rockets", "rocket_self_destruct", "在途火箭 SelfDestructButtonSideScreen 自毁操作，高风险确认后触发", "covered", "building_control domain=rocket rocketDomain=self_destruct"),
+                Row("resources", "inventory_and_reports", "资源、食物、AllResourcesScreen 固定/通知开关、殖民地报告和诊断设置", "covered", "read_control domain=resources", "colony_control", "colony_control"),
+                Row("ui", "notifications_and_markers", "通知读取、点击聚焦、dismiss、弹字、地图标记、编辑标记请求", "covered", "colony_control", "game_control domain=ui uiDomain=feedback", "game_control domain=ui uiDomain=edit_mark"),
+                Row("ui", "management_screens", "打开/切换管理面板、覆盖视图、百科、查找、建造分类 UI 入口", "covered", "game_control domain=ui uiDomain=action", "navigation_control", "read_control domain=knowledge kind=database action=query", "dupes_control domain=priority", "dupes_control domain=hat"),
+                Row("automation", "logic_and_power_controls", "自动化开关、电闸、信号阈值、元素过滤/传感器、逻辑广播频道、计数器、Critter Sensor 小动物/蛋计数、时间范围、滤波/缓冲延迟、计时器、ribbon bit、阀门、逻辑报警器、星图传感器、彗星探测器、自动化专用搬运、逻辑端口状态和受限批量控制", "covered", "building_control domain=config", "building_control domain=filter", "building_control domain=side_surface surface=option", "building_control domain=config", "building_control domain=side_surface surface=automation", "building_control domain=side_surface surface=misc kind=logic_alarm", "building_control domain=space_building kind=cluster_location_sensor", "building_control domain=space_building kind=comet_detector"),
+                Row("ranching", "critter_and_egg_operations", "小动物清单、抓捕、放生、投放点过滤和容量、孵化器蛋请求与连续孵化、生物诱饵站、牧场/蛋/鱼相关操作", "covered", "colony_control domain=bio bioDomain=ranching kind=critters action=critters", "orders_control domain=designation action=capture", "colony_control domain=bio bioDomain=ranching kind=dropoff", "colony_control domain=bio bioDomain=ranching kind=incubator", "building_control domain=special kind=creature_lure", "orders_control domain=designation action=attack"),
+                Row("farming", "harvest_and_planting", "种子目录、收获状态、自动收获、区域收获、铲除、单点/批量种植选择和种植请求", "covered", "colony_control domain=bio bioDomain=farming action=seed_catalog", "colony_control domain=bio bioDomain=farming", "orders_control domain=area action=harvest"),
+                Row("farming", "genetic_analysis_seed_permissions", "GeneticAnalysisStationSideScreen / Botanical Analyzer 突变种子允许/禁用分析", "covered", "building_control domain=story_facility kind=genetic_analysis_station"),
+                Row("medical", "medical_and_care_assignments", "患者清单、床位、医疗床单点/批量阈值、床位分配、医生站药品/可治疗疾病、诊疗、护理、制药相关分配", "covered", "colony_control domain=management kind=medical", "dupes_control domain=assignable", "orders_control domain=designation action=manual_delivery"),
+                Row("combat", "combat_targeting", "攻击标记、取消攻击和优先级", "covered", "read_control domain=world action=text_map", "colony_control domain=bio bioDomain=ranching kind=critters action=critters", "orders_control domain=designation action=attack"),
+                Row("story", "printerceptor_operations", "PrinterceptorSideScreen 打开打印选择界面、拦截打印舱候选和 databank/充能状态", "covered", "building_control domain=story_facility"),
+                Row("story", "poi_tech_unlock_portals", "Research Portal/信息传送通道：查看解锁差事、进度、会解锁的 POI 科技项，开始或取消解锁研究", "covered", "building_control domain=story_facility"),
+                Row("story", "lore_bearer_reading", "LoreBearerSideScreen 阅读/检查按钮、已读状态、tooltip 和弹窗触发", "covered", "building_control domain=side_surface surface=facility"),
+                Row("story", "telepad_side_screen", "TelepadSideScreen 查看移民倒计时、打开移民选择、殖民地摘要、技能和研究界面、胜利条件状态", "covered", "building_control domain=side_surface surface=facility"),
+                Row("story", "artifact_analysis_display", "ArtifactAnalysisSideScreen 已分析 artifact 列表、分析站状态、场上 artifact 和 reveal/lore 弹窗", "covered", "building_control domain=side_surface surface=facility"),
+                Row("story", "warp_portal_side_screen", "WarpPortalSideScreen 等待复制人后开始传送、取消分配/传送准备和冷却状态读取", "covered", "building_control domain=space_story"),
+                Row("story", "temporal_tear_side_screen", "TemporalTearSideScreen 查看裂隙开启/消耗状态并在双重确认后消耗当前位置火箭", "covered", "building_control domain=space_story"),
+                Row("diagnostics", "generic_process_conditions", "ConditionListSideScreen / IProcessConditionSet 通用条件状态读取，包括火箭发射/储存/飞行条件", "covered", "building_control domain=space_story"),
+                Row("sandbox", "sandbox_tools", "沙盒刷子、桶填充、取样、生成、清地面、清小动物、揭示、温度、压力、故事特质盖章和 Debug AutoPlumber/InstantBuild 操作", "covered", "game_control", "game_control", "game_control")
             };
         }
 
@@ -548,6 +548,8 @@ namespace OniMcp.Tools
 
         private static bool IsPlayerFacingTool(McpTool tool)
         {
+            if (tool.Hidden)
+                return false;
             switch (tool.Group)
             {
                 case "tools":
@@ -657,7 +659,7 @@ namespace OniMcp.Tools
 
             public CoverageRow WithRuntimeStatus(HashSet<string> toolNames)
             {
-                MissingTools = Tools.Where(tool => !toolNames.Contains(tool)).ToList();
+                MissingTools = Tools.Where(tool => !toolNames.Contains(SurfaceAuditUtil.ToolNameOnly(tool))).ToList();
                 if (DeclaredStatus == "missing")
                     Status = "missing";
                 else if (MissingTools.Count == 0 && Tools.Count > 0)

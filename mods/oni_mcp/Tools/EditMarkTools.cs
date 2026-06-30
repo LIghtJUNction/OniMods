@@ -25,8 +25,9 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
+                Hidden = true,
                 Aliases = new List<string> { "map_edit_mark_create", "agent_edit_area" },
-                Description = "为指定矩形区域创建编辑标记请求：区域+提示词+文本地图上下文，交给 MCP 客户端 agent 先计划再执行；截图仅作可选视觉补充",
+                Description = "兼容入口：请优先使用 game_control domain=ui uiDomain=edit_mark action=create。为指定矩形区域创建编辑标记请求：区域+提示词+文本地图上下文，交给 MCP 客户端 agent 先计划再执行；截图仅作可选视觉补充",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["prompt"] = new McpToolParameter { Type = "string", Description = "用户对框选区域的修改提示词", Required = true },
@@ -63,7 +64,8 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "read",
                 Risk = "none",
-                Description = "列出等待 MCP 客户端 agent 处理的编辑标记请求",
+                Hidden = true,
+                Description = "兼容入口：请优先使用 game_control domain=ui uiDomain=edit_mark action=list。列出等待 MCP 客户端 agent 处理的编辑标记请求",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "返回数量，默认 20，最大 100", Required = false }
@@ -98,7 +100,8 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Description = "清除指定或全部编辑标记请求",
+                Hidden = true,
+                Description = "兼容入口：请优先使用 game_control domain=ui uiDomain=edit_mark action=clear。清除指定或全部编辑标记请求",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "string", Description = "请求 ID；留空且 all=true 时清除全部", Required = false },
@@ -131,6 +134,47 @@ namespace OniMcp.Tools
                         ["removed"] = removed,
                         ["remaining"] = PendingRequests.Count
                     }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ControlEditMarkRequest()
+        {
+            return new McpTool
+            {
+                Name = "edit_mark_request_control",
+                Group = "ui",
+                Mode = "execute",
+                Risk = "low",
+                Aliases = new List<string> { "edit_mark_control", "map_edit_mark_control", "agent_edit_area_control" },
+                Tags = new List<string> { "edit", "mark", "request", "area", "plan", "agent" },
+                Description = "统一创建、列出和清除编辑标记请求。action=create/list/clear；create 用 prompt+area，list 读取待处理请求，clear 清除指定或全部请求。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：create、list、clear", Required = true },
+                    ["prompt"] = new McpToolParameter { Type = "string", Description = "action=create 时用户对框选区域的修改提示词", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "action=create 时可选区域句柄；提供后可省略 x1/y1/x2/y2", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=create 时区域起点/左下 X；使用 areaId 时可省略", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=create 时区域起点/左下 Y；使用 areaId 时可省略", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=create 时区域终点/右上 X；使用 areaId 时可省略", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=create 时区域终点/右上 Y；使用 areaId 时可省略", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "action=create 时世界 ID，默认当前激活世界", Required = false },
+                    ["includeTextMap"] = new McpToolParameter { Type = "boolean", Description = "action=create 时是否内联框选区域文本地图，默认 true", Required = false },
+                    ["includeScreenshot"] = new McpToolParameter { Type = "boolean", Description = "action=create 时是否附带当前屏幕截图路径，默认 false", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时返回数量，默认 20，最大 100", Required = false },
+                    ["id"] = new McpToolParameter { Type = "string", Description = "action=clear 时请求 ID；留空且 all=true 时清除全部", Required = false },
+                    ["all"] = new McpToolParameter { Type = "boolean", Description = "action=clear 时是否清除全部请求，默认 false", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "create")
+                        return CreateEditMarkRequest().Handler(args);
+                    if (action == "list")
+                        return ListEditMarkRequests().Handler(args);
+                    if (action == "clear")
+                        return ClearEditMarkRequest().Handler(args);
+                    return CallToolResult.Error("action must be one of create, list, clear");
                 }
             };
         }
@@ -286,7 +330,7 @@ namespace OniMcp.Tools
                 var notification = new Notification(
                     "MCP 编辑标记已创建",
                     NotificationType.MessageImportant,
-                    (notifications, data) => "请求 " + request.Id + " 正在等待客户端 agent 读取 edit_mark_request_list 并先计划再执行。",
+                    (notifications, data) => "请求 " + request.Id + " 正在等待客户端 agent 使用 game_control domain=ui uiDomain=edit_mark action=list 读取并先计划再执行。",
                     request.Id,
                     true,
                     0f,
@@ -325,7 +369,7 @@ namespace OniMcp.Tools
                             ["id"] = request.Id,
                             ["areaId"] = request.AreaId,
                             ["prompt"] = request.Prompt,
-                            ["message"] = "MCP edit mark request created. Call edit_mark_request_list to read prompt, areaId, and textMap."
+                            ["message"] = "MCP edit mark request created. Call game_control domain=ui uiDomain=edit_mark action=list to read prompt, areaId, and textMap."
                         });
                 }
             }
@@ -384,9 +428,9 @@ namespace OniMcp.Tools
                     {
                         ["planFirst"] = true,
                         ["executeOnlyAfterPlan"] = true,
-                        ["contextRule"] = "Use textMap first. Call world_text_map for more detail if needed. Use screenshotPath/game_screenshot only for visual confirmation.",
+                        ["contextRule"] = "Use textMap first. Call read_control domain=world action=text_map for more detail if needed. Use screenshotPath/navigation_control action=screenshot only for visual confirmation.",
                         ["planRule"] = "Write a concise executable plan in the response, then use dryRun/validateOnly where available before execution. If a planned call is invalid, report the issue and revise before executing.",
-                        ["recommendedTools"] = new[] { "world_text_map", "tools_search", "tools_call_many", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "orders_dig_area", "orders_sweep_area", "game_screenshot" }
+                        ["recommendedTools"] = new[] { "read_control domain=world action=text_map", "server_control domain=catalog action=search", "server_control domain=batch action=call_many", "navigation_control action=jump", "navigation_control action=select_tool", "navigation_control action=left_click", "navigation_control action=hold_left", "orders_control", "navigation_control action=screenshot" }
                     }
                 };
 
@@ -432,7 +476,7 @@ namespace OniMcp.Tools
                         ["maxTokens"] = 3000,
                         ["includeContext"] = "thisServer"
                     },
-                    ["note"] = "Client-side MCP request object. Poll edit_mark_request_list or use this sampling request to wake an agent client."
+                    ["note"] = "Client-side MCP request object. Poll game_control domain=ui uiDomain=edit_mark action=list or use this sampling request to wake an agent client."
                 };
             }
         }

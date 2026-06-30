@@ -19,9 +19,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "button_menu_controls_list", "sidescreen_buttons_list" },
                 Tags = new List<string> { "controls", "side-screen", "button", "activatable", "studyable", "generic" },
-                Description = "列出实现 ISidescreenButtonControl 的通用侧屏按钮控件，例如研究、挖掘 POI、激活设施、查看对象等",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface kind=button action=list。列出实现 ISidescreenButtonControl 的通用侧屏按钮控件",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按对象名、prefabId、按钮文本或 tooltip 筛选", Required = false },
@@ -69,12 +70,13 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "high",
+                Hidden = true,
                 Aliases = new List<string> { "button_menu_press", "sidescreen_button_press" },
                 Tags = new List<string> { "controls", "side-screen", "button", "activatable", "studyable", "generic" },
-                Description = "按下目标对象的 ISidescreenButtonControl 侧屏按钮。该通用按钮可能触发研究、激活、开门、挖掘等操作，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface kind=button action=press。按下目标对象的 ISidescreenButtonControl 侧屏按钮，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["buttonIndex"] = new McpToolParameter { Type = "integer", Description = "按钮索引；先用 side_buttons_list 查询，默认 0", Required = false },
+                    ["buttonIndex"] = new McpToolParameter { Type = "integer", Description = "按钮索引；先用 building_control domain=side_surface kind=button action=list 查询，默认 0", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认触发通用侧屏按钮", Required = true },
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "跳过 SidescreenEnabled/Interactable 检查，默认 false", Required = false }
                 }),

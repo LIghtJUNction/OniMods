@@ -11,6 +11,34 @@ namespace OniMcp.Tools
 {
     public static class SpecialUserMenuActionTools
     {
+        public static McpTool ControlMutantSeed()
+        {
+            return new McpTool
+            {
+                Name = "mutant_seed_control",
+                Group = "production",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "accept_mutant_seeds_control", "mutated_seed_toggle_control" },
+                Tags = new List<string> { "production", "farming", "mutant-seeds", "fish-feeder", "spice-grinder", "fabricator", "user-menu" },
+                Description = "兼容入口：请优先使用 building_control domain=production action=mutant_seed_list/mutant_seed_set。突变种子接收开关：action=list 查询玩家菜单开关；action=set 设置接受/拒收",
+                Parameters = MutantSeedControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                            return ListMutantSeedControls().Handler(args);
+                        case "set":
+                            return SetMutantSeedControl().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be list or set");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListMutantSeedControls()
         {
             return new McpTool
@@ -21,7 +49,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "accept_mutant_seeds_list", "mutated_seed_toggles_list" },
                 Tags = new List<string> { "production", "farming", "mutant-seeds", "fish-feeder", "spice-grinder", "fabricator", "user-menu" },
-                Description = "列出玩家菜单里的接受/拒收突变种子开关，覆盖 ComplexFabricator、FishFeeder 和 SpiceGrinder",
+                Description = "兼容旧工具：请改用 building_control domain=production action=mutant_seed_list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId 或组件类型筛选", Required = false },
@@ -40,7 +69,7 @@ namespace OniMcp.Tools
                     {
                         ["returned"] = rows.Count,
                         ["controls"] = rows,
-                        ["setTool"] = "mutant_seed_control_set"
+                        ["setTool"] = "building_control domain=production action=mutant_seed_set"
                     });
                 }
             };
@@ -56,7 +85,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "accept_mutant_seeds_set", "mutated_seed_toggle_set" },
                 Tags = new List<string> { "production", "farming", "mutant-seeds", "fish-feeder", "spice-grinder", "fabricator", "user-menu" },
-                Description = "设置建筑是否接受突变种子。accept=true 接受，accept=false 拒收；覆盖制作站、鱼喂食器和香料研磨器",
+                Description = "兼容旧工具：请改用 building_control domain=production action=mutant_seed_set",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["accept"] = new McpToolParameter { Type = "boolean", Description = "true=接受突变种子，false=拒收突变种子", Required = true },
@@ -84,6 +114,34 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlRocketUsage()
+        {
+            return new McpTool
+            {
+                Name = "rocket_usage_control",
+                Group = "rockets",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "rocket_usage_restriction_control", "rocket_controlled_building_control" },
+                Tags = new List<string> { "rocket", "usage", "restriction", "control-station", "user-menu" },
+                Description = "火箭内部建筑使用限制聚合工具：action=list 查询状态；action=set 设置是否受 RocketControlStation 限制",
+                Parameters = RocketUsageControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                            return ListRocketUsageControls().Handler(args);
+                        case "set":
+                            return SetRocketUsageControl().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be list or set");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListRocketUsageControls()
         {
             return new McpTool
@@ -94,7 +152,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "rocket_usage_restrictions_list", "rocket_controlled_buildings_list" },
                 Tags = new List<string> { "rocket", "usage", "restriction", "control-station", "user-menu" },
-                Description = "列出火箭内部建筑玩家菜单的“受控制台限制/不受限制”状态",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=usage action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId 或状态筛选", Required = false },
@@ -113,7 +172,7 @@ namespace OniMcp.Tools
                     {
                         ["returned"] = rows.Count,
                         ["controls"] = rows,
-                        ["setTool"] = "rocket_usage_control_set"
+                        ["setTool"] = "rocket_usage_control"
                     });
                 }
             };
@@ -129,7 +188,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "rocket_usage_restriction_set", "rocket_controlled_building_set" },
                 Tags = new List<string> { "rocket", "usage", "restriction", "control-station", "user-menu" },
-                Description = "设置火箭内部建筑是否受 RocketControlStation 限制。controlled=true 受控制台限制，false 不受限制",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=usage action=set",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["controlled"] = new McpToolParameter { Type = "boolean", Description = "true=受控制台限制，false=不受控制台限制", Required = true },
@@ -364,6 +424,28 @@ namespace OniMcp.Tools
             parameters["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；按坐标查找时建议提供", Required = false };
             parameters["query"] = new McpToolParameter { Type = "string", Description = "目标模糊匹配；不建议在写入时替代 id/坐标", Required = false };
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> MutantSeedControlParams()
+        {
+            return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true },
+                ["accept"] = new McpToolParameter { Type = "boolean", Description = "action=set 时必填；true=接受突变种子，false=拒收突变种子", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set 时必须为 true，确认修改玩家菜单开关", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false }
+            }));
+        }
+
+        private static Dictionary<string, McpToolParameter> RocketUsageControlParams()
+        {
+            return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true },
+                ["controlled"] = new McpToolParameter { Type = "boolean", Description = "action=set 时必填；true=受控制台限制，false=不受控制台限制", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set 时必须为 true，确认修改火箭内部建筑限制", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false }
+            }));
         }
 
         private static CallToolResult JsonResult(object payload)

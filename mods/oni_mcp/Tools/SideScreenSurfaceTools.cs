@@ -19,6 +19,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "sidescreen_surface_audit", "ui_surface_audit" },
                 Tags = new List<string> { "coverage", "audit", "side-screen", "ui", "tools", "resources" },
                 Description = "从运行时类型反射审计 ONI SideScreenContent 子类及辅助侧屏 KScreen 与 MCP 工具/资源覆盖映射，用于发现玩家侧屏操作缺口",
@@ -35,7 +36,7 @@ namespace OniMcp.Tools
                     string status = (args["status"]?.ToString() ?? "all").Trim().ToLowerInvariant();
                     bool includeNoAction = ToolUtil.GetBool(args, "includeNoAction", false);
                     int limit = ToolUtil.ClampLimit(args, 200, 500);
-                    var toolNames = new HashSet<string>(OniToolRegistry.GetTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
+                    var toolNames = new HashSet<string>(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceNames = new HashSet<string>(
                         OniResourceRegistry.GetResourceInfos().Select(info => info.Name)
                             .Concat(OniResourceRegistry.GetResourceTemplateInfos().Select(info => info.Name)),
@@ -134,198 +135,198 @@ namespace OniMcp.Tools
             switch (className)
             {
                 case "AccessControlSideScreen":
-                    return Covered("Door access permissions", "access_control_get", "access_control_set", "access_control_get");
+                    return Covered("Door access permissions", "building_config_control", "building_config_control", "building_config_control");
                 case "ActiveRangeSideScreen":
-                    return Covered("Activation/deactivation range sliders", "activation_ranges_list", "activation_range_set", "activation_ranges_list");
+                    return Covered("Activation/deactivation range sliders", "building_control domain=side_surface surface=activation", "building_control domain=side_surface surface=activation", "building_control domain=side_surface surface=activation");
                 case "AlarmSideScreen":
-                    return Covered("Logic alarm notification settings", "logic_alarms_list", "logic_alarm_set", "logic_alarms_list");
+                    return Covered("Logic alarm notification settings", "logic_alarm_control", "logic_alarm_control", "logic_alarm_control");
                 case "ArtableSelectionSideScreen":
-                    return Covered("Art stage/facade selection", "artables_list", "artable_stage_set", "artables_list");
+                    return Covered("Art stage/facade selection", "artable_control", "artable_control", "artable_control");
                 case "ArtifactAnalysisSideScreen":
-                    return Covered("Artifact analysis display and reveal", "artifacts_list", "artifact_reveal_open", "artifacts_list");
+                    return Covered("Artifact analysis display and reveal", "building_control domain=side_surface surface=facility", "building_control domain=side_surface surface=facility", "artifacts_list");
                 case "AssignableSideScreen":
-                    return Covered("Assignable ownership", "assignables_list", "assignables_set", "assignables_list");
+                    return Covered("Assignable ownership", "dupes_control domain=assignable", "dupes_control domain=assignable", "dupes_control domain=assignable action=list");
                 case "AssignmentGroupControllerSideScreen":
-                    return Covered("Assignment group membership toggles", "assignment_groups_list", "assignment_group_member_set", "assignment_groups_list");
+                    return Covered("Assignment group membership toggles", "building_control domain=rocket rocketDomain=assignment_group", "building_control domain=rocket rocketDomain=assignment_group", "building_control domain=rocket rocketDomain=assignment_group");
                 case "OwnablesSecondSideScreen":
-                    return Covered("Slot-specific assignable selection", "dupes_equipment_list", "assignable_slot_item_set", "dupes_equipment_list");
+                    return Covered("Slot-specific assignable selection", "dupes_control domain=side_screen", "dupes_control domain=assignable", "dupes_control domain=side_screen action=equipment");
                 case "AssignPilotAndCrewSideScreen":
                     return CoveredTools(
                         "Rocket pilot/crew assignment summary and edit-crew entry",
-                        new[] { "rocket_crew_requests_list", "assignment_groups_list" },
-                        new[] { "assignment_group_member_set" },
-                        new[] { "rocket_crew_requests_list", "assignment_groups_list" });
+                        new[] { "building_control domain=rocket rocketDomain=crew_request", "building_control domain=rocket rocketDomain=assignment_group" },
+                        new[] { "building_control domain=rocket rocketDomain=assignment_group" },
+                        new[] { "building_control domain=rocket rocketDomain=crew_request", "building_control domain=rocket rocketDomain=assignment_group" });
                 case "AutoPlumberSideScreen":
-                    return Covered("Debug AutoPlumber buttons", "sandbox_actions_list", "debug_auto_plumb_building", "sandbox_actions_list");
+                    return Covered("Debug AutoPlumber buttons", "game_control", "game_control", "game_control");
                 case "AutomatableSideScreen":
-                    return Covered("Allow manual delivery/fetching for automatable buildings", "automatable_controls_list", "automatable_control_set", "automatable_controls_list");
+                    return Covered("Allow manual delivery/fetching for automatable buildings", "building_control domain=side_surface surface=automation", "building_control domain=side_surface surface=automation", "building_control domain=side_surface surface=automation");
                 case "BionicSideScreen":
-                    return Covered("Bionic upgrade slots", "bionic_upgrades_list", "assignable_slot_item_set", "bionic_upgrades_list");
+                    return Covered("Bionic upgrade slots", "dupes_control domain=side_screen", "dupes_control domain=assignable", "dupes_control domain=side_screen action=bionic_upgrades");
                 case "ButtonMenuSideScreen":
-                    return Covered("Generic ISidescreenButtonControl buttons", "side_buttons_list", "side_button_press", "side_buttons_list");
+                    return Covered("Generic ISidescreenButtonControl buttons", "building_control domain=side_surface", "building_control domain=side_surface", "building_control domain=side_surface");
                 case "CapacityControlSideScreen":
-                    return Covered("Capacity controls", "state_controls_list", "capacity_control_set", "state_controls_list");
+                    return Covered("Capacity controls", "building_config_control", "building_config_control", "building_config_control");
                 case "CargoModuleSideScreen":
-                    return Covered("Rocket cargo collector status", "rocket_cargo_collectors_list", null, "rocket_cargo_collectors_list");
+                    return Covered("Rocket cargo collector status", "building_control domain=rocket rocketDomain=cargo_status action=collectors", null, "building_control domain=rocket rocketDomain=cargo_status action=collectors");
                 case "CheckboxListGroupSideScreen":
-                    return Covered("Read-only side-screen checklists", "side_checklists_list", null, "side_checklists_list");
+                    return Covered("Read-only side-screen checklists", "building_control domain=side_surface", null, "side_checklists_list");
                 case "ClusterDestinationSideScreen":
                     return CoveredTools(
                         "Rocket destination, round-trip mode and landing pad selection",
-                        new[] { "rockets_status", "space_destinations_list", "launch_pads_list" },
-                        new[] { "rockets_set_destination", "rocket_round_trip_set", "rocket_landing_pad_set" },
-                        new[] { "rockets_status", "launch_pads_list" });
+                        new[] { "building_control domain=rocket rocketDomain=ops" },
+                        new[] { "building_control domain=rocket rocketDomain=ops" },
+                        new[] { "building_control domain=rocket rocketDomain=ops" });
                 case "ClusterGridWorldSideScreen":
                     return CoveredTools(
                         "Cluster map view-world button",
-                        new[] { "world_list", "camera_get_view" },
-                        new[] { "camera_set_active_world" },
+                        new[] { "world_list", "navigation_control domain=camera" },
+                        new[] { "navigation_control domain=camera" },
                         new[] { "world_list" });
                 case "ClusterLocationFilterSideScreen":
-                    return Covered("Cluster location sensor filter", "cluster_location_sensors_list", "cluster_location_sensor_set", "cluster_location_sensors_list");
+                    return Covered("Cluster location sensor filter", "cluster_location_sensor_control", "cluster_location_sensor_control", "cluster_location_sensor_control");
                 case "CometDetectorSideScreen":
-                    return Covered("Comet detector target selection", "comet_detectors_list", "comet_detector_target_set", "comet_detectors_list");
+                    return Covered("Comet detector target selection", "comet_detector_control", "comet_detector_control", "comet_detector_control");
                 case "CommandModuleSideScreen":
                     return CoveredTools(
                         "Base-game rocket launch conditions and starmap button",
-                        new[] { "process_conditions_list", "rockets_status" },
+                        new[] { "building_control domain=space_story", "building_control domain=rocket rocketDomain=ops" },
                         new[] { "ui_management_open" },
-                        new[] { "process_conditions_list", "rockets_status" });
+                        new[] { "building_control domain=space_story", "building_control domain=rocket rocketDomain=ops" });
                 case "ComplexFabricatorSideScreen":
                     return CoveredTools(
                         "Fabricator recipe categories and selected recipe queue controls",
-                        new[] { "production_fabricators_list", "production_recipes_list" },
-                        new[] { "production_queue_set" },
-                        new[] { "production_fabricators_list", "production_recipes_list" });
+                        new[] { "building_control domain=production" },
+                        new[] { "building_control domain=production" },
+                        new[] { "building_control domain=production" });
                 case "ConditionListSideScreen":
-                    return Covered("Process condition list", "process_conditions_list", null, "process_conditions_list");
+                    return Covered("Process condition list", "building_control domain=space_story", null, "building_control domain=space_story action=process_conditions");
                 case "ConfigureConsumerSideScreen":
-                    return Covered("Configurable consumer option", "configurable_consumers_list", "configurable_consumer_option_set", "configurable_consumers_list");
+                    return Covered("Configurable consumer option", "configurable_consumer_control", "configurable_consumer_control", "configurable_consumer_control");
                 case "CounterSideScreen":
-                    return Covered("Counter control", "state_controls_list", "logic_counter_set", "state_controls_list");
+                    return Covered("Counter control", "building_config_control", "building_config_control", "building_config_control");
                 case "CritterSensorSideScreen":
-                    return Covered("Critter sensor egg/critter count toggles", "critter_sensors_list", "critter_sensor_counting_set", "critter_sensors_list");
+                    return Covered("Critter sensor egg/critter count toggles", "building_control domain=side_surface surface=automation", "building_control domain=side_surface surface=automation", "building_control domain=side_surface surface=automation");
                 case "DispenserSideScreen":
-                    return Covered("Dispenser item selection/request", "dispensers_list", "dispenser_control", "dispensers_list");
+                    return Covered("Dispenser item selection/request", "building_control domain=side_surface surface=facility", "building_control domain=side_surface surface=facility", "dispensers_list");
                 case "DoorToggleSideScreen":
                 case "SealedDoorSideScreen":
-                    return Covered("Door state toggles", "buildings_config_list", "doors_set_state", "buildings_config_list");
+                    return Covered("Door state toggles", "building_config_control", "building_config_control", "building_config_control");
                 case "FilterSideScreen":
                 case "FlatTagFilterSideScreen":
                 case "TagFilterScreen":
                 case "TreeFilterableSideScreen":
-                    return Covered("Storage/filter selection", "filters_list", "filters_tree_set", "filters_list");
+                    return Covered("Storage/filter selection", "building_control domain=filter", "building_control domain=filter", "building_control domain=filter");
                 case "FewOptionSideScreen":
-                    return Covered("Few-option side-screen choices", "side_options_list", "few_option_set", "side_options_list");
+                    return Covered("Few-option side-screen choices", "building_control domain=side_surface surface=option", "building_control domain=side_surface surface=option", "building_control domain=side_surface surface=option");
                 case "GeneShufflerSideScreen":
-                    return Covered("Gene shuffler control", "gene_shufflers_list", "gene_shuffler_control", "gene_shufflers_list");
+                    return Covered("Gene shuffler control", "gene_shuffler_control", "gene_shuffler_control", "gene_shuffler_control");
                 case "GeoTunerSideScreen":
-                    return Covered("GeoTuner geyser assignment", "geo_tuners_list", "geo_tuner_assign", "geo_tuners_list");
+                    return Covered("GeoTuner geyser assignment", "building_control domain=side_surface surface=geo_tuner", "building_control domain=side_surface surface=geo_tuner", "building_control domain=side_surface surface=geo_tuner");
                 case "GeneticAnalysisStationSideScreen":
-                    return Covered("Botanical analyzer seed permissions", "genetic_analysis_stations_list", "genetic_analysis_seed_set", "genetic_analysis_stations_list");
+                    return Covered("Botanical analyzer seed permissions", "building_control domain=story_facility kind=genetic_analysis_station", "building_control domain=story_facility kind=genetic_analysis_station", "building_control domain=story_facility kind=genetic_analysis_station");
                 case "HarvestModuleSideScreen":
-                    return Covered("Rocket harvest module status", "rocket_harvest_modules_list", null, "rocket_harvest_modules_list");
+                    return Covered("Rocket harvest module status", "building_control domain=rocket rocketDomain=cargo_status action=harvest_modules", null, "building_control domain=rocket rocketDomain=cargo_status action=harvest_modules");
                 case "HabitatModuleSideScreen":
                     return NoAction("IsValidForTarget returns false in current build; superseded by RocketInteriorSectionSideScreen");
                 case "HighEnergyParticleDirectionSideScreen":
-                    return Covered("Radbolt direction", "side_options_list", "radbolt_direction_set", "side_options_list");
+                    return Covered("Radbolt direction", "building_control domain=side_surface surface=option", "building_control domain=side_surface surface=option", "building_control domain=side_surface surface=option");
                 case "IncubatorSideScreen":
-                    return Covered("Incubator egg request", "incubators_list", "incubator_configure", "incubators_list");
+                    return Covered("Incubator egg request", "incubator_control", "incubator_control", "incubator_control");
                 case "IntSliderSideScreen":
                 case "SingleSliderSideScreen":
                 case "DualSliderSideScreen":
                 case "MultiSliderSideScreen":
-                    return Covered("Generic slider controls", "buildings_config_list", "buildings_slider_set", "buildings_config_list");
+                    return Covered("Generic slider controls", "building_config_control", "building_config_control", "building_config_control");
                 case "LaunchButtonSideScreen":
-                    return Covered("Rocket launch/cancel", "rockets_status", "rockets_request_launch", "rockets_status");
+                    return Covered("Rocket launch/cancel", "building_control domain=rocket rocketDomain=ops", "building_control domain=rocket rocketDomain=ops", "building_control domain=rocket rocketDomain=ops action=status");
                 case "LaunchPadSideScreen":
-                    return Covered("Rocket landing pad selection", "launch_pads_list", "rocket_landing_pad_set", "launch_pads_list");
+                    return Covered("Rocket landing pad selection", "building_control domain=rocket rocketDomain=ops", "building_control domain=rocket rocketDomain=ops", "building_control domain=rocket rocketDomain=ops");
                 case "LimitValveSideScreen":
-                    return Covered("Limit valve amount", "automation_controls_list", "limit_valves_set", "automation_controls_list");
+                    return Covered("Limit valve amount", "building_config_control", "building_config_control", "building_config_control");
                 case "LogicBitSelectorSideScreen":
-                    return Covered("Ribbon bit selector", "automation_controls_list", "logic_ribbon_bit_set", "automation_controls_list");
+                    return Covered("Ribbon bit selector", "building_config_control", "building_config_control", "building_config_control");
                 case "LogicBroadcastChannelSideScreen":
-                    return Covered("Logic broadcast channel", "side_options_list", "logic_broadcast_channel_set", "side_options_list");
+                    return Covered("Logic broadcast channel", "building_control domain=side_surface surface=option", "building_control domain=side_surface surface=option", "building_control domain=side_surface surface=option");
                 case "LoreBearerSideScreen":
-                    return Covered("Lore bearer read button", "lore_bearers_list", "lore_bearer_press", "lore_bearers_list");
+                    return Covered("Lore bearer read button", "building_control domain=side_surface surface=facility", "building_control domain=side_surface surface=facility", "lore_bearers_list");
                 case "LureSideScreen":
-                    return Covered("Creature lure bait", "creature_lures_list", "creature_lure_bait_set", "creature_lures_list");
+                    return Covered("Creature lure bait", "creature_lure_control", "creature_lure_control", "creature_lure_control");
                 case "MinionTodoSideScreen":
-                    return Covered("Duplicant todo list", "minion_todos_list", null, "minion_todos_list");
+                    return Covered("Duplicant todo list", "dupes_control domain=side_screen", null, "dupes_control domain=side_screen action=todos");
                 case "MissileSelectionSideScreen":
-                    return Covered("Missile launcher ammunition", "missile_launchers_list", "missile_ammunition_set", "missile_launchers_list");
+                    return Covered("Missile launcher ammunition", "missile_launcher_control", "missile_launcher_control", "missile_launcher_control");
                 case "ModuleFlightUtilitySideScreen":
-                    return Covered("Rocket flight utility control", "rocket_flight_utilities_list", "rocket_flight_utility_control", "rocket_flight_utilities_list");
+                    return Covered("Rocket flight utility control", "building_control domain=rocket rocketDomain=flight_utility", "building_control domain=rocket rocketDomain=flight_utility", "building_control domain=rocket rocketDomain=flight_utility");
                 case "MonumentSideScreen":
-                    return Covered("Monument part facade/flip", "monument_parts_list", "monument_part_set", "monument_parts_list");
+                    return Covered("Monument part facade/flip", "monument_part_control", "monument_part_control", "monument_part_control");
                 case "NToggleSideScreen":
-                    return Covered("Generic N-toggle side-screen", "n_toggles_list", "n_toggle_set", "n_toggles_list");
+                    return Covered("Generic N-toggle side-screen", "n_toggle_control", "n_toggle_control", "n_toggle_control");
                 case "PixelPackSideScreen":
-                    return Covered("Pixel pack colors", "pixel_packs_list", "pixel_pack_color_set", "pixel_packs_list");
+                    return Covered("Pixel pack colors", "pixel_pack_control", "pixel_pack_control", "pixel_pack_control");
                 case "PlanterSideScreen":
-                    return Covered("Planting selection", "farming_planting_list", "farming_planting_set", "farming_planting_list");
+                    return Covered("Planting selection", "colony_control domain=bio bioDomain=farming", "colony_control domain=bio bioDomain=farming", "colony_control domain=bio bioDomain=farming");
                 case "PlayerControlledToggleSideScreen":
-                    return Covered("Player controlled toggle", "buildings_config_list", "buildings_set_toggle", "buildings_config_list");
+                    return Covered("Player controlled toggle", "building_config_control", "building_config_control", "building_config_control");
                 case "PrinterceptorSideScreen":
-                    return Covered("Printerceptor control", "printerceptors_list", "printerceptor_control", "printerceptors_list");
+                    return Covered("Printerceptor control", "building_control domain=story_facility", "building_control domain=story_facility", "building_control domain=story_facility");
                 case "ProgressBarSideScreen":
-                    return Covered("Generic progress bar", "progress_bars_list", null, "progress_bars_list");
+                    return Covered("Generic progress bar", "building_control domain=side_surface", null, "building_control domain=side_surface");
                 case "RailGunSideScreen":
-                    return Covered("Railgun launch mass", "railguns_list", "railgun_launch_mass_set", "railguns_list");
+                    return Covered("Railgun launch mass", "railgun_control", "railgun_control", "railgun_control");
                 case "ReceptacleSideScreen":
-                    return Covered("Generic SingleEntityReceptacle request/cancel/remove controls", "receptacles_list", "receptacle_control", "receptacles_list");
+                    return Covered("Generic SingleEntityReceptacle request/cancel/remove controls", "building_control domain=receptacle", "building_control domain=receptacle", "building_control domain=receptacle");
                 case "SpecialCargoBayClusterSideScreen":
-                    return Covered("Special cargo bay entity request/cancel/remove controls", "receptacles_list", "receptacle_control", "receptacles_list");
+                    return Covered("Special cargo bay entity request/cancel/remove controls", "building_control domain=receptacle", "building_control domain=receptacle", "building_control domain=receptacle");
                 case "RelatedEntitiesSideScreen":
-                    return Covered("Related entity navigation", "related_entities_list", "related_entity_focus", "related_entities_list");
+                    return Covered("Related entity navigation", "building_control domain=side_surface", "building_control domain=side_surface", "building_control domain=side_surface");
                 case "RemoteWorkTerminalSidescreen":
-                    return Covered("Remote work dock selection", "remote_work_terminals_list", "remote_work_terminal_dock_set", "remote_work_terminals_list");
+                    return Covered("Remote work dock selection", "building_control domain=story_facility kind=remote_work_terminal", "building_control domain=story_facility kind=remote_work_terminal", "building_control domain=story_facility kind=remote_work_terminal");
                 case "ResearchSideScreen":
-                    return Covered("Research selection", "research_status", "research_set", "research_status");
+                    return Covered("Research selection", "colony_control domain=management kind=research action=status", "colony_control domain=management kind=research", "colony_control domain=management kind=research action=status");
                 case "RocketInteriorSectionSideScreen":
                     return CoveredTools(
                         "Rocket interior/exterior view navigation",
-                        new[] { "rockets_status", "world_list" },
-                        new[] { "camera_set_active_world" },
-                        new[] { "rockets_status", "world_list" });
+                        new[] { "building_control domain=rocket rocketDomain=ops", "world_list" },
+                        new[] { "navigation_control domain=camera" },
+                        new[] { "building_control domain=rocket rocketDomain=ops", "world_list" });
                 case "RocketModuleSideScreen":
-                    return Covered("Rocket module reordering", "rocket_modules_list", "rocket_module_control", "rocket_modules_list");
+                    return Covered("Rocket module reordering", "building_control domain=rocket rocketDomain=module", "building_control domain=rocket rocketDomain=module", "building_control domain=rocket rocketDomain=module");
                 case "RocketRestrictionSideScreen":
-                    return Covered("Rocket console restrictions", "rocket_restrictions_list", "rocket_restriction_set", "rocket_restrictions_list");
+                    return Covered("Rocket console restrictions", "building_control domain=rocket rocketDomain=restriction", "building_control domain=rocket rocketDomain=restriction", "building_control domain=rocket rocketDomain=restriction");
                 case "SelfDestructButtonSideScreen":
-                    return Covered("Rocket self destruct", "rocket_self_destruct_list", "rocket_self_destruct_trigger", "rocket_self_destruct_list");
+                    return Covered("Rocket self destruct", "building_control domain=rocket rocketDomain=self_destruct action=list", "building_control domain=rocket rocketDomain=self_destruct action=trigger", "building_control domain=rocket rocketDomain=self_destruct action=list");
                 case "SelectModuleSideScreen":
-                    return Covered("Rocket module definition selection and material choice", "rocket_module_defs_list", "rocket_module_control", "rocket_module_defs_list");
+                    return Covered("Rocket module definition selection and material choice", "building_control domain=rocket rocketDomain=module", "building_control domain=rocket rocketDomain=module", "building_control domain=rocket rocketDomain=module");
                 case "SelectedRecipeQueueScreen":
-                    return Covered("Fabricator selected recipe variant, queue count and infinite toggle", "production_recipes_list", "production_queue_set", "production_recipes_list");
+                    return Covered("Fabricator selected recipe variant, queue count and infinite toggle", "building_control domain=production", "building_control domain=production", "building_control domain=production");
                 case "SingleCheckboxSideScreen":
-                    return Covered("Single checkbox controls", "state_controls_list", "checkbox_control_set", "state_controls_list");
+                    return Covered("Single checkbox controls", "building_config_control", "building_config_control", "building_config_control");
                 case "SingleItemSelectionSideScreen":
                 case "SingleItemSelectionSideScreenBase":
-                    return Covered("StorageTile single item target selection", "storage_tile_selections_list", "storage_tile_selection_set", "storage_tile_selections_list");
+                    return Covered("StorageTile single item target selection", "building_control domain=tile_selection", "building_control domain=tile_selection", "building_control domain=tile_selection");
                 case "SuitLockerSideScreen":
-                    return Covered("Suit locker configuration", "suit_lockers_list", "suit_locker_control", "suit_lockers_list");
+                    return Covered("Suit locker configuration", "building_control domain=side_surface surface=facility", "building_control domain=side_surface surface=facility", "suit_lockers_list");
                 case "SummonCrewSideScreen":
-                    return Covered("Rocket crew summon/release", "rocket_crew_requests_list", "rocket_crew_request_set", "rocket_crew_requests_list");
+                    return Covered("Rocket crew summon/release", "building_control domain=rocket rocketDomain=crew_request", "building_control domain=rocket rocketDomain=crew_request", "building_control domain=rocket rocketDomain=crew_request");
                 case "TelepadSideScreen":
-                    return Covered("Telepad controls and summary links", "telepads_list", "telepad_control", "telepads_list");
+                    return Covered("Telepad controls and summary links", "building_control domain=side_surface surface=facility", "building_control domain=side_surface surface=facility", "telepads_list");
                 case "TelescopeSideScreen":
-                    return Covered("Telescope starmap analysis", "telescopes_list", "telescope_control", "telescopes_list");
+                    return Covered("Telescope starmap analysis", "building_control domain=space_story", "building_control domain=space_story", "telescopes_list");
                 case "TemporalTearSideScreen":
-                    return Covered("Temporal tear consume craft", "temporal_tears_list", "temporal_tear_consume_craft", "temporal_tears_list");
+                    return Covered("Temporal tear consume craft", "building_control domain=space_story", "building_control domain=space_story", "temporal_tears_list");
                 case "ThresholdSwitchSideScreen":
                 case "TemperatureSwitchSideScreen":
-                    return Covered("Threshold switch controls", "buildings_config_list", "buildings_threshold_set", "buildings_config_list");
+                    return Covered("Threshold switch controls", "building_config_control", "building_config_control", "building_config_control");
                 case "TimeRangeSideScreen":
-                    return Covered("Time range controls", "state_controls_list", "time_range_set", "state_controls_list");
+                    return Covered("Time range controls", "building_config_control", "building_config_control", "building_config_control");
                 case "TimerSideScreen":
-                    return Covered("Logic timer controls", "automation_controls_list", "logic_timer_set", "automation_controls_list");
+                    return Covered("Logic timer controls", "building_config_control", "building_config_control", "building_config_control");
                 case "TurboModeSideScreen":
-                    return Covered("Liquid tepidizer turbo mode", "turbo_heaters_list", "turbo_heater_set", "turbo_heaters_list");
+                    return Covered("Liquid tepidizer turbo mode", "turbo_heater_control", "turbo_heater_control", "turbo_heater_control");
                 case "ValveSideScreen":
-                    return Covered("Valve flow controls", "automation_controls_list", "valves_flow_set", "automation_controls_list");
+                    return Covered("Valve flow controls", "building_config_control", "building_config_control", "building_config_control");
                 case "WarpPortalSideScreen":
-                    return Covered("Warp portal control", "warp_portals_list", "warp_portal_control", "warp_portals_list");
+                    return Covered("Warp portal control", "building_control domain=space_story", "building_control domain=space_story", "warp_portals_list");
                 case "BaseGameImpactorImperativeSideScreen":
                     return NoAction("Vanilla impactor health/time display; no direct player operation beyond MissileSelectionSideScreen ammunition");
                 case "NoConfigSideScreen":
@@ -340,11 +341,11 @@ namespace OniMcp.Tools
         private static SurfaceRow PatternSurface(string className)
         {
             if (className.Contains("Cluster") || className.Contains("CommandModule") || className.Contains("RocketInterior") || className.Contains("HabitatModule"))
-                return Covered("Rocket/starmap navigation/status surface", "rockets_status", null, "rockets_status");
+                return Covered("Rocket/starmap navigation/status surface", "building_control domain=rocket rocketDomain=ops", null, "building_control domain=rocket rocketDomain=ops action=status");
             if (className == "OwnablesSecondSideScreen")
-                return Covered("Slot-specific assignable selection", "dupes_equipment_list", "assignable_slot_item_set", "dupes_equipment_list");
+                return Covered("Slot-specific assignable selection", "dupes_control domain=side_screen", "dupes_control domain=assignable", "dupes_control domain=side_screen action=equipment");
             if (className.Contains("Ownables"))
-                return Covered("Assignable ownership surface", "assignables_list", "assignables_set", "assignables_list");
+                return Covered("Assignable ownership surface", "dupes_control domain=assignable", "dupes_control domain=assignable", "dupes_control domain=assignable action=list");
             if (className.Contains("Resource") || className.Contains("Details"))
                 return NoAction("Read-only detail/status surface covered by world/resources/colony resources or base game UI");
             return null;

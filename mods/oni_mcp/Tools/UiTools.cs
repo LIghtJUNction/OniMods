@@ -28,12 +28,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "ui_actions_list",
+                Hidden = true,
                 Group = "ui",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "ui_management_list", "ui_hotkeys_list" },
                 Tags = new List<string> { "ui", "management", "screen", "hotkey", "action" },
-                Description = "列出可由 MCP 安全打开/触发的 UI 页面和 Action，包括管理菜单、覆盖层、建造分类和取消/关闭",
+                Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=list。列出可由 MCP 安全打开/触发的 UI 页面和 Action，包括管理菜单、覆盖层、建造分类和取消/关闭",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["kind"] = new McpToolParameter { Type = "string", Description = "过滤类型：all、management、overlay、build、navigation，默认 all", Required = false, EnumValues = new List<string> { "all", "management", "overlay", "build", "navigation" } }
@@ -63,12 +64,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "ui_management_open",
+                Hidden = true,
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
                 Aliases = new List<string> { "management_open", "ui_open_screen" },
                 Tags = new List<string> { "ui", "management", "screen", "codex", "research", "skills" },
-                Description = "打开指定管理页面：vitals、consumables、priorities、schedule、skills、research、starmap、report、database/codex",
+                Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=open_management。打开指定管理页面：vitals、consumables、priorities、schedule、skills、research、starmap、report、database/codex",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["screen"] = new McpToolParameter { Type = "string", Description = "页面名", Required = true, EnumValues = ManagementScreens.Keys.OrderBy(name => name).ToList() },
@@ -117,12 +119,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "ui_action_trigger",
+                Hidden = true,
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
                 Aliases = new List<string> { "ui_hotkey_trigger", "game_action_trigger" },
                 Tags = new List<string> { "ui", "hotkey", "action", "management", "build", "overlay" },
-                Description = "触发白名单内的安全 UI Action，用于打开/关闭界面、覆盖层和建造分类；不会触发 debug 或破坏性游戏操作",
+                Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=trigger。触发白名单内的安全 UI Action，用于打开/关闭界面、覆盖层和建造分类；不会触发 debug 或破坏性游戏操作",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "Action 枚举名，如 ManageVitals、Overlay1、BuildCategoryTiles、Escape", Required = true }
@@ -139,6 +142,45 @@ namespace OniMcp.Tools
 
                     DispatchUiAction(match);
                     return CallToolResult.Text(JsonConvert.SerializeObject(ActionInfo(match, safe[match]), McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ControlUiAction()
+        {
+            return new McpTool
+            {
+                Name = "ui_action_control",
+                Group = "ui",
+                Mode = "execute",
+                Risk = "low",
+                Aliases = new List<string> { "ui_control", "ui_hotkey_control", "game_action_control" },
+                Tags = new List<string> { "ui", "hotkey", "action", "management", "build", "overlay" },
+                Description = "UI Action 聚合工具：action=list/trigger/open_management；读取安全 UI Action 白名单、触发白名单内动作或打开管理页面。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、trigger 或 open_management", Required = true, EnumValues = new List<string> { "list", "trigger", "open_management" } },
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "action=list 时过滤类型：all、management、overlay、build、navigation，默认 all", Required = false, EnumValues = new List<string> { "all", "management", "overlay", "build", "navigation" } },
+                    ["uiAction"] = new McpToolParameter { Type = "string", Description = "action=trigger 时的 Action 枚举名，如 ManageVitals、Overlay1、BuildCategoryTiles、Escape", Required = false },
+                    ["screen"] = new McpToolParameter { Type = "string", Description = "action=open_management 时的页面名", Required = false, EnumValues = ManagementScreens.Keys.OrderBy(name => name).ToList() },
+                    ["codexId"] = new McpToolParameter { Type = "string", Description = "action=open_management screen=database/codex 时可直接打开指定 Codex entry id", Required = false },
+                    ["researchId"] = new McpToolParameter { Type = "string", Description = "action=open_management screen=research 时可缩放到指定 tech id", Required = false },
+                    ["reportDay"] = new McpToolParameter { Type = "integer", Description = "action=open_management screen=report 时打开指定周期报告；默认当前周期", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListUiActions().Handler(args);
+                    if (action == "trigger")
+                    {
+                        var forwarded = (Newtonsoft.Json.Linq.JObject)args.DeepClone();
+                        forwarded["action"] = args["uiAction"] ?? args["ui_action"] ?? args["name"];
+                        return TriggerUiAction().Handler(forwarded);
+                    }
+                    if (action == "open_management")
+                        return OpenManagementScreen().Handler(args);
+                    return CallToolResult.Error("action must be list, trigger, or open_management");
                 }
             };
         }

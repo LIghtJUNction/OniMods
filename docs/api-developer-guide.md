@@ -2,7 +2,7 @@
 
 本文档面向开发者和高级用户，描述如何通过 HTTP JSON-RPC 2.0 与缺氧（Oxygen Not Included）MCP 服务器进行协议级交互。
 
-> **API 稳定性警告**：在 `oni_mcp` 发布 `1.0.0` 之前，HTTP 行为、工具名称、参数结构、资源路径和返回字段都可能发生不兼容变更。二创、插件、脚本和第三方客户端请锁定目标版本，运行时读取 `tools_manifest` 或 `oni://tools/manifest`，并为字段缺失、重命名和语义调整预留兼容逻辑。
+> **API 稳定性警告**：在 `oni_mcp` 发布 `1.0.0` 之前，HTTP 行为、工具名称、参数结构、资源路径和返回字段都可能发生不兼容变更。二创、插件、脚本和第三方客户端请锁定目标版本，运行时读取 `server_control domain=catalog action=manifest` 或 `oni://tools/manifest`，并为字段缺失、重命名和语义调整预留兼容逻辑。
 
 ---
 
@@ -154,7 +154,7 @@ curl -X POST http://localhost:8787/mcp/ \
 # tools/call
 curl -X POST http://localhost:8787/mcp/ \
   -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
-  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"colony_status","arguments":{}}}'
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"colony_control","arguments":{"domain":"read","action":"status"}}}'
 ```
 
 工具参数通过 `arguments` 传递，类型为 `JObject`（键值对）。
@@ -170,8 +170,8 @@ curl -X POST http://localhost:8787/mcp/ \
     "jsonrpc": "2.0", "id": 4,
     "method": "tools/call",
     "params": {
-      "name": "colony_diagnostics",
-      "arguments": {},
+      "name": "colony_control",
+      "arguments": { "domain": "diagnostic", "action": "diagnostics" },
       "task": { "title": "Colony diagnostics scan", "ttl": 600000 }
     }
   }'
@@ -185,7 +185,7 @@ curl -X POST http://localhost:8787/mcp/ \
   "result": {
     "task": {
       "taskId": "abc123", "status": "working",
-      "statusMessage": "Calling tool colony_diagnostics",
+      "statusMessage": "Calling tool colony_control",
       "createdAt": "2026-05-24T05:00:00Z",
       "lastUpdatedAt": "2026-05-24T05:00:00Z",
       "ttl": 600000, "pollInterval": 1000
@@ -221,7 +221,7 @@ curl -X POST http://localhost:8787/mcp/ \
 
 ### 批量调用
 
-`tools_call_many` 一次顺序调用最多 20 个工具，支持 `dryRun` 预检和 `defaults` 合并。默认返回 `responseMode: "summary"`，避免批量读把完整子工具内容重复嵌套到响应里：
+`server_control domain=batch action=call_many` 一次顺序调用最多 20 个工具，支持 `dryRun` 预检和 `defaults` 合并。默认返回 `responseMode: "summary"`，避免批量读把完整子工具内容重复嵌套到响应里：
 
 ```bash
 curl -X POST http://localhost:8787/mcp/ \
@@ -230,15 +230,16 @@ curl -X POST http://localhost:8787/mcp/ \
     "jsonrpc": "2.0", "id": 9,
     "method": "tools/call",
     "params": {
-      "name": "tools_call_many",
+      "name": "server_control",
       "arguments": {
+        "domain": "batch", "action": "call_many",
         "dryRun": true, "requireAllValid": true,
         "responseMode": "summary",
         "defaults": { "confirm": true },
         "calls": [
-          { "name": "game_pause", "arguments": {} },
-          { "name": "colony_status", "arguments": {} },
-          { "name": "power_summary", "arguments": { "detail": "brief" } }
+          { "name": "game_control", "arguments": { "domain": "speed", "action": "pause" } },
+          { "name": "colony_control", "arguments": { "domain": "read", "action": "status" } },
+          { "name": "read_control", "arguments": { "domain": "infrastructure", "action": "power_summary", "includeDetails": false } }
         ]
       }
     }
@@ -250,8 +251,8 @@ curl -X POST http://localhost:8787/mcp/ \
 ```json
 {
   "items": [
-    { "t": "game_pause", "a": {} },
-    { "t": "colony_status", "a": {} }
+    { "t": "game_control domain=speed", "a": { "action": "pause" } },
+    { "t": "colony_control", "a": { "domain": "read", "action": "status" } }
   ],
   "defaults": { "detail": "brief" }
 }
@@ -261,7 +262,7 @@ curl -X POST http://localhost:8787/mcp/ \
 
 ### Agent 程序 DSL
 
-需要 `if` / `while` / `repeat` 这类控制流时，用 `agent_program_execute`，不要把大量单步判断硬塞进 `tools_call_many`。它接受受限 JSON DSL，只能通过现有 MCP 工具执行游戏动作；子工具仍然遵守自己的 `confirm` 和风险校验。
+需要 `if` / `while` / `repeat` 这类控制流时，用 `server_control domain=program action=execute`，不要把大量单步判断硬塞进 `server_control domain=batch action=call_many`。它接受受限 JSON DSL，只能通过现有 MCP 工具执行游戏动作；子工具仍然遵守自己的 `confirm` 和风险校验。
 
 ```json
 {
@@ -296,15 +297,15 @@ curl -X POST http://localhost:8787/mcp/ \
 
 核心语义：`saveAs` 保存工具返回 JSON；`$name.path` 读取变量路径；表达式支持 `eq/ne/lt/lte/gt/gte/and/or/not/add/sub/mul/div/mod/contains/exists`；`dryRun=true` 只验证结构和工具名，不执行子调用。
 
-建造蓝图优先使用可视 agent 指针：先用 `buildings_search_defs` / `buildings_materials` 选择建筑和材料，再用 `build_preview` 预检单个 anchor；确认后用 `agent_pointer_jump` 或 `agent_pointer_aim_cell` → `agent_pointer_select_tool tool=build` → `agent_pointer_left_click` 或 `agent_pointer_hold_left`。可用 `agent_pointer_user_mouse_get` 读取玩家鼠标所在格，或 `agent_pointer_jump code=mouse` 直接跳到该格；指针移动不会默认移动相机，确实需要跟镜头时传 `moveCamera=true`。需要给玩家解释意图时，用 `agent_pointer_say message=...` 在指针旁显示聊天气泡。
+建造蓝图优先使用可视 agent 指针：先用 `building_control domain=planning action=search_defs` / `building_control domain=planning action=materials` 选择建筑和材料，再用 `building_control domain=planning action=preview` 预检单个 anchor；确认后用 `navigation_control action=jump` 或 `navigation_control action=aim_cell` → `navigation_control action=select_tool tool=build` → `navigation_control action=left_click` 或 `navigation_control action=hold_left`。可用 `navigation_control action=user_mouse` 读取玩家鼠标所在格，或 `navigation_control action=jump code=mouse` 直接跳到该格；指针移动不会默认移动相机，确实需要跟镜头时传 `moveCamera=true`。需要给玩家解释意图时，用 `navigation_control action=say message=...` 在指针旁显示聊天气泡。
 
-省略 `agentId` 时使用全局默认 `agent` 指针；显式传入 `agentId` 时跨 session 复用同一指针，适合多步定位、选工具、点击链路。多步操作建议第一步用 `agent_pointer_get agentId=planner` 或 `agent_pointer_jump/aim_cell agentId=builder` 建立指针，之后每次 `agent_pointer_*` 都传同一个 `agentId`。可见动作尽量传 `displayText`，用 6-40 字给玩家说明当前位置、已选工具或即将执行的操作。需要第二个并行指针时，换一个 `agentId`。不再需要某个指针时，用 `agent_pointer_clear agentId=...` 删除它及其跳转点。回到主菜单或游戏世界未加载时，指针会自动隐藏。
+省略 `agentId` 时使用全局默认 `agent` 指针；显式传入 `agentId` 时跨 session 复用同一指针，适合多步定位、选工具、点击链路。多步操作建议第一步用 `navigation_control action=get agentId=planner` 或 `navigation_control action=jump/aim_cell agentId=builder` 建立指针，之后每次 `navigation_control` 指针动作都传同一个 `agentId`。可见动作尽量传 `displayText`，用 6-40 字给玩家说明当前位置、已选工具或即将执行的操作。需要第二个并行指针时，换一个 `agentId`。不再需要某个指针时，用 `navigation_control action=clear agentId=...` 删除它及其跳转点。回到主菜单或游戏世界未加载时，指针会自动隐藏。
 
-`buildings_search_defs` 会返回 `placement`，其中 `anchor=lowerLeftCell` 表示 x/y 或指针格是建筑 footprint 的左下锚点，不是视觉中心。`build_preview` 会返回 footprint、支撑、材料和明显碰撞诊断；实际执行后返回 `actualPlacement` / `placementCheck`，必要时再用 `world_area_snapshot` / `world_text_map` 复核。
+`building_control domain=planning action=search_defs` 会返回 `placement`，其中 `anchor=lowerLeftCell` 表示 x/y 或指针格是建筑 footprint 的左下锚点，不是视觉中心。`building_control domain=planning action=preview` 会返回 footprint、支撑、材料和明显碰撞诊断；实际执行后返回 `actualPlacement` / `placementCheck`，必要时再用 `read_control domain=world action=area_snapshot` / `read_control domain=world action=text_map` 复核。
 
-对 `BuildLocationRule=OnFloor` 的建筑，必须先通过指针放置或确认下方已有实体地板/支撑。电线、管道、梯子和砖块的水平/垂直路线使用多段 `agent_pointer_hold_left`。床、厕所、机器等宽/高大于 1 的建筑默认拒绝拖拽建造，必须逐个 anchor 用 `agent_pointer_left_click` 放置；只有明确需要重复 footprint 时才传 `allowFootprintDrag=true`。
+对 `BuildLocationRule=OnFloor` 的建筑，必须先通过指针放置或确认下方已有实体地板/支撑。电线、管道、梯子和砖块的水平/垂直路线使用多段 `navigation_control action=hold_left`。床、厕所、机器等宽/高大于 1 的建筑默认拒绝拖拽建造，必须逐个 anchor 用 `navigation_control action=left_click` 放置；只有明确需要重复 footprint 时才传 `allowFootprintDrag=true`。
 
-快速直线示例：先把指针跳到起点，选择 `Wire`，再 `agent_pointer_hold_left direction=right length=9 confirm=true`。折线拆成多段水平/垂直拖拽。
+快速直线示例：先把指针跳到起点，选择 `Wire`，再 `navigation_control action=hold_left direction=right length=9 confirm=true`。折线拆成多段水平/垂直拖拽。
 
 ---
 
@@ -377,7 +378,7 @@ curl -X POST http://localhost:8787/mcp/ \
 # 查看当前会话的客户端能力
 curl -X POST http://localhost:8787/mcp/ \
   -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
-  -d '{"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"mcp_client_capabilities","arguments":{}}}'
+  -d '{"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"server_control","arguments":{"domain":"diagnostics","action":"capabilities"}}}'
 
 # 生成 sampling 请求对象
 curl -X POST http://localhost:8787/mcp/ \
@@ -386,9 +387,11 @@ curl -X POST http://localhost:8787/mcp/ \
     "jsonrpc": "2.0", "id": 17,
     "method": "tools/call",
     "params": {
-      "name": "mcp_sampling_request_create",
+      "name": "server_control",
       "arguments": {
-        "messages": [{ "role": "user", "content": { "type": "text", "text": "Describe this" } }]
+        "domain": "client_request",
+        "action": "create_sampling",
+        "prompt": "Describe this"
       }
     }
   }'
@@ -432,10 +435,10 @@ RESP=$(curl -s -X POST http://localhost:8787/mcp/ \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"tasks":{}},"clientInfo":{"name":"cli","version":"1.0"}}}')
 SID=$(echo "$RESP" | grep -oP 'Mcp-Session-Id: \K[^\r]+' || echo "")
 
-# Step 2: tools/list → colony_status → colony_diagnostics → resources/read
+# Step 2: tools/list → colony_control status → colony_control diagnostics → resources/read
 for P in '{"method":"tools/list","params":{}}' \
-         '{"method":"tools/call","params":{"name":"colony_status","arguments":{}}}' \
-         '{"method":"tools/call","params":{"name":"colony_diagnostics","arguments":{}}}' \
+         '{"method":"tools/call","params":{"name":"colony_control","arguments":{"domain":"read","action":"status"}}}' \
+         '{"method":"tools/call","params":{"name":"colony_control","arguments":{"domain":"diagnostic","action":"diagnostics"}}}' \
          '{"method":"resources/read","params":{"uri":"oni://colony/diagnostics"}}'; do
   curl -X POST http://localhost:8787/mcp/ \
     -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: 2025-11-25" \
@@ -468,7 +471,7 @@ curl -X POST http://localhost:8787/mcp/ \
 ```bash
 curl -X POST http://localhost:8787/mcp/ \
   -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
-  -d '{"jsonrpc":"2.0","id":40,"method":"tools/call","params":{"name":"tools_search","arguments":{"query":"power","detail":"brief"}}}'
+  -d '{"jsonrpc":"2.0","id":40,"method":"tools/call","params":{"name":"server_control","arguments":{"domain":"catalog","action":"search","query":"power","detail":"brief"}}}'
 ```
 
 ### 风险工具调用
@@ -478,13 +481,13 @@ curl -X POST http://localhost:8787/mcp/ \
 ```bash
 curl -X POST http://localhost:8787/mcp/ \
   -H "Content-Type: application/json" -H "Mcp-Session-Id: $SID" -H "Mcp-Protocol-Version: $VER" \
-  -d '{"jsonrpc":"2.0","id":50,"method":"tools/call","params":{"name":"buildings_deconstruct","arguments":{"buildingId":"B123","confirm":true}}}'
+  -d '{"jsonrpc":"2.0","id":50,"method":"tools/call","params":{"name":"orders_control","arguments":{"domain":"designation","action":"deconstruct","id":123,"confirm":true}}}'
 ```
 
 ### 性能优化
 
-1. **缓存工具元信息**：`tools/list` 是懒暴露层，首次调用后缓存结果，完整列表用 `tools_manifest`
-2. **批量调用减少往返**：用 `tools_call_many` 代替多次单独 `tools/call`
+1. **缓存工具元信息**：`tools/list` 是懒暴露层，首次调用后缓存结果，完整列表用 `server_control domain=catalog action=manifest`
+2. **批量调用减少往返**：用 `server_control domain=batch action=call_many` 代替多次单独 `tools/call`
 3. **异步任务**：长耗时工具（大范围地图扫描）用 `task` 模式避免阻塞
 
 ---

@@ -21,9 +21,10 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "planters_list", "plants_list" },
                 Tags = new List<string> { "farming", "plants", "planters", "seeds", "harvest" },
-                Description = "列出种植箱/农砖等 PlantablePlot 的种植请求、当前植物和可接受种子类型",
+                Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=list。列出种植箱/农砖等 PlantablePlot 的种植请求、当前植物和可接受种子类型",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、请求种子或当前植物筛选", Required = false },
@@ -57,6 +58,80 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlPlanting()
+        {
+            return new McpTool
+            {
+                Name = "farming_planting_control",
+                Group = "farming",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "planting_control", "planter_seed_control", "farm_plot_control" },
+                Tags = new List<string> { "farming", "plants", "planters", "seeds", "harvest", "uproot", "batch" },
+                Description = "统一读取/设置种植槽、种子目录、收获标记和区域铲除。action=list_planting/seed_catalog/list_harvestables/set_harvestable/set_planting/batch_set_planting/uproot；兼容 list/set/batch。",
+                Parameters = RectParams(LookupParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list_planting/list、seed_catalog/list_seeds/seeds、list_harvestables、set_harvestable、set_planting/set/plant、batch_set_planting/batch、uproot", Required = true, EnumValues = new List<string> { "list_planting", "list", "seed_catalog", "list_seeds", "seeds", "list_harvestables", "set_harvestable", "set_planting", "set", "plant", "batch_set_planting", "batch", "uproot" } },
+                    ["seedTag"] = new McpToolParameter { Type = "string", Description = "set_planting/batch_set_planting 且 plantingAction=set 时的种子 prefab/tag，例如 BasicPlantSeed", Required = false },
+                    ["mutationTag"] = new McpToolParameter { Type = "string", Description = "植物突变/亚种 tag；未使用突变时留空", Required = false },
+                    ["plantingAction"] = new McpToolParameter { Type = "string", Description = "种植请求动作：set 或 cancel；避免与外层 action 冲突，也兼容 requestAction", Required = false, EnumValues = new List<string> { "set", "cancel" } },
+                    ["requestAction"] = new McpToolParameter { Type = "string", Description = "plantingAction 的别名：set 或 cancel", Required = false, EnumValues = new List<string> { "set", "cancel" } },
+                    ["harvestAction"] = new McpToolParameter { Type = "string", Description = "set_harvestable 的动作：mark、when_ready、cancel，默认 mark", Required = false, EnumValues = new List<string> { "mark", "when_ready", "cancel" } },
+                    ["uprootAction"] = new McpToolParameter { Type = "string", Description = "uproot 的动作：mark 或 cancel，默认 mark", Required = false, EnumValues = new List<string> { "mark", "cancel" } },
+                    ["readyOnly"] = new McpToolParameter { Type = "boolean", Description = "list_harvestables 时只返回可收获对象；set_harvestable mark 时是否要求当前可收获", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "uproot 时铲除差事优先级 1-9，默认 5", Required = false },
+                    ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "uproot 时是否设为红色最高优先级，默认 false", Required = false },
+                    ["emptyOnly"] = new McpToolParameter { Type = "boolean", Description = "action=batch 时只处理没有当前植物的种植槽，默认 true", Required = false },
+                    ["removeOccupant"] = new McpToolParameter { Type = "boolean", Description = "若已有植物，是否先调用 OrderRemoveOccupant 铲除，默认 false", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "按种植槽/植物名称、prefabId、当前植物或请求种子筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "list/batch 最多返回或处理数量", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "set 中 removeOccupant=true 时需要；batch 必须为 true；大区域 uproot 时必须为 true", Required = false }
+                })),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "list" || action == "list_planting")
+                        return ListPlanting().Handler(args);
+                    if (action == "seed_catalog" || action == "list_seeds" || action == "seeds")
+                        return ListSeedCatalog().Handler(args);
+                    if (action == "list_harvestables")
+                        return ListHarvestables().Handler(args);
+
+                    var delegated = (JObject)args.DeepClone();
+                    if (action == "set_harvestable")
+                    {
+                        string harvestAction = args["harvestAction"]?.ToString();
+                        if (!string.IsNullOrWhiteSpace(harvestAction))
+                            delegated["action"] = harvestAction.Trim();
+                        else
+                            delegated.Remove("action");
+                        return SetHarvestable().Handler(delegated);
+                    }
+                    if (action == "uproot")
+                    {
+                        string uprootAction = args["uprootAction"]?.ToString();
+                        if (!string.IsNullOrWhiteSpace(uprootAction))
+                            delegated["action"] = uprootAction.Trim();
+                        else
+                            delegated.Remove("action");
+                        return UprootArea().Handler(delegated);
+                    }
+
+                    string plantingAction = args["plantingAction"]?.ToString() ?? args["requestAction"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(plantingAction))
+                        delegated["action"] = plantingAction.Trim();
+                    else
+                        delegated.Remove("action");
+
+                    if (action == "set" || action == "set_planting" || action == "plant")
+                        return SetPlanting().Handler(delegated);
+                    if (action == "batch" || action == "batch_set_planting")
+                        return BatchSetPlanting().Handler(delegated);
+                    return CallToolResult.Error("action must be one of list_planting, seed_catalog, list_harvestables, set_harvestable, set_planting, batch_set_planting, uproot");
+                }
+            };
+        }
+
         public static McpTool ListHarvestables()
         {
             return new McpTool
@@ -65,9 +140,10 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "plants_harvestables_list", "harvestables_list" },
                 Tags = new List<string> { "farming", "plants", "harvest", "when-ready" },
-                Description = "列出可收获/可设置自动收获的植物和作物状态：是否成熟、是否标记收获、是否开启成熟即收获",
+                Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=list_harvestables。列出可收获/可设置自动收获的植物和作物状态",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按名称或 prefabId 筛选", Required = false },
@@ -113,9 +189,10 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "plant_harvest_set", "harvestable_set" },
                 Tags = new List<string> { "farming", "plants", "harvest", "when-ready" },
-                Description = "按单个对象设置收获状态：mark 标记当前收获、when_ready 开启自动收获、cancel 取消收获/自动收获",
+                Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=set_harvestable。按单个对象设置收获状态：mark、when_ready、cancel",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "mark、when_ready、cancel，默认 mark", Required = false, EnumValues = new List<string> { "mark", "when_ready", "cancel" } },
@@ -158,9 +235,10 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "plantable_seeds_list", "seeds_catalog" },
                 Tags = new List<string> { "farming", "plants", "seeds", "catalog" },
-                Description = "列出游戏内 PlantableSeed prefab，可用于 farming_planting_set 的 seedTag",
+                Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=seed_catalog。列出游戏内 PlantableSeed prefab，可用于 colony_control domain=bio bioDomain=farming action=set/batch 的 seedTag",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按种子、植物或显示名筛选", Required = false },
@@ -197,9 +275,10 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "planter_set_seed", "plant_seed_select" },
                 Tags = new List<string> { "farming", "plants", "planters", "seeds" },
-                Description = "设置或取消种植箱/农砖的种子请求；可选 removeOccupant=true 先铲除当前植物",
+                Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=set。设置或取消种植箱/农砖的种子请求；可选 removeOccupant=true 先铲除当前植物",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["seedTag"] = new McpToolParameter { Type = "string", Description = "种子 prefab/tag，例如 BasicPlantSeed；action=set 时必填", Required = false },
@@ -261,9 +340,10 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "planters_batch_set_seed", "plant_seed_area_set" },
                 Tags = new List<string> { "farming", "plants", "planters", "seeds", "batch" },
-                Description = "按区域批量设置或取消种植请求；适合一次给多块农砖/种植箱安排同一种种子",
+                Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=batch。按区域批量设置或取消种植请求；适合一次给多块农砖/种植箱安排同一种种子",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["seedTag"] = new McpToolParameter { Type = "string", Description = "种子 prefab/tag，例如 BasicPlantSeed；action=set 时必填", Required = false },
@@ -364,9 +444,10 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "farming_uproot_area", "plants_cancel_uproot" },
                 Tags = new List<string> { "farming", "plants", "uproot", "harvest" },
-                Description = "按区域标记或取消铲除植物，对应植物用户菜单的 Uproot/Cancel Uproot",
+                Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=uproot。按区域标记或取消铲除植物",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "mark 或 cancel，默认 mark", Required = false, EnumValues = new List<string> { "mark", "cancel" } },

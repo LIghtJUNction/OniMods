@@ -16,12 +16,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "receptacles_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "single_entity_receptacles_list", "receptacle_side_screens_list" },
                 Tags = new List<string> { "buildings", "side-screen", "receptacle", "single-entity", "pedestal", "rocket", "cargo" },
-                Description = "列出 ReceptacleSideScreen / SingleEntityReceptacle 通用实体请求控件，包含特殊火箭货舱；不含种植箱和孵化器",
+                Description = "兼容入口：请优先使用 building_control domain=receptacle action=list。列出 ReceptacleSideScreen / SingleEntityReceptacle 通用实体请求控件，包含特殊火箭货舱；不含种植箱和孵化器",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、请求对象或当前 occupant 筛选", Required = false },
@@ -63,22 +64,22 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "receptacle_control",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "single_entity_receptacle_control", "receptacle_side_screen_control" },
                 Tags = new List<string> { "buildings", "side-screen", "receptacle", "single-entity", "rocket", "cargo" },
-                Description = "执行 ReceptacleSideScreen 操作：request、cancel_request、remove_occupant、cancel_remove，需 confirm=true",
-                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "request、cancel_request、remove_occupant、cancel_remove", Required = true, EnumValues = new List<string> { "request", "cancel_request", "remove_occupant", "cancel_remove" } },
-                    ["entityTag"] = new McpToolParameter { Type = "string", Description = "action=request 时请求的实体 prefab/tag", Required = false },
-                    ["additionalTag"] = new McpToolParameter { Type = "string", Description = "可选附加过滤 tag，例如突变植物 SubSpeciesID", Required = false },
-                    ["replaceExistingRequest"] = new McpToolParameter { Type = "boolean", Description = "request 时若已有请求，是否先取消旧请求，默认 true", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认创建/取消/移除实体请求", Required = true }
-                }),
+                Description = "统一读取、单点和批量执行 ReceptacleSideScreen 操作。action=list/request/cancel_request/remove_occupant/cancel_remove/batch；写操作需 confirm=true。",
+                Parameters = ReceptacleControlParams(),
                 Handler = args =>
                 {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (string.IsNullOrWhiteSpace(action) || action == "list")
+                        return ListReceptacles().Handler(args);
+                    if (action == "batch")
+                        return BatchControlReceptacles().Handler(args);
+
                     if (!ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required for receptacle changes");
 
@@ -106,12 +107,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "receptacles_batch_control",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "single_entity_receptacles_batch_control" },
                 Tags = new List<string> { "buildings", "side-screen", "receptacle", "batch" },
-                Description = "批量执行 ReceptacleSideScreen 操作；items 支持短字段 a/tag/w，defaults 可共享 action/entityTag/worldId，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=receptacle action=batch。批量执行 ReceptacleSideScreen 操作；items 支持短字段 a/tag/w，defaults 可共享 action/entityTag/worldId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "数组；每项支持 id 或 x/y/worldId，并提供 action、entityTag/additionalTag 等参数；短字段 a=action、tag=entityTag、w=worldId", Required = true },
@@ -178,9 +180,10 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "single_item_selection_list", "storage_tiles_target_items_list" },
                 Tags = new List<string> { "resources", "storage", "side-screen", "single-item", "tile" },
-                Description = "列出 SingleItemSelectionSideScreen / StorageTile 的目标物品选择、容量、当前内容和可选物品",
+                Description = "兼容入口：请优先使用 building_control domain=tile_selection action=list。列出 SingleItemSelectionSideScreen / StorageTile 的目标物品选择、容量、当前内容和可选物品",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、目标物品或可选物品筛选", Required = false },
@@ -225,9 +228,10 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "single_item_selection_set", "storage_tile_target_item_set" },
                 Tags = new List<string> { "resources", "storage", "side-screen", "single-item", "tile" },
-                Description = "设置 SingleItemSelectionSideScreen / StorageTile 的目标物品；clear=true 选择 None，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=tile_selection action=set。设置 SingleItemSelectionSideScreen / StorageTile 的目标物品；clear=true 选择 None，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["itemTag"] = new McpToolParameter { Type = "string", Description = "目标物品 tag；clear=true 时可省略", Required = false },
@@ -266,9 +270,10 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "single_item_selections_batch_set" },
                 Tags = new List<string> { "resources", "storage", "side-screen", "single-item", "batch" },
-                Description = "批量设置 StorageTile 目标物品；items 支持短字段 i/c/w，defaults 可共享 itemTag/clear/worldId，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=tile_selection action=batch。批量设置 StorageTile 目标物品；items 支持短字段 i/c/w，defaults 可共享 itemTag/clear/worldId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "数组；每项支持 id 或 x/y/worldId，并提供 itemTag 或 clear=true；短字段 i=itemTag、c=clear、w=worldId", Required = true },
@@ -323,6 +328,53 @@ namespace OniMcp.Tools
                         ["failed"] = results.Count(item => !(bool)item["ok"]),
                         ["results"] = results
                     });
+                }
+            };
+        }
+
+        public static McpTool ControlStorageTileSelection()
+        {
+            return new McpTool
+            {
+                Name = "storage_tile_selection_control",
+                Hidden = true,
+                Group = "resources",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "single_item_selection_control", "storage_tile_target_item_control" },
+                Tags = new List<string> { "resources", "storage", "side-screen", "single-item", "tile", "batch" },
+                Description = "统一读取、单点设置和批量设置 StorageTile 目标物品。action=list/set/batch；set/batch 需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list、set、batch", Required = true },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、目标物品或可选物品筛选", Required = false },
+                    ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可选择物品，默认 true", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set 时目标 KPrefabID InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=list/set 时可选区域或目标 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=list/set 时可选区域或目标 Y", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前或目标格所在世界", Required = false },
+                    ["itemTag"] = new McpToolParameter { Type = "string", Description = "action=set 时目标物品 tag；clear=true 时可省略", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "action=set 时是否选择 None / GameTags.Void", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "action=batch 时数组；每项支持 id 或 x/y/worldId，并提供 itemTag 或 clear=true；短字段 i/c/w", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch 时合并到每项的默认参数", Required = false },
+                    ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set/batch 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListStorageTileSelections().Handler(args);
+                    if (action == "set")
+                        return SetStorageTileSelection().Handler(args);
+                    if (action == "batch")
+                        return BatchSetStorageTileSelections().Handler(args);
+                    return CallToolResult.Error("action must be one of list, set, batch");
                 }
             };
         }
@@ -702,6 +754,24 @@ namespace OniMcp.Tools
             parameters["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y；未传 id 时使用", Required = false };
             parameters["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；按坐标查找时建议提供", Required = false };
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> ReceptacleControlParams()
+        {
+            return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list、request、cancel_request、remove_occupant、cancel_remove 或 batch", Required = false, EnumValues = new List<string> { "list", "request", "cancel_request", "remove_occupant", "cancel_remove", "batch" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、请求对象或当前 occupant 筛选", Required = false },
+                ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可请求实体选项，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["entityTag"] = new McpToolParameter { Type = "string", Description = "action=request 时请求的实体 prefab/tag", Required = false },
+                ["additionalTag"] = new McpToolParameter { Type = "string", Description = "可选附加过滤 tag，例如突变植物 SubSpeciesID", Required = false },
+                ["replaceExistingRequest"] = new McpToolParameter { Type = "boolean", Description = "action=request 时若已有请求，是否先取消旧请求，默认 true", Required = false },
+                ["items"] = new McpToolParameter { Type = "array", Description = "action=batch 时数组；每项支持 id 或 x/y/worldId，并提供 action、entityTag/additionalTag；短字段 a/tag/w", Required = false },
+                ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch 时合并到每项的默认参数；支持 action/a、entityTag/tag、worldId/w", Required = false },
+                ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "写操作必须为 true，确认创建/取消/移除实体请求", Required = false }
+            }));
         }
 
         private static CallToolResult JsonResult(object payload)

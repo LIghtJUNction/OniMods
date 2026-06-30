@@ -26,7 +26,8 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "get_game_time" },
-                Description = "获取游戏内时间和周期信息",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 game_control domain=speed action=time",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {
@@ -60,8 +61,9 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "low",
+                Hidden = true,
                 Aliases = new List<string> { "set_game_speed" },
-                Description = "设置游戏速度（1=正常, 2=快进, 3=超快）",
+                Description = "兼容入口：请优先使用 game_control domain=speed action=set_speed",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["speed"] = new McpToolParameter
@@ -72,53 +74,182 @@ namespace OniMcp.Tools
                         EnumValues = new List<string> { "0", "1", "2", "3" }
                     }
                 },
+                Handler = args => SetSpeed(args)
+            };
+        }
+
+        public static McpTool ControlGameSpeed()
+        {
+            return new McpTool
+            {
+                Name = "game_speed_control",
+                Group = "game",
+                Mode = "execute",
+                Risk = "low",
+                Aliases = new List<string> { "game_control_speed", "game_pause_resume_speed" },
+                Tags = new List<string> { "game", "speed", "pause", "resume", "time" },
+                Description = "统一读取游戏时间并控制暂停/恢复/速度。action=time、pause、resume 或 set_speed；set_speed 时传 speed=0..3。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：time、pause、resume、set_speed", Required = true, EnumValues = new List<string> { "time", "pause", "resume", "set_speed" } },
+                    ["speed"] = new McpToolParameter
+                    {
+                        Type = "integer",
+                        Description = "action=set_speed 时的速度等级：0=暂停, 1=正常, 2=快进, 3=超快",
+                        Required = false,
+                        EnumValues = new List<string> { "0", "1", "2", "3" }
+                    }
+                },
                 Handler = args =>
                 {
-                    if (Game.Instance == null)
-                        return CallToolResult.Error("Game not initialized");
-
-                    var speedToken = args["speed"];
-                    if (speedToken == null || !int.TryParse(speedToken.ToString(), out int speed))
-                        return CallToolResult.Error("Invalid speed parameter");
-
-                    if (speed < 0 || speed > 3)
-                        return CallToolResult.Error("Speed must be 0-3");
-
-                    var speedControl = SpeedControlScreen.Instance;
-                    if (speedControl == null)
-                        return CallToolResult.Error("SpeedControlScreen not available");
-
-                    int internalSpeed = Math.Max(0, Math.Min(speed - 1, 2));
-                    switch (speed)
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
                     {
-                        case 0:
-                            speedControl.Pause();
-                            break;
-                        case 1:
-                            UnpauseAll(speedControl);
-                            speedControl.SetSpeed(internalSpeed);
-                            break;
-                        case 2:
-                            UnpauseAll(speedControl);
-                            speedControl.SetSpeed(internalSpeed);
-                            break;
-                        case 3:
-                            UnpauseAll(speedControl);
-                            speedControl.SetSpeed(internalSpeed);
-                            break;
+                        case "time":
+                        case "get_time":
+                            return GetGameTime().Handler(args);
+                        case "pause":
+                            return Pause();
+                        case "resume":
+                            return Resume();
+                        case "set_speed":
+                        case "speed":
+                            return SetSpeed(args);
+                        default:
+                            return CallToolResult.Error("action must be time, pause, resume, or set_speed");
                     }
-
-                    var result = new Dictionary<string, object>
-                    {
-                        ["requestedSpeed"] = speed,
-                        ["speed"] = speed == 0 ? 0 : speedControl.GetSpeed() + 1,
-                        ["internalSpeed"] = speedControl.GetSpeed(),
-                        ["timeScale"] = Time.timeScale,
-                        ["isPaused"] = speedControl.IsPaused
-                    };
-                    return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
             };
+        }
+
+        public static McpTool ControlGame()
+        {
+            return new McpTool
+            {
+                Name = "game_control",
+                Group = "game",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "game_system_control" },
+                Tags = new List<string> { "game", "speed", "pause", "save", "dlc", "red-alert", "sandbox", "debug", "map", "ui", "feedback", "edit-mark" },
+                Description = "统一游戏入口。domain=speed/state/save/dlc/sandbox/ui；sandbox 下 kind=read/area/entity/map_designate 用于沙盒读取、区域编辑、实体生成和 search/designate 地图编辑；ui 下 uiDomain=action/feedback/edit_mark。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "游戏子系统：speed、state、save、dlc、sandbox、ui", Required = true, EnumValues = new List<string> { "speed", "state", "save", "dlc", "sandbox", "ui" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "子系统动作：speed=time/pause/resume/set_speed；state=red_alert_status/set_red_alert/set_sandbox_mode；save=list/save/load/quit；dlc=list/activate；sandbox 按 kind 支持 list_actions/sample_cell/list_story_traits/paint/flood_fill/temperature/reveal/clear_floor/clear_critters/destroy/stress/spawn_entity/story_trait_stamp/auto_plumb_building；ui 按 uiDomain 支持 list/trigger/open_management/notification/popup/marker/create/clear", Required = true },
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "domain=sandbox 时的子域：read、area、entity 或 map_designate，默认 read；domain=ui uiDomain=action action=list 时过滤类型", Required = false, EnumValues = new List<string> { "read", "area", "entity", "map_designate", "all", "management", "overlay", "build", "navigation" } },
+                    ["uiDomain"] = new McpToolParameter { Type = "string", Description = "domain=ui 时的 UI 子域：action、feedback 或 edit_mark", Required = false, EnumValues = new List<string> { "action", "feedback", "edit_mark" } },
+                    ["speed"] = new McpToolParameter { Type = "integer", Description = "domain=speed action=set_speed 时的速度等级：0=暂停, 1=正常, 2=快进, 3=超快", Required = false },
+                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "domain=state 写动作 true=开启，false=关闭", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "domain=state 的世界 ID，默认当前激活世界", Required = false },
+                    ["allWorlds"] = new McpToolParameter { Type = "boolean", Description = "domain=state 是否应用/读取全部已加载世界，默认 false", Required = false },
+                    ["type"] = new McpToolParameter { Type = "string", Description = "domain=save list/load index 查找范围：local、cloud 或 both，默认 both", Required = false, EnumValues = new List<string> { "local", "cloud", "both" } },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "读取动作最多返回数量", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "domain=save 的另存为文件名；不能包含目录分隔符", Required = false },
+                    ["overwrite"] = new McpToolParameter { Type = "boolean", Description = "domain=save action=save 时目标文件已存在是否覆盖", Required = false },
+                    ["updateActiveSave"] = new McpToolParameter { Type = "boolean", Description = "domain=save action=save 成功后是否设为当前 active save，默认 true", Required = false },
+                    ["index"] = new McpToolParameter { Type = "integer", Description = "domain=save action=load 时 game_control domain=save action=list 返回的 index", Required = false },
+                    ["path"] = new McpToolParameter { Type = "string", Description = "domain=save action=load 时完整存档路径", Required = false },
+                    ["target"] = new McpToolParameter { Type = "string", Description = "domain=save action=quit 时 menu 退出到主菜单；desktop 退出程序，默认 menu", Required = false, EnumValues = new List<string> { "menu", "desktop" } },
+                    ["saveFirst"] = new McpToolParameter { Type = "boolean", Description = "domain=save action=quit 时退出前是否先保存，默认 false", Required = false },
+                    ["includeCosmetic"] = new McpToolParameter { Type = "boolean", Description = "domain=dlc action=list 时是否包含 cosmetic/content-only DLC，默认 false", Required = false },
+                    ["dlcId"] = new McpToolParameter { Type = "string", Description = "domain=dlc action=activate 时的 DLC id，如 DLC2_ID、DLC3_ID、DLC4_ID、DLC5_ID", Required = false },
+                    ["uiAction"] = new McpToolParameter { Type = "string", Description = "domain=ui uiDomain=action action=trigger 时的 Action 枚举名", Required = false },
+                    ["screen"] = new McpToolParameter { Type = "string", Description = "domain=ui uiDomain=action action=open_management 时的页面名", Required = false },
+                    ["title"] = new McpToolParameter { Type = "string", Description = "domain=ui uiDomain=feedback action=notification 时通知标题", Required = false },
+                    ["message"] = new McpToolParameter { Type = "string", Description = "domain=ui 的通知正文或提示内容，按 action 解释", Required = false },
+                    ["text"] = new McpToolParameter { Type = "string", Description = "domain=ui uiDomain=feedback action=popup 时浮动提示文字", Required = false },
+                    ["markerAction"] = new McpToolParameter { Type = "string", Description = "domain=ui uiDomain=feedback action=marker 时的子动作：create/list/clear", Required = false, EnumValues = new List<string> { "create", "list", "clear" } },
+                    ["prompt"] = new McpToolParameter { Type = "string", Description = "domain=ui uiDomain=edit_mark action=create 时用户对框选区域的修改提示词", Required = false },
+                    ["search"] = new McpToolParameter { Type = "string", Description = "domain=sandbox kind=map_designate 时要查找的文本地图片段", Required = false },
+                    ["designate"] = new McpToolParameter { Type = "string", Description = "domain=sandbox kind=map_designate 时指定片段；_、same、keep 保留原格", Required = false },
+                    ["replace"] = new McpToolParameter { Type = "string", Description = "兼容旧参数：请改用 designate", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 起点/目标格 X，按 action 解释", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 起点/目标格 Y，按 action 解释", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 矩形/搜索区域左下 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 矩形/搜索区域左下 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 矩形/搜索区域右上 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 矩形/搜索区域右上 Y", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "domain=sandbox 可选区域句柄", Required = false },
+                    ["element"] = new McpToolParameter { Type = "string", Description = "domain=sandbox paint/flood_fill 或 map_designate 默认元素", Required = false },
+                    ["prefabId"] = new McpToolParameter { Type = "string", Description = "domain=sandbox kind=entity action=spawn_entity 时 Prefab ID", Required = false },
+                    ["storyId"] = new McpToolParameter { Type = "string", Description = "domain=sandbox kind=entity action=story_trait_stamp 时故事 ID", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 目标对象 InstanceID，按 action 解释", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "domain=sandbox kind=read action=list_story_traits 时搜索词", Required = false },
+                    ["massKg"] = new McpToolParameter { Type = "number", Description = "domain=sandbox 元素质量 kg，按 action 解释", Required = false },
+                    ["temperatureK"] = new McpToolParameter { Type = "number", Description = "domain=sandbox 温度 K，按 action 解释", Required = false },
+                    ["disease"] = new McpToolParameter { Type = "string", Description = "domain=sandbox 病菌 ID，默认无", Required = false },
+                    ["diseaseCount"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 每格病菌数量，默认 0", Required = false },
+                    ["matchMode"] = new McpToolParameter { Type = "string", Description = "domain=sandbox kind=map_designate 匹配处理：unique/first/all，默认 unique", Required = false, EnumValues = new List<string> { "unique", "first", "all" } },
+                    ["matchIndex"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox kind=map_designate 多匹配时选择第几个，0 基", Required = false },
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 区域/搜索安全上限", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "domain=sandbox kind=map_designate 只预览不修改，默认 true", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "domain=sandbox kind=map_designate 搜索时是否把未揭示格视为 unk，默认 false", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "domain=sandbox 允许绕过对应底层工具的沙盒模式或 InstantBuild 要求，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "底层写入/危险动作需要 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string domain = (args["domain"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (domain)
+                    {
+                        case "speed":
+                        case "time":
+                            return ControlGameSpeed().Handler(args);
+                        case "state":
+                        case "red_alert":
+                            return ControlGameState().Handler(args);
+                        case "sandbox":
+                        case "sandbox_tools":
+                        case "debug":
+                            return ForwardSandbox(args);
+                        case "ui":
+                        case "interface":
+                            return ForwardUi(args);
+                        case "save":
+                        case "saves":
+                        case "lifecycle":
+                            return ControlGameSave().Handler(args);
+                        case "dlc":
+                        case "dlc_activation":
+                            return ControlDlcActivation().Handler(args);
+                        default:
+                            return CallToolResult.Error("domain must be speed, state, save, dlc, sandbox, or ui");
+                    }
+                }
+            };
+        }
+
+        private static CallToolResult ForwardUi(JObject args)
+        {
+            var forwarded = args == null ? new JObject() : (JObject)args.DeepClone();
+            string uiDomain = (forwarded["uiDomain"]?.ToString() ?? string.Empty).Trim();
+            bool uiDomainFromKind = false;
+            if (string.IsNullOrWhiteSpace(uiDomain))
+            {
+                uiDomain = (forwarded["kind"]?.ToString() ?? string.Empty).Trim();
+                uiDomainFromKind = true;
+            }
+
+            forwarded["domain"] = uiDomain;
+            forwarded.Remove("uiDomain");
+            if (uiDomainFromKind && !string.IsNullOrWhiteSpace(uiDomain))
+                forwarded.Remove("kind");
+
+            return UiControlTools.ControlUi().Handler(forwarded);
+        }
+
+        private static CallToolResult ForwardSandbox(JObject args)
+        {
+            string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+            string kind = (args["kind"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(kind) &&
+                (action == "set_sandbox_mode" || action == "sandbox_mode" || action == "sandbox_toggle" || action == "sandbox"))
+                return ControlGameState().Handler(args);
+
+            var forwarded = args == null ? new JObject() : (JObject)args.DeepClone();
+            forwarded.Remove("domain");
+            return SandboxTools.ControlSandbox().Handler(forwarded);
         }
 
         public static McpTool PauseGame()
@@ -129,17 +260,11 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "low",
+                Hidden = true,
                 Aliases = new List<string> { "pause_game" },
-                Description = "暂停游戏",
+                Description = "兼容入口：请优先使用 game_control domain=speed action=pause",
                 Parameters = new Dictionary<string, McpToolParameter>(),
-                Handler = args =>
-                {
-                    if (Game.Instance == null)
-                        return CallToolResult.Error("Game not initialized");
-
-                    SpeedControlScreen.Instance?.Pause();
-                    return CallToolResult.Text("Game paused");
-                }
+                Handler = args => Pause()
             };
         }
 
@@ -151,29 +276,82 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "low",
+                Hidden = true,
                 Aliases = new List<string> { "resume_game" },
-                Description = "恢复游戏（取消暂停）",
+                Description = "兼容入口：请优先使用 game_control domain=speed action=resume",
                 Parameters = new Dictionary<string, McpToolParameter>(),
-                Handler = args =>
-                {
-                    if (Game.Instance == null)
-                        return CallToolResult.Error("Game not initialized");
-
-                    var speedControl = SpeedControlScreen.Instance;
-                    if (speedControl == null)
-                        return CallToolResult.Error("SpeedControlScreen not available");
-
-                    UnpauseAll(speedControl);
-                    var result = new Dictionary<string, object>
-                    {
-                        ["isPaused"] = speedControl.IsPaused,
-                        ["speed"] = speedControl.GetSpeed() + 1,
-                        ["internalSpeed"] = speedControl.GetSpeed(),
-                        ["timeScale"] = Time.timeScale
-                    };
-                    return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
-                }
+                Handler = args => Resume()
             };
+        }
+
+        private static CallToolResult SetSpeed(JObject args)
+        {
+            if (Game.Instance == null)
+                return CallToolResult.Error("Game not initialized");
+
+            var speedToken = args["speed"];
+            if (speedToken == null || !int.TryParse(speedToken.ToString(), out int speed))
+                return CallToolResult.Error("Invalid speed parameter");
+
+            if (speed < 0 || speed > 3)
+                return CallToolResult.Error("Speed must be 0-3");
+
+            var speedControl = SpeedControlScreen.Instance;
+            if (speedControl == null)
+                return CallToolResult.Error("SpeedControlScreen not available");
+
+            int internalSpeed = Math.Max(0, Math.Min(speed - 1, 2));
+            switch (speed)
+            {
+                case 0:
+                    speedControl.Pause();
+                    break;
+                case 1:
+                case 2:
+                case 3:
+                    UnpauseAll(speedControl);
+                    speedControl.SetSpeed(internalSpeed);
+                    break;
+            }
+
+            var result = new Dictionary<string, object>
+            {
+                ["requestedSpeed"] = speed,
+                ["speed"] = speed == 0 ? 0 : speedControl.GetSpeed() + 1,
+                ["internalSpeed"] = speedControl.GetSpeed(),
+                ["timeScale"] = Time.timeScale,
+                ["isPaused"] = speedControl.IsPaused
+            };
+            return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult Pause()
+        {
+            if (Game.Instance == null)
+                return CallToolResult.Error("Game not initialized");
+
+            SpeedControlScreen.Instance?.Pause();
+            return CallToolResult.Text("Game paused");
+        }
+
+        private static CallToolResult Resume()
+        {
+            if (Game.Instance == null)
+                return CallToolResult.Error("Game not initialized");
+
+            var speedControl = SpeedControlScreen.Instance;
+            if (speedControl == null)
+                return CallToolResult.Error("SpeedControlScreen not available");
+
+            UnpauseAll(speedControl);
+            var result = new Dictionary<string, object>
+            {
+                ["isPaused"] = speedControl.IsPaused,
+                ["speed"] = speedControl.GetSpeed() + 1,
+                ["internalSpeed"] = speedControl.GetSpeed(),
+                ["timeScale"] = Time.timeScale
+            };
+            return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
         }
 
         public static McpTool GetRedAlertStatus()
@@ -181,12 +359,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "game_red_alert_status",
+                Hidden = true,
                 Group = "game",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "red_alert_status", "emergency_status" },
                 Tags = new List<string> { "game", "red-alert", "emergency", "priority", "紧急", "红色警戒" },
-                Description = "读取当前/全部世界的红色警戒（紧急模式）状态",
+                Description = "兼容入口：请优先使用 game_control domain=state action=red_alert_status",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
@@ -217,12 +396,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "game_red_alert_set",
+                Hidden = true,
                 Group = "game",
                 Mode = "execute",
                 Risk = "medium",
                 Aliases = new List<string> { "red_alert_set", "emergency_set", "game_emergency_set" },
                 Tags = new List<string> { "game", "red-alert", "emergency", "priority", "紧急", "红色警戒" },
-                Description = "开启或关闭红色警戒（紧急模式）。默认只修改当前世界；allWorlds=true 可同步全部已加载世界。需 confirm=true",
+                Description = "兼容入口：请优先使用 game_control domain=state action=set_red_alert。默认只修改当前世界；allWorlds=true 可同步全部已加载世界。需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["enabled"] = new McpToolParameter { Type = "boolean", Description = "true 开启红色警戒/紧急模式，false 关闭", Required = true },
@@ -273,12 +453,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "game_sandbox_mode_set",
+                Hidden = true,
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "sandbox_mode_set", "sandbox_toggle" },
                 Tags = new List<string> { "game", "sandbox", "debug", "toggle", "top-left" },
-                Description = "设置游戏沙盒模式开关，等价于顶部左侧 Sandbox Toggle。需要存档已启用 sandbox，并要求 confirm=true",
+                Description = "兼容入口：请优先使用 game_control domain=state action=set_sandbox_mode。设置游戏沙盒模式开关，等价于顶部左侧 Sandbox Toggle。需要存档已启用 sandbox，并要求 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["enabled"] = new McpToolParameter { Type = "boolean", Description = "true 开启沙盒模式，false 关闭", Required = true },
@@ -304,6 +485,39 @@ namespace OniMcp.Tools
                         ["after"] = Game.Instance.SandboxModeActive,
                         ["sandboxEnabledForSave"] = global::SaveGame.Instance.sandboxEnabled
                     }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ControlGameState()
+        {
+            return new McpTool
+            {
+                Name = "game_state_control",
+                Group = "game",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "game_emergency_control", "game_sandbox_control" },
+                Tags = new List<string> { "game", "red-alert", "sandbox", "emergency", "state" },
+                Description = "游戏状态聚合工具：action=red_alert_status/set_red_alert/set_sandbox_mode；高风险动作需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "red_alert_status、set_red_alert 或 set_sandbox_mode", Required = true, EnumValues = new List<string> { "red_alert_status", "set_red_alert", "set_sandbox_mode" } },
+                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "set_red_alert/set_sandbox_mode 时 true=开启，false=关闭", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "red alert 世界 ID，默认当前激活世界", Required = false },
+                    ["allWorlds"] = new McpToolParameter { Type = "boolean", Description = "red alert 是否应用/读取全部已加载世界，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "set_red_alert/set_sandbox_mode 必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "red_alert_status" || action == "status")
+                        return GetRedAlertStatus().Handler(args);
+                    if (action == "set_red_alert" || action == "red_alert")
+                        return SetRedAlert().Handler(args);
+                    if (action == "set_sandbox_mode" || action == "sandbox")
+                        return SetSandboxMode().Handler(args);
+                    return CallToolResult.Error("action must be red_alert_status, set_red_alert, or set_sandbox_mode");
                 }
             };
         }
@@ -340,17 +554,63 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlGameSave()
+        {
+            return new McpTool
+            {
+                Name = "game_save_control",
+                Group = "game",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "game_saves_control", "game_lifecycle_control" },
+                Tags = new List<string> { "game", "save", "load", "quit", "pause-menu", "lifecycle" },
+                Description = "游戏存档/生命周期聚合工具：action=list/save/load/quit；save/load/quit 必须传 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、save、load 或 quit", Required = true, EnumValues = new List<string> { "list", "save", "load", "quit" } },
+                    ["type"] = new McpToolParameter { Type = "string", Description = "list/load index 查找范围：local、cloud 或 both，默认 both", Required = false, EnumValues = new List<string> { "local", "cloud", "both" } },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 最多返回数量，默认 40，最大 200", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "save/quit saveFirst=true 时的另存为文件名；不能包含目录分隔符", Required = false },
+                    ["overwrite"] = new McpToolParameter { Type = "boolean", Description = "目标文件已存在时是否允许覆盖，默认 false", Required = false },
+                    ["updateActiveSave"] = new McpToolParameter { Type = "boolean", Description = "action=save 保存成功后是否把目标设为当前 active save，默认 true", Required = false },
+                    ["index"] = new McpToolParameter { Type = "integer", Description = "action=load 时 game_control domain=save action=list 返回的 index；path 为空时使用", Required = false },
+                    ["path"] = new McpToolParameter { Type = "string", Description = "action=load 时完整存档路径；必须位于 ONI 本地或云存档目录下", Required = false },
+                    ["target"] = new McpToolParameter { Type = "string", Description = "action=quit 时 menu 退出到主菜单；desktop 退出程序，默认 menu", Required = false, EnumValues = new List<string> { "menu", "desktop" } },
+                    ["saveFirst"] = new McpToolParameter { Type = "boolean", Description = "action=quit 时退出前是否先保存，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=save/load/quit 必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                            return ListSaves().Handler(args);
+                        case "save":
+                            return SaveGame().Handler(args);
+                        case "load":
+                            return LoadSave().Handler(args);
+                        case "quit":
+                            return QuitGame().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be list, save, load, or quit");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListSaves()
         {
             return new McpTool
             {
                 Name = "game_saves_list",
+                Hidden = true,
                 Group = "game",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "saves_list", "save_files_list" },
                 Tags = new List<string> { "game", "save", "load", "pause-menu", "lifecycle" },
-                Description = "列出本地/云端存档文件，供保存、另存为和载入前确认目标",
+                Description = "兼容入口：请优先使用 game_control domain=save action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["type"] = new McpToolParameter { Type = "string", Description = "local、cloud 或 both，默认 both", Required = false, EnumValues = new List<string> { "local", "cloud", "both" } },
@@ -388,12 +648,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "game_save",
+                Hidden = true,
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "save_game", "save_as" },
                 Tags = new List<string> { "game", "save", "save-as", "pause-menu", "filesystem" },
-                Description = "保存当前游戏；未提供 name 时覆盖当前 active save，提供 name 时保存到当前殖民地目录。必须 confirm=true；覆盖已有文件还需 overwrite=true",
+                Description = "兼容入口：请优先使用 game_control domain=save action=save。必须 confirm=true；覆盖已有文件还需 overwrite=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["name"] = new McpToolParameter { Type = "string", Description = "可选另存为文件名；不能包含目录分隔符；自动补 .sav", Required = false },
@@ -416,7 +677,7 @@ namespace OniMcp.Tools
                     bool overwrite = ToolUtil.GetBool(args, "overwrite", false);
                     bool existedBefore = File.Exists(target);
                     if (existedBefore && !overwrite)
-                        return CallToolResult.Error("Target save already exists; pass overwrite=true after verifying the path with game_saves_list");
+                        return CallToolResult.Error("Target save already exists; pass overwrite=true after verifying the path with game_control domain=save action=list");
 
                     bool updateActiveSave = ToolUtil.GetBool(args, "updateActiveSave", true);
                     string before = SaveLoader.GetActiveSaveFilePath();
@@ -440,15 +701,16 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "game_load_save",
+                Hidden = true,
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "load_save", "game_load" },
                 Tags = new List<string> { "game", "load", "save", "pause-menu", "lifecycle" },
-                Description = "载入已有存档，等价于 LoadScreen 选择存档并确认；会停止当前游戏并切换场景。必须先用 game_saves_list 确认 index/path，并传 confirm=true",
+                Description = "兼容入口：请优先使用 game_control domain=save action=load。必须先用 game_control domain=save action=list 确认 index/path，并传 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["index"] = new McpToolParameter { Type = "integer", Description = "game_saves_list 返回的 index；path 为空时使用", Required = false },
+                    ["index"] = new McpToolParameter { Type = "integer", Description = "game_control domain=save action=list 返回的 index；path 为空时使用", Required = false },
                     ["path"] = new McpToolParameter { Type = "string", Description = "完整存档路径；必须位于 ONI 本地或云存档目录下", Required = false },
                     ["type"] = new McpToolParameter { Type = "string", Description = "index 查找范围：local、cloud 或 both，默认 both", Required = false, EnumValues = new List<string> { "local", "cloud", "both" } },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险载入确认，必须为 true", Required = true }
@@ -481,12 +743,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "game_quit",
+                Hidden = true,
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "quit_game", "game_quit_to_menu", "game_quit_to_desktop" },
                 Tags = new List<string> { "game", "quit", "pause-menu", "lifecycle", "desktop" },
-                Description = "退出当前游戏到主菜单或桌面。可先保存；操作会中断当前游戏场景，desktop 会结束游戏进程。必须 confirm=true",
+                Description = "兼容入口：请优先使用 game_control domain=save action=quit。可先保存；操作会中断当前游戏场景，desktop 会结束游戏进程。必须 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["target"] = new McpToolParameter { Type = "string", Description = "menu 退出到主菜单；desktop 退出程序，默认 menu", Required = false, EnumValues = new List<string> { "menu", "desktop" } },
@@ -520,7 +783,7 @@ namespace OniMcp.Tools
 
                         bool overwrite = ToolUtil.GetBool(args, "overwrite", false);
                         if (File.Exists(saveTarget) && !overwrite)
-                            return CallToolResult.Error("Target save already exists; pass overwrite=true after verifying the path with game_saves_list");
+                            return CallToolResult.Error("Target save already exists; pass overwrite=true after verifying the path with game_control domain=save action=list");
 
                         saved = SaveLoader.Instance.Save(saveTarget, isAutoSave: false, updateSavePointer: true);
                     }
@@ -546,17 +809,52 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlDlcActivation()
+        {
+            return new McpTool
+            {
+                Name = "game_dlc_activation_control",
+                Group = "game",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "game_dlc_control", "dlc_activation_control" },
+                Tags = new List<string> { "game", "dlc", "pause-menu", "save", "reload", "lifecycle" },
+                Description = "DLC 存档激活聚合工具：action=list/activate；activate 必须传 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list 或 activate", Required = true, EnumValues = new List<string> { "list", "activate" } },
+                    ["includeCosmetic"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否包含 cosmetic/content-only DLC，默认 false", Required = false },
+                    ["dlcId"] = new McpToolParameter { Type = "string", Description = "action=activate 时的 DLC id，如 DLC2_ID、DLC3_ID、DLC4_ID、DLC5_ID", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=activate 必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                            return ListDlcActivation().Handler(args);
+                        case "activate":
+                            return ActivateDlcForSave().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be list or activate");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListDlcActivation()
         {
             return new McpTool
             {
                 Name = "game_dlc_activation_list",
+                Hidden = true,
                 Group = "game",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "dlc_activation_list", "game_dlc_list" },
                 Tags = new List<string> { "game", "dlc", "pause-menu", "save", "lifecycle" },
-                Description = "列出暂停菜单中可查看/可激活的 DLC 存档状态，包括订阅、当前存档是否启用以及是否允许由玩家激活",
+                Description = "兼容入口：请优先使用 game_control domain=dlc action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["includeCosmetic"] = new McpToolParameter { Type = "boolean", Description = "是否包含 cosmetic/content-only DLC，默认 false", Required = false }
@@ -585,12 +883,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "game_dlc_activate",
+                Hidden = true,
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "activate_dlc_for_save", "dlc_activate" },
                 Tags = new List<string> { "game", "dlc", "pause-menu", "save", "reload", "lifecycle" },
-                Description = "为当前存档激活一个暂停菜单可编辑 DLC。会先写入备份存档，再修改当前存档并触发重载；必须先用 game_dlc_activation_list 确认可激活并传 confirm=true",
+                Description = "兼容入口：请优先使用 game_control domain=dlc action=activate。会先写入备份存档，再修改当前存档并触发重载；必须先用 game_control domain=dlc action=list 确认可激活并传 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["dlcId"] = new McpToolParameter { Type = "string", Description = "DLC id，如 DLC2_ID、DLC3_ID、DLC4_ID、DLC5_ID", Required = true },
@@ -741,7 +1040,7 @@ namespace OniMcp.Tools
             var files = SaveLoader.GetAllFiles(sort: true, type: ParseSaveType(args["type"]?.ToString()));
             if (index >= files.Count)
             {
-                error = "index is outside game_saves_list range";
+                error = "index is outside game_control domain=save action=list range";
                 return null;
             }
             return files[index].path;
@@ -852,6 +1151,56 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlBuildingsRead()
+        {
+            return new McpTool
+            {
+                Name = "buildings_read_control",
+                Group = "buildings",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "buildings_control", "building_read_control" },
+                Tags = new List<string> { "buildings", "read", "summary" },
+                Description = "统一读取建筑列表和建筑类型摘要；action=list/summary。兼容 buildings_list 与 buildings_summary。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter
+                    {
+                        Type = "string",
+                        Description = "读取动作：list=建筑明细列表，summary=按建筑类型聚合摘要",
+                        Required = true
+                    },
+                    ["type"] = new McpToolParameter
+                    {
+                        Type = "string",
+                        Description = "建筑类型筛选（如 Generator, Pump, Bed, Tile 等），留空返回所有",
+                        Required = false
+                    },
+                    ["limit"] = new McpToolParameter
+                    {
+                        Type = "integer",
+                        Description = "最多返回多少个建筑/建筑类型，默认 100，最大 500",
+                        Required = false
+                    }
+                },
+                Handler = args =>
+                {
+                    var action = args["action"]?.ToString()?.Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                        case "buildings":
+                            return GetBuildings().Handler(args);
+                        case "summary":
+                        case "aggregate":
+                            return GetBuildingSummary().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be one of: list, summary");
+                    }
+                }
+            };
+        }
+
         public static McpTool GetBuildings()
         {
             return new McpTool
@@ -860,8 +1209,9 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "get_buildings" },
-                Description = "获取殖民地建筑列表，可按类型筛选",
+                Description = "兼容入口：请优先使用 read_control domain=buildings action=list。获取殖民地建筑列表，可按类型筛选",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["type"] = new McpToolParameter
@@ -943,8 +1293,9 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "get_building_summary" },
-                Description = "按建筑类型聚合统计数量、运行状态和世界分布",
+                Description = "兼容入口：请优先使用 read_control domain=buildings action=summary。按建筑类型聚合统计数量、运行状态和世界分布",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["type"] = new McpToolParameter

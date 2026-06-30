@@ -16,12 +16,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "side_options_list",
+                Hidden = true,
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "building_option_controls_list", "direction_controls_list" },
                 Tags = new List<string> { "controls", "side-screen", "direction", "few-option", "broadcast", "radbolt" },
-                Description = "列出非 slider/threshold 的选项型侧屏控件：工作方向、少量选项、逻辑广播频道、辐射粒子方向",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=option action=list。列出非 slider/threshold 的选项型侧屏控件：工作方向、少量选项、逻辑广播频道、辐射粒子方向",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["kind"] = new McpToolParameter { Type = "string", Description = "过滤类型：any、direction、few_option、broadcast_receiver、radbolt_direction，默认 any", Required = false, EnumValues = new List<string> { "any", "direction", "few_option", "broadcast_receiver", "radbolt_direction" } },
@@ -81,39 +82,77 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "workable_direction_set" },
                 Tags = new List<string> { "controls", "direction", "workable", "user-menu" },
-                Description = "设置 DirectionControl 工作方向：Any、Left、Right，对应建筑用户菜单中的可工作方向切换",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=option action=set kind=direction",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["direction"] = new McpToolParameter { Type = "string", Description = "Any、Left 或 Right", Required = true, EnumValues = new List<string> { "Any", "Left", "Right" } }
                 }),
+                Handler = args => SetOptionControl(args, "direction")
+            };
+        }
+
+        public static McpTool SetOptionControl()
+        {
+            return new McpTool
+            {
+                Name = "side_option_set",
+                Hidden = true,
+                Group = "controls",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "option_control_set", "side_screen_option_control_set" },
+                Tags = new List<string> { "controls", "side-screen", "direction", "few-option", "broadcast", "radbolt" },
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=option action=set。用 kind 参数选择 direction、few_option、broadcast_receiver 或 radbolt_direction。",
+                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "控件类型：direction、few_option、broadcast_receiver、radbolt_direction", Required = true, EnumValues = new List<string> { "direction", "few_option", "broadcast_receiver", "radbolt_direction" } },
+                    ["direction"] = new McpToolParameter { Type = "string", Description = "kind=direction 时为 Any/Left/Right；kind=radbolt_direction 时为 Up/UpLeft/Left/DownLeft/Down/DownRight/Right/UpRight", Required = false },
+                    ["tag"] = new McpToolParameter { Type = "string", Description = "kind=few_option 时的目标选项 tag；可先用 building_control domain=side_surface surface=option action=list kind=few_option 查询", Required = false },
+                    ["broadcasterId"] = new McpToolParameter { Type = "integer", Description = "kind=broadcast_receiver 时的目标 LogicBroadcaster InstanceID；clear=true 时可省略", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "kind=broadcast_receiver 时是否清空当前频道", Required = false }
+                }),
+                Handler = args => SetOptionControl(args, null)
+            };
+        }
+
+        public static McpTool ControlSideOption()
+        {
+            return new McpTool
+            {
+                Name = "side_option_control",
+                Hidden = true,
+                Group = "controls",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "option_control", "side_screen_option_control" },
+                Tags = new List<string> { "controls", "side-screen", "direction", "few-option", "broadcast", "radbolt" },
+                Description = "选项型侧屏聚合工具：action=list/set；读取或设置工作方向、少量选项、逻辑广播频道和辐射粒子方向。",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标对象 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标格子 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标格子 Y", Required = false },
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "action=list 时为 any/direction/few_option/broadcast_receiver/radbolt_direction；action=set 时为 direction/few_option/broadcast_receiver/radbolt_direction", Required = false, EnumValues = new List<string> { "any", "direction", "few_option", "broadcast_receiver", "radbolt_direction" } },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、选项 tag 或广播器名筛选", Required = false },
+                    ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可选项/可用广播器，默认 true", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["direction"] = new McpToolParameter { Type = "string", Description = "action=set kind=direction 时为 Any/Left/Right；kind=radbolt_direction 时为八方向", Required = false },
+                    ["tag"] = new McpToolParameter { Type = "string", Description = "action=set kind=few_option 时的目标选项 tag", Required = false },
+                    ["broadcasterId"] = new McpToolParameter { Type = "integer", Description = "action=set kind=broadcast_receiver 时的目标 LogicBroadcaster InstanceID；clear=true 时可省略", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "action=set kind=broadcast_receiver 时是否清空当前频道", Required = false }
+                }),
                 Handler = args =>
                 {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var control = go.GetComponent<DirectionControl>();
-                    if (control == null)
-                        return CallToolResult.Error("Target does not expose DirectionControl");
-
-                    WorkableReactable.AllowedDirection direction;
-                    if (!Enum.TryParse(args["direction"]?.ToString() ?? "", true, out direction))
-                        return CallToolResult.Error("direction must be Any, Left or Right");
-
-                    var before = control.allowedDirection;
-                    var method = OniReflection.GetMethodSafe(typeof(DirectionControl), "SetAllowedDirection", false, new[] { typeof(WorkableReactable.AllowedDirection) });
-                    if (method == null)
-                        return CallToolResult.Error("DirectionControl.SetAllowedDirection not found");
-                    method.Invoke(control, new object[] { direction });
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = before.ToString(),
-                        ["direction"] = control.allowedDirection.ToString(),
-                        ["changed"] = before != control.allowedDirection
-                    }, McpJsonUtil.Settings));
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListOptionControls().Handler(args);
+                    if (action == "set")
+                        return SetOptionControl().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
                 }
             };
         }
@@ -126,41 +165,15 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "side_screen_option_set" },
                 Tags = new List<string> { "controls", "few-option", "side-screen", "mode" },
-                Description = "设置实现 FewOptionSideScreen.IFewOptionSideScreen 的少量选项侧屏控件",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=option action=set kind=few_option",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["tag"] = new McpToolParameter { Type = "string", Description = "目标选项 tag；可先用 side_options_list kind=few_option 查询", Required = true }
+                    ["tag"] = new McpToolParameter { Type = "string", Description = "目标选项 tag；可先用 building_control domain=side_surface surface=option action=list kind=few_option 查询", Required = true }
                 }),
-                Handler = args =>
-                {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var control = go.GetComponent<FewOptionSideScreen.IFewOptionSideScreen>();
-                    if (control == null)
-                        return CallToolResult.Error("Target does not expose IFewOptionSideScreen");
-
-                    string tagName = args["tag"]?.ToString();
-                    if (string.IsNullOrWhiteSpace(tagName))
-                        return CallToolResult.Error("tag is required");
-                    var tag = new Tag(tagName.Trim());
-                    var option = control.GetOptions().FirstOrDefault(item => item.tag == tag);
-                    if (option.tag != tag)
-                        return CallToolResult.Error("tag is not a valid option for this target");
-
-                    var before = control.GetSelectedOption();
-                    control.OnOptionSelected(option);
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = TagInfo(before),
-                        ["selected"] = TagInfo(control.GetSelectedOption()),
-                        ["changed"] = before != control.GetSelectedOption()
-                    }, McpJsonUtil.Settings));
-                }
+                Handler = args => SetOptionControl(args, "few_option")
             };
         }
 
@@ -172,47 +185,16 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "broadcast_receiver_set", "logic_receiver_channel_set" },
                 Tags = new List<string> { "controls", "logic", "broadcast", "receiver", "automation" },
-                Description = "设置 LogicBroadcastReceiver 监听的 LogicBroadcaster；clear=true 可清空频道",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=option action=set kind=broadcast_receiver",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["broadcasterId"] = new McpToolParameter { Type = "integer", Description = "目标 LogicBroadcaster InstanceID；clear=true 时可省略", Required = false },
                     ["clear"] = new McpToolParameter { Type = "boolean", Description = "是否清空当前频道", Required = false }
                 }),
-                Handler = args =>
-                {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var receiver = go.GetComponent<LogicBroadcastReceiver>();
-                    if (receiver == null)
-                        return CallToolResult.Error("Target does not expose LogicBroadcastReceiver");
-
-                    var before = receiver.GetChannel();
-                    if (ToolUtil.GetBool(args, "clear", false))
-                    {
-                        receiver.SetChannel(null);
-                    }
-                    else
-                    {
-                        int? broadcasterId = ToolUtil.GetInt(args, "broadcasterId");
-                        if (!broadcasterId.HasValue)
-                            return CallToolResult.Error("broadcasterId is required unless clear=true");
-                        var broadcaster = FindBroadcaster(broadcasterId.Value);
-                        if (broadcaster == null)
-                            return CallToolResult.Error("LogicBroadcaster not found");
-                        receiver.SetChannel(broadcaster);
-                    }
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = before == null ? null : TargetInfo(before.gameObject),
-                        ["channel"] = receiver.GetChannel() == null ? null : TargetInfo(receiver.GetChannel().gameObject),
-                        ["changed"] = before != receiver.GetChannel()
-                    }, McpJsonUtil.Settings));
-                }
+                Handler = args => SetOptionControl(args, "broadcast_receiver")
             };
         }
 
@@ -224,40 +206,154 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "hep_direction_set", "radiation_particle_direction_set" },
                 Tags = new List<string> { "controls", "radbolt", "high-energy-particle", "direction" },
-                Description = "设置辐射粒子发射/转向建筑的八向发射方向",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=option action=set kind=radbolt_direction",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["direction"] = new McpToolParameter { Type = "string", Description = "Up、UpLeft、Left、DownLeft、Down、DownRight、Right、UpRight", Required = true, EnumValues = new List<string> { "Up", "UpLeft", "Left", "DownLeft", "Down", "DownRight", "Right", "UpRight" } }
                 }),
-                Handler = args =>
-                {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var control = go.GetComponent<IHighEnergyParticleDirection>();
-                    if (control == null)
-                        return CallToolResult.Error("Target does not expose IHighEnergyParticleDirection");
-
-                    EightDirection direction;
-                    if (!Enum.TryParse(args["direction"]?.ToString() ?? "", true, out direction))
-                        return CallToolResult.Error("direction must be one of the eight EightDirection values");
-
-                    var before = control.Direction;
-                    control.Direction = direction;
-                    if (Game.Instance != null)
-                        Game.Instance.ForceOverlayUpdate(clearLastMode: true);
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = before.ToString(),
-                        ["direction"] = control.Direction.ToString(),
-                        ["changed"] = before != control.Direction
-                    }, McpJsonUtil.Settings));
-                }
+                Handler = args => SetOptionControl(args, "radbolt_direction")
             };
+        }
+
+        private static CallToolResult SetOptionControl(JObject args, string forcedKind)
+        {
+            var go = FindTarget(args);
+            if (go == null)
+                return CallToolResult.Error("Target not found");
+
+            string kind = forcedKind ?? (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+            switch (kind)
+            {
+                case "direction":
+                    return SetDirectionControl(go, args);
+                case "few_option":
+                case "few-option":
+                case "fewoption":
+                    return SetFewOptionControl(go, args);
+                case "broadcast_receiver":
+                case "broadcast-receiver":
+                case "broadcast":
+                    return SetBroadcastReceiverControl(go, args);
+                case "radbolt_direction":
+                case "radbolt-direction":
+                case "radbolt":
+                    return SetRadboltDirectionControl(go, args);
+                default:
+                    return CallToolResult.Error("kind must be direction, few_option, broadcast_receiver, or radbolt_direction");
+            }
+        }
+
+        private static CallToolResult SetDirectionControl(GameObject go, JObject args)
+        {
+            var control = go.GetComponent<DirectionControl>();
+            if (control == null)
+                return CallToolResult.Error("Target does not expose DirectionControl");
+
+            WorkableReactable.AllowedDirection direction;
+            if (!Enum.TryParse(args["direction"]?.ToString() ?? "", true, out direction))
+                return CallToolResult.Error("direction must be Any, Left or Right");
+
+            var before = control.allowedDirection;
+            var method = OniReflection.GetMethodSafe(typeof(DirectionControl), "SetAllowedDirection", false, new[] { typeof(WorkableReactable.AllowedDirection) });
+            if (method == null)
+                return CallToolResult.Error("DirectionControl.SetAllowedDirection not found");
+            method.Invoke(control, new object[] { direction });
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "direction",
+                ["before"] = before.ToString(),
+                ["direction"] = control.allowedDirection.ToString(),
+                ["changed"] = before != control.allowedDirection
+            }, McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult SetFewOptionControl(GameObject go, JObject args)
+        {
+            var control = go.GetComponent<FewOptionSideScreen.IFewOptionSideScreen>();
+            if (control == null)
+                return CallToolResult.Error("Target does not expose IFewOptionSideScreen");
+
+            string tagName = args["tag"]?.ToString();
+            if (string.IsNullOrWhiteSpace(tagName))
+                return CallToolResult.Error("tag is required");
+            var tag = new Tag(tagName.Trim());
+            var option = control.GetOptions().FirstOrDefault(item => item.tag == tag);
+            if (option.tag != tag)
+                return CallToolResult.Error("tag is not a valid option for this target");
+
+            var before = control.GetSelectedOption();
+            control.OnOptionSelected(option);
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "few_option",
+                ["before"] = TagInfo(before),
+                ["selected"] = TagInfo(control.GetSelectedOption()),
+                ["changed"] = before != control.GetSelectedOption()
+            }, McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult SetBroadcastReceiverControl(GameObject go, JObject args)
+        {
+            var receiver = go.GetComponent<LogicBroadcastReceiver>();
+            if (receiver == null)
+                return CallToolResult.Error("Target does not expose LogicBroadcastReceiver");
+
+            var before = receiver.GetChannel();
+            if (ToolUtil.GetBool(args, "clear", false))
+            {
+                receiver.SetChannel(null);
+            }
+            else
+            {
+                int? broadcasterId = ToolUtil.GetInt(args, "broadcasterId");
+                if (!broadcasterId.HasValue)
+                    return CallToolResult.Error("broadcasterId is required unless clear=true");
+                var broadcaster = FindBroadcaster(broadcasterId.Value);
+                if (broadcaster == null)
+                    return CallToolResult.Error("LogicBroadcaster not found");
+                receiver.SetChannel(broadcaster);
+            }
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "broadcast_receiver",
+                ["before"] = before == null ? null : TargetInfo(before.gameObject),
+                ["channel"] = receiver.GetChannel() == null ? null : TargetInfo(receiver.GetChannel().gameObject),
+                ["changed"] = before != receiver.GetChannel()
+            }, McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult SetRadboltDirectionControl(GameObject go, JObject args)
+        {
+            var control = go.GetComponent<IHighEnergyParticleDirection>();
+            if (control == null)
+                return CallToolResult.Error("Target does not expose IHighEnergyParticleDirection");
+
+            EightDirection direction;
+            if (!Enum.TryParse(args["direction"]?.ToString() ?? "", true, out direction))
+                return CallToolResult.Error("direction must be one of the eight EightDirection values");
+
+            var before = control.Direction;
+            control.Direction = direction;
+            if (Game.Instance != null)
+                Game.Instance.ForceOverlayUpdate(clearLastMode: true);
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "radbolt_direction",
+                ["before"] = before.ToString(),
+                ["direction"] = control.Direction.ToString(),
+                ["changed"] = before != control.Direction
+            }, McpJsonUtil.Settings));
         }
 
         private static Dictionary<string, object> ControlInfo(GameObject go, bool includeOptions)

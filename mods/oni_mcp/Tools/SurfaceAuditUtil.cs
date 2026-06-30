@@ -14,8 +14,18 @@ namespace OniMcp.Tools
                 return new List<string>();
 
             return tools
-                .Where(tool => !string.IsNullOrWhiteSpace(tool) && (toolNames == null || !toolNames.Contains(tool)))
+                .Where(tool => !string.IsNullOrWhiteSpace(tool) && (toolNames == null || !toolNames.Contains(ToolNameOnly(tool))))
                 .ToList();
+        }
+
+        public static string ToolNameOnly(string tool)
+        {
+            if (string.IsNullOrWhiteSpace(tool))
+                return string.Empty;
+
+            var trimmed = tool.Trim();
+            int space = trimmed.IndexOfAny(new[] { ' ', '\t', '\r', '\n' });
+            return space < 0 ? trimmed : trimmed.Substring(0, space);
         }
 
         public static List<string> MissingResources(IEnumerable<string> resources, HashSet<string> resourceNames)

@@ -19,9 +19,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "related_entities_side_screen_list", "side_related_entities_list" },
                 Tags = new List<string> { "controls", "side-screen", "related-entities", "navigation", "selection" },
-                Description = "列出实现 IRelatedEntities 的侧屏关联对象，等同 RelatedEntitiesSideScreen 中可点击跳转的行",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface kind=related action=list。列出实现 IRelatedEntities 的侧屏关联对象",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按目标对象、prefabId、关联对象名称、状态或类型筛选", Required = false },
@@ -65,9 +66,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "low",
+                Hidden = true,
                 Aliases = new List<string> { "related_entities_side_screen_focus", "side_related_entity_select" },
                 Tags = new List<string> { "controls", "side-screen", "related-entities", "navigation", "selection", "camera" },
-                Description = "选择并聚焦 RelatedEntitiesSideScreen 中的一个关联对象；只改变 UI 选择和镜头，不修改游戏状态",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface kind=related action=focus。选择并聚焦 RelatedEntitiesSideScreen 中的一个关联对象",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["relatedIndex"] = new McpToolParameter { Type = "integer", Description = "关联对象序号；先用 related_entities_list 查询，默认 0", Required = false },

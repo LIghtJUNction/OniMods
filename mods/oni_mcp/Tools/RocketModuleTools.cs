@@ -16,12 +16,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "rocket_modules_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "reorderable_modules_list", "rocket_module_side_screen_list" },
                 Tags = new List<string> { "rockets", "modules", "reorder", "side-screen", "buildings" },
-                Description = "列出可由 RocketModuleSideScreen 管理的火箭模块，包含上下移动、移除和替换能力",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=module action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按模块名、prefabId 或火箭名筛选", Required = false },
@@ -66,12 +67,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "rocket_module_defs_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "rocket_module_buildables_list" },
                 Tags = new List<string> { "rockets", "modules", "build", "replace", "side-screen" },
-                Description = "列出 SelectModuleSideScreen 中可选择的火箭模块定义，并可针对现有模块给出 add/replace 可建造状态",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=module action=list_defs",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["mode"] = new McpToolParameter { Type = "string", Description = "any、add 或 replace；提供目标时默认 any", Required = false, EnumValues = new List<string> { "any", "add", "replace" } },
@@ -115,92 +117,114 @@ namespace OniMcp.Tools
                 Risk = "high",
                 Aliases = new List<string> { "rocket_module_side_screen_action", "reorderable_module_control" },
                 Tags = new List<string> { "rockets", "modules", "reorder", "build", "side-screen" },
-                Description = "执行 RocketModuleSideScreen 操作：swap_up、swap_down、remove、cancel_remove、add 或 replace。结构变更需 confirm=true",
-                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "swap_up、swap_down、remove、cancel_remove、add、replace", Required = true, EnumValues = new List<string> { "swap_up", "swap_down", "remove", "cancel_remove", "add", "replace" } },
-                    ["moduleId"] = new McpToolParameter { Type = "string", Description = "add/replace 的目标模块 prefabId，例如 HabitatModuleSmall", Required = false },
-                    ["materials"] = new McpToolParameter { Type = "string", Description = "可选建材 tag 逗号分隔；省略则用模块默认材料", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认改变火箭模块结构", Required = true },
-                    ["force"] = new McpToolParameter { Type = "boolean", Description = "跳过 CanSwap/CanChange/SelectModuleCondition 检查，默认 false", Required = false }
-                }),
+                Description = "火箭模块聚合工具：action=list/list_defs 查询模块或定义；action=swap_up/swap_down/remove/cancel_remove/add/replace 修改模块。结构变更需 confirm=true",
+                Parameters = ModuleControlParams(),
                 Handler = args =>
                 {
-                    if (!ToolUtil.GetBool(args, "confirm", false))
-                        return CallToolResult.Error("confirm=true is required for rocket module structure changes");
-
-                    var module = FindModule(args);
-                    if (module == null)
-                        return CallToolResult.Error("Target rocket module not found");
-
                     string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
-                    bool force = ToolUtil.GetBool(args, "force", false);
-                    var before = ModuleInfo(module, includeOptions: false);
-                    GameObject created = null;
-
-                    if (action == "swap_up")
-                    {
-                        if (!force && !module.CanSwapUp())
-                            return CallToolResult.Error("Module cannot swap up right now");
-                        module.SwapWithAbove(selectOnComplete: false);
-                    }
-                    else if (action == "swap_down")
-                    {
-                        if (!force && !module.CanSwapDown())
-                            return CallToolResult.Error("Module cannot swap down right now");
-                        module.SwapWithBelow(selectOnComplete: false);
-                    }
-                    else if (action == "remove")
-                    {
-                        var deconstructable = module.GetComponent<Deconstructable>();
-                        if (deconstructable == null)
-                            return CallToolResult.Error("Module does not expose Deconstructable removal");
-                        if (!force && !module.CanRemoveModule())
-                            return CallToolResult.Error("Module cannot be removed right now");
-                        if (!deconstructable.IsMarkedForDeconstruction())
-                            module.Trigger((int)GameHashes.MarkForDeconstruct);
-                    }
-                    else if (action == "cancel_remove")
-                    {
-                        var deconstructable = module.GetComponent<Deconstructable>();
-                        if (deconstructable == null)
-                            return CallToolResult.Error("Module does not expose Deconstructable removal");
-                        deconstructable.CancelDeconstruction();
-                    }
-                    else if (action == "add" || action == "replace")
-                    {
-                        var def = ResolveModuleDef(args["moduleId"]?.ToString());
-                        if (def == null)
-                            return CallToolResult.Error("moduleId must match a SelectModuleSideScreen module prefab");
-                        var context = GetSelectionContext(module, def, action == "add");
-                        if (!force)
-                        {
-                            if (action == "replace" && !module.CanChangeModule())
-                                return CallToolResult.Error("Module cannot be replaced right now");
-                            string error = GetBuildError(module, def, context);
-                            if (!string.IsNullOrEmpty(error))
-                                return CallToolResult.Error(error);
-                        }
-                        var materials = ParseMaterials(args["materials"]?.ToString(), def);
-                        created = action == "add" ? module.AddModule(def, materials) : module.ConvertModule(def, materials);
-                        if (created == null)
-                            return CallToolResult.Error("Game rejected module add/replace request");
-                    }
-                    else
-                    {
-                        return CallToolResult.Error("action must be swap_up, swap_down, remove, cancel_remove, add, or replace");
-                    }
-
-                    return JsonResult(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(module.gameObject),
-                        ["action"] = action,
-                        ["before"] = before,
-                        ["after"] = ModuleInfo(created != null ? created.GetComponent<ReorderableBuilding>() : module, includeOptions: false),
-                        ["created"] = created != null ? TargetInfo(created) : null
-                    });
+                    if (string.IsNullOrWhiteSpace(action) || action == "list" || action == "list_modules")
+                        return ListModules().Handler(args);
+                    if (action == "list_defs" || action == "list_definitions" || action == "defs")
+                        return ListModuleDefinitions().Handler(args);
+                    return ExecuteModuleAction(args, action);
                 }
             };
+        }
+
+        private static CallToolResult ExecuteModuleAction(JObject args, string action)
+        {
+            if (!ToolUtil.GetBool(args, "confirm", false))
+                return CallToolResult.Error("confirm=true is required for rocket module structure changes");
+
+            var module = FindModule(args);
+            if (module == null)
+                return CallToolResult.Error("Target rocket module not found");
+
+            bool force = ToolUtil.GetBool(args, "force", false);
+            var before = ModuleInfo(module, includeOptions: false);
+            GameObject created = null;
+
+            if (action == "swap_up")
+            {
+                if (!force && !module.CanSwapUp())
+                    return CallToolResult.Error("Module cannot swap up right now");
+                module.SwapWithAbove(selectOnComplete: false);
+            }
+            else if (action == "swap_down")
+            {
+                if (!force && !module.CanSwapDown())
+                    return CallToolResult.Error("Module cannot swap down right now");
+                module.SwapWithBelow(selectOnComplete: false);
+            }
+            else if (action == "remove")
+            {
+                var deconstructable = module.GetComponent<Deconstructable>();
+                if (deconstructable == null)
+                    return CallToolResult.Error("Module does not expose Deconstructable removal");
+                if (!force && !module.CanRemoveModule())
+                    return CallToolResult.Error("Module cannot be removed right now");
+                if (!deconstructable.IsMarkedForDeconstruction())
+                    module.Trigger((int)GameHashes.MarkForDeconstruct);
+            }
+            else if (action == "cancel_remove")
+            {
+                var deconstructable = module.GetComponent<Deconstructable>();
+                if (deconstructable == null)
+                    return CallToolResult.Error("Module does not expose Deconstructable removal");
+                deconstructable.CancelDeconstruction();
+            }
+            else if (action == "add" || action == "replace")
+            {
+                var def = ResolveModuleDef(args["moduleId"]?.ToString());
+                if (def == null)
+                    return CallToolResult.Error("moduleId must match a SelectModuleSideScreen module prefab");
+                var context = GetSelectionContext(module, def, action == "add");
+                if (!force)
+                {
+                    if (action == "replace" && !module.CanChangeModule())
+                        return CallToolResult.Error("Module cannot be replaced right now");
+                    string error = GetBuildError(module, def, context);
+                    if (!string.IsNullOrEmpty(error))
+                        return CallToolResult.Error(error);
+                }
+                var materials = ParseMaterials(args["materials"]?.ToString(), def);
+                created = action == "add" ? module.AddModule(def, materials) : module.ConvertModule(def, materials);
+                if (created == null)
+                    return CallToolResult.Error("Game rejected module add/replace request");
+            }
+            else
+            {
+                return CallToolResult.Error("action must be list, list_defs, swap_up, swap_down, remove, cancel_remove, add, or replace");
+            }
+
+            return JsonResult(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(module.gameObject),
+                ["action"] = action,
+                ["before"] = before,
+                ["after"] = ModuleInfo(created != null ? created.GetComponent<ReorderableBuilding>() : module, includeOptions: false),
+                ["created"] = created != null ? TargetInfo(created) : null
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> ModuleControlParams()
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["id"] = new McpToolParameter { Type = "integer", Description = "目标火箭模块 InstanceID；写操作或 list_defs 上下文可用", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "目标火箭模块格子 X；写操作或 list_defs 上下文可用", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "目标火箭模块格子 Y；写操作或 list_defs 上下文可用", Required = false },
+                ["action"] = new McpToolParameter { Type = "string", Description = "list、list_defs、swap_up、swap_down、remove、cancel_remove、add、replace", Required = false, EnumValues = new List<string> { "list", "list_defs", "swap_up", "swap_down", "remove", "cancel_remove", "add", "replace" } },
+                ["mode"] = new McpToolParameter { Type = "string", Description = "action=list_defs 时为 any、add 或 replace", Required = false, EnumValues = new List<string> { "any", "add", "replace" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "读取时按模块名、prefabId 或火箭名筛选", Required = false },
+                ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回 add/replace 可选模块定义，默认 false", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "读取时最多返回数量，默认 100，最大 500", Required = false },
+                ["moduleId"] = new McpToolParameter { Type = "string", Description = "add/replace 的目标模块 prefabId，例如 HabitatModuleSmall", Required = false },
+                ["materials"] = new McpToolParameter { Type = "string", Description = "可选建材 tag 逗号分隔；省略则用模块默认材料", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "写操作必须为 true，确认改变火箭模块结构", Required = false },
+                ["force"] = new McpToolParameter { Type = "boolean", Description = "跳过 CanSwap/CanChange/SelectModuleCondition 检查，默认 false", Required = false }
+            });
+            return parameters;
         }
 
         private static Dictionary<string, object> ModuleInfo(ReorderableBuilding module, bool includeOptions)

@@ -11,16 +11,111 @@ namespace OniMcp.Tools
 {
     public static class InventoryTools
     {
+        public static McpTool ControlResources()
+        {
+            return new McpTool
+            {
+                Name = "resources_control",
+                Group = "resources",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "inventory_control", "resource_management_control" },
+                Tags = new List<string> { "resources", "inventory", "food", "items", "search", "pin", "notification" },
+                Description = "资源统一入口：action=inventory/food/search_items/pins/set_pin。set_pin 写入需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "inventory、food、search_items、pins 或 set_pin", Required = true, EnumValues = new List<string> { "inventory", "food", "search_items", "pins", "set_pin" } },
+                    ["resource"] = new McpToolParameter { Type = "string", Description = "inventory/search_items/set_pin 时按资源、物品名、prefabId、元素或 tag 过滤/指定资源", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "search_items/pins 时按物品名、prefabId、元素、tag 或资源名模糊搜索", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "按世界 ID 过滤，留空返回全部世界或当前激活世界", Required = false },
+                    ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "inventory/search_items 时是否包含已储存在容器/复制人身上的物品", Required = false },
+                    ["looseOnly"] = new McpToolParameter { Type = "boolean", Description = "search_items 时仅返回地上散落物；等价于 includeStored=false", Required = false },
+                    ["includeUnpinned"] = new McpToolParameter { Type = "boolean", Description = "pins 时是否包含未固定且未通知的已发现资源，默认 false", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量；各 action 使用原工具默认值和上限", Required = false },
+                    ["pinned"] = new McpToolParameter { Type = "boolean", Description = "set_pin 时是否固定在资源面板；不传则不修改", Required = false },
+                    ["notify"] = new McpToolParameter { Type = "boolean", Description = "set_pin 时是否启用资源通知；不传则不修改", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "set_pin 必须为 true，确认修改资源面板开关", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "inventory":
+                        case "food":
+                        case "search_items":
+                            return ReadResourcesControl().Handler(args);
+                        case "pins":
+                        case "pin_list":
+                            {
+                                var forwarded = args != null ? (JObject)args.DeepClone() : new JObject();
+                                forwarded["action"] = "list";
+                                return ControlResourcePin().Handler(forwarded);
+                            }
+                        case "set_pin":
+                        case "pin_set":
+                            {
+                                var forwarded = args != null ? (JObject)args.DeepClone() : new JObject();
+                                forwarded["action"] = "set";
+                                return ControlResourcePin().Handler(forwarded);
+                            }
+                        default:
+                            return CallToolResult.Error("action must be inventory, food, search_items, pins, or set_pin");
+                    }
+                }
+            };
+        }
+
+        public static McpTool ReadResourcesControl()
+        {
+            return new McpTool
+            {
+                Name = "resources_read_control",
+                Group = "resources",
+                Mode = "read",
+                Risk = "none",
+                Tags = new List<string> { "resources", "inventory", "food", "items", "search", "资源", "库存", "食物", "搜索" },
+                Description = "资源读取聚合入口：action=inventory 读资源库存；action=food 读食物库存；action=search_items 搜索地图可拾取物品",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "inventory、food 或 search_items", Required = true, EnumValues = new List<string> { "inventory", "food", "search_items" } },
+                    ["resource"] = new McpToolParameter { Type = "string", Description = "action=inventory/search_items 时按资源、物品名、prefabId 或元素过滤", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=search_items 时按物品名、prefabId、元素或 tag 模糊搜索", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "按世界 ID 过滤，留空返回全部世界", Required = false },
+                    ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "action=inventory/search_items 时是否包含已储存在容器/复制人身上的物品", Required = false },
+                    ["looseOnly"] = new McpToolParameter { Type = "boolean", Description = "action=search_items 时仅返回地上散落物；等价于 includeStored=false", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量；各 action 使用原工具默认值和上限", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "inventory")
+                        return GetInventory().Handler(args);
+                    if (action == "food")
+                        return GetFoodInventory().Handler(args);
+                    if (action == "search_items")
+                    {
+                        var forwarded = args != null ? (JObject)args.DeepClone() : new JObject();
+                        forwarded.Remove("action");
+                        return SearchItems().Handler(forwarded);
+                    }
+
+                    return CallToolResult.Error("action must be inventory, food, or search_items");
+                }
+            };
+        }
+
         public static McpTool GetInventory()
         {
             return new McpTool
             {
                 Name = "resources_inventory",
+                Hidden = true,
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "get_inventory" },
-                Description = "按资源/物品聚合殖民地可拾取库存，包含质量、数量、储存状态和位置统计",
+                Description = "兼容旧工具：请改用 read_control domain=resources action=inventory",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["resource"] = new McpToolParameter
@@ -144,11 +239,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "resources_food",
+                Hidden = true,
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "get_food_inventory" },
-                Description = "获取食物库存，按食物类型聚合卡路里、质量、品质和储存状态",
+                Description = "兼容旧工具：请改用 read_control domain=resources action=food",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter
@@ -235,12 +331,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "items_search",
+                Hidden = true,
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "find_items", "resources_find_items", "pickupables_search", "map_items_search" },
                 Tags = new List<string> { "items", "pickupables", "resources", "search", "map", "物品", "搜索", "全图" },
-                Description = "全地图搜索可拾取物品/资源实例，按名称、prefabId 或元素过滤，返回坐标、质量、储存状态和容器信息",
+                Description = "兼容旧工具：请改用 read_control domain=resources action=search_items",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按物品名、prefabId、元素或 tag 模糊搜索；留空返回全部", Required = false },
@@ -303,17 +400,53 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlResourcePin()
+        {
+            return new McpTool
+            {
+                Name = "resource_pin_control",
+                Group = "resources",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "resources_pin_control", "resources_notification_control" },
+                Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
+                Description = "资源面板固定/通知聚合工具：action=list 查询；action=set 设置 pinned/notify，写入需 confirm=true",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按资源 tag 或名称过滤", Required = false },
+                    ["includeUnpinned"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否包含未固定且未通知的已发现资源，默认 false", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["resource"] = new McpToolParameter { Type = "string", Description = "action=set 时的资源 tag、prefabId 或名称，例如 Water、Oxygen、Dirt", Required = false },
+                    ["pinned"] = new McpToolParameter { Type = "boolean", Description = "action=set 时是否固定在资源面板；不传则不修改", Required = false },
+                    ["notify"] = new McpToolParameter { Type = "boolean", Description = "action=set 时是否启用资源通知；不传则不修改", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set 时必须为 true，确认修改资源面板开关", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListResourcePins().Handler(args);
+                    if (action == "set")
+                        return SetResourcePin().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
+                }
+            };
+        }
+
         public static McpTool ListResourcePins()
         {
             return new McpTool
             {
                 Name = "resources_pins_list",
+                Hidden = true,
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "resources_pins", "resources_notifications_list", "resource_pins_list" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
-                Description = "读取 AllResourcesScreen 资源行的固定显示和通知开关状态",
+                Description = "兼容旧工具：请改用 read_control domain=resources action=pins",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
@@ -355,12 +488,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "resources_pin_set",
+                Hidden = true,
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "set_resource_pin", "resources_notification_set", "resource_pin_set" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
-                Description = "设置 AllResourcesScreen 资源行的固定显示和通知开关；需 confirm=true",
+                Description = "兼容旧工具：请改用 read_control domain=resources action=set_pin；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["resource"] = new McpToolParameter { Type = "string", Description = "资源 tag、prefabId 或名称，例如 Water、Oxygen、Dirt", Required = true },

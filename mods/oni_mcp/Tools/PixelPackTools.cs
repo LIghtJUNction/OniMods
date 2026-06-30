@@ -71,17 +71,44 @@ namespace OniMcp.Tools
             new Color(72f / 85f, 72f / 85f, 72f / 85f)
         };
 
+        public static McpTool ControlPixelPack()
+        {
+            return new McpTool
+            {
+                Name = "pixel_pack_control",
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "pixelpack_control", "pixel_pack_color_control" },
+                Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
+                Description = "Pixel Pack 颜色聚合工具：action=list 查询；action=set_color 设置单面板颜色；action=copy_colors 执行复制/交换",
+                Parameters = PixelPackControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListPixelPacks().Handler(args);
+                    if (action == "set_color" || action == "set")
+                        return SetPixelPackColor().Handler(args);
+                    if (action == "copy_colors" || action == "copy")
+                        return CopyPixelPackColors().Handler(args);
+                    return CallToolResult.Error("action must be list, set_color, or copy_colors");
+                }
+            };
+        }
+
         public static McpTool ListPixelPacks()
         {
             return new McpTool
             {
                 Name = "pixel_packs_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "pixel_pack_colors_list", "pixelpack_list" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
-                Description = "列出 Pixel Pack 建筑、当前逻辑值、四个面板的 active/standby 颜色和侧屏颜色预设",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=pixel_pack action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名或 prefabId 筛选", Required = false },
@@ -129,17 +156,18 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "pixel_pack_color_set",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "pixelpack_color_set" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
-                Description = "设置 Pixel Pack 单个面板的 active 或 standby 颜色，等同于侧屏选择颜色后点击对应面板",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=pixel_pack action=set_color",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["panelIndex"] = new McpToolParameter { Type = "integer", Description = "面板索引 0-3", Required = true },
                     ["state"] = new McpToolParameter { Type = "string", Description = "active 或 standby", Required = true, EnumValues = new List<string> { "active", "standby" } },
-                    ["colorIndex"] = new McpToolParameter { Type = "integer", Description = "Pixel Pack 侧屏颜色预设索引；可用 pixel_packs_list includePresets=true 查询", Required = false },
+                    ["colorIndex"] = new McpToolParameter { Type = "integer", Description = "Pixel Pack 侧屏颜色预设索引；可用 building_control domain=special kind=pixel_pack action=list includePresets=true 查询", Required = false },
                     ["r"] = new McpToolParameter { Type = "number", Description = "自定义颜色红色通道 0-1；colorIndex 为空时使用", Required = false },
                     ["g"] = new McpToolParameter { Type = "number", Description = "自定义颜色绿色通道 0-1；colorIndex 为空时使用", Required = false },
                     ["b"] = new McpToolParameter { Type = "number", Description = "自定义颜色蓝色通道 0-1；colorIndex 为空时使用", Required = false },
@@ -189,12 +217,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "pixel_pack_colors_copy",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "pixelpack_colors_copy", "pixel_pack_colors_swap" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
-                Description = "执行 Pixel Pack 侧屏的复制/交换颜色操作：active_to_standby、standby_to_active、swap",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=pixel_pack action=copy_colors",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["operation"] = new McpToolParameter { Type = "string", Description = "active_to_standby、standby_to_active 或 swap", Required = true, EnumValues = new List<string> { "active_to_standby", "standby_to_active", "swap" } }
@@ -404,6 +433,29 @@ namespace OniMcp.Tools
             };
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
+            return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> PixelPackControlParams()
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list、set_color 或 copy_colors", Required = true, EnumValues = new List<string> { "list", "set_color", "copy_colors" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名或 prefabId 筛选", Required = false },
+                ["includePresets"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回 Pixel Pack 侧屏颜色预设，默认 false", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["id"] = new McpToolParameter { Type = "integer", Description = "action=set_color/copy_colors 时的目标 Pixel Pack InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "action=set_color/copy_colors 时的目标格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "action=set_color/copy_colors 时的目标格子 Y", Required = false },
+                ["panelIndex"] = new McpToolParameter { Type = "integer", Description = "action=set_color 时的面板索引 0-3", Required = false },
+                ["state"] = new McpToolParameter { Type = "string", Description = "action=set_color 时为 active 或 standby", Required = false, EnumValues = new List<string> { "active", "standby" } },
+                ["colorIndex"] = new McpToolParameter { Type = "integer", Description = "action=set_color 时的 Pixel Pack 侧屏颜色预设索引；可用 action=list includePresets=true 查询", Required = false },
+                ["r"] = new McpToolParameter { Type = "number", Description = "action=set_color 时自定义颜色红色通道 0-1；colorIndex 为空时使用", Required = false },
+                ["g"] = new McpToolParameter { Type = "number", Description = "action=set_color 时自定义颜色绿色通道 0-1；colorIndex 为空时使用", Required = false },
+                ["b"] = new McpToolParameter { Type = "number", Description = "action=set_color 时自定义颜色蓝色通道 0-1；colorIndex 为空时使用", Required = false },
+                ["a"] = new McpToolParameter { Type = "number", Description = "action=set_color 时自定义颜色透明通道 0-1，默认 1", Required = false },
+                ["operation"] = new McpToolParameter { Type = "string", Description = "action=copy_colors 时为 active_to_standby、standby_to_active 或 swap", Required = false, EnumValues = new List<string> { "active_to_standby", "standby_to_active", "swap" } }
+            });
             return parameters;
         }
 

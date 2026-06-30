@@ -14,6 +14,98 @@ namespace OniMcp.Tools
     {
         private const int MaxTextMapCells = 2500;
 
+        public static McpTool ReadWorldControl()
+        {
+            return new McpTool
+            {
+                Name = "world_read_control",
+                Group = "world",
+                Mode = "execute",
+                Risk = "low",
+                Aliases = new List<string> { "world_inspect", "world_map_read", "world_analysis_read" },
+                Tags = new List<string> { "world", "map", "cell", "terrain", "layout", "thermal", "search", "地图", "格子", "文本地图", "搜索" },
+                Description = "统一读取世界格子、元素摘要、文本地图、区域快照、布局候选、过热风险和地图搜索：action=cell_info|element_summary|text_map|area_snapshot|layout_candidates|thermal_overheat_risk|search",
+                Parameters = WorldReadControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    var forwardArgs = ForwardWorldReadArgs(args);
+                    switch (action)
+                    {
+                        case "cell_info":
+                            return GetCellInfo().Handler(forwardArgs);
+                        case "element_summary":
+                            return GetWorldElementSummary().Handler(forwardArgs);
+                        case "text_map":
+                            return GetWorldTextMap().Handler(forwardArgs);
+                        case "area_snapshot":
+                            return GetWorldAreaSnapshot().Handler(forwardArgs);
+                        case "layout_candidates":
+                            return GetLayoutCandidates().Handler(forwardArgs);
+                        case "thermal_overheat_risk":
+                            return ScanOverheatRisk().Handler(forwardArgs);
+                        case "search":
+                            return WorldSearchTools.SearchWorld().Handler(forwardArgs);
+                        default:
+                            return CallToolResult.Error("action must be cell_info, element_summary, text_map, area_snapshot, layout_candidates, thermal_overheat_risk, or search");
+                    }
+                }
+            };
+        }
+
+        private static JObject ForwardWorldReadArgs(JObject args)
+        {
+            var forwardArgs = (JObject)args.DeepClone();
+            forwardArgs.Remove("action");
+            return forwardArgs;
+        }
+
+        private static Dictionary<string, McpToolParameter> WorldReadControlParams()
+        {
+            var parameters = new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter
+                {
+                    Type = "string",
+                    Description = "操作：cell_info/element_summary/text_map/area_snapshot/layout_candidates/thermal_overheat_risk/search",
+                    Required = true,
+                    EnumValues = new List<string> { "cell_info", "element_summary", "text_map", "area_snapshot", "layout_candidates", "thermal_overheat_risk", "search" }
+                }
+            };
+
+            MergeWorldReadParameters(parameters, GetCellInfo().Parameters);
+            MergeWorldReadParameters(parameters, GetWorldElementSummary().Parameters);
+            MergeWorldReadParameters(parameters, GetWorldTextMap().Parameters);
+            MergeWorldReadParameters(parameters, GetWorldAreaSnapshot().Parameters);
+            MergeWorldReadParameters(parameters, GetLayoutCandidates().Parameters);
+            MergeWorldReadParameters(parameters, ScanOverheatRisk().Parameters);
+            MergeWorldReadParameters(parameters, WorldSearchTools.SearchWorld().Parameters);
+            return parameters;
+        }
+
+        private static void MergeWorldReadParameters(Dictionary<string, McpToolParameter> target, Dictionary<string, McpToolParameter> source)
+        {
+            if (source == null)
+                return;
+            foreach (var item in source)
+            {
+                if (target.ContainsKey(item.Key))
+                    continue;
+                target[item.Key] = CopyOptionalWorldReadParameter(item.Value);
+            }
+        }
+
+        private static McpToolParameter CopyOptionalWorldReadParameter(McpToolParameter source)
+        {
+            return new McpToolParameter
+            {
+                Type = source.Type,
+                Description = source.Description,
+                Required = false,
+                EnumValues = source.EnumValues == null ? null : new List<string>(source.EnumValues)
+            };
+        }
+
         public static McpTool GetCellInfo()
         {
             return new McpTool
@@ -24,7 +116,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_cell_info" },
                 Tags = new List<string> { "world", "cell", "grid", "terrain", "elements", "temperature", "disease", "map", "格子", "元素" },
-                Description = "获取指定地图格子的元素、质量、温度、病菌、可见性和世界信息",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 read_control domain=world action=cell_info",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter
@@ -334,7 +427,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_world_element_summary" },
                 Tags = new List<string> { "world", "elements", "summary", "statistics", "mass", "temperature", "map", "元素", "统计" },
-                Description = "按元素统计指定世界中的气体、液体、固体质量和平均温度",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 read_control domain=world action=element_summary",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter
@@ -444,7 +538,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_world_text_map", "world_serialize_area" },
                 Tags = new List<string> { "map", "text", "markdown", "sequence", "world", "地图", "格子" },
-                Description = "把指定矩形地图序列化为 Markdown/JSON 文档。默认作为低 token 扫描或无视觉能力客户端的兜底；需要让视觉模型判断坐标时优先用 camera_coordinate_screenshot，把坐标网格直接叠加到截图上。",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 read_control domain=world action=text_map",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；返回结果会把该区域左下角作为 origin，并同时显示世界绝对坐标", Required = false },
@@ -677,7 +772,8 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "area_snapshot", "world_snapshot_area" },
                 Tags = new List<string> { "map", "snapshot", "text", "grid", "screenshot", "overlay", "地图", "截图", "快照" },
-                Description = "一次返回同一区域的结构化文本地图、对象摘要和可选 utility overlay（电力/气管/液管/运输/逻辑）。默认用于结构化兜底/批量扫描；视觉坐标上下文优先用 camera_coordinate_screenshot。",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 read_control domain=world action=area_snapshot",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；返回结果包含 origin/relativeRect 和世界绝对坐标范围", Required = false },
@@ -816,7 +912,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "world_layout_candidates", "base_layout_candidates", "room_candidates" },
                 Tags = new List<string> { "layout", "planning", "room", "base", "map", "平面", "规划", "房间" },
-                Description = "【平面结构规划】在指定区域内寻找适合实验室/宿舍/厕所/通用房间的候选矩形，返回评分、需挖掘、需铺砖、危险格、连通性和建议用途；只读。",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 read_control domain=world action=layout_candidates",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；提供后可省略 x1/y1/x2/y2/worldId", Required = false },
@@ -888,7 +985,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "overheat_risk_scan", "thermal_risk_scan" },
                 Tags = new List<string> { "thermal", "temperature", "overheat", "buildings", "heat", "温度", "过热" },
-                Description = "扫描建筑过热风险，按当前格温和建筑过热温度差排序，适合快速发现即将过热或已经过热的设备",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 read_control domain=world action=thermal_overheat_risk",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；默认当前激活世界，传 -1 扫描全部世界", Required = false },

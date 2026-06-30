@@ -12,17 +12,102 @@ namespace OniMcp.Tools
 {
     public static class SpecialBuildingTools
     {
+        public static McpTool ControlSpecialBuilding()
+        {
+            return new McpTool
+            {
+                Name = "special_building_control",
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "special_side_building_control" },
+                Tags = new List<string> { "buildings", "special", "side-screen", "art", "ranching", "rocket", "monument" },
+                Description = "特殊建筑侧屏聚合工具：kind=artable/creature_lure/gene_shuffler/missile_launcher/monument_part，action 使用对应旧 control 的动作。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "特殊建筑类型：artable、creature_lure、gene_shuffler、missile_launcher、monument_part", Required = true, EnumValues = new List<string> { "artable", "creature_lure", "gene_shuffler", "missile_launcher", "monument_part" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：list、set_stage、set_bait、complete、request_recharge、cancel_recharge、toggle_recharge、set_ammunition、set", Required = true },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "目标建筑 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标建筑或区域 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标建筑或区域 Y", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "区域左下 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "区域左下 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "区域右上 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "区域右上 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按名称、prefabId 或选项筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量", Required = false },
+                    ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可选项", Required = false },
+                    ["stageId"] = new McpToolParameter { Type = "string", Description = "kind=artable action=set_stage 时的阶段 id", Required = false },
+                    ["baitTag"] = new McpToolParameter { Type = "string", Description = "kind=creature_lure action=set_bait 时的诱饵 tag", Required = false },
+                    ["missileId"] = new McpToolParameter { Type = "string", Description = "kind=missile_launcher action=set_ammunition 时的弹药 id", Required = false },
+                    ["allowed"] = new McpToolParameter { Type = "boolean", Description = "kind=missile_launcher action=set_ammunition 时是否允许", Required = false },
+                    ["partId"] = new McpToolParameter { Type = "string", Description = "kind=monument_part action=set 时的外观 id", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "清空当前选择；用于 artable/creature_lure", Required = false },
+                    ["rotate"] = new McpToolParameter { Type = "boolean", Description = "kind=monument_part action=set 时执行翻转", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "跳过部分预检查", Required = false }
+                },
+                Handler = args =>
+                {
+                    string kind = (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (kind)
+                    {
+                        case "artable":
+                            return ControlArtable().Handler(args);
+                        case "creature_lure":
+                        case "lure":
+                            return ControlCreatureLure().Handler(args);
+                        case "gene_shuffler":
+                        case "neural_vacillator":
+                            return ControlGeneShuffler().Handler(args);
+                        case "missile_launcher":
+                            return ControlMissileLauncher().Handler(args);
+                        case "monument_part":
+                            return ControlMonumentPart().Handler(args);
+                        default:
+                            return CallToolResult.Error("kind must be artable, creature_lure, gene_shuffler, missile_launcher, or monument_part");
+                    }
+                }
+            };
+        }
+
+        public static McpTool ControlArtable()
+        {
+            return new McpTool
+            {
+                Name = "artable_control",
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Hidden = true,
+                Aliases = new List<string> { "artwork_selection_control", "artable_facade_control" },
+                Tags = new List<string> { "buildings", "art", "decor", "facade", "side-screen" },
+                Description = "艺术建筑外观聚合工具：action=list 查询可选阶段；action=set_stage 设置阶段或 clear=true 重做",
+                Parameters = ArtableControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListArtables().Handler(args);
+                    if (action == "set_stage" || action == "set")
+                        return SetArtableStage().Handler(args);
+                    return CallToolResult.Error("action must be list or set_stage");
+                }
+            };
+        }
+
         public static McpTool ListArtables()
         {
             return new McpTool
             {
                 Name = "artables_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "artwork_selection_list", "artable_facades_list" },
                 Tags = new List<string> { "buildings", "art", "decor", "facade", "side-screen" },
-                Description = "列出可重选外观的艺术建筑和 ArtableSelectionSideScreen 可选阶段",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=artable action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、阶段 id 或阶段名筛选", Required = false },
@@ -66,12 +151,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "artable_stage_set",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "artwork_selection_set", "artable_facade_set" },
                 Tags = new List<string> { "buildings", "art", "decor", "facade", "side-screen" },
-                Description = "设置艺术建筑目标外观阶段，或清空为 Default 并重新发布艺术差事",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=artable action=set_stage",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["stageId"] = new McpToolParameter { Type = "string", Description = "目标 ArtableStage id；clear=true 时忽略", Required = false },
@@ -115,17 +201,43 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlCreatureLure()
+        {
+            return new McpTool
+            {
+                Name = "creature_lure_control",
+                Group = "ranching",
+                Mode = "write",
+                Risk = "medium",
+                Hidden = true,
+                Aliases = new List<string> { "lure_control", "creature_lure_bait_control" },
+                Tags = new List<string> { "buildings", "ranching", "lure", "bait", "side-screen" },
+                Description = "生物诱饵站聚合工具：action=list 查询可选诱饵；action=set_bait 选择或清空诱饵",
+                Parameters = CreatureLureControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListCreatureLures().Handler(args);
+                    if (action == "set_bait" || action == "set")
+                        return SetCreatureLureBait().Handler(args);
+                    return CallToolResult.Error("action must be list or set_bait");
+                }
+            };
+        }
+
         public static McpTool ListCreatureLures()
         {
             return new McpTool
             {
                 Name = "creature_lures_list",
+                Hidden = true,
                 Group = "ranching",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "lures_list", "creature_lure_baits_list" },
                 Tags = new List<string> { "buildings", "ranching", "lure", "bait", "side-screen" },
-                Description = "列出生物诱饵站和 LureSideScreen 可选诱饵",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=creature_lure action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId 或诱饵 tag 筛选", Required = false },
@@ -140,12 +252,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "creature_lure_bait_set",
+                Hidden = true,
                 Group = "ranching",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "lure_bait_set" },
                 Tags = new List<string> { "buildings", "ranching", "lure", "bait", "side-screen" },
-                Description = "选择或清空生物诱饵站诱饵，等同于 LureSideScreen toggle",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=creature_lure action=set_bait",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["baitTag"] = new McpToolParameter { Type = "string", Description = "诱饵 tag，如 SlimeMold 或 Phosphorite；clear=true 时忽略", Required = false },
@@ -183,12 +296,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "gene_shufflers_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "neural_vacillators_list" },
                 Tags = new List<string> { "buildings", "gene-shuffler", "trait", "recharge", "side-screen" },
-                Description = "列出 Gene Shuffler/Neural Vacillator 状态、分配对象和充能请求",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=gene_shuffler action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按名称、prefabId 或分配对象筛选", Required = false },
@@ -229,19 +343,20 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "neural_vacillator_control" },
                 Tags = new List<string> { "buildings", "gene-shuffler", "trait", "recharge", "side-screen" },
-                Description = "执行 GeneShufflerSideScreen 按钮：完成时领取/关闭完成状态，已消耗时请求或取消充能",
-                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "complete、request_recharge、cancel_recharge 或 toggle_recharge", Required = true, EnumValues = new List<string> { "complete", "request_recharge", "cancel_recharge", "toggle_recharge" } }
-                }),
+                Description = "Gene Shuffler 聚合工具：action=list 查询状态；complete/request_recharge/cancel_recharge/toggle_recharge 执行按钮",
+                Parameters = GeneShufflerControlParams(),
                 Handler = args =>
                 {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (string.IsNullOrWhiteSpace(action) || action == "list")
+                        return ListGeneShufflers().Handler(args);
+
                     var shuffler = FindGeneShuffler(args);
                     if (shuffler == null)
                         return CallToolResult.Error("Target GeneShuffler not found");
-                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
                     var before = GeneShufflerInfo(shuffler);
 
                     if (action == "complete")
@@ -273,17 +388,43 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlMissileLauncher()
+        {
+            return new McpTool
+            {
+                Name = "missile_launcher_control",
+                Group = "rockets",
+                Mode = "write",
+                Risk = "medium",
+                Hidden = true,
+                Aliases = new List<string> { "missile_ammunition_control", "missile_launcher_ammunition_control" },
+                Tags = new List<string> { "buildings", "rocket", "missile", "ammunition", "side-screen" },
+                Description = "导弹发射器聚合工具：action=list 查询弹药允许状态；action=set_ammunition 设置弹药允许状态",
+                Parameters = MissileLauncherControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListMissileLaunchers().Handler(args);
+                    if (action == "set_ammunition" || action == "set")
+                        return SetMissileAmmunition().Handler(args);
+                    return CallToolResult.Error("action must be list or set_ammunition");
+                }
+            };
+        }
+
         public static McpTool ListMissileLaunchers()
         {
             return new McpTool
             {
                 Name = "missile_launchers_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "missile_ammunition_list" },
                 Tags = new List<string> { "buildings", "rocket", "missile", "ammunition", "side-screen" },
-                Description = "列出导弹发射器和 MissileSelectionSideScreen 弹药允许状态",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=missile_launcher action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId 或弹药 tag 筛选", Required = false },
@@ -321,12 +462,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "missile_ammunition_set",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "missile_launcher_ammunition_set" },
                 Tags = new List<string> { "buildings", "rocket", "missile", "ammunition", "side-screen" },
-                Description = "设置导弹发射器弹药允许状态，等同于 MissileSelectionSideScreen toggle",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=missile_launcher action=set_ammunition",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["ammoTag"] = new McpToolParameter { Type = "string", Description = "弹药 tag，如 MissileBasic、MissileLongRange 或 DLC cosmic blast 类型", Required = true },
@@ -358,17 +500,43 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlMonumentPart()
+        {
+            return new McpTool
+            {
+                Name = "monument_part_control",
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Hidden = true,
+                Aliases = new List<string> { "monument_facade_control" },
+                Tags = new List<string> { "buildings", "monument", "decor", "facade", "side-screen" },
+                Description = "纪念碑部件聚合工具：action=list 查询可选外观；action=set 设置外观或 rotate=true 翻转",
+                Parameters = MonumentPartControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListMonumentParts().Handler(args);
+                    if (action == "set")
+                        return SetMonumentPart().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
+                }
+            };
+        }
+
         public static McpTool ListMonumentParts()
         {
             return new McpTool
             {
                 Name = "monument_parts_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "monument_facades_list" },
                 Tags = new List<string> { "buildings", "monument", "decor", "facade", "side-screen" },
-                Description = "列出纪念碑部件、当前外观和 MonumentSideScreen 可选外观",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=monument_part action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、part 或外观 id 筛选", Required = false },
@@ -408,12 +576,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "monument_part_set",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "monument_facade_set" },
                 Tags = new List<string> { "buildings", "monument", "decor", "facade", "side-screen" },
-                Description = "设置纪念碑部件外观或执行翻转，等同于 MonumentSideScreen",
+                Description = "兼容旧工具：请改用 building_control domain=special kind=monument_part action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["partId"] = new McpToolParameter { Type = "string", Description = "MonumentPartResource id；rotate=true 时可省略", Required = false },
@@ -744,6 +913,80 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> AreaLookupParams(Dictionary<string, McpToolParameter> extra)
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y", Required = false }
+            });
+            foreach (var item in extra)
+                parameters[item.Key] = item.Value;
+            return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> ArtableControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_stage", Required = true, EnumValues = new List<string> { "list", "set_stage" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、阶段 id 或阶段名筛选", Required = false },
+                ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可选阶段，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["stageId"] = new McpToolParameter { Type = "string", Description = "action=set_stage 时的目标 ArtableStage id；clear=true 时忽略", Required = false },
+                ["clear"] = new McpToolParameter { Type = "boolean", Description = "action=set_stage 时 true 表示清空成 Default 并重新等待创作", Required = false },
+                ["force"] = new McpToolParameter { Type = "boolean", Description = "action=set_stage 时跳过解锁和当前品质过滤检查，默认 false", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> CreatureLureControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_bait", Required = true, EnumValues = new List<string> { "list", "set_bait" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId 或诱饵 tag 筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["baitTag"] = new McpToolParameter { Type = "string", Description = "action=set_bait 时的诱饵 tag，如 SlimeMold 或 Phosphorite；clear=true 时忽略", Required = false },
+                ["clear"] = new McpToolParameter { Type = "boolean", Description = "action=set_bait 时 true 表示清空诱饵选择", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> MissileLauncherControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_ammunition", Required = true, EnumValues = new List<string> { "list", "set_ammunition" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId 或弹药 tag 筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["ammoTag"] = new McpToolParameter { Type = "string", Description = "action=set_ammunition 时的弹药 tag，如 MissileBasic、MissileLongRange 或 DLC cosmic blast 类型", Required = false },
+                ["allowed"] = new McpToolParameter { Type = "boolean", Description = "action=set_ammunition 时是否允许该弹药", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> GeneShufflerControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list、complete、request_recharge、cancel_recharge 或 toggle_recharge", Required = false, EnumValues = new List<string> { "list", "complete", "request_recharge", "cancel_recharge", "toggle_recharge" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按名称、prefabId 或分配对象筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> MonumentPartControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、part 或外观 id 筛选", Required = false },
+                ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可选外观，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["partId"] = new McpToolParameter { Type = "string", Description = "action=set 时的 MonumentPartResource id；rotate=true 时可省略", Required = false },
+                ["rotate"] = new McpToolParameter { Type = "boolean", Description = "action=set 时 true 表示执行翻转按钮", Required = false }
+            });
         }
 
         private static bool HasRectInput(JObject args)

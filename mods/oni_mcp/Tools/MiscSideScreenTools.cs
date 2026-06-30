@@ -18,12 +18,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "configurable_consumers_list",
+                Hidden = true,
                 Group = "production",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "spice_grinders_list", "consumer_options_list" },
                 Tags = new List<string> { "production", "side-screen", "configurable-consumer", "spice" },
-                Description = "列出 ConfigureConsumerSideScreen 选项型消费者及可选配方/设置",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=configurable_consumer action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId、选项名或 optionId 筛选", Required = false },
@@ -38,12 +39,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "configurable_consumer_option_set",
+                Hidden = true,
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "spice_grinder_option_set", "consumer_option_set" },
                 Tags = new List<string> { "production", "side-screen", "configurable-consumer", "spice" },
-                Description = "设置 ConfigureConsumerSideScreen 当前选项，可按 optionIndex、optionId 或 optionName 选择",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=configurable_consumer action=set_option",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["optionIndex"] = new McpToolParameter { Type = "integer", Description = "GetSettingOptions() 中的选项序号", Required = false },
@@ -74,17 +76,127 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlConfigurableConsumer()
+        {
+            return new McpTool
+            {
+                Name = "configurable_consumer_control",
+                Group = "production",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "spice_grinder_control", "consumer_option_control" },
+                Tags = new List<string> { "production", "side-screen", "configurable-consumer", "spice" },
+                Description = "可配置消费者聚合工具：action=list 查询选项型消费者；action=set_option 设置当前选项",
+                Parameters = ConfigurableConsumerControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListConfigurableConsumers().Handler(args);
+                    if (action == "set_option" || action == "set")
+                        return SetConfigurableConsumerOption().Handler(args);
+                    return CallToolResult.Error("action must be list or set_option");
+                }
+            };
+        }
+
+        public static McpTool ControlMiscSideScreen()
+        {
+            return new McpTool
+            {
+                Name = "misc_sidescreen_control",
+                Hidden = true,
+                Group = "controls",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "misc_side_screen_control", "small_sidescreen_control" },
+                Tags = new List<string> { "controls", "side-screen", "toggle", "logic", "alarm", "turbo", "configurable-consumer" },
+                Description = "小型侧屏控件统一入口。kind=n_toggle/logic_alarm/turbo_heater/configurable_consumer；action 透传到对应旧 control。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "侧屏控件类型：n_toggle、logic_alarm、turbo_heater、configurable_consumer", Required = true, EnumValues = new List<string> { "n_toggle", "logic_alarm", "turbo_heater", "configurable_consumer" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：通常为 list/set；configurable_consumer 支持 set_option", Required = true },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑、prefabId、标题、选项或报警信息筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "action=list 时区域句柄；与 x1/y1/x2/y2 二选一", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 Y", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set/set_option 时目标 KPrefabID.InstanceID；推荐", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=set/set_option 时目标格子 X；未传 id 时使用", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=set/set_option 时目标格子 Y；未传 id 时使用", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；list 时可筛选，set 时按坐标查找建议提供", Required = false },
+                    ["optionIndex"] = new McpToolParameter { Type = "integer", Description = "n_toggle/configurable_consumer 的目标选项序号", Required = false },
+                    ["optionId"] = new McpToolParameter { Type = "string", Description = "configurable_consumer 的选项 ID", Required = false },
+                    ["optionName"] = new McpToolParameter { Type = "string", Description = "n_toggle/configurable_consumer 的选项显示名称", Required = false },
+                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "turbo_heater action=set 时 true=启用，false=关闭", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "logic_alarm action=set 时报警名称，最长 30 字符", Required = false },
+                    ["tooltip"] = new McpToolParameter { Type = "string", Description = "logic_alarm action=set 时报警说明，最长 90 字符", Required = false },
+                    ["type"] = new McpToolParameter { Type = "string", Description = "logic_alarm action=set 时通知类型：bad、neutral 或 duplicant_threatening", Required = false, EnumValues = new List<string> { "bad", "neutral", "duplicant_threatening" } },
+                    ["pauseOnNotify"] = new McpToolParameter { Type = "boolean", Description = "logic_alarm action=set 时触发后是否暂停", Required = false },
+                    ["zoomOnNotify"] = new McpToolParameter { Type = "boolean", Description = "logic_alarm action=set 时触发后是否跳转镜头", Required = false }
+                },
+                Handler = args =>
+                {
+                    string kind = (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (kind)
+                    {
+                        case "n_toggle":
+                        case "multi_toggle":
+                            return ControlNToggle().Handler(args);
+                        case "logic_alarm":
+                        case "alarm":
+                            return ControlLogicAlarm().Handler(args);
+                        case "turbo_heater":
+                        case "turbo":
+                            return ControlTurboHeater().Handler(args);
+                        case "configurable_consumer":
+                        case "consumer":
+                            return ControlConfigurableConsumer().Handler(args);
+                        default:
+                            return CallToolResult.Error("kind must be n_toggle, logic_alarm, turbo_heater, or configurable_consumer");
+                    }
+                }
+            };
+        }
+
+        public static McpTool ControlNToggle()
+        {
+            return new McpTool
+            {
+                Name = "n_toggle_control",
+                Group = "controls",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "multi_toggle_control", "n_toggle_option_control" },
+                Tags = new List<string> { "controls", "side-screen", "toggle", "multi-option" },
+                Description = "多选侧屏控件聚合工具：action=list 查询 INToggleSideScreenControl；action=set 排队选择选项",
+                Parameters = NToggleControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListNToggles().Handler(args);
+                    if (action == "set")
+                        return SetNToggle().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
+                }
+            };
+        }
+
         public static McpTool ListNToggles()
         {
             return new McpTool
             {
                 Name = "n_toggles_list",
+                Hidden = true,
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "multi_toggle_controls_list", "n_toggle_controls_list" },
                 Tags = new List<string> { "controls", "side-screen", "toggle", "multi-option" },
-                Description = "列出实现 INToggleSideScreenControl 的多选侧屏控件",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=n_toggle action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId、标题或选项筛选", Required = false },
@@ -99,12 +211,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "n_toggle_set",
+                Hidden = true,
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "multi_toggle_set", "n_toggle_option_set" },
                 Tags = new List<string> { "controls", "side-screen", "toggle", "multi-option" },
-                Description = "设置 INToggleSideScreenControl 的 queued option",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=n_toggle action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["optionIndex"] = new McpToolParameter { Type = "integer", Description = "目标选项序号", Required = false },
@@ -141,9 +254,10 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "alarm_side_screens_list" },
                 Tags = new List<string> { "automation", "logic", "alarm", "notification", "side-screen" },
-                Description = "列出 LogicAlarmSideScreen 名称、提示、通知类型、暂停和镜头跳转设置",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=misc kind=logic_alarm action=list。列出 LogicAlarmSideScreen 名称、提示、通知类型、暂停和镜头跳转设置",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId、报警名称、提示或类型筛选", Required = false },
@@ -161,9 +275,10 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "alarm_side_screen_set" },
                 Tags = new List<string> { "automation", "logic", "alarm", "notification", "side-screen" },
-                Description = "设置 LogicAlarmSideScreen 的通知名称、提示、类型、触发暂停和触发镜头跳转",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=misc kind=logic_alarm action=set。设置 LogicAlarmSideScreen 的通知名称、提示、类型、触发暂停和触发镜头跳转",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["name"] = new McpToolParameter { Type = "string", Description = "报警名称，最长 30 字符；留空不修改", Required = false },
@@ -207,17 +322,85 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlLogicAlarm()
+        {
+            return new McpTool
+            {
+                Name = "logic_alarm_control",
+                Group = "automation",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "logic_alarm_side_control", "alarm_side_screen_control" },
+                Tags = new List<string> { "automation", "logic", "alarm", "notification", "side-screen" },
+                Description = "统一读取和设置 LogicAlarmSideScreen 通知配置。action=list/set。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list 或 set", Required = true },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑、prefabId、报警名称、提示或类型筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "action=list 时区域句柄；与 x1/y1/x2/y2 二选一", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 Y", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set 时目标 KPrefabID.InstanceID；推荐", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=set 时目标格子 X；未传 id 时使用", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=set 时目标格子 Y；未传 id 时使用", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；list 时可筛选，set 时按坐标查找建议提供", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "action=set 时报警名称，最长 30 字符；留空不修改", Required = false },
+                    ["tooltip"] = new McpToolParameter { Type = "string", Description = "action=set 时报警说明，最长 90 字符；留空不修改", Required = false },
+                    ["type"] = new McpToolParameter { Type = "string", Description = "action=set 时通知类型：bad、neutral 或 duplicant_threatening；留空不修改", Required = false, EnumValues = new List<string> { "bad", "neutral", "duplicant_threatening" } },
+                    ["pauseOnNotify"] = new McpToolParameter { Type = "boolean", Description = "action=set 时触发后是否暂停；留空不修改", Required = false },
+                    ["zoomOnNotify"] = new McpToolParameter { Type = "boolean", Description = "action=set 时触发后是否跳转镜头；留空不修改", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListLogicAlarms().Handler(args);
+                    if (action == "set")
+                        return SetLogicAlarm().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
+                }
+            };
+        }
+
+        public static McpTool ControlTurboHeater()
+        {
+            return new McpTool
+            {
+                Name = "turbo_heater_control",
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "liquid_tepidizer_turbo_control", "turbo_mode_control" },
+                Tags = new List<string> { "building", "heater", "liquid", "turbo", "side-screen" },
+                Description = "Liquid Tepidizer 涡轮模式聚合工具：action=list 查询状态；action=set 开关涡轮模式",
+                Parameters = TurboHeaterControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListTurboHeaters().Handler(args);
+                    if (action == "set")
+                        return SetTurboHeater().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
+                }
+            };
+        }
+
         public static McpTool ListTurboHeaters()
         {
             return new McpTool
             {
                 Name = "turbo_heaters_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "liquid_tepidizers_list", "turbo_mode_heaters_list" },
                 Tags = new List<string> { "building", "heater", "liquid", "turbo", "side-screen" },
-                Description = "列出 Liquid Tepidizer TurboModeSideScreen 状态和功耗范围",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=turbo_heater action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑或 prefabId 筛选", Required = false },
@@ -232,12 +415,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "turbo_heater_set",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "liquid_tepidizer_turbo_set", "turbo_mode_set" },
                 Tags = new List<string> { "building", "heater", "liquid", "turbo", "side-screen" },
-                Description = "开启或关闭 Liquid Tepidizer TurboModeSideScreen",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=turbo_heater action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["enabled"] = new McpToolParameter { Type = "boolean", Description = "true=最大功耗，false=最小功耗", Required = true }
@@ -267,12 +451,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "rocket_self_destruct_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "self_destruct_modules_list" },
                 Tags = new List<string> { "rocket", "self-destruct", "side-screen" },
-                Description = "列出可执行 SelfDestructButtonSideScreen 的在途火箭舱体",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=self_destruct action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId 或火箭名筛选", Required = false },
@@ -287,12 +472,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "rocket_self_destruct_trigger",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "write",
                 Risk = "high",
                 Aliases = new List<string> { "self_destruct_trigger" },
                 Tags = new List<string> { "rocket", "self-destruct", "destructive", "side-screen" },
-                Description = "触发 SelfDestructButtonSideScreen 火箭自毁。高风险操作，必须 confirm=true",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=self_destruct action=trigger",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认自毁火箭", Required = true }
@@ -314,6 +500,30 @@ namespace OniMcp.Tools
                         ["before"] = before,
                         ["triggered"] = true
                     });
+                }
+            };
+        }
+
+        public static McpTool ControlSelfDestruct()
+        {
+            return new McpTool
+            {
+                Name = "rocket_self_destruct_control",
+                Group = "rockets",
+                Mode = "write",
+                Risk = "high",
+                Aliases = new List<string> { "rocket_self_destruct", "self_destruct_control" },
+                Tags = new List<string> { "rocket", "self-destruct", "destructive", "side-screen" },
+                Description = "火箭自毁聚合工具：action=list 查询可自毁火箭舱体；action=trigger 触发自毁，必须 confirm=true。",
+                Parameters = SelfDestructControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListSelfDestructModules().Handler(args);
+                    if (action == "trigger")
+                        return TriggerSelfDestruct().Handler(args);
+                    return CallToolResult.Error("action must be list or trigger");
                 }
             };
         }
@@ -586,6 +796,69 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> AreaLookupParams(Dictionary<string, McpToolParameter> extra)
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["id"] = new McpToolParameter { Type = "integer", Description = "目标建筑 InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "目标建筑格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "目标建筑格子 Y", Required = false }
+            });
+            foreach (var item in extra)
+                parameters[item.Key] = item.Value;
+            return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> ConfigurableConsumerControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_option", Required = true, EnumValues = new List<string> { "list", "set_option" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑、prefabId、选项名或 optionId 筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["optionIndex"] = new McpToolParameter { Type = "integer", Description = "action=set_option 时 GetSettingOptions() 中的选项序号", Required = false },
+                ["optionId"] = new McpToolParameter { Type = "string", Description = "action=set_option 时 IConfigurableConsumerOption.GetID().Name", Required = false },
+                ["optionName"] = new McpToolParameter { Type = "string", Description = "action=set_option 时显示名称，大小写不敏感", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set_option 时确认执行；保留给调用方做写操作显式确认", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> NToggleControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑、prefabId、标题或选项筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["optionIndex"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标选项序号", Required = false },
+                ["optionName"] = new McpToolParameter { Type = "string", Description = "action=set 时的目标选项显示文本，大小写不敏感", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set 时确认执行；保留给调用方做写操作显式确认", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> TurboHeaterControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑或 prefabId 筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["enabled"] = new McpToolParameter { Type = "boolean", Description = "action=set 时 true=最大功耗，false=最小功耗", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set 时确认执行；保留给调用方做写操作显式确认", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> SelfDestructControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 trigger", Required = true, EnumValues = new List<string> { "list", "trigger" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑、prefabId 或火箭名筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=trigger 时必须为 true，确认自毁火箭", Required = false }
+            });
         }
 
         private static bool HasRectInput(JObject args)

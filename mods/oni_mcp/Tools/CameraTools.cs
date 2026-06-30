@@ -38,15 +38,63 @@ namespace OniMcp.Tools
             "harvest"
         };
 
+        public static McpTool ControlCamera()
+        {
+            return new McpTool
+            {
+                Name = "camera_control",
+                Group = "camera",
+                Mode = "execute",
+                Risk = "low",
+                Aliases = new List<string> { "camera", "camera_tools", "screenshot_control" },
+                Tags = new List<string> { "camera", "screenshot", "overlay", "world", "navigation" },
+                Description = "相机聚合工具：action=get_view/set_active_world/set_view/move/switch_view/focus_cell/focus_dupe/screenshot/coordinate_screenshot",
+                Parameters = CameraControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "get_view":
+                            return GetCameraView().Handler(args);
+                        case "set_active_world":
+                        case "set_world":
+                        case "switch_world":
+                            return SetActiveWorld().Handler(args);
+                        case "set_view":
+                            return SetCameraView().Handler(args);
+                        case "move":
+                            return MoveCamera().Handler(args);
+                        case "switch_view":
+                        case "overlay":
+                            return SwitchView().Handler(args);
+                        case "focus_cell":
+                            return FocusCell().Handler(args);
+                        case "focus_dupe":
+                            return FocusDupe().Handler(args);
+                        case "screenshot":
+                        case "game_screenshot":
+                            return TakeScreenshot().Handler(args);
+                        case "coordinate_screenshot":
+                        case "coord_screenshot":
+                            return TakeCoordinateScreenshot().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be get_view, set_active_world, set_view, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot");
+                    }
+                }
+            };
+        }
+
         public static McpTool GetCameraView()
         {
             return new McpTool
             {
                 Name = "camera_get_view",
+                Hidden = true,
                 Group = "camera",
                 Mode = "read",
                 Risk = "none",
-                Description = "获取当前相机位置、缩放、激活世界和屏幕尺寸",
+                Description = "兼容入口：请优先使用 navigation_control action=get_view",
                 Handler = args =>
                 {
                     var camera = CameraController.Instance;
@@ -71,12 +119,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "camera_set_active_world",
+                Hidden = true,
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
                 Aliases = new List<string> { "world_set_active", "camera_switch_world", "view_world" },
                 Tags = new List<string> { "camera", "world", "cluster", "rocket", "navigation" },
-                Description = "切换当前激活世界，用于复现星图 View World、火箭内外部查看等玩家导航操作",
+                Description = "兼容入口：请优先使用 navigation_control action=set_active_world",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，可先读 oni://world/list", Required = true },
@@ -136,10 +185,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "camera_set_view",
+                Hidden = true,
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "移动相机到指定世界坐标，并可设置缩放",
+                Description = "兼容入口：请优先使用 navigation_control action=set_view",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter { Type = "number", Description = "目标 X 坐标", Required = true },
@@ -176,10 +226,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "camera_move",
+                Hidden = true,
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "控制摄像头相对平移或绝对跳转",
+                Description = "兼容入口：请优先使用 navigation_control action=move",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["mode"] = new McpToolParameter
@@ -259,10 +310,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "camera_switch_view",
+                Hidden = true,
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "切换 ONI 覆盖层视图，可选保存切换后的游戏截图",
+                Description = "兼容入口：请优先使用 navigation_control action=switch_view",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["view"] = new McpToolParameter
@@ -334,10 +386,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "camera_focus_cell",
+                Hidden = true,
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "移动相机到指定地图格子",
+                Description = "兼容入口：请优先使用 navigation_control action=focus_cell",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter { Type = "integer", Description = "格子 X 坐标", Required = true },
@@ -374,10 +427,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "camera_focus_dupe",
+                Hidden = true,
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Description = "移动相机并跟随指定复制人",
+                Description = "兼容入口：请优先使用 navigation_control action=focus_dupe",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -399,10 +453,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "game_screenshot",
+                Hidden = true,
                 Group = "game",
                 Mode = "execute",
                 Risk = "low",
-                Description = "保存当前游戏画面截图到系统临时目录的 oni-mcp/screenshots 并返回文件路径/HTTP URL。需要格子坐标时优先使用 camera_coordinate_screenshot，它会把坐标网格直接叠加到截图上。",
+                Description = "兼容入口：请优先使用 navigation_control action=screenshot。需要格子坐标时使用 navigation_control action=coordinate_screenshot。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["filename"] = new McpToolParameter { Type = "string", Description = "可选文件名，默认自动按周期和时间生成", Required = false }
@@ -420,12 +475,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "camera_coordinate_screenshot",
+                Hidden = true,
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
                 Aliases = new List<string> { "world_coordinate_screenshot", "map_coordinate_screenshot", "coordinate_screenshot" },
                 Tags = new List<string> { "camera", "screenshot", "coordinates", "grid", "vision", "map", "截图", "坐标" },
-                Description = "移动相机到指定区域，临时叠加格子坐标网格并截图。给视觉模型优先用这个：图片里直接有 x/y 坐标、格线和 HTTP URL，不必先读文本地图。",
+                Description = "兼容入口：请优先使用 navigation_control action=coordinate_screenshot。给视觉模型优先用坐标截图：图片里直接有 x/y 坐标、格线和 HTTP URL。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；提供后可省略 x1/y1/x2/y2/worldId", Required = false },
@@ -536,6 +592,49 @@ namespace OniMcp.Tools
         public static Dictionary<string, object> CleanupTemporaryScreenshots()
         {
             return WorldEditor.CleanupTemporaryScreenshots();
+        }
+
+        private static Dictionary<string, McpToolParameter> CameraControlParams()
+        {
+            return new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter
+                {
+                    Type = "string",
+                    Description = "操作：get_view、set_active_world、set_view、move、switch_view、focus_cell、focus_dupe、screenshot、coordinate_screenshot",
+                    Required = true,
+                    EnumValues = new List<string> { "get_view", "set_active_world", "set_view", "move", "switch_view", "focus_cell", "focus_dupe", "screenshot", "coordinate_screenshot" }
+                },
+                ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，set_active_world 必填；其他 action 默认当前激活世界", Required = false },
+                ["requireDiscovered"] = new McpToolParameter { Type = "boolean", Description = "set_active_world：是否要求目标世界已被发现，默认 true", Required = false },
+                ["lookAtSurface"] = new McpToolParameter { Type = "boolean", Description = "set_active_world：世界未被访问时是否 LookAtSurface，默认 true", Required = false },
+                ["x"] = new McpToolParameter { Type = "number", Description = "set_view/move jump 目标 X；focus_cell 格子 X；也可用于按坐标定位", Required = false },
+                ["y"] = new McpToolParameter { Type = "number", Description = "set_view/move jump 目标 Y；focus_cell 格子 Y；也可用于按坐标定位", Required = false },
+                ["zoom"] = new McpToolParameter { Type = "number", Description = "相机正交缩放；留空按各 action 默认值处理", Required = false },
+                ["snap"] = new McpToolParameter { Type = "boolean", Description = "set_view/move：是否立即跳转", Required = false },
+                ["mode"] = new McpToolParameter { Type = "string", Description = "move：pan=按 dx/dy 相对平移，jump=跳转到 x/y 世界坐标", Required = false, EnumValues = new List<string> { "pan", "jump" } },
+                ["dx"] = new McpToolParameter { Type = "number", Description = "move pan：X 方向偏移，默认 0", Required = false },
+                ["dy"] = new McpToolParameter { Type = "number", Description = "move pan：Y 方向偏移，默认 0", Required = false },
+                ["duration"] = new McpToolParameter { Type = "number", Description = "move：平滑移动秒数，默认 0.5", Required = false },
+                ["view"] = new McpToolParameter { Type = "string", Description = "switch_view/coordinate_screenshot 覆盖层视图", Required = false, EnumValues = OverlayViewNames },
+                ["screenshot"] = new McpToolParameter { Type = "boolean", Description = "switch_view：是否保存切换后的截图，默认 true", Required = false },
+                ["filename"] = new McpToolParameter { Type = "string", Description = "screenshot/switch_view/coordinate_screenshot：可选截图文件名", Required = false },
+                ["waitFrames"] = new McpToolParameter { Type = "integer", Description = "switch_view/coordinate_screenshot：截图前等待的 Unity 帧数", Required = false },
+                ["allowSound"] = new McpToolParameter { Type = "boolean", Description = "switch_view：是否播放视图切换音效，默认 false", Required = false },
+                ["id"] = new McpToolParameter { Type = "integer", Description = "focus_dupe：复制人 InstanceID", Required = false },
+                ["name"] = new McpToolParameter { Type = "string", Description = "focus_dupe：复制人名称", Required = false },
+                ["areaId"] = new McpToolParameter { Type = "string", Description = "coordinate_screenshot：区域句柄；提供后可省略 x1/y1/x2/y2/worldId", Required = false },
+                ["x1"] = new McpToolParameter { Type = "integer", Description = "coordinate_screenshot：区域左下 X", Required = false },
+                ["y1"] = new McpToolParameter { Type = "integer", Description = "coordinate_screenshot：区域左下 Y", Required = false },
+                ["x2"] = new McpToolParameter { Type = "integer", Description = "coordinate_screenshot：区域右上 X", Required = false },
+                ["y2"] = new McpToolParameter { Type = "integer", Description = "coordinate_screenshot：区域右上 Y", Required = false },
+                ["focusCamera"] = new McpToolParameter { Type = "boolean", Description = "coordinate_screenshot：是否自动移动相机覆盖区域，默认 true", Required = false },
+                ["paddingCells"] = new McpToolParameter { Type = "number", Description = "coordinate_screenshot：自动对焦时四周留白格数，默认 1.5", Required = false },
+                ["showGrid"] = new McpToolParameter { Type = "boolean", Description = "coordinate_screenshot：是否显示格线，默认 true", Required = false },
+                ["showCoordinates"] = new McpToolParameter { Type = "boolean", Description = "coordinate_screenshot：是否在边缘显示 x/y 坐标，默认 true", Required = false },
+                ["includeCellLabels"] = new McpToolParameter { Type = "boolean", Description = "coordinate_screenshot：是否在格心稀疏标注 x,y", Required = false },
+                ["step"] = new McpToolParameter { Type = "integer", Description = "coordinate_screenshot：坐标标签步长", Required = false }
+            };
         }
 
         private static bool TryResolveOverlayView(string requestedView, out string viewName, out HashedString mode)

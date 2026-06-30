@@ -10,6 +10,74 @@ namespace OniMcp.Tools
 {
     public static class ToolCatalogTools
     {
+        public static McpTool ControlToolCatalog()
+        {
+            return new McpTool
+            {
+                Name = "tools_catalog_control",
+                Group = "tools",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "tools_control", "tool_catalog_control" },
+                Tags = new List<string> { "catalog", "search", "discovery", "intent", "manifest", "guide", "coverage", "audit", "surfaces", "low-token" },
+                Description = "统一工具目录入口：action=manifest/search/guide/coverage/static_audit/surface_audit，返回工具清单、工具搜索、意图指南、覆盖审计和 surface 审计。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "目录动作：manifest=工具清单，search=工具搜索，guide=按目标生成工具指南，coverage=玩家操作覆盖，static_audit=静态自检，surface_audit=surface 覆盖审计", Required = true, EnumValues = new List<string> { "manifest", "search", "guide", "coverage", "static_audit", "surface_audit" } },
+                    ["surface"] = new McpToolParameter { Type = "string", Description = "action=surface_audit 时的审计类型：side_screen/user_menu/management/tool_menu/ui_menu/global_control/notification", Required = false, EnumValues = new List<string> { "side_screen", "user_menu", "management", "tool_menu", "ui_menu", "global_control", "notification" } },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=manifest/search/coverage/surface_audit 时的关键词或目标意图", Required = false },
+                    ["goal"] = new McpToolParameter { Type = "string", Description = "action=guide 时的玩家目标或操作意图", Required = false },
+                    ["group"] = new McpToolParameter { Type = "string", Description = "action=manifest/search/coverage 时的工具或操作分组过滤", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "action=manifest/search 时过滤 read/write/execute/any", Required = false },
+                    ["risk"] = new McpToolParameter { Type = "string", Description = "action=manifest/search/static_audit 时过滤 none/low/medium/dangerous/any", Required = false },
+                    ["status"] = new McpToolParameter { Type = "string", Description = "action=coverage 时过滤 all/covered/partial/missing；action=surface_audit 时过滤 all/covered/review/no_action", Required = false, EnumValues = new List<string> { "all", "covered", "partial", "missing", "review", "no_action" } },
+                    ["detail"] = new McpToolParameter { Type = "string", Description = "返回细节；manifest/search/coverage 支持 brief/compact/full，guide 支持 brief/compact", Required = false },
+                    ["includeResources"] = new McpToolParameter { Type = "boolean", Description = "action=coverage 时是否返回 resourceAnchors", Required = false },
+                    ["includeHotkeys"] = new McpToolParameter { Type = "boolean", Description = "action=coverage 时是否返回游戏 Action 枚举热键覆盖摘要", Required = false },
+                    ["includeNoAction"] = new McpToolParameter { Type = "boolean", Description = "action=surface_audit surface=side_screen 时是否返回纯显示/无玩家操作侧屏", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=manifest/search/coverage 时最多返回多少项", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "manifest":
+                            return GetToolsManifest().Handler(args);
+                        case "search":
+                            return SearchTools().Handler(args);
+                        case "guide":
+                            return GetToolsGuide().Handler(args);
+                        case "coverage":
+                        case "player_action_coverage":
+                            return ToolCoverageTools.GetPlayerActionCoverage().Handler(args);
+                        case "static_audit":
+                        case "audit":
+                            return ToolCoverageTools.GetStaticAudit().Handler(args);
+                        case "surface_audit":
+                        case "surface":
+                            return HandleSurfaceAudit(args);
+                        default:
+                            return CallToolResult.Error("action must be one of: manifest, search, guide, coverage, static_audit, surface_audit");
+                    }
+                }
+            };
+        }
+
+        private static CallToolResult HandleSurfaceAudit(JObject args)
+        {
+            string surface = (args["surface"]?.ToString() ?? args["kind"]?.ToString() ?? args["audit"]?.ToString() ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(surface))
+                return CallToolResult.Error("surface is required for action=surface_audit; use one of side_screen, user_menu, management, tool_menu, ui_menu, global_control, notification");
+
+            var delegated = (JObject)args.DeepClone();
+            delegated["action"] = surface;
+            delegated.Remove("surface");
+            delegated.Remove("kind");
+            delegated.Remove("audit");
+            return SurfaceAuditControlTools.ControlSurfaceAudit().Handler(delegated);
+        }
+
         public static McpTool GetToolsManifest()
         {
             return new McpTool
@@ -18,6 +86,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Description = "获取 ONI MCP 工具分组、读写模式、风险等级和参数摘要；默认 brief 低 token 输出，按需传 detail=full 查看完整参数",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -26,7 +95,7 @@ namespace OniMcp.Tools
                     ["mode"] = new McpToolParameter { Type = "string", Description = "read、write、execute 或 any", Required = false },
                     ["risk"] = new McpToolParameter { Type = "string", Description = "none、low、medium、dangerous 或 any", Required = false },
                     ["detail"] = new McpToolParameter { Type = "string", Description = "brief 极简；compact 返回摘要；full 返回完整参数 schema；默认 brief", Required = false, EnumValues = new List<string> { "brief", "compact", "full" } },
-                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个工具；默认 80，最大 320。需要完整清单时显式传 limit=320", Required = false }
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少个公开组合工具；默认 80，最大 100", Required = false }
                 },
                 Handler = args =>
                 {
@@ -36,7 +105,7 @@ namespace OniMcp.Tools
                     string mode = (args["mode"]?.ToString() ?? "any").ToLowerInvariant();
                     string risk = (args["risk"]?.ToString() ?? "any").ToLowerInvariant();
                     string detail = string.IsNullOrWhiteSpace(args["detail"]?.ToString()) ? "brief" : NormalizeDetail(args["detail"]?.ToString().ToLowerInvariant());
-                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 80, 320));
+                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 80, 100));
 
                     var matchedTools = OniToolRegistry.GetVisibleTools()
                         .Where(tool => string.IsNullOrEmpty(groupFilter) || tool.Group.ToLowerInvariant() == groupFilter)
@@ -97,6 +166,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Description = "按关键词、分组、读写模式或风险等级检索 ONI MCP 工具；支持中英文意图词，brief 模式用于低 token 工具发现",
                 Aliases = new List<string> { "tool_search", "tools_find", "find_tools" },
                 Tags = new List<string> { "catalog", "search", "discovery", "intent", "low-token", "工具检索" },
@@ -154,6 +224,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Description = "按玩家目标生成低 token 工具使用指南：推荐资源、检索词、工具链和批量策略",
                 Aliases = new List<string> { "tools_intent_guide", "tool_route", "action_guide" },
                 Tags = new List<string> { "catalog", "intent", "routing", "planning", "batch", "low-token", "工具指南" },
@@ -176,22 +247,22 @@ namespace OniMcp.Tools
                         ["matched"] = guides.Select(guide => GuideToDictionary(guide, detail)).ToList(),
                         ["defaultFlow"] = new[]
                         {
-                            "1. Read recommended resources first; tools/list is intentionally core-only, so use oni://... resources, tools_search detail=brief/full, or tools_manifest for discovery.",
-                            "2. For gameplay formulas or edge-case mechanics, read oni://guide/mechanics or call guide_mechanics_query; combine it with database_query for current in-game codex facts.",
-                            "3. If the player action surface is unclear, call tools_player_action_coverage with detail=brief and query=<goal>; then call tools_search with detail=brief for exact schemas.",
-                            "4. Before player-like map actions, create or reuse a visible agent pointer with a stable agentId such as planner or builder; pass that same agentId through every agent_pointer_* call so the model remembers one pointer across the whole task.",
-                            "5. Use displayText on visible pointer actions whenever useful: jump/aim/select/click/drag can show short player-facing status like '准备铺线' or '标记挖掘'. Prefer displayText over a separate say call unless you need a longer bubble.",
-                            "6. For player-like map actions, use the visible agent pointer flow: agent_pointer_get or agent_pointer_jump/aim_cell with agentId+displayText, agent_pointer_select_tool with the same agentId, then agent_pointer_left_click or agent_pointer_hold_left with confirm/dryRun and displayText. Multi-cell buildings use lower-left anchors and should be placed with one left_click per anchor.",
+                            "1. Read recommended resources first; tools/list is intentionally core-only, so use oni://... resources or server_control domain=catalog action=search/manifest for discovery.",
+                            "2. For gameplay formulas or edge-case mechanics, read oni://guide/mechanics or call read_control domain=knowledge kind=guide action=query; combine it with read_control domain=knowledge kind=database action=query for current in-game codex facts.",
+                            "3. If the player action surface is unclear, call server_control domain=catalog action=coverage detail=brief query=<goal>; then call server_control domain=catalog action=search detail=brief for exact schemas.",
+                            "4. Before player-like map actions, create or reuse a visible agent pointer with a stable agentId such as planner or builder; pass that same agentId through every navigation_control call so the model remembers one pointer across the whole task.",
+                            "5. Use displayText on visible pointer actions whenever useful: action=jump/aim_cell/select_tool/left_click/hold_left can show short player-facing status like '准备铺线' or '标记挖掘'. Prefer displayText over action=say unless you need a longer bubble.",
+                            "6. For player-like map actions, use the visible agent pointer flow: navigation_control action=get or action=jump/aim_cell with agentId+displayText, action=select_tool with the same agentId, then action=left_click or action=hold_left with confirm/dryRun and displayText. Multi-cell buildings use lower-left anchors and should be placed with one left_click per anchor.",
                             "7. For risky or multi-step work, write the plan in the response and use dryRun/validateOnly where available before executing.",
                             "8. Do not repeat the same write/execute call after a zero-effect result; re-read state or choose the correct tool. Verify with read resources after execution."
                         },
                         ["batch"] = new Dictionary<string, object>
                         {
-                            ["tool"] = "tools_call_many",
+                            ["tool"] = "server_control domain=batch action=call_many",
                             ["recommendedResponseMode"] = "summary",
                             ["compactShape"] = "items:[{t:'tool_name',a:{...}}]",
                             ["defaults"] = "defaults/defaultArguments merges into each child call; child arguments win",
-                            ["domainDefaults"] = "Selected domain batch tools also accept defaults/defaultArguments, including user_menu_actions_batch_press, maintenance_actions_batch_execute, buildings_config_batch_set, automation_controls_batch_set, automatable_controls_batch_set, critter_sensors_batch_set, production_queue_batch_set, activation_ranges_batch_set, receptacles_batch_control, and storage_tile_selections_batch_set.",
+                            ["domainDefaults"] = "Selected domain batch tools also accept defaults/defaultArguments, including building_control domain=side_surface surface=user_menu action=batch, building_control domain=side_surface surface=maintenance action=batch, building_control domain=config action=batch_set, building_control domain=config action=batch_set_automation, building_control domain=side_surface surface=automation action=batch, building_control domain=production action=batch, building_control domain=side_surface surface=activation action=batch, building_control domain=receptacle action=batch, and building_control domain=tile_selection action=batch.",
                             ["recommendedPreflight"] = "dryRun=true before execute; keep requireAllValid=true for write/execute batches",
                             ["maxCalls"] = 20,
                             ["note"] = "Batch tool does not bypass child tool confirm/safety parameters. Repeating the same write/execute tool with the same area usually just repeats the mistake; inspect the result and route to a different tool when marked=0 or skipped dominates."
@@ -321,7 +392,7 @@ namespace OniMcp.Tools
                 return "完整参数 schema。大批量检索建议先用 detail=brief 或 compact。";
             if (detail == "brief")
                 return "极简结果：name/g/m/r/req。需要摘要用 detail=compact；需要完整参数 schema 用 detail=full。";
-            return "紧凑结果包含摘要和必填参数；需要完整参数 schema 时用 detail=full 或 tools_manifest。";
+            return "紧凑结果包含摘要和必填参数；需要完整参数 schema 时用 detail=full 或 server_control domain=catalog action=manifest。";
         }
 
         private static string ExpandQuery(string query)
@@ -341,9 +412,9 @@ namespace OniMcp.Tools
         {
             var result = new List<string>();
             if (token.Contains("water") || token.Contains("liquid") || token.Contains("污水") || token.Contains("液") || token.Contains("水") || token.Contains("拖地"))
-                result.AddRange(new[] { "orders", "mop", "liquid", "water", "floor", "spill", "orders_mop_area" });
+                result.AddRange(new[] { "orders", "mop", "liquid", "water", "floor", "spill", "orders_control" });
             if (token.Contains("sweep") || token.Contains("debris") || token.Contains("清扫") || token.Contains("打扫") || token.Contains("散落") || token.Contains("碎片"))
-                result.AddRange(new[] { "orders", "sweep", "clear", "storage", "debris", "pickupable", "orders_sweep_area" });
+                result.AddRange(new[] { "orders", "sweep", "clear", "storage", "debris", "pickupable", "orders_control" });
             return result;
         }
 
@@ -368,7 +439,7 @@ namespace OniMcp.Tools
                 case "液体":
                 case "地上的水":
                 case "拖地":
-                    return new[] { "orders", "mop", "liquid", "water", "floor", "spill", "orders_mop_area" };
+                    return new[] { "orders", "mop", "liquid", "water", "floor", "spill", "orders_control" };
                 case "build":
                 case "building":
                 case "建造":
@@ -393,7 +464,7 @@ namespace OniMcp.Tools
                 case "duplicant":
                 case "复制人":
                 case "小人":
-                    return new[] { "dupes", "duplicant", "schedule", "skills", "assignables", "rename", "auto_rename", "dupes_auto_rename" };
+                    return new[] { "dupes", "duplicant", "schedule", "skills", "assignables", "rename", "auto_rename", "dupes_control domain=command action=auto_rename" };
                 case "rename":
                 case "name":
                 case "renaming":
@@ -401,7 +472,7 @@ namespace OniMcp.Tools
                 case "重命名":
                 case "命名":
                 case "名字":
-                    return new[] { "rename", "name", "dupes_rename", "dupes_auto_rename", "duplicant", "dupes", "apply" };
+                    return new[] { "rename", "name", "dupes_control domain=command action=rename", "dupes_control domain=command action=auto_rename", "duplicant", "dupes", "apply" };
                 case "rocket":
                 case "火箭":
                 case "太空":
@@ -440,7 +511,7 @@ namespace OniMcp.Tools
                     return new[] { "world", "text", "map", "cell", "area" };
                 case "batch":
                 case "批量":
-                    return new[] { "batch", "many", "area", "tools_call_many" };
+                    return new[] { "batch", "many", "area", "server_control domain=batch action=call_many" };
                 default:
                     return new string[0];
             }
@@ -508,93 +579,93 @@ namespace OniMcp.Tools
                 new ToolGuide("general",
                     new[] { "general", "help", "unknown", "工具", "帮助" },
                     new[] { "oni://tools/manifest", "oni://tools/player-action-coverage", "oni://guide/mechanics", "oni://colony/summary" },
-                    new[] { "colony_state_snapshot", "tools_search", "tools_manifest", "guide_mechanics_query", "tools_call_many" },
-                    new[] { "colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts", "guide_mechanics_query query=<mechanic>", "tools_search detail=brief query=<goal>", "tools_guide goal=<goal>" },
-                    "Use colony_state_snapshot profile=minimal or delta=true for loop polling. Use tools_call_many for independent reads and simple low-risk writes. For complex/risky/player-marked plans, write the plan in the response and dry-run exact actions before execution.",
-                    new[] { "read minimal/delta colony_state_snapshot", "search tools", "dry-run actions", "execute", "verify" }),
+                    new[] { "colony_control domain=snapshot action=get", "server_control domain=catalog action=search", "server_control domain=catalog action=manifest", "read_control domain=knowledge kind=guide action=query", "server_control domain=batch action=call_many" },
+                    new[] { "colony_control domain=snapshot action=get profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts", "read_control domain=knowledge kind=guide action=query query=<mechanic>", "server_control domain=catalog action=search detail=brief query=<goal>", "server_control domain=catalog action=guide goal=<goal>" },
+                    "Use colony_control domain=snapshot action=get profile=minimal or delta=true for loop polling. Use server_control domain=batch action=call_many for independent reads and simple low-risk writes. For complex/risky/player-marked plans, write the plan in the response and dry-run exact actions before execution.",
+                    new[] { "read colony_control domain=snapshot action=get with minimal/delta", "search tools", "dry-run actions", "execute", "verify" }),
                 new ToolGuide("mechanics_advice",
                     new[] { "mechanics", "formula", "heat", "oxygen", "food preservation", "ranching", "power", "automation", "机制", "公式", "热量", "制氧", "保鲜", "养殖", "电力", "自动化", "缺氧机制速查" },
-                    new[] { "oni://guide/mechanics{?query,category,detail,limit}", "oni://tools/read/database_query{?query}", "oni://colony/summary", "oni://world/text-map{?profile=standard}" },
-                    new[] { "guide_mechanics_query", "database_query", "colony_state_snapshot", "world_area_snapshot", "world_text_map", "power_summary", "building_power_ports", "thermal_overheat_risk_scan" },
-                    new[] { "guide_mechanics_query query=电解器入水温度", "guide_mechanics_query category=thermal query=隔热砖", "database_query query=<building_or_element>", "colony_state_snapshot profile=standard" },
-                    "Use guide_mechanics_query for distilled player-tested formulas and edge cases; use database_query for the game's current codex/building/element facts; read live resources before applying advice to the current save.",
+                    new[] { "oni://guide/mechanics{?query,category,detail,limit}", "read_control domain=knowledge kind=database action=query query=<building_or_element>", "oni://colony/summary", "oni://world/text-map{?profile=standard}" },
+                    new[] { "read_control domain=knowledge kind=guide action=query", "read_control domain=knowledge kind=database action=query", "colony_control domain=snapshot action=get", "read_control domain=world action=area_snapshot", "read_control domain=world action=text_map", "read_control domain=infrastructure", "read_control domain=world action=thermal_overheat_risk" },
+                    new[] { "read_control domain=knowledge kind=guide action=query query=电解器入水温度", "read_control domain=knowledge kind=guide action=query category=thermal query=隔热砖", "read_control domain=knowledge kind=database action=query query=<building_or_element>", "colony_control domain=snapshot action=get profile=standard" },
+                    "Use read_control domain=knowledge kind=guide action=query for distilled player-tested formulas and edge cases; use read_control domain=knowledge kind=database action=query for the game's current codex/building/element facts; read live resources before applying advice to the current save.",
                     new[] { "query guide mechanics", "query in-game database if exact object stats matter", "read live save state", "calculate/adapt recommendation", "verify after any action" }),
                 new ToolGuide("map_area_orders",
                     new[] { "dig", "sweep", "mop", "water", "liquid", "spill", "disinfect", "cancel", "harvest", "地图", "挖掘", "清扫", "拖地", "地上的水", "液体", "区域" },
-                    new[] { "oni://world/search{?query,kinds,nearX,nearY}", "oni://world/cell/{x}/{y}", "oni://tools/read/priorities_list" },
-                    new[] { "world_search", "world_search_cells", "world_search_objects", "camera_coordinate_screenshot", "world_cell_info", "world_area_snapshot", "layout_candidates", "agent_pointer_get", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "orders_dig_area", "orders_sweep_area", "orders_mop_area", "orders_cancel_area", "orders_harvest_area", "tools_call_many" },
-                    new[] { "world_search query=Water kinds=cells state=liquid nearX=... nearY=... limit=10", "camera_coordinate_screenshot x1=... y1=... x2=... y2=... view=none", "world_cell_info x=<targetX> y=<targetY>", "agent_pointer_get agentId=planner", "agent_pointer_jump agentId=planner x=... y=... displayText=移动到施工起点", "agent_pointer_select_tool agentId=planner tool=dig|mop|sweep|cancel|harvest displayText=选择区域命令", "agent_pointer_hold_left agentId=planner direction=right length=... confirm=true displayText=标记这条直线" },
-                    "Use world_search first when the task is to find water, resources, a building, a dupe, or a nearby target; then use camera_coordinate_screenshot around the returned x/y so vision models can see the grid and exact coordinates. Use world_cell_info for final selected cells. Text maps are fallback/low-token scans, not the primary visual context. Use orders_mop_area for water/liquid on the floor; never use sweep for liquids. Do not use orders_attack for digging.",
+                    new[] { "oni://world/search{?query,kinds,nearX,nearY}", "oni://world/cell/{x}/{y}" },
+                    new[] { "read_control domain=world action=search", "navigation_control", "read_control domain=world action=cell_info", "read_control domain=world action=area_snapshot", "read_control domain=world action=layout_candidates", "navigation_control", "orders_control", "server_control domain=batch action=call_many" },
+                    new[] { "read_control domain=world action=search query=Water kinds=cells state=liquid nearX=... nearY=... returnMode=clusters limit=10", "navigation_control action=coordinate_screenshot x1=... y1=... x2=... y2=... view=none", "read_control domain=world action=cell_info x=<targetX> y=<targetY>", "navigation_control action=get agentId=planner", "navigation_control action=jump agentId=planner x=... y=... displayText=移动到施工起点", "navigation_control action=select_tool agentId=planner tool=dig|mop|sweep|cancel|harvest displayText=选择区域命令", "navigation_control action=hold_left agentId=planner direction=right length=... confirm=true displayText=标记这条直线" },
+                    "Use read_control domain=world action=search first when the task is to find water, resources, a building, a dupe, or a nearby target; then use navigation_control action=coordinate_screenshot around the returned x/y so vision models can see the grid and exact coordinates. Use read_control domain=world action=cell_info for final selected cells. Text maps are fallback/low-token scans, not the primary visual context. Use orders_control domain=area action=mop for water/liquid on the floor; never use sweep for liquids. Do not use orders_control domain=designation action=attack for digging.",
                     new[] { "search target", "capture coordinate screenshot around returned coordinates", "inspect selected cell details", "create/reuse pointer agentId=planner", "jump/aim pointer with displayText", "select order tool with displayText", "left-click or hold-left with displayText", "verify with coordinate screenshot" }),
                 new ToolGuide("critter_removal",
                     new[] { "kill", "attack", "critter", "creature", "crab", "hermit", "杀", "杀死", "攻击", "小动物", "寄居蟹" },
                     new[] { "oni://ranching/critters", "oni://world/text-map{?profile=scan,format=json}" },
-                    new[] { "critters_list", "orders_attack", "tools_call_many" },
-                    new[] { "critters_list query=<species>", "orders_attack id=<targetId> confirm=true" },
-                    "Resolve exact critter InstanceIDs with critters_list first; then call orders_attack per target or batch via tools_call_many. Attack is dangerous and requires confirm=true.",
-                    new[] { "list critters with query/species", "select target ids", "mark attack with confirm=true", "verify critters_list or pending errands" }),
+                    new[] { "colony_control domain=bio bioDomain=ranching kind=critters action=critters", "orders_control domain=designation action=attack", "server_control domain=batch action=call_many" },
+                    new[] { "colony_control domain=bio bioDomain=ranching kind=critters action=critters query=<species>", "orders_control domain=designation action=attack id=<targetId> confirm=true" },
+                    "Resolve exact critter InstanceIDs with colony_control domain=bio bioDomain=ranching kind=critters action=critters first; then call orders_control domain=designation action=attack per target or batch via server_control domain=batch action=call_many. Attack is dangerous and requires confirm=true.",
+                    new[] { "list critters with query/species", "select target ids", "mark attack with confirm=true", "verify colony_control domain=bio bioDomain=ranching kind=critters action=critters or pending errands" }),
                 new ToolGuide("build_and_configure",
                     new[] { "build", "building", "construct", "config", "toilet", "outhouse", "plumbing", "wire", "power", "placement", "footprint", "anchor", "建造", "建筑", "配置", "厕所", "茅厕", "卫生间", "洗手间", "电线", "接线", "供电", "空位", "候选", "footprint" },
                     new[] { "oni://world/search{?query,kinds}", "oni://buildings/defs{?query}", "oni://buildings/materials{?prefabId}", "oni://power/ports{?x1,y1,x2,y2,query}", "oni://buildings/configurables", "oni://automation/controls" },
-                    new[] { "world_search_objects", "camera_coordinate_screenshot", "world_cell_info", "build_placement_candidates", "build_preview", "utility_auto_connect", "building_power_ports", "layout_candidates", "buildings_search_defs", "buildings_materials", "agent_pointer_get", "agent_pointer_jump", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left", "buildings_config_list", "buildings_config_batch_set", "tools_call_many" },
-                    new[] { "world_search_objects query=<battery|toilet|pump> kinds=buildings nearX=... nearY=...", "camera_coordinate_screenshot x1=... y1=... x2=... y2=... view=power", "building_power_ports x1=... y1=... x2=... y2=... query=<battery|generator|consumer>", "build_placement_candidates prefabId=<building> areaId=<area> limit=8", "build_preview prefabId=<building> x=<anchorX> y=<anchorY>", "utility_auto_connect type=wire fromX=<portX> fromY=<portY> toX=<targetX> toY=<targetY> material=auto confirm=true", "buildings_search_defs query=wire|toilet", "buildings_materials prefabId=Wire" },
-                    "Use coordinate screenshots as the main spatial context for build work, then world_cell_info on exact candidate cells. Use building_power_ports before power wiring and utility_auto_connect for wire/pipe/logic paths; it reuses existing same-layer utility cells. Build previews can auto-classify natural solid and uprootable plants as clearable obstructions when autoDigObstructions/autoUprootObstructions are enabled. Use buildings_search_defs to choose prefab/facade and material=auto unless explicit material is justified.",
-                    new[] { "search existing anchors or capture coordinate screenshot", "pick exact candidate cells", "preview one anchor", "use utility_auto_connect for utility paths or pointer build for normal placement", "verify placement with coordinate screenshot and world_cell_info", "batch config if needed" }),
+                    new[] { "read_control domain=world action=search", "navigation_control", "read_control domain=world action=cell_info", "building_control domain=planning", "read_control domain=infrastructure", "read_control domain=world action=layout_candidates", "navigation_control", "building_control domain=config", "building_control domain=config", "server_control domain=batch action=call_many" },
+                    new[] { "read_control domain=world action=search query=<battery|toilet|pump> kinds=buildings nearX=... nearY=... returnMode=clusters", "navigation_control action=coordinate_screenshot x1=... y1=... x2=... y2=... view=power", "read_control domain=infrastructure action=power_ports x1=... y1=... x2=... y2=... query=<battery|generator|consumer>", "building_control domain=planning action=placement_candidates prefabId=<building> areaId=<area> limit=8", "building_control domain=planning action=preview prefabId=<building> x=<anchorX> y=<anchorY>", "building_control domain=planning action=auto_connect type=wire fromX=<portX> fromY=<portY> toX=<targetX> toY=<targetY> material=auto confirm=true", "building_control domain=planning action=search_defs query=wire|toilet", "building_control domain=planning action=materials prefabId=Wire" },
+                    "Use coordinate screenshots as the main spatial context for build work, then read_control domain=world action=cell_info on exact candidate cells. Use read_control domain=infrastructure action=power_ports before power wiring and building_control domain=planning action=auto_connect for wire/pipe/logic paths; it reuses existing same-layer utility cells. Build previews can auto-classify natural solid and uprootable plants as clearable obstructions when autoDigObstructions/autoUprootObstructions are enabled. Use building_control domain=planning action=search_defs to choose prefab/facade and material=auto unless explicit material is justified.",
+                    new[] { "search existing anchors or capture coordinate screenshot", "pick exact candidate cells", "preview one anchor", "use building_control domain=planning action=auto_connect for utility paths or pointer build for normal placement", "verify placement with coordinate screenshot and read_control domain=world action=cell_info", "batch config if needed" }),
                 new ToolGuide("dupes_and_assignments",
                     new[] { "dupe", "duplicant", "schedule", "skill", "bed", "assign", "stuck", "trapped", "rescue", "rename", "name", "auto_rename", "复制人", "日程", "技能", "分配", "被困", "卡住", "救援", "改名", "重命名", "命名", "名字" },
                     new[] { "oni://dupes", "oni://dupes/status-check", "oni://dupes/direct-commands", "oni://dupes/priorities", "oni://dupes/priority-settings", "oni://dupes/equipment", "oni://assignables", "oni://schedules" },
-                    new[] { "dupes_status_check", "dupes_list", "dupes_detail", "dupes_rename", "dupes_auto_rename", "dupes_move_to", "dupes_move_batch_to", "dupes_skills_list", "dupes_learn_skill", "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "dupes_priority_settings_get", "dupes_priority_settings_set", "dupes_equipment_list", "assignables_list", "assignables_set", "assignable_slot_item_set", "schedule_set_block" },
-                    new[] { "dupes_auto_rename apply=true style=role_prefix", "dupes_rename name=<current> newName=<new>", "dupe stuck trapped rescue schedule skill assign bed move priority jobs" },
-                    "Use dupes_auto_rename for batch role-based naming and dupes_rename for one duplicant. Use dupes_status_check first only for health, location, navigation, and suspected trapped cases. Schedule/assignment changes can be grouped via tools_call_many.",
-                    new[] { "choose rename/status/assignment intent", "for naming use dupes_auto_rename apply=false to preview or apply=true to execute", "for rescue read dupes_status_check", "execute selected write/execute tool", "verify" }),
+                    new[] { "dupes_control domain=info", "colony_control domain=read action=dupes", "dupes_control domain=command action=rename", "dupes_control domain=command action=auto_rename", "dupes_control domain=command", "dupes_control domain=skill", "dupes_control domain=priority", "dupes_control domain=hat", "dupes_control domain=side_screen", "dupes_control domain=assignable", "colony_control domain=management kind=schedule" },
+                    new[] { "dupes_control domain=info action=status_check radius=8", "dupes_control domain=info action=detail name=<dupe>", "dupes_control domain=command action=auto_rename apply=true style=role_prefix", "dupes_control domain=command action=rename name=<current> newName=<new>", "dupe stuck trapped rescue schedule skill assign bed move priority jobs" },
+                    "Use dupes_control domain=command action=auto_rename for batch role-based naming and dupes_control domain=command action=rename for one duplicant. Use dupes_control domain=info action=status_check first only for health, location, navigation, and suspected trapped cases. Schedule/assignment changes can be grouped via server_control domain=batch action=call_many.",
+                    new[] { "choose rename/status/assignment intent", "for naming use dupes_control domain=command action=auto_rename apply=false to preview or apply=true to execute", "for rescue read dupes_control domain=info action=status_check", "execute selected write/execute tool", "verify" }),
                 new ToolGuide("resources_food_storage",
                     new[] { "resources", "food", "storage", "filter", "diet", "diagnostics", "alerts", "资源", "食物", "储存", "过滤" },
                     new[] { "oni://resources/inventory", "oni://resources/food", "oni://world/search{?query,kinds}", "oni://resources/pins", "oni://colony/diagnostic-settings", "oni://storage/list", "oni://filters/controls" },
-                    new[] { "colony_state_snapshot", "resources_inventory", "resources_food", "items_search", "world_search", "world_search_objects", "resources_pins_list", "resources_pin_set", "colony_diagnostic_settings_list", "colony_diagnostic_settings_set", "resources_storage_list", "resources_storage_set_filter", "filters_list", "filters_tree_set", "diet_status", "diet_policy" },
-                    new[] { "colony_state_snapshot profile=standard includeFood=true", "items_search resource=<name> limit=20", "world_search query=<water|coal|algae> kinds=cells,items nearX=... nearY=... limit=20", "resources food storage filter diet pin notify diagnostics alerts" },
-                    "Start with colony_state_snapshot for food/alert triage. Use resources_inventory/items_search for totals, and world_search when coordinates or nearest accessible material matter. Then batch read inventory/storage/filter only when exact resource routing is needed.",
-                    new[] { "read colony_state_snapshot", "identify shortage", "locate material with inventory/search if needed", "plan filter/diet/storage changes", "execute", "verify" }),
+                    new[] { "colony_control domain=snapshot action=get", "read_control domain=resources", "read_control domain=world action=search", "read_control domain=resources action=pins", "colony_control", "building_control domain=storage", "building_control domain=filter", "colony_control domain=management kind=diet" },
+                    new[] { "colony_control domain=snapshot action=get profile=standard includeFood=true", "read_control domain=resources action=search_items resource=<name> limit=20", "read_control domain=world action=search query=<water|coal|algae> kinds=cells,items nearX=... nearY=... limit=20", "resources food storage filter diet pin notify diagnostics alerts" },
+                    "Start with colony_control domain=snapshot action=get for food/alert triage. Use read_control domain=resources action=inventory/search_items for totals, and read_control domain=world action=search when coordinates or nearest accessible material matter. Then batch read inventory/storage/filter only when exact resource routing is needed.",
+                    new[] { "read colony_control domain=snapshot action=get", "identify shortage", "locate material with inventory/search if needed", "plan filter/diet/storage changes", "execute", "verify" }),
                 new ToolGuide("object_context_actions",
                     new[] { "context", "user menu", "button", "cancel", "repair", "compost", "empty", "equipment", "对象菜单", "按钮", "取消", "维修", "倒空", "卸装" },
                     new[] { "oni://controls/user-menu-actions", "oni://controls/maintenance-actions", "oni://tools/user-menu-surfaces{?detail=brief}" },
-                    new[] { "user_menu_actions_list", "user_menu_action_press", "user_menu_actions_batch_press", "maintenance_actions_list", "maintenance_action_execute", "maintenance_actions_batch_execute" },
+                    new[] { "building_control domain=side_surface" },
                     new[] { "user menu context action button maintenance" },
-                    "Use action list resources to resolve actionKey, then batch press/execute with defaults/defaultArguments for shared actionKey/worldId/enabled settings.",
+                    "Use building_control domain=side_surface surface=user_menu action=list/press/batch and building_control domain=side_surface surface=maintenance action=list/execute/batch; batch modes accept defaults/defaultArguments for shared actionKey/worldId/enabled settings.",
                     new[] { "read action surface", "choose actionKey", "create plan", "batch execute with defaults", "verify target state" }),
-                new ToolGuide("farming_ranching",
+                    new ToolGuide("farming_ranching",
                     new[] { "farm", "plant", "seed", "harvest", "critter", "ranch", "incubator", "种植", "牧场", "小动物" },
                     new[] { "oni://farming/planting", "oni://farming/harvestables", "oni://farming/seeds", "oni://ranching/critters", "oni://ranching/dropoffs", "oni://ranching/incubators" },
-                    new[] { "farming_planting_list", "farming_planting_batch_set", "farming_harvestable_set", "critters_list", "critters_capture", "critters_dropoff_batch_configure", "incubators_batch_configure" },
+                    new[] { "colony_control domain=bio bioDomain=farming", "colony_control domain=bio bioDomain=ranching kind=critters action=critters", "orders_control domain=designation action=capture", "colony_control domain=bio bioDomain=ranching kind=dropoff", "colony_control domain=bio bioDomain=ranching kind=incubator" },
                     new[] { "farming planting harvest seed ranching critter incubator" },
                     "Use domain batch tools for planting, dropoffs, and incubators instead of generic repeated calls.",
                     new[] { "read current farm/ranch state", "select targets", "batch set", "verify lists" }),
                 new ToolGuide("automation_and_side_screens",
                     new[] { "automation", "logic", "sensor", "threshold", "slider", "side screen", "自动化", "逻辑", "传感器", "侧屏" },
                     new[] { "oni://automation/controls", "oni://automation/automatable", "oni://automation/critter-sensors", "oni://controls/state", "oni://controls/options" },
-                    new[] { "automation_controls_list", "automation_controls_batch_set", "automatable_controls_batch_set", "critter_sensors_batch_set", "activation_ranges_list", "activation_ranges_batch_set", "storage_tile_selections_list", "storage_tile_selections_batch_set", "receptacles_list", "receptacles_batch_control", "state_controls_list", "logic_counter_set", "side_options_list" },
+                    new[] { "building_control domain=config", "building_control domain=config", "building_control domain=side_surface surface=automation", "building_control domain=side_surface surface=activation", "building_control domain=tile_selection", "building_control domain=receptacle", "building_control domain=config", "building_control domain=side_surface surface=option" },
                     new[] { "automation logic sensor threshold side screen controls" },
                     "Prefer specific batch tools for homogeneous side-screen controls; use defaults/defaultArguments for repeated target/world/count settings. Activation ranges support a/d/w, receptacles support a/tag/w, and storage tiles support i/c/w compact fields.",
                     new[] { "read relevant controls", "plan thresholds", "batch set", "verify" }),
                 new ToolGuide("production",
                     new[] { "production", "recipe", "queue", "fabricator", "cook", "refine", "生产", "配方", "队列" },
                     new[] { "oni://production/fabricators", "oni://production/recipes", "oni://production/mutant-seed-controls" },
-                    new[] { "production_fabricators_list", "production_recipes_list", "production_queue_set", "production_queue_batch_set", "mutant_seed_controls_list", "mutant_seed_control_set" },
+                    new[] { "building_control domain=production" },
                     new[] { "production recipe queue fabricator mutant seeds" },
-                    "Use production_recipes_list to choose the exact material-variant recipeId, then production_queue_batch_set with defaults for shared mode/count.",
-                    new[] { "read fabricators and recipes", "choose exact recipe ids", "set queue", "verify queue" }),
+                    "Use building_control domain=production action=list_recipes to choose the exact material-variant recipeId, then building_control domain=production action=batch with defaults for shared mode/count. Use action=mutant_seed_list/mutant_seed_set for mutant seed acceptance toggles.",
+                    new[] { "read fabricators and recipes through building_control domain=production", "choose exact recipe ids", "set queue", "verify queue" }),
                 new ToolGuide("research",
                     new[] { "research", "tech", "technology", "queue", "cancel research", "clear research", "research portal", "unlock portal", "information transmission", "研究", "科技", "取消研究", "信息传送通道", "信息传输通道", "解锁信息传送通道", "解锁信息传输通道" },
                     new[] { "oni://research/status", "oni://story/poi-tech-unlocks" },
-                    new[] { "research_status", "research_list", "research_set", "research_clear", "poi_tech_unlocks_list", "poi_tech_unlock_control", "ui_management_open" },
+                    new[] { "colony_control domain=management kind=research action=status", "colony_control domain=management kind=research action=list", "colony_control domain=management kind=research", "building_control domain=story_facility", "ui_management_open" },
                     new[] { "research tech queue cancel clear portal poi tech unlock information transmission" },
-                    "Use research_list for normal tech research. Use poi_tech_unlocks_list/control for Research Portal 信息传送通道 unlock chores; control requires confirm=true.",
-                    new[] { "read research_status or poi_tech_unlocks_list", "resolve exact tech or portal target", "set research queue or start/cancel portal chore", "verify status" }),
+                    "Use colony_control domain=management kind=research action=status/list/set/clear for normal tech research. Use building_control domain=story_facility kind=poi_tech_unlock for Research Portal 信息传送通道 unlock chores; control requires confirm=true.",
+                    new[] { "read colony_control domain=management kind=research action=status or building_control domain=story_facility kind=poi_tech_unlock action=list", "resolve exact tech or portal target", "set research queue or start/cancel portal chore", "verify colony_control domain=management kind=research action=status" }),
                 new ToolGuide("rockets",
                     new[] { "rocket", "space", "launch", "crew", "cargo", "module", "火箭", "太空", "发射", "乘员" },
                     new[] { "oni://rockets/status", "oni://rockets/modules", "oni://rockets/launch-pads", "oni://rockets/crew-requests", "oni://rockets/assignment-groups", "oni://rockets/flight-utilities" },
-                    new[] { "rockets_list", "rockets_status", "rockets_set_destination", "rocket_landing_pad_set", "rockets_request_launch", "rocket_crew_request_set", "assignment_group_member_set", "rocket_module_control", "rocket_flight_utility_control" },
+                    new[] { "building_control domain=rocket rocketDomain=ops", "building_control domain=rocket rocketDomain=crew_request", "building_control domain=rocket rocketDomain=assignment_group", "building_control domain=rocket rocketDomain=module", "building_control domain=rocket rocketDomain=flight_utility" },
                     new[] { "rocket launch destination crew cargo module assignment group" },
-                    "Batch rocket reads; keep launch/self-destruct requests explicit with confirmation.",
+                    "Use building_control with domain=ops/module/flight_utility/restriction/usage/crew_request/assignment_group/cargo_status/self_destruct; keep launch/self-destruct requests explicit with confirmation.",
                     new[] { "read rocket resources", "check conditions", "plan", "apply destination/crew", "request launch", "verify" })
             };
         }
@@ -653,42 +724,20 @@ namespace OniMcp.Tools
 
         private static void AddPointerExampleArguments(McpTool tool, Dictionary<string, object> example)
         {
-            if (tool == null || string.IsNullOrWhiteSpace(tool.Name) || !tool.Name.StartsWith("agent_pointer_", StringComparison.Ordinal))
+            if (tool == null || !string.Equals(tool.Name, "navigation_control", StringComparison.Ordinal))
                 return;
 
+            if (!example.ContainsKey("action"))
+                example["action"] = "get";
             if (tool.Parameters.ContainsKey("agentId") && !example.ContainsKey("agentId"))
-                example["agentId"] = tool.Name == "agent_pointer_select_tool" ? "builder" : "planner";
+                example["agentId"] = "planner";
             if (tool.Parameters.ContainsKey("displayText") && !example.ContainsKey("displayText"))
                 example["displayText"] = PointerDisplayTextExample(tool.Name);
-            if (tool.Name == "agent_pointer_select_tool")
-                example["tool"] = "build";
-            if (tool.Name == "agent_pointer_select_tool" && !example.ContainsKey("prefabId"))
-                example["prefabId"] = "Ladder";
-            if ((tool.Name == "agent_pointer_left_click" || tool.Name == "agent_pointer_hold_left") && !example.ContainsKey("dryRun") && !example.ContainsKey("confirm"))
-                example["dryRun"] = true;
         }
 
         private static string PointerDisplayTextExample(string toolName)
         {
-            switch (toolName)
-            {
-                case "agent_pointer_aim_cell":
-                case "agent_pointer_aim_world":
-                case "agent_pointer_jump":
-                    return "移动到目标位置";
-                case "agent_pointer_nudge":
-                    return "微调指针位置";
-                case "agent_pointer_select_tool":
-                    return "选择操作工具";
-                case "agent_pointer_left_click":
-                    return "确认这个格子";
-                case "agent_pointer_hold_left":
-                    return "拖拽标记直线";
-                case "agent_pointer_jump_point_set":
-                    return "记住这个位置";
-                default:
-                    return "正在操作指针";
-            }
+            return "正在操作指针";
         }
 
         private static string GroupDescription(string group)

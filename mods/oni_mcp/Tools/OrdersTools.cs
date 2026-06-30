@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Klei.Input;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using UnityEngine;
 using OniMcp.Support;
@@ -13,16 +14,74 @@ namespace OniMcp.Tools
     {
         private const int CancelEvent = 2127324410;
 
+        public static McpTool ControlOrders()
+        {
+            return new McpTool
+            {
+                Name = "orders_control",
+                Group = "orders",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "orders", "orders_unified_control", "orders_action_control", "map_orders_control" },
+                Tags = new List<string> { "orders", "priority", "area", "designation", "dig", "sweep", "mop", "deconstruct" },
+                Description = "订单聚合工具：domain=priority/area/designation。用一个入口设置优先级、下达区域订单或执行指定/取消类操作；原有确认限制保持不变。",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "订单领域：priority、area 或 designation；省略时按 action 自动推断", Required = false, EnumValues = new List<string> { "priority", "area", "designation" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=priority: list/set_building/set_area；domain=area: dig/sweep/mop/disinfect/cancel/harvest；domain=designation: deconstruct/attack/capture/empty_conduits/cut_conduits/manual_delivery", Required = true },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "单目标对象 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "单目标或矩形起点 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "单目标或矩形起点 Y", Required = false },
+                    ["type"] = new McpToolParameter { Type = "string", Description = "管线/剪断类型；用于 empty_conduits/cut_conduits", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "差事优先级 1-9", Required = false },
+                    ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "是否设为红色最高优先级", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "harvest/attack/capture/manual_delivery 等动作的子模式", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "priority list/set_area 的名称或 prefabId 筛选", Required = false },
+                    ["includeInactive"] = new McpToolParameter { Type = "boolean", Description = "priority list/set_area 是否包含不可设置优先级对象", Required = false },
+                    ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "sweep 是否纳入已存储对象", Required = false },
+                    ["includeAttack"] = new McpToolParameter { Type = "boolean", Description = "cancel 是否取消攻击标记", Required = false },
+                    ["includeCapture"] = new McpToolParameter { Type = "boolean", Description = "cancel 是否取消抓捕标记", Required = false },
+                    ["readyOnly"] = new McpToolParameter { Type = "boolean", Description = "harvest mark 是否只处理当前可收获对象", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep/harvest 预览不执行", Required = false },
+                    ["previewToken"] = new McpToolParameter { Type = "string", Description = "dryRun 返回的预览令牌", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "attack 允许标记友方/协助阵营目标", Required = false },
+                    ["attackAreaConfirm"] = new McpToolParameter { Type = "string", Description = "attack 区域 mark 二次确认，必须精确为 attack area", Required = false },
+                    ["paused"] = new McpToolParameter { Type = "boolean", Description = "manual_delivery 暂停/恢复手动补料", Required = false },
+                    ["capacityKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 目标储量上限 kg", Required = false },
+                    ["refillMassKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 补料阈值 kg", Required = false },
+                    ["minimumMassKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 单次搬运最小质量 kg", Required = false },
+                    ["requestNow"] = new McpToolParameter { Type = "boolean", Description = "manual_delivery 立即请求一次搬运", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep 返回逐项诊断", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "读取/诊断最多返回数量", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作或大区域确认；沿用具体动作原规则", Required = false }
+                }),
+                Handler = args =>
+                {
+                    string domain = (args["domain"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (string.IsNullOrEmpty(domain))
+                        domain = InferOrdersDomain((args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant());
+                    if (domain == "priority" || domain == "priorities")
+                        return ControlPriority().Handler(args);
+                    if (domain == "area" || domain == "area_action")
+                        return AreaAction().Handler(args);
+                    if (domain == "designation" || domain == "designate")
+                        return DesignationControl().Handler(args);
+                    return CallToolResult.Error("domain must be priority, area, or designation");
+                }
+            };
+        }
+
         public static McpTool ListPriorities()
         {
             return new McpTool
             {
                 Name = "priorities_list",
+                Hidden = true,
                 Group = "orders",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "orders_priorities_list" },
-                Description = "列出可设置优先级的对象，可按区域、世界和名称筛选",
+                Description = "兼容入口：请优先使用 orders_control domain=priority action=list。列出可设置优先级的对象，可按区域、世界和名称筛选",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按名称或 prefabId 关键词筛选", Required = false },
@@ -68,10 +127,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "buildings_set_priority",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Description = "设置建筑或可优先级对象的差事优先级",
+                Description = "兼容入口：请优先使用 orders_control domain=priority action=set_building。设置建筑或可优先级对象的差事优先级",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "优先级 1-9", Required = true },
@@ -100,11 +160,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "priorities_set_area",
+                Hidden = true,
                 Group = "orders",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "orders_set_priority_area", "set_priority_area" },
-                Description = "批量设置矩形区域内可优先级对象的差事优先级",
+                Description = "兼容入口：请优先使用 orders_control domain=priority action=set_area。批量设置矩形区域内可优先级对象的差事优先级",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "优先级 1-9", Required = true },
@@ -160,15 +221,88 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlPriority()
+        {
+            return new McpTool
+            {
+                Name = "priority_control",
+                Group = "orders",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "orders_priority_control", "prioritize_control" },
+                Tags = new List<string> { "orders", "priority", "prioritize", "buildings", "area" },
+                Description = "优先级聚合工具：action=list/set_building/set_area；读取可设置优先级对象，或设置单体/区域优先级。",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、set_building 或 set_area", Required = true, EnumValues = new List<string> { "list", "set_building", "set_area" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set_building 时的目标对象 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=set_building 时的目标格子 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=set_building 时的目标格子 Y", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "action=set_building/set_area 时的优先级 1-9", Required = false },
+                    ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "action=set_building/set_area 时是否设为红色最高优先级，默认 false", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list/set_area 时按名称或 prefabId 关键词筛选", Required = false },
+                    ["includeInactive"] = new McpToolParameter { Type = "boolean", Description = "action=list/set_area 时是否包含当前不可设置优先级的对象，默认 false", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list/set_area 时最多返回或修改数量", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set_area 且区域超过 100 格时必须为 true", Required = false }
+                }),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListPriorities().Handler(args);
+                    if (action == "set_building" || action == "set")
+                        return SetBuildingPriority().Handler(args);
+                    if (action == "set_area" || action == "area")
+                        return SetPriorityArea().Handler(args);
+                    return CallToolResult.Error("action must be list, set_building, or set_area");
+                }
+            };
+        }
+
+        private static string InferOrdersDomain(string action)
+        {
+            switch (action)
+            {
+                case "dig":
+                case "sweep":
+                case "mop":
+                case "disinfect":
+                case "cancel":
+                case "harvest":
+                    return "area";
+                case "list":
+                case "set":
+                case "set_building":
+                case "set_area":
+                case "area":
+                    return "priority";
+                case "deconstruct":
+                case "deconstruct_building":
+                case "attack":
+                case "capture":
+                case "wrangle":
+                case "empty_conduits":
+                case "empty_pipe":
+                case "cut_conduits":
+                case "cut":
+                case "manual_delivery":
+                case "delivery":
+                    return "designation";
+                default:
+                    return "";
+            }
+        }
+
         public static McpTool DeconstructBuilding()
         {
             return new McpTool
             {
                 Name = "buildings_deconstruct",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "execute",
                 Risk = "dangerous",
-                Description = "将指定建筑标记为拆除，需要 confirm=true",
+                Description = "兼容入口：请优先使用 orders_control domain=designation action=deconstruct。将指定建筑标记为拆除，需要 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认，必须为 true", Required = true }
@@ -197,7 +331,8 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
-                Description = "把矩形区域内固体散落物/碎片标记为清扫到仓库；不处理水、污水或任何液体，地上的水/液体必须使用 orders_mop_area；返回逐项诊断",
+                Hidden = true,
+                Description = "兼容入口：请优先使用 orders_control domain=area action=sweep。把矩形区域内固体散落物/碎片标记为清扫到仓库；不处理水、污水或任何液体。",
                 Aliases = new List<string> { "sweep_area", "clear_debris_area", "solid_debris_sweep_area" },
                 Tags = new List<string> { "orders", "sweep", "clear", "debris", "solid", "pickupable", "storage", "not-liquid", "固体", "碎片", "散落物", "清扫到仓库" },
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -324,10 +459,10 @@ namespace OniMcp.Tools
                         ["targets"] = targets,
                         ["truncatedTargets"] = detail ? Math.Max(0, inRect - targets.Count) : 0,
                         ["liquidCellsInRect"] = liquidScan["count"],
-                        ["mopHint"] = (int)liquidScan["count"] > 0 ? "This area contains liquid cells. Sweep only handles solid pickupables/debris; use orders_mop_area for water/liquid on floor." : null,
+                        ["mopHint"] = (int)liquidScan["count"] > 0 ? "This area contains liquid cells. Sweep only handles solid pickupables/debris; use orders_control domain=area action=mop for water/liquid on floor." : null,
                         ["liquidSamples"] = liquidScan["samples"],
                         ["note"] = marked == 0
-                            ? "No sweep errands were marked. Check targets/skipped; sweep only handles solid pickupables/debris, not water/liquid. For floor liquids use orders_mop_area. Sweep also requires reachable storage accepting the item before dupes will haul it."
+                            ? "No sweep errands were marked. Check targets/skipped; sweep only handles solid pickupables/debris, not water/liquid. For floor liquids use orders_control domain=area action=mop. Sweep also requires reachable storage accepting the item before dupes will haul it."
                             : "Sweep marks solid debris only; it never mops water/liquid. Dupes still need reachable storage accepting the item."
                     };
                     if (dryRun)
@@ -335,6 +470,110 @@ namespace OniMcp.Tools
                     return CallToolResult.Text(JsonConvert.SerializeObject(responseDict, McpJsonUtil.Settings));
                 }
             };
+        }
+
+        public static McpTool AreaAction()
+        {
+            return new McpTool
+            {
+                Name = "orders_area_action",
+                Group = "orders",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "orders_area", "area_order", "area_designate" },
+                Tags = new List<string> { "orders", "area", "dig", "sweep", "mop", "disinfect", "cancel", "harvest" },
+                Description = "统一区域命令入口。action=dig/sweep/mop/disinfect/cancel/harvest；复用各具体订单参数，危险或大区域仍需 confirm=true。",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "区域命令：dig、sweep、mop、disinfect、cancel、harvest", Required = true, EnumValues = new List<string> { "dig", "sweep", "mop", "disinfect", "cancel", "harvest" } },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "支持该参数的命令使用：差事优先级 1-9，默认 5", Required = false },
+                    ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "支持该参数的命令使用：是否设为红色最高优先级，默认 false", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep/harvest 支持：只预览不执行", Required = false },
+                    ["previewToken"] = new McpToolParameter { Type = "string", Description = "dig/sweep/harvest dryRun 返回的预览令牌", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "harvest 支持：mark、when_ready、cancel", Required = false, EnumValues = new List<string> { "mark", "when_ready", "cancel" } },
+                    ["readyOnly"] = new McpToolParameter { Type = "boolean", Description = "harvest 支持：mark 模式是否只处理当前可收获对象，默认 true", Required = false },
+                    ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "sweep 支持：是否纳入已存储对象，默认 false", Required = false },
+                    ["includeAttack"] = new McpToolParameter { Type = "boolean", Description = "cancel 支持：是否取消攻击标记，默认 true", Required = false },
+                    ["includeCapture"] = new McpToolParameter { Type = "boolean", Description = "cancel 支持：是否取消抓捕标记，默认 true", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep 支持：是否返回逐项诊断", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "dig/sweep 支持：逐项诊断最多返回数量", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作或大区域确认；dig 执行时必须 true", Required = false }
+                }),
+                Handler = args => RunAreaAction(args)
+            };
+        }
+
+        public static McpTool DesignationControl()
+        {
+            return new McpTool
+            {
+                Name = "designation_control",
+                Group = "orders",
+                Mode = "execute",
+                Risk = "dangerous",
+                Aliases = new List<string> { "orders_designation_control", "map_designation_control" },
+                Tags = new List<string> { "orders", "designation", "deconstruct", "attack", "capture", "conduit", "manual-delivery" },
+                Description = "统一指定/取消类入口：action=deconstruct/attack/capture/empty_conduits/cut_conduits/manual_delivery。只做路由聚合，保留各旧工具的 confirm 和安全限制。",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter
+                    {
+                        Type = "string",
+                        Description = "指定动作：deconstruct、attack、capture、empty_conduits、cut_conduits、manual_delivery",
+                        Required = true,
+                        EnumValues = new List<string> { "deconstruct", "attack", "capture", "empty_conduits", "cut_conduits", "manual_delivery" }
+                    },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID；适用于 deconstruct/attack/capture/manual_delivery", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；适用于 deconstruct/attack/cut_conduits/manual_delivery", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y；适用于 deconstruct/attack/cut_conduits/manual_delivery", Required = false },
+                    ["type"] = new McpToolParameter { Type = "string", Description = "empty_conduits/cut_conduits 的管线类型", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "支持该参数的动作使用：差事优先级 1-9，默认 5", Required = false },
+                    ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "支持该参数的动作使用：是否设为红色最高优先级", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "attack/capture 支持：mark、cancel；capture 额外支持 release", Required = false, EnumValues = new List<string> { "mark", "cancel", "release" } },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "attack 支持：允许标记友方/协助阵营目标", Required = false },
+                    ["attackAreaConfirm"] = new McpToolParameter { Type = "string", Description = "attack 区域 mark 二次确认，必须精确为 attack area", Required = false },
+                    ["paused"] = new McpToolParameter { Type = "boolean", Description = "manual_delivery 支持：true 暂停手动补料，false 恢复", Required = false },
+                    ["capacityKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 支持：目标储量上限 kg", Required = false },
+                    ["refillMassKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 支持：补料阈值 kg", Required = false },
+                    ["minimumMassKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 支持：单次搬运最小质量 kg", Required = false },
+                    ["requestNow"] = new McpToolParameter { Type = "boolean", Description = "manual_delivery 支持：立即请求一次搬运", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认；deconstruct/attack/cut_conduits 或大区域 capture/empty_conduits 按原规则要求", Required = false }
+                }),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "deconstruct":
+                        case "deconstruct_building":
+                            return DeconstructBuilding().Handler(args);
+                        case "attack":
+                            return Attack().Handler(WithRoutedMode(args));
+                        case "capture":
+                        case "wrangle":
+                            return CaptureCritters().Handler(WithRoutedMode(args));
+                        case "empty_conduits":
+                        case "empty_pipe":
+                            return EmptyConduits().Handler(args);
+                        case "cut_conduits":
+                        case "cut":
+                            return CutConduits().Handler(args);
+                        case "manual_delivery":
+                        case "delivery":
+                            return ConfigureManualDelivery().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be deconstruct, attack, capture, empty_conduits, cut_conduits, or manual_delivery");
+                    }
+                }
+            };
+        }
+
+        private static JObject WithRoutedMode(JObject args)
+        {
+            var routed = (JObject)args.DeepClone();
+            string mode = routed["mode"]?.ToString();
+            routed["action"] = string.IsNullOrWhiteSpace(mode) ? "mark" : mode;
+            return routed;
         }
 
         public static McpTool DigArea()
@@ -345,7 +584,8 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
-                Description = "在矩形区域内对自然实体格子下达挖掘命令；dryRun=true 只返回目标、质量和风险预览，不要求 confirm",
+                Hidden = true,
+                Description = "兼容入口：请优先使用 orders_control domain=area action=dig。在矩形区域内对自然实体格子下达挖掘命令。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只预检并返回 preview，不实际下达挖掘，默认 false；dryRun 不要求 confirm", Required = false },
@@ -438,10 +678,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "orders_attack",
+                Hidden = true,
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
-                Description = "仅用于攻击小动物/敌对目标，不能用于挖掘。按对象、格子或矩形区域标记/取消攻击目标；区域攻击除 confirm=true 外还必须 action=mark 且 attackAreaConfirm=\"attack area\"",
+                Description = "兼容入口：请优先使用 orders_control domain=designation action=attack。仅用于攻击小动物/敌对目标，不能用于挖掘。区域攻击除 confirm=true 外还必须 action=mark 且 attackAreaConfirm=\"attack area\"",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID；提供后优先于坐标/区域", Required = false },
@@ -462,7 +703,7 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("confirm=true is required for attack orders");
                     bool areaAttack = mark && args["id"] == null && HasRectInput(args);
                     if (areaAttack && args["attackAreaConfirm"]?.ToString() != "attack area")
-                        return CallToolResult.Error("Refusing area attack without attackAreaConfirm=\"attack area\". For terrain excavation use orders_dig_area, not orders_attack.");
+                        return CallToolResult.Error("Refusing area attack without attackAreaConfirm=\"attack area\". For terrain excavation use orders_control domain=area action=dig, not orders_attack.");
                     if (FactionManager.Instance == null)
                         return CallToolResult.Error("FactionManager is not initialized");
 
@@ -506,6 +747,28 @@ namespace OniMcp.Tools
             };
         }
 
+        private static CallToolResult RunAreaAction(JObject args)
+        {
+            string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+            switch (action)
+            {
+                case "dig":
+                    return DigArea().Handler(args);
+                case "sweep":
+                    return SweepArea().Handler(args);
+                case "mop":
+                    return MopArea().Handler(args);
+                case "disinfect":
+                    return DisinfectArea().Handler(args);
+                case "cancel":
+                    return CancelArea().Handler(args);
+                case "harvest":
+                    return HarvestArea().Handler(args);
+                default:
+                    return CallToolResult.Error("action must be dig, sweep, mop, disinfect, cancel, or harvest");
+            }
+        }
+
         public static McpTool MopArea()
         {
             return new McpTool
@@ -514,6 +777,7 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "mop_area", "liquids_mop_area", "water_mop_area", "mop_liquid_area", "mop_water_area" },
                 Tags = new List<string> { "orders", "mop", "liquid", "water", "polluted-water", "floor", "spill", "地上的水", "拖地", "液体", "水" },
                 Description = "在矩形区域内对地上的水、污水或其他可拖地液体格子下达拖地命令；不是清扫固体碎片。遵循游戏限制：下方必须有地面且液体质量不能超过可拖地上限",
@@ -605,8 +869,9 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "disinfect_area", "germs_disinfect_area" },
-                Description = "标记矩形区域内带病菌且支持消毒的对象",
+                Description = "兼容入口：请优先使用 orders_control domain=area action=disinfect。标记矩形区域内带病菌且支持消毒的对象",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "消毒差事优先级 1-9，默认 5", Required = false },
@@ -668,11 +933,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "conduits_empty_area",
+                Hidden = true,
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
                 Aliases = new List<string> { "empty_pipe_area", "orders_empty_pipe" },
-                Description = "按区域标记气管、液管或运输轨道清空内容，对应游戏 Empty Pipe 工具",
+                Description = "兼容入口：请优先使用 orders_control domain=designation action=empty_conduits。按区域标记气管、液管或运输轨道清空内容，对应游戏 Empty Pipe 工具",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["type"] = new McpToolParameter
@@ -752,11 +1018,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "conduits_cut",
+                Hidden = true,
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders_cut_conduits", "cut_conduits" },
-                Description = "按格子或矩形区域剪断管路/电线/运输轨道，实际下达拆除对应段的命令，需要 confirm=true",
+                Description = "兼容入口：请优先使用 orders_control domain=designation action=cut_conduits。按格子或矩形区域剪断管路/电线/运输轨道，实际下达拆除对应段的命令，需要 confirm=true",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；不提供矩形时按单格处理", Required = false },
@@ -843,8 +1110,9 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "cancel_area", "orders_cancel" },
-                Description = "取消矩形区域内玩家已下达的订单：挖掘、建造、拆除、清扫、收获、攻击、抓捕等可取消对象",
+                Description = "兼容入口：请优先使用 orders_control domain=area action=cancel。取消矩形区域内玩家已下达的订单：挖掘、建造、拆除、清扫、收获、攻击、抓捕等可取消对象",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["includeAttack"] = new McpToolParameter { Type = "boolean", Description = "是否取消区域内攻击标记，默认 true", Required = false },
@@ -910,8 +1178,9 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "harvest_area", "plants_harvest_area" },
-                Description = "标记、取消或设置区域内植物/可收获对象的收获命令；mode=mark 仅标记当前可收获，when_ready 设置成熟即收获",
+                Description = "兼容入口：请优先使用 orders_control domain=area action=harvest。标记、取消或设置区域内植物/可收获对象的收获命令；mode=mark 仅标记当前可收获，when_ready 设置成熟即收获",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["mode"] = new McpToolParameter { Type = "string", Description = "mark、when_ready、cancel；默认 mark", Required = false, EnumValues = new List<string> { "mark", "when_ready", "cancel" } },
@@ -1020,11 +1289,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "critters_capture",
+                Hidden = true,
                 Group = "ranching",
                 Mode = "execute",
                 Risk = "medium",
                 Aliases = new List<string> { "orders_capture", "critters_wrangle" },
-                Description = "按对象或区域标记/取消抓捕小动物；action=release 可释放已捆绑小动物",
+                Description = "兼容入口：请优先使用 orders_control domain=designation action=capture。按对象或区域标记/取消抓捕小动物；action=release 可释放已捆绑小动物",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID；提供后优先于区域", Required = false },
@@ -1123,7 +1393,8 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "building_enable", "building_disable" },
-                Description = "启用或禁用指定建筑；直接设置建筑状态，不排队复制人开关差事",
+                Hidden = true,
+                Description = "兼容入口：请使用 building_control domain=config action=set_enabled。启用或禁用指定建筑；直接设置建筑状态，不排队复制人开关差事",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["enabled"] = new McpToolParameter { Type = "boolean", Description = "true 启用，false 禁用", Required = true }
@@ -1158,7 +1429,8 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "logic_switch_set", "building_toggle_set" },
-                Description = "设置支持玩家手动开关的建筑/自动化开关状态，例如逻辑开关；仅当目标实现 IPlayerControlledToggle 时可用",
+                Hidden = true,
+                Description = "兼容入口：请使用 building_control domain=config action=set_toggle。设置支持玩家手动开关的建筑/自动化开关状态，例如逻辑开关；仅当目标实现 IPlayerControlledToggle 时可用",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["on"] = new McpToolParameter { Type = "boolean", Description = "true 打开，false 关闭", Required = true }
@@ -1194,11 +1466,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "buildings_manual_delivery",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "manual_delivery_set", "building_refill_set" },
-                Description = "配置建筑手动补料/搬运：暂停或恢复补料、设置容量/补料阈值、立即请求搬运",
+                Description = "兼容入口：请优先使用 orders_control domain=designation action=manual_delivery。配置建筑手动补料/搬运：暂停或恢复补料、设置容量/补料阈值、立即请求搬运",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["paused"] = new McpToolParameter { Type = "boolean", Description = "可选：true 暂停手动补料，false 恢复", Required = false },
@@ -1446,7 +1719,7 @@ namespace OniMcp.Tools
                     ["severity"] = "info",
                     ["count"] = liquidCount,
                     ["samples"] = liquidScan.ContainsKey("samples") ? liquidScan["samples"] : null,
-                    ["message"] = "Sweep ignores liquid cells; use orders_mop_area for floor liquids."
+                    ["message"] = "Sweep ignores liquid cells; use orders_control domain=area action=mop for floor liquids."
                 });
             }
             return risks;

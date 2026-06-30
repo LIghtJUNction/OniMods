@@ -11,6 +11,64 @@ namespace OniMcp.Tools
 {
     public static class PowerAndRoomTools
     {
+        public static McpTool InfrastructureReadControl()
+        {
+            return new McpTool
+            {
+                Name = "infrastructure_read_control",
+                Group = "infrastructure",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "infrastructure_read" },
+                Tags = new List<string> { "power", "electricity", "rooms", "infrastructure", "电力", "房间", "基础设施" },
+                Description = "电力/房间只读聚合入口：action=power_summary/power_ports/rooms；底层行为分别等同 power_summary、building_power_ports、rooms_list",
+                Parameters = InfrastructureReadParams(),
+                Handler = args =>
+                {
+                    args = args ?? new JObject();
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    var forwarded = new JObject(args);
+                    forwarded.Remove("action");
+
+                    switch (action)
+                    {
+                        case "power_summary":
+                            return GetPowerSummary().Handler(forwarded);
+                        case "power_ports":
+                            return GetBuildingPowerPorts().Handler(forwarded);
+                        case "rooms":
+                            return ListRooms().Handler(forwarded);
+                        default:
+                            return CallToolResult.Error("Unsupported action. Use power_summary, power_ports, or rooms.");
+                    }
+                }
+            };
+        }
+
+        public static McpTool GetBuildingPowerPortsCompat()
+        {
+            var tool = GetBuildingPowerPorts();
+            tool.Hidden = true;
+            tool.Description = "兼容入口：请使用 read_control domain=infrastructure action=power_ports。";
+            return tool;
+        }
+
+        public static McpTool GetPowerSummaryCompat()
+        {
+            var tool = GetPowerSummary();
+            tool.Hidden = true;
+            tool.Description = "兼容入口：请使用 read_control domain=infrastructure action=power_summary。";
+            return tool;
+        }
+
+        public static McpTool ListRoomsCompat()
+        {
+            var tool = ListRooms();
+            tool.Hidden = true;
+            tool.Description = "兼容入口：请使用 read_control domain=infrastructure action=rooms。";
+            return tool;
+        }
+
         public static McpTool GetBuildingPowerPorts()
         {
             return new McpTool
@@ -376,6 +434,21 @@ namespace OniMcp.Tools
                 circuits[id] = aggregate;
             }
             return aggregate;
+        }
+
+        private static Dictionary<string, McpToolParameter> InfrastructureReadParams()
+        {
+            return RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "读取类型：power_summary 电力摘要；power_ports 建筑电力接口；rooms 房间列表", Required = true, EnumValues = new List<string> { "power_summary", "power_ports", "rooms" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=power_ports 时按名称或 prefabId 关键词筛选", Required = false },
+                ["type"] = new McpToolParameter { Type = "string", Description = "action=rooms 时按房间类型 id/name 过滤，例如 Barracks、GreatHall、PowerPlant", Required = false },
+                ["includeDetails"] = new McpToolParameter { Type = "boolean", Description = "action=power_summary 时是否返回发电机/电池/消费者明细，默认 false", Required = false },
+                ["includeBuildings"] = new McpToolParameter { Type = "boolean", Description = "action=rooms 时是否返回房间内建筑明细，默认 false", Required = false },
+                ["includeCriteria"] = new McpToolParameter { Type = "boolean", Description = "action=rooms 时是否返回房间条件文本，默认 false", Required = false },
+                ["includeNeutral"] = new McpToolParameter { Type = "boolean", Description = "action=rooms 时是否返回 Neutral/杂间，默认 false", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量；沿用对应旧工具默认值和上限", Required = false }
+            });
         }
 
         private static Dictionary<string, object> PowerDeviceInfo(GameObject go, string role, ushort circuitId, float? capacityJ, float? storedJ, float? wattsUsed, float? wattsRating, bool operational, bool empty = false, bool powered = false)

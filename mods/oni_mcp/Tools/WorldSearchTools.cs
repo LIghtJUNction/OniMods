@@ -21,16 +21,17 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "map_search", "world_find", "find_on_map" },
                 Tags = new List<string> { "world", "map", "search", "find", "elements", "buildings", "items", "dupes", "地图", "搜索", "查找" },
-                Description = "【地图搜索首选】按自然语言/query 在同一区域内搜索格子元素、建筑、物品和复制人；支持 nearX/nearY 最近排序，适合快速找水、氧气、建筑、资源、复制人或危险格。",
+                Description = "兼容旧工具：请改用 read_control domain=world action=search。按自然语言/query 在同一区域内搜索格子元素、建筑、物品和复制人；支持 nearX/nearY 最近排序。",
                 Parameters = CommonSearchParameters(includeKinds: true),
                 Handler = args =>
                 {
                     if (Game.Instance == null)
                         return CallToolResult.Error("Game not initialized");
 
-                    var request = SearchRequest.From(args);
+                    var request = SearchRequest.From(args, "clusters");
                     var results = new List<SearchHit>();
                     if (request.IncludeKind("cells") || request.IncludeKind("elements"))
                         results.AddRange(SearchCells(request));
@@ -54,16 +55,17 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "map_search_cells", "world_find_cells", "element_cells_search" },
                 Tags = new List<string> { "world", "map", "search", "cells", "elements", "temperature", "mass", "地图", "格子", "元素" },
-                Description = "按元素、状态、温度、质量、固体/可见性条件搜索地图格子；默认只搜当前相机附近，适合找水、氧气、真空、高温、低温、可挖固体。",
+                Description = "兼容入口：请优先使用 world_search kinds=cells/elements。",
                 Parameters = CellSearchParameters(),
                 Handler = args =>
                 {
                     if (Game.Instance == null)
                         return CallToolResult.Error("Game not initialized");
 
-                    var request = SearchRequest.From(args);
+                    var request = SearchRequest.From(args, "hits");
                     return CallToolResult.Text(JsonConvert.SerializeObject(BuildResult("world_search_cells", request, SearchCells(request)), McpJsonUtil.Settings));
                 }
             };
@@ -77,16 +79,17 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "map_search_objects", "world_find_objects", "object_search" },
                 Tags = new List<string> { "world", "map", "search", "buildings", "items", "dupes", "objects", "地图", "对象", "建筑", "物品" },
-                Description = "按名称/prefab/元素在地图上搜索建筑、散落物和复制人；支持 areaId/矩形/世界过滤和 nearX/nearY 最近排序。",
+                Description = "兼容入口：请优先使用 world_search kinds=buildings/items/dupes。",
                 Parameters = ObjectSearchParameters(),
                 Handler = args =>
                 {
                     if (Game.Instance == null)
                         return CallToolResult.Error("Game not initialized");
 
-                    var request = SearchRequest.From(args);
+                    var request = SearchRequest.From(args, "hits");
                     var results = new List<SearchHit>();
                     if (request.IncludeKind("buildings"))
                         results.AddRange(SearchBuildings(request));
@@ -106,6 +109,7 @@ namespace OniMcp.Tools
             parameters["query"] = new McpToolParameter { Type = "string", Description = "搜索词，可匹配元素 ID/名称、建筑名/prefabId、物品名/prefabId、复制人名；留空时按条件返回", Required = false };
             if (includeKinds)
                 parameters["kinds"] = new McpToolParameter { Type = "array", Description = "搜索类型数组或逗号字符串：cells,elements,buildings,items,resources,dupes；默认 all", Required = false };
+            parameters["returnMode"] = new McpToolParameter { Type = "string", Description = "返回形态：clusters 返回连通区域/对象组，summary 只返回统计，hits 返回逐项命中。默认 clusters", Required = false, EnumValues = new List<string> { "clusters", "summary", "hits" } };
             AddCellFilters(parameters);
             AddSortFilters(parameters);
             return parameters;
@@ -115,6 +119,7 @@ namespace OniMcp.Tools
         {
             var parameters = BaseAreaParameters();
             parameters["query"] = new McpToolParameter { Type = "string", Description = "元素 ID/名称搜索词，例如 Water/Oxygen/Cuprite；留空时按条件返回", Required = false };
+            parameters["returnMode"] = new McpToolParameter { Type = "string", Description = "兼容入口默认 hits；可传 clusters 或 summary 获取压缩视图", Required = false, EnumValues = new List<string> { "hits", "clusters", "summary" } };
             AddCellFilters(parameters);
             AddSortFilters(parameters);
             return parameters;
@@ -125,6 +130,7 @@ namespace OniMcp.Tools
             var parameters = BaseAreaParameters();
             parameters["query"] = new McpToolParameter { Type = "string", Description = "对象搜索词，可匹配建筑名/prefabId、物品名/prefabId/元素、复制人名", Required = false };
             parameters["kinds"] = new McpToolParameter { Type = "array", Description = "对象类型数组或逗号字符串：buildings,items,resources,dupes；默认 buildings,items,dupes", Required = false };
+            parameters["returnMode"] = new McpToolParameter { Type = "string", Description = "兼容入口默认 hits；可传 clusters 或 summary 获取压缩视图", Required = false, EnumValues = new List<string> { "hits", "clusters", "summary" } };
             AddSortFilters(parameters);
             return parameters;
         }
@@ -324,24 +330,147 @@ namespace OniMcp.Tools
         private static Dictionary<string, object> BuildResult(string tool, SearchRequest request, IEnumerable<SearchHit> rawHits)
         {
             var hits = rawHits.ToList();
-            var sorted = SortHits(hits, request).Take(request.Limit).Select(hit => hit.ToDictionary(request)).ToList();
-            return new Dictionary<string, object>
+            var result = new Dictionary<string, object>
             {
                 ["v"] = 1,
                 ["tool"] = tool,
+                ["returnMode"] = request.ReturnMode,
                 ["query"] = request.Query,
                 ["kinds"] = request.Kinds.ToArray(),
                 ["worldId"] = request.WorldId,
                 ["rect"] = new[] { request.Rect["x1"], request.Rect["y1"], request.Rect["x2"], request.Rect["y2"] },
                 ["visibleOnly"] = request.VisibleOnly,
                 ["matched"] = hits.Count,
-                ["returned"] = sorted.Count,
                 ["sort"] = request.Sort,
                 ["near"] = request.HasNear ? (object)new[] { request.NearX.Value, request.NearY.Value } : null,
                 ["summary"] = hits.GroupBy(hit => hit.Kind).ToDictionary(group => group.Key, group => group.Count()),
-                ["items"] = sorted,
-                ["recommendedFollowUp"] = "Use world_area_snapshot or world_text_map around a returned x/y when terrain context is needed; use camera_focus_cell for visual inspection."
+                ["recommendedFollowUp"] = "Use world_area_snapshot or world_text_map around a cluster bbox when terrain context is needed; use camera_focus_cell for visual inspection."
             };
+
+            if (request.ReturnMode == "summary")
+            {
+                result["returned"] = 0;
+                return result;
+            }
+
+            if (request.ReturnMode == "clusters")
+            {
+                var clusters = BuildClusters(hits, request).Take(request.Limit).ToList();
+                result["returned"] = clusters.Count;
+                result["clusters"] = clusters;
+                return result;
+            }
+
+            var sorted = SortHits(hits, request).Take(request.Limit).Select(hit => hit.ToDictionary(request)).ToList();
+            result["returned"] = sorted.Count;
+            result["items"] = sorted;
+            return result;
+        }
+
+        private static IEnumerable<Dictionary<string, object>> BuildClusters(List<SearchHit> hits, SearchRequest request)
+        {
+            foreach (var cluster in BuildCellClusters(hits.Where(hit => hit.Kind == "cell").ToList(), request))
+                yield return cluster;
+            foreach (var cluster in BuildObjectGroups(hits.Where(hit => hit.Kind != "cell").ToList(), request))
+                yield return cluster;
+        }
+
+        private static IEnumerable<Dictionary<string, object>> BuildCellClusters(List<SearchHit> cellHits, SearchRequest request)
+        {
+            var orderedGroups = cellHits
+                .GroupBy(hit => $"{hit.WorldId}|{hit.ElementId}|{hit.State}")
+                .OrderByDescending(group => group.Count());
+
+            int clusterIndex = 0;
+            foreach (var group in orderedGroups)
+            {
+                var remaining = group.ToDictionary(hit => CellKey(hit.WorldId, hit.X, hit.Y), hit => hit);
+                while (remaining.Count > 0)
+                {
+                    var first = remaining.Values.First();
+                    var queue = new Queue<SearchHit>();
+                    var members = new List<SearchHit>();
+                    remaining.Remove(CellKey(first.WorldId, first.X, first.Y));
+                    queue.Enqueue(first);
+
+                    while (queue.Count > 0)
+                    {
+                        var current = queue.Dequeue();
+                        members.Add(current);
+                        TryEnqueueNeighbor(current.WorldId, current.X + 1, current.Y, remaining, queue);
+                        TryEnqueueNeighbor(current.WorldId, current.X - 1, current.Y, remaining, queue);
+                        TryEnqueueNeighbor(current.WorldId, current.X, current.Y + 1, remaining, queue);
+                        TryEnqueueNeighbor(current.WorldId, current.X, current.Y - 1, remaining, queue);
+                    }
+
+                    yield return CellClusterInfo($"cell_cluster_{clusterIndex++}", members, request);
+                }
+            }
+        }
+
+        private static IEnumerable<Dictionary<string, object>> BuildObjectGroups(List<SearchHit> objectHits, SearchRequest request)
+        {
+            int groupIndex = 0;
+            foreach (var group in objectHits.GroupBy(hit => $"{hit.WorldId}|{hit.Kind}|{hit.PrefabId}").OrderByDescending(group => group.Count()))
+            {
+                var members = group.ToList();
+                yield return new Dictionary<string, object>
+                {
+                    ["id"] = $"object_group_{groupIndex++}",
+                    ["kind"] = members[0].Kind,
+                    ["prefabId"] = members[0].PrefabId,
+                    ["name"] = members[0].Name,
+                    ["worldId"] = members[0].WorldId,
+                    ["bbox"] = BBox(members),
+                    ["count"] = members.Count,
+                    ["nearestDistance"] = request.HasNear ? (object)Math.Round(Math.Sqrt(members.Min(hit => request.DistanceSquared(hit.X, hit.Y))), 2) : null,
+                    ["sampleItems"] = SortHits(members, request).Take(8).Select(hit => hit.ToDictionary(request)).ToList()
+                };
+            }
+        }
+
+        private static Dictionary<string, object> CellClusterInfo(string id, List<SearchHit> members, SearchRequest request)
+        {
+            float mass = members.Sum(hit => hit.MassKg ?? 0f);
+            var temps = members.Where(hit => hit.TemperatureC.HasValue).Select(hit => hit.TemperatureC.Value).ToList();
+            var sorted = SortHits(members, request).Take(12).ToList();
+            return new Dictionary<string, object>
+            {
+                ["id"] = id,
+                ["kind"] = "cell_cluster",
+                ["elementId"] = members[0].ElementId,
+                ["state"] = members[0].State,
+                ["worldId"] = members[0].WorldId,
+                ["bbox"] = BBox(members),
+                ["cells"] = members.Count,
+                ["estimatedMassKg"] = Math.Round(mass, 2),
+                ["avgMassKg"] = Math.Round(mass / Math.Max(1, members.Count), 3),
+                ["avgTemperatureC"] = temps.Count == 0 ? (object)null : Math.Round(temps.Average(), 2),
+                ["minTemperatureC"] = temps.Count == 0 ? (object)null : Math.Round(temps.Min(), 2),
+                ["maxTemperatureC"] = temps.Count == 0 ? (object)null : Math.Round(temps.Max(), 2),
+                ["nearestDistance"] = request.HasNear ? (object)Math.Round(Math.Sqrt(members.Min(hit => request.DistanceSquared(hit.X, hit.Y))), 2) : null,
+                ["suggestedCells"] = sorted.Select(hit => new[] { hit.X, hit.Y }).ToList()
+            };
+        }
+
+        private static int[] BBox(List<SearchHit> members)
+        {
+            return new[] { members.Min(hit => hit.X), members.Min(hit => hit.Y), members.Max(hit => hit.X), members.Max(hit => hit.Y) };
+        }
+
+        private static string CellKey(int worldId, int x, int y)
+        {
+            return worldId + ":" + x + ":" + y;
+        }
+
+        private static void TryEnqueueNeighbor(int worldId, int x, int y, Dictionary<string, SearchHit> remaining, Queue<SearchHit> queue)
+        {
+            string key = CellKey(worldId, x, y);
+            SearchHit hit;
+            if (!remaining.TryGetValue(key, out hit))
+                return;
+            remaining.Remove(key);
+            queue.Enqueue(hit);
         }
 
         private static IEnumerable<SearchHit> SortHits(List<SearchHit> hits, SearchRequest request)
@@ -374,6 +503,7 @@ namespace OniMcp.Tools
             public string Sort;
             public int? NearX;
             public int? NearY;
+            public string ReturnMode;
             public string State;
             public bool? Solid;
             public float? MinMassKg;
@@ -383,7 +513,7 @@ namespace OniMcp.Tools
 
             public bool HasNear => NearX.HasValue && NearY.HasValue;
 
-            public static SearchRequest From(JObject args)
+            public static SearchRequest From(JObject args, string defaultReturnMode)
             {
                 int maxCells = Math.Max(100, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 2500, MaxSearchCells));
                 var rect = WorldEditor.ResolveRectOrCamera(args, maxCells);
@@ -398,6 +528,7 @@ namespace OniMcp.Tools
                     Sort = NormalizeSort(args["sort"]?.ToString(), ToolUtil.GetInt(args, "nearX").HasValue && ToolUtil.GetInt(args, "nearY").HasValue),
                     NearX = ToolUtil.GetInt(args, "nearX"),
                     NearY = ToolUtil.GetInt(args, "nearY"),
+                    ReturnMode = NormalizeReturnMode(args["returnMode"]?.ToString(), defaultReturnMode),
                     State = NormalizeState(args["state"]?.ToString()),
                     Solid = args["solid"] == null ? (bool?)null : ToolUtil.GetBool(args, "solid", false),
                     MinMassKg = ToolUtil.GetFloat(args, "minMassKg"),
@@ -509,6 +640,14 @@ namespace OniMcp.Tools
                     return hasNear ? "nearest" : "kind";
                 string sort = value.Trim().ToLowerInvariant();
                 return sort == "nearest" || sort == "mass" || sort == "temperature" ? sort : "kind";
+            }
+
+            private static string NormalizeReturnMode(string value, string defaultReturnMode)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    return defaultReturnMode == "hits" || defaultReturnMode == "summary" ? defaultReturnMode : "clusters";
+                string mode = value.Trim().ToLowerInvariant();
+                return mode == "hits" || mode == "summary" || mode == "clusters" ? mode : "clusters";
             }
 
             private static string NormalizeState(string value)

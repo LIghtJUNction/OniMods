@@ -17,7 +17,8 @@ namespace OniMcp.Tools
                 Group = "research",
                 Mode = "read",
                 Risk = "none",
-                Description = "查看当前研究目标、队列和进度",
+                Hidden = true,
+                Description = "兼容入口：请优先使用 colony_control domain=management kind=research action=status。查看当前研究目标、队列和进度",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {
@@ -47,8 +48,9 @@ namespace OniMcp.Tools
                 Group = "research",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "list_research" },
-                Description = "列出或搜索可研究科技。query 可匹配科技 ID、名称、解锁建筑 ID/名称或搜索词",
+                Description = "兼容入口：请优先使用 colony_control domain=management kind=research action=list。列出或搜索可研究科技。query 可匹配科技 ID、名称、解锁建筑 ID/名称或搜索词",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "可选搜索词", Required = false },
@@ -94,8 +96,9 @@ namespace OniMcp.Tools
                 Group = "research",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "set_research" },
-                Description = "选择当前研究目标。优先用 id 精确指定，也可用 query 搜索科技或解锁建筑",
+                Description = "兼容入口：请优先使用 colony_control domain=management kind=research action=set。选择当前研究目标。优先用 id 精确指定，也可用 query 搜索科技或解锁建筑",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "string", Description = "科技 ID，例如 FarmingTech、SanitationSciences、ImprovedOxygen", Required = false },
@@ -164,9 +167,10 @@ namespace OniMcp.Tools
                 Group = "research",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "clear_research", "research_cancel", "research_queue_clear" },
                 Tags = new List<string> { "research", "queue", "cancel", "clear", "management", "researchscreen" },
-                Description = "取消当前研究队列，等价于 ResearchScreen 的取消研究按钮；需 confirm=true",
+                Description = "兼容入口：请优先使用 colony_control domain=management kind=research action=clear。取消当前研究队列，等价于 ResearchScreen 的取消研究按钮；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认清空当前研究队列", Required = true }
@@ -210,6 +214,43 @@ namespace OniMcp.Tools
                     };
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(response, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ControlResearch()
+        {
+            return new McpTool
+            {
+                Name = "research_control",
+                Group = "research",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "research_queue_control", "research_management" },
+                Tags = new List<string> { "research", "queue", "tech", "management", "researchscreen" },
+                Description = "统一查看、搜索、设置和清空研究队列。action=status/list/set/clear；status 查看当前队列，list 搜索科技，set 选择当前研究，clear 需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：status、list、set、clear", Required = true },
+                    ["id"] = new McpToolParameter { Type = "string", Description = "action=set 时科技 ID，例如 FarmingTech、SanitationSciences、ImprovedOxygen", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list/set 时搜索词，可匹配科技名称、ID、解锁项", Required = false },
+                    ["includeComplete"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否包含已完成科技，默认 true", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 30，最大 100", Required = false },
+                    ["clearQueue"] = new McpToolParameter { Type = "boolean", Description = "action=set 时是否清空旧队列，默认 true", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=clear 时必须为 true，确认清空当前研究队列", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "status")
+                        return GetResearchStatus().Handler(args);
+                    if (action == "list")
+                        return ListResearch().Handler(args);
+                    if (action == "set")
+                        return SetResearch().Handler(args);
+                    if (action == "clear")
+                        return ClearResearch().Handler(args);
+                    return CallToolResult.Error("action must be one of status, list, set, clear");
                 }
             };
         }

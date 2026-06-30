@@ -19,9 +19,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "active_range_controls_list", "activation_range_side_screens_list" },
                 Tags = new List<string> { "controls", "side-screen", "activation-range", "smart-battery", "reservoir", "massage" },
-                Description = "列出 ActiveRangeSideScreen / IActivationRangeTarget 双阈值控件，例如智能电池、智能储液库、按摩床",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=activation action=list。列出 ActiveRangeSideScreen / IActivationRangeTarget 双阈值控件，例如智能电池、智能储液库、按摩床",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、标题或标签筛选", Required = false },
@@ -64,9 +65,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "active_range_set", "activation_range_side_screen_set" },
                 Tags = new List<string> { "controls", "side-screen", "activation-range", "smart-battery", "reservoir", "massage" },
-                Description = "设置 ActiveRangeSideScreen / IActivationRangeTarget 双阈值。会影响自动启停/使用条件，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=activation action=set。设置 ActiveRangeSideScreen / IActivationRangeTarget 双阈值。会影响自动启停/使用条件，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["activateValue"] = new McpToolParameter { Type = "number", Description = "激活阈值；留空不改", Required = false },
@@ -105,9 +107,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "active_ranges_batch_set", "activation_range_batch_set" },
                 Tags = new List<string> { "controls", "side-screen", "activation-range", "batch" },
-                Description = "批量设置 ActiveRangeSideScreen / IActivationRangeTarget 双阈值，适合多个智能电池/储液库同步配置；items 支持短字段 a/d/w，defaults 可共享阈值/worldId，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=activation action=batch。批量设置 ActiveRangeSideScreen / IActivationRangeTarget 双阈值，适合多个智能电池/储液库同步配置；items 支持短字段 a/d/w，defaults 可共享阈值/worldId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "数组；每项支持 id 或 x/y/worldId，并可提供 activateValue/deactivateValue；短字段 a=activateValue、d=deactivateValue、w=worldId", Required = true },
@@ -162,6 +165,52 @@ namespace OniMcp.Tools
                         ["failed"] = results.Count(item => !(bool)item["ok"]),
                         ["results"] = results
                     });
+                }
+            };
+        }
+
+        public static McpTool ControlActivationRange()
+        {
+            return new McpTool
+            {
+                Name = "activation_range_control",
+                Hidden = true,
+                Group = "controls",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "active_range_control", "activation_range_side_screen_control" },
+                Tags = new List<string> { "controls", "side-screen", "activation-range", "smart-battery", "reservoir", "batch" },
+                Description = "统一读取、单点设置和批量设置 ActiveRange 双阈值。action=list/set/batch；set/batch 需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list、set、batch", Required = true },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、标题或标签筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set 时目标 KPrefabID InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=list/set 时可选区域或目标 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=list/set 时可选区域或目标 Y", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前或目标格所在世界", Required = false },
+                    ["activateValue"] = new McpToolParameter { Type = "number", Description = "action=set 时激活阈值；留空不改", Required = false },
+                    ["deactivateValue"] = new McpToolParameter { Type = "number", Description = "action=set 时停用阈值；留空不改", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "action=batch 时数组；每项支持 id 或 x/y/worldId，并可提供 activateValue/deactivateValue；短字段 a/d/w", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch 时合并到每项的默认参数", Required = false },
+                    ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set/batch 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListActivationRanges().Handler(args);
+                    if (action == "set")
+                        return SetActivationRange().Handler(args);
+                    if (action == "batch")
+                        return BatchSetActivationRanges().Handler(args);
+                    return CallToolResult.Error("action must be one of list, set, batch");
                 }
             };
         }

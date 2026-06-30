@@ -12,6 +12,105 @@ namespace OniMcp.Tools
 {
     public static class BuildPlanningTools
     {
+        public static McpTool ControlBuildPlanning()
+        {
+            return new McpTool
+            {
+                Name = "build_planning_control",
+                Group = "buildings",
+                Mode = "execute",
+                Risk = "medium",
+                Aliases = new List<string> { "buildings_planning_control", "build_control" },
+                Tags = new List<string> { "buildings", "materials", "preview", "placement", "utility", "建造", "材料", "预检", "候选" },
+                Description = "建造规划组合工具：action=search_defs/materials/preview/placement_candidates/auto_connect/build_area",
+                Parameters = BuildPlanningControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    var forwardArgs = ForwardArgs(args);
+                    switch (action)
+                    {
+                        case "search_defs":
+                        case "search":
+                        case "defs":
+                            return SearchBuildables().Handler(forwardArgs);
+                        case "materials":
+                        case "list_materials":
+                            return ListBuildMaterials().Handler(forwardArgs);
+                        case "preview":
+                        case "validate":
+                            return PreviewBuild().Handler(forwardArgs);
+                        case "placement_candidates":
+                        case "candidates":
+                        case "anchors":
+                            return FindPlacementCandidates().Handler(forwardArgs);
+                        case "auto_connect":
+                        case "utility_auto_connect":
+                        case "connect":
+                            return AutoConnectUtility().Handler(forwardArgs);
+                        case "build_area":
+                        case "area":
+                        case "batch_build":
+                            return BuildArea().Handler(forwardArgs);
+                        default:
+                            return CallToolResult.Error("action must be search_defs, materials, preview, placement_candidates, auto_connect, or build_area");
+                    }
+                }
+            };
+        }
+
+        private static JObject ForwardArgs(JObject args)
+        {
+            var forwardArgs = (JObject)args.DeepClone();
+            forwardArgs.Remove("action");
+            return forwardArgs;
+        }
+
+        private static Dictionary<string, McpToolParameter> BuildPlanningControlParams()
+        {
+            var parameters = new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter
+                {
+                    Type = "string",
+                    Description = "操作：search_defs/materials/preview/placement_candidates/auto_connect/build_area",
+                    Required = true,
+                    EnumValues = new List<string> { "search_defs", "materials", "preview", "placement_candidates", "auto_connect", "build_area" }
+                }
+            };
+
+            MergeParameters(parameters, SearchBuildables().Parameters);
+            MergeParameters(parameters, ListBuildMaterials().Parameters);
+            MergeParameters(parameters, PreviewBuild().Parameters);
+            MergeParameters(parameters, FindPlacementCandidates().Parameters);
+            MergeParameters(parameters, AutoConnectUtility().Parameters);
+            MergeParameters(parameters, BuildArea().Parameters);
+            return parameters;
+        }
+
+        private static void MergeParameters(Dictionary<string, McpToolParameter> target, Dictionary<string, McpToolParameter> source)
+        {
+            if (source == null)
+                return;
+            foreach (var item in source)
+            {
+                if (target.ContainsKey(item.Key))
+                    continue;
+                target[item.Key] = CopyOptionalParameter(item.Value);
+            }
+        }
+
+        private static McpToolParameter CopyOptionalParameter(McpToolParameter source)
+        {
+            return new McpToolParameter
+            {
+                Type = source.Type,
+                Description = source.Description,
+                Required = false,
+                EnumValues = source.EnumValues == null ? null : new List<string>(source.EnumValues)
+            };
+        }
+
         public static McpTool SearchBuildables()
         {
             return new McpTool
@@ -20,7 +119,8 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Description = "搜索可建造建筑定义，返回 prefabId、尺寸、材料类别、可用外观和是否解锁",
+                Hidden = true,
+                Description = "兼容入口：请使用 building_control domain=planning action=search_defs",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "建筑 ID 或名称关键词", Required = false },
@@ -63,9 +163,10 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "building_materials", "build_materials" },
                 Tags = new List<string> { "buildings", "materials", "inventory", "available", "建造", "材料" },
-                Description = "列出指定建筑当前可用建造材料，按库存量排序；用于避免使用 SandStone 等当前星球没有的材料。material=auto 会使用同一选择逻辑。",
+                Description = "兼容入口：请使用 building_control domain=planning action=materials",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["prefabId"] = new McpToolParameter { Type = "string", Description = "建筑 prefabId，例如 Outhouse、Tile、Wire", Required = true },
@@ -115,9 +216,10 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "build_validate", "building_preview" },
                 Tags = new List<string> { "buildings", "preview", "footprint", "placement", "建造", "预检" },
-                Description = "预检指定 prefabId 在 x/y anchor 的建造 footprint、材料、支撑和明显碰撞；不生成蓝图。anchor 是 lowerLeftCell。",
+                Description = "兼容入口：请使用 building_control domain=planning action=preview",
                 Parameters = BuildPlacementParameters(includeConfirm: false, includeArea: false),
                 Handler = args =>
                 {
@@ -143,9 +245,10 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "build_auto_connect", "wire_auto_connect", "pipe_auto_connect", "logic_auto_connect" },
                 Tags = new List<string> { "buildings", "utility", "wire", "pipe", "logic", "connect", "电线", "水管", "气管", "信号线" },
-                Description = "自动铺设电线/水管/气管/运输管/信号线。给 from/to 或 points，工具会按曼哈顿路径逐格放置蓝图，已有同层线缆/管道会当作已连接复用，默认自动挖自然土块并标记铲除植物。",
+                Description = "兼容入口：请使用 building_control domain=planning action=auto_connect",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["type"] = new McpToolParameter { Type = "string", Description = "utility 类型：wire、liquid、gas、solid、logic；prefabId 留空时用它选择默认建筑", Required = false, EnumValues = new List<string> { "wire", "liquid", "gas", "solid", "logic" } },
@@ -257,9 +360,10 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "placement_candidates", "footprint_candidates", "anchor_candidates", "build_anchor_candidates" },
                 Tags = new List<string> { "buildings", "preview", "footprint", "placement", "anchor", "candidate", "layout", "建造", "候选", "空位", "支撑", "碰撞" },
-                Description = "在指定区域内扫描某个建筑的可放置锚点，直接返回候选坐标、footprint 预检、支撑、冲突和优先级评分；只读。",
+                Description = "兼容入口：请使用 building_control domain=planning action=placement_candidates",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["prefabId"] = new McpToolParameter { Type = "string", Description = "建筑 prefabId，例如 MedicalCot、Tile、Wire", Required = true },
@@ -808,7 +912,7 @@ namespace OniMcp.Tools
 
             var pointer = AgentPointerRegistry.Get(ToolSessionContext.SessionId, args["agentId"]?.ToString());
             if (pointer == null || !Grid.IsValidCell(pointer.Cell))
-                return CallToolResult.Error("Pointer is not aimed at a valid cell; call agent_pointer_aim_cell first");
+                return CallToolResult.Error("Pointer is not aimed at a valid cell; call navigation_control action=aim_cell first");
 
             Grid.CellToXY(pointer.Cell, out int x, out int y);
             if (args["worldId"] == null && pointer.WorldId >= 0)
@@ -825,7 +929,7 @@ namespace OniMcp.Tools
 
             var pointer = AgentPointerRegistry.Get(ToolSessionContext.SessionId, args["agentId"]?.ToString());
             if (pointer == null || !Grid.IsValidCell(pointer.Cell))
-                return CallToolResult.Error("Pointer is not aimed at a valid cell; call agent_pointer_aim_cell first");
+                return CallToolResult.Error("Pointer is not aimed at a valid cell; call navigation_control action=aim_cell first");
 
             int? requestedLength = ToolUtil.GetInt(args, "length");
             if (!requestedLength.HasValue || requestedLength.Value <= 0)
@@ -1292,8 +1396,8 @@ namespace OniMcp.Tools
                 ["footprintCells"] = width * height,
                 ["singleCellDragSafe"] = width == 1 && height == 1,
                 ["dragGuidance"] = width == 1 && height == 1
-                    ? "May be placed with agent_pointer_hold_left for straight lines."
-                    : "Recommended: use agent_pointer_left_click on each lower-left anchor. agent_pointer_left_click works but is less predictable for multi-cell footprints."
+                    ? "May be placed with navigation_control action=hold_left for straight lines."
+                    : "Recommended: use navigation_control action=left_click on each lower-left anchor. navigation_control action=left_click works but is less predictable for multi-cell footprints."
             };
         }
 
@@ -2815,7 +2919,7 @@ namespace OniMcp.Tools
                     ["singleCell"] = SingleCell,
                     ["allowFootprintDrag"] = AllowFootprintDrag,
                     ["reason"] = Reason,
-                    ["next"] = Allowed ? null : "Use agent_pointer_left_click for each lower-left anchor cell, or retry with allowFootprintDrag=true if this repeated footprint is intentional."
+                    ["next"] = Allowed ? null : "Use navigation_control action=left_click for each lower-left anchor cell, or retry with allowFootprintDrag=true if this repeated footprint is intentional."
                 };
             }
         }
@@ -2955,7 +3059,7 @@ namespace OniMcp.Tools
                     ["elements"] = Elements.Select(tag => tag.Name).ToList(),
                     ["availableMaterials"] = Available.Take(20).Select(item => item.ToDictionary()).ToList(),
                     ["candidateMaterials"] = Candidates.Take(20).Select(item => item.ToDictionary()).ToList(),
-                    ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect resources_inventory/buildings_materials",
+                    ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect read_control domain=resources action=inventory/building_control domain=planning action=materials",
                     ["error"] = Error
                 };
             }

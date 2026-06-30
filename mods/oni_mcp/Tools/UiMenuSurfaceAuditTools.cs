@@ -17,6 +17,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "overlay_menu_audit", "build_menu_audit", "ui_hotkey_surface_audit" },
                 Tags = new List<string> { "coverage", "audit", "ui", "overlay", "build-menu", "hotkey", "tools", "resources" },
                 Description = "审计 ONI 覆盖层菜单、建造分类入口和安全 UI hotkey surface 与 MCP 工具/资源覆盖映射",
@@ -33,7 +34,7 @@ namespace OniMcp.Tools
                     string status = (args["status"]?.ToString() ?? "all").Trim().ToLowerInvariant();
                     string detail = (args["detail"]?.ToString() ?? "brief").Trim().ToLowerInvariant();
                     int limit = ToolUtil.ClampLimit(args, 120, 300);
-                    var toolNames = new HashSet<string>(OniToolRegistry.GetTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
+                    var toolNames = new HashSet<string>(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceNames = new HashSet<string>(
                         OniResourceRegistry.GetResourceInfos().Select(info => info.Name)
                             .Concat(OniResourceRegistry.GetResourceTemplateInfos().Select(info => info.Name)),
@@ -81,7 +82,7 @@ namespace OniMcp.Tools
         {
             int order = 0;
             foreach (var overlay in OverlayRows())
-                yield return Covered(order++, "overlay", overlay.Action, overlay.Surface, overlay.View, new[] { "ui_actions_list", "camera_get_view", "camera_switch_view" }, new[] { "ui_actions_list", "camera_get_view" });
+                yield return Covered(order++, "overlay", overlay.Action, overlay.Surface, overlay.View, new[] { "game_control domain=ui uiDomain=action", "navigation_control domain=camera" }, new[] { "game_control domain=ui uiDomain=action", "navigation_control domain=camera" });
 
             order = 0;
             foreach (string action in BuildCategoryActions())
@@ -93,8 +94,8 @@ namespace OniMcp.Tools
                     action,
                     "Open build category " + suffix + ", discover available buildings/materials/facades, then place blueprints through the agent pointer",
                     NormalizeBuildCategory(suffix),
-                    new[] { "ui_actions_list", "ui_action_trigger", "buildings_search_defs", "buildings_materials", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left" },
-                    new[] { "ui_actions_list", "buildings_search_defs" });
+                    new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs", "building_control domain=planning action=materials", "navigation_control action=select_tool", "navigation_control action=left_click", "navigation_control action=hold_left" },
+                    new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs" });
             }
 
             yield return Covered(
@@ -103,8 +104,8 @@ namespace OniMcp.Tools
                 "BuildMenuKeyA-Z",
                 "Trigger whitelisted build-menu item hotkeys after a build category is open; placement uses the agent pointer with prefab ids plus optional material/facade ids",
                 "build_menu_keys",
-                new[] { "ui_actions_list", "ui_action_trigger", "buildings_search_defs", "buildings_materials", "agent_pointer_select_tool", "agent_pointer_left_click", "agent_pointer_hold_left" },
-                new[] { "ui_actions_list", "buildings_search_defs" });
+                new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs", "building_control domain=planning action=materials", "navigation_control action=select_tool", "navigation_control action=left_click", "navigation_control action=hold_left" },
+                new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs" });
 
             yield return Covered(
                 0,
@@ -112,8 +113,8 @@ namespace OniMcp.Tools
                 "Escape/Find/Help/ToggleScreenshotMode",
                 "Close active UI, open find/help, and toggle screenshot mode through the safe UI action whitelist",
                 "safe_navigation",
-                new[] { "ui_actions_list", "ui_action_trigger" },
-                new[] { "ui_actions_list" });
+                new[] { "game_control domain=ui uiDomain=action" },
+                new[] { "game_control domain=ui uiDomain=action" });
 
             yield return Covered(
                 0,
@@ -121,8 +122,8 @@ namespace OniMcp.Tools
                 "AllResourcesScreen",
                 "Read resource rows and set per-resource pinned and notification toggles",
                 "all_resources_screen",
-                new[] { "resources_inventory", "resources_food", "resources_pins_list", "resources_pin_set" },
-                new[] { "resources_inventory", "resources_food", "resources_pins_list" });
+                new[] { "resources_inventory", "resources_food", "resource_pin_control" },
+                new[] { "resources_inventory", "resources_food", "resource_pin_control" });
 
             yield return Covered(
                 1,
@@ -130,8 +131,8 @@ namespace OniMcp.Tools
                 "AllDiagnosticsScreen",
                 "Read diagnostic rows, set per-diagnostic display mode, criteria toggles and debug notification suppression",
                 "all_diagnostics_screen",
-                new[] { "colony_diagnostics", "colony_alerts", "colony_diagnostic_settings_list", "colony_diagnostic_settings_set" },
-                new[] { "colony_diagnostics", "colony_alerts", "colony_diagnostic_settings_list" });
+                new[] { "colony_diagnostics", "colony_alerts", "colony_control" },
+                new[] { "colony_diagnostics", "colony_alerts", "colony_control" });
         }
 
         private static IEnumerable<(string Action, string Surface, string View)> OverlayRows()

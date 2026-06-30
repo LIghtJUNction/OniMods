@@ -14,7 +14,7 @@ Use when the user wants to **control ONI via MCP tools**, not when they want gam
 ### The OODA Loop for ONI MCP
 
 ```
-Observe (Sense)    → colony_state_snapshot minimal/delta + targeted small reads → get state snapshot
+Observe (Sense)    → colony_control domain=snapshot action=get profile=minimal delta=true + targeted small reads → get state snapshot
 Orient (Analyze)   → parse JSON, identify gaps/anomalies
 Decide (Plan)      → select target state, choose tools
 Act (Execute)      → call write/execute tools with confirm
@@ -30,28 +30,28 @@ All map actions must be driven through the visible agent pointer unless the tool
 Default action workflow:
 
 ```
-agent_pointer_jump or agent_pointer_aim_cell
-agent_pointer_select_tool tool=<build|dig|cancel|sweep|mop|disinfect|harvest|deconstruct> prefabId? material? priority?
-agent_pointer_left_click confirm=true
+navigation_control action=jump or action=aim_cell
+navigation_control action=select_tool tool=<build|dig|cancel|sweep|mop|disinfect|harvest|deconstruct> prefabId? material? priority?
+navigation_control action=left_click confirm=true
 # or for straight lines:
-agent_pointer_hold_left direction=<right|left|up|down> length=<cells> confirm=true
+navigation_control action=hold_left direction=<right|left|up|down> length=<cells> confirm=true
 ```
 
 Rules:
 - Legacy coordinate building tools are removed from the public MCP surface. Do not call or suggest them.
 - Treat direct `orders_*_area` calls as compatibility/debug paths. Do not use them as the first choice for normal play.
-- Use `agent_pointer_hold_left` for wires, pipes, ladders, tiles, straight digs, sweep lines, mop lines, cancel lines, and harvest lines.
-- Use `agent_pointer_jump code=home|p1|p2` or `agent_pointer_jump x/y|dx/dy|direction+steps` for navigation. Use `agent_pointer_jump_point_set code=p1` to save repeat work locations.
+- Use `navigation_control action=hold_left` for wires, pipes, ladders, tiles, straight digs, sweep lines, mop lines, cancel lines, and harvest lines.
+- Use `navigation_control action=jump code=home|p1|p2` or `action=jump x/y|dx/dy|direction+steps` for navigation. Use `navigation_control action=jump_point jumpPointAction=set code=p1` to save repeat work locations.
 - If a coordinate is known from a read tool, jump the pointer to it and act with the pointer; do not pass that coordinate directly to build/order tools.
 
 ### Control Modes
 
 | Mode | Trigger | Primary Tools | Output |
 |------|---------|--------------|--------|
-| **Diagnostic** | User asks "what's wrong" | `colony_diagnostics`, `colony_alerts`, `resources_food`, `dupes_needs`, `power_summary`, `thermal_overheat_risk_scan` | Problem list + severity |
-| **Planning** | User asks "what should I do" | `tools_guide`, compact reads, dry-run tools | Short plan with explicit validation steps |
-| **Execution** | User says "do it" | `tools_call_many`, individual write/execute tools | Execution result + task IDs |
-| **Monitoring** | User wants status update | `colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts` | Snapshot diff |
+| **Diagnostic** | User asks "what's wrong" | `colony_control domain=diagnostic action=diagnostics`, `colony_control domain=diagnostic action=alerts`, `read_control domain=resources action=food`, `dupes_control domain=info action=needs`, `read_control domain=infrastructure action=power_summary`, `read_control domain=world action=thermal_overheat_risk` | Problem list + severity |
+| **Planning** | User asks "what should I do" | `server_control domain=catalog action=guide`, compact reads, dry-run tools | Short plan with explicit validation steps |
+| **Execution** | User says "do it" | `server_control domain=batch action=call_many`, individual write/execute tools | Execution result + task IDs |
+| **Monitoring** | User wants status update | `colony_control domain=snapshot action=get profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts` | Snapshot diff |
 
 Mode transitions: Diagnostic → Planning → Execution → Monitoring. If Execution fails, fall back to Diagnostic.
 
@@ -59,9 +59,9 @@ Mode transitions: Diagnostic → Planning → Execution → Monitoring. If Execu
 
 ### Read vs Write vs Execute
 
-- **Read** (`colony_*`, `dupes_*`, `resources_*`, `world_*`, `power_summary`, `rooms_list`) → 获取状态，无副作用，可缓存
-- **Write** (`set_personal_priority`, `schedule_set_block`, `set_storage_filter`) → 修改配置，需 `confirm=true`（medium risk）
-- **Execute** (`game_pause`, `camera_move`, `orders_dig`, `buildings_deconstruct`) → 对游戏下达动作，dangerous 需 `confirm=true`
+- **Read** (`colony_*`, `dupes_*`, `read_control domain=resources/world/infrastructure`, `world_*`) → 获取状态，无副作用，可缓存
+- **Write** (`dupes_control domain=priority action=set`, `colony_control domain=management kind=schedule action=set_block`, `building_control domain=storage action=set_filter`) → 修改配置，需 `confirm=true`（medium risk）
+- **Execute** (`game_control domain=speed action=pause`, `navigation_control action=move`, `orders_dig`, `orders_control domain=designation action=deconstruct`) → 对游戏下达动作，dangerous 需 `confirm=true`
 
 Mode is inferred from tool name: `get_*` / `list_*` → read; `set_*` / `configure_*` → write; `move_*` / `pause_*` / `focus_*` → execute.
 
@@ -77,18 +77,18 @@ Resource URIs are idempotent and cacheable. Tools with parameters are not. Promp
 
 | Goal | Use |
 |------|-----|
-| "What tools exist?" | `tools_manifest` (full) or `tools_search detail=brief` (filtered) |
-| "What can I do about X?" | `tools_guide goal=X` |
-| "Am I missing coverage?" | `tools_player_action_coverage` |
-| "Is this tool safe?" | `tools_static_audit` |
+| "What tools exist?" | `server_control domain=catalog action=manifest` (full) or `server_control domain=catalog action=search detail=brief` (filtered) |
+| "What can I do about X?" | `server_control domain=catalog action=guide goal=X` |
+| "Am I missing coverage?" | `server_control domain=catalog action=coverage` |
+| "Is this tool safe?" | `server_control domain=catalog action=static_audit` |
 
-`tools_manifest` exposes ~60 core tools by default; `tools_search detail=full` reveals the complete ~320 tool registry. Use `detail=brief` for low-token discovery.
+`server_control domain=catalog action=manifest` exposes the compact 8-tool core surface; `detail=full` expands the parameters for those public aggregate tools. Legacy fine-grained tools are hidden compatibility entrypoints and should not be preferred.
 
 ### Anti-Loop Guardrails
 
-- Do not call the same read tool with identical arguments twice in a row. If the first result is insufficient, name the missing field and switch to a targeted tool, `tools_search`, or a user question.
-- Do not substitute a nearby-sounding tool for a different job. Example: `dupes_status_check` is for health/pathing, not names, attributes, or batch rename.
-- Before using a tool name that is not visible in the current tool set, call `tools_search query=<action>` or `tools_manifest group=<category>` and follow the returned schema.
+- Do not call the same read tool with identical arguments twice in a row. If the first result is insufficient, name the missing field and switch to a targeted tool, `server_control domain=catalog action=search`, or a user question.
+- Do not substitute a nearby-sounding tool for a different job. Example: `dupes_control domain=info action=status_check` is for health/pathing, not names, attributes, or batch rename.
+- Before using a tool name that is not visible in the current tool set, call `server_control domain=catalog action=search query=<action>` or `server_control domain=catalog action=manifest group=<category>` and follow the returned schema.
 - Keep simple requests simple: a one-step configuration task should not trigger colony snapshots, maps, screenshots, or unrelated audits unless the result depends on them.
 - After any zero-effect write/execute result (`marked=0`, no changed rows, missing target), do not repeat the same call. Read the result hint, re-read the smallest relevant context, then change tool or parameters.
 
@@ -101,35 +101,35 @@ Spatial ONI control starts with the visible agent pointer. Use text maps only as
 Use camera tools when the user asks to look somewhere, when you need a screenshot of a specific region, or when a visual overlay matters:
 
 ```
-camera_get_view
+navigation_control action=get_view
   → read current position, zoom, activeWorldId, screen size
 
-camera_focus_cell
+navigation_control action=focus_cell
   x, y, worldId?, zoom?
   → center a known grid cell
 
-camera_focus_dupe
+navigation_control action=focus_dupe
   id/name
   → follow a duplicant
 
-camera_move
+navigation_control action=move
   mode: jump | pan
   x/y for jump, dx/dy for pan, zoom?
   → move to a coordinate or nudge the view
 
-camera_set_active_world
+navigation_control action=set_active_world
   worldId
   → switch asteroid/rocket interior before reading or viewing that world
 ```
 
-After moving the camera, call `camera_get_view` if exact view confirmation matters. For map-data tools, moving the camera is optional when you pass explicit `x1,y1,x2,y2`; it is required only for screenshots or default camera-centered map reads.
+After moving the camera, call `navigation_control action=get_view` if exact view confirmation matters. For map-data tools, moving the camera is optional when you pass explicit `x1,y1,x2,y2`; it is required only for screenshots or default camera-centered map reads.
 
 ### View / Overlay Switching
 
-Use `camera_switch_view` for visual overlays and optional screenshot capture:
+Use `navigation_control action=switch_view` for visual overlays and optional screenshot capture:
 
 ```
-camera_switch_view
+navigation_control action=switch_view
   view: none | oxygen | power | gas_conduits | liquid_conduits | solid_conveyor | logic | temperature | heat_flow | materials | light | decor | rooms | priorities | disease | radiation | sound | suit | crop | harvest
   screenshot: true|false
 ```
@@ -137,39 +137,39 @@ camera_switch_view
 Rules:
 - Use `view=none` before a normal visual screenshot.
 - Use `view=oxygen`, `temperature`, `rooms`, `decor`, `crop`, `harvest`, `priorities`, `disease`, etc. when the task depends on visual overlay colors/icons.
-- For power, gas pipes, liquid pipes, conveyors, and logic wires, prefer `world_area_snapshot` or `world_text_map view=...` for coordinate-accurate planning; use `camera_switch_view` only to visually confirm.
-- `camera_switch_view screenshot=true` is the shortest way to switch overlay and capture the current screen in one call.
+- For power, gas pipes, liquid pipes, conveyors, and logic wires, prefer `read_control domain=world action=area_snapshot` or `read_control domain=world action=text_map view=...` for coordinate-accurate planning; use `navigation_control action=switch_view` only to visually confirm.
+- `navigation_control action=switch_view screenshot=true` is the shortest way to switch overlay and capture the current screen in one call.
 
 ### Screenshot Use
 
-Use `game_screenshot` only after the camera and overlay are set correctly. Screenshot is useful for:
+Use `navigation_control action=screenshot` only after the camera and overlay are set correctly. Screenshot is useful for:
 
 - confirming the player-facing visual state
 - room/decor/crop/harvest/priority/disease overlays
 - UI state that is not represented by world maps
 - comparing what the user sees with structured map data
 
-Screenshot is weak for exact coordinates. If a decision affects digging, building, sweeping, mopping, wiring, piping, or deconstruction, read `world_area_snapshot` or `world_text_map` before acting.
+Screenshot is weak for exact coordinates. If a decision affects digging, building, sweeping, mopping, wiring, piping, or deconstruction, read `read_control domain=world action=area_snapshot` or `read_control domain=world action=text_map` before acting.
 
 ### Pointer Build Discipline
 
 For any build/dig/deconstruct action, screenshots and text maps are observation only. The actual command path should be pointer selection plus click/drag.
 
 Rules:
-- Before placing a line, aim the pointer at the start cell with `agent_pointer_jump` or `agent_pointer_aim_cell`.
-- Select the current tool with `agent_pointer_select_tool`.
-- Treat `buildings_search_defs.placement.anchor=lowerLeftCell` as the build anchor. Do not treat screenshot center, tooltip position, or blueprint center as the anchor.
-- For horizontal/vertical 1x1 work (tiles, ladders, wires, conduits), use `agent_pointer_hold_left direction=... length=... confirm=true`.
-- For furniture/machines or any footprint wider/taller than 1 cell, use `agent_pointer_left_click` once per lower-left anchor. `agent_pointer_hold_left` rejects these by default; pass `allowFootprintDrag=true` only when repeated footprint placement is intentional.
-- Preflight uncertain multi-cell placements with `agent_pointer_left_click dryRun=true`, then execute with `confirm=true`.
-- After execution, compare `placementCheck` with a targeted `world_area_snapshot`/`world_text_map`. If the blueprint is shifted, cancel it with the pointer's cancel tool before replacing.
+- Before placing a line, aim the pointer at the start cell with `navigation_control action=jump/aim_cell`.
+- Select the current tool with `navigation_control action=select_tool`.
+- Treat `building_control domain=planning action=search_defs` placement anchor `lowerLeftCell` as the build anchor. Do not treat screenshot center, tooltip position, or blueprint center as the anchor.
+- For horizontal/vertical 1x1 work (tiles, ladders, wires, conduits), use `navigation_control action=hold_left direction=... length=... confirm=true`.
+- For furniture/machines or any footprint wider/taller than 1 cell, use `navigation_control action=left_click` once per lower-left anchor. `navigation_control action=hold_left` rejects these by default; pass `allowFootprintDrag=true` only when repeated footprint placement is intentional.
+- Preflight uncertain multi-cell placements with `navigation_control action=left_click dryRun=true`, then execute with `confirm=true`.
+- After execution, compare `placementCheck` with a targeted `read_control domain=world action=area_snapshot`/`read_control domain=world action=text_map`. If the blueprint is shifted, cancel it with the pointer's cancel tool before replacing.
 
 ### World Map Reads
 
-Use `world_area_snapshot` only when pointer/camera state and compact status do not provide enough spatial context:
+Use `read_control domain=world action=area_snapshot` only when pointer/camera state and compact status do not provide enough spatial context:
 
 ```
-world_area_snapshot
+read_control domain=world action=area_snapshot
   x1, y1, x2, y2, worldId?
   preset: terrain | construction | utilities | planning | all
   encoding: rle
@@ -183,10 +183,10 @@ Presets:
 - `planning`: utilities + layout candidates/planning summary
 - `all`: utilities + screenshot; only use when visual confirmation is also needed
 
-Use `world_text_map` for narrower or more controlled reads:
+Use `read_control domain=world action=text_map` for narrower or more controlled reads:
 
 ```
-world_text_map
+read_control domain=world action=text_map
   x1, y1, x2, y2, worldId?
   profile: standard | minimal | scan
   encoding: plain | rle | both
@@ -212,11 +212,11 @@ Rules:
 For a spatial task:
 
 ```
-game_pause
-colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
-agent_pointer_get
-agent_pointer_jump/aim_cell if target is known
-targeted world_area_snapshot only if terrain/hazard context is missing
+game_control domain=speed action=pause
+colony_control domain=snapshot action=get profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
+navigation_control action=get
+navigation_control action=jump/aim_cell if target is known
+targeted read_control domain=world action=area_snapshot only if terrain/hazard context is missing
 ```
 
 If the user gives an area or edit marker, use that area directly; do not waste time moving the camera before reading the map.
@@ -226,12 +226,12 @@ If the user gives an area or edit marker, use that area directly; do not waste t
 ### Sequence 1: Colony Health Check
 
 ```
-colony_state_snapshot profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
-colony_state_snapshot profile=brief only when minimal flags a concern
-resources_food         → only when food detail is needed
-power_summary          → generation vs load per circuit
-thermal_overheat_risk_scan → overheat risk sorted by delta-T
-rooms_list             → room coverage summary
+colony_control domain=snapshot action=get profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
+colony_control domain=snapshot action=get profile=brief only when minimal flags a concern
+read_control domain=resources action=food → only when food detail is needed
+read_control domain=infrastructure action=power_summary → generation vs load per circuit
+read_control domain=world action=thermal_overheat_risk → overheat risk sorted by delta-T
+read_control domain=infrastructure action=rooms → room coverage summary
 → Parse JSON, compare against thresholds, flag anomalies
 ```
 
@@ -242,21 +242,21 @@ Use `detail=compact` on all calls for a sub-5-second scan. Escalate to `detail=f
 Use this for low-risk, small-scope actions such as a short dig, mop, sweep, floor line, config batch, or dry-run-passed blueprint:
 
 ```
-tools_call_many
+server_control domain=batch action=call_many
   dryRun: true
   responseMode: summary
   requireAllValid: true
   stopOnError: true
   items: [...]
 
-tools_call_many
+server_control domain=batch action=call_many
   dryRun: false
   responseMode: summary
   requireAllValid: true
   stopOnError: true
   items: [...]
 
-verify with colony_state_snapshot/world_area_snapshot/targeted read
+verify with colony_control domain=snapshot action=get, read_control domain=world action=area_snapshot, or targeted read
 ```
 
 For map actions, the `items` should usually be pointer tool calls, not coordinate order/build calls. Do not create separate planning records for trivial single-step actions. It adds latency without improving safety.
@@ -278,14 +278,14 @@ If `validate` reports missing `confirm`, inject it into defaults or the correspo
 ### Sequence 4: Batch Configuration
 
 ```
-tools_call_many
+server_control domain=batch action=call_many
   dryRun: true
   responseMode: summary
   defaults: { confirm: true }
   items:
-    - { t: set_personal_priority, a: { id: 1, choreGroup: Dig, priority: 4 } }
-    - { t: set_personal_priority, a: { id: 2, choreGroup: Build, priority: 4 } }
-    - { t: schedule_set_block,   a: { schedule: "Default", hour: 3, group: Sleep } }
+    - { t: dupes_control, a: { domain: priority, action: set, id: 1, choreGroup: Dig, priority: 4 } }
+    - { t: dupes_control, a: { domain: priority, action: set, id: 2, choreGroup: Build, priority: 4 } }
+    - { t: colony_control, a: { domain: management, kind: schedule, action: set_block, schedule: "Default", hour: 3, group: Sleep } }
     ...
   requireAllValid: true
   stopOnError: true
@@ -296,44 +296,44 @@ If `dryRun` passes, re-call with `dryRun: false` to execute. `defaults` merges i
 ### Sequence 5: Spatial Analysis + Action
 
 ```
-game_pause             → freeze state for complex or destructive spatial plans
-world_area_snapshot
+game_control domain=speed action=pause → freeze state for complex or destructive spatial plans
+read_control domain=world action=area_snapshot
   x1, y1, x2, y2
   preset: construction | utilities
   encoding: rle
   includeScreenshot: false
 → Preferred coordinate-accurate context for build/dig/power/pipe planning
-world_text_map
+read_control domain=world action=text_map
   x1, y1, x2, y2
   profile: standard
   encoding: plain
   includeElements: true
 → Use directly for human-readable terrain/object debugging
-camera_focus_cell / camera_move
-camera_switch_view
-game_screenshot
+navigation_control action=focus_cell / navigation_control action=move
+navigation_control action=switch_view
+navigation_control action=screenshot
 → Optional visual confirmation only after structured maps
-→ Define reusable area: area_define → areaId when the same region will be reused
+→ Define reusable area: read_control domain=area action=define → areaId when the same region will be reused
 → Plan: choose pointer start, build/order tool, and click/drag gestures
-→ Execute: agent_pointer_left_click or agent_pointer_hold_left
-→ Verify: world_area_snapshot or world_text_map over the same area
+→ Execute: navigation_control action=left_click or action=hold_left
+→ Verify: read_control domain=world action=area_snapshot or read_control domain=world action=text_map over the same area
 ```
 
-Use `world_area_snapshot` for normal spatial planning because it keeps base terrain, objects, and utility overlays in one response. Use `world_text_map profile=standard encoding=plain` by default; reserve `profile=scan encoding=rle` for very large low-token terrain scans. Use screenshots only for visual confirmation, room/decor/crop/UI overlay interpretation, or when text maps cannot express the visual state.
+Use `read_control domain=world action=area_snapshot` for normal spatial planning because it keeps base terrain, objects, and utility overlays in one response. Use `read_control domain=world action=text_map profile=standard encoding=plain` by default; reserve `profile=scan encoding=rle` for very large low-token terrain scans. Use screenshots only for visual confirmation, room/decor/crop/UI overlay interpretation, or when text maps cannot express the visual state.
 
 ### Sequence 6: Duplicant Management
 
 ```
-dupes_list             → all dupes with ID, name, world, stress
-dupes_detail           → single dupe: attributes, traits, skills
-dupes_needs            → needs, stress sources, morale
-dupes_priorities_list  → current chore priorities
+colony_control domain=read action=dupes             → all dupes with ID, name, world, stress
+dupes_control domain=info action=detail → single dupe: attributes, traits, skills
+dupes_control domain=info action=needs  → needs, stress sources, morale
+dupes_orders_control domain=priority action=list  → current chore priorities
 → Identify gaps
-→ Batch update: tools_call_many with set_personal_priority items
-→ Verify: dupes_priorities_list
+→ Batch update: server_control domain=batch action=call_many with set_personal_priority items
+→ Verify: dupes_orders_control domain=priority action=list
 ```
 
-Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools require numeric `id`, not name.
+Always fetch `colony_control domain=read action=dupes` first to resolve name → ID mapping. Many dupe tools require numeric `id`, not name.
 
 ## Parameter Selection Rules
 
@@ -355,15 +355,15 @@ Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools 
 - `profile=standard` + `encoding=plain` → default readable terrain/object map
 - `profile=scan` + `encoding=rle` → very large low-token terrain scan only
 - `format=json` → structured data for machine-readable planning and validation
-- `tools_call_many responseMode=summary` → compact per-call status without nested full payloads
+- `server_control domain=batch action=call_many responseMode=summary` → compact per-call status without nested full payloads
 
 ### confirm
 - `confirm: true` required for all medium/dangerous write tools
-- `tools_call_many` with `dryRun: true` pre-validates confirm requirements
-- Use `buildings_materials` and `buildings_search_defs` before construction; build placement itself must go through the visible pointer.
+- `server_control domain=batch action=call_many` with `dryRun: true` pre-validates confirm requirements
+- Use `building_control domain=planning action=materials/search_defs` before construction; build placement itself must go through the visible pointer.
 - Never bypass confirm for dangerous tools (`orders_dig`, `orders_deconstruct`, `orders_sweep`)
 - Do not repeat the same write/execute tool with identical coordinates after a zero-effect result. Read the result fields, re-read state if needed, then choose a different tool or corrected parameters.
-- Use `orders_sweep_area` only for solid debris/pickupables. Use `orders_mop_area` for water, polluted water, spills, "地上的水", or other liquid cells on a floor.
+- Use `orders_control domain=area action=sweep` only for solid debris/pickupables. Use `orders_control domain=area action=mop` for water, polluted water, spills, "地上的水", or other liquid cells on a floor.
 
 ### x1, y1, x2, y2 (area coordinates)
 - Always specify in world cell coordinates
@@ -377,50 +377,50 @@ Always fetch `dupes_list` first to resolve name → ID mapping. Many dupe tools 
 Always read current state before modifying:
 
 ```
-BAD:  directly call schedule_set_block with new values
-GOOD: schedule_list → identify target schedule name/hour/group
-      schedule_set_block → schedule_list to verify
+BAD:  directly set schedule values without first reading the current schedule
+GOOD: colony_control domain=management kind=schedule action=list → identify target schedule name/hour/group
+      colony_control domain=management kind=schedule action=set_block → colony_control domain=management kind=schedule action=list to verify
 ```
 
 ### Pattern B: Area-Based Operations
 
-1. `area_define` with `x1,y1,x2,y2,name` → get `a*` areaId for a hand-picked region
-   or `area_blocks worldId=<id>` → get `b*` areaIds for automatic world chunks
-2. Reuse `areaId` in subsequent calls (`world_text_map?areaId=xyz`)
+1. `read_control domain=area action=define` with `x1,y1,x2,y2,name` → get `a*` areaId for a hand-picked region
+   or `read_control domain=area action=blocks worldId=<id>` → get `b*` areaIds for automatic world chunks
+2. Reuse `areaId` in subsequent calls (`read_control domain=world action=text_map?areaId=xyz`)
    or temporarily join adjacent blocks with `areaId=b1+b2+b3`
-3. For repeated use, call `area_merge areaIds=[...]` to create one merged `a*` handle
+3. For repeated use, call `read_control domain=area action=merge areaIds=[...]` to create one merged `a*` handle
 4. Bulk operations within an area should be decomposed into visible pointer clicks/drags; use direct area tools only when no pointer equivalent exists
-5. Clean up temporary `a*` areas with `area_forget` when no longer needed; keep `b*` blocks while scanning the world
+5. Clean up temporary `a*` areas with `read_control domain=area action=forget` when no longer needed; keep `b*` blocks while scanning the world
 
 ### Pattern C: Differential Updates
 
-1. Read full list (`dupes_list`, `schedule_list`, `buildings_summary`)
+1. Read full list (`colony_control domain=read action=dupes`, `colony_control domain=management kind=schedule action=list`, `read_control domain=buildings action=summary`)
 2. Compute delta locally (don't diff on server)
-3. Send only changes via `tools_call_many`
+3. Send only changes via `server_control domain=batch action=call_many`
 
 ### Pattern D: Parallel Reads
 
-Use `tools_call_many` for independent read calls to reduce round-trips:
+Use `server_control domain=batch action=call_many` for independent read calls to reduce round-trips:
 
 ```
-tools_call_many
+server_control domain=batch action=call_many
   responseMode: summary
   items:
-    - { t: colony_status }
-    - { t: colony_diagnostics }
-    - { t: resources_food }
-    - { t: power_summary }
+    - { t: colony_control, a: { domain: read, action: status } }
+    - { t: colony_control, a: { domain: diagnostic, action: diagnostics } }
+    - { t: read_control, a: { domain: resources, action: food } }
+    - { t: read_control, a: { domain: infrastructure, action: power_summary } }
 ```
 
 Do NOT batch interdependent calls where a later call needs an id or result from an earlier call.
 
 ### Pattern E: One-Shot State Snapshot
 
-Use `colony_state_snapshot profile=brief|standard` as the default first read. It replaces the common `game_time + colony_status + colony_diagnostics + colony_alerts + resources_food + dupes_list + research_status` bundle. Keep `includeAtmosphere=false` unless oxygen totals are needed, because atmosphere requires a full grid scan.
+Use `colony_control domain=snapshot action=get profile=brief|standard` as the default first read. It replaces the common `game_control domain=speed action=time + colony_control domain=read action=status + colony_control domain=diagnostic action=diagnostics + colony_control domain=diagnostic action=alerts + read_control domain=resources action=food + colony_control domain=read action=dupes + colony_control domain=management kind=research action=status` bundle. Keep `includeAtmosphere=false` unless oxygen totals are needed, because atmosphere requires a full grid scan.
 
 ### Pattern F: Pointer Build First
 
-For construction, choose prefab/material with read tools, aim the pointer at the exact start cell, then use `agent_pointer_left_click` or `agent_pointer_hold_left`. `BuildLocationRule=OnFloor` buildings must have floor/support cells below them; place visible support tiles first with the pointer before machines, beds, toilets, batteries, and research stations.
+For construction, choose prefab/material with read tools, aim the pointer at the exact start cell, then use `navigation_control action=left_click/hold_left`. `BuildLocationRule=OnFloor` buildings must have floor/support cells below them; place visible support tiles first with the pointer before machines, beds, toilets, batteries, and research stations.
 
 ## Error Recovery
 
@@ -428,7 +428,7 @@ For construction, choose prefab/material with read tools, aim the pointer at the
 1. Check error message for missing param / invalid value / type mismatch
 2. Re-read state if stale data suspected (IDs may have shifted)
 3. Retry with corrected params
-4. If persistent, fall back to `tools_search` to find alternative tool
+4. If persistent, fall back to `server_control domain=catalog action=search` to find alternative tool
 
 ### Request timeout (10s)
 1. Check if task was created via `tasks/list` or server polling
@@ -449,11 +449,11 @@ For construction, choose prefab/material with read tools, aim the pointer at the
 ## Risk Management
 
 ### Tool Risk Levels
-- **none**: read-only, cacheable, retry-safe (`colony_status`, `dupes_list`, `world_text_map`)
-- **low**: minor state change (`camera_move`, `game_pause`, `set_light_color`)
-- **medium**: config changes (`set_personal_priority`, `schedule_set_block`, `set_threshold`) — confirm recommended
+- **none**: read-only, cacheable, retry-safe (`colony_control domain=read action=status`, `colony_control domain=read action=dupes`, `read_control domain=world action=text_map`)
+- **low**: minor state change (`navigation_control action=move`, `game_control domain=speed action=pause`, `building_control domain=config action=visual kind=light visualAction=set_color`)
+- **medium**: config changes (`dupes_control domain=priority action=set`, `colony_control domain=management kind=schedule action=set_block`, `building_control domain=config action=set_threshold`) — confirm recommended
 - **dangerous**: map-altering (`orders_dig`, `orders_deconstruct`, `orders_sweep`, `orders_cut_conduits`) — confirm required
-- `orders_sweep_area` is solid debris/storage cleanup only; liquid cleanup is `orders_mop_area`.
+- `orders_control domain=area action=sweep` is solid debris/storage cleanup only; liquid cleanup is `orders_control domain=area action=mop`.
 
 Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` / `dig` → dangerous; `set_` / `assign` / `sweep` / `launch` → medium; `pause` / `resume` / `focus` → low; everything else → none.
 
@@ -464,47 +464,47 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 - [ ] Use `dryRun` or `validateOnly` if available
 - [ ] For construction, confirm prefab/material and support cells before pointer click/drag
 - [ ] Define rollback read tools for verification
-- [ ] Ensure game is paused (`game_pause`) for complex multi-step operations
+- [ ] Ensure game is paused (`game_control domain=speed action=pause`) for complex multi-step operations
 
 ## State Caching Strategy
 
 ### What to cache (short TTL)
-- `tools_manifest` / `tools_search` result → static after init
-- `colony_status` → 5 seconds (cycle/time change slowly)
-- `resources_inventory` → 10 seconds
-- `dupes_list` → 10 seconds
-- `buildings_summary` → 15 seconds
-- `rooms_list` → 30 seconds
+- `server_control domain=catalog action=manifest` / `server_control domain=catalog action=search` result → static after init
+- `colony_control domain=read action=status` → 5 seconds (cycle/time change slowly)
+- `read_control domain=resources action=inventory` → 10 seconds
+- `colony_control domain=read action=dupes` → 10 seconds
+- `read_control domain=buildings action=summary` → 15 seconds
+- `read_control domain=infrastructure action=rooms` → 30 seconds
 
 ### What NOT to cache
 - Any write/execute result
-- `world_cell_info` (can change every tick)
+- `read_control domain=world action=cell_info` (can change every tick)
 - `camera_view` (player may have moved)
-- `colony_alerts` (volatile)
-- `power_summary` during grid changes
+- `colony_control domain=diagnostic action=alerts` (volatile)
+- `read_control domain=infrastructure action=power_summary` during grid changes
 
 ### Cache invalidation
 - Any write/execute tool call → invalidate related read caches
 - Game pause/resume/speed change → invalidate time-sensitive caches
-- `orders_dig` / `orders_deconstruct` → invalidate `world_text_map` and `buildings_summary`
+- `orders_dig` / `orders_deconstruct` → invalidate `read_control domain=world action=text_map` and `read_control domain=buildings action=summary`
 
 ## Tool Categories at a Glance
 
 | Category | Read | Write | Execute |
 |----------|------|-------|---------|
-| **colony** | `colony_status`, `colony_diagnostics`, `colony_alerts`, `colony_report`, `colony_summary`, `diagnostic_settings_list`, `notifications_list` | `set_diagnostic_settings` | `click_notification`, `dismiss_notification` |
-| **dupes** | `dupes_list`, `dupes_detail`, `dupes_attributes`, `dupes_needs`, `dupes_priorities_list`, `dupes_skills`, `equipment`, `direct_commands`, `todos` | `set_personal_priority`, `batchSetPersonalPriorities`, `learn_skill`, `set_hat`, `dupes_rename`/`rename_dupe`, `dupes_auto_rename`, `set_assignable`, `set_assignable_slot_item` | `move_dupe`, `move_dupes_batch` |
-| **schedules** | `schedule_list` | `schedule_create`, `schedule_set_block`, `schedule_assign_dupe`, `schedule_optimize` | — |
-| **resources** | `resources_inventory`, `resources_food`, `resources_pins`, `storage_list`, `storage_detail`, `diet_status` | `set_resource_pin`, `set_storage_filter`, `set_diet_food`, `apply_diet_policy` | — |
-| **buildings** | `buildings_list`, `buildings_summary`, `buildings_search_defs`, `buildings_config_list`, `artables_list`, `lights_list`, `pixel_packs_list` | `set_building_enabled`, `configure_manual_delivery`, `copy_settings`, `set_artable_stage`, `set_light_color`, `set_pixel_pack_color` | — |
-| **orders** | `priorities_list` | `set_building_priority`, `set_priority_area`, `set_building_toggle` | `agent_pointer_left_click`, `agent_pointer_hold_left`, `buildings_deconstruct`, `orders_sweep_area`, `orders_dig_area`, `orders_mop_area`, `orders_disinfect_area`, `orders_cancel_area`, `orders_harvest_area`, `critters_capture`, `conduits_empty_area`, `conduits_cut` |
-| **power** | `power_summary` | — | — |
-| **rooms** | `rooms_list` | — | — |
-| **world** | `world_list`, `world_cell_info`, `world_element_summary`, `world_text_map`, `thermal_overheat_risk_scan` | `area_define`, `area_forget` | — |
-| **camera** | `camera_get_view` | — | `camera_move`, `camera_set_view`, `camera_switch_view`, `camera_focus_cell`, `camera_focus_dupe`, `game_screenshot` |
-| **game** | `game_time`, `list_saves`, `list_dlc_activation` | `set_sandbox_mode`, `activate_dlc_for_save` | `game_pause`, `game_resume`, `set_game_speed`, `save_game`, `load_save`, `quit_game` |
-| **tools** | `tools_manifest`, `tools_search`, `tools_guide`, `tools_player_action_coverage`, `tools_static_audit` | `edit_mark_request_create`, `edit_mark_request_clear` | `tools_call_many` |
-| **server** | `server_status`, `mcp_client_capabilities`, `logs_tail` | — | — |
+| **colony** | `colony_control domain=read action=status`, `colony_control domain=diagnostic action=diagnostics`, `colony_control domain=diagnostic action=alerts`, `colony_control domain=report action=report`, `colony_control domain=report action=summary`, `colony_control domain=diagnostic action=list_settings`, `colony_control domain=notification action=list` | `colony_control domain=diagnostic action=set_settings` | `colony_control domain=notification action=click/dismiss` |
+| **dupes** | `colony_control domain=read action=dupes`, `dupes_control domain=info action=detail/attributes/needs/status_check`, `dupes_control domain=priority action=list`, `dupes_control domain=skill action=list`, `dupes_control domain=side_screen action=equipment/direct_commands/todos` | `dupes_control domain=priority action=set/batch_set`, `dupes_control domain=skill action=learn`, `dupes_control domain=hat action=set`, `dupes_control domain=command action=rename`, `dupes_control domain=command action=auto_rename`, `dupes_control domain=assignable action=set/set_slot_item` | `dupes_control domain=command action=move_to/move_batch_to/force_action` |
+| **schedules** | `colony_control domain=management kind=schedule action=list` | `colony_control domain=management kind=schedule action=create/set_block/assign_dupe/optimize` | — |
+| **resources** | `read_control domain=resources action=inventory/food/search_items`, `read_control domain=resources action=pins`, `building_control domain=storage action=list/detail`, `colony_control domain=management kind=diet action=status` | `read_control domain=resources action=set_pin`, `building_control domain=storage action=set_filter`, `colony_control domain=management kind=diet action=set/policy` | — |
+| **buildings** | `read_control domain=buildings action=list/summary`, `building_control domain=planning action=search_defs/materials/placement_candidates`, `building_control domain=config action=list`, `building_control domain=special kind=artable action=list`, `building_control domain=config action=visual kind=light visualAction=list`, `building_control domain=config action=visual kind=pixel_pack visualAction=list` | `building_control domain=planning action=preview/auto_connect`, `building_control domain=config action=set_enabled/set_toggle/copy_settings`, `orders_control domain=designation action=manual_delivery`, `building_control domain=special kind=artable action=set_stage`, `building_control domain=config action=visual kind=light visualAction=set_color`, `building_control domain=config action=visual kind=pixel_pack visualAction=set_color` | — |
+| **orders** | `orders_control domain=priority action=list` | `orders_control domain=priority action=set_building`, `orders_control domain=priority action=set_area` | `navigation_control action=left_click/hold_left`, `orders_control domain=designation action=deconstruct`, `orders_control domain=area action=sweep`, `orders_control domain=area action=dig`, `orders_control domain=area action=mop`, `orders_control domain=area action=disinfect`, `orders_control domain=area action=cancel`, `orders_control domain=area action=harvest`, `orders_control domain=designation action=capture`, `orders_control domain=designation action=empty_conduits`, `orders_control domain=designation action=cut_conduits` |
+| **power** | `read_control domain=infrastructure action=power_summary/power_ports` | — | — |
+| **rooms** | `read_control domain=infrastructure action=rooms` | — | — |
+| **world** | `colony_control domain=read action=worlds`, `read_control domain=world action=cell_info`, `read_control domain=world action=element_summary`, `read_control domain=world action=text_map`, `read_control domain=world action=thermal_overheat_risk` | `read_control domain=area action=define`, `read_control domain=area action=forget` | — |
+| **camera** | `navigation_control action=get_view` | — | `navigation_control action=move/set_view/switch_view/focus_cell/focus_dupe/screenshot` |
+| **game** | `game_control domain=speed action=time`, `game_control domain=save action=list`, `game_control domain=dlc action=list` | `game_control domain=state action=set_sandbox_mode`, `game_control domain=dlc action=activate` | `game_control domain=speed action=pause/resume/set_speed`, `game_control domain=save action=save/load/quit` |
+| **tools** | `server_control domain=catalog action=manifest`, `server_control domain=catalog action=search`, `server_control domain=catalog action=guide`, `server_control domain=catalog action=coverage`, `server_control domain=catalog action=static_audit` | `game_control domain=ui uiDomain=edit_mark action=create/clear` | `server_control domain=batch action=call_many` |
+| **server** | `server_control domain=diagnostics action=status/capabilities/logs_tail`, `server_control domain=client_request` | — | — |
 
 ## Prompt Workflows
 
@@ -512,11 +512,11 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 |--------|---------|---------------------|
 | `colony_triage` | Quick health check | `oni://colony/status` → `oni://colony/diagnostics` → `oni://colony/alerts` → `oni://resources/food` |
 | `next_cycle_plan` | Action planning | `oni://colony/summary` → `oni://resources/inventory` → `oni://research/status` → `oni://schedules` → `oni://dupes` |
-| `inspect_area` | Spatial analysis | `oni://world/text-map` plain map → optionally `world_text_map` with `includeBuildings=true` |
-| `dupe_care_review` | Duplicant audit | `oni://dupes` → `oni://schedules` → `dupes_detail` / `dupes_needs` / `dupes_attributes` |
-| `power_audit` | Power system check | `oni://power/summary` → optionally `buildings_config_list` filtered for power |
+| `inspect_area` | Spatial analysis | `oni://world/text-map` plain map → optionally `read_control domain=world action=text_map` with `includeBuildings=true` |
+| `dupe_care_review` | Duplicant audit | `oni://dupes` → `oni://schedules` → `dupes_control domain=info action=detail/needs/attributes` |
+| `power_audit` | Power system check | `oni://power/summary` → optionally `building_control domain=config action=list` filtered for power |
 | `rooms_overview` | Room coverage check | `oni://rooms/list` → filter by type/size |
-| `thermal_audit` | Overheat risk scan | `oni://thermal/overheat-risk` → optionally `world_element_summary` |
+| `thermal_audit` | Overheat risk scan | `oni://thermal/overheat-risk` → optionally `read_control domain=world action=element_summary` |
 
 Prompts return a structured text that tells you which resources and tools to call. They do not execute directly — you must make the calls.
 
@@ -524,39 +524,39 @@ Prompts return a structured text that tells you which resources and tools to cal
 
 | URI | Tool Equivalent | Use Case |
 |-----|-----------------|----------|
-| `oni://colony/status` | `colony_status` | Baseline snapshot |
-| `oni://colony/diagnostics` | `colony_diagnostics` | Alert summary |
-| `oni://colony/alerts` | `colony_alerts` | Notification list |
-| `oni://colony/summary` | `colony_summary` | Planning input |
-| `oni://resources/inventory` | `resources_inventory` | Stock levels |
-| `oni://resources/food` | `resources_food` | Food with expiry |
-| `oni://power/summary` | `power_summary` | Circuit health |
-| `oni://rooms/list` | `rooms_list` | Room coverage |
-| `oni://thermal/overheat-risk` | `thermal_overheat_risk_scan` | Heat risk ranking |
-| `oni://world/elements` | `world_element_summary` | Element mass/temp |
-| `oni://world/text-map` | `world_text_map` | Terrain scan |
-| `oni://dupes` | `dupes_list` | Duplicant roster |
-| `oni://schedules` | `schedule_list` | Schedule definitions |
-| `oni://research/status` | `research_status` | Tech progress |
-| `oni://tools/manifest` | `tools_manifest` | Tool catalog |
-| `oni://tools/search` | `tools_search` | Filtered discovery |
+| `oni://colony/status` | `colony_control domain=read action=status` | Baseline snapshot |
+| `oni://colony/diagnostics` | `colony_control domain=diagnostic action=diagnostics` | Alert summary |
+| `oni://colony/alerts` | `colony_control domain=diagnostic action=alerts` | Notification list |
+| `oni://colony/summary` | `colony_control domain=report action=summary` | Planning input |
+| `oni://resources/inventory` | `read_control domain=resources action=inventory` | Stock levels |
+| `oni://resources/food` | `read_control domain=resources action=food` | Food with expiry |
+| `oni://power/summary` | `read_control domain=infrastructure action=power_summary` | Circuit health |
+| `oni://rooms/list` | `read_control domain=infrastructure action=rooms` | Room coverage |
+| `oni://thermal/overheat-risk` | `read_control domain=world action=thermal_overheat_risk` | Heat risk ranking |
+| `oni://world/elements` | `read_control domain=world action=element_summary` | Element mass/temp |
+| `oni://world/text-map` | `read_control domain=world action=text_map` | Terrain scan |
+| `oni://dupes` | `colony_control domain=read action=dupes` | Duplicant roster |
+| `oni://schedules` | `colony_control domain=management kind=schedule action=list` | Schedule definitions |
+| `oni://research/status` | `colony_control domain=management kind=research action=status` | Tech progress |
+| `oni://tools/manifest` | `server_control domain=catalog action=manifest` | Tool catalog |
+| `oni://tools/search` | `server_control domain=catalog action=search` | Filtered discovery |
 Resource templates accept query params: `oni://power/summary?worldId=2&includeDetails=true`, `oni://thermal/overheat-risk?marginC=20&limit=50`.
 
 ## Quick Reference
 
 | Situation | First Tool | Second Tool | Verification |
 |-----------|-----------|-------------|--------------|
-| "What's happening?" | `colony_diagnostics` | `colony_alerts` | `colony_status` |
-| "Fix power" | `power_summary` | `buildings_config_list` (power subset) | `power_summary` |
-| "Build something" | `buildings_search_defs` | `agent_pointer_select_tool` + `agent_pointer_left_click`/`agent_pointer_hold_left` | `world_text_map` |
-| "Manage dupes" | `dupes_list` | `dupes_detail` / `dupes_needs` | `dupes_list` |
-| "Check heat" | `thermal_overheat_risk_scan` | `world_element_summary` | `thermal_overheat_risk_scan` |
-| "Plan actions" | `tools_guide` | `tools_search` + dryRun-capable tools | relevant read tools |
-| "Batch config" | `tools_call_many` (dryRun) | `tools_call_many` (execute) | relevant read tools |
-| "Find a tool" | `tools_search` | `tools_guide` | `tools_static_audit` |
-| "Area ops" | `area_define` | `world_text_map` (with areaId) | `area_get` |
-| "Camera nav" | `camera_get_view` | `camera_move` / `camera_focus_cell` | `camera_get_view` |
-| "Check research" | `research_status` | `list_research` | `research_status` |
-| "Check rockets" | `rockets_status` | `rockets_detail` | `rockets_status` |
-| "Storage config" | `storage_list` | `storage_detail` | `set_storage_filter` |
-| "Automation setup" | `automation_controls_list` | `set_automatable_control` | `automation_controls_list` |
+| "What's happening?" | `colony_control domain=diagnostic action=diagnostics` | `colony_control domain=diagnostic action=alerts` | `colony_control domain=read action=status` |
+| "Fix power" | `read_control domain=infrastructure action=power_summary` | `building_control domain=config action=list` (power subset) | `read_control domain=infrastructure action=power_summary` |
+| "Build something" | `building_control domain=planning action=search_defs` | `navigation_control action=select_tool` + `action=left_click/hold_left` | `read_control domain=world action=text_map` |
+| "Manage dupes" | `colony_control domain=read action=dupes` | `dupes_control domain=info action=detail/needs` | `colony_control domain=read action=dupes` |
+| "Check heat" | `read_control domain=world action=thermal_overheat_risk` | `read_control domain=world action=element_summary` | `read_control domain=world action=thermal_overheat_risk` |
+| "Plan actions" | `server_control domain=catalog action=guide` | `server_control domain=catalog action=search` + dryRun-capable tools | relevant read tools |
+| "Batch config" | `server_control domain=batch action=call_many` (dryRun) | `server_control domain=batch action=call_many` (execute) | relevant read tools |
+| "Find a tool" | `server_control domain=catalog action=search` | `server_control domain=catalog action=guide` | `server_control domain=catalog action=static_audit` |
+| "Area ops" | `read_control domain=area action=define` | `read_control domain=world action=text_map` (with areaId) | `read_control domain=area action=get` |
+| "Camera nav" | `navigation_control action=get_view` | `navigation_control action=move/focus_cell` | `navigation_control action=get_view` |
+| "Check research" | `colony_control domain=management kind=research action=status` | `colony_control domain=management kind=research action=list` | `colony_control domain=management kind=research action=status` |
+| "Check rockets" | `building_control domain=rocket rocketDomain=ops action=status` | `building_control domain=rocket rocketDomain=ops action=detail` | `building_control domain=rocket rocketDomain=ops action=status` |
+| "Storage config" | `building_control domain=storage action=list` | `building_control domain=storage action=detail` | `building_control domain=storage action=set_filter` |
+| "Automation setup" | `building_control domain=config action=list_automation` | `building_control domain=side_surface surface=automation kind=automatable action=set` | `building_control domain=config action=list_automation` |

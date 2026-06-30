@@ -15,11 +15,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "resources_storage_list",
+                Hidden = true,
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "storage_list" },
-                Description = "列出储物箱/储液库/储气库等储存建筑，包含容量、已存质量和过滤器摘要",
+                Description = "兼容入口：请优先使用 building_control domain=storage action=list。列出储物箱/储液库/储气库等储存建筑，包含容量、已存质量和过滤器摘要",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["resource"] = new McpToolParameter { Type = "string", Description = "按储存过滤标签或建筑名筛选", Required = false },
@@ -54,11 +55,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "resources_storage_detail",
+                Hidden = true,
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "storage_detail" },
-                Description = "读取单个储存建筑的过滤标签、库存物品和容量信息",
+                Description = "兼容入口：请优先使用 building_control domain=storage action=detail。读取单个储存建筑的过滤标签、库存物品和容量信息",
                 Parameters = StorageLookupParams(),
                 Handler = args =>
                 {
@@ -75,10 +77,11 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "resources_storage_set_filter",
+                Hidden = true,
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
-                Description = "设置储存建筑的资源过滤标签；默认替换当前过滤器，也可 add/remove",
+                Description = "兼容入口：请优先使用 building_control domain=storage action=set_filter。设置储存建筑的资源过滤标签；默认替换当前过滤器，也可 add/remove",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "建筑 InstanceID", Required = false },
@@ -116,6 +119,125 @@ namespace OniMcp.Tools
 
                     filterable.UpdateFilters(next);
                     return CallToolResult.Text(JsonConvert.SerializeObject(target.ToDictionary(includeItems: false), McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ControlStorage()
+        {
+            return new McpTool
+            {
+                Name = "storage_control",
+                Hidden = true,
+                Group = "resources",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "resources_storage_control", "storage_filter_control" },
+                Tags = new List<string> { "resources", "storage", "filter", "inventory" },
+                Description = "储存建筑聚合工具：action=list/detail/set_filter；读取储存列表/详情，或修改储存过滤标签。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、detail 或 set_filter", Required = true, EnumValues = new List<string> { "list", "detail", "set_filter" } },
+                    ["resource"] = new McpToolParameter { Type = "string", Description = "action=list 时按储存过滤标签或建筑名筛选", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "action=list 时按世界 ID 过滤", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑所在格子 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑所在格子 Y", Required = false },
+                    ["tags"] = new McpToolParameter { Type = "array", Description = "action=set_filter 时资源 Tag 列表，如 Dirt、Algae、SandStone", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "action=set_filter 时为 replace、add、remove，默认 replace", Required = false, EnumValues = new List<string> { "replace", "add", "remove" } }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return GetStorageList().Handler(args);
+                    if (action == "detail")
+                        return GetStorageDetail().Handler(args);
+                    if (action == "set_filter" || action == "set")
+                        return SetStorageFilter().Handler(args);
+                    return CallToolResult.Error("action must be list, detail, or set_filter");
+                }
+            };
+        }
+
+        public static McpTool ControlStorageSystem()
+        {
+            return new McpTool
+            {
+                Name = "storage_system_control",
+                Group = "resources",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "storage_controls", "inventory_storage_control" },
+                Tags = new List<string> { "resources", "storage", "filter", "inventory", "side-screen", "receptacle" },
+                Description = "储存/过滤/实体插槽聚合工具：domain=storage/tile_selection/filter/receptacle，再用 action 参数执行对应子操作。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "storage、tile_selection、filter 或 receptacle", Required = true, EnumValues = new List<string> { "storage", "tile_selection", "filter", "receptacle" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "子工具操作；storage=list/detail/set_filter，tile_selection=list/set/batch，filter=list/set，receptacle=list/request/cancel_request/remove_occupant/cancel_remove/batch", Required = false },
+                    ["resource"] = new McpToolParameter { Type = "string", Description = "domain=storage action=list 时按储存过滤标签或建筑名筛选", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "domain=tile_selection/filter/receptacle action=list 时按名称、prefabId 或 tag 筛选", Required = false },
+                    ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "列表查询时是否返回可选项", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "列表查询最多返回数量", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "目标 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标或区域 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标或区域 Y", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "区域起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "区域起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "区域终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "区域终点 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID", Required = false },
+                    ["tag"] = new McpToolParameter { Type = "string", Description = "domain=filter action=set kind=single 时的目标 tag/元素", Required = false },
+                    ["tags"] = new McpToolParameter { Type = "array", Description = "domain=storage/filter 写入时的 tag 列表", Required = false },
+                    ["itemTag"] = new McpToolParameter { Type = "string", Description = "domain=tile_selection action=set 时的目标物品 tag", Required = false },
+                    ["entityTag"] = new McpToolParameter { Type = "string", Description = "domain=receptacle action=request 时的实体 tag", Required = false },
+                    ["additionalTag"] = new McpToolParameter { Type = "string", Description = "domain=receptacle action=request 时的附加 tag", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "过滤写入模式：replace、add、remove 或 clear", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "清空单选或 StorageTile 目标", Required = false },
+                    ["replaceExistingRequest"] = new McpToolParameter { Type = "boolean", Description = "domain=receptacle action=request 时是否替换现有请求，默认 true", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "批量操作条目", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "批量操作默认参数", Required = false },
+                    ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "写操作确认；子工具要求时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string domain = (args["domain"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (string.IsNullOrWhiteSpace(domain))
+                    {
+                        string legacyKind = (args["kind"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                        if (legacyKind == "storage" || legacyKind == "building" || legacyKind == "buildings" ||
+                            legacyKind == "tile_selection" || legacyKind == "tile" || legacyKind == "storage_tile" || legacyKind == "single_item" ||
+                            legacyKind == "filter" || legacyKind == "filters" ||
+                            legacyKind == "receptacle" || legacyKind == "receptacles" || legacyKind == "entity_slot" || legacyKind == "entity_slots")
+                        {
+                            domain = legacyKind;
+                        }
+                    }
+
+                    switch (domain)
+                    {
+                        case "storage":
+                        case "building":
+                        case "buildings":
+                            return ControlStorage().Handler(args);
+                        case "tile_selection":
+                        case "tile":
+                        case "storage_tile":
+                        case "single_item":
+                            return ReceptacleTools.ControlStorageTileSelection().Handler(args);
+                        case "filter":
+                        case "filters":
+                            return FilterTools.ControlFilter().Handler(args);
+                        case "receptacle":
+                        case "receptacles":
+                        case "entity_slot":
+                        case "entity_slots":
+                            return ReceptacleTools.ControlReceptacle().Handler(args);
+                        default:
+                            return CallToolResult.Error("domain must be storage, tile_selection, filter, or receptacle");
+                    }
                 }
             };
         }

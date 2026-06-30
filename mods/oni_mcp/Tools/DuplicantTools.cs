@@ -20,6 +20,125 @@ namespace OniMcp.Tools
         private static readonly MethodInfo BrainCancelFetchesMethod = typeof(MinionBrain).GetMethod("CancelFetches", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(string) }, null);
         private static readonly MethodInfo MoveMonitorCancelMethod = typeof(MoveToLocationMonitor.Instance).GetMethod("CancelChore", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
 
+        public static McpTool ControlDupes()
+        {
+            return new McpTool
+            {
+                Name = "dupes_control",
+                Group = "dupes",
+                Mode = "execute",
+                Risk = "medium",
+                Aliases = new List<string> { "duplicants_control", "dupe_control" },
+                Tags = new List<string> { "dupes", "duplicants", "priority", "skills", "hats", "assignable", "commands", "side-screen" },
+                Description = "复制人统一入口。domain=info/priority/hat/command/side_screen/skill/assignable；action 透传到对应旧 control。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "复制人子系统：info、priority、hat、command、side_screen、skill、assignable", Required = true, EnumValues = new List<string> { "info", "priority", "hat", "command", "side_screen", "skill", "assignable" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "子系统动作。info=detail/attributes/needs/status_check；priority=list/set/batch/settings_get/settings_set/reset；hat=list/set；command=move_to/move_batch_to/force_action/rename/auto_rename；side_screen=direct_commands/equipment/todos/bionic_upgrades；skill=list/learn；assignable=list/set/set_slot", Required = true },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "复制人、目标对象或可分配对象 InstanceID", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "复制人或目标对象名称", Required = false },
+                    ["dupeId"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；部分写操作使用", Required = false },
+                    ["dupeName"] = new McpToolParameter { Type = "string", Description = "复制人名称；部分写操作使用", Required = false },
+                    ["targetId"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID", Required = false },
+                    ["targetName"] = new McpToolParameter { Type = "string", Description = "目标对象名称", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标格 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标格 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；读操作过滤或坐标查找使用", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "读取动作的关键词过滤", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回或处理数量", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "domain=priority 写操作的优先级", Required = false },
+                    ["skillId"] = new McpToolParameter { Type = "string", Description = "domain=skill action=learn 时的技能 ID", Required = false },
+                    ["hatId"] = new McpToolParameter { Type = "string", Description = "domain=hat action=set 时的帽子 ID", Required = false },
+                    ["newName"] = new McpToolParameter { Type = "string", Description = "domain=command action=rename 时的新名称", Required = false },
+                    ["style"] = new McpToolParameter { Type = "string", Description = "domain=command action=auto_rename 时的命名风格", Required = false },
+                    ["apply"] = new McpToolParameter { Type = "boolean", Description = "domain=command action=auto_rename 是否实际应用", Required = false },
+                    ["commandAction"] = new McpToolParameter { Type = "string", Description = "domain=command action=force_action 时的底层动作", Required = false },
+                    ["slotId"] = new McpToolParameter { Type = "string", Description = "domain=assignable action=set_slot 时的槽位 ID", Required = false },
+                    ["itemId"] = new McpToolParameter { Type = "integer", Description = "domain=assignable action=set_slot 时的物品 InstanceID", Required = false },
+                    ["includeDetails"] = new McpToolParameter { Type = "boolean", Description = "部分 info/side_screen 读取动作是否包含更多细节", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "底层写入、移动、强制动作或批量动作按原 control 要求确认", Required = false }
+                },
+                Handler = args =>
+                {
+                    string domain = (args["domain"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (domain)
+                    {
+                        case "info":
+                        case "read":
+                            return ControlDupeInfo().Handler(args);
+                        case "priority":
+                        case "priorities":
+                            return ControlPersonalPriority().Handler(args);
+                        case "hat":
+                        case "hats":
+                            return ControlHat().Handler(args);
+                        case "command":
+                        case "commands":
+                            return ControlDupeCommands().Handler(args);
+                        case "side_screen":
+                        case "side":
+                        case "sidescreen":
+                            return ControlDupeSideScreens().Handler(args);
+                        case "skill":
+                        case "skills":
+                            return ControlSkill().Handler(args);
+                        case "assignable":
+                        case "assignables":
+                            return ControlAssignable().Handler(args);
+                        default:
+                            return CallToolResult.Error("domain must be info, priority, hat, command, side_screen, skill, or assignable");
+                    }
+                }
+            };
+        }
+
+        public static McpTool ControlDupeInfo()
+        {
+            return new McpTool
+            {
+                Name = "dupes_info_control",
+                Group = "dupes",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "duplicants_info_control", "dupe_info_control" },
+                Tags = new List<string> { "dupes", "duplicants", "detail", "attributes", "needs", "status", "stuck", "trapped", "navigation", "复制人", "属性", "需求", "被困", "状态" },
+                Description = "复制人基础只读信息聚合工具：action=detail 单个详情；action=attributes 属性/特性；action=needs 需求/压力/士气；action=status_check 状态/被困检查。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "读取类型：detail、attributes、needs、status_check", Required = true, EnumValues = new List<string> { "detail", "attributes", "needs", "status_check" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；detail 必填 id 或 name，其他 action 留空返回全部", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称；detail 必填 id 或 name，其他 action 留空返回全部", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "status_check：世界 ID；默认全部世界", Required = false },
+                    ["radius"] = new McpToolParameter { Type = "integer", Description = "status_check：周边可达性扫描半径，默认 8，最大 20", Required = false },
+                    ["targetX"] = new McpToolParameter { Type = "integer", Description = "status_check：可选目标格 X", Required = false },
+                    ["targetY"] = new McpToolParameter { Type = "integer", Description = "status_check：可选目标格 Y", Required = false },
+                    ["targetWorldId"] = new McpToolParameter { Type = "integer", Description = "status_check：目标格世界 ID", Required = false },
+                    ["includeReachableSamples"] = new McpToolParameter { Type = "boolean", Description = "status_check：是否返回少量可达格样本，默认 true", Required = false },
+                    ["includeDetails"] = new McpToolParameter { Type = "boolean", Description = "status_check：是否附加属性、技能、日程和完整 needs 摘要，默认 false", Required = false },
+                    ["detailMode"] = new McpToolParameter { Type = "string", Description = "status_check：compact 或 full，默认 compact", Required = false, EnumValues = new List<string> { "compact", "full" } },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "status_check：最多返回复制人数，默认 50，最大 100", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "detail":
+                            return GetDupeDetails().Handler(args);
+                        case "attributes":
+                            return GetDupeAttributes().Handler(args);
+                        case "needs":
+                            return GetDupeNeeds().Handler(args);
+                        case "status":
+                        case "status_check":
+                            return GetDupeStatusCheck().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be detail, attributes, needs, or status_check");
+                    }
+                }
+            };
+        }
+
         public static McpTool GetDupeDetails()
         {
             return new McpTool
@@ -28,7 +147,8 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Description = "获取复制人详细信息：位置、日程、技能、属性、需求和当前状态",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 dupes_control domain=info action=detail。获取复制人详细信息：位置、日程、技能、属性、需求和当前状态",
                 Parameters = DupeLookupParams(),
                 Handler = args =>
                 {
@@ -48,7 +168,8 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Description = "获取一个或所有复制人的属性、兴趣倾向和已掌握技能",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 dupes_control domain=info action=attributes。获取一个或所有复制人的属性、兴趣倾向和已掌握技能",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID，留空返回全部", Required = false },
@@ -71,7 +192,8 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Description = "获取复制人的核心需求数值，如卡路里、压力、膀胱、体温等",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 dupes_control domain=info action=needs。获取复制人的核心需求数值，如卡路里、压力、膀胱、体温等",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID，留空返回全部", Required = false },
@@ -94,9 +216,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "duplicants_status_check", "dupes_stuck_check", "dupe_rescue_check" },
                 Tags = new List<string> { "dupes", "duplicants", "status", "stuck", "trapped", "navigation", "rescue", "复制人", "被困", "状态" },
-                Description = "【复制人状态/被困检查首选】一次返回复制人位置、当前差事、关键需求、周边可达格和疑似被困风险；只读，不移动复制人。用于替代 dupes_list + dupes_detail + dupes_needs + 局部地图的常规组合调用。",
+                Description = "兼容旧工具：请改用 dupes_control domain=info action=status_check。【复制人状态/被困检查首选】一次返回复制人位置、当前差事、关键需求、周边可达格和疑似被困风险；只读，不移动复制人。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；留空检查全部", Required = false },
@@ -187,12 +310,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "dupes_priorities_list",
+                Hidden = true,
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "duplicant_priorities_list", "jobs_priorities_list", "personal_priorities_list" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "chore-groups" },
-                Description = "读取 Priorities/Jobs 管理屏中复制人对各 ChoreGroup 的个人优先级 0-5、禁用状态和关联技能等级",
+                Description = "兼容入口：读取个人优先级；新调用请使用 dupes_control domain=priority action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID，留空返回全部", Required = false },
@@ -221,17 +345,67 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlPersonalPriority()
+        {
+            return new McpTool
+            {
+                Name = "dupes_priority_control",
+                Group = "dupes",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "duplicant_priority_control", "jobs_priority_control", "personal_priority_control", "dupes_priorities_control" },
+                Tags = new List<string> { "dupes", "priorities", "jobs", "management", "chore-groups", "batch", "settings" },
+                Description = "统一读取、设置、批量设置和配置 Jobs/Priorities 个人优先级。action=list/set/batch/settings_get/settings_set/reset；写操作需 confirm=true",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：list、set、batch、settings_get、settings_set、reset", Required = true, EnumValues = new List<string> { "list", "set", "batch", "settings_get", "settings_set", "reset" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；list/set 使用", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称；list/set 使用", Required = false },
+                    ["choreGroup"] = new McpToolParameter { Type = "string", Description = "ChoreGroup ID/名称；list 可过滤，set/batch 可作为目标或默认值", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "个人优先级 0-5；set/batch 使用", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "batch 设置数组；每项支持 id/name/choreGroup/priority", Required = false },
+                    ["includeNonUserPrioritizable"] = new McpToolParameter { Type = "boolean", Description = "list 时是否包含 UI 不允许用户设置的组，默认 false", Required = false },
+                    ["advancedPersonalPriorities"] = new McpToolParameter { Type = "boolean", Description = "settings_set 时切换高级个人优先级模式；留空不改变", Required = false },
+                    ["reset"] = new McpToolParameter { Type = "boolean", Description = "settings_set 时是否执行 reset；action=reset 会自动设置为 true", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认写操作；set/batch/settings_set/reset 必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = args["action"]?.ToString()?.Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                            return ListPersonalPriorities().Handler(args);
+                        case "set":
+                            return SetPersonalPriority().Handler(args);
+                        case "batch":
+                            return BatchSetPersonalPriorities().Handler(args);
+                        case "settings_get":
+                            return GetPersonalPrioritySettings().Handler(args);
+                        case "settings_set":
+                            return SetPersonalPrioritySettings().Handler(args);
+                        case "reset":
+                            args["reset"] = true;
+                            return SetPersonalPrioritySettings().Handler(args);
+                        default:
+                            return CallToolResult.Error("Unsupported action; use list, set, batch, settings_get, settings_set, or reset");
+                    }
+                }
+            };
+        }
+
         public static McpTool SetPersonalPriority()
         {
             return new McpTool
             {
                 Name = "dupes_priority_set",
+                Hidden = true,
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "duplicant_priority_set", "jobs_priority_set", "personal_priority_set", "set_personal_priority" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "chore-groups" },
-                Description = "设置 Priorities/Jobs 管理屏中单个复制人的某个 ChoreGroup 个人优先级；priority 0-5，需 confirm=true",
+                Description = "兼容入口：设置单个复制人个人优先级；新调用请使用 dupes_control domain=priority action=set，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -280,12 +454,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "dupes_priorities_batch_set",
+                Hidden = true,
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "duplicant_priorities_batch_set", "jobs_priorities_batch_set" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "batch" },
-                Description = "批量设置复制人个人工作优先级；items 支持 {id|name,choreGroup,priority}，顶层 choreGroup/priority 可作默认值，需 confirm=true",
+                Description = "兼容入口：批量设置个人优先级；新调用请使用 dupes_control domain=priority action=batch，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "优先级设置数组；每项支持 id/name/choreGroup/priority", Required = true },
@@ -335,12 +510,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "dupes_priority_settings_get",
+                Hidden = true,
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "jobs_priority_settings_get", "personal_priority_settings_get" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "settings" },
-                Description = "读取 Jobs/Priorities 管理屏全局设置：advancedPersonalPriorities、默认模式和 reset 行为摘要",
+                Description = "兼容入口：读取 Jobs/Priorities 全局设置；新调用请使用 dupes_control domain=priority action=settings_get",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args => CallToolResult.Text(JsonConvert.SerializeObject(PersonalPrioritySettingsInfo(), McpJsonUtil.Settings))
             };
@@ -351,12 +527,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "dupes_priority_settings_set",
+                Hidden = true,
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "jobs_priority_settings_set", "personal_priority_settings_set", "dupes_priorities_reset" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "settings" },
-                Description = "设置 Jobs/Priorities 管理屏全局设置；可切换 advancedPersonalPriorities 或执行与 Reset 按钮一致的重置，需 confirm=true",
+                Description = "兼容入口：设置 Jobs/Priorities 全局设置或 reset；新调用请使用 dupes_control domain=priority action=settings_set/reset，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["advancedPersonalPriorities"] = new McpToolParameter { Type = "boolean", Description = "是否启用高级个人优先级模式；留空不改变", Required = false },
@@ -405,9 +582,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "low",
+                Hidden = true,
                 Aliases = new List<string> { "rename_dupe", "dupe_rename", "duplicant_rename", "rename_duplicant" },
                 Tags = new List<string> { "dupes", "dupe", "duplicants", "duplicant", "rename", "name", "复制人", "改名", "命名", "名字" },
-                Description = "修改指定复制人的名字",
+                Description = "兼容旧工具：请改用 dupes_control domain=command action=rename。修改指定复制人的名字",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -437,9 +615,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "auto_rename_dupes", "duplicants_auto_rename", "dupes_rename_by_role", "duplicants_rename_by_role" },
                 Tags = new List<string> { "dupes", "duplicants", "rename", "auto-rename", "name", "role", "job", "apply", "复制人", "改名", "重命名", "命名", "职业", "属性" },
-                Description = "按复制人属性/兴趣自动生成职业化名字；apply=false 只预览，apply=true 立即应用重命名",
+                Description = "兼容旧工具：请改用 dupes_control domain=command action=auto_rename。按复制人属性/兴趣自动生成职业化名字；apply=false 只预览，apply=true 立即应用重命名",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["style"] = new McpToolParameter { Type = "string", Description = "命名风格：role_prefix、cn_job、short，默认 role_prefix", Required = false },
@@ -481,6 +660,65 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlDupeCommands()
+        {
+            return new McpTool
+            {
+                Name = "dupes_command_control",
+                Group = "dupes",
+                Mode = "execute",
+                Risk = "medium",
+                Aliases = new List<string> { "dupe_command_control", "duplicant_command_control", "dupes_direct_command_control" },
+                Tags = new List<string> { "dupes", "commands", "move", "batch", "force", "direct", "rescue", "rename", "auto-rename" },
+                Description = "复制人直接动作聚合入口：action=move_to 单人移动；action=force_action 取消/强制移动；action=move_batch_to 批量移动；action=rename/auto_rename 命名。force_action 的具体动作使用 commandAction=cancel_all/move_to/cancel_all_and_move",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "直接动作：move_to、force_action、move_batch_to、rename、auto_rename", Required = true, EnumValues = new List<string> { "move_to", "force_action", "move_batch_to", "rename", "auto_rename" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "单人动作的复制人 InstanceID", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "单人动作的复制人名称", Required = false },
+                    ["newName"] = new McpToolParameter { Type = "string", Description = "action=rename 的新名字", Required = false },
+                    ["style"] = new McpToolParameter { Type = "string", Description = "action=auto_rename 的命名风格：role_prefix、cn_job、short，默认 role_prefix", Required = false },
+                    ["apply"] = new McpToolParameter { Type = "boolean", Description = "action=auto_rename 是否应用重命名，默认 false 只预览", Required = false },
+                    ["commandAction"] = new McpToolParameter { Type = "string", Description = "action=force_action 时的强制动作：cancel_all、move_to、cancel_all_and_move", Required = false, EnumValues = new List<string> { "cancel_all", "move_to", "cancel_all_and_move" } },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；批量时可作为默认目标", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y；批量时可作为默认目标", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；批量时可作为默认目标", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "action=move_batch_to 的移动命令数组；每项含 id/i 或 name/n，x/y 可省略以使用顶层默认目标", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=move_batch_to 最多处理数量，默认 50，最大 100", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认执行直接动作；写入/执行动作必须为 true", Required = true }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "move_to":
+                            return MoveDupe().Handler(args);
+                        case "move_batch_to":
+                            return MoveDupesBatch().Handler(args);
+                        case "rename":
+                            if (!ToolUtil.GetBool(args, "confirm", false))
+                                return CallToolResult.Error("confirm=true is required for action=rename");
+                            return RenameDupe().Handler(args);
+                        case "auto_rename":
+                            if (ToolUtil.GetBool(args, "apply", false) && !ToolUtil.GetBool(args, "confirm", false))
+                                return CallToolResult.Error("confirm=true is required for action=auto_rename apply=true");
+                            return AutoRenameDupes().Handler(args);
+                        case "force_action":
+                            var forwarded = (JObject)args.DeepClone();
+                            var commandAction = forwarded["commandAction"];
+                            if (commandAction == null || string.IsNullOrWhiteSpace(commandAction.ToString()))
+                                return CallToolResult.Error("commandAction is required for action=force_action");
+                            forwarded["action"] = commandAction;
+                            forwarded.Remove("commandAction");
+                            return ForceDupeAction().Handler(forwarded);
+                        default:
+                            return CallToolResult.Error("action must be move_to, force_action, move_batch_to, rename, or auto_rename");
+                    }
+                }
+            };
+        }
+
         public static McpTool MoveDupe()
         {
             return new McpTool
@@ -489,8 +727,9 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "dupe_move", "move_dupe", "duplicant_move_to" },
-                Description = "对复制人下达“移动到这里”命令，使用游戏原生 MoveToLocationMonitor/MoveChore",
+                Description = "兼容旧工具：请改用 dupes_control domain=command action=move_to。对复制人下达“移动到这里”命令，使用游戏原生 MoveToLocationMonitor/MoveChore",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -540,9 +779,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "dupe_force_action", "duplicant_force_action", "dupe_cancel_all" },
                 Tags = new List<string> { "dupes", "force", "cancel", "move", "direct", "rescue" },
-                Description = "对复制人执行强制动作：取消全部当前/挂起工作，或取消后立刻强制移动到指定坐标；需 confirm=true",
+                Description = "兼容旧工具：请改用 dupes_control domain=command action=force_action commandAction=cancel_all/move_to/cancel_all_and_move。对复制人执行强制动作；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -613,9 +853,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "execute",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "dupes_move_many", "move_dupes_batch", "duplicants_move_batch", "batch_move_dupes" },
                 Tags = new List<string> { "dupes", "commands", "move", "batch", "direct" },
-                Description = "批量下达复制人“移动到这里”命令。items 支持 {id|i,name|n,x,y,worldId|w}，顶层 x/y/worldId 可作为默认目标",
+                Description = "兼容旧工具：请改用 dupes_control domain=command action=move_batch_to。批量下达复制人“移动到这里”命令。items 支持 {id|i,name|n,x,y,worldId|w}，顶层 x/y/worldId 可作为默认目标",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "移动命令数组；每项含 id/i 或 name/n，x/y 可省略以使用顶层默认目标", Required = true },
@@ -701,9 +942,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "dupe_actions_list", "duplicant_commands_list" },
                 Tags = new List<string> { "dupes", "commands", "move", "assignables", "skills", "equipment" },
-                Description = "列出复制人可直接执行/配置的玩家操作入口：移动到这里、技能、分配对象、装备槽和相关 MCP 工具",
+                Description = "兼容入口：请使用 dupes_control domain=side_screen action=direct_commands。列出复制人可直接执行/配置的玩家操作入口：移动到这里、技能、分配对象、装备槽和相关 MCP 工具",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；留空返回全部", Required = false },
@@ -726,14 +968,11 @@ namespace OniMcp.Tools
                         {
                             "dupes_move_to",
                             "dupes_move_batch_to",
-                            "dupes_skills_list",
-                            "dupes_learn_skill",
-                            "assignables_list",
-                            "assignables_set",
-                            "assignable_slot_item_set",
-                            "dupes_equipment_list",
-                            "diet_set",
-                            "schedule_assign_dupe"
+                            "dupes_skill_control",
+                            "assignable_control",
+                            "dupes_control domain=side_screen action=equipment",
+                            "colony_control domain=management kind=diet",
+                            "colony_control domain=management kind=schedule"
                         }
                     }, McpJsonUtil.Settings));
                 }
@@ -748,9 +987,10 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "equipment_slots_list", "dupe_equipment_list" },
                 Tags = new List<string> { "dupes", "equipment", "suits", "assignables" },
-                Description = "列出复制人装备槽、当前装备、可用 Assignable/Equippable 分配对象；槽位选择/清空使用 assignable_slot_item_set",
+                Description = "兼容入口：请使用 dupes_control domain=side_screen action=equipment。列出复制人装备槽、当前装备、可用 Assignable/Equippable 分配对象；槽位选择/清空使用 dupes_control domain=assignable action=set_slot",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；留空返回全部", Required = false },
@@ -776,6 +1016,41 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlDupeSideScreens()
+        {
+            return new McpTool
+            {
+                Name = "dupes_side_screen_control",
+                Group = "dupes",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "dupe_side_screen_control", "duplicant_side_screen_control" },
+                Tags = new List<string> { "dupes", "side-screen", "commands", "equipment", "todo", "bionic" },
+                Description = "复制人侧屏只读聚合工具：action=direct_commands/equipment/todos/bionic_upgrades",
+                Parameters = DupeSideScreenControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "direct_commands":
+                        case "commands":
+                            return ListDirectCommands().Handler(args);
+                        case "equipment":
+                            return ListEquipment().Handler(args);
+                        case "todos":
+                        case "todo":
+                            return FacilitySideScreenTools.ListMinionTodos().Handler(args);
+                        case "bionic_upgrades":
+                        case "bionic":
+                            return FacilitySideScreenTools.ListBionicUpgrades().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be direct_commands, equipment, todos, or bionic_upgrades");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListSkills()
         {
             return new McpTool
@@ -785,7 +1060,8 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "dupes_skills", "skills_list" },
-                Description = "列出复制人技能树中的技能、前置技能、技能组、士气期望和可学习状态",
+                Hidden = true,
+                Description = "兼容入口：请使用 dupes_control domain=skill action=list。列出复制人技能树中的技能、前置技能、技能组、士气期望和可学习状态",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "可选复制人 InstanceID；提供后附带该复制人的可学习状态", Required = false },
@@ -828,7 +1104,8 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "learn_skill", "dupe_skill_learn", "skills_learn" },
-                Description = "让复制人学习一个技能；默认遵守技能点、前置技能和职业限制，force=true 可用 GrantSkill 作为外部授予",
+                Hidden = true,
+                Description = "兼容入口：请使用 dupes_control domain=skill action=learn。让复制人学习一个技能；默认遵守技能点、前置技能和职业限制，force=true 可用 GrantSkill 作为外部授予",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -883,17 +1160,58 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlSkill()
+        {
+            return new McpTool
+            {
+                Name = "dupes_skill_control",
+                Group = "dupes",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "dupe_skill_control", "skills_control" },
+                Tags = new List<string> { "dupes", "skills", "management" },
+                Description = "复制人技能查询/学习统一入口：action=list/learn；学习技能需 confirm=true",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list, learn", Required = true, EnumValues = new List<string> { "list", "learn" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "list: 技能 ID/名称/组关键词", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "list: 返回数量，默认 100，最大 300", Required = false },
+                    ["skillId"] = new McpToolParameter { Type = "string", Description = "learn: 技能 ID，例如 Farming1、Mining1", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "learn: 绕过技能点/前置条件并作为授予技能记录，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "learn: 确认修改复制人技能，必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = args["action"]?.ToString()?.Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                            return ListSkills().Handler(args);
+                        case "learn":
+                            if (string.IsNullOrWhiteSpace(args["skillId"]?.ToString()))
+                                return CallToolResult.Error("skillId is required for action=learn");
+                            return LearnSkill().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be list or learn");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListHatOptions()
         {
             return new McpTool
             {
                 Name = "dupes_hats_list",
+                Hidden = true,
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "skills_hats_list", "dupe_hats_list" },
                 Tags = new List<string> { "dupes", "skills", "hats", "cosmetic", "management" },
-                Description = "列出复制人的当前帽子、目标帽子和可选帽子；对应 SkillsScreen 的帽子下拉选择",
+                Description = "兼容入口：列出复制人帽子选项；新调用请使用 dupes_control domain=hat action=list",
                 Parameters = DupeLookupParams(),
                 Handler = args =>
                 {
@@ -905,17 +1223,54 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlHat()
+        {
+            return new McpTool
+            {
+                Name = "dupes_hat_control",
+                Group = "dupes",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "dupe_hat_control", "skills_hat_control", "hat_control" },
+                Tags = new List<string> { "dupes", "skills", "hats", "cosmetic", "management" },
+                Description = "统一列出和设置复制人帽子。action=list/set；set 可传 hat 或 clear=true，需 confirm=true",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称", Required = false },
+                    ["hat"] = new McpToolParameter { Type = "string", Description = "set 时目标帽子 prefabId；留空或 clear=true 可清空", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "set 时是否清空目标帽子，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认 set 操作，必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = args["action"]?.ToString()?.Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                            return ListHatOptions().Handler(args);
+                        case "set":
+                            return SetHat().Handler(args);
+                        default:
+                            return CallToolResult.Error("Unsupported action; use list or set");
+                    }
+                }
+            };
+        }
+
         public static McpTool SetHat()
         {
             return new McpTool
             {
                 Name = "dupes_hat_set",
+                Hidden = true,
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "set_hat", "skills_hat_set", "dupe_hat_set" },
                 Tags = new List<string> { "dupes", "skills", "hats", "cosmetic", "management" },
-                Description = "设置复制人的目标帽子或清空帽子；与 SkillsScreen 的帽子下拉选择一致，需 confirm=true",
+                Description = "兼容入口：设置复制人的目标帽子或清空帽子；新调用请使用 dupes_control domain=hat action=set，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -968,6 +1323,41 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlAssignable()
+        {
+            return new McpTool
+            {
+                Name = "assignable_control",
+                Group = "dupes",
+                Mode = "write",
+                Risk = "medium",
+                Description = "可分配对象聚合入口：action=list/set/set_slot",
+                Parameters = AssignableControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "list").Trim().ToLowerInvariant();
+                    if (action == "list" || action == "status")
+                        return ListAssignables().Handler(args);
+
+                    if (action == "set" || action == "assign")
+                    {
+                        var forwarded = (JObject)args.DeepClone();
+                        forwarded["action"] = args["assignmentAction"] ?? args["assignAction"] ?? "assign";
+                        return SetAssignable().Handler(forwarded);
+                    }
+
+                    if (action == "set_slot" || action == "slot")
+                    {
+                        var forwarded = (JObject)args.DeepClone();
+                        forwarded["action"] = args["slotAction"] ?? args["itemAction"] ?? "assign";
+                        return SetAssignableSlotItem().Handler(forwarded);
+                    }
+
+                    return CallToolResult.Error("action must be list, set, or set_slot");
+                }
+            };
+        }
+
         public static McpTool ListAssignables()
         {
             return new McpTool
@@ -977,7 +1367,8 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "beds_list", "medical_assignables_list" },
-                Description = "列出床、医疗床、餐桌、太空服等可分配对象及其当前分配",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 dupes_control domain=assignable action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["slotId"] = new McpToolParameter { Type = "string", Description = "按分配槽过滤，如 Bed、MedicalBed、SuitLocker；可留空", Required = false },
@@ -1020,7 +1411,8 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "bed_assign", "medical_bed_assign", "assignable_set" },
-                Description = "设置或清除可分配对象的分配对象；覆盖床位、医疗床、餐桌、太空服等 Assignable/Ownable 对象",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 dupes_control domain=assignable action=set，并用 assignmentAction=assign/unassign/public",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["targetId"] = new McpToolParameter { Type = "integer", Description = "可分配对象 InstanceID", Required = false },
@@ -1079,7 +1471,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "equipment_slot_set", "ownables_slot_set", "bionic_upgrade_slot_set" },
                 Tags = new List<string> { "dupes", "equipment", "assignables", "ownables", "bionic", "side-screen" },
-                Description = "设置或清空复制人的指定 AssignableSlotInstance，等价于 OwnablesSecondSideScreen 中点击某槽位的 None 或物品行",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 dupes_control domain=assignable action=set_slot，并用 slotAction=assign/unassign/none",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；也可用 dupeId", Required = false },
@@ -1088,7 +1481,7 @@ namespace OniMcp.Tools
                     ["dupeName"] = new McpToolParameter { Type = "string", Description = "复制人名称；优先于 name", Required = false },
                     ["slotId"] = new McpToolParameter { Type = "string", Description = "槽类型 ID，如 Suit、Hat、BionicUpgrade；多槽类型建议同时给 slotInstanceId 或 slotIndex", Required = false },
                     ["slotInstanceId"] = new McpToolParameter { Type = "string", Description = "AssignableSlotInstance.ID，如 BionicUpgrade2；也接受 assignableSlotId", Required = false },
-                    ["assignableSlotId"] = new McpToolParameter { Type = "string", Description = "slotInstanceId 的别名，便于直接使用 bionic_upgrades_list 返回字段", Required = false },
+                    ["assignableSlotId"] = new McpToolParameter { Type = "string", Description = "slotInstanceId 的别名，便于直接使用 dupes_control domain=side_screen action=bionic_upgrades 返回字段", Required = false },
                     ["slotIndex"] = new McpToolParameter { Type = "integer", Description = "在匹配 slotId 的槽列表中的 0 基序号；多槽时可用", Required = false },
                     ["assignableId"] = new McpToolParameter { Type = "integer", Description = "要分配的 Assignable/Equippable InstanceID；action=assign 时可用", Required = false },
                     ["itemId"] = new McpToolParameter { Type = "integer", Description = "assignableId 的别名", Required = false },
@@ -1147,6 +1540,54 @@ namespace OniMcp.Tools
             };
         }
 
+        private static Dictionary<string, McpToolParameter> AssignableControlParams()
+        {
+            return new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list/status、set/assign 或 set_slot/slot；默认 list", Required = false },
+                ["slotId"] = new McpToolParameter { Type = "string", Description = "action=list/set/set_slot 可用；按槽类型过滤或定位", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时搜索可分配对象；action=set_slot 时搜索候选物品", Required = false },
+                ["worldId"] = new McpToolParameter { Type = "integer", Description = "action=list 时按世界过滤", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 返回数量，默认 100，最大 500", Required = false },
+                ["targetId"] = new McpToolParameter { Type = "integer", Description = "action=set 时的可分配对象 InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "action=set 时可分配对象格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "action=set 时可分配对象格子 Y", Required = false },
+                ["dupeId"] = new McpToolParameter { Type = "integer", Description = "action=set/set_slot 时复制人 InstanceID；set 时为目标复制人，set_slot 时为槽位所属复制人", Required = false },
+                ["dupeName"] = new McpToolParameter { Type = "string", Description = "action=set/set_slot 时复制人名称", Required = false },
+                ["id"] = new McpToolParameter { Type = "integer", Description = "action=set_slot 时复制人 InstanceID；也可用 dupeId", Required = false },
+                ["name"] = new McpToolParameter { Type = "string", Description = "action=set_slot 时复制人名称；也可用 dupeName", Required = false },
+                ["assignmentAction"] = new McpToolParameter { Type = "string", Description = "action=set 时的内部动作：assign、unassign、public；默认 assign", Required = false, EnumValues = new List<string> { "assign", "unassign", "public" } },
+                ["assignAction"] = new McpToolParameter { Type = "string", Description = "assignmentAction 的短别名", Required = false, EnumValues = new List<string> { "assign", "unassign", "public" } },
+                ["slotAction"] = new McpToolParameter { Type = "string", Description = "action=set_slot 时的内部动作：assign、unassign、none；默认 assign", Required = false, EnumValues = new List<string> { "assign", "unassign", "none" } },
+                ["itemAction"] = new McpToolParameter { Type = "string", Description = "slotAction 的别名", Required = false, EnumValues = new List<string> { "assign", "unassign", "none" } },
+                ["slotInstanceId"] = new McpToolParameter { Type = "string", Description = "action=set_slot 时 AssignableSlotInstance.ID，如 BionicUpgrade2", Required = false },
+                ["assignableSlotId"] = new McpToolParameter { Type = "string", Description = "slotInstanceId 的别名，便于使用 dupes_control domain=side_screen action=bionic_upgrades 返回字段", Required = false },
+                ["slotIndex"] = new McpToolParameter { Type = "integer", Description = "action=set_slot 时同类型槽的 0 基序号", Required = false },
+                ["assignableId"] = new McpToolParameter { Type = "integer", Description = "action=set_slot 时要分配的 Assignable/Equippable InstanceID", Required = false },
+                ["itemId"] = new McpToolParameter { Type = "integer", Description = "assignableId 的别名", Required = false },
+                ["prefabId"] = new McpToolParameter { Type = "string", Description = "action=set_slot 时按 prefabId 选择候选物品", Required = false },
+                ["itemName"] = new McpToolParameter { Type = "string", Description = "action=set_slot 时按名称/关键词选择候选物品", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set/set_slot 必须为 true", Required = false }
+            };
+        }
+
+        private static Dictionary<string, McpToolParameter> DupeSideScreenControlParams()
+        {
+            return new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "direct_commands、equipment、todos 或 bionic_upgrades", Required = true, EnumValues = new List<string> { "direct_commands", "equipment", "todos", "bionic_upgrades" } },
+                ["id"] = new McpToolParameter { Type = "integer", Description = "可选复制人 InstanceID", Required = false },
+                ["name"] = new McpToolParameter { Type = "string", Description = "可选复制人名称", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=todos/bionic_upgrades 时按复制人、差事、目标、升级名或状态筛选", Required = false },
+                ["slotId"] = new McpToolParameter { Type = "string", Description = "action=equipment 时按装备槽 ID 过滤，例如 Suit、Hat", Required = false },
+                ["includeAvailable"] = new McpToolParameter { Type = "boolean", Description = "action=equipment 时是否附带未分配可用装备列表，默认 true", Required = false },
+                ["includeBlocked"] = new McpToolParameter { Type = "boolean", Description = "action=todos 时是否包含失败/阻塞差事，默认 true", Required = false },
+                ["includePotentialOnly"] = new McpToolParameter { Type = "boolean", Description = "action=todos 时是否只返回 IsPotentialSuccess 的阻塞差事，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量；各 action 沿用原列表工具默认值和上限", Required = false },
+                ["taskLimit"] = new McpToolParameter { Type = "integer", Description = "action=todos 时每个复制人最多返回差事数，默认 30，最大 100", Required = false }
+            };
+        }
+
         internal static Dictionary<string, object> GetDupeDetail(MinionIdentity dupe)
         {
             var pos = dupe.transform.GetPosition();
@@ -1186,11 +1627,11 @@ namespace OniMcp.Tools
                 ["recommendedLookup"] = new Dictionary<string, object>
                 {
                     ["move"] = "dupes_move_to / dupes_move_batch_to",
-                    ["skills"] = "dupes_skills_list / dupes_learn_skill",
-                    ["assignables"] = "assignables_list / assignables_set",
-                    ["equipment"] = "dupes_equipment_list then assignable_slot_item_set",
-                    ["schedule"] = "schedule_assign_dupe",
-                    ["diet"] = "diet_set"
+                    ["skills"] = "dupes_control domain=skill action=list/learn",
+                    ["assignables"] = "dupes_control domain=assignable action=list/set",
+                    ["equipment"] = "dupes_control domain=side_screen action=equipment then dupes_control domain=assignable action=set_slot",
+                    ["schedule"] = "colony_control domain=management kind=schedule action=assign_dupe",
+                    ["diet"] = "colony_control domain=management kind=diet action=set"
                 }
             };
         }
@@ -1444,7 +1885,7 @@ namespace OniMcp.Tools
                 ["scheduleBlock"] = scheduleBlock,
                 ["reachableCells"] = reachable.ReachableCells,
                 ["next"] = reason == "no_current_chore"
-                    ? "Check personal priorities and available errands; use dupes_priorities_list or inspect nearby build/dig/supply errands."
+                    ? "Check personal priorities and available errands; use dupes_control domain=priority action=list or inspect nearby build/dig/supply errands."
                     : "Inspect the returned reasonCode before issuing rescue or priority changes."
             };
         }
@@ -1764,7 +2205,7 @@ namespace OniMcp.Tools
                 return matches[0];
             if (matches.Count == 0)
             {
-                error = "Assignable slot not found; use dupes_equipment_list or bionic_upgrades_list first";
+                error = "Assignable slot not found; use dupes_control domain=side_screen action=equipment or action=bionic_upgrades first";
                 return null;
             }
 
@@ -1812,7 +2253,7 @@ namespace OniMcp.Tools
                 return candidates[0];
             if (candidates.Count == 0)
             {
-                error = "Assignable item not found for slot; use assignables_list or dupes_equipment_list includeAvailable first";
+                error = "Assignable item not found for slot; use dupes_control domain=assignable action=list or dupes_control domain=side_screen action=equipment includeAvailable first";
                 return null;
             }
 

@@ -13,17 +13,45 @@ namespace OniMcp.Tools
     {
         private const int MaxTunersPerGeyser = 5;
 
+        public static McpTool ControlGeoTuner()
+        {
+            return new McpTool
+            {
+                Name = "geo_tuner_control",
+                Hidden = true,
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "geotuner_control", "geo_tuner_assignment_control" },
+                Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
+                Description = "GeoTuner 聚合工具：action=list 查询调谐器；action=list_geysers 查询可选喷泉；action=assign 设置或清空目标喷泉",
+                Parameters = GeoTunerControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListGeoTuners().Handler(args);
+                    if (action == "list_geysers" || action == "geysers")
+                        return ListGeoTunerGeysers().Handler(args);
+                    if (action == "assign" || action == "set")
+                        return AssignGeoTuner().Handler(args);
+                    return CallToolResult.Error("action must be list, list_geysers, or assign");
+                }
+            };
+        }
+
         public static McpTool ListGeoTuners()
         {
             return new McpTool
             {
                 Name = "geo_tuners_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "geotuners_list", "geo_tuner_assignments_list" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
-                Description = "列出 GeoTuner 建筑、当前/未来目标喷泉和调谐分配状态",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=geo_tuner action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、喷泉名或喷泉类型筛选", Required = false },
@@ -64,12 +92,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "geo_tuner_geysers_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "geotuner_geysers_list", "geotuner_targets_list" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
-                Description = "列出 GeoTuner 可选择的喷泉目标，包括研究、可见、已分配数量和是否可分配",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=geo_tuner action=list_geysers",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按喷泉名、prefabId 或喷泉类型筛选", Required = false },
@@ -114,12 +143,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "geo_tuner_assign",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "geotuner_assign", "geo_tuner_set_geyser" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
-                Description = "设置 GeoTuner 未来目标喷泉或清空目标，等同于 GeoTuner 侧屏选择喷泉",
+                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=geo_tuner action=assign",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["geyserId"] = new McpToolParameter { Type = "integer", Description = "目标喷泉 InstanceID；clear=true 时忽略", Required = false },
@@ -340,6 +370,35 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> AreaLookupParams(Dictionary<string, McpToolParameter> extra)
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["id"] = new McpToolParameter { Type = "integer", Description = "目标 GeoTuner InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "目标 GeoTuner 格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "目标 GeoTuner 格子 Y", Required = false }
+            });
+            foreach (var item in extra)
+                parameters[item.Key] = item.Value;
+            return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> GeoTunerControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list、list_geysers 或 assign", Required = true, EnumValues = new List<string> { "list", "list_geysers", "assign" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list/list_geysers 时按建筑、喷泉或类型筛选", Required = false },
+                ["includeUnstudied"] = new McpToolParameter { Type = "boolean", Description = "action=list_geysers 时是否包含可见但未研究喷泉，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list/list_geysers 时最多返回数量，默认 100，最大 500", Required = false },
+                ["geyserId"] = new McpToolParameter { Type = "integer", Description = "action=assign 时的目标喷泉 InstanceID；clear=true 时忽略", Required = false },
+                ["geyserX"] = new McpToolParameter { Type = "integer", Description = "action=assign 时的目标喷泉格子 X；geyserId 为空时可用坐标定位", Required = false },
+                ["geyserY"] = new McpToolParameter { Type = "integer", Description = "action=assign 时的目标喷泉格子 Y；geyserId 为空时可用坐标定位", Required = false },
+                ["clear"] = new McpToolParameter { Type = "boolean", Description = "action=assign 时 true 表示选择 Nothing/清空未来目标", Required = false },
+                ["force"] = new McpToolParameter { Type = "boolean", Description = "action=assign 时跳过未研究和 5 台上限检查；默认 false", Required = false }
+            });
         }
 
         private static bool HasLookupInput(JObject args)

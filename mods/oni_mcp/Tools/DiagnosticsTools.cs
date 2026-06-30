@@ -17,7 +17,8 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "read",
                 Risk = "none",
-                Description = "汇总殖民地生存诊断：食物、氧气、床位、厕所、压力、建筑运行状态和建议",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=diagnostics",
                 Handler = args =>
                 {
                     if (Game.Instance == null)
@@ -37,7 +38,8 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "read",
                 Risk = "none",
-                Description = "返回当前殖民地诊断告警列表，适合代理快速决定下一步行动",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=alerts",
                 Handler = args =>
                 {
                     var diagnostics = BuildDiagnostics();
@@ -51,12 +53,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "colony_diagnostic_settings_list",
+                Hidden = true,
                 Group = "colony",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "diagnostic_settings_list", "all_diagnostics_settings_list" },
                 Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria" },
-                Description = "读取 AllDiagnosticsScreen 诊断显示模式、子条件启用状态和 Debug 通知禁用状态",
+                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=list_settings",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
@@ -93,12 +96,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "colony_diagnostic_settings_set",
+                Hidden = true,
                 Group = "colony",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "set_diagnostic_settings", "diagnostic_settings_set", "all_diagnostics_settings_set" },
                 Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria" },
-                Description = "设置 AllDiagnosticsScreen 诊断显示模式、子条件启用状态或 Debug 通知禁用状态；需 confirm=true",
+                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=set_settings；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["diagnosticId"] = new McpToolParameter { Type = "string", Description = "诊断 ID；修改 displaySetting 或 criteriaId 时必填", Required = false },
@@ -175,12 +179,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "colony_auto_disinfect_set",
+                Hidden = true,
                 Group = "colony",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "auto_disinfect_set", "global_auto_disinfect_set", "disable_auto_disinfect_global" },
                 Tags = new List<string> { "auto-disinfect", "disinfect", "global", "care", "消毒", "全局", "禁用消毒" },
-                Description = "设置全局自动消毒策略；disabled=true 会关闭现有和新出现对象的 AutoDisinfectable，避免逐对象 user-menu 批量调用",
+                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=set_auto_disinfect；disabled=true 会关闭现有和新出现对象的 AutoDisinfectable",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["disabled"] = new McpToolParameter { Type = "boolean", Description = "true=全局禁用自动消毒；false=允许游戏默认自动消毒行为", Required = true },
@@ -208,6 +213,50 @@ namespace OniMcp.Tools
                             ? "Global auto-disinfect is disabled. New AutoDisinfectable objects will be forced off by the MCP policy patch."
                             : "Global auto-disinfect policy is off; existing object states are not force-enabled."
                     }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ControlDiagnostics()
+        {
+            return new McpTool
+            {
+                Name = "diagnostic_control",
+                Group = "colony",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "colony_diagnostic_control", "diagnostic_settings_control" },
+                Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria", "auto-disinfect" },
+                Description = "殖民地诊断聚合工具：action=diagnostics 读取诊断汇总；action=alerts 读取告警；action=list_settings 读取诊断设置；action=set_settings 修改诊断/子条件/Debug 通知；action=set_auto_disinfect 设置全局自动消毒策略",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "diagnostics、alerts、list_settings、set_settings 或 set_auto_disinfect", Required = true, EnumValues = new List<string> { "diagnostics", "alerts", "list_settings", "set_settings", "set_auto_disinfect" } },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "action=list_settings/set_settings 时的世界 ID，默认当前激活世界", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list_settings 时按诊断 id/name 或子条件 id/name 过滤", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list_settings 时最多返回诊断数量，默认 100，最大 300", Required = false },
+                    ["diagnosticId"] = new McpToolParameter { Type = "string", Description = "action=set_settings 时诊断 ID；修改 displaySetting 或 criteriaId 时必填", Required = false },
+                    ["displaySetting"] = new McpToolParameter { Type = "string", Description = "action=set_settings 时显示模式：always、alert_only、never", Required = false, EnumValues = new List<string> { "always", "alert_only", "never" } },
+                    ["criteriaId"] = new McpToolParameter { Type = "string", Description = "action=set_settings 时子条件 ID；传 criteriaEnabled 时必填", Required = false },
+                    ["criteriaEnabled"] = new McpToolParameter { Type = "boolean", Description = "action=set_settings 时是否启用指定子条件", Required = false },
+                    ["debugNotificationsDisabled"] = new McpToolParameter { Type = "boolean", Description = "action=set_settings 时是否禁用 Debug 通知", Required = false },
+                    ["disabled"] = new McpToolParameter { Type = "boolean", Description = "action=set_auto_disinfect 时 true=全局禁用自动消毒；false=允许游戏默认自动消毒行为", Required = false },
+                    ["applyNow"] = new McpToolParameter { Type = "boolean", Description = "action=set_auto_disinfect 时是否立即同步现有对象，默认 true", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set_settings/set_auto_disinfect 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "diagnostics" || action == "summary")
+                        return GetColonyDiagnostics().Handler(args);
+                    if (action == "alerts")
+                        return GetColonyAlerts().Handler(args);
+                    if (action == "list_settings" || action == "list")
+                        return ListDiagnosticSettings().Handler(args);
+                    if (action == "set_settings" || action == "set")
+                        return SetDiagnosticSettings().Handler(args);
+                    if (action == "set_auto_disinfect" || action == "auto_disinfect")
+                        return SetGlobalAutoDisinfect().Handler(args);
+                    return CallToolResult.Error("action must be diagnostics, alerts, list_settings, set_settings, or set_auto_disinfect");
                 }
             };
         }

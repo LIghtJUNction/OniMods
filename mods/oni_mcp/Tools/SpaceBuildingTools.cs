@@ -11,17 +11,98 @@ namespace OniMcp.Tools
 {
     public static class SpaceBuildingTools
     {
+        public static McpTool ControlSpaceBuilding()
+        {
+            return new McpTool
+            {
+                Name = "space_building_control",
+                Group = "automation",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "space_side_building_control" },
+                Tags = new List<string> { "automation", "space", "rocket", "sensor", "railgun", "side-screen" },
+                Description = "航天建筑侧屏聚合工具：kind=comet_detector/cluster_location_sensor/railgun，action 使用对应旧 control 的动作。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "航天建筑类型：comet_detector、cluster_location_sensor、railgun", Required = true, EnumValues = new List<string> { "comet_detector", "cluster_location_sensor", "railgun" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：list、set_target、set、set_launch_mass", Required = true },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "目标建筑 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标建筑或区域 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标建筑或区域 Y", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "区域左下 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "区域左下 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "区域右上 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "区域右上 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按名称、prefabId 或状态筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量", Required = false },
+                    ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可选项", Required = false },
+                    ["targetType"] = new McpToolParameter { Type = "string", Description = "kind=comet_detector action=set_target 时的目标类型", Required = false },
+                    ["rocketId"] = new McpToolParameter { Type = "integer", Description = "kind=comet_detector targetType=rocket 时的火箭 id", Required = false },
+                    ["rocketName"] = new McpToolParameter { Type = "string", Description = "kind=comet_detector targetType=rocket 时的火箭名", Required = false },
+                    ["target"] = new McpToolParameter { Type = "string", Description = "kind=cluster_location_sensor action=set 时为 space 或 location", Required = false },
+                    ["q"] = new McpToolParameter { Type = "integer", Description = "kind=cluster_location_sensor target=location 时的 q 坐标", Required = false },
+                    ["r"] = new McpToolParameter { Type = "integer", Description = "kind=cluster_location_sensor target=location 时的 r 坐标", Required = false },
+                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "kind=cluster_location_sensor action=set 时是否启用目标", Required = false },
+                    ["massKg"] = new McpToolParameter { Type = "number", Description = "kind=railgun action=set_launch_mass 时的发射质量 kg", Required = false }
+                },
+                Handler = args =>
+                {
+                    string kind = (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (kind)
+                    {
+                        case "comet_detector":
+                        case "space_scanner":
+                            return ControlCometDetector().Handler(args);
+                        case "cluster_location_sensor":
+                        case "cluster_location":
+                            return ControlClusterLocationSensor().Handler(args);
+                        case "railgun":
+                            return ControlRailGun().Handler(args);
+                        default:
+                            return CallToolResult.Error("kind must be comet_detector, cluster_location_sensor, or railgun");
+                    }
+                }
+            };
+        }
+
+        public static McpTool ControlCometDetector()
+        {
+            return new McpTool
+            {
+                Name = "comet_detector_control",
+                Group = "automation",
+                Mode = "write",
+                Risk = "medium",
+                Hidden = true,
+                Aliases = new List<string> { "space_scanner_control", "comet_detector_target_control" },
+                Tags = new List<string> { "automation", "space", "comet", "rocket", "sensor", "side-screen" },
+                Description = "彗星探测器聚合工具：action=list 查询探测目标；action=set_target 设置 meteor_shower、ballistic_object 或 rocket",
+                Parameters = CometDetectorControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListCometDetectors().Handler(args);
+                    if (action == "set_target" || action == "set")
+                        return SetCometDetectorTarget().Handler(args);
+                    return CallToolResult.Error("action must be list or set_target");
+                }
+            };
+        }
+
         public static McpTool ListCometDetectors()
         {
             return new McpTool
             {
                 Name = "comet_detectors_list",
+                Hidden = true,
                 Group = "automation",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "space_scanners_list", "comet_detector_targets_list" },
                 Tags = new List<string> { "automation", "space", "comet", "rocket", "sensor", "side-screen" },
-                Description = "列出 CometDetectorSideScreen 探测目标：流星、玩家发射物或指定火箭",
+                Description = "兼容旧工具：请改用 building_control domain=space_building kind=comet_detector action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、目标类型或火箭名筛选", Required = false },
@@ -64,12 +145,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "comet_detector_target_set",
+                Hidden = true,
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "space_scanner_target_set" },
                 Tags = new List<string> { "automation", "space", "comet", "rocket", "sensor", "side-screen" },
-                Description = "设置 CometDetectorSideScreen 探测目标。DLC 模式支持 meteor_shower、ballistic_object、rocket；基础版支持 meteor_shower 或 rocket",
+                Description = "兼容旧工具：请改用 building_control domain=space_building kind=comet_detector action=set_target。DLC 模式支持 meteor_shower、ballistic_object、rocket；基础版支持 meteor_shower 或 rocket",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["targetType"] = new McpToolParameter { Type = "string", Description = "meteor_shower、ballistic_object 或 rocket", Required = true, EnumValues = new List<string> { "meteor_shower", "ballistic_object", "rocket" } },
@@ -132,17 +214,43 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlClusterLocationSensor()
+        {
+            return new McpTool
+            {
+                Name = "cluster_location_sensor_control",
+                Group = "automation",
+                Mode = "write",
+                Risk = "medium",
+                Hidden = true,
+                Aliases = new List<string> { "cluster_location_filter_control" },
+                Tags = new List<string> { "automation", "space", "cluster", "location", "sensor", "side-screen" },
+                Description = "星图位置传感器聚合工具：action=list 查询过滤状态；action=set 设置空太空或指定星图坐标过滤开关",
+                Parameters = ClusterLocationSensorControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListClusterLocationSensors().Handler(args);
+                    if (action == "set")
+                        return SetClusterLocationSensor().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
+                }
+            };
+        }
+
         public static McpTool ListClusterLocationSensors()
         {
             return new McpTool
             {
                 Name = "cluster_location_sensors_list",
+                Hidden = true,
                 Group = "automation",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "cluster_location_filters_list" },
                 Tags = new List<string> { "automation", "space", "cluster", "location", "sensor", "side-screen" },
-                Description = "列出 LogicClusterLocationSensor 位置过滤设置，包括空太空和可见星体/POI",
+                Description = "兼容旧工具：请改用 building_control domain=space_building kind=cluster_location_sensor action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、星体名或坐标筛选", Required = false },
@@ -157,12 +265,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "cluster_location_sensor_set",
+                Hidden = true,
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "cluster_location_filter_set" },
                 Tags = new List<string> { "automation", "space", "cluster", "location", "sensor", "side-screen" },
-                Description = "设置 LogicClusterLocationSensor 的空太空或指定星图坐标过滤开关",
+                Description = "兼容旧工具：请改用 building_control domain=space_building kind=cluster_location_sensor action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["target"] = new McpToolParameter { Type = "string", Description = "space 或 location", Required = true, EnumValues = new List<string> { "space", "location" } },
@@ -207,17 +316,43 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlRailGun()
+        {
+            return new McpTool
+            {
+                Name = "railgun_control",
+                Group = "rockets",
+                Mode = "write",
+                Risk = "medium",
+                Hidden = true,
+                Aliases = new List<string> { "railgun_launch_mass_control" },
+                Tags = new List<string> { "space", "railgun", "launcher", "mass", "side-screen" },
+                Description = "轨道炮聚合工具：action=list 查询发射质量/库存/辐射粒子能量；action=set_launch_mass 设置发射质量",
+                Parameters = RailGunControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListRailGuns().Handler(args);
+                    if (action == "set_launch_mass" || action == "set")
+                        return SetRailGunLaunchMass().Handler(args);
+                    return CallToolResult.Error("action must be list or set_launch_mass");
+                }
+            };
+        }
+
         public static McpTool ListRailGuns()
         {
             return new McpTool
             {
                 Name = "railguns_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "railgun_launch_mass_list" },
                 Tags = new List<string> { "space", "railgun", "launcher", "mass", "side-screen" },
-                Description = "列出轨道炮发射质量、资源库存和辐射粒子能量状态",
+                Description = "兼容旧工具：请改用 building_control domain=space_building kind=railgun action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名或 prefabId 筛选", Required = false },
@@ -232,12 +367,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "railgun_launch_mass_set",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "railgun_mass_set" },
                 Tags = new List<string> { "space", "railgun", "launcher", "mass", "side-screen" },
-                Description = "设置 RailGunSideScreen 发射质量 slider/数字输入",
+                Description = "兼容旧工具：请改用 building_control domain=space_building kind=railgun action=set_launch_mass",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["massKg"] = new McpToolParameter { Type = "number", Description = "目标发射质量 kg，按轨道炮 min/max 夹取", Required = true }
@@ -565,6 +701,58 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> AreaLookupParams(Dictionary<string, McpToolParameter> extra)
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["id"] = new McpToolParameter { Type = "integer", Description = "目标建筑 InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "目标建筑格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "目标建筑格子 Y", Required = false }
+            });
+            foreach (var item in extra)
+                parameters[item.Key] = item.Value;
+            return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> CometDetectorControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_target", Required = true, EnumValues = new List<string> { "list", "set_target" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、目标类型或火箭名筛选", Required = false },
+                ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可选目标，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["targetType"] = new McpToolParameter { Type = "string", Description = "action=set_target 时为 meteor_shower、ballistic_object 或 rocket", Required = false, EnumValues = new List<string> { "meteor_shower", "ballistic_object", "rocket" } },
+                ["rocketId"] = new McpToolParameter { Type = "integer", Description = "action=set_target 且 targetType=rocket 时的 Clustercraft/Spacecraft 目标 id", Required = false },
+                ["rocketName"] = new McpToolParameter { Type = "string", Description = "action=set_target 且 targetType=rocket 时按火箭名定位", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> ClusterLocationSensorControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、星体名或坐标筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["target"] = new McpToolParameter { Type = "string", Description = "action=set 时为 space 或 location", Required = false, EnumValues = new List<string> { "space", "location" } },
+                ["q"] = new McpToolParameter { Type = "integer", Description = "action=set 且 target=location 时的星图 q 坐标", Required = false },
+                ["r"] = new McpToolParameter { Type = "integer", Description = "action=set 且 target=location 时的星图 r 坐标", Required = false },
+                ["enabled"] = new McpToolParameter { Type = "boolean", Description = "action=set 时是否启用该目标", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> RailGunControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_launch_mass", Required = true, EnumValues = new List<string> { "list", "set_launch_mass" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名或 prefabId 筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["massKg"] = new McpToolParameter { Type = "number", Description = "action=set_launch_mass 时的目标发射质量 kg，按轨道炮 min/max 夹取", Required = false }
+            });
         }
 
         private static bool HasRectInput(JObject args)

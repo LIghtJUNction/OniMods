@@ -19,9 +19,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "checkbox_list_group_controls_list", "quest_checklists_list", "side_screen_checklists_list" },
                 Tags = new List<string> { "controls", "side-screen", "checklist", "quest", "conditions", "read-only" },
-                Description = "列出实现 ICheckboxListGroupControl 的只读侧屏清单，例如故事任务、化石挖掘、地热设施和其它条件清单",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface kind=checklist action=list。列出实现 ICheckboxListGroupControl 的只读侧屏清单",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按对象、prefabId、标题、描述、条目或 tooltip 筛选", Required = false },

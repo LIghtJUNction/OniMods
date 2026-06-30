@@ -17,6 +17,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "management_screen_audit", "table_screen_audit" },
                 Tags = new List<string> { "coverage", "audit", "management", "screen", "ui", "tools", "resources" },
                 Description = "审计 ONI 管理菜单和 TableScreen/全屏管理界面与 MCP 工具/资源覆盖映射",
@@ -33,7 +34,7 @@ namespace OniMcp.Tools
                     string status = (args["status"]?.ToString() ?? "all").Trim().ToLowerInvariant();
                     string detail = (args["detail"]?.ToString() ?? "brief").Trim().ToLowerInvariant();
                     int limit = ToolUtil.ClampLimit(args, 80, 200);
-                    var toolNames = new HashSet<string>(OniToolRegistry.GetTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
+                    var toolNames = new HashSet<string>(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceNames = new HashSet<string>(
                         OniResourceRegistry.GetResourceInfos().Select(info => info.Name)
                             .Concat(OniResourceRegistry.GetResourceTemplateInfos().Select(info => info.Name)),
@@ -83,15 +84,15 @@ namespace OniMcp.Tools
                 "top_right_management_toggles",
                 "ManageVitals/ManageConsumables/ManagePriorities/ManageSchedule/ManageSkills/ManageResearch/ManageStarmap/ManageReport/ManageDatabase",
                 "Open, close and switch top-right management screens",
-                new[] { "ui_actions_list", "ui_management_open", "ui_action_trigger" },
-                new[] { "ui_actions_list" });
+                new[] { "game_control domain=ui uiDomain=action", "game_control domain=ui uiDomain=action action=open_management" },
+                new[] { "game_control domain=ui uiDomain=action" });
 
             yield return Covered(
                 "VitalsTableScreen",
                 "vitals",
                 "ManageVitals",
                 "Inspect duplicant stress, morale expectation, fullness, health and immunity; select/focus duplicant rows",
-                new[] { "dupes_detail", "dupes_attributes", "dupes_needs", "camera_focus_dupe", "ui_management_open" },
+                new[] { "dupes_control domain=info", "navigation_control domain=camera", "game_control domain=ui uiDomain=action action=open_management" },
                 new[] { "dupes_list" });
 
             yield return Covered(
@@ -99,47 +100,47 @@ namespace OniMcp.Tools
                 "consumables",
                 "ManageConsumables",
                 "Inspect and edit per-duplicant consumable food/medicine/battery permissions, including batch policies",
-                new[] { "diet_status", "diet_set", "diet_policy", "resources_food", "ui_management_open" },
-                new[] { "diet_status", "resources_food" });
+                new[] { "colony_control domain=management kind=diet", "resources_food", "game_control domain=ui uiDomain=action action=open_management" },
+                new[] { "colony_control domain=management kind=diet", "resources_food" });
 
             yield return Covered(
                 "JobsTableScreen",
                 "priorities",
                 "ManagePriorities",
                 "Inspect and edit per-duplicant personal ChoreGroup priorities",
-                new[] { "dupes_priorities_list", "dupes_priority_set", "dupes_priorities_batch_set", "ui_management_open" },
-                new[] { "dupes_priorities_list" });
+                new[] { "dupes_control domain=priority", "game_control domain=ui uiDomain=action action=open_management" },
+                new[] { "dupes_control domain=priority" });
 
             yield return Covered(
                 "JobsTableScreen",
                 "priority_settings",
                 "ManagePriorities",
                 "Toggle advanced personal priority mode and reset personal priorities using the same semantics as the screen's Reset button",
-                new[] { "dupes_priority_settings_get", "dupes_priority_settings_set", "ui_management_open" },
-                new[] { "dupes_priority_settings_get" });
+                new[] { "dupes_control domain=priority", "game_control domain=ui uiDomain=action action=open_management" },
+                new[] { "dupes_control domain=priority" });
 
             yield return Covered(
                 "ScheduleScreen",
                 "schedule",
                 "ManageSchedule",
                 "Create schedules, edit schedule blocks and assign duplicants to schedules",
-                new[] { "schedule_list", "schedule_create", "schedule_set_block", "schedule_assign_dupe", "schedule_optimize", "ui_management_open" },
-                new[] { "schedule_list" });
+                new[] { "colony_control domain=management kind=schedule", "game_control domain=ui uiDomain=action action=open_management" },
+                new[] { "colony_control domain=management kind=schedule" });
 
             yield return Covered(
                 "SkillsScreen",
                 "skills",
                 "ManageSkills",
                 "Inspect duplicant skill points, learn skills and choose hats from the skill screen",
-                new[] { "dupes_skills_list", "dupes_learn_skill", "dupes_hats_list", "dupes_hat_set", "ui_management_open" },
-                new[] { "dupes_skills_list", "dupes_hats_list" });
+                new[] { "dupes_control domain=skill", "dupes_control domain=hat", "game_control domain=ui uiDomain=action action=open_management" },
+                new[] { "dupes_control domain=skill", "dupes_control domain=hat" });
 
             yield return Covered(
                 "ResearchScreen",
                 "research",
                 "ManageResearch",
                 "Inspect research tree, search technologies and set/clear active research queue target",
-                new[] { "research_status", "research_list", "research_set", "research_clear", "ui_management_open" },
+                new[] { "colony_control domain=management kind=research action=status", "colony_control domain=management kind=research", "game_control domain=ui uiDomain=action action=open_management" },
                 new[] { "research_status" });
 
             yield return Covered(
@@ -147,23 +148,23 @@ namespace OniMcp.Tools
                 "starmap",
                 "ManageStarmap",
                 "Inspect base-game starmap, rocket state, destinations and telescope analysis targets",
-                new[] { "ui_management_open", "rockets_status", "space_destinations_list", "rockets_set_destination", "starmap_analysis_targets_list", "starmap_analysis_target_set" },
-                new[] { "rockets_status", "starmap_analysis_targets_list" });
+                new[] { "game_control domain=ui uiDomain=action action=open_management", "building_control domain=rocket rocketDomain=ops", "building_control domain=space_story" },
+                new[] { "building_control domain=rocket rocketDomain=ops", "starmap_analysis_targets_list" });
 
             yield return Covered(
                 "ClusterMapScreen",
                 "starmap_cluster",
                 "ManageStarmap",
                 "Inspect Spaced Out cluster map, switch active world and set rocket destinations/analysis targets",
-                new[] { "ui_management_open", "world_list", "camera_set_active_world", "rockets_status", "space_destinations_list", "rockets_set_destination", "starmap_analysis_targets_list", "starmap_analysis_target_set" },
-                new[] { "world_list", "rockets_status", "starmap_analysis_targets_list" });
+                new[] { "game_control domain=ui uiDomain=action action=open_management", "colony_control domain=read action=worlds", "navigation_control domain=camera", "building_control domain=rocket rocketDomain=ops", "building_control domain=space_story" },
+                new[] { "colony_control domain=read action=worlds", "building_control domain=rocket rocketDomain=ops", "starmap_analysis_targets_list" });
 
             yield return Covered(
                 "ReportScreen",
                 "report",
                 "ManageReport",
                 "Open and inspect current or historical colony reports",
-                new[] { "colony_report", "ui_management_open" },
+                new[] { "colony_report", "game_control domain=ui uiDomain=action action=open_management" },
                 new[] { "colony_report" });
 
             yield return Covered(
@@ -171,7 +172,7 @@ namespace OniMcp.Tools
                 "database_codex",
                 "ManageDatabase",
                 "Open codex/database entries and query ONI database content by id/name/category",
-                new[] { "database_query", "ui_management_open" },
+                new[] { "read_control domain=knowledge kind=database action=query", "game_control domain=ui uiDomain=action action=open_management" },
                 new[] { "tools_read_resource" });
         }
 

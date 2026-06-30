@@ -27,7 +27,8 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "spacecraft_list", "rockets_discover", "spacecraft_discover" },
-                Description = "列出 Spaced Out 集群火箭和基础版航天器，包含飞行状态、当前位置、目的地和内部世界",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=list",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["includeBaseGame"] = new McpToolParameter { Type = "boolean", Description = "是否包含基础版 SpacecraftManager 航天器，默认 true", Required = false }
@@ -72,7 +73,8 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "spacecraft_status" },
-                Description = "汇总 Spaced Out 火箭和基础版航天器状态，突出飞行中、待发射、可发射和任务中对象",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=status",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["includeDetail"] = new McpToolParameter { Type = "boolean", Description = "是否包含每艘火箭的详细模块信息，默认 false", Required = false },
@@ -124,7 +126,8 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "spacecraft_detail" },
-                Description = "获取指定 Spaced Out 火箭详情，包括燃料、航程、路径、内部世界和发射准备状态",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=detail",
+                Hidden = true,
                 Parameters = RocketLookupParams(),
                 Handler = args =>
                 {
@@ -142,11 +145,12 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "space_destinations_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "cluster_entities_list" },
-                Description = "列出星图实体和基础版航天目的地，可用于选择 rockets_set_destination 的 q/r 或 worldId",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=list_destinations。列出星图实体和基础版航天目的地，可用于选择 set_destination 的 q/r 或 worldId",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只返回星图可见实体，默认 true", Required = false },
@@ -184,12 +188,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "launch_pads_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "rocket_launch_pads_list", "landing_pads_list" },
                 Tags = new List<string> { "rocket", "launch-pad", "landing", "side-screen" },
-                Description = "列出 LaunchPadSideScreen 发射台状态、已停靠火箭和可降落/待降落火箭",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=list_launch_pads。列出 LaunchPadSideScreen 发射台状态、已停靠火箭和可降落/待降落火箭",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按发射台名、prefabId、世界名或等待降落火箭名筛选", Required = false },
@@ -227,7 +232,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "rocket_repeat_destination_set", "rocket_roundtrip_set" },
                 Tags = new List<string> { "rocket", "destination", "round-trip", "side-screen" },
-                Description = "设置 ClusterDestinationSideScreen 往返/单程按钮状态，需要 confirm=true",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=set_round_trip",
+                Hidden = true,
                 Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["repeat"] = new McpToolParameter { Type = "boolean", Description = "true=往返，false=单程", Required = true },
@@ -258,6 +264,47 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlRocketFlight()
+        {
+            return new McpTool
+            {
+                Name = "rocket_flight_control",
+                Group = "rockets",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "rocket_destination_side_control", "rocket_landing_control" },
+                Tags = new List<string> { "rocket", "destination", "landing", "round-trip", "side-screen" },
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=set_round_trip/set_landing_pad",
+                Hidden = true,
+                Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["operation"] = new McpToolParameter { Type = "string", Description = "set_round_trip 或 set_landing_pad", Required = true, EnumValues = new List<string> { "set_round_trip", "set_landing_pad" } },
+                    ["repeat"] = new McpToolParameter { Type = "boolean", Description = "operation=set_round_trip 时：true=往返，false=单程", Required = false },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "operation=set_landing_pad 时：land 或 cancel", Required = false, EnumValues = new List<string> { "land", "cancel" } },
+                    ["padId"] = new McpToolParameter { Type = "integer", Description = "operation=set_landing_pad action=land 时目标 LaunchPad InstanceID", Required = false },
+                    ["padX"] = new McpToolParameter { Type = "integer", Description = "operation=set_landing_pad action=land 时目标 LaunchPad 格子 X", Required = false },
+                    ["padY"] = new McpToolParameter { Type = "integer", Description = "operation=set_landing_pad action=land 时目标 LaunchPad 格子 Y", Required = false },
+                    ["padWorldId"] = new McpToolParameter { Type = "integer", Description = "operation=set_landing_pad 按坐标查找平台时的世界 ID", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认修改，必须为 true", Required = true }
+                }),
+                Handler = args =>
+                {
+                    string operation = (args["operation"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (operation)
+                    {
+                        case "set_round_trip":
+                        case "round_trip":
+                            return SetRocketRoundTrip().Handler(args);
+                        case "set_landing_pad":
+                        case "landing_pad":
+                            return SetRocketLandingPad().Handler(args);
+                        default:
+                            return CallToolResult.Error("operation must be set_round_trip or set_landing_pad");
+                    }
+                }
+            };
+        }
+
         public static McpTool SetRocketLandingPad()
         {
             return new McpTool
@@ -268,7 +315,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "rocket_land_at_pad", "rocket_landing_cancel" },
                 Tags = new List<string> { "rocket", "launch-pad", "landing", "side-screen" },
-                Description = "执行 LaunchPadSideScreen 降落/取消降落操作。action=land 时指定 padId 或 padX/padY；action=cancel 清除当前降落请求。需要 confirm=true",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=set_landing_pad landingAction=land/cancel",
+                Hidden = true,
                 Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "land 或 cancel", Required = true, EnumValues = new List<string> { "land", "cancel" } },
@@ -327,7 +375,8 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "execute",
                 Risk = "medium",
-                Description = "设置 Spaced Out 火箭星图目的地。可传 q/r 星图坐标，或传 worldId 自动定位对应小行星，需要 confirm=true",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=set_destination",
+                Hidden = true,
                 Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["q"] = new McpToolParameter { Type = "integer", Description = "目标星图轴坐标 q；使用 worldId 时可省略", Required = false },
@@ -377,6 +426,81 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlRocketOps()
+        {
+            return new McpTool
+            {
+                Name = "rocket_ops_control",
+                Group = "rockets",
+                Mode = "execute",
+                Risk = "medium",
+                Aliases = new List<string> { "rocket_control", "rocket_operation_control", "rocket_launch_control" },
+                Tags = new List<string> { "rocket", "destination", "launch", "landing", "round-trip", "side-screen" },
+                Description = "火箭操作组合工具。action=list/status/detail/list_destinations/list_launch_pads/set_destination/request_launch/cancel_launch/set_round_trip/set_landing_pad。",
+                Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、status、detail、list_destinations、list_launch_pads、set_destination、request_launch、cancel_launch、set_round_trip、set_landing_pad", Required = true, EnumValues = new List<string> { "list", "status", "detail", "list_destinations", "list_launch_pads", "set_destination", "request_launch", "cancel_launch", "set_round_trip", "set_landing_pad" } },
+                    ["includeDetail"] = new McpToolParameter { Type = "boolean", Description = "action=status 时是否包含每艘火箭的详细模块信息，默认 false", Required = false },
+                    ["includeBaseGame"] = new McpToolParameter { Type = "boolean", Description = "action=list/status 时是否包含基础版航天器，默认 true", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "action=list_destinations 时是否只返回星图可见实体，默认 true", Required = false },
+                    ["layer"] = new McpToolParameter { Type = "string", Description = "action=list_destinations 时按星图层过滤，例如 Asteroid、Craft、POI", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list_launch_pads 时按发射台名、prefabId、世界名或等待降落火箭名筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list_destinations/list_launch_pads 时最多返回数量", Required = false },
+                    ["q"] = new McpToolParameter { Type = "integer", Description = "action=set_destination 时目标星图轴坐标 q；使用 worldId 时可省略", Required = false },
+                    ["r"] = new McpToolParameter { Type = "integer", Description = "action=set_destination 时目标星图轴坐标 r；使用 worldId 时可省略", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "action=set_destination 时目标小行星世界 ID；提供后自动解析其星图位置", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "action=set_destination 时跳过 CanTravelToCell 预检查，默认 false", Required = false },
+                    ["automated"] = new McpToolParameter { Type = "boolean", Description = "action=request_launch 时是否作为自动发射请求，默认 false", Required = false },
+                    ["repeat"] = new McpToolParameter { Type = "boolean", Description = "action=set_round_trip 时 true=往返，false=单程", Required = false },
+                    ["landingAction"] = new McpToolParameter { Type = "string", Description = "action=set_landing_pad 时：land 或 cancel", Required = false, EnumValues = new List<string> { "land", "cancel" } },
+                    ["padId"] = new McpToolParameter { Type = "integer", Description = "action=set_landing_pad landingAction=land 时目标 LaunchPad InstanceID", Required = false },
+                    ["padX"] = new McpToolParameter { Type = "integer", Description = "action=set_landing_pad landingAction=land 时目标 LaunchPad 格子 X", Required = false },
+                    ["padY"] = new McpToolParameter { Type = "integer", Description = "action=set_landing_pad landingAction=land 时目标 LaunchPad 格子 Y", Required = false },
+                    ["padWorldId"] = new McpToolParameter { Type = "integer", Description = "action=set_landing_pad 按坐标查找平台时的世界 ID", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认修改，写操作必须为 true", Required = true }
+                }),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? args["operation"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "list":
+                            return ListRockets().Handler(args);
+                        case "status":
+                            return GetRocketStatus().Handler(args);
+                        case "detail":
+                            return GetRocketDetail().Handler(args);
+                        case "list_destinations":
+                        case "destinations":
+                            return ListSpaceDestinations().Handler(args);
+                        case "list_launch_pads":
+                        case "launch_pads":
+                        case "pads":
+                            return ListLaunchPads().Handler(args);
+                        case "set_destination":
+                        case "destination":
+                            return SetRocketDestination().Handler(args);
+                        case "request_launch":
+                        case "launch":
+                            return RequestRocketLaunch().Handler(args);
+                        case "cancel_launch":
+                        case "cancel":
+                            return CancelRocketLaunch().Handler(args);
+                        case "set_round_trip":
+                        case "round_trip":
+                            return SetRocketRoundTrip().Handler(args);
+                        case "set_landing_pad":
+                        case "landing_pad":
+                            var forwarded = (JObject)args.DeepClone();
+                            forwarded["action"] = args["landingAction"] ?? args["landing_action"] ?? args["padAction"] ?? args["pad_action"];
+                            return SetRocketLandingPad().Handler(forwarded);
+                        default:
+                            return CallToolResult.Error("action must be list, status, detail, list_destinations, list_launch_pads, set_destination, request_launch, cancel_launch, set_round_trip, or set_landing_pad");
+                    }
+                }
+            };
+        }
+
         public static McpTool RequestRocketLaunch()
         {
             return new McpTool
@@ -385,7 +509,8 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "execute",
                 Risk = "medium",
-                Description = "请求 Spaced Out 火箭发射，需要目的地已设置且 confirm=true",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=request_launch",
+                Hidden = true,
                 Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["automated"] = new McpToolParameter { Type = "boolean", Description = "是否作为自动发射请求，默认 false", Required = false },
@@ -423,7 +548,8 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "execute",
                 Risk = "medium",
-                Description = "取消 Spaced Out 火箭发射请求，需要 confirm=true",
+                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=cancel_launch",
+                Hidden = true,
                 Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认取消发射，必须为 true", Required = true }

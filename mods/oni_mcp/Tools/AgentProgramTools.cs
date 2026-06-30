@@ -463,7 +463,8 @@ namespace OniMcp.Tools
                 var pointerArgs = new JObject();
                 if (args["agentId"] != null)
                     pointerArgs["agentId"] = args["agentId"].DeepClone();
-                var pointerResult = OniToolRegistry.CallTool("agent_pointer_get", pointerArgs);
+                pointerArgs["action"] = "get";
+                var pointerResult = OniToolRegistry.CallTool("navigation_control", pointerArgs);
                 if (pointerResult == null || pointerResult.IsError)
                     throw new AgentProgramException("readCell requires x/y or an aimed pointer");
                 var pointerJson = TryParseJson(ResultText(pointerResult)) as JObject;
@@ -480,6 +481,8 @@ namespace OniMcp.Tools
                 toolName = null;
                 args = new JObject();
                 saveAs = stmt["saveAs"]?.ToString() ?? stmt["as"]?.ToString();
+                string inferredAction = null;
+                string inferredDomain = null;
 
                 string op = Op(stmt);
                 if (op == "call")
@@ -492,32 +495,54 @@ namespace OniMcp.Tools
                 }
 
                 if (op == "jump" || op == "move")
-                    toolName = "agent_pointer_jump";
+                {
+                    toolName = "navigation_control";
+                    inferredAction = "jump";
+                }
                 else if (op == "nudge")
-                    toolName = "agent_pointer_nudge";
+                {
+                    toolName = "navigation_control";
+                    inferredAction = "nudge";
+                }
                 else if (op == "select")
-                    toolName = "agent_pointer_select_tool";
+                {
+                    toolName = "navigation_control";
+                    inferredAction = "select_tool";
+                }
                 else if (op == "click")
-                    toolName = "agent_pointer_left_click";
+                {
+                    toolName = "navigation_control";
+                    inferredAction = "left_click";
+                }
                 else if (op == "drag" || op == "hold")
-                    toolName = "agent_pointer_hold_left";
+                {
+                    toolName = "navigation_control";
+                    inferredAction = "hold_left";
+                }
                 else if (op == "say")
-                    toolName = "agent_pointer_say";
+                {
+                    toolName = "navigation_control";
+                    inferredAction = "say";
+                }
                 else if (op == "readpointer")
                 {
-                    toolName = "agent_pointer_get";
+                    toolName = "navigation_control";
+                    inferredAction = "get";
                     if (string.IsNullOrWhiteSpace(saveAs))
                         saveAs = "pointer";
                 }
                 else if (op == "readmouse")
                 {
-                    toolName = "agent_pointer_user_mouse_get";
+                    toolName = "navigation_control";
+                    inferredAction = "user_mouse";
                     if (string.IsNullOrWhiteSpace(saveAs))
                         saveAs = "mouse";
                 }
                 else if (op == "readcell")
                 {
-                    toolName = "world_cell_info";
+                    toolName = "read_control";
+                    inferredDomain = "world";
+                    inferredAction = "cell_info";
                     if (string.IsNullOrWhiteSpace(saveAs))
                         saveAs = "cell";
                 }
@@ -527,6 +552,10 @@ namespace OniMcp.Tools
                 }
 
                 args = InlineArguments(stmt);
+                if (inferredDomain != null && args["domain"] == null)
+                    args["domain"] = inferredDomain;
+                if (inferredAction != null && args["action"] == null)
+                    args["action"] = inferredAction;
                 return true;
             }
 

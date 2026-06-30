@@ -16,12 +16,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "rocket_flight_utilities_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "rocket_emptyable_cargo_list", "module_flight_utility_list" },
                 Tags = new List<string> { "rocket", "module", "cargo", "deploy", "jettison", "side-screen" },
-                Description = "列出 ModuleFlightUtilitySideScreen 中可清空/投放的火箭模块、自动投放、目标和复制人选择状态",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=flight_utility action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["rocketId"] = new McpToolParameter { Type = "integer", Description = "可选火箭 InstanceID", Required = false },
@@ -66,10 +67,10 @@ namespace OniMcp.Tools
                 Risk = "high",
                 Aliases = new List<string> { "rocket_emptyable_cargo_control", "module_flight_utility_control" },
                 Tags = new List<string> { "rocket", "module", "cargo", "deploy", "jettison", "side-screen" },
-                Description = "执行 ModuleFlightUtilitySideScreen 操作：empty、set_auto_deploy、set_target、clear_target、choose_duplicant、clear_duplicant。empty 和目标变更需 confirm=true",
+                Description = "ModuleFlightUtilitySideScreen 聚合工具：action=list 查询；empty、set_auto_deploy、set_target、clear_target、choose_duplicant、clear_duplicant 执行控制。empty 和目标变更需 confirm=true",
                 Parameters = UtilityLookupParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "empty、set_auto_deploy、set_target、clear_target、choose_duplicant、clear_duplicant", Required = true, EnumValues = new List<string> { "empty", "set_auto_deploy", "set_target", "clear_target", "choose_duplicant", "clear_duplicant" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、empty、set_auto_deploy、set_target、clear_target、choose_duplicant、clear_duplicant", Required = true, EnumValues = new List<string> { "list", "empty", "set_auto_deploy", "set_target", "clear_target", "choose_duplicant", "clear_duplicant" } },
                     ["autoDeploy"] = new McpToolParameter { Type = "boolean", Description = "action=set_auto_deploy 时的目标值", Required = false },
                     ["q"] = new McpToolParameter { Type = "integer", Description = "action=set_target 时的星图 q 坐标", Required = false },
                     ["r"] = new McpToolParameter { Type = "integer", Description = "action=set_target 时的星图 r 坐标", Required = false },
@@ -79,11 +80,14 @@ namespace OniMcp.Tools
                 }),
                 Handler = args =>
                 {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListFlightUtilities().Handler(args);
+
                     var found = FindUtilityModule(args);
                     if (found.module == null)
                         return CallToolResult.Error("Target IEmptyableCargo module not found");
 
-                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
                     var before = UtilityInfo(found.craft, found.module, includeDupes: false);
                     bool confirm = ToolUtil.GetBool(args, "confirm", false);
 
@@ -161,12 +165,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "rocket_restrictions_list",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "rocket_control_station_restrictions_list" },
                 Tags = new List<string> { "rocket", "control-station", "restriction", "side-screen" },
-                Description = "列出 RocketRestrictionSideScreen 火箭控制台地面/太空使用限制状态",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=restriction action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId 或火箭名筛选", Required = false },
@@ -205,12 +210,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "rocket_restriction_set",
+                Hidden = true,
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "rocket_control_station_restriction_set" },
                 Tags = new List<string> { "rocket", "control-station", "restriction", "side-screen" },
-                Description = "设置 RocketRestrictionSideScreen：none=不限制，space=地面禁用/仅太空可用。自动化接入时按钮由逻辑控制",
+                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=restriction action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["mode"] = new McpToolParameter { Type = "string", Description = "none 或 space", Required = true, EnumValues = new List<string> { "none", "space" } },
@@ -239,6 +245,30 @@ namespace OniMcp.Tools
                         ["before"] = before,
                         ["station"] = RestrictionInfo(station)
                     });
+                }
+            };
+        }
+
+        public static McpTool ControlRocketRestriction()
+        {
+            return new McpTool
+            {
+                Name = "rocket_restriction_control",
+                Group = "rockets",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "rocket_control_station_restriction_control" },
+                Tags = new List<string> { "rocket", "control-station", "restriction", "side-screen" },
+                Description = "火箭控制台限制聚合工具：action=list 查询地面/太空使用限制；action=set 设置 none/space",
+                Parameters = RocketRestrictionControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListRocketRestrictions().Handler(args);
+                    if (action == "set")
+                        return SetRocketRestriction().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
                 }
             };
         }
@@ -495,6 +525,22 @@ namespace OniMcp.Tools
             };
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
+            return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> RocketRestrictionControlParams()
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑、prefabId 或火箭名筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["id"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标建筑 InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标建筑格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标建筑格子 Y", Required = false },
+                ["mode"] = new McpToolParameter { Type = "string", Description = "action=set 时为 none 或 space", Required = false, EnumValues = new List<string> { "none", "space" } },
+                ["force"] = new McpToolParameter { Type = "boolean", Description = "action=set 时接入逻辑自动化仍强制写入保存值，默认 false", Required = false }
+            });
             return parameters;
         }
 

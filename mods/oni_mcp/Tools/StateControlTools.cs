@@ -16,12 +16,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "state_controls_list",
+                Hidden = true,
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "numeric_checkbox_controls_list", "capacity_counter_controls_list" },
                 Tags = new List<string> { "controls", "side-screen", "capacity", "checkbox", "counter", "time-range" },
-                Description = "列出数值/状态型侧屏控件：容量上限、单 checkbox、计数器、时间范围传感器",
+                Description = "兼容入口：请优先使用 game_control domain=state action=list。列出数值/状态型侧屏控件：容量上限、单 checkbox、计数器、时间范围传感器",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["kind"] = new McpToolParameter { Type = "string", Description = "过滤类型：any、capacity、checkbox、counter、time_range，默认 any", Required = false, EnumValues = new List<string> { "any", "capacity", "checkbox", "counter", "time_range" } },
@@ -80,39 +81,81 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "user_capacity_set", "storage_capacity_set" },
                 Tags = new List<string> { "controls", "capacity", "side-screen", "storage" },
-                Description = "设置实现 IUserControlledCapacity 的玩家容量上限侧屏控件",
+                Description = "兼容入口：请优先使用 game_control domain=state action=set kind=capacity",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["capacity"] = new McpToolParameter { Type = "number", Description = "目标容量，按目标 min/max 夹取；WholeValues 目标会取整", Required = true }
                 }),
+                Handler = args => SetStateControl(args, "capacity")
+            };
+        }
+
+        public static McpTool SetStateControl()
+        {
+            return new McpTool
+            {
+                Name = "state_control_set",
+                Hidden = true,
+                Group = "controls",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "state_side_control_set", "numeric_checkbox_control_set", "capacity_counter_control_set" },
+                Tags = new List<string> { "controls", "side-screen", "capacity", "checkbox", "counter", "time-range" },
+                Description = "兼容入口：请优先使用 game_control domain=state action=set。用 kind 参数选择 capacity、checkbox、counter 或 time_range。",
+                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "控件类型：capacity、checkbox、counter、time_range", Required = true, EnumValues = new List<string> { "capacity", "checkbox", "counter", "time_range" } },
+                    ["capacity"] = new McpToolParameter { Type = "number", Description = "kind=capacity 时的目标容量，按目标 min/max 夹取；WholeValues 目标会取整", Required = false },
+                    ["value"] = new McpToolParameter { Type = "boolean", Description = "kind=checkbox 时的目标值", Required = false },
+                    ["maxCount"] = new McpToolParameter { Type = "integer", Description = "kind=counter 时的目标最大计数 1-10；留空不修改", Required = false },
+                    ["advancedMode"] = new McpToolParameter { Type = "boolean", Description = "kind=counter 时是否启用高级模式；留空不修改", Required = false },
+                    ["reset"] = new McpToolParameter { Type = "boolean", Description = "kind=counter 时是否执行 Reset Counter，默认 false", Required = false },
+                    ["start"] = new McpToolParameter { Type = "number", Description = "kind=time_range 时的开始时间，周期百分比 0-1；留空不修改", Required = false },
+                    ["duration"] = new McpToolParameter { Type = "number", Description = "kind=time_range 时的持续时间，周期百分比 0-1；留空不修改", Required = false }
+                }),
+                Handler = args => SetStateControl(args, null)
+            };
+        }
+
+        public static McpTool ControlState()
+        {
+            return new McpTool
+            {
+                Name = "state_control",
+                Group = "controls",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "state_side_control", "numeric_checkbox_control", "capacity_counter_control" },
+                Tags = new List<string> { "controls", "side-screen", "capacity", "checkbox", "counter", "time-range" },
+                Description = "数值/状态型侧屏聚合工具：action=list/set；读取或设置容量上限、checkbox、计数器和时间范围传感器。",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标对象 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标格子 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标格子 Y", Required = false },
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "action=list 时为 any/capacity/checkbox/counter/time_range；action=set 时为 capacity/checkbox/counter/time_range", Required = false, EnumValues = new List<string> { "any", "capacity", "checkbox", "counter", "time_range" } },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、checkbox 文案或单位筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["capacity"] = new McpToolParameter { Type = "number", Description = "action=set kind=capacity 时的目标容量", Required = false },
+                    ["value"] = new McpToolParameter { Type = "boolean", Description = "action=set kind=checkbox 时的目标值", Required = false },
+                    ["maxCount"] = new McpToolParameter { Type = "integer", Description = "action=set kind=counter 时的目标最大计数 1-10；留空不修改", Required = false },
+                    ["advancedMode"] = new McpToolParameter { Type = "boolean", Description = "action=set kind=counter 时是否启用高级模式；留空不修改", Required = false },
+                    ["reset"] = new McpToolParameter { Type = "boolean", Description = "action=set kind=counter 时是否执行 Reset Counter，默认 false", Required = false },
+                    ["start"] = new McpToolParameter { Type = "number", Description = "action=set kind=time_range 时的开始时间，周期百分比 0-1；留空不修改", Required = false },
+                    ["duration"] = new McpToolParameter { Type = "number", Description = "action=set kind=time_range 时的持续时间，周期百分比 0-1；留空不修改", Required = false }
+                }),
                 Handler = args =>
                 {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var capacity = GetCapacity(go);
-                    if (capacity == null || !capacity.ControlEnabled())
-                        return CallToolResult.Error("Target does not expose an enabled IUserControlledCapacity");
-
-                    float? requested = ToolUtil.GetFloat(args, "capacity");
-                    if (!requested.HasValue)
-                        return CallToolResult.Error("capacity is required");
-
-                    float before = capacity.UserMaxCapacity;
-                    float next = Mathf.Clamp(requested.Value, capacity.MinCapacity, capacity.MaxCapacity);
-                    if (capacity.WholeValues)
-                        next = Mathf.Round(next);
-                    capacity.UserMaxCapacity = next;
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = ToolUtil.SafeFloat(before),
-                        ["capacity"] = CapacityInfo(capacity),
-                        ["changed"] = Math.Abs(before - capacity.UserMaxCapacity) > 0.0001f
-                    }, McpJsonUtil.Settings));
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListStateControls().Handler(args);
+                    if (action == "set")
+                        return SetStateControl().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
                 }
             };
         }
@@ -125,34 +168,15 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "single_checkbox_set" },
                 Tags = new List<string> { "controls", "checkbox", "side-screen", "toggle" },
-                Description = "设置实现 ICheckboxControl 的单 checkbox 侧屏控件",
+                Description = "兼容入口：请优先使用 game_control domain=state action=set kind=checkbox",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["value"] = new McpToolParameter { Type = "boolean", Description = "checkbox 目标值", Required = true }
                 }),
-                Handler = args =>
-                {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var checkbox = GetCheckbox(go);
-                    if (checkbox == null)
-                        return CallToolResult.Error("Target does not expose ICheckboxControl");
-
-                    bool before = checkbox.GetCheckboxValue();
-                    bool value = ToolUtil.GetBool(args, "value", before);
-                    checkbox.SetCheckboxValue(value);
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = before,
-                        ["checkbox"] = CheckboxInfo(checkbox),
-                        ["changed"] = before != checkbox.GetCheckboxValue()
-                    }, McpJsonUtil.Settings));
-                }
+                Handler = args => SetStateControl(args, "checkbox")
             };
         }
 
@@ -164,51 +188,17 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "counter_control_set" },
                 Tags = new List<string> { "controls", "logic", "counter", "automation" },
-                Description = "设置逻辑计数器侧屏：maxCount、advancedMode，或执行 reset",
+                Description = "兼容入口：请优先使用 game_control domain=state action=set kind=counter",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["maxCount"] = new McpToolParameter { Type = "integer", Description = "目标最大计数 1-10；留空不修改", Required = false },
                     ["advancedMode"] = new McpToolParameter { Type = "boolean", Description = "是否启用高级模式；留空不修改", Required = false },
                     ["reset"] = new McpToolParameter { Type = "boolean", Description = "是否执行 Reset Counter，默认 false", Required = false }
                 }),
-                Handler = args =>
-                {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var counter = go.GetComponent<LogicCounter>();
-                    if (counter == null)
-                        return CallToolResult.Error("Target does not expose LogicCounter");
-
-                    var before = CounterInfo(counter);
-                    int? maxCount = ToolUtil.GetInt(args, "maxCount");
-                    if (maxCount.HasValue)
-                    {
-                        counter.maxCount = Mathf.Clamp(maxCount.Value, 1, 10);
-                        if (counter.currentCount > counter.maxCount)
-                            counter.currentCount = counter.maxCount;
-                    }
-                    if (args["advancedMode"] != null)
-                        counter.advancedMode = ToolUtil.GetBool(args, "advancedMode", counter.advancedMode);
-                    if (ToolUtil.GetBool(args, "reset", false))
-                        counter.ResetCounter();
-                    else
-                    {
-                        counter.SetCounterState();
-                        counter.UpdateLogicCircuit();
-                        counter.UpdateVisualState(force: true);
-                        counter.UpdateMeter();
-                    }
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = before,
-                        ["counter"] = CounterInfo(counter)
-                    }, McpJsonUtil.Settings));
-                }
+                Handler = args => SetStateControl(args, "counter")
             };
         }
 
@@ -220,41 +210,147 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "time_of_day_sensor_set" },
                 Tags = new List<string> { "controls", "logic", "time-range", "automation" },
-                Description = "设置 LogicTimeOfDaySensor 时间范围侧屏，start/duration 为周期百分比 0-1",
+                Description = "兼容入口：请优先使用 game_control domain=state action=set kind=time_range",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["start"] = new McpToolParameter { Type = "number", Description = "开始时间，周期百分比 0-1；留空不修改", Required = false },
                     ["duration"] = new McpToolParameter { Type = "number", Description = "持续时间，周期百分比 0-1；留空不修改", Required = false }
                 }),
-                Handler = args =>
-                {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var sensor = go.GetComponent<LogicTimeOfDaySensor>();
-                    if (sensor == null)
-                        return CallToolResult.Error("Target does not expose LogicTimeOfDaySensor");
-
-                    var before = TimeRangeInfo(sensor);
-                    float? start = ToolUtil.GetFloat(args, "start");
-                    float? duration = ToolUtil.GetFloat(args, "duration");
-                    if (!start.HasValue && !duration.HasValue)
-                        return CallToolResult.Error("start or duration is required");
-                    if (start.HasValue)
-                        sensor.startTime = Mathf.Clamp01(start.Value);
-                    if (duration.HasValue)
-                        sensor.duration = Mathf.Clamp01(duration.Value);
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = before,
-                        ["timeRange"] = TimeRangeInfo(sensor)
-                    }, McpJsonUtil.Settings));
-                }
+                Handler = args => SetStateControl(args, "time_range")
             };
+        }
+
+        private static CallToolResult SetStateControl(JObject args, string forcedKind)
+        {
+            var go = FindTarget(args);
+            if (go == null)
+                return CallToolResult.Error("Target not found");
+
+            string kind = forcedKind ?? (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+            switch (kind)
+            {
+                case "capacity":
+                    return SetCapacityControl(go, args);
+                case "checkbox":
+                    return SetCheckboxControl(go, args);
+                case "counter":
+                    return SetCounterControl(go, args);
+                case "time_range":
+                case "time-range":
+                case "timerange":
+                    return SetTimeRangeControl(go, args);
+                default:
+                    return CallToolResult.Error("kind must be capacity, checkbox, counter, or time_range");
+            }
+        }
+
+        private static CallToolResult SetCapacityControl(GameObject go, JObject args)
+        {
+            var capacity = GetCapacity(go);
+            if (capacity == null || !capacity.ControlEnabled())
+                return CallToolResult.Error("Target does not expose an enabled IUserControlledCapacity");
+
+            float? requested = ToolUtil.GetFloat(args, "capacity");
+            if (!requested.HasValue)
+                return CallToolResult.Error("capacity is required");
+
+            float before = capacity.UserMaxCapacity;
+            float next = Mathf.Clamp(requested.Value, capacity.MinCapacity, capacity.MaxCapacity);
+            if (capacity.WholeValues)
+                next = Mathf.Round(next);
+            capacity.UserMaxCapacity = next;
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "capacity",
+                ["before"] = ToolUtil.SafeFloat(before),
+                ["capacity"] = CapacityInfo(capacity),
+                ["changed"] = Math.Abs(before - capacity.UserMaxCapacity) > 0.0001f
+            }, McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult SetCheckboxControl(GameObject go, JObject args)
+        {
+            var checkbox = GetCheckbox(go);
+            if (checkbox == null)
+                return CallToolResult.Error("Target does not expose ICheckboxControl");
+
+            bool before = checkbox.GetCheckboxValue();
+            bool value = ToolUtil.GetBool(args, "value", before);
+            checkbox.SetCheckboxValue(value);
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "checkbox",
+                ["before"] = before,
+                ["checkbox"] = CheckboxInfo(checkbox),
+                ["changed"] = before != checkbox.GetCheckboxValue()
+            }, McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult SetCounterControl(GameObject go, JObject args)
+        {
+            var counter = go.GetComponent<LogicCounter>();
+            if (counter == null)
+                return CallToolResult.Error("Target does not expose LogicCounter");
+
+            var before = CounterInfo(counter);
+            int? maxCount = ToolUtil.GetInt(args, "maxCount");
+            if (maxCount.HasValue)
+            {
+                counter.maxCount = Mathf.Clamp(maxCount.Value, 1, 10);
+                if (counter.currentCount > counter.maxCount)
+                    counter.currentCount = counter.maxCount;
+            }
+            if (args["advancedMode"] != null)
+                counter.advancedMode = ToolUtil.GetBool(args, "advancedMode", counter.advancedMode);
+            if (ToolUtil.GetBool(args, "reset", false))
+                counter.ResetCounter();
+            else
+            {
+                counter.SetCounterState();
+                counter.UpdateLogicCircuit();
+                counter.UpdateVisualState(force: true);
+                counter.UpdateMeter();
+            }
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "counter",
+                ["before"] = before,
+                ["counter"] = CounterInfo(counter)
+            }, McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult SetTimeRangeControl(GameObject go, JObject args)
+        {
+            var sensor = go.GetComponent<LogicTimeOfDaySensor>();
+            if (sensor == null)
+                return CallToolResult.Error("Target does not expose LogicTimeOfDaySensor");
+
+            var before = TimeRangeInfo(sensor);
+            float? start = ToolUtil.GetFloat(args, "start");
+            float? duration = ToolUtil.GetFloat(args, "duration");
+            if (!start.HasValue && !duration.HasValue)
+                return CallToolResult.Error("start or duration is required");
+            if (start.HasValue)
+                sensor.startTime = Mathf.Clamp01(start.Value);
+            if (duration.HasValue)
+                sensor.duration = Mathf.Clamp01(duration.Value);
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "time_range",
+                ["before"] = before,
+                ["timeRange"] = TimeRangeInfo(sensor)
+            }, McpJsonUtil.Settings));
         }
 
         private static Dictionary<string, object> ControlInfo(GameObject go)

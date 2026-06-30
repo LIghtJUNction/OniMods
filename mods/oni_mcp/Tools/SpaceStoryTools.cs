@@ -12,6 +12,52 @@ namespace OniMcp.Tools
 {
     public static class SpaceStoryTools
     {
+        public static McpTool ControlSpaceStory()
+        {
+            return new McpTool
+            {
+                Name = "space_story_control",
+                Group = "story",
+                Mode = "execute",
+                Risk = "high",
+                Aliases = new List<string> { "space_story_surface_control", "space_side_screen_control" },
+                Tags = new List<string> { "story", "space", "starmap", "telescope", "warp", "temporal-tear", "conditions" },
+                Description = "太空/故事侧屏组合工具。kind=warp_portal/telescope/starmap_analysis/temporal_tear/process_conditions；action=list 或对应操作",
+                Parameters = SpaceStoryControlParams(),
+                Handler = args =>
+                {
+                    string kind = (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    string action = (args["action"]?.ToString() ?? "list").Trim().ToLowerInvariant();
+                    bool list = string.IsNullOrWhiteSpace(action) || action == "list" || action == "status";
+
+                    switch (kind)
+                    {
+                        case "warp":
+                        case "warp_portal":
+                        case "warp_portals":
+                            return list ? ListWarpPortals().Handler(args) : ControlWarpPortal().Handler(args);
+                        case "telescope":
+                        case "telescopes":
+                            return list ? ListTelescopes().Handler(args) : ControlTelescope().Handler(args);
+                        case "starmap":
+                        case "starmap_analysis":
+                        case "analysis":
+                            return list ? ListStarmapAnalysisTargets().Handler(args) : SetStarmapAnalysisTarget().Handler(args);
+                        case "temporal":
+                        case "temporal_tear":
+                        case "temporal_tears":
+                            return list ? ListTemporalTears().Handler(args) : ConsumeTemporalTearCraft().Handler(args);
+                        case "process":
+                        case "process_conditions":
+                        case "conditions":
+                            return ListProcessConditions().Handler(args);
+                        default:
+                            return CallToolResult.Error("kind must be warp_portal, telescope, starmap_analysis, temporal_tear, or process_conditions");
+                    }
+                }
+            };
+        }
+
         public static McpTool ListWarpPortals()
         {
             return new McpTool
@@ -22,7 +68,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "warp_portal_status_list" },
                 Tags = new List<string> { "story", "warp", "teleport", "portal", "assignable", "side-screen" },
-                Description = "列出 WarpPortalSideScreen 状态：等待传送、传送中、冷却进度和分配复制人",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=warp_portal action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、状态或复制人筛选", Required = false },
@@ -42,7 +89,8 @@ namespace OniMcp.Tools
                 Risk = "high",
                 Aliases = new List<string> { "warp_portal_start", "warp_portal_cancel" },
                 Tags = new List<string> { "story", "warp", "teleport", "portal", "side-screen" },
-                Description = "执行 WarpPortalSideScreen 操作：start_warp 开始传送等待中的复制人，cancel_assignment 取消当前分配/传送准备",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=warp_portal action=start_warp/cancel_assignment",
+                Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "start_warp 或 cancel_assignment", Required = true, EnumValues = new List<string> { "start_warp", "cancel_assignment" } },
@@ -97,7 +145,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "telescope_analysis_status", "space_analysis_telescopes" },
                 Tags = new List<string> { "space", "telescope", "starmap", "analysis", "side-screen" },
-                Description = "列出 TelescopeSideScreen 建筑状态和当前星图分析目标",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=telescope action=list",
+                Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、世界或分析目标筛选", Required = false },
@@ -127,7 +176,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "space_destinations_analysis_list", "telescope_targets_list" },
                 Tags = new List<string> { "space", "starmap", "destination", "analysis", "telescope" },
-                Description = "列出星图目的地分析状态，用于选择或清除望远镜分析目标",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=starmap_analysis action=list",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按目的地名称、类型、状态或距离筛选", Required = false },
@@ -168,7 +218,8 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "telescope_analysis_target_set", "starmap_analyze_destination" },
                 Tags = new List<string> { "space", "starmap", "destination", "analysis", "telescope" },
-                Description = "设置或清除望远镜/星图分析目标；等价于 StarmapScreen 的 Analyze/Suspend Destination Analysis",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=starmap_analysis action=set/clear",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["destinationId"] = new McpToolParameter { Type = "integer", Description = "SpaceDestination id；clear=false 时与 query 二选一", Required = false },
@@ -225,7 +276,8 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "telescope_open_starmap", "starmap_toggle_from_telescope" },
                 Tags = new List<string> { "space", "telescope", "starmap", "ui", "side-screen" },
-                Description = "执行 TelescopeSideScreen 操作：open_starmap 打开/切换星图界面",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=telescope action=open_starmap",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "open_starmap", Required = true, EnumValues = new List<string> { "open_starmap" } }
@@ -257,7 +309,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "temporal_tear_status", "wormhole_status" },
                 Tags = new List<string> { "story", "temporal-tear", "wormhole", "rocket", "cluster", "side-screen" },
-                Description = "列出 TemporalTearSideScreen 状态、裂隙位置和当前位置可被裂隙消耗的火箭",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=temporal_tear action=list",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按火箭名、状态或位置筛选候选火箭", Required = false },
@@ -296,7 +349,8 @@ namespace OniMcp.Tools
                 Risk = "critical",
                 Aliases = new List<string> { "temporal_tear_enter", "wormhole_consume_rocket" },
                 Tags = new List<string> { "story", "temporal-tear", "wormhole", "rocket", "destructive", "side-screen" },
-                Description = "让位于时间裂隙上的火箭进入/被消耗。此操作会销毁火箭、模块和内部复制人，必须双重确认",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=temporal_tear action=consume_craft",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["craftId"] = new McpToolParameter { Type = "integer", Description = "目标 Clustercraft InstanceID", Required = false },
@@ -345,7 +399,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "condition_list_side_screen", "rocket_process_conditions" },
                 Tags = new List<string> { "conditions", "side-screen", "rocket", "diagnostics", "process" },
-                Description = "读取实现 IProcessConditionSet 的对象条件列表，对应 ConditionListSideScreen 的状态、提示和 tooltip",
+                Description = "兼容入口：请使用 building_control domain=space_story kind=process_conditions action=list",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "目标建筑/火箭 InstanceID；省略时列出所有带条件对象", Required = false },
@@ -729,6 +784,28 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> SpaceStoryControlParams()
+        {
+            return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["kind"] = new McpToolParameter { Type = "string", Description = "warp_portal、telescope、starmap_analysis、temporal_tear 或 process_conditions", Required = true },
+                ["action"] = new McpToolParameter { Type = "string", Description = "list/status 或对应操作：start_warp、cancel_assignment、open_starmap、set/clear、consume_craft", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "按名称、prefabId、状态、目的地、火箭或条件筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "list 返回上限", Required = false },
+                ["includeTargets"] = new McpToolParameter { Type = "boolean", Description = "kind=telescope action=list 时是否附带分析目标摘要", Required = false },
+                ["includeComplete"] = new McpToolParameter { Type = "boolean", Description = "kind=starmap_analysis action=list 时是否包含已完成目标", Required = false },
+                ["destinationId"] = new McpToolParameter { Type = "integer", Description = "kind=starmap_analysis action=set 时 SpaceDestination id", Required = false },
+                ["clear"] = new McpToolParameter { Type = "boolean", Description = "kind=starmap_analysis 时 true=清除当前分析目标", Required = false },
+                ["allowComplete"] = new McpToolParameter { Type = "boolean", Description = "kind=starmap_analysis action=set 时允许选择已完成目标", Required = false },
+                ["craftId"] = new McpToolParameter { Type = "integer", Description = "kind=temporal_tear action=consume_craft 时目标 Clustercraft InstanceID", Required = false },
+                ["craftName"] = new McpToolParameter { Type = "string", Description = "kind=temporal_tear action=consume_craft 时目标火箭名称", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "写入、传送、分析目标变更和危险操作按旧工具要求传 true", Required = false },
+                ["confirmDestructive"] = new McpToolParameter { Type = "string", Description = "kind=temporal_tear action=consume_craft 时必须精确填写 consume craft", Required = false },
+                ["conditionType"] = new McpToolParameter { Type = "string", Description = "kind=process_conditions 时：All/RocketFlight/RocketPrep/RocketStorage/RocketBoard", Required = false },
+                ["showHidden"] = new McpToolParameter { Type = "boolean", Description = "kind=process_conditions 时是否包含 ShowInUI=false 的条件", Required = false }
+            }));
         }
 
         private static Dictionary<string, McpToolParameter> RectParams(Dictionary<string, McpToolParameter> extra)

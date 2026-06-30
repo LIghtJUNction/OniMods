@@ -18,8 +18,9 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "area_save", "rect_save" },
-                Description = "把一个矩形区域保存为短 areaId；区域左下角作为 origin，后续支持 areaId 的工具可用它代替绝对矩形",
+                Description = "兼容入口：请优先使用 read_control domain=area action=define。把一个矩形区域保存为短 areaId；区域左下角作为 origin，后续支持 areaId 的工具可用它代替绝对矩形",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
@@ -42,8 +43,9 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "area_rect" },
-                Description = "查询 areaId 对应的区域坐标、origin、relativeRect 和世界 ID",
+                Description = "兼容入口：请优先使用 read_control domain=area action=get。查询 areaId 对应的区域坐标、origin、relativeRect 和世界 ID",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "区域句柄，例如 a1", Required = true }
@@ -67,8 +69,9 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "areas" },
-                Description = "列出当前会话保存的 areaId，最近使用的排在前面",
+                Description = "兼容入口：请优先使用 read_control domain=area action=list。列出当前会话保存的 areaId，最近使用的排在前面",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "返回数量，默认 20，最大 100", Required = false }
@@ -98,8 +101,9 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "world_blocks", "area_grid", "world_area_blocks" },
-                Description = "把一个世界自动切成 blk 开头的地图块句柄（blk1、blk2...）。每块默认约 40x40，可传 blockWidth/blockHeight/maxCells 调整；返回的 blk* 可像普通 areaId 一样用于 world_text_map、world_area_snapshot 和支持 areaId 的整块工具。",
+                Description = "兼容入口：请优先使用 read_control domain=area action=blocks。把一个世界自动切成 blk 开头的地图块句柄（blk1、blk2...）。每块默认约 40x40，可传 blockWidth/blockHeight/maxCells 调整；返回的 blk* 可像普通 areaId 一样用于 world_text_map、world_area_snapshot 和支持 areaId 的整块工具。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
@@ -182,8 +186,9 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "area_union", "area_compose", "merge_areas" },
-                Description = "把多个 areaId（例如 blk1+blk2+blk3 或 [\"blk1\",\"blk2\"]）拼接成一个新的 a* 区域句柄。拼接使用同一世界内的外接矩形；非相邻区域会包含中间空隙并返回 continuity/gapCellsPercent/warning。",
+                Description = "兼容入口：请优先使用 read_control domain=area action=merge。把多个 areaId（例如 blk1+blk2+blk3 或 [\"blk1\",\"blk2\"]）拼接成一个新的 a* 区域句柄。拼接使用同一世界内的外接矩形；非相邻区域会包含中间空隙并返回 continuity/gapCellsPercent/warning。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaIds"] = new McpToolParameter { Type = "array", Description = "要拼接的区域句柄数组；也可传字符串 blk1+blk2,blk3", Required = false },
@@ -256,7 +261,8 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
-                Description = "删除不再需要的 areaId",
+                Hidden = true,
+                Description = "兼容入口：请优先使用 read_control domain=area action=forget。删除不再需要的 areaId",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "区域句柄，例如 a1", Required = true }
@@ -269,6 +275,54 @@ namespace OniMcp.Tools
                         ["removed"] = removed,
                         ["areaId"] = args["areaId"]?.ToString()
                     }, McpJsonUtil.Settings));
+                }
+            };
+        }
+
+        public static McpTool ControlArea()
+        {
+            return new McpTool
+            {
+                Name = "area_control",
+                Group = "world",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "areas_control", "area_handle_control", "world_area_control" },
+                Tags = new List<string> { "area", "region", "handle", "blocks", "merge", "world" },
+                Description = "统一管理区域句柄。action=define/get/list/blocks/merge/forget；用 areaId 代替重复坐标，blocks 生成 blk* 地图块，merge 生成复用区域。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：define、get、list、blocks、merge、forget", Required = true },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=define 时区域左下/起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=define 时区域左下/起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=define 时区域右上/终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=define 时区域右上/终点 Y", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "action=get/forget/merge 时区域句柄；merge 也支持 blk1+blk2 或逗号/空格分隔", Required = false },
+                    ["areaIds"] = new McpToolParameter { Type = "array", Description = "action=merge 时要拼接的区域句柄数组", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "action=define/blocks 时世界 ID，默认当前激活世界", Required = false },
+                    ["label"] = new McpToolParameter { Type = "string", Description = "action=define/blocks/merge 时可选标签", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list/blocks 时返回数量限制", Required = false },
+                    ["blockWidth"] = new McpToolParameter { Type = "integer", Description = "action=blocks 时块宽度；建议 20..50", Required = false },
+                    ["blockHeight"] = new McpToolParameter { Type = "integer", Description = "action=blocks 时块高度；建议 20..50", Required = false },
+                    ["maxCells"] = new McpToolParameter { Type = "integer", Description = "action=blocks 时每块目标最大格子数，默认 1600", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "action=merge 时只返回拼接预览，不创建新 areaId", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "define")
+                        return DefineArea().Handler(args);
+                    if (action == "get")
+                        return GetArea().Handler(args);
+                    if (action == "list")
+                        return ListAreas().Handler(args);
+                    if (action == "blocks")
+                        return GenerateAreaBlocks().Handler(args);
+                    if (action == "merge")
+                        return MergeAreas().Handler(args);
+                    if (action == "forget")
+                        return ForgetArea().Handler(args);
+                    return CallToolResult.Error("action must be one of define, get, list, blocks, merge, forget");
                 }
             };
         }

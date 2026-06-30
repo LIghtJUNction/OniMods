@@ -19,9 +19,10 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "automatable_manual_controls_list", "automation_manual_allowed_list" },
                 Tags = new List<string> { "automation", "side-screen", "automatable", "manual", "storage" },
-                Description = "列出 AutomatableSideScreen 控件，显示建筑是否只允许自动化搬运以及是否允许复制人手动搬运",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=automatable action=list。列出 AutomatableSideScreen 控件，显示建筑是否只允许自动化搬运以及是否允许复制人手动搬运",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名或 prefabId 筛选", Required = false },
@@ -66,9 +67,10 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "automatable_manual_control_set", "automation_manual_allowed_set" },
                 Tags = new List<string> { "automation", "side-screen", "automatable", "manual", "storage" },
-                Description = "设置 AutomatableSideScreen 的允许手动搬运开关；会影响复制人是否能手动搬运，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=automatable action=set。设置 AutomatableSideScreen 的允许手动搬运开关；会影响复制人是否能手动搬运，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["allowManual"] = new McpToolParameter { Type = "boolean", Description = "true 允许复制人手动搬运，false 只允许自动化搬运", Required = false },
@@ -106,9 +108,10 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "automatable_manual_controls_batch_set" },
                 Tags = new List<string> { "automation", "side-screen", "automatable", "batch" },
-                Description = "批量设置 AutomatableSideScreen 的允许手动搬运开关，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=automatable action=batch。批量设置 AutomatableSideScreen 的允许手动搬运开关，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "数组；每项支持 id 或 x/y/worldId，并提供 allowManual 或 automationOnly", Required = true },
@@ -174,9 +177,10 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "critter_count_sensors_list", "logic_critter_sensors_list" },
                 Tags = new List<string> { "automation", "sensor", "critter", "egg", "side-screen" },
-                Description = "列出 CritterSensorSideScreen / LogicCritterCountSensor 的小动物/蛋计数开关、阈值和当前计数",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=critter_sensor action=list。列出 CritterSensorSideScreen / LogicCritterCountSensor 的小动物/蛋计数开关、阈值和当前计数",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名或 prefabId 筛选", Required = false },
@@ -221,9 +225,10 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "critter_count_sensor_set", "logic_critter_sensor_set" },
                 Tags = new List<string> { "automation", "sensor", "critter", "egg", "side-screen" },
-                Description = "设置 CritterSensorSideScreen 的 Count Critters / Count Eggs 开关；阈值仍用 buildings_threshold_set，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=critter_sensor action=set。设置 CritterSensorSideScreen 的 Count Critters / Count Eggs 开关；阈值仍用 building_control domain=config action=set_threshold，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["countCritters"] = new McpToolParameter { Type = "boolean", Description = "是否把小动物计入传感器当前值；留空不改", Required = false },
@@ -261,9 +266,10 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "critter_count_sensors_batch_set" },
                 Tags = new List<string> { "automation", "sensor", "critter", "egg", "batch" },
-                Description = "批量设置 CritterSensorSideScreen 的 Count Critters / Count Eggs 开关，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=critter_sensor action=batch。批量设置 CritterSensorSideScreen 的 Count Critters / Count Eggs 开关，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "数组；每项支持 id 或 x/y/worldId，并可提供 countCritters/countEggs", Required = true },
@@ -319,6 +325,81 @@ namespace OniMcp.Tools
                     });
                 }
             };
+        }
+
+        public static McpTool ControlAutomationSideScreen()
+        {
+            return new McpTool
+            {
+                Name = "automation_side_control",
+                Hidden = true,
+                Group = "automation",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "automation_side_screen_control", "side_automation_control" },
+                Tags = new List<string> { "automation", "side-screen", "automatable", "critter-sensor", "batch" },
+                Description = "统一读取、单点设置和批量设置自动化侧屏控件。kind=automatable/critter_sensor；action=list/set/batch；set/batch 需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "控件类型：automatable 或 critter_sensor", Required = true },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list、set、batch", Required = true },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名或 prefabId 筛选", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["areaId"] = new McpToolParameter { Type = "string", Description = "action=list 时区域句柄；与 x1/y1/x2/y2 二选一", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 Y", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set 时目标 KPrefabID.InstanceID；推荐", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=set 时目标格子 X；未传 id 时使用", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=set 时目标格子 Y；未传 id 时使用", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；list 时可筛选，set 时按坐标查找建议提供", Required = false },
+                    ["allowManual"] = new McpToolParameter { Type = "boolean", Description = "kind=automatable action=set/batch 时：true 允许手动搬运", Required = false },
+                    ["automationOnly"] = new McpToolParameter { Type = "boolean", Description = "kind=automatable action=set/batch 时：直接设置只允许自动化搬运", Required = false },
+                    ["countCritters"] = new McpToolParameter { Type = "boolean", Description = "kind=critter_sensor action=set/batch 时：是否计入小动物", Required = false },
+                    ["countEggs"] = new McpToolParameter { Type = "boolean", Description = "kind=critter_sensor action=set/batch 时：是否计入蛋", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "action=batch 时数组；每项支持 id 或 x/y/worldId，并提供对应 kind 的设置字段", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch 时合并到每项的默认参数", Required = false },
+                    ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set/batch 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string kind = NormalizeKind(args["kind"]?.ToString());
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+
+                    if (kind == "automatable")
+                    {
+                        if (action == "list")
+                            return ListAutomatableControls().Handler(args);
+                        if (action == "set")
+                            return SetAutomatableControl().Handler(args);
+                        if (action == "batch")
+                            return BatchSetAutomatableControls().Handler(args);
+                    }
+                    else if (kind == "critter_sensor")
+                    {
+                        if (action == "list")
+                            return ListCritterSensors().Handler(args);
+                        if (action == "set")
+                            return SetCritterSensorCounting().Handler(args);
+                        if (action == "batch")
+                            return BatchSetCritterSensors().Handler(args);
+                    }
+
+                    return CallToolResult.Error("kind must be automatable or critter_sensor; action must be list, set, or batch");
+                }
+            };
+        }
+
+        private static string NormalizeKind(string value)
+        {
+            string kind = (value ?? string.Empty).Trim().ToLowerInvariant().Replace("-", "_");
+            if (kind == "manual" || kind == "automatable_control" || kind == "automatable_controls")
+                return "automatable";
+            if (kind == "critter" || kind == "critter_sensor_counting" || kind == "critter_sensors" || kind == "logic_critter_sensor")
+                return "critter_sensor";
+            return kind;
         }
 
         private static void ApplyAutomatable(Automatable automatable, JObject args)

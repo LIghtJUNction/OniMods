@@ -70,7 +70,7 @@ namespace OniMcp.Tools
                 },
                 Builder = args => BuildResult(
                     "复制人照护流程",
-                    "读取 oni://dupes 和 oni://schedules。若指定复制人，调用 dupes_detail、dupes_needs 和 dupes_attributes 获取细节。" +
+                    "读取 oni://dupes 和 oni://schedules。若指定复制人，调用 dupes_control domain=info action=detail/needs/attributes 获取细节。" +
                     Optional(args, "dupe", " 指定复制人：{0}。") +
                     " 输出照护风险、可调整日程、饮食和技能建议。")
             },

@@ -9,15 +9,61 @@ namespace OniMcp.Tools
 {
     public static class ScheduleTools
     {
+        public static McpTool ControlSchedule()
+        {
+            return new McpTool
+            {
+                Name = "schedule_control",
+                Group = "schedules",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "schedules_control", "schedule_management_control" },
+                Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "dupe", "日程", "作息", "轮班" },
+                Description = "日程管理聚合工具：action=list/create/set_block/assign_dupe/optimize",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、create、set_block、assign_dupe 或 optimize", Required = true, EnumValues = new List<string> { "list", "create", "set_block", "assign_dupe", "optimize" } },
+                    ["schedule"] = new McpToolParameter { Type = "string", Description = "action=set_block/assign_dupe 时的目标日程名称", Required = false },
+                    ["hour"] = new McpToolParameter { Type = "integer", Description = "action=set_block 时 0-23 小时", Required = false },
+                    ["group"] = new McpToolParameter { Type = "string", Description = "action=set_block 时区块类型 ID：Hygene、Worktime、Recreation、Sleep", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "action=create 时为新日程名称；action=assign_dupe 时为复制人名称", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=assign_dupe 时的复制人 InstanceID", Required = false },
+                    ["sleepStart"] = new McpToolParameter { Type = "integer", Description = "action=create 时睡眠开始小时 0-23，默认 20", Required = false },
+                    ["alarmOn"] = new McpToolParameter { Type = "boolean", Description = "action=create 时是否启用日程铃声，默认 true", Required = false },
+                    ["replaceExisting"] = new McpToolParameter { Type = "boolean", Description = "action=create 时同名日程存在是否覆盖区块，默认 true", Required = false },
+                    ["shifts"] = new McpToolParameter { Type = "integer", Description = "action=optimize 时轮班数量，默认按人数自动，最多 4 班", Required = false },
+                    ["baseSleepStart"] = new McpToolParameter { Type = "integer", Description = "action=optimize 时第一班睡眠开始小时，默认 20", Required = false },
+                    ["prefix"] = new McpToolParameter { Type = "string", Description = "action=optimize 时日程名前缀，默认 AI轮班", Required = false },
+                    ["apply"] = new McpToolParameter { Type = "boolean", Description = "action=optimize 时是否实际创建并分配，默认 false 只预览", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return GetSchedules().Handler(args);
+                    if (action == "create")
+                        return CreateSchedule().Handler(args);
+                    if (action == "set_block" || action == "set")
+                        return SetScheduleBlock().Handler(args);
+                    if (action == "assign_dupe" || action == "assign")
+                        return AssignDupeSchedule().Handler(args);
+                    if (action == "optimize")
+                        return OptimizeSchedules().Handler(args);
+                    return CallToolResult.Error("action must be list, create, set_block, assign_dupe, or optimize");
+                }
+            };
+        }
+
         public static McpTool GetSchedules()
         {
             return new McpTool
             {
                 Name = "schedule_list",
+                Hidden = true,
                 Group = "schedules",
                 Mode = "read",
                 Risk = "none",
-                Description = "获取所有日程、每小时区块、可用区块类型和已分配复制人",
+                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=list",
                 Handler = args =>
                 {
                     if (ScheduleManager.Instance == null)
@@ -46,12 +92,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "schedule_set_block",
+                Hidden = true,
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "set_schedule_block", "schedule_block_set", "change_schedule_block" },
                 Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "blocks", "日程", "作息", "轮班", "时间段" },
-                Description = "设置某个日程在指定小时的区块类型",
+                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=set_block",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["schedule"] = new McpToolParameter { Type = "string", Description = "日程名称", Required = true },
@@ -81,12 +128,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "schedule_create",
+                Hidden = true,
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "create_schedule", "schedule_add", "add_schedule" },
                 Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "create", "日程", "作息", "轮班", "创建" },
-                Description = "创建一个日程，并可按 sleepStart 自动生成 1 小时洗漱、3 小时睡眠、2 小时娱乐的基础模板",
+                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=create",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["name"] = new McpToolParameter { Type = "string", Description = "新日程名称", Required = true },
@@ -125,12 +173,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "schedule_assign_dupe",
+                Hidden = true,
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "assign_dupe_schedule", "schedule_assign_duplicant", "assign_duplicant_schedule" },
                 Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "assign", "shift", "日程", "复制人", "分配", "轮班" },
-                Description = "把复制人分配到指定日程",
+                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=assign_dupe",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -163,12 +212,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "schedule_optimize",
+                Hidden = true,
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "optimize_schedules", "schedule_stagger_shifts", "stagger_dupe_schedules" },
                 Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "shift", "stagger", "optimize", "日程", "复制人", "错峰", "轮班", "优化" },
-                Description = "为当前复制人创建并分配错峰轮班日程，减少厕所/床/娱乐设施拥挤",
+                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=optimize",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["shifts"] = new McpToolParameter { Type = "integer", Description = "轮班数量，默认按人数自动：1-2 人用 1 班，3-5 人用 3 班，最多 4 班", Required = false },

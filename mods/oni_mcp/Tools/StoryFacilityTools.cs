@@ -11,17 +11,62 @@ namespace OniMcp.Tools
 {
     public static class StoryFacilityTools
     {
+        public static McpTool ControlStoryFacility()
+        {
+            return new McpTool
+            {
+                Name = "story_facility_control",
+                Group = "story",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "story_side_facility_control" },
+                Tags = new List<string> { "story", "facility", "printerceptor", "poi", "remote-work", "genetic-analysis", "side-screen" },
+                Description = "剧情设施聚合工具：kind=printerceptor/poi_tech_unlock/remote_work_terminal/genetic_analysis_station，action 控制读取或执行",
+                Parameters = StoryFacilityControlParams(),
+                Handler = args =>
+                {
+                    string kind = (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (string.IsNullOrWhiteSpace(action))
+                        action = "list";
+
+                    if (kind == "printerceptor" || kind == "printerceptors")
+                    {
+                        if (action == "list")
+                            return ListPrinterceptors().Handler(args);
+                        return ControlPrinterceptor().Handler(args);
+                    }
+
+                    if (kind == "poi_tech_unlock" || kind == "poi_tech_unlocks" || kind == "research_portal")
+                    {
+                        if (action == "list")
+                            return ListPoiTechUnlocks().Handler(args);
+                        return ControlPoiTechUnlock().Handler(args);
+                    }
+
+                    if (kind == "remote_work_terminal" || kind == "remote_work_terminals")
+                        return ControlRemoteWorkTerminal().Handler(args);
+
+                    if (kind == "genetic_analysis_station" || kind == "genetic_analysis_stations" || kind == "botanical_analyzer")
+                        return ControlGeneticAnalysisStation().Handler(args);
+
+                    return CallToolResult.Error("kind must be printerceptor, poi_tech_unlock, remote_work_terminal, or genetic_analysis_station");
+                }
+            };
+        }
+
         public static McpTool ListPrinterceptors()
         {
             return new McpTool
             {
                 Name = "printerceptors_list",
+                Hidden = true,
                 Group = "story",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "hijacked_headquarters_list", "printerceptor_status_list" },
                 Tags = new List<string> { "story", "printerceptor", "immigration", "side-screen" },
-                Description = "列出 PrinterceptorSideScreen 状态：passcode、拦截充能、打印界面可用性和 databank 库存",
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=printerceptor action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId 或状态筛选", Required = false },
@@ -36,12 +81,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "printerceptor_control",
+                Hidden = true,
                 Group = "story",
                 Mode = "execute",
                 Risk = "medium",
                 Aliases = new List<string> { "hijacked_headquarters_control" },
                 Tags = new List<string> { "story", "printerceptor", "immigration", "side-screen" },
-                Description = "执行 PrinterceptorSideScreen 操作：intercept 拦截当前打印舱候选，open_print_interface 打开打印选择界面",
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=printerceptor action=intercept/open_print_interface",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "intercept 或 open_print_interface", Required = true, EnumValues = new List<string> { "intercept", "open_print_interface" } },
@@ -91,12 +137,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "poi_tech_unlocks_list",
+                Hidden = true,
                 Group = "story",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "research_portals_list", "information_transmission_channels_list", "info_transmission_channels_list" },
                 Tags = new List<string> { "story", "poi", "tech", "unlock", "research-portal", "information-transmission-channel", "信息传送通道", "信息传输通道", "解锁信息传输通道" },
-                Description = "列出 Research Portal/信息传送通道（信息传输通道）状态、解锁差事、工作进度和完成后解锁的 POI 科技项",
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=poi_tech_unlock action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按对象、prefabId、按钮文本或解锁科技筛选", Required = false },
@@ -144,12 +191,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "poi_tech_unlock_control",
+                Hidden = true,
                 Group = "story",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "research_portal_control", "information_transmission_channel_control", "info_transmission_channel_control" },
                 Tags = new List<string> { "story", "poi", "tech", "unlock", "research-portal", "information-transmission-channel", "信息传送通道", "信息传输通道", "解锁信息传输通道" },
-                Description = "控制 Research Portal/信息传送通道（信息传输通道）：start 开始解锁研究，cancel 取消解锁研究，toggle 切换当前命令；需 confirm=true",
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=poi_tech_unlock action=start/cancel/toggle；需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "start、cancel 或 toggle", Required = true, EnumValues = new List<string> { "start", "cancel", "toggle" } },
@@ -213,12 +261,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "remote_work_terminals_list",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "remote_work_terminal_docks_list" },
                 Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
-                Description = "列出 RemoteWorkTerminalSidescreen 目标 dock 选择、当前 dock 和同世界可选 dock",
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=remote_work_terminal action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按终端、dock、prefabId 或世界筛选", Required = false },
@@ -234,12 +283,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "remote_work_terminal_dock_set",
+                Hidden = true,
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "remote_work_dock_set" },
                 Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
-                Description = "设置 RemoteWorkTerminalSidescreen 目标 dock；clear=true 对应 Nothing Selected",
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=remote_work_terminal action=set_dock",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["dockId"] = new McpToolParameter { Type = "integer", Description = "目标 RemoteWorkerDock InstanceID", Required = false },
@@ -275,17 +325,43 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlRemoteWorkTerminal()
+        {
+            return new McpTool
+            {
+                Name = "remote_work_terminal_control",
+                Hidden = true,
+                Group = "buildings",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "remote_work_dock_control" },
+                Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=remote_work_terminal；action=list 查询可选 dock，action=set_dock 设置或清空目标 dock",
+                Parameters = RemoteWorkTerminalControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListRemoteWorkTerminals().Handler(args);
+                    if (action == "set_dock" || action == "set")
+                        return SetRemoteWorkDock().Handler(args);
+                    return CallToolResult.Error("action must be list or set_dock");
+                }
+            };
+        }
+
         public static McpTool ListGeneticAnalysisStations()
         {
             return new McpTool
             {
                 Name = "genetic_analysis_stations_list",
+                Hidden = true,
                 Group = "farming",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "botanical_analyzers_list", "seed_analysis_stations_list" },
                 Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
-                Description = "列出 GeneticAnalysisStationSideScreen 可分析种子、允许/禁用状态和库存",
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=genetic_analysis_station action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、种子、植物或状态筛选", Required = false },
@@ -300,12 +376,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "genetic_analysis_seed_set",
+                Hidden = true,
                 Group = "farming",
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "botanical_analyzer_seed_set", "seed_analysis_allowed_set" },
                 Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
-                Description = "设置 GeneticAnalysisStationSideScreen 中某类种子的允许/禁用状态",
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=genetic_analysis_station action=set_seed",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["seedId"] = new McpToolParameter { Type = "string", Description = "种子 tag/prefab id，例如 BasicFabricPlantSeed；与 speciesId 二选一", Required = false },
@@ -333,6 +410,31 @@ namespace OniMcp.Tools
                         ["before"] = before,
                         ["station"] = GeneticStationInfo(station)
                     });
+                }
+            };
+        }
+
+        public static McpTool ControlGeneticAnalysisStation()
+        {
+            return new McpTool
+            {
+                Name = "genetic_analysis_station_control",
+                Hidden = true,
+                Group = "farming",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "botanical_analyzer_control", "seed_analysis_station_control" },
+                Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
+                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=genetic_analysis_station；action=list 查询可分析种子，action=set_seed 设置允许/禁用",
+                Parameters = GeneticAnalysisStationControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListGeneticAnalysisStations().Handler(args);
+                    if (action == "set_seed" || action == "set")
+                        return SetGeneticAnalysisSeed().Handler(args);
+                    return CallToolResult.Error("action must be list or set_seed");
                 }
             };
         }
@@ -632,6 +734,67 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> AreaLookupParams(Dictionary<string, McpToolParameter> extra)
+        {
+            var parameters = RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["id"] = new McpToolParameter { Type = "integer", Description = "目标建筑 InstanceID", Required = false },
+                ["x"] = new McpToolParameter { Type = "integer", Description = "目标建筑格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "integer", Description = "目标建筑格子 Y", Required = false }
+            });
+            foreach (var item in extra)
+                parameters[item.Key] = item.Value;
+            return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> StoryFacilityControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["kind"] = new McpToolParameter { Type = "string", Description = "printerceptor、poi_tech_unlock、remote_work_terminal 或 genetic_analysis_station", Required = true, EnumValues = new List<string> { "printerceptor", "poi_tech_unlock", "remote_work_terminal", "genetic_analysis_station" } },
+                ["action"] = new McpToolParameter { Type = "string", Description = "默认 list；printerceptor: intercept/open_print_interface；poi_tech_unlock: start/cancel/toggle；remote_work_terminal: set_dock；genetic_analysis_station: set_seed", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按名称、prefabId 或状态筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["pendingOnly"] = new McpToolParameter { Type = "boolean", Description = "kind=poi_tech_unlock action=list 时是否只返回已有解锁差事的通道", Required = false },
+                ["lockedOnly"] = new McpToolParameter { Type = "boolean", Description = "kind=poi_tech_unlock action=list 时是否只返回尚未解锁的通道", Required = false },
+                ["includeDocks"] = new McpToolParameter { Type = "boolean", Description = "kind=remote_work_terminal action=list 时是否返回同世界可选 dock，默认 true", Required = false },
+                ["dockId"] = new McpToolParameter { Type = "integer", Description = "kind=remote_work_terminal action=set_dock 时的目标 dock InstanceID", Required = false },
+                ["dockName"] = new McpToolParameter { Type = "string", Description = "kind=remote_work_terminal action=set_dock 时的目标 dock 名称", Required = false },
+                ["clear"] = new McpToolParameter { Type = "boolean", Description = "kind=remote_work_terminal action=set_dock 时清空选择", Required = false },
+                ["seedId"] = new McpToolParameter { Type = "string", Description = "kind=genetic_analysis_station action=set_seed 时的种子 tag/prefab id", Required = false },
+                ["speciesId"] = new McpToolParameter { Type = "string", Description = "kind=genetic_analysis_station action=set_seed 时的植物 species prefab id", Required = false },
+                ["allowed"] = new McpToolParameter { Type = "boolean", Description = "kind=genetic_analysis_station action=set_seed 时 true=允许送入分析，false=禁止", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "需要确认的写操作必须为 true", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> RemoteWorkTerminalControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_dock", Required = true, EnumValues = new List<string> { "list", "set_dock" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按终端、dock、prefabId 或世界筛选", Required = false },
+                ["includeDocks"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回同世界可选 dock，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["dockId"] = new McpToolParameter { Type = "integer", Description = "action=set_dock 时的目标 RemoteWorkerDock InstanceID", Required = false },
+                ["dockName"] = new McpToolParameter { Type = "string", Description = "action=set_dock 时的目标 dock 名称", Required = false },
+                ["clear"] = new McpToolParameter { Type = "boolean", Description = "action=set_dock 时清空选择，默认 false", Required = false }
+            });
+        }
+
+        private static Dictionary<string, McpToolParameter> GeneticAnalysisStationControlParams()
+        {
+            return AreaLookupParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set_seed", Required = true, EnumValues = new List<string> { "list", "set_seed" } },
+                ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑、种子、植物或状态筛选", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                ["seedId"] = new McpToolParameter { Type = "string", Description = "action=set_seed 时的种子 tag/prefab id，例如 BasicFabricPlantSeed；与 speciesId 二选一", Required = false },
+                ["speciesId"] = new McpToolParameter { Type = "string", Description = "action=set_seed 时的植物 species prefab id；会解析到对应 seedId", Required = false },
+                ["allowed"] = new McpToolParameter { Type = "boolean", Description = "action=set_seed 时 true=允许送入分析，false=禁止", Required = false }
+            });
         }
 
         private static bool HasRectInput(JObject args)

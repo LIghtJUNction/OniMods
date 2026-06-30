@@ -16,12 +16,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "production_fabricators_list",
+                Hidden = true,
                 Group = "production",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "fabricators_list", "crafting_stations_list" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "craft", "refinery", "kitchen" },
-                Description = "列出制作站/精炼/厨房等 ComplexFabricator 的配方队列、当前订单、下一订单和运行状态",
+                Description = "兼容入口：请优先使用 building_control domain=production action=list_fabricators。列出制作站/精炼/厨房等 ComplexFabricator 的配方队列、当前订单、下一订单和运行状态",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、当前/下一配方或已排队配方筛选", Required = false },
@@ -66,12 +67,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "production_recipes_list",
+                Hidden = true,
                 Group = "production",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "fabricator_recipes_list", "crafting_recipes_list" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "ingredients", "results" },
-                Description = "列出制作站可用 ComplexRecipe，包含 recipeId、分类、材料、产物、科技锁和当前队列数量；可按单个制作站、区域或关键词筛选",
+                Description = "兼容入口：请优先使用 building_control domain=production action=list_recipes。列出制作站可用 ComplexRecipe，包含 recipeId、分类、材料、产物、科技锁和当前队列数量；可按单个制作站、区域或关键词筛选",
                 Parameters = LookupParams(RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["recipeId"] = new McpToolParameter { Type = "string", Description = "精确配方 id 过滤", Required = false },
@@ -136,9 +138,10 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "fabricator_queue_set", "crafting_queue_set" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "craft" },
-                Description = "设置制作站配方队列数量：set/add/remove/infinite/clear，对应制作站侧屏队列加减和无限制作",
+                Description = "兼容入口：请优先使用 building_control domain=production action=set。设置制作站配方队列数量：set/add/remove/infinite/clear，对应制作站侧屏队列加减和无限制作",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["recipeId"] = new McpToolParameter { Type = "string", Description = "目标 ComplexRecipe.id，可先用 production_recipes_list 查询", Required = true },
@@ -193,9 +196,10 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "fabricator_queue_batch_set", "crafting_queue_batch_set" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "batch", "craft" },
-                Description = "批量设置同一制作站的多个配方队列。items 支持短字段 r/m/c，defaults 可共享 mode/count，适合一次规划多个制作订单",
+                Description = "兼容入口：请优先使用 building_control domain=production action=batch。批量设置同一制作站的多个配方队列。items 支持短字段 r/m/c，defaults 可共享 mode/count，适合一次规划多个制作订单",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "队列操作数组。每项：recipeId/r，mode/m=set|add|remove|infinite|clear，count/c", Required = false },
@@ -284,6 +288,40 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlQueue()
+        {
+            return new McpTool
+            {
+                Name = "production_queue_control",
+                Group = "production",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "fabricator_queue_control", "crafting_queue_control" },
+                Tags = new List<string> { "production", "fabricator", "recipe", "queue", "batch", "craft" },
+                Description = "生产队列聚合工具：action=list_fabricators/list_recipes/set/batch/set_mutant_seeds/mutant_seed_list/mutant_seed_set；读取制作站和配方，设置队列或突变种子策略。",
+                Parameters = ProductionQueueControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "list_fabricators").Trim().ToLowerInvariant();
+                    if (action == "list" || action == "list_fabricators" || action == "fabricators")
+                        return ListFabricators().Handler(args);
+                    if (action == "list_recipes" || action == "recipes")
+                        return ListRecipes().Handler(args);
+                    if (action == "set")
+                        return SetQueue().Handler(args);
+                    if (action == "batch")
+                        return BatchSetQueue().Handler(args);
+                    if (action == "set_mutant_seeds" || action == "mutant_seeds")
+                        return SetMutantSeeds().Handler(args);
+                    if (action == "mutant_seed_list" || action == "list_mutant_seeds")
+                        return SpecialUserMenuActionTools.ListMutantSeedControls().Handler(args);
+                    if (action == "mutant_seed_set" || action == "set_mutant_seed_control")
+                        return SpecialUserMenuActionTools.SetMutantSeedControl().Handler(args);
+                    return CallToolResult.Error("action must be one of list_fabricators, list_recipes, set, batch, set_mutant_seeds, mutant_seed_list, mutant_seed_set");
+                }
+            };
+        }
+
         public static McpTool SetMutantSeeds()
         {
             return new McpTool
@@ -292,9 +330,10 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "fabricator_mutant_seeds_set", "production_seed_mutations_set" },
                 Tags = new List<string> { "production", "fabricator", "seeds", "mutations", "spaced-out" },
-                Description = "设置制作站是否拒收突变种子，对应 DLC 制作站用户菜单的接受/拒绝突变种子开关",
+                Description = "兼容入口：请优先使用 building_control domain=production action=set_mutant_seeds。设置制作站是否拒收突变种子，对应 DLC 制作站用户菜单的接受/拒绝突变种子开关",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["forbid"] = new McpToolParameter { Type = "boolean", Description = "true=拒收突变种子，false=接受突变种子", Required = true }
@@ -681,6 +720,31 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
+        }
+
+        private static Dictionary<string, McpToolParameter> ProductionQueueControlParams()
+        {
+            return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "list_fabricators、list_recipes、set、batch、set_mutant_seeds、mutant_seed_list 或 mutant_seed_set", Required = false, EnumValues = new List<string> { "list_fabricators", "list_recipes", "set", "batch", "set_mutant_seeds", "mutant_seed_list", "mutant_seed_set" } },
+                ["recipeId"] = new McpToolParameter { Type = "string", Description = "action=list_recipes 时精确过滤；action=set 时为目标 ComplexRecipe.id", Required = false },
+                ["categoryId"] = new McpToolParameter { Type = "string", Description = "action=list_recipes 时精确配方分类 id 过滤", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "读取时按建筑名、prefabId、配方、材料、产物或突变种子开关组件筛选", Required = false },
+                ["fabricatorQuery"] = new McpToolParameter { Type = "string", Description = "action=list_recipes 时筛选制作站", Required = false },
+                ["queuedOnly"] = new McpToolParameter { Type = "boolean", Description = "读取时是否只返回已有队列/订单项，默认 false", Required = false },
+                ["includeRecipes"] = new McpToolParameter { Type = "boolean", Description = "action=list_fabricators 时是否附带每个制作站的配方摘要，默认 false", Required = false },
+                ["includeLocked"] = new McpToolParameter { Type = "boolean", Description = "action=list_recipes 时是否包含科技未解锁配方，默认 true", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "读取时最多返回数量", Required = false },
+                ["mode"] = new McpToolParameter { Type = "string", Description = "action=set/batch 时队列模式：set、add、remove、infinite 或 clear，默认 set", Required = false, EnumValues = new List<string> { "set", "add", "remove", "infinite", "clear" } },
+                ["count"] = new McpToolParameter { Type = "integer", Description = "action=set/batch 时 set/add/remove 的数量", Required = false },
+                ["items"] = new McpToolParameter { Type = "array", Description = "action=batch 时队列操作数组。每项：recipeId/r，mode/m，count/c", Required = false },
+                ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch 时合并到每项的默认队列参数", Required = false },
+                ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                ["clearAll"] = new McpToolParameter { Type = "boolean", Description = "action=batch 时 true=先清空该制作站所有配方队列", Required = false },
+                ["forbid"] = new McpToolParameter { Type = "boolean", Description = "action=set_mutant_seeds 时 true=拒收突变种子，false=接受突变种子", Required = false },
+                ["accept"] = new McpToolParameter { Type = "boolean", Description = "action=mutant_seed_set 时 true=接受突变种子，false=拒收突变种子", Required = false },
+                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "写队列或突变种子开关时必须为 true，避免误改生产状态", Required = false }
+            }));
         }
 
         private static bool HasLookupInput(JObject args)

@@ -10,6 +10,43 @@ namespace OniMcp.Tools
 {
     public static class ColonyReportTools
     {
+        public static McpTool ControlColonyReport()
+        {
+            var parameters = new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "report 或 summary", Required = true },
+                ["day"] = new McpToolParameter { Type = "integer", Description = "report: 报告周期；留空则按 which 选择", Required = false },
+                ["which"] = new McpToolParameter { Type = "string", Description = "report: today、yesterday 或 latest，默认 latest", Required = false },
+                ["includeZero"] = new McpToolParameter { Type = "boolean", Description = "report: 是否包含零值条目，默认 false", Required = false },
+                ["includeContexts"] = new McpToolParameter { Type = "boolean", Description = "report: 是否包含按复制人/建筑等上下文拆分的子项，默认 true", Required = false },
+                ["includeNotes"] = new McpToolParameter { Type = "boolean", Description = "report: 是否包含报告注释明细，默认 false", Required = false },
+                ["limit"] = new McpToolParameter { Type = "integer", Description = "report: 最多返回多少个主条目，默认 80，最大 300", Required = false },
+                ["includeStats"] = new McpToolParameter { Type = "boolean", Description = "summary: 是否包含概要统计曲线，默认 true", Required = false },
+                ["maxStatPoints"] = new McpToolParameter { Type = "integer", Description = "summary: 每条统计曲线最多返回多少个点，默认 60，最大 500", Required = false }
+            };
+
+            return new McpTool
+            {
+                Name = "colony_report_control",
+                Group = "colony",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "daily_report", "get_colony_report", "get_colony_summary" },
+                Tags = new List<string> { "report", "summary", "daily", "colony", "殖民地报告", "殖民地概要" },
+                Description = "统一读取殖民地报告和殖民地概要：action=report|summary",
+                Parameters = parameters,
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "report")
+                        return GetColonyReport().Handler(args);
+                    if (action == "summary")
+                        return GetColonySummary().Handler(args);
+                    return CallToolResult.Error("action must be report or summary");
+                }
+            };
+        }
+
         public static McpTool GetColonyReport()
         {
             return new McpTool
@@ -20,7 +57,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "daily_report", "get_colony_report" },
                 Tags = new List<string> { "report", "daily", "colony", "殖民地报告" },
-                Description = "读取游戏原生每日殖民地报告（ReportManager）。默认返回昨天/最近完成周期的报告",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 colony_control domain=report action=report",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["day"] = new McpToolParameter { Type = "integer", Description = "报告周期；留空则按 which 选择", Required = false },
@@ -79,7 +117,8 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_colony_summary" },
                 Tags = new List<string> { "summary", "retired colony", "colony", "殖民地概要" },
-                Description = "读取游戏原生殖民地概要数据（RetireColonyUtility），不退休殖民地、不写入文件",
+                Hidden = true,
+                Description = "兼容旧工具：请改用 colony_control domain=report action=summary",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["includeStats"] = new McpToolParameter { Type = "boolean", Description = "是否包含概要统计曲线，默认 true", Required = false },

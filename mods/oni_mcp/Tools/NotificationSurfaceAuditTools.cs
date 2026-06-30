@@ -17,6 +17,7 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "hud_notification_surface_audit", "message_surface_audit" },
                 Tags = new List<string> { "coverage", "audit", "notifications", "messages", "hud", "focus", "tools", "resources" },
                 Description = "审计 ONI NotificationScreen/NotificationManager/消息通知与 MCP 工具/资源覆盖映射",
@@ -33,7 +34,7 @@ namespace OniMcp.Tools
                     string status = (args["status"]?.ToString() ?? "all").Trim().ToLowerInvariant();
                     string detail = (args["detail"]?.ToString() ?? "brief").Trim().ToLowerInvariant();
                     int limit = ToolUtil.ClampLimit(args, 80, 200);
-                    var toolNames = new HashSet<string>(OniToolRegistry.GetTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
+                    var toolNames = new HashSet<string>(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
                     var resourceNames = new HashSet<string>(
                         OniResourceRegistry.GetResourceInfos().Select(info => info.Name)
                             .Concat(OniResourceRegistry.GetResourceTemplateInfos().Select(info => info.Name)),
@@ -79,12 +80,12 @@ namespace OniMcp.Tools
 
         private static IEnumerable<NotificationSurfaceRow> KnownRows()
         {
-            yield return Covered("NotificationScreen", "notification_rows", "Click notification row to cycle grouped notifications, focus/select target, run custom callback or open message", new[] { "notifications_list", "notification_click", "camera_focus_cell", "camera_set_active_world" }, new[] { "notifications_list" });
-            yield return Covered("NotificationScreen", "dismiss_button", "Dismiss clearable notification groups", new[] { "notifications_list", "notification_dismiss" }, new[] { "notifications_list" });
-            yield return Covered("NotificationManager", "active_and_pending_notifications", "Read active/pending notification stack and readiness", new[] { "notifications_list", "colony_alerts", "colony_diagnostics" }, new[] { "notifications_list", "colony_alerts" });
-            yield return Covered("MessageNotification", "message_dialog", "Open message notifications through NotificationScreen message dialog path", new[] { "notifications_list", "notification_click" }, new[] { "notifications_list" });
-            yield return Covered("EventInfoScreen", "event_notification_focus", "Event notifications with clickFocus/custom callback", new[] { "notifications_list", "notification_click" }, new[] { "notifications_list" });
-            yield return Covered("SimpleInfoScreen.StatusItemEntry", "status_item_clicks", "Clickable selected-object status items and related targets", new[] { "related_entities_list", "related_entity_focus", "side_buttons_list", "side_button_press", "process_conditions_list" }, new[] { "related_entities_list", "side_buttons_list", "process_conditions_list" });
+            yield return Covered("NotificationScreen", "notification_rows", "Click notification row to cycle grouped notifications, focus/select target, run custom callback or open message", new[] { "colony_control", "navigation_control domain=camera" }, new[] { "colony_control" });
+            yield return Covered("NotificationScreen", "dismiss_button", "Dismiss clearable notification groups", new[] { "colony_control" }, new[] { "colony_control" });
+            yield return Covered("NotificationManager", "active_and_pending_notifications", "Read active/pending notification stack and readiness", new[] { "colony_control", "colony_alerts", "colony_diagnostics" }, new[] { "colony_control", "colony_alerts" });
+            yield return Covered("MessageNotification", "message_dialog", "Open message notifications through NotificationScreen message dialog path", new[] { "colony_control" }, new[] { "colony_control" });
+            yield return Covered("EventInfoScreen", "event_notification_focus", "Event notifications with clickFocus/custom callback", new[] { "colony_control" }, new[] { "colony_control" });
+            yield return Covered("SimpleInfoScreen.StatusItemEntry", "status_item_clicks", "Clickable selected-object status items and related targets", new[] { "building_control domain=side_surface", "building_control domain=space_story" }, new[] { "building_control domain=side_surface", "building_control domain=space_story action=process_conditions" });
         }
 
         private static NotificationSurfaceRow Covered(string sourceClass, string surface, string playerSurface, string[] tools, string[] resources)

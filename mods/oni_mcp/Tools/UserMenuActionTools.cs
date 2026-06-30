@@ -56,9 +56,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "context_menu_actions_list", "object_user_buttons_list" },
                 Tags = new List<string> { "controls", "user-menu", "context-menu", "buttons", "actions" },
-                Description = "列出已映射的对象 UserMenu 按钮操作，包括清扫/移动/维修/堆肥/倒空/雕刻等非侧屏按钮",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=user_menu action=list。列出已映射的对象 UserMenu 按钮操作，包括清扫/移动/维修/堆肥/倒空/雕刻等非侧屏按钮",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按对象名、prefabId、actionKey、说明或组件类型筛选", Required = false },
@@ -105,9 +106,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "high",
+                Hidden = true,
                 Aliases = new List<string> { "context_menu_action_press", "object_user_button_press" },
                 Tags = new List<string> { "controls", "user-menu", "context-menu", "buttons", "actions" },
-                Description = "执行已映射对象 UserMenu 按钮操作。用于非侧屏按钮；需先用 user_menu_actions_list 查询 actionKey，且 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=user_menu action=press。执行已映射对象 UserMenu 按钮操作。用于非侧屏按钮；需先用 action=list 查询 actionKey，且 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["actionKey"] = new McpToolParameter { Type = "string", Description = "要执行的 actionKey，例如 toggle_compost、toggle_dump、allow_auto_repair", Required = true },
@@ -151,9 +153,10 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "high",
+                Hidden = true,
                 Aliases = new List<string> { "context_menu_actions_batch_press" },
                 Tags = new List<string> { "controls", "user-menu", "context-menu", "batch" },
-                Description = "批量执行已映射对象 UserMenu 按钮操作；items 支持 {actionKey|a,id/x/y/worldId|w}，defaults 可共享 actionKey/worldId，需 confirm=true",
+                Description = "兼容入口：请优先使用 building_control domain=side_surface surface=user_menu action=batch。批量执行已映射对象 UserMenu 按钮操作；items 支持 {actionKey|a,id/x/y/worldId|w}，defaults 可共享 actionKey/worldId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "数组；每项支持 id 或 x/y/worldId，并提供 actionKey 或短字段 a", Required = true },
@@ -209,6 +212,103 @@ namespace OniMcp.Tools
                         ["failed"] = results.Count(item => !(bool)item["ok"]),
                         ["results"] = results
                     });
+                }
+            };
+        }
+
+        public static McpTool ControlUserMenuAction()
+        {
+            return new McpTool
+            {
+                Name = "user_menu_action_control",
+                Group = "controls",
+                Mode = "write",
+                Risk = "high",
+                Aliases = new List<string> { "context_menu_action_control", "object_user_button_control" },
+                Tags = new List<string> { "controls", "user-menu", "context-menu", "buttons", "actions", "batch" },
+                Description = "统一读取、执行和批量执行对象 UserMenu 按钮操作。action=list/press/batch；press/batch 需 confirm=true。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "操作：list、press、batch", Required = true },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按对象名、prefabId、actionKey、说明或组件类型筛选", Required = false },
+                    ["category"] = new McpToolParameter { Type = "string", Description = "action=list 时按分类筛选，如 orders、resources、buildings、ranching、care", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回对象数量，默认 100，最大 500", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=press 时目标 KPrefabID InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标 Y", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "action=list 时筛选矩形终点 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前或目标格所在世界", Required = false },
+                    ["actionKey"] = new McpToolParameter { Type = "string", Description = "action=press 时要执行的 actionKey；批量项可用 actionKey 或 a", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "action=batch 时数组；每项支持 id 或 x/y/worldId，并提供 actionKey 或短字段 a", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch 时合并到每项的默认参数", Required = false },
+                    ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=press/batch 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListUserMenuActions().Handler(args);
+                    if (action == "press")
+                        return PressUserMenuAction().Handler(args);
+                    if (action == "batch")
+                        return BatchPressUserMenuActions().Handler(args);
+                    return CallToolResult.Error("action must be one of list, press, batch");
+                }
+            };
+        }
+
+        public static McpTool ControlUserAction()
+        {
+            return new McpTool
+            {
+                Name = "user_action_control",
+                Group = "controls",
+                Mode = "write",
+                Risk = "high",
+                Aliases = new List<string> { "user_menu_control", "context_action_control", "object_action_control" },
+                Tags = new List<string> { "controls", "user-menu", "context-menu", "maintenance", "buttons", "actions", "batch" },
+                Description = "用户菜单动作聚合入口：domain=generic/maintenance；generic 路由对象 UserMenu 按钮 list/press/batch，maintenance 路由带状态机或槽位参数的 list/execute/batch。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "generic 或 maintenance；省略时按 action 推断，execute 默认 maintenance，其余默认 generic", Required = false, EnumValues = new List<string> { "generic", "maintenance" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "generic: list/press/batch；maintenance: list/execute/batch", Required = true },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "list 或部分维护动作的筛选词", Required = false },
+                    ["category"] = new McpToolParameter { Type = "string", Description = "generic list 时按分类筛选，如 orders、resources、buildings、ranching、care", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "list 最多返回对象数量", Required = false },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "目标 KPrefabID InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标 Y", Required = false },
+                    ["x1"] = new McpToolParameter { Type = "integer", Description = "list 时筛选矩形起点 X", Required = false },
+                    ["y1"] = new McpToolParameter { Type = "integer", Description = "list 时筛选矩形起点 Y", Required = false },
+                    ["x2"] = new McpToolParameter { Type = "integer", Description = "list 时筛选矩形终点 X", Required = false },
+                    ["y2"] = new McpToolParameter { Type = "integer", Description = "list 时筛选矩形终点 Y", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前或目标格所在世界", Required = false },
+                    ["actionKey"] = new McpToolParameter { Type = "string", Description = "要执行的动作 key；批量项可用 actionKey 或 a", Required = false },
+                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "maintenance set_transit_tube_wax / set_hive_harvest 的目标状态", Required = false },
+                    ["slotId"] = new McpToolParameter { Type = "string", Description = "maintenance unequip_dupe_equipment 的装备槽 ID", Required = false },
+                    ["equipmentId"] = new McpToolParameter { Type = "integer", Description = "maintenance unequip_dupe_equipment 的装备 KPrefabID.InstanceID", Required = false },
+                    ["equipmentPrefab"] = new McpToolParameter { Type = "string", Description = "maintenance unequip_dupe_equipment 的装备 prefabId", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "batch 时操作数组", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "batch 时合并到每项的默认参数", Required = false },
+                    ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "defaults 的别名", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "press/execute/batch 时必须为 true", Required = false }
+                },
+                Handler = args =>
+                {
+                    string domain = (args["domain"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (string.IsNullOrEmpty(domain))
+                        domain = action == "execute" ? "maintenance" : "generic";
+
+                    if (domain == "generic" || domain == "menu" || domain == "user_menu")
+                        return ControlUserMenuAction().Handler(args);
+                    if (domain == "maintenance" || domain == "service")
+                        return MaintenanceActionTools.ControlMaintenanceAction().Handler(args);
+                    return CallToolResult.Error("domain must be generic or maintenance");
                 }
             };
         }

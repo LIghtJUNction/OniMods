@@ -16,12 +16,13 @@ namespace OniMcp.Tools
             return new McpTool
             {
                 Name = "filters_list",
+                Hidden = true,
                 Group = "filters",
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "building_filters_list", "filterable_controls_list" },
                 Tags = new List<string> { "filters", "filterable", "tree-filter", "element-filter", "side-screen", "conduit" },
-                Description = "列出玩家可配置过滤器：气/液/固体管道过滤器、元素传感器、储存/树形过滤器和平铺 tag 过滤器",
+                Description = "兼容入口：请优先使用 building_control domain=filter action=list。列出玩家可配置过滤器：气/液/固体管道过滤器、元素传感器、储存/树形过滤器和平铺 tag 过滤器",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["kind"] = new McpToolParameter { Type = "string", Description = "过滤类型：any、single、tree、flat，默认 any", Required = false, EnumValues = new List<string> { "any", "single", "tree", "flat" } },
@@ -81,46 +82,93 @@ namespace OniMcp.Tools
                 Group = "filters",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "element_filter_set", "filterable_set" },
                 Tags = new List<string> { "filters", "filterable", "element-filter", "sensor", "conduit" },
-                Description = "设置单选 Filterable.SelectedTag，用于气/液/固体过滤器、元素传感器等单元素过滤侧屏",
+                Description = "兼容入口：请优先使用 building_control domain=filter action=set kind=single",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["tag"] = new McpToolParameter { Type = "string", Description = "目标 tag/元素，例如 Oxygen、Water、Dirt；clear=true 时可省略", Required = false },
                     ["clear"] = new McpToolParameter { Type = "boolean", Description = "true 时设为 GameTags.Void/未选择", Required = false }
                 }),
+                Handler = SetSingleFilter
+            };
+        }
+
+        public static McpTool SetFilter()
+        {
+            return new McpTool
+            {
+                Name = "filter_set",
+                Hidden = true,
+                Group = "filters",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "filters_set", "building_filter_set" },
+                Tags = new List<string> { "filters", "filterable", "tree-filter", "flat-tag-filter", "element-filter", "side-screen" },
+                Description = "兼容入口：请优先使用 building_control domain=filter action=set。kind=single 设置单选 Filterable；kind=tree/flat 设置 TreeFilterable/FlatTagFilterable 多选标签。",
+                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "过滤器类型：single、tree 或 flat", Required = true, EnumValues = new List<string> { "single", "tree", "flat" } },
+                    ["tag"] = new McpToolParameter { Type = "string", Description = "kind=single 时的目标 tag/元素；clear=true 时可省略", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "kind=single 时设为未选择；kind=tree/flat 时等同 mode=clear", Required = false },
+                    ["tags"] = new McpToolParameter { Type = "array", Description = "kind=tree/flat 时的 tag 列表，例如 Dirt、Algae、BasicSingleHarvestPlantSeed", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "kind=tree/flat 时：replace、add、remove 或 clear，默认 replace", Required = false, EnumValues = new List<string> { "replace", "add", "remove", "clear" } }
+                }),
                 Handler = args =>
                 {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var filterable = go.GetComponent<Filterable>();
-                    if (filterable == null)
-                        return CallToolResult.Error("Target does not expose Filterable");
-
-                    Tag before = filterable.SelectedTag;
-                    if (ToolUtil.GetBool(args, "clear", false))
+                    string kind = (args["kind"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (kind)
                     {
-                        filterable.SelectedTag = GameTags.Void;
+                        case "single":
+                            return SetSingleFilter(args);
+                        case "tree":
+                        case "flat":
+                            if (ToolUtil.GetBool(args, "clear", false) && string.IsNullOrWhiteSpace(args["mode"]?.ToString()))
+                                args["mode"] = "clear";
+                            return SetTreeFilter(args);
+                        default:
+                            return CallToolResult.Error("kind must be single, tree, or flat");
                     }
-                    else
-                    {
-                        string tagName = args["tag"]?.ToString();
-                        if (string.IsNullOrWhiteSpace(tagName))
-                            return CallToolResult.Error("tag is required unless clear=true");
-                        var tag = new Tag(tagName.Trim());
-                        if (!SingleFilterOptions(filterable).Contains(tag))
-                            return CallToolResult.Error("tag is not currently valid for this Filterable; inspect filters_list includeOptions=true");
-                        filterable.SelectedTag = tag;
-                    }
+                }
+            };
+        }
 
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["before"] = TagInfo(before),
-                        ["selected"] = TagInfo(filterable.SelectedTag),
-                        ["changed"] = before != filterable.SelectedTag
-                    }, McpJsonUtil.Settings));
+        public static McpTool ControlFilter()
+        {
+            return new McpTool
+            {
+                Name = "filter_control",
+                Hidden = true,
+                Group = "filters",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "filters_control", "building_filter_control" },
+                Tags = new List<string> { "filters", "filterable", "tree-filter", "flat-tag-filter", "element-filter", "side-screen", "conduit" },
+                Description = "过滤器聚合工具：action=list/set；读取可配置过滤器，或设置 single/tree/flat 过滤标签。",
+                Parameters = RectParams(new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list 或 set", Required = true, EnumValues = new List<string> { "list", "set" } },
+                    ["id"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标对象 InstanceID", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标格子 X", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "action=set 时的目标格子 Y", Required = false },
+                    ["kind"] = new McpToolParameter { Type = "string", Description = "action=list 时为 any/single/tree/flat；action=set 时为 single/tree/flat", Required = false, EnumValues = new List<string> { "any", "single", "tree", "flat" } },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按建筑名、prefabId、已选 tag 或可选 tag 筛选", Required = false },
+                    ["includeOptions"] = new McpToolParameter { Type = "boolean", Description = "action=list 时是否返回可选 tag 选项，默认 false", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
+                    ["tag"] = new McpToolParameter { Type = "string", Description = "action=set kind=single 时的目标 tag/元素；clear=true 时可省略", Required = false },
+                    ["clear"] = new McpToolParameter { Type = "boolean", Description = "action=set 时清空过滤器", Required = false },
+                    ["tags"] = new McpToolParameter { Type = "array", Description = "action=set kind=tree/flat 时的 tag 列表", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "action=set kind=tree/flat 时：replace、add、remove 或 clear，默认 replace", Required = false, EnumValues = new List<string> { "replace", "add", "remove", "clear" } }
+                }),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    if (action == "list")
+                        return ListFilters().Handler(args);
+                    if (action == "set")
+                        return SetFilter().Handler(args);
+                    return CallToolResult.Error("action must be list or set");
                 }
             };
         }
@@ -133,60 +181,95 @@ namespace OniMcp.Tools
                 Group = "filters",
                 Mode = "write",
                 Risk = "medium",
+                Hidden = true,
                 Aliases = new List<string> { "tree_filter_set", "flat_tag_filter_set", "multi_filter_set" },
                 Tags = new List<string> { "filters", "tree-filter", "flat-tag-filter", "storage", "side-screen" },
-                Description = "设置多选 TreeFilterable/FlatTagFilterable 标签；可 replace/add/remove/clear，覆盖储存过滤和其他树形过滤侧屏",
+                Description = "兼容入口：请优先使用 building_control domain=filter action=set kind=tree 或 kind=flat",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["tags"] = new McpToolParameter { Type = "array", Description = "tag 列表，例如 Dirt、Algae、BasicSingleHarvestPlantSeed；clear 时可省略", Required = false },
                     ["mode"] = new McpToolParameter { Type = "string", Description = "replace、add、remove 或 clear，默认 replace", Required = false, EnumValues = new List<string> { "replace", "add", "remove", "clear" } }
                 }),
-                Handler = args =>
-                {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var tree = go.GetComponent<TreeFilterable>();
-                    if (tree == null)
-                        return CallToolResult.Error("Target does not expose TreeFilterable");
-
-                    string mode = (args["mode"]?.ToString() ?? "replace").Trim().ToLowerInvariant();
-                    var before = tree.GetTags().Select(TagInfo).ToList();
-                    var next = new HashSet<Tag>(tree.GetTags());
-                    var requested = ParseTags(args["tags"]);
-
-                    if (mode == "clear" || mode == "replace")
-                        next.Clear();
-                    if (mode != "clear" && requested.Count == 0)
-                        return CallToolResult.Error("tags must contain at least one tag unless mode=clear");
-
-                    foreach (var tag in requested)
-                    {
-                        if (mode == "remove")
-                            next.Remove(tag);
-                        else
-                            next.Add(tag);
-                    }
-
-                    var flat = go.GetComponent<FlatTagFilterable>();
-                    if (flat != null)
-                    {
-                        ApplyFlatTags(flat, next);
-                    }
-                    else
-                    {
-                        tree.UpdateFilters(next);
-                    }
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["target"] = TargetInfo(go),
-                        ["mode"] = mode,
-                        ["before"] = before,
-                        ["selected"] = tree.GetTags().Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList()
-                    }, McpJsonUtil.Settings));
-                }
+                Handler = SetTreeFilter
             };
+        }
+
+        private static CallToolResult SetSingleFilter(JObject args)
+        {
+            var go = FindTarget(args);
+            if (go == null)
+                return CallToolResult.Error("Target not found");
+            var filterable = go.GetComponent<Filterable>();
+            if (filterable == null)
+                return CallToolResult.Error("Target does not expose Filterable");
+
+            Tag before = filterable.SelectedTag;
+            if (ToolUtil.GetBool(args, "clear", false))
+            {
+                filterable.SelectedTag = GameTags.Void;
+            }
+            else
+            {
+                string tagName = args["tag"]?.ToString();
+                if (string.IsNullOrWhiteSpace(tagName))
+                    return CallToolResult.Error("tag is required unless clear=true");
+                var tag = new Tag(tagName.Trim());
+                if (!SingleFilterOptions(filterable).Contains(tag))
+                    return CallToolResult.Error("tag is not currently valid for this Filterable; inspect building_control domain=filter action=list includeOptions=true");
+                filterable.SelectedTag = tag;
+            }
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = "single",
+                ["before"] = TagInfo(before),
+                ["selected"] = TagInfo(filterable.SelectedTag),
+                ["changed"] = before != filterable.SelectedTag
+            }, McpJsonUtil.Settings));
+        }
+
+        private static CallToolResult SetTreeFilter(JObject args)
+        {
+            var go = FindTarget(args);
+            if (go == null)
+                return CallToolResult.Error("Target not found");
+            var tree = go.GetComponent<TreeFilterable>();
+            if (tree == null)
+                return CallToolResult.Error("Target does not expose TreeFilterable");
+
+            string mode = (args["mode"]?.ToString() ?? "replace").Trim().ToLowerInvariant();
+            var before = tree.GetTags().Select(TagInfo).ToList();
+            var next = new HashSet<Tag>(tree.GetTags());
+            var requested = ParseTags(args["tags"]);
+
+            if (mode == "clear" || mode == "replace")
+                next.Clear();
+            if (mode != "clear" && requested.Count == 0)
+                return CallToolResult.Error("tags must contain at least one tag unless mode=clear");
+
+            foreach (var tag in requested)
+            {
+                if (mode == "remove")
+                    next.Remove(tag);
+                else
+                    next.Add(tag);
+            }
+
+            var flat = go.GetComponent<FlatTagFilterable>();
+            if (flat != null)
+                ApplyFlatTags(flat, next);
+            else
+                tree.UpdateFilters(next);
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["target"] = TargetInfo(go),
+                ["kind"] = flat != null ? "flat" : "tree",
+                ["mode"] = mode,
+                ["before"] = before,
+                ["selected"] = tree.GetTags().Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList()
+            }, McpJsonUtil.Settings));
         }
 
         private static Dictionary<string, object> FilterInfo(GameObject go, bool includeOptions)

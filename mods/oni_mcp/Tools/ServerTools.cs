@@ -13,6 +13,127 @@ namespace OniMcp.Tools
 {
     public static class ServerTools
     {
+        public static McpTool ControlServer()
+        {
+            return new McpTool
+            {
+                Name = "server_control",
+                Group = "server",
+                Mode = "read/execute",
+                Risk = "medium",
+                Aliases = new List<string> { "mcp_server_control", "server_diagnostics_control", "mcp_client_request_control", "tools_catalog_control", "tools_call_many", "agent_program_execute" },
+                Description = "服务器/MCP 组合入口：domain=diagnostics action=status/capabilities/logs_tail；domain=client_request action=create_sampling/create_elicitation；domain=catalog action=manifest/search/guide/coverage/static_audit/surface_audit；domain=batch action=call_many 批量调用工具；domain=program action=execute 执行受限流程 DSL",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "diagnostics、client_request、catalog、batch 或 program，默认 diagnostics", Required = false, EnumValues = new List<string> { "diagnostics", "client_request", "catalog", "batch", "program" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "diagnostics: status/capabilities/logs_tail；client_request: create_sampling/create_elicitation；catalog: manifest/search/guide/coverage/static_audit/surface_audit；batch: call_many；program: execute", Required = true },
+                    ["file"] = new McpToolParameter { Type = "string", Description = "diagnostics logs_tail：current 或 previous", Required = false },
+                    ["lines"] = new McpToolParameter { Type = "integer", Description = "diagnostics logs_tail：返回末尾行数，默认 120，最大 1000", Required = false },
+                    ["filter"] = new McpToolParameter { Type = "string", Description = "diagnostics logs_tail：可选关键词过滤", Required = false },
+                    ["surface"] = new McpToolParameter { Type = "string", Description = "catalog surface_audit：side_screen/user_menu/management/tool_menu/ui_menu/global_control/notification", Required = false, EnumValues = new List<string> { "side_screen", "user_menu", "management", "tool_menu", "ui_menu", "global_control", "notification" } },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "catalog manifest/search/coverage/surface_audit 的关键词或目标意图", Required = false },
+                    ["goal"] = new McpToolParameter { Type = "string", Description = "catalog guide 的玩家目标或操作意图", Required = false },
+                    ["group"] = new McpToolParameter { Type = "string", Description = "catalog manifest/search/coverage 的工具或操作分组过滤", Required = false },
+                    ["mode"] = new McpToolParameter { Type = "string", Description = "catalog manifest/search 过滤 read/write/execute/any", Required = false },
+                    ["risk"] = new McpToolParameter { Type = "string", Description = "catalog manifest/search/static_audit 过滤 none/low/medium/dangerous/any", Required = false },
+                    ["status"] = new McpToolParameter { Type = "string", Description = "catalog coverage/surface_audit 状态过滤", Required = false, EnumValues = new List<string> { "all", "covered", "partial", "missing", "review", "no_action" } },
+                    ["detail"] = new McpToolParameter { Type = "string", Description = "catalog 返回细节：brief/compact/full，按 action 支持", Required = false },
+                    ["includeResources"] = new McpToolParameter { Type = "boolean", Description = "catalog coverage 是否返回 resourceAnchors", Required = false },
+                    ["includeHotkeys"] = new McpToolParameter { Type = "boolean", Description = "catalog coverage 是否返回游戏 Action 枚举热键覆盖摘要", Required = false },
+                    ["includeNoAction"] = new McpToolParameter { Type = "boolean", Description = "catalog surface_audit surface=side_screen 是否返回纯显示/无玩家操作侧屏", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "catalog manifest/search/coverage 最多返回多少项", Required = false },
+                    ["calls"] = new McpToolParameter { Type = "array", Description = "domain=batch action=call_many：要调用的工具数组，格式为 [{\"name\":\"tool_name\",\"arguments\":{...}}]，也兼容短字段 {t,a}；最多 20 个", Required = false },
+                    ["items"] = new McpToolParameter { Type = "array", Description = "domain=batch action=call_many：calls 的别名", Required = false },
+                    ["defaults"] = new McpToolParameter { Type = "object", Description = "domain=batch action=call_many：合并到每个子调用 arguments 的默认参数对象；子调用同名参数优先", Required = false },
+                    ["defaultArguments"] = new McpToolParameter { Type = "object", Description = "domain=batch action=call_many：defaults 的别名", Required = false },
+                    ["stopOnError"] = new McpToolParameter { Type = "boolean", Description = "domain=batch action=call_many：遇到错误后是否停止后续调用，默认 false", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "domain=batch action=call_many：只做结构、安全和工具存在性预检，不执行任何子调用，默认 false", Required = false },
+                    ["requireAllValid"] = new McpToolParameter { Type = "boolean", Description = "domain=batch action=call_many：执行前要求所有子调用通过预检，默认 true", Required = false },
+                    ["responseMode"] = new McpToolParameter { Type = "string", Description = "domain=batch action=call_many：full/summary/errors，默认 summary", Required = false, EnumValues = new List<string> { "full", "summary", "errors" } },
+                    ["includeArguments"] = new McpToolParameter { Type = "boolean", Description = "domain=batch action=call_many：是否回显合并 defaults 后的 arguments，默认 false", Required = false },
+                    ["maxTextChars"] = new McpToolParameter { Type = "integer", Description = "domain=batch action=call_many：summary/errors 模式下每项 text 最大字符数，默认 500，最大 4000", Required = false },
+                    ["program"] = new McpToolParameter { Type = "object", Description = "domain=program action=execute：受限流程 DSL 对象、数组或 JSON 字符串，格式如 {vars:{...},steps:[...]}", Required = false },
+                    ["maxSteps"] = new McpToolParameter { Type = "integer", Description = "domain=program action=execute：最大执行语句数，默认 200，最大 2000", Required = false },
+                    ["maxLoopIterations"] = new McpToolParameter { Type = "integer", Description = "domain=program action=execute：单个 while/repeat 最大迭代次数，默认 100，最大 1000", Required = false },
+                    ["trace"] = new McpToolParameter { Type = "boolean", Description = "domain=program action=execute：是否返回详细执行 trace，默认 true", Required = false },
+                    ["prompt"] = new McpToolParameter { Type = "string", Description = "client_request create_sampling：用户消息", Required = false },
+                    ["systemPrompt"] = new McpToolParameter { Type = "string", Description = "client_request create_sampling：可选 system prompt", Required = false },
+                    ["maxTokens"] = new McpToolParameter { Type = "integer", Description = "client_request create_sampling：最大 token 数，默认 1000", Required = false },
+                    ["temperature"] = new McpToolParameter { Type = "number", Description = "client_request create_sampling：可选 temperature", Required = false },
+                    ["includeContext"] = new McpToolParameter { Type = "string", Description = "client_request create_sampling：上下文范围", Required = false, EnumValues = new List<string> { "none", "thisServer", "allServers" } },
+                    ["message"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：展示给用户的问题或说明", Required = false },
+                    ["fieldName"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：结构化响应字段名，默认 response", Required = false },
+                    ["fieldDescription"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：结构化响应字段说明", Required = false },
+                    ["fieldType"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：字段类型，默认 string", Required = false, EnumValues = new List<string> { "string", "boolean", "integer", "number" } },
+                    ["required"] = new McpToolParameter { Type = "boolean", Description = "client_request create_elicitation：字段是否必填，默认 true", Required = false },
+                    ["schema"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：可选完整 JSON schema", Required = false }
+                },
+                Handler = args =>
+                {
+                    string domain = (args["domain"]?.ToString() ?? "diagnostics").Trim().ToLowerInvariant();
+                    if (domain == "diagnostics" || domain == "diagnostic" || domain == "server")
+                        return DiagnosticsControl().Handler(args);
+                    if (domain == "client_request" || domain == "client" || domain == "request")
+                        return ControlClientRequest().Handler(args);
+                    if (domain == "catalog" || domain == "tools" || domain == "tool_catalog")
+                    {
+                        var forwarded = new JObject(args);
+                        forwarded.Remove("domain");
+                        return ToolCatalogTools.ControlToolCatalog().Handler(forwarded);
+                    }
+                    if (domain == "batch" || domain == "call_many" || domain == "many")
+                        return ToolBatchTools.CallMany().Handler(args);
+                    if (domain == "program" || domain == "agent_program" || domain == "flow" || domain == "script")
+                    {
+                        string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                        if (action == "execute" || action == "run" || action == "start")
+                            return AgentProgramTools.ExecuteProgram().Handler(args);
+                        return CallToolResult.Error("domain=program action must be execute");
+                    }
+                    return CallToolResult.Error("domain must be diagnostics, client_request, catalog, batch, or program");
+                }
+            };
+        }
+
+        public static McpTool DiagnosticsControl()
+        {
+            return new McpTool
+            {
+                Name = "server_diagnostics_control",
+                Hidden = true,
+                Group = "server",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "server_diagnostics", "mcp_server_diagnostics" },
+                Description = "兼容旧工具：请改用 server_control domain=diagnostics action=status/capabilities/logs_tail",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter
+                    {
+                        Type = "string",
+                        Description = "诊断动作：status 返回 MCP 服务器状态；capabilities 返回客户端能力；logs_tail 读取最近游戏日志",
+                        Required = true,
+                        EnumValues = new List<string> { "status", "capabilities", "logs_tail" }
+                    },
+                    ["file"] = new McpToolParameter { Type = "string", Description = "action=logs_tail 时使用：日志文件 current 或 previous，默认 current", Required = false },
+                    ["lines"] = new McpToolParameter { Type = "integer", Description = "action=logs_tail 时使用：返回末尾行数，默认 120，最大 1000", Required = false },
+                    ["filter"] = new McpToolParameter { Type = "string", Description = "action=logs_tail 时使用：可选关键词过滤，不区分大小写", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = args["action"]?.ToString();
+                    if (string.Equals(action, "status", StringComparison.OrdinalIgnoreCase))
+                        return GetMcpStatus().Handler(args);
+                    if (string.Equals(action, "capabilities", StringComparison.OrdinalIgnoreCase))
+                        return GetClientCapabilities().Handler(args);
+                    if (string.Equals(action, "logs_tail", StringComparison.OrdinalIgnoreCase))
+                        return TailLogs().Handler(args);
+
+                    return CallToolResult.Error("Invalid action. Expected status, capabilities, or logs_tail.");
+                }
+            };
+        }
+
         public static McpTool GetMcpStatus()
         {
             return new McpTool
@@ -21,8 +142,9 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "get_mcp_status" },
-                Description = "获取 ONI MCP 服务器状态、监听地址、默认暴露工具数量和完整注册工具数量",
+                Description = "兼容旧名；建议使用 server_diagnostics_control action=status",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {
@@ -33,10 +155,10 @@ namespace OniMcp.Tools
                         ["endpoint"] = server?.EndpointUrl,
                         ["port"] = server?.Port ?? 0,
                         ["configPath"] = OniMcpOptions.ConfigPath,
-                        ["toolCount"] = OniToolRegistry.GetTools().Count,
+                        ["toolCount"] = OniToolRegistry.GetVisibleTools().Count,
                         ["listedToolCount"] = OniToolRegistry.GetDefaultToolInfoCount(),
                         ["toolsListMode"] = "core",
-                        ["discovery"] = "tools/list returns core routing tools; use tools_search detail=full or tools_manifest for all registered tools. Hidden tools remain callable by name."
+                        ["discovery"] = "tools/list and catalog return the compact public aggregate tools. Hidden compatibility tools remain callable by exact name but are not preferred."
                     };
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(status, McpJsonUtil.Settings));
@@ -52,8 +174,9 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "tail_logs", "player_log" },
-                Description = "查看 ONI Player.log 或 Player-prev.log 的末尾内容，可按关键词过滤",
+                Description = "兼容旧名；建议使用 server_diagnostics_control action=logs_tail",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["file"] = new McpToolParameter { Type = "string", Description = "日志文件：current 或 previous，默认 current", Required = false },
@@ -108,8 +231,9 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "client_capabilities", "server_client_capabilities" },
-                Description = "列出当前 MCP 会话声明的客户端能力，包括 sampling、elicitation 和 tasks",
+                Description = "兼容旧名；建议使用 server_diagnostics_control action=capabilities",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {
@@ -133,8 +257,9 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "sampling_request_create", "client_sampling_request" },
-                Description = "生成 sampling/createMessage 客户端请求对象；需要 MCP 客户端声明 sampling 后由客户端侧执行",
+                Description = "兼容旧名；建议使用 mcp_client_request_control action=create_sampling",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["prompt"] = new McpToolParameter { Type = "string", Description = "要让客户端模型生成或分析的用户消息", Required = true },
@@ -184,6 +309,48 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ControlClientRequest()
+        {
+            return new McpTool
+            {
+                Name = "mcp_client_request_control",
+                Hidden = true,
+                Group = "server",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "client_request_control", "mcp_client_request" },
+                Description = "兼容旧工具：请改用 server_control domain=client_request action=create_sampling/create_elicitation",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：create_sampling 或 create_elicitation", Required = true, EnumValues = new List<string> { "create_sampling", "create_elicitation" } },
+                    ["prompt"] = new McpToolParameter { Type = "string", Description = "create_sampling：要让客户端模型生成或分析的用户消息", Required = false },
+                    ["systemPrompt"] = new McpToolParameter { Type = "string", Description = "create_sampling：可选 system prompt", Required = false },
+                    ["maxTokens"] = new McpToolParameter { Type = "integer", Description = "create_sampling：最大 token 数，默认 1000", Required = false },
+                    ["temperature"] = new McpToolParameter { Type = "number", Description = "create_sampling：可选 temperature", Required = false },
+                    ["includeContext"] = new McpToolParameter { Type = "string", Description = "create_sampling：上下文范围", Required = false, EnumValues = new List<string> { "none", "thisServer", "allServers" } },
+                    ["message"] = new McpToolParameter { Type = "string", Description = "create_elicitation：展示给用户的问题或说明", Required = false },
+                    ["fieldName"] = new McpToolParameter { Type = "string", Description = "create_elicitation：结构化响应字段名，默认 response", Required = false },
+                    ["fieldDescription"] = new McpToolParameter { Type = "string", Description = "create_elicitation：结构化响应字段说明", Required = false },
+                    ["fieldType"] = new McpToolParameter { Type = "string", Description = "create_elicitation：字段类型，默认 string", Required = false, EnumValues = new List<string> { "string", "boolean", "integer", "number" } },
+                    ["required"] = new McpToolParameter { Type = "boolean", Description = "create_elicitation：字段是否必填，默认 true", Required = false },
+                    ["schema"] = new McpToolParameter { Type = "string", Description = "create_elicitation：可选完整 JSON schema；提供后覆盖 field* 参数", Required = false }
+                },
+                Handler = args =>
+                {
+                    string action = args["action"]?.ToString();
+                    switch (action)
+                    {
+                        case "create_sampling":
+                            return CreateSamplingRequest().Handler(args);
+                        case "create_elicitation":
+                            return CreateElicitationRequest().Handler(args);
+                        default:
+                            return CallToolResult.Error("Invalid action. Expected create_sampling or create_elicitation.");
+                    }
+                }
+            };
+        }
+
         public static McpTool CreateElicitationRequest()
         {
             return new McpTool
@@ -192,8 +359,9 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
+                Hidden = true,
                 Aliases = new List<string> { "elicitation_request_create", "client_elicitation_request" },
-                Description = "生成 elicitation/create 客户端请求对象，用于向用户索取结构化确认或输入",
+                Description = "兼容旧名；建议使用 mcp_client_request_control action=create_elicitation",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["message"] = new McpToolParameter { Type = "string", Description = "展示给用户的问题或说明", Required = true },

@@ -17,6 +17,51 @@ namespace OniMcp.Tools
         private static readonly Regex RichTextTagRegex = new Regex("<[^>]+>", RegexOptions.Compiled);
         private static readonly Regex WhitespaceRegex = new Regex("\\s+", RegexOptions.Compiled);
 
+        public static McpTool ControlKnowledgeQuery()
+        {
+            return new McpTool
+            {
+                Name = "knowledge_query_control",
+                Group = "database",
+                Mode = "read",
+                Risk = "none",
+                Aliases = new List<string> { "knowledge_control", "oni_knowledge_query" },
+                Tags = new List<string> { "codex", "database", "guide", "mechanics", "wiki", "百科", "机制", "公式" },
+                Description = "知识查询组合入口：domain=database/guide。database 查询游戏内置 Database/百科；guide 查询结构化玩家机制、公式和边界条件。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "database 或 guide，默认 database", Required = false, EnumValues = new List<string> { "database", "guide" } },
+                    ["id"] = new McpToolParameter { Type = "string", Description = "domain=database 时精确条目 ID 或子条目 ID；优先于 query", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "搜索词，可匹配百科条目或机制速查条目", Required = false },
+                    ["category"] = new McpToolParameter { Type = "string", Description = "可选分类过滤；database 常用 BUILDINGS/ELEMENTS/CREATURES，guide 常用 thermal/oxygen/power 等", Required = false },
+                    ["includeContent"] = new McpToolParameter { Type = "boolean", Description = "domain=database 时是否返回正文摘要，默认 true", Required = false },
+                    ["includeDisabled"] = new McpToolParameter { Type = "boolean", Description = "domain=database 时是否包含禁用条目，默认 false", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "string", Description = "domain=guide 时 detail=brief/full，默认 brief", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回多少条，按 domain 解释", Required = false },
+                    ["maxResults"] = new McpToolParameter { Type = "integer", Description = "domain=database 时最多返回多少百科条目，默认 3，最大 10", Required = false }
+                },
+                Handler = args =>
+                {
+                    string domain = (args["domain"]?.ToString() ?? "database").Trim().ToLowerInvariant();
+                    var forwarded = new JObject(args);
+                    forwarded.Remove("domain");
+                    switch (domain)
+                    {
+                        case "database":
+                        case "codex":
+                        case "wiki":
+                            return QueryDatabase().Handler(forwarded);
+                        case "guide":
+                        case "mechanics":
+                        case "mechanic":
+                            return GuideMechanicsTools.QueryGuideMechanics().Handler(forwarded);
+                        default:
+                            return CallToolResult.Error("domain must be database or guide");
+                    }
+                }
+            };
+        }
+
         public static McpTool QueryDatabase()
         {
             return new McpTool

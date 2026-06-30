@@ -9,6 +9,37 @@ namespace OniMcp.Tools
 {
     public static class DietTools
     {
+        public static McpTool ControlDiet()
+        {
+            return new McpTool
+            {
+                Name = "diet_control",
+                Group = "diet",
+                Mode = "write",
+                Risk = "medium",
+                Aliases = new List<string> { "consumables_control" },
+                Description = "饮食权限聚合工具：action=status 查看；action=set 设置单个食物；action=policy 按品质批量应用策略",
+                Parameters = DietControlParams(),
+                Handler = args =>
+                {
+                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    switch (action)
+                    {
+                        case "status":
+                        case "list":
+                            return GetDietStatus().Handler(args);
+                        case "set":
+                            return SetDietFood().Handler(args);
+                        case "policy":
+                        case "apply_policy":
+                            return ApplyDietPolicy().Handler(args);
+                        default:
+                            return CallToolResult.Error("action must be status, set, or policy");
+                    }
+                }
+            };
+        }
+
         public static McpTool GetDietStatus()
         {
             return new McpTool
@@ -17,7 +48,8 @@ namespace OniMcp.Tools
                 Group = "diet",
                 Mode = "read",
                 Risk = "none",
-                Description = "查看复制人的饮食权限和当前食物库存",
+                Description = "兼容旧工具：请改用 colony_control domain=management kind=diet action=status",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID，留空返回全部", Required = false },
@@ -59,7 +91,8 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "set_diet_food" },
-                Description = "允许或禁用某个复制人食用指定食物。可用 allDupes=true 应用到全部复制人",
+                Description = "兼容旧工具：请改用 colony_control domain=management kind=diet action=set",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -106,7 +139,8 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "apply_diet_policy" },
-                Description = "按食物品质批量配置饮食。常用：minQuality=-1 允许全部基础食物，minQuality=0 禁用营养棒等低品质食物",
+                Description = "兼容旧工具：请改用 colony_control domain=management kind=diet action=policy",
+                Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID，留空配合 allDupes", Required = false },
@@ -149,6 +183,22 @@ namespace OniMcp.Tools
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
+            };
+        }
+
+        private static Dictionary<string, McpToolParameter> DietControlParams()
+        {
+            return new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Description = "status/list、set 或 policy/apply_policy", Required = true },
+                ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；status/set/policy 可用", Required = false },
+                ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称；status/set/policy 可用", Required = false },
+                ["includeAllFoods"] = new McpToolParameter { Type = "boolean", Description = "action=status 时是否包含未库存食物，默认 false", Required = false },
+                ["food"] = new McpToolParameter { Type = "string", Description = "action=set 时必填；食物 ID 或名称", Required = false },
+                ["allow"] = new McpToolParameter { Type = "boolean", Description = "action=set 时必填；true 允许，false 禁用", Required = false },
+                ["minQuality"] = new McpToolParameter { Type = "integer", Description = "action=policy 最低允许品质，默认 -1", Required = false },
+                ["onlyStocked"] = new McpToolParameter { Type = "boolean", Description = "action=policy 是否只修改当前库存食物，默认 true", Required = false },
+                ["allDupes"] = new McpToolParameter { Type = "boolean", Description = "action=set/policy 是否应用到全部复制人", Required = false }
             };
         }
 

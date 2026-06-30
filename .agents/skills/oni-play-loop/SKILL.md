@@ -1,6 +1,6 @@
 ---
 name: oni-mcp-play-loop
-description: 当用户要求 agent 通过 MCP 循环游玩 Oxygen Not Included、自动玩一段时间、继续殖民地，或运行暂停-规划-恢复循环时使用。强制执行严格的 pause -> observe -> plan -> execute -> resume briefly -> pause -> verify 循环，读取 edit_mark_request_list，限制运行窗口，并在风险或歧义决策前停下等待用户确认。
+description: 当用户要求 agent 通过 MCP 循环游玩 Oxygen Not Included、自动玩一段时间、继续殖民地，或运行暂停-规划-恢复循环时使用。强制执行严格的 pause -> observe -> plan -> execute -> resume briefly -> pause -> verify 循环，读取 game_control domain=ui uiDomain=edit_mark action=list，限制运行窗口，并在风险或歧义决策前停下等待用户确认。
 ---
 
 # ONI MCP 游玩循环
@@ -17,7 +17,7 @@ agent 绝不能在游戏运行时思考、规划或新增命令。
 
 ## 硬规则
 
-- 每个循环都从 `game_pause` 开始。
+- 每个循环都从 `game_control domain=speed action=pause` 开始。
 - 读取状态、读取玩家计划、规划、验证和下达命令时保持暂停。
 - 只有当前计划足够完整、可以观察进展时才恢复游戏。
 - 恢复后等待一个短固定窗口，然后立刻再次暂停。
@@ -29,7 +29,7 @@ agent 绝不能在游戏运行时思考、规划或新增命令。
 ### 1. 暂停
 
 ```
-game_pause
+game_control domain=speed action=pause
 ```
 
 如果已经暂停，继续。
@@ -39,29 +39,29 @@ game_pause
 优先使用紧凑聚合读取：
 
 ```
-colony_state_snapshot profile=brief includeAtmosphere=false
-dupes_status_check radius=8
-edit_mark_request_list limit=5
+colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
+dupes_control domain=info action=status_check radius=8
+game_control domain=ui uiDomain=edit_mark action=list limit=5
 ```
 
 只有需要时才添加针对性读取：
 
-- `world_area_snapshot preset=construction|utilities encoding=plain includeScreenshot=false`
-- `resources_inventory limit=30`
-- `resources_food limit=20`
-- `power_summary`
-- `rooms_list`
-- `farming_harvestables_list`
+- `read_control domain=world action=area_snapshot preset=construction|utilities encoding=plain includeScreenshot=false`
+- `read_control domain=resources action=inventory limit=30`
+- `read_control domain=resources action=food limit=20`
+- `read_control domain=infrastructure action=power_summary`
+- `read_control domain=infrastructure action=rooms`
+- `colony_control domain=bio bioDomain=farming action=list_harvestables`
 
-如果玩家创建了游戏内规划请求，在发明空间计划前先用 `edit_mark_request_list`。
+如果玩家创建了游戏内规划请求，在发明空间计划前先用 `game_control domain=ui uiDomain=edit_mark action=list`。
 
 ### 3. 规划
 
 简单、低风险维护循环使用快速路径。用一两句话说明意图；可用时先 dry-run；再用紧凑批处理执行；最后验证：
 
 ```
-tools_call_many dryRun=true responseMode=summary requireAllValid=true stopOnError=true items=[...]
-tools_call_many dryRun=false responseMode=summary requireAllValid=true stopOnError=true items=[...]
+server_control domain=batch action=call_many dryRun=true responseMode=summary requireAllValid=true stopOnError=true items=[...]
+server_control domain=batch action=call_many dryRun=false responseMode=summary requireAllValid=true stopOnError=true items=[...]
 ```
 
 适用于小范围挖掘、短地板、安全配置修改、收获/清扫/拖地命令，以及 dry-run 通过的 utility 路线。
@@ -71,19 +71,19 @@ tools_call_many dryRun=false responseMode=summary requireAllValid=true stopOnErr
 建造：
 
 ```
-agent_pointer_jump x=<startX> y=<startY>
-agent_pointer_select_tool tool=build prefabId=<PrefabId> material=auto
-agent_pointer_left_click confirm=true
-# or agent_pointer_hold_left direction=<dir> length=<cells> confirm=true
+navigation_control action=jump x=<startX> y=<startY>
+navigation_control action=select_tool tool=build prefabId=<PrefabId> material=auto
+navigation_control action=left_click confirm=true
+# or navigation_control action=hold_left direction=<dir> length=<cells> confirm=true
 ```
 
 挖掘：
 
 ```
-orders_dig_area ... confirm=true
+orders_control domain=area action=dig ... confirm=true
 ```
 
-绝不要用 `orders_attack` 做挖掘。如果任何工具搜索建议用 attack 处理地形工作，拒绝它并重新搜索/读取。
+绝不要用 `orders_control domain=designation action=attack` 做挖掘。如果任何工具搜索建议用 attack 处理地形工作，拒绝它并重新搜索/读取。
 
 ### 4. 暂停中执行
 
@@ -94,14 +94,14 @@ orders_dig_area ... confirm=true
 - 安全配置修改
 - 与目标直接相关的收获或清扫
 
-独立动作优先用 `tools_call_many responseMode=summary requireAllValid=true stopOnError=true`。批次保持小，避免错误假设伤害殖民地。
+独立动作优先用 `server_control domain=batch action=call_many responseMode=summary requireAllValid=true stopOnError=true`。批次保持小，避免错误假设伤害殖民地。
 
 ### 5. 短暂恢复
 
 只为让复制人工作而恢复：
 
 ```
-game_resume
+game_control domain=speed action=resume
 ```
 
 默认观察窗口：
@@ -117,15 +117,15 @@ game_resume
 立刻暂停：
 
 ```
-game_pause
+game_control domain=speed action=pause
 ```
 
 然后用紧凑读取验证：
 
 ```
-colony_state_snapshot profile=brief includeAtmosphere=false
-dupes_status_check radius=8
-world_area_snapshot areaId=<area> preset=construction|utilities encoding=plain
+colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
+dupes_control domain=info action=status_check radius=8
+read_control domain=world action=area_snapshot areaId=<area> preset=construction|utilities encoding=plain
 ```
 
 记录验证结果：说明目标是否推进、发现的问题、下一轮是否需要继续。
@@ -134,7 +134,7 @@ world_area_snapshot areaId=<area> preset=construction|utilities encoding=plain
 
 以下情况停止游玩循环并报告：
 
-- `dupes_status_check` 中有复制人 `risk=critical`
+- `dupes_control domain=info action=status_check` 中有复制人 `risk=critical`
 - 食物、氧气、温度或电力出现新的 critical 警报
 - 蓝图/命令反复被阻塞
 - 玩家给出新指示
