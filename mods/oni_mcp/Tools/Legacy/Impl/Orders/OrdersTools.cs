@@ -24,7 +24,7 @@ namespace OniMcp.Tools
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders", "orders_unified_control", "orders_action_control", "map_orders_control" },
                 Tags = new List<string> { "orders", "priority", "area", "designation", "dig", "sweep", "mop", "deconstruct" },
-                Description = "订单聚合工具：domain=priority/area/designation。用一个入口设置优先级、下达区域订单或执行指定/取消类操作；原有确认限制保持不变。",
+                Description = "订单聚合工具：domain=priority/area/designation。优先用 action + query/target/search/id/areaId 定位和执行；x/y 坐标仅作精确 fallback。用一个入口设置优先级、下达区域订单或执行指定/取消类操作；原有确认限制保持不变。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "订单领域：priority、area 或 designation；省略时按 action 自动推断", Required = false, EnumValues = new List<string> { "priority", "area", "designation" } },
@@ -1522,11 +1522,16 @@ namespace OniMcp.Tools
         {
             var parameters = new Dictionary<string, McpToolParameter>
             {
-                ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID", Required = false },
-                ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X", Required = false },
-                ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y", Required = false },
-                ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；按坐标查找时默认当前激活世界", Required = false }
-            };
+            ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID", Required = false },
+            ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；省略时可用 query/target/search 搜索定位", Required = false },
+            ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y；省略时可用 query/target/search 搜索定位", Required = false },
+            ["query"] = new McpToolParameter { Type = "string", Description = "按对象名称、prefabId、元素或复制人搜索目标格", Required = false },
+            ["target"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
+            ["search"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
+            ["nearX"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 X 最近排序", Required = false },
+            ["nearY"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 Y 最近排序", Required = false },
+            ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；按坐标查找时默认当前激活世界", Required = false }
+        };
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
@@ -1553,7 +1558,15 @@ namespace OniMcp.Tools
             int? id = ToolUtil.GetInt(args, "id");
             int? x = ToolUtil.GetInt(args, "x");
             int? y = ToolUtil.GetInt(args, "y");
-            int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
+        int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
+        if (!cell.HasValue)
+        {
+            int searchX;
+            int searchY;
+            string searchError;
+            if (ToolUtil.TryResolveSearchCell(args, out searchX, out searchY, out searchError))
+                cell = Grid.XYToCell(searchX, searchY);
+        }
             int worldId = cell.HasValue ? ToolUtil.ResolveWorldId(args) : (ToolUtil.GetInt(args, "worldId") ?? -1);
 
             foreach (var prioritizable in Components.Prioritizables.Items)
@@ -1957,9 +1970,9 @@ namespace OniMcp.Tools
                 layers.AddRange(new[] { ObjectLayer.LiquidConduit, ObjectLayer.LiquidConduitTile, ObjectLayer.ReplacementLiquidConduit });
             if (type == "auto" || type == "all" || type == "solid")
                 layers.AddRange(new[] { ObjectLayer.SolidConduit, ObjectLayer.SolidConduitTile, ObjectLayer.ReplacementSolidConduit });
-            if (type == "all" || type == "wire")
+            if (type == "auto" || type == "all" || type == "wire")
                 layers.AddRange(new[] { ObjectLayer.Wire, ObjectLayer.WireTile, ObjectLayer.ReplacementWire });
-            if (type == "all" || type == "logic")
+            if (type == "auto" || type == "all" || type == "logic")
                 layers.AddRange(new[] { ObjectLayer.LogicWire, ObjectLayer.LogicWireTile, ObjectLayer.ReplacementLogicWire });
             if (type == "all" || type == "travel_tube")
                 layers.AddRange(new[] { ObjectLayer.TravelTubeTile, ObjectLayer.ReplacementTravelTube, ObjectLayer.Building });

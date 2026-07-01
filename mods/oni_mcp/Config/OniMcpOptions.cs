@@ -20,7 +20,7 @@ namespace OniMcp.Config
 
         [Option("Port", "HTTP port for the MCP endpoint.", "Server")]
         [Limit(1024, 65535, 1)]
-        public int Port { get; set; } = 8787;
+        public int Port { get; set; } = 8788;
 
         [Option("Require token", "Require clients to send the configured bearer token.", "Authentication")]
         public bool AuthEnabled { get; set; } = false;
@@ -190,7 +190,7 @@ namespace OniMcp.Config
 
             options.Host = NormalizeHost(options.Host);
             if (options.Port < 1024 || options.Port > 65535)
-                options.Port = 8787;
+                options.Port = 8788;
             options.AuthToken = (options.AuthToken ?? "").Trim();
             if (string.IsNullOrEmpty(options.AuthToken))
                 options.AuthEnabled = false;

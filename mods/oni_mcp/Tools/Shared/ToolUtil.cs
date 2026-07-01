@@ -123,6 +123,105 @@ namespace OniMcp.Tools
             return WorldEditor.ResolveRect(args);
         }
 
+        public static bool TryResolveSearchCell(JObject args, out int x, out int y, out string error)
+        {
+            x = 0;
+            y = 0;
+            error = null;
+
+            string query = args["query"]?.ToString();
+            if (string.IsNullOrWhiteSpace(query))
+                query = args["target"]?.ToString();
+            if (string.IsNullOrWhiteSpace(query))
+                query = args["search"]?.ToString();
+            if (string.IsNullOrWhiteSpace(query))
+                query = args["name"]?.ToString();
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                error = "query/target/search/name is required when x/y are omitted";
+                return false;
+            }
+
+            int worldId = ResolveWorldId(args);
+            int? nearX = GetInt(args, "nearX");
+            int? nearY = GetInt(args, "nearY");
+            int bestCell = -1;
+            int bestDistance = int.MaxValue;
+
+            Action<int> considerCell = cell =>
+            {
+                if (!Grid.IsValidCell(cell) || !Grid.IsWorldValidCell(cell))
+                    return;
+                if (worldId >= 0 && Grid.WorldIdx[cell] != worldId)
+                    return;
+                int cx = Grid.CellColumn(cell);
+                int cy = Grid.CellRow(cell);
+                int distance = nearX.HasValue && nearY.HasValue
+                    ? Math.Abs(cx - nearX.Value) + Math.Abs(cy - nearY.Value)
+                    : 0;
+                if (bestCell < 0 || distance < bestDistance)
+                {
+                    bestCell = cell;
+                    bestDistance = distance;
+                }
+            };
+
+            foreach (var building in Components.BuildingCompletes.Items)
+            {
+                if (building == null || building.gameObject == null)
+                    continue;
+                if (!GameObjectMatchesWorld(building.gameObject, worldId))
+                    continue;
+                var kpid = building.GetComponent<KPrefabID>();
+                string prefabId = building.Def?.PrefabID ?? kpid?.PrefabTag.Name;
+                if (ContainsMatch(prefabId, query) || ContainsMatch(CleanName(building.GetProperName()), query))
+                    considerCell(Grid.PosToCell(building));
+            }
+
+            foreach (var pickupable in Components.Pickupables.Items)
+            {
+                if (pickupable == null || pickupable.gameObject == null)
+                    continue;
+                if (!GameObjectMatchesWorld(pickupable.gameObject, worldId))
+                    continue;
+                var kpid = pickupable.GetComponent<KPrefabID>();
+                var primary = pickupable.GetComponent<PrimaryElement>();
+                string elementId = primary != null ? primary.ElementID.ToString() : null;
+                if (ContainsMatch(kpid?.PrefabTag.Name, query)
+                    || ContainsMatch(elementId, query)
+                    || ContainsMatch(CleanName(pickupable.GetProperName()), query))
+                    considerCell(Grid.PosToCell(pickupable));
+            }
+
+            foreach (var dupe in Components.LiveMinionIdentities.Items)
+            {
+                if (dupe == null)
+                    continue;
+                if (!GameObjectMatchesWorld(dupe.gameObject, worldId))
+                    continue;
+                var kpid = dupe.GetComponent<KPrefabID>();
+                if (ContainsMatch(kpid?.PrefabTag.Name, query) || ContainsMatch(CleanName(dupe.GetProperName()), query))
+                    considerCell(Grid.PosToCell(dupe));
+            }
+
+            if (bestCell < 0)
+            {
+                error = $"No visible object matched query '{query}'";
+                return false;
+            }
+
+            x = Grid.CellColumn(bestCell);
+            y = Grid.CellRow(bestCell);
+            return true;
+        }
+
+        private static bool ContainsMatch(string value, string query)
+        {
+            return !string.IsNullOrWhiteSpace(value)
+                && !string.IsNullOrWhiteSpace(query)
+                && value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         public static float SafeFloat(float value)
         {
             return float.IsNaN(value) || float.IsInfinity(value) ? 0f : value;

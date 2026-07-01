@@ -30,7 +30,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "duplicants_control", "dupe_control" },
                 Tags = new List<string> { "dupes", "duplicants", "priority", "skills", "hats", "assignable", "commands", "side-screen" },
-                Description = "复制人统一入口。domain=info/priority/hat/command/side_screen/skill/assignable；action 透传到对应旧 control。",
+                Description = "复制人统一入口。domain=info/priority/hat/command/side_screen/skill/assignable；优先用 action + name/dupeName/query/target/search/id 定位和执行；x/y 坐标仅作精确 fallback。action 透传到对应旧 control。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "复制人子系统：info、priority、hat、command、side_screen、skill、assignable", Required = true, EnumValues = new List<string> { "info", "priority", "hat", "command", "side_screen", "skill", "assignable" } },
@@ -734,8 +734,13 @@ namespace OniMcp.Tools
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
                     ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称", Required = false },
-                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X", Required = true },
-                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y", Required = true },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；省略时使用 query/target/search 搜索定位", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y；省略时使用 query/target/search 搜索定位", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "坐标省略时按对象/元素/复制人名称搜索目标格", Required = false },
+                    ["target"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
+                    ["search"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
+                    ["nearX"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 X 最近排序", Required = false },
+                    ["nearY"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 Y 最近排序", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认下达移动命令，必须为 true", Required = true }
                 },
@@ -748,16 +753,17 @@ namespace OniMcp.Tools
                     if (dupe == null)
                         return CallToolResult.Error("Duplicant not found");
 
-                    int? x = ToolUtil.GetInt(args, "x");
-                    int? y = ToolUtil.GetInt(args, "y");
-                    if (!x.HasValue || !y.HasValue)
-                        return CallToolResult.Error("x and y are required");
-                    int cell = Grid.XYToCell(x.Value, y.Value);
+                    int x;
+                    int y;
+                    string resolveError;
+                    if (!TryResolveActionCell(args, out x, out y, out resolveError))
+                        return CallToolResult.Error(resolveError);
+                    int cell = Grid.XYToCell(x, y);
                     if (!Grid.IsValidCell(cell) || !Grid.IsVisible(cell))
                         return CallToolResult.Error("Target cell is invalid or not visible");
                     int worldId = ToolUtil.ResolveWorldId(args, dupe.GetMyWorldId());
                     Dictionary<string, object> moved;
-                    string error = TryMoveDupeToCell(dupe, x.Value, y.Value, worldId, out moved);
+                    string error = TryMoveDupeToCell(dupe, x, y, worldId, out moved);
                     if (error != null)
                         return CallToolResult.Error(error);
 
@@ -788,8 +794,13 @@ namespace OniMcp.Tools
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
                     ["name"] = new McpToolParameter { Type = "string", Description = "复制人名称", Required = false },
                     ["action"] = new McpToolParameter { Type = "string", Description = "强制动作：cancel_all、move_to、cancel_all_and_move", Required = true, EnumValues = new List<string> { "cancel_all", "move_to", "cancel_all_and_move" } },
-                    ["x"] = new McpToolParameter { Type = "integer", Description = "move_to / cancel_all_and_move 目标格子 X", Required = false },
-                    ["y"] = new McpToolParameter { Type = "integer", Description = "move_to / cancel_all_and_move 目标格子 Y", Required = false },
+                    ["x"] = new McpToolParameter { Type = "integer", Description = "move_to / cancel_all_and_move 目标格子 X；省略时使用 query/target/search 搜索定位", Required = false },
+                    ["y"] = new McpToolParameter { Type = "integer", Description = "move_to / cancel_all_and_move 目标格子 Y；省略时使用 query/target/search 搜索定位", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "坐标省略时按对象/元素/复制人名称搜索目标格", Required = false },
+                    ["target"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
+                    ["search"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
+                    ["nearX"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 X 最近排序", Required = false },
+                    ["nearY"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 Y 最近排序", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认复制人当前世界", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认执行强制动作，必须为 true", Required = true }
                 },
@@ -821,17 +832,18 @@ namespace OniMcp.Tools
 
                         case "move_to":
                         case "cancel_all_and_move":
-                            int? x = ToolUtil.GetInt(args, "x");
-                            int? y = ToolUtil.GetInt(args, "y");
-                            if (!x.HasValue || !y.HasValue)
-                                return CallToolResult.Error("x and y are required for move actions");
+                            int x;
+                            int y;
+                            string resolveError;
+                            if (!TryResolveActionCell(args, out x, out y, out resolveError))
+                                return CallToolResult.Error(resolveError);
 
                             if (action == "cancel_all_and_move")
                                 response["cancelled"] = ForceCancelAllDupeWork(dupe, "MCP force action before move");
 
                             int worldId = ToolUtil.ResolveWorldId(args, dupe.GetMyWorldId());
                             Dictionary<string, object> moved;
-                            string error = TryMoveDupeToCell(dupe, x.Value, y.Value, worldId, out moved);
+                            string error = TryMoveDupeToCell(dupe, x, y, worldId, out moved);
                             if (error != null)
                                 return CallToolResult.Error(error);
 
@@ -2024,6 +2036,24 @@ namespace OniMcp.Tools
             {
                 return fallback;
             }
+        }
+
+        private static bool TryResolveActionCell(JObject args, out int x, out int y, out string error)
+        {
+            x = 0;
+            y = 0;
+            error = null;
+
+            int? requestedX = ToolUtil.GetInt(args, "x");
+            int? requestedY = ToolUtil.GetInt(args, "y");
+            if (requestedX.HasValue && requestedY.HasValue)
+            {
+                x = requestedX.Value;
+                y = requestedY.Value;
+                return true;
+            }
+
+            return ToolUtil.TryResolveSearchCell(args, out x, out y, out error);
         }
 
         private static string TryMoveDupeToCell(MinionIdentity dupe, int x, int y, int worldId, out Dictionary<string, object> moved)

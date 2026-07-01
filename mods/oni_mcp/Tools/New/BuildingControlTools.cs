@@ -16,7 +16,7 @@ namespace OniMcp.Tools
                 Risk = "dangerous",
                 Aliases = new List<string> { "buildings_control", "building_system_control" },
                 Tags = new List<string> { "buildings", "planning", "config", "production", "storage", "facility", "side-screen", "materials", "preview", "rocket", "space" },
-                Description = "建筑域统一入口：domain=planning/config/production/storage/filter/tile_selection/receptacle/side_surface/space_building/space_story/special/story_facility/rocket。规划建造、建筑配置、生产队列、储存/过滤/插槽、对象侧屏、特殊/剧情/太空设施和火箭系统都通过 domain 参数路由；保留各子工具 action/kind/confirm 规则。",
+                Description = "建筑域统一入口：domain=planning/config/production/storage/filter/tile_selection/receptacle/side_surface/space_building/space_story/special/story_facility/rocket。优先用 action + query/target/search/id/areaId 定位和执行；x/y 坐标仅作精确 fallback。规划建造、建筑配置、生产队列、储存/过滤/插槽、对象侧屏、特殊/剧情/太空设施和火箭系统都通过 domain 参数路由；保留各子工具 action/kind/confirm 规则。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "planning、config、production、storage、filter、tile_selection、receptacle、side_surface、space_building、space_story、special、story_facility 或 rocket", Required = true, EnumValues = new List<string> { "planning", "config", "production", "storage", "filter", "tile_selection", "receptacle", "side_surface", "space_building", "space_story", "special", "story_facility", "rocket" } },

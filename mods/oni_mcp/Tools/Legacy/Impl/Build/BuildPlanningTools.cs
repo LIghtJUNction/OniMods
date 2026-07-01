@@ -531,12 +531,16 @@ namespace OniMcp.Tools
                     string prefabId = args["prefabId"]?.ToString();
                     if (string.IsNullOrWhiteSpace(prefabId))
                         return CallToolResult.Error("prefabId is required");
-                    var def = Assets.GetBuildingDef(prefabId);
-                    if (def == null)
-                        return CallToolResult.Error("Building def not found");
+                var def = Assets.GetBuildingDef(prefabId);
+                if (def == null)
+                    return CallToolResult.Error("Building def not found");
 
-                    string error;
-                    var anchors = ResolveAnchors(args, def, out error);
+                JObject connectArgs;
+                if (IsLinearUtilityPrefab(def.PrefabID) && TryBuildAutoConnectArgs(args, def.PrefabID, out connectArgs))
+                    return AutoConnectUtility().Handler(connectArgs);
+
+                string error;
+                var anchors = ResolveAnchors(args, def, out error);
                     if (error != null)
                         return CallToolResult.Error(error);
 
@@ -834,6 +838,50 @@ namespace OniMcp.Tools
             return path;
         }
 
+        private static bool TryBuildAutoConnectArgs(JObject args, string prefabId, out JObject connectArgs)
+        {
+            connectArgs = args == null ? new JObject() : (JObject)args.DeepClone();
+            connectArgs["prefabId"] = prefabId;
+            connectArgs["action"] = "auto_connect";
+
+            if (connectArgs["points"] != null)
+                return true;
+
+            var anchors = args?["anchors"] as JArray;
+            if (anchors != null && anchors.Count >= 2)
+            {
+                connectArgs["points"] = anchors.DeepClone();
+                return true;
+            }
+
+            int? x = ToolUtil.GetInt(args, "x");
+            int? y = ToolUtil.GetInt(args, "y");
+            int? x1 = ToolUtil.GetInt(args, "x1");
+            int? y1 = ToolUtil.GetInt(args, "y1");
+            int? x2 = ToolUtil.GetInt(args, "x2");
+            int? y2 = ToolUtil.GetInt(args, "y2");
+
+            if (x.HasValue && y.HasValue && x2.HasValue && y2.HasValue)
+            {
+                connectArgs["fromX"] = x.Value;
+                connectArgs["fromY"] = y.Value;
+                connectArgs["toX"] = x2.Value;
+                connectArgs["toY"] = y2.Value;
+                return true;
+            }
+
+            if (x1.HasValue && y1.HasValue && x2.HasValue && y2.HasValue)
+            {
+                connectArgs["fromX"] = x1.Value;
+                connectArgs["fromY"] = y1.Value;
+                connectArgs["toX"] = x2.Value;
+                connectArgs["toY"] = y2.Value;
+                return true;
+            }
+
+            return false;
+        }
+
         private static List<CellCoord> ParsePathPoints(JToken token)
         {
             var result = new List<CellCoord>();
@@ -1039,6 +1087,7 @@ namespace OniMcp.Tools
 
             var orientation = ParseOrientation(args["orientation"]?.ToString());
             var materialResult = SelectElements(def, args["material"]?.ToString(), worldId);
+            materialResult.RequiredKg = RequiredMaterialKg(def);
             if (!materialResult.Valid)
                 return ErrorResult(prefabId, x, y, materialResult.Error, materialResult.ToDictionary());
 
@@ -1084,7 +1133,8 @@ namespace OniMcp.Tools
                     ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
                     ["support"] = supportResult.ToDictionary(),
                     ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
-                    ["materialSelection"] = materialResult.ToDictionary(),
+            ["materialSelection"] = materialResult.ToDictionary(),
+            ["materials"] = materialResult.ToDictionary(),
                     ["facade"] = facadeResult.ResponseId,
                     ["autoDig"] = autoDig
                 };
@@ -1111,7 +1161,8 @@ namespace OniMcp.Tools
                     ["existingUtility"] = existingUtility,
                     ["support"] = supportResult.ToDictionary(),
                     ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
-                    ["materialSelection"] = materialResult.ToDictionary(),
+            ["materialSelection"] = materialResult.ToDictionary(),
+            ["materials"] = materialResult.ToDictionary(),
                     ["facade"] = facadeResult.ResponseId,
                     ["autoDig"] = autoDig
                 };
@@ -1154,7 +1205,8 @@ namespace OniMcp.Tools
                 ["fallbackPlacement"] = fallbackPlacement,
                 ["support"] = supportResult.ToDictionary(),
                 ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
-                ["materialSelection"] = materialResult.ToDictionary(),
+            ["materialSelection"] = materialResult.ToDictionary(),
+            ["materials"] = materialResult.ToDictionary(),
                 ["facade"] = facadeResult.ResponseId,
                 ["autoDig"] = autoDig,
                 ["id"] = go.GetComponent<KPrefabID>()?.InstanceID ?? -1
@@ -1231,6 +1283,11 @@ namespace OniMcp.Tools
                 ["prefabId"] = new McpToolParameter { Type = "string", Description = "建筑 prefabId，例如 MedicalCot、Tile、Wire", Required = true },
                 ["x"] = new McpToolParameter { Type = "integer", Description = "lowerLeftCell anchor X", Required = false },
                 ["y"] = new McpToolParameter { Type = "integer", Description = "lowerLeftCell anchor Y", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "坐标省略时按对象/元素/复制人名称搜索定位 anchor", Required = false },
+                ["target"] = new McpToolParameter { Type = "string", Description = "query 的别名：搜索目标名称、prefabId、元素或复制人", Required = false },
+                ["search"] = new McpToolParameter { Type = "string", Description = "query 的别名：搜索目标名称、prefabId、元素或复制人", Required = false },
+                ["nearX"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 X 最近排序", Required = false },
+                ["nearY"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 Y 最近排序", Required = false },
                 ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界或 areaId 绑定世界", Required = false },
                 ["material"] = new McpToolParameter { Type = "string", Description = "建造材料 tag；auto/default 自动选择", Required = false },
                 ["facade"] = new McpToolParameter { Type = "string", Description = "可选建筑外观/permit id", Required = false },
@@ -1263,8 +1320,7 @@ namespace OniMcp.Tools
             int? requestedY = ToolUtil.GetInt(args, "y");
             if (!requestedX.HasValue || !requestedY.HasValue)
             {
-                error = "x and y are required";
-                return false;
+                return ToolUtil.TryResolveSearchCell(args, out x, out y, out error);
             }
 
             var area = WorldEditor.ResolveRelativeArea(args);
@@ -1523,6 +1579,7 @@ namespace OniMcp.Tools
                 ["placement"] = placement.ToDictionary(),
                 ["obstructions"] = FindFootprintObstructions(placement).Take(50).ToList(),
                 ["materialSelection"] = materialResult.ToDictionary(),
+                ["materials"] = materialResult.ToDictionary(),
                 ["reasonHint"] = "TryPlace returned null after preflight; inspect obstructions/support/materialSelection for likely cause."
             };
         }
@@ -2293,6 +2350,28 @@ namespace OniMcp.Tools
             return candidates;
         }
 
+        private static float RequiredMaterialKg(BuildingDef def)
+        {
+            if (def == null)
+                return 0f;
+
+            try
+            {
+                var buildingsType = typeof(BuildingDef).Assembly.GetType("TUNING+BUILDINGS") ?? Type.GetType("TUNING+BUILDINGS");
+                var massField = buildingsType?.GetField("CONSTRUCTION_MASS_KG", BindingFlags.Public | BindingFlags.Static);
+                var masses = massField?.GetValue(null) as float[];
+                int tier = Mathf.RoundToInt(ToolUtil.SafeFloat(def.MassTier));
+                if (masses != null && tier >= 0 && tier < masses.Length)
+                    return Math.Max(0f, masses[tier]);
+            }
+            catch
+            {
+                // Keep material diagnostics best-effort across ONI builds.
+            }
+
+            return 0f;
+        }
+
         private static IEnumerable<Tag> CandidateMaterialTags(BuildingDef def, int worldId)
         {
             foreach (var tag in DefaultBuildElements(def))
@@ -3017,23 +3096,25 @@ namespace OniMcp.Tools
             public string Mode;
             public string Requested;
             public List<Tag> Elements = new List<Tag>();
-            public BuildMaterialInfo Selected;
-            public List<BuildMaterialInfo> Available = new List<BuildMaterialInfo>();
-            public List<BuildMaterialInfo> Candidates = new List<BuildMaterialInfo>();
-            public string Error;
+        public BuildMaterialInfo Selected;
+        public List<BuildMaterialInfo> Available = new List<BuildMaterialInfo>();
+        public List<BuildMaterialInfo> Candidates = new List<BuildMaterialInfo>();
+        public float RequiredKg;
+        public string Error;
 
-            public static MaterialSelection Success(List<Tag> elements, string mode, string requested, BuildMaterialInfo selected, List<BuildMaterialInfo> available)
-            {
-                return new MaterialSelection
+        public static MaterialSelection Success(List<Tag> elements, string mode, string requested, BuildMaterialInfo selected, List<BuildMaterialInfo> available)
+        {
+            return new MaterialSelection
                 {
                     Valid = true,
                     Mode = mode,
-                    Requested = string.IsNullOrWhiteSpace(requested) ? "auto" : requested,
-                    Elements = elements ?? new List<Tag>(),
-                    Selected = selected,
-                    Available = available ?? new List<BuildMaterialInfo>()
-                };
-            }
+                Requested = string.IsNullOrWhiteSpace(requested) ? "auto" : requested,
+                Elements = elements ?? new List<Tag>(),
+                Selected = selected,
+                Available = available ?? new List<BuildMaterialInfo>(),
+                RequiredKg = 0f
+            };
+        }
 
             public static MaterialSelection Invalid(string error, string requested, List<BuildMaterialInfo> available, List<BuildMaterialInfo> candidates)
             {
@@ -3041,23 +3122,34 @@ namespace OniMcp.Tools
                 {
                     Valid = false,
                     Mode = "invalid",
-                    Requested = string.IsNullOrWhiteSpace(requested) ? "auto" : requested,
-                    Error = error,
-                    Available = available ?? new List<BuildMaterialInfo>(),
-                    Candidates = candidates ?? new List<BuildMaterialInfo>()
-                };
-            }
+                Requested = string.IsNullOrWhiteSpace(requested) ? "auto" : requested,
+                Error = error,
+                Available = available ?? new List<BuildMaterialInfo>(),
+                Candidates = candidates ?? new List<BuildMaterialInfo>(),
+                RequiredKg = 0f
+            };
+        }
 
-            public Dictionary<string, object> ToDictionary()
+        public Dictionary<string, object> ToDictionary()
+        {
+            float selectedAvailableKg = Selected != null ? ToolUtil.SafeFloat(Selected.AvailableKg) : 0f;
+            bool hasRequiredKg = RequiredKg > 0f;
+            object satisfied = hasRequiredKg ? (object)(IsFreeBuildContext() || selectedAvailableKg >= RequiredKg) : null;
+            float shortageKg = hasRequiredKg ? Math.Max(0f, RequiredKg - selectedAvailableKg) : 0f;
+
+            return new Dictionary<string, object>
             {
-                return new Dictionary<string, object>
-                {
-                    ["valid"] = Valid,
-                    ["mode"] = Mode,
-                    ["requested"] = Requested,
-                    ["selected"] = Selected != null ? Selected.ToDictionary() : null,
-                    ["elements"] = Elements.Select(tag => tag.Name).ToList(),
-                    ["availableMaterials"] = Available.Take(20).Select(item => item.ToDictionary()).ToList(),
+                ["valid"] = Valid,
+                ["mode"] = Mode,
+                ["requested"] = Requested,
+                ["requirementKnown"] = hasRequiredKg,
+                ["requiredKg"] = hasRequiredKg ? (object)Math.Round(ToolUtil.SafeFloat(RequiredKg), 3) : null,
+                ["selectedAvailableKg"] = Selected != null ? (object)Math.Round(selectedAvailableKg, 3) : null,
+                ["satisfied"] = satisfied,
+                ["shortageKg"] = hasRequiredKg ? (object)Math.Round(shortageKg, 3) : null,
+                ["selected"] = Selected != null ? Selected.ToDictionary() : null,
+                ["elements"] = Elements.Select(tag => tag.Name).ToList(),
+                ["availableMaterials"] = Available.Take(20).Select(item => item.ToDictionary()).ToList(),
                     ["candidateMaterials"] = Candidates.Take(20).Select(item => item.ToDictionary()).ToList(),
                     ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect read_control domain=resources action=inventory/building_control domain=planning action=materials",
                     ["error"] = Error

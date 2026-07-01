@@ -98,9 +98,6 @@
     <Content Include="$(MSBuildProjectDirectory)/assets/edit_mark_tool.png" Condition="Exists('$(MSBuildProjectDirectory)/assets/edit_mark_tool.png')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildProjectDirectory)/translations/**/*.po" Condition="Exists('$(MSBuildProjectDirectory)/translations')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -158,7 +155,6 @@
       <ModOutputFiles Include="$(OutputPath)README.md" Condition="Exists('$(OutputPath)README.md')" />
       <ModOutputFiles Include="$(OutputPath)README_EN.md" Condition="Exists('$(OutputPath)README_EN.md')" />
       <ModOutputFiles Include="$(OutputPath)assets/edit_mark_tool.png" Condition="Exists('$(OutputPath)assets/edit_mark_tool.png')" />
-      <ModOutputFiles Include="$(OutputPath)translations/**/*.po" Condition="Exists('$(OutputPath)translations')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
 
