@@ -10,7 +10,7 @@ using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
-    public static class BuildPlanningTools
+    public static partial class BuildPlanningTools
     {
         public static McpTool ControlBuildPlanning()
         {
@@ -29,8 +29,13 @@ namespace OniMcp.Tools
                     string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
                     var forwardArgs = ForwardArgs(args);
                     switch (action)
-                    {
-                        case "search_defs":
+                {
+                    case "parse_plan":
+                    case "parse_sequence":
+                    case "parse":
+                    case "plan_text":
+                        return ParseBuildPlan().Handler(forwardArgs);
+                    case "search_defs":
                         case "search":
                         case "defs":
                             return SearchBuildables().Handler(forwardArgs);
@@ -53,7 +58,7 @@ namespace OniMcp.Tools
                         case "batch_build":
                             return BuildArea().Handler(forwardArgs);
                         default:
-                            return CallToolResult.Error("action must be search_defs, materials, preview, placement_candidates, auto_connect, or build_area");
+                        return CallToolResult.Error("action must be parse_plan, search_defs, materials, preview, placement_candidates, auto_connect, or build_area");
                     }
                 }
             };
@@ -73,12 +78,13 @@ namespace OniMcp.Tools
                 ["action"] = new McpToolParameter
                 {
                     Type = "string",
-                    Description = "操作：search_defs/materials/preview/placement_candidates/auto_connect/build_area",
+                    Description = "操作：parse_plan/search_defs/materials/preview/placement_candidates/auto_connect/build_area",
                     Required = true,
-                    EnumValues = new List<string> { "search_defs", "materials", "preview", "placement_candidates", "auto_connect", "build_area" }
+                    EnumValues = new List<string> { "parse_plan", "search_defs", "materials", "preview", "placement_candidates", "auto_connect", "build_area" }
                 }
             };
 
+            MergeParameters(parameters, ParseBuildPlan().Parameters);
             MergeParameters(parameters, SearchBuildables().Parameters);
             MergeParameters(parameters, ListBuildMaterials().Parameters);
             MergeParameters(parameters, PreviewBuild().Parameters);
@@ -155,6 +161,45 @@ namespace OniMcp.Tools
             };
         }
 
+        public static McpTool ParseBuildPlan()
+        {
+            return new McpTool
+            {
+                Name = "build_parse_plan",
+                Group = "buildings",
+                Mode = "read",
+                Risk = "none",
+                Hidden = true,
+                Aliases = new List<string> { "build_parse_sequence", "building_plan_parse", "blueprint_parse" },
+                Tags = new List<string> { "buildings", "planning", "parse", "sequence", "blueprint", "建造", "规划", "解析" },
+                Description = "兼容入口：请使用 building_control domain=planning action=parse_plan。把自然语言/文字序列解析成 prefabId、material、anchor query 等建造参数。",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["plan"] = new McpToolParameter { Type = "string", Description = "建造文字序列，例如 粉砂岩砖@氧气、Wire-小型冰箱、用铜矿造手动发电机在电池旁", Required = false },
+                    ["blueprint"] = new McpToolParameter { Type = "string", Description = "plan 的别名", Required = false },
+                    ["sequence"] = new McpToolParameter { Type = "string", Description = "plan 的别名；也可传有序文字序列，如 粉砂岩砖-梯子-电线@电池，返回 sequenceItems 逐项分类", Required = false },
+                    ["text"] = new McpToolParameter { Type = "string", Description = "plan 的别名", Required = false },
+                    ["prefabId"] = new McpToolParameter { Type = "string", Description = "可选已知建筑 prefabId；传入后只解析材料/锚点", Required = false },
+                    ["material"] = new McpToolParameter { Type = "string", Description = "可选已知建材；传入后不从文字中猜测材料", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "可选已知锚点搜索词；传入后不从文字中猜测锚点", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "候选返回数量，默认 5，最大 20", Required = false }
+                },
+                Handler = args =>
+                {
+                    try
+                    {
+                        var resolution = ResolveBuildPlan(args);
+                        return CallToolResult.Text(JsonConvert.SerializeObject(resolution.ToDictionary(), McpJsonUtil.Settings));
+                    }
+                    catch (Exception ex)
+                    {
+                        return CallToolResult.Error("parse_plan failed: " + ex);
+                    }
+                }
+            };
+        }
+
         public static McpTool ListBuildMaterials()
         {
             return new McpTool
@@ -176,6 +221,14 @@ namespace OniMcp.Tools
                 },
                 Handler = args =>
                 {
+                    var planResolution = ResolveBuildPlan(args);
+                    if (args["prefabId"] == null && !string.IsNullOrWhiteSpace(planResolution.PrefabId))
+                        args["prefabId"] = planResolution.PrefabId;
+                    if (args["material"] == null && !string.IsNullOrWhiteSpace(planResolution.Material))
+                        args["material"] = planResolution.Material;
+                    if (args["query"] == null && args["target"] == null && args["search"] == null && !string.IsNullOrWhiteSpace(planResolution.AnchorQuery))
+                        args["query"] = planResolution.AnchorQuery;
+
                     string prefabId = args["prefabId"]?.ToString();
                     if (string.IsNullOrWhiteSpace(prefabId))
                         return CallToolResult.Error("prefabId is required");
@@ -257,6 +310,9 @@ namespace OniMcp.Tools
                     ["fromY"] = new McpToolParameter { Type = "integer", Description = "起点 Y", Required = false },
                     ["toX"] = new McpToolParameter { Type = "integer", Description = "终点 X", Required = false },
                     ["toY"] = new McpToolParameter { Type = "integer", Description = "终点 Y", Required = false },
+                    ["fromQuery"] = new McpToolParameter { Type = "string", Description = "可选起点搜索词；wire 自动连接时可搜索已有电源/电线/建筑", Required = false },
+                    ["toQuery"] = new McpToolParameter { Type = "string", Description = "可选终点搜索词；wire 自动连接时搜索要接电的设备", Required = false },
+                    ["maxAutoConnectRadius"] = new McpToolParameter { Type = "integer", Description = "wire 缺省起点时，围绕目标电口搜索已有电线/输出端口的半径，默认 80，最大 200", Required = false },
                     ["points"] = new McpToolParameter { Type = "array", Description = "可选折线路径点数组，支持 [[x,y],...] 或 [{x,y},...]；提供后优先使用", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
                     ["material"] = new McpToolParameter { Type = "string", Description = "建造材料 tag；auto/default 自动选择", Required = false },
@@ -511,6 +567,8 @@ namespace OniMcp.Tools
             parameters["stepY"] = new McpToolParameter { Type = "integer", Description = "无 anchors 时的 anchor Y 步长；默认 1 或建筑高度", Required = false };
             parameters["maxAnchors"] = new McpToolParameter { Type = "integer", Description = "最多处理多少个 anchors，默认 100，最大 500", Required = false };
             parameters["allowPartial"] = new McpToolParameter { Type = "boolean", Description = "默认 false。实际建造前若任何 anchor 预检失败则整批拒绝；true 时跳过失败 anchor", Required = false };
+            parameters["autoConnectPower"] = new McpToolParameter { Type = "boolean", Description = "耗电建筑默认 true：放置建筑蓝图时同步从最近已有电线/电源输出接线到电口；传 false 可关闭", Required = false };
+            parameters["maxAutoConnectRadius"] = new McpToolParameter { Type = "integer", Description = "autoConnectPower 搜索最近已有电线/电源输出的半径，默认 80，最大 200", Required = false };
 
             return new McpTool
             {
@@ -528,9 +586,17 @@ namespace OniMcp.Tools
                     if (!ToolUtil.GetBool(args, "confirm", false) && !ToolUtil.GetBool(args, "dryRun", false))
                         return CallToolResult.Error("confirm=true is required unless dryRun=true");
 
+                    var planResolution = ResolveBuildPlan(args);
+                    if (args["prefabId"] == null && !string.IsNullOrWhiteSpace(planResolution.PrefabId))
+                        args["prefabId"] = planResolution.PrefabId;
+                    if (args["material"] == null && !string.IsNullOrWhiteSpace(planResolution.Material))
+                        args["material"] = planResolution.Material;
+                    if (args["query"] == null && args["target"] == null && args["search"] == null && !string.IsNullOrWhiteSpace(planResolution.AnchorQuery))
+                        args["query"] = planResolution.AnchorQuery;
+
                     string prefabId = args["prefabId"]?.ToString();
                     if (string.IsNullOrWhiteSpace(prefabId))
-                        return CallToolResult.Error("prefabId is required");
+                        return CallToolResult.Error("prefabId is required, or provide plan/blueprint/sequence with a recognizable building name");
                 var def = Assets.GetBuildingDef(prefabId);
                 if (def == null)
                     return CallToolResult.Error("Building def not found");
@@ -543,6 +609,7 @@ namespace OniMcp.Tools
                 var anchors = ResolveAnchors(args, def, out error);
                     if (error != null)
                         return CallToolResult.Error(error);
+                    var anchorResolution = BuildAnchorResolution(args, anchors);
 
                     int maxAnchors = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxAnchors") ?? 100, 500));
                     if (anchors.Count > maxAnchors)
@@ -585,37 +652,67 @@ namespace OniMcp.Tools
                             ["prefabId"] = prefabId,
                             ["dryRun"] = dryRun,
                             ["committed"] = false,
-                            ["valid"] = failedPreviews.Count == 0,
-                            ["actionable"] = hardFailedPreviews.Count == 0,
-                            ["anchorCount"] = anchors.Count,
+                        ["valid"] = failedPreviews.Count == 0,
+                        ["actionable"] = hardFailedPreviews.Count == 0,
+                        ["anchorResolution"] = anchorResolution,
+                        ["planResolution"] = planResolution.ToDictionary(),
+                        ["anchorCount"] = anchors.Count,
                             ["validAnchors"] = validAnchors.Count,
-                            ["autoDiggableAnchors"] = autoDigAnchors.Count,
-                            ["failed"] = failedPreviews.Count,
-                            ["hardFailed"] = hardFailedPreviews.Count,
-                            ["errors"] = failedPreviews.Take(50).ToList(),
-                            ["previews"] = previews
-                        }, McpJsonUtil.Settings));
+                        ["autoDiggableAnchors"] = autoDigAnchors.Count,
+                        ["failed"] = failedPreviews.Count,
+                        ["hardFailed"] = hardFailedPreviews.Count,
+                        ["next"] = failedPreviews.Count == 0
+                            ? "Dry run passed. Re-run with confirm=true to place blueprints."
+                            : hardFailedPreviews.Count == 0
+                                ? "Only auto-diggable obstructions remain. Re-run with confirm=true to queue required dig/uproot and place blueprints."
+                                : "Fix hard failures first; inspect errors[0].reasonCode/details before retrying.",
+                        ["tokenHint"] = "Use valid/actionable/anchorResolution/planResolution/errors[0].reasonCode first; read previews only when choosing an alternate anchor.",
+                        ["errors"] = failedPreviews.Take(50).ToList(),
+                        ["previews"] = previews
+                    }, McpJsonUtil.Settings));
                     }
 
                     var actualSupport = new HashSet<int>();
                     var autoDigContext = AutoDigContext.FromArgs(args);
                     var results = new List<Dictionary<string, object>>();
+                    var remainingAnchors = new List<CellCoord>();
                     int planned = 0;
+                    int alreadyPresent = 0;
+                    int alreadyConnected = 0;
+                    int succeeded = 0;
                     int failed = 0;
                     int autoDigQueued = 0;
                     int autoDigAlreadyMarked = 0;
                     foreach (var anchor in allowPartial ? actionableAnchors : anchors)
                     {
                         var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport, autoDigContext);
-                        bool ok = result.ContainsKey("planned") && (bool)result["planned"];
+                        bool wasPlanned = GetBool(result, "planned");
+                        bool wasAlreadyPresent = GetBool(result, "alreadyPresent");
+                        bool wasAlreadyConnected = GetBool(result, "alreadyConnected");
+                        bool isAutoDig = IsAutoDigResult(result);
+                        bool ok = wasPlanned || wasAlreadyPresent || wasAlreadyConnected || isAutoDig;
                         autoDigQueued += GetAutoDigInt(result, "marked");
                         autoDigAlreadyMarked += GetAutoDigInt(result, "alreadyMarked");
-                        if (ok)
+                        if (wasPlanned && !wasAlreadyPresent && !wasAlreadyConnected)
                             planned++;
-                        else if (!IsAutoDigResult(result))
+                        if (wasAlreadyPresent)
+                            alreadyPresent++;
+                        if (wasAlreadyConnected)
+                            alreadyConnected++;
+                        if (ok)
+                            succeeded++;
+                        else if (!isAutoDig)
+                        {
                             failed++;
+                            remainingAnchors.Add(anchor);
+                        }
+                        if (!wasPlanned && !wasAlreadyPresent && !wasAlreadyConnected && isAutoDig)
+                            remainingAnchors.Add(anchor);
                         results.Add(result);
                     }
+
+                    if (allowPartial && hardFailedPreviews.Count > 0)
+                        remainingAnchors.AddRange(anchors.Where(anchor => hardFailedPreviews.Any(item => SameAnchor(item, anchor))));
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
@@ -623,14 +720,22 @@ namespace OniMcp.Tools
                         ["dryRun"] = false,
                         ["committed"] = planned > 0 || autoDigQueued > 0,
                         ["allowPartial"] = allowPartial,
+                        ["anchorResolution"] = anchorResolution,
+                        ["planResolution"] = planResolution.ToDictionary(),
                         ["anchorCount"] = anchors.Count,
                         ["attempted"] = allowPartial ? actionableAnchors.Count : anchors.Count,
+                        ["succeeded"] = succeeded,
                         ["planned"] = planned,
+                        ["alreadyPresent"] = alreadyPresent,
+                        ["alreadyConnected"] = alreadyConnected,
                         ["autoDigQueued"] = autoDigQueued,
                         ["autoDigAlreadyMarked"] = autoDigAlreadyMarked,
                         ["autoDigLimitReached"] = autoDigContext.LimitReached,
                         ["pendingBuildAfterDig"] = autoDigQueued + autoDigAlreadyMarked,
                         ["failed"] = failed + (allowPartial ? hardFailedPreviews.Count : 0),
+                        ["allRequestedSatisfied"] = planned + alreadyPresent + alreadyConnected >= anchors.Count,
+                        ["remainingAnchors"] = remainingAnchors.Select(anchor => AnchorDictionary(anchor.x, anchor.y, ToolUtil.ResolveWorldId(args))).ToList(),
+                        ["remainingAction"] = BuildRemainingBuildAreaAction(args, prefabId, remainingAnchors),
                         ["preflightErrors"] = hardFailedPreviews.Take(50).ToList(),
                         ["results"] = results
                     }, McpJsonUtil.Settings));
@@ -727,6 +832,59 @@ namespace OniMcp.Tools
             return bool.TryParse(value.ToString(), out parsed) && parsed;
         }
 
+        private static bool SameAnchor(Dictionary<string, object> result, CellCoord anchor)
+        {
+            return GetInt(result, "x") == anchor.x && GetInt(result, "y") == anchor.y;
+        }
+
+        private static Dictionary<string, object> BuildRemainingBuildAreaAction(JObject args, string prefabId, List<CellCoord> anchors)
+        {
+            if (anchors == null || anchors.Count == 0)
+                return null;
+
+            var arguments = new Dictionary<string, object>
+            {
+                ["domain"] = "planning",
+                ["action"] = "build_area",
+                ["prefabId"] = prefabId,
+                ["worldId"] = ToolUtil.ResolveWorldId(args),
+                ["anchors"] = anchors
+                    .Select(anchor => new Dictionary<string, object> { ["x"] = anchor.x, ["y"] = anchor.y })
+                    .ToList(),
+                ["confirm"] = true,
+                ["dryRun"] = false,
+                ["allowPartial"] = true
+            };
+
+            CopyIfPresent(args, arguments, "material");
+            CopyIfPresent(args, arguments, "facade");
+            CopyIfPresent(args, arguments, "facadeId");
+            CopyIfPresent(args, arguments, "orientation");
+            CopyIfPresent(args, arguments, "priority");
+            CopyIfPresent(args, arguments, "allowUnsupported");
+            CopyIfPresent(args, arguments, "autoConnectPower");
+            CopyIfPresent(args, arguments, "maxAutoConnectRadius");
+
+            return new Dictionary<string, object>
+            {
+                ["tool"] = "building_control",
+                ["arguments"] = arguments,
+                ["note"] = "Retry only anchors that are not yet built/blueprinted/connected. If autoDigQueued > 0, run after dig chores finish."
+            };
+        }
+
+        private static void CopyIfPresent(JObject source, Dictionary<string, object> target, string key)
+        {
+            if (source == null || target == null || source[key] == null)
+                return;
+            if (source[key].Type == JTokenType.Boolean)
+                target[key] = source[key].Value<bool>();
+            else if (source[key].Type == JTokenType.Integer)
+                target[key] = source[key].Value<int>();
+            else
+                target[key] = source[key].ToString();
+        }
+
         private static bool GetDictionaryBool(Dictionary<string, object> dict, string key)
         {
             object value;
@@ -819,11 +977,14 @@ namespace OniMcp.Tools
                 int? toY = ToolUtil.GetInt(args, "toY");
                 if (!fromX.HasValue || !fromY.HasValue || !toX.HasValue || !toY.HasValue)
                 {
-                    error = "Provide either points or fromX/fromY/toX/toY";
-                    return new List<CellCoord>();
+                    if (!TryResolveAutoUtilityEndpoints(args, out points, out error))
+                        return new List<CellCoord>();
                 }
-                points.Add(new CellCoord(fromX.Value, fromY.Value));
-                points.Add(new CellCoord(toX.Value, toY.Value));
+                else
+                {
+                    points.Add(new CellCoord(fromX.Value, fromY.Value));
+                    points.Add(new CellCoord(toX.Value, toY.Value));
+                }
             }
 
             if (points.Count < 2)
@@ -836,6 +997,250 @@ namespace OniMcp.Tools
             for (int i = 0; i < points.Count - 1; i++)
                 AddManhattanSegment(path, points[i], points[i + 1]);
             return path;
+        }
+
+        private static bool TryResolveAutoUtilityEndpoints(JObject args, out List<CellCoord> points, out string error)
+        {
+            points = new List<CellCoord>();
+            error = null;
+
+            string prefabId = args["prefabId"]?.ToString();
+            if (!string.IsNullOrWhiteSpace(prefabId) && prefabId.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                error = "Provide either points or fromX/fromY/toX/toY for non-wire utility auto_connect";
+                return false;
+            }
+
+            int worldId = ToolUtil.ResolveWorldId(args);
+            string toQuery = FirstNonEmpty(args["toQuery"], args["targetQuery"], args["query"], args["target"], args["search"], args["name"]);
+            if (string.IsNullOrWhiteSpace(toQuery))
+            {
+                error = "Provide points, fromX/fromY/toX/toY, or query/toQuery for one-call wire auto_connect";
+                return false;
+            }
+
+            int toCell;
+            string toError;
+            if (!TryResolvePowerEndpointCell(toQuery, worldId, preferOutput: false, out toCell, out toError))
+            {
+                error = toError;
+                return false;
+            }
+
+            int fromCell;
+            string fromQuery = FirstNonEmpty(args["fromQuery"], args["sourceQuery"], args["source"], args["from"]);
+            if (!string.IsNullOrWhiteSpace(fromQuery))
+            {
+                string fromError;
+                if (!TryResolvePowerEndpointCell(fromQuery, worldId, preferOutput: true, out fromCell, out fromError))
+                {
+                    error = fromError;
+                    return false;
+                }
+            }
+            else if (!TryFindNearestWireOrPowerOutput(toCell, worldId, ToolUtil.GetInt(args, "maxAutoConnectRadius") ?? 80, out fromCell))
+            {
+                error = $"No connected power output found near '{toQuery}'. Provide fromQuery/fromX/fromY for a powered source.";
+                return false;
+            }
+
+            points.Add(CellCoordFromCell(fromCell));
+            points.Add(CellCoordFromCell(toCell));
+            return true;
+        }
+
+        private static bool TryResolvePowerEndpointCell(string query, int worldId, bool preferOutput, out int cell, out string error)
+        {
+            cell = Grid.InvalidCell;
+            error = null;
+            GameObject best = null;
+            int bestScore = int.MinValue;
+
+            foreach (var building in Components.BuildingCompletes.Items)
+            {
+                if (building == null || building.gameObject == null)
+                    continue;
+                if (!ToolUtil.GameObjectMatchesWorld(building.gameObject, worldId))
+                    continue;
+
+                var def = building.Def;
+                if (def == null || (!def.RequiresPowerInput && !def.RequiresPowerOutput))
+                    continue;
+
+                int score = PowerEndpointScore(building.gameObject, def, query, preferOutput);
+                if (score > bestScore)
+                {
+                    best = building.gameObject;
+                    bestScore = score;
+                }
+            }
+
+            if (best == null || bestScore <= 0)
+            {
+                error = $"No built power endpoint instance matched '{query}'. Use read_control domain=buildings action=list query={query} to inspect existing targets, or provide explicit fromX/fromY/toX/toY.";
+                return false;
+            }
+
+            var bestBuilding = best.GetComponent<Building>();
+            var bestDef = bestBuilding?.Def;
+            if (bestBuilding == null || bestDef == null)
+            {
+                error = $"Matched '{query}' but could not inspect building ports";
+                return false;
+            }
+
+            int preferred = preferOutput && bestDef.RequiresPowerOutput
+                ? bestBuilding.GetPowerOutputCell()
+                : bestBuilding.GetPowerInputCell();
+            int fallback = preferOutput ? bestBuilding.GetPowerInputCell() : bestBuilding.GetPowerOutputCell();
+            cell = Grid.IsValidCell(preferred) ? preferred : fallback;
+            if (!Grid.IsValidCell(cell))
+            {
+                error = $"Matched '{query}' but it has no valid power port cell";
+                return false;
+            }
+            return true;
+        }
+
+        private static int PowerEndpointScore(GameObject go, BuildingDef def, string query, bool preferOutput)
+        {
+            if (go == null || def == null || string.IsNullOrWhiteSpace(query))
+                return 0;
+
+            int score = 0;
+            var kpid = go.GetComponent<KPrefabID>();
+            score = Math.Max(score, SimpleMatchScore(def.PrefabID, query));
+            score = Math.Max(score, SimpleMatchScore(kpid?.PrefabTag.Name, query));
+            score = Math.Max(score, SimpleMatchScore(ToolUtil.CleanName(go.GetProperName()), query));
+            score = Math.Max(score, SimpleMatchScore(go.name, query));
+            if (score > 0)
+            {
+                if (preferOutput && def.RequiresPowerOutput)
+                    score += 40;
+                if (!preferOutput && def.RequiresPowerInput)
+                    score += 40;
+            }
+            return score;
+        }
+
+        private static int SimpleMatchScore(string value, string query)
+        {
+            if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(query))
+                return 0;
+            if (string.Equals(value.Trim(), query.Trim(), StringComparison.OrdinalIgnoreCase))
+                return 1000;
+            if (value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                return 700;
+
+            string normalizedValue = NormalizeBuildSearchText(value);
+            string normalizedQuery = NormalizeBuildSearchText(query);
+            if (normalizedValue == normalizedQuery)
+                return 950;
+            return normalizedValue.Contains(normalizedQuery) ? 650 : 0;
+        }
+
+        private static string NormalizeBuildSearchText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+            var chars = new List<char>(value.Length);
+            foreach (char ch in value)
+            {
+                if (char.IsLetterOrDigit(ch))
+                    chars.Add(char.ToLowerInvariant(ch));
+            }
+            return new string(chars.ToArray());
+        }
+
+        private static bool TryFindNearestWireOrPowerOutput(int targetCell, int worldId, int radius, out int cell)
+        {
+            cell = Grid.InvalidCell;
+            if (!Grid.IsValidCell(targetCell))
+                return false;
+
+            radius = Math.Max(1, Math.Min(radius, 200));
+            int targetX = Grid.CellColumn(targetCell);
+            int targetY = Grid.CellRow(targetCell);
+            int bestDistance = int.MaxValue;
+
+            foreach (var building in Components.BuildingCompletes.Items)
+            {
+                if (building == null || building.Def == null || !building.Def.RequiresPowerOutput)
+                    continue;
+                if (!ToolUtil.GameObjectMatchesWorld(building.gameObject, worldId))
+                    continue;
+                if (!TryGetConnectedCircuitId(building.gameObject, out _))
+                    continue;
+
+                int candidate = building.GetPowerOutputCell();
+                if (!Grid.IsValidCell(candidate) || !ToolUtil.CellMatchesWorld(candidate, worldId))
+                    continue;
+                int x = Grid.CellColumn(candidate);
+                int y = Grid.CellRow(candidate);
+                int distance = Math.Abs(x - targetX) + Math.Abs(y - targetY);
+                if (distance > radius)
+                    continue;
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    cell = candidate;
+                }
+            }
+
+            return Grid.IsValidCell(cell);
+        }
+
+        private static bool TryGetConnectedCircuitId(GameObject go, out ushort circuitId)
+        {
+            circuitId = ushort.MaxValue;
+            if (go == null)
+                return false;
+
+            foreach (var component in go.GetComponents<Component>())
+            {
+                if (component == null)
+                    continue;
+                var type = component.GetType();
+                var property = type.GetProperty("CircuitID", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (TryReadCircuitId(property == null ? null : property.GetValue(component, null), out circuitId))
+                    return true;
+                var field = type.GetField("CircuitID", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (TryReadCircuitId(field == null ? null : field.GetValue(component), out circuitId))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool TryReadCircuitId(object value, out ushort circuitId)
+        {
+            circuitId = ushort.MaxValue;
+            if (value == null)
+                return false;
+            try
+            {
+                circuitId = Convert.ToUInt16(value);
+                return circuitId != ushort.MaxValue;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static CellCoord CellCoordFromCell(int cell)
+        {
+            return new CellCoord(Grid.CellColumn(cell), Grid.CellRow(cell));
+        }
+
+        private static string FirstNonEmpty(params JToken[] values)
+        {
+            foreach (var value in values)
+            {
+                string text = value?.ToString();
+                if (!string.IsNullOrWhiteSpace(text))
+                    return text.Trim();
+            }
+            return null;
         }
 
         private static bool TryBuildAutoConnectArgs(JObject args, string prefabId, out JObject connectArgs)
@@ -879,7 +1284,23 @@ namespace OniMcp.Tools
                 return true;
             }
 
+            if (HasAutoConnectQuery(args))
+                return true;
+
             return false;
+        }
+
+        private static bool HasAutoConnectQuery(JObject args)
+        {
+            return !string.IsNullOrWhiteSpace(FirstNonEmpty(
+                args?["toQuery"],
+                args?["targetQuery"],
+                args?["fromQuery"],
+                args?["sourceQuery"],
+                args?["query"],
+                args?["target"],
+                args?["search"],
+                args?["name"]));
         }
 
         private static List<CellCoord> ParsePathPoints(JToken token)
@@ -1086,6 +1507,30 @@ namespace OniMcp.Tools
                 return ErrorResult(prefabId, x, y, $"Cell is not in worldId={worldId}");
 
             var orientation = ParseOrientation(args["orientation"]?.ToString());
+            var earlyPlacement = BuildPlacementDetails(def, x, y, worldId);
+            var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);
+            if (earlyExistingBuild != null)
+            {
+                RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
+                return new Dictionary<string, object>
+                {
+                    ["planned"] = false,
+                    ["blueprintPlaced"] = false,
+                    ["alreadyPresent"] = true,
+                    ["alreadyBlueprint"] = string.Equals(earlyExistingBuild["kind"]?.ToString(), "blueprint", StringComparison.OrdinalIgnoreCase),
+                    ["alreadyBuilding"] = string.Equals(earlyExistingBuild["kind"]?.ToString(), "building", StringComparison.OrdinalIgnoreCase),
+                    ["valid"] = true,
+                    ["prefabId"] = prefabId,
+                    ["name"] = ToolUtil.CleanName(def.Name),
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["anchor"] = AnchorDictionary(x, y, worldId),
+                    ["worldId"] = worldId,
+                    ["placement"] = earlyPlacement.ToDictionary(),
+                    ["footprint"] = earlyPlacement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
+                    ["existing"] = earlyExistingBuild
+                };
+            }
             var materialResult = SelectElements(def, args["material"]?.ToString(), worldId);
             materialResult.RequiredKg = RequiredMaterialKg(def);
             if (!materialResult.Valid)
@@ -1101,6 +1546,34 @@ namespace OniMcp.Tools
 
             var placement = BuildPlacementDetails(def, x, y, worldId);
             var footprintResult = ValidateFootprint(placement);
+            var existingBuild = ExistingMatchingBuildAtPlacement(def, placement);
+            if (existingBuild != null)
+            {
+                RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
+                return new Dictionary<string, object>
+                {
+                    ["planned"] = false,
+                    ["blueprintPlaced"] = false,
+                    ["alreadyPresent"] = true,
+                    ["alreadyBlueprint"] = string.Equals(existingBuild["kind"]?.ToString(), "blueprint", StringComparison.OrdinalIgnoreCase),
+                    ["alreadyBuilding"] = string.Equals(existingBuild["kind"]?.ToString(), "building", StringComparison.OrdinalIgnoreCase),
+                    ["valid"] = true,
+                    ["prefabId"] = prefabId,
+                    ["name"] = ToolUtil.CleanName(def.Name),
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["anchor"] = AnchorDictionary(x, y, worldId),
+                    ["worldId"] = worldId,
+                    ["placement"] = placement.ToDictionary(),
+                    ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
+                    ["existing"] = existingBuild,
+                    ["support"] = supportResult.ToDictionary(),
+                    ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
+                    ["materialSelection"] = materialResult.ToDictionary(),
+                    ["materials"] = materialResult.ToDictionary(),
+                    ["facade"] = facadeResult.ResponseId
+                };
+            }
             Dictionary<string, object> autoDig = null;
             if (!footprintResult.Valid)
             {
@@ -1116,6 +1589,7 @@ namespace OniMcp.Tools
             if (IsDryRun(args))
             {
                 RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
+                var powerAutoConnect = TryAutoConnectPower(def, x, y, orientation, args, plannedSupportCells, autoDigContext);
                 return new Dictionary<string, object>
                 {
                     ["planned"] = false,
@@ -1133,9 +1607,10 @@ namespace OniMcp.Tools
                     ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
                     ["support"] = supportResult.ToDictionary(),
                     ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
-            ["materialSelection"] = materialResult.ToDictionary(),
-            ["materials"] = materialResult.ToDictionary(),
+                    ["materialSelection"] = materialResult.ToDictionary(),
+                    ["materials"] = materialResult.ToDictionary(),
                     ["facade"] = facadeResult.ResponseId,
+                    ["powerAutoConnect"] = powerAutoConnect,
                     ["autoDig"] = autoDig
                 };
             }
@@ -1186,6 +1661,7 @@ namespace OniMcp.Tools
             SetPriority(go, ToolUtil.GetInt(args, "priority") ?? 5);
             RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
             var actualPlacement = ActualPlacementDetails(go, def, x, y);
+            var placedPowerAutoConnect = TryAutoConnectPower(def, x, y, orientation, args, plannedSupportCells, autoDigContext);
             return new Dictionary<string, object>
             {
                 ["planned"] = true,
@@ -1205,11 +1681,142 @@ namespace OniMcp.Tools
                 ["fallbackPlacement"] = fallbackPlacement,
                 ["support"] = supportResult.ToDictionary(),
                 ["material"] = materialResult.Elements.Select(tag => tag.Name).ToList(),
-            ["materialSelection"] = materialResult.ToDictionary(),
-            ["materials"] = materialResult.ToDictionary(),
+                ["materialSelection"] = materialResult.ToDictionary(),
+                ["materials"] = materialResult.ToDictionary(),
                 ["facade"] = facadeResult.ResponseId,
+                ["powerAutoConnect"] = placedPowerAutoConnect,
                 ["autoDig"] = autoDig,
                 ["id"] = go.GetComponent<KPrefabID>()?.InstanceID ?? -1
+            };
+        }
+
+        private static Dictionary<string, object> TryAutoConnectPower(
+            BuildingDef def,
+            int anchorX,
+            int anchorY,
+            Orientation orientation,
+            JObject args,
+            HashSet<int> plannedSupportCells,
+            AutoDigContext autoDigContext)
+        {
+            bool enabled = def != null
+                && def.RequiresPowerInput
+                && ToolUtil.GetBool(args, "autoConnectPower", true);
+            if (!enabled)
+            {
+                return new Dictionary<string, object>
+                {
+                    ["enabled"] = false,
+                    ["reason"] = def == null || !def.RequiresPowerInput ? "building_has_no_power_input" : "disabled_by_argument"
+                };
+            }
+
+            int worldId = ToolUtil.ResolveWorldId(args);
+            int inputCell = PowerInputCell(def, anchorX, anchorY, orientation);
+            if (!Grid.IsValidCell(inputCell) || !ToolUtil.CellMatchesWorld(inputCell, worldId))
+            {
+                return new Dictionary<string, object>
+                {
+                    ["enabled"] = true,
+                    ["status"] = "no_valid_power_input_cell",
+                    ["planned"] = 0,
+                    ["failed"] = 0
+                };
+            }
+
+            int sourceCell;
+            int radius = ToolUtil.GetInt(args, "maxAutoConnectRadius") ?? 80;
+            if (!TryFindNearestWireOrPowerOutput(inputCell, worldId, radius, out sourceCell))
+            {
+                return new Dictionary<string, object>
+                {
+                    ["enabled"] = true,
+                    ["status"] = "no_connected_power_source",
+                    ["input"] = CellCoordDictionary(inputCell),
+                    ["planned"] = 0,
+                    ["failed"] = 0,
+                    ["next"] = "Connect a power producer/output first, provide fromQuery/fromX/fromY for a powered source, or pass autoConnectPower=false."
+                };
+            }
+
+            var path = new List<CellCoord>();
+            AddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell));
+            int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
+            if (path.Count > maxCells)
+            {
+                return new Dictionary<string, object>
+                {
+                    ["enabled"] = true,
+                    ["status"] = "path_too_large",
+                    ["input"] = CellCoordDictionary(inputCell),
+                    ["source"] = CellCoordDictionary(sourceCell),
+                    ["pathCells"] = path.Count,
+                    ["maxCells"] = maxCells,
+                    ["planned"] = 0,
+                    ["failed"] = 0
+                };
+            }
+
+            var wireArgs = (JObject)args.DeepClone();
+            wireArgs["prefabId"] = "Wire";
+            wireArgs["material"] = args["wireMaterial"] ?? args["material"] ?? new JValue("auto");
+            wireArgs["autoConnectPower"] = false;
+            wireArgs["confirm"] = true;
+
+            var results = new List<Dictionary<string, object>>();
+            int planned = 0;
+            int reused = 0;
+            int failed = 0;
+            int autoDigQueued = 0;
+            foreach (var point in path)
+            {
+                var result = TryPlanOne("Wire", point.x, point.y, wireArgs, plannedSupportCells, autoDigContext);
+                bool ok = result.ContainsKey("planned") && (bool)result["planned"];
+                bool alreadyConnected = result.ContainsKey("alreadyConnected") && (bool)result["alreadyConnected"];
+                autoDigQueued += GetAutoDigInt(result, "marked");
+                if (ok)
+                    planned++;
+                else if (alreadyConnected)
+                    reused++;
+                else if (!IsAutoDigResult(result))
+                    failed++;
+                if (results.Count < 50)
+                    results.Add(result);
+            }
+
+            return new Dictionary<string, object>
+            {
+                ["enabled"] = true,
+                ["status"] = failed == 0 ? "connected_or_planned" : planned + reused > 0 ? "partially_connected" : "failed",
+                ["dryRun"] = IsDryRun(args),
+                ["input"] = CellCoordDictionary(inputCell),
+                ["source"] = CellCoordDictionary(sourceCell),
+                ["pathCells"] = path.Count,
+                ["planned"] = planned,
+                ["reused"] = reused,
+                ["failed"] = failed,
+                ["autoDigQueued"] = autoDigQueued,
+                ["path"] = path.Select(p => new { x = p.x, y = p.y }).ToList(),
+                ["results"] = results
+            };
+        }
+
+        private static int PowerInputCell(BuildingDef def, int anchorX, int anchorY, Orientation orientation)
+        {
+            int anchorCell = Grid.XYToCell(anchorX, anchorY);
+            if (!Grid.IsValidCell(anchorCell) || def == null)
+                return Grid.InvalidCell;
+            CellOffset rotated = Rotatable.GetRotatedCellOffset(def.PowerInputOffset, orientation);
+            return Grid.OffsetCell(anchorCell, rotated);
+        }
+
+        private static Dictionary<string, object> CellCoordDictionary(int cell)
+        {
+            return new Dictionary<string, object>
+            {
+                ["cell"] = cell,
+                ["x"] = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
+                ["y"] = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1
             };
         }
 
@@ -1280,7 +1887,11 @@ namespace OniMcp.Tools
         {
             var parameters = new Dictionary<string, McpToolParameter>
             {
-                ["prefabId"] = new McpToolParameter { Type = "string", Description = "建筑 prefabId，例如 MedicalCot、Tile、Wire", Required = true },
+                ["prefabId"] = new McpToolParameter { Type = "string", Description = "建筑 prefabId，例如 MedicalCot、Tile、Wire；也可省略并用 plan/blueprint/sequence 解析", Required = false },
+                ["plan"] = new McpToolParameter { Type = "string", Description = "文字建造序列/短语，解析成 prefabId/material/query，例如 粉砂岩砖@氧气、Wire-小型冰箱、用铜矿造手动发电机在电池旁", Required = false },
+                ["blueprint"] = new McpToolParameter { Type = "string", Description = "plan 的别名", Required = false },
+                ["sequence"] = new McpToolParameter { Type = "string", Description = "plan 的别名；用于搜索/行动一体化时传文字序列", Required = false },
+                ["text"] = new McpToolParameter { Type = "string", Description = "plan 的别名", Required = false },
                 ["x"] = new McpToolParameter { Type = "integer", Description = "lowerLeftCell anchor X", Required = false },
                 ["y"] = new McpToolParameter { Type = "integer", Description = "lowerLeftCell anchor Y", Required = false },
                 ["query"] = new McpToolParameter { Type = "string", Description = "坐标省略时按对象/元素/复制人名称搜索定位 anchor", Required = false },
@@ -1288,6 +1899,10 @@ namespace OniMcp.Tools
                 ["search"] = new McpToolParameter { Type = "string", Description = "query 的别名：搜索目标名称、prefabId、元素或复制人", Required = false },
                 ["nearX"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 X 最近排序", Required = false },
                 ["nearY"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 Y 最近排序", Required = false },
+                ["offsetX"] = new McpToolParameter { Type = "integer", Description = "搜索/x,y 解析出 anchor 后的 X 偏移；别名 dx。用于一次调用内按搜索结果相对放置蓝图", Required = false },
+                ["offsetY"] = new McpToolParameter { Type = "integer", Description = "搜索/x,y 解析出 anchor 后的 Y 偏移；别名 dy。用于一次调用内按搜索结果相对放置蓝图", Required = false },
+                ["dx"] = new McpToolParameter { Type = "integer", Description = "offsetX 的短别名", Required = false },
+                ["dy"] = new McpToolParameter { Type = "integer", Description = "offsetY 的短别名", Required = false },
                 ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界或 areaId 绑定世界", Required = false },
                 ["material"] = new McpToolParameter { Type = "string", Description = "建造材料 tag；auto/default 自动选择", Required = false },
                 ["facade"] = new McpToolParameter { Type = "string", Description = "可选建筑外观/permit id", Required = false },
@@ -1320,7 +1935,10 @@ namespace OniMcp.Tools
             int? requestedY = ToolUtil.GetInt(args, "y");
             if (!requestedX.HasValue || !requestedY.HasValue)
             {
-                return ToolUtil.TryResolveSearchCell(args, out x, out y, out error);
+                if (!ToolUtil.TryResolveSearchCell(args, out x, out y, out error))
+                    return false;
+                ApplyAnchorOffset(args, ref x, ref y);
+                return true;
             }
 
             var area = WorldEditor.ResolveRelativeArea(args);
@@ -1336,7 +1954,43 @@ namespace OniMcp.Tools
                 y = requestedY.Value;
             }
 
+            ApplyAnchorOffset(args, ref x, ref y);
             return true;
+        }
+
+        private static void ApplyAnchorOffset(JObject args, ref int x, ref int y)
+        {
+            x += ToolUtil.GetInt(args, "offsetX") ?? ToolUtil.GetInt(args, "dx") ?? 0;
+            y += ToolUtil.GetInt(args, "offsetY") ?? ToolUtil.GetInt(args, "dy") ?? 0;
+        }
+
+        private static Dictionary<string, object> BuildAnchorResolution(JObject args, List<CellCoord> anchors)
+        {
+            string query = args["query"]?.ToString();
+            if (string.IsNullOrWhiteSpace(query))
+                query = args["target"]?.ToString();
+            if (string.IsNullOrWhiteSpace(query))
+                query = args["search"]?.ToString();
+            if (string.IsNullOrWhiteSpace(query))
+                query = args["name"]?.ToString();
+
+            int offsetX = ToolUtil.GetInt(args, "offsetX") ?? ToolUtil.GetInt(args, "dx") ?? 0;
+            int offsetY = ToolUtil.GetInt(args, "offsetY") ?? ToolUtil.GetInt(args, "dy") ?? 0;
+            var first = anchors != null && anchors.Count > 0
+                ? new Dictionary<string, object> { ["x"] = anchors[0].x, ["y"] = anchors[0].y }
+                : null;
+
+            return new Dictionary<string, object>
+            {
+                ["mode"] = anchors != null && anchors.Count > 1
+                    ? "anchors"
+                    : string.IsNullOrWhiteSpace(query) ? "coordinate_or_area" : "search_anchor",
+                ["query"] = string.IsNullOrWhiteSpace(query) ? null : query,
+                ["offset"] = new Dictionary<string, int> { ["x"] = offsetX, ["y"] = offsetY },
+                ["anchorCount"] = anchors?.Count ?? 0,
+                ["firstAnchor"] = first,
+                ["oneCallSearchAndAction"] = !string.IsNullOrWhiteSpace(query)
+            };
         }
 
         private static List<CellCoord> ResolveAnchors(JObject args, BuildingDef def, out string error)
@@ -1963,6 +2617,52 @@ namespace OniMcp.Tools
             }
 
             return null;
+        }
+
+        private static Dictionary<string, object> ExistingMatchingBuildAtPlacement(BuildingDef def, PlacementDetails placement)
+        {
+            if (def == null || placement == null)
+                return null;
+
+            foreach (var complete in Components.BuildingCompletes.Items)
+            {
+                var go = complete?.gameObject;
+                if (go == null || !ToolUtil.GameObjectMatchesWorld(go, placement.WorldId))
+                    continue;
+
+                var building = go.GetComponent<Building>();
+                string existingPrefabId = building?.Def?.PrefabID ?? go.GetComponent<KPrefabID>()?.PrefabTag.Name ?? go.name;
+                if (!EqualsIgnoreCase(existingPrefabId, def.PrefabID))
+                    continue;
+
+                var actual = ActualPlacementDetails(go, def, placement.AnchorX, placement.AnchorY);
+                var check = ComparePlacement(placement, actual);
+                if (!GetBool(check, "valid"))
+                    continue;
+
+                return new Dictionary<string, object>
+                {
+                    ["kind"] = "building",
+                    ["prefabId"] = existingPrefabId,
+                    ["id"] = go.GetComponent<KPrefabID>()?.InstanceID ?? -1,
+                    ["actualPlacement"] = actual,
+                    ["placementCheck"] = check
+                };
+            }
+
+            var blueprint = FindConstructableAtPlacement(def, placement);
+            if (blueprint == null)
+                return null;
+
+            var blueprintBuilding = blueprint.GetComponent<Building>();
+            return new Dictionary<string, object>
+            {
+                ["kind"] = "blueprint",
+                ["prefabId"] = blueprintBuilding?.Def?.PrefabID ?? blueprint.GetComponent<KPrefabID>()?.PrefabTag.Name ?? blueprint.name,
+                ["id"] = blueprint.GetComponent<KPrefabID>()?.InstanceID ?? -1,
+                ["actualPlacement"] = ActualPlacementDetails(blueprint, def, placement.AnchorX, placement.AnchorY),
+                ["placementCheck"] = ComparePlacement(placement, ActualPlacementDetails(blueprint, def, placement.AnchorX, placement.AnchorY))
+            };
         }
 
         private static Dictionary<string, object> ExistingMatchingUtilityAtPlacement(BuildingDef def, PlacementDetails placement)
@@ -2626,15 +3326,33 @@ namespace OniMcp.Tools
             };
         }
 
-        private static bool IsUnlockedAndAvailable(BuildingDef def)
-        {
-            return def != null && def.IsAvailable() && IsTechUnlocked(def);
-        }
+private static bool IsUnlockedAndAvailable(BuildingDef def)
+{
+if (def == null)
+return false;
+try
+{
+return def.IsAvailable() && IsTechUnlocked(def);
+}
+catch
+{
+return false;
+}
+}
 
-        private static bool IsTechUnlocked(BuildingDef def)
-        {
-            return def != null && Db.Get().Techs.IsTechItemComplete(def.PrefabID);
-        }
+private static bool IsTechUnlocked(BuildingDef def)
+{
+if (def == null || Db.Get() == null || Db.Get().Techs == null)
+return false;
+try
+{
+return Db.Get().Techs.IsTechItemComplete(def.PrefabID);
+}
+catch
+{
+return false;
+}
+}
 
         private static object AutoMaterialValue(BuildingDef def, int worldId)
         {
@@ -3150,10 +3868,16 @@ namespace OniMcp.Tools
                 ["selected"] = Selected != null ? Selected.ToDictionary() : null,
                 ["elements"] = Elements.Select(tag => tag.Name).ToList(),
                 ["availableMaterials"] = Available.Take(20).Select(item => item.ToDictionary()).ToList(),
-                    ["candidateMaterials"] = Candidates.Take(20).Select(item => item.ToDictionary()).ToList(),
-                    ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect read_control domain=resources action=inventory/building_control domain=planning action=materials",
-                    ["error"] = Error
-                };
+                ["candidateMaterials"] = Candidates.Take(20).Select(item => item.ToDictionary()).ToList(),
+                ["fallbackMaterial"] = Available.Count > 0 ? Available[0].Tag.Name : null,
+                ["next"] = Valid
+                    ? "Material is usable."
+                    : Available.Count > 0
+                        ? "Retry with material=auto or material=" + Available[0].Tag.Name + " if exact material is not required."
+                        : "No usable material is currently available; inspect inventory/material candidates before retrying.",
+                ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect read_control domain=resources action=inventory/building_control domain=planning action=materials",
+                ["error"] = Error
+            };
             }
         }
 

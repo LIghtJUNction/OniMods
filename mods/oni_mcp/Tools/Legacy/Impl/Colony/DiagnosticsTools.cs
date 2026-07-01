@@ -294,7 +294,7 @@ namespace OniMcp.Tools
             }
 
             var buildingCounts = CountBuildings();
-            int oxygenProducers = CountByPrefab(buildingCounts, "OxygenDiffuser") + CountByPrefab(buildingCounts, "Electrolyzer");
+        int oxygenProducers = CountByPrefab(buildingCounts, "OxygenDiffuser") + CountByPrefab(buildingCounts, "MineralDeoxidizer") + CountByPrefab(buildingCounts, "Electrolyzer");
             int beds = CountByPrefab(buildingCounts, "Bed") + CountByPrefab(buildingCounts, "LuxuryBed");
             int toilets = CountByPrefab(buildingCounts, "Outhouse") + CountByPrefab(buildingCounts, "FlushToilet");
             int researchStations = CountByPrefab(buildingCounts, "ResearchCenter") + CountByPrefab(buildingCounts, "AdvancedResearchCenter");

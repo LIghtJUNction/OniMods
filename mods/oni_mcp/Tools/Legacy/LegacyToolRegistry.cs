@@ -304,6 +304,7 @@ namespace OniMcp.Tools
             registerHidden(GameControlTools.SaveGame());
             registerHidden(GameControlTools.LoadSave());
             registerHidden(GameControlTools.QuitGame());
+            registerHidden(GameLaunchTools.ControlGameLaunch());
             registerHidden(GameControlTools.ControlDlcActivation());
             registerHidden(GameControlTools.ListDlcActivation());
             registerHidden(GameControlTools.ActivateDlcForSave());

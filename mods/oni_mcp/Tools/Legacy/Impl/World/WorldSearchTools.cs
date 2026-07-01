@@ -29,10 +29,13 @@ namespace OniMcp.Tools
                 Handler = args =>
                 {
                     if (Game.Instance == null)
-                        return CallToolResult.Error("Game not initialized");
+                    return CallToolResult.Error("Game not initialized");
 
-                    var request = SearchRequest.From(args, "clusters");
-                    var results = new List<SearchHit>();
+                var request = SearchRequest.From(args, "clusters");
+                if (request.HasPattern)
+                    return CallToolResult.Text(JsonConvert.SerializeObject(BuildPatternResult(request), McpJsonUtil.Settings));
+
+                var results = new List<SearchHit>();
                     if (request.IncludeKind("cells") || request.IncludeKind("elements"))
                         results.AddRange(SearchCells(request));
                     if (request.IncludeKind("buildings"))
@@ -107,6 +110,10 @@ namespace OniMcp.Tools
         {
             var parameters = BaseAreaParameters();
             parameters["query"] = new McpToolParameter { Type = "string", Description = "搜索词，可匹配元素 ID/名称、建筑名/prefabId、物品名/prefabId、复制人名；留空时按条件返回", Required = false };
+            parameters["pattern"] = new McpToolParameter { Type = "string", Description = "连续格子排列搜索，例如 粉砂岩-泥土-氧气、SiltStone>Dirt>Oxygen、砂岩|粉砂岩-* -氧气、Dirt{3}；优先于普通 query", Required = false };
+            parameters["sequence"] = new McpToolParameter { Type = "string", Description = "pattern 的别名：连续元素/状态排列；支持 * 任意格、A|B 备选、term{N} 重复", Required = false };
+            parameters["direction"] = new McpToolParameter { Type = "string", Description = "pattern 搜索方向：horizontal、vertical 或 both，默认 both；会同时匹配正反方向", Required = false, EnumValues = new List<string> { "horizontal", "vertical", "both" } };
+            parameters["matchMode"] = new McpToolParameter { Type = "string", Description = "pattern/query 匹配模式：exact 精确；smart 规范化/包含；fuzzy 允许少量拼写误差。默认 smart", Required = false, EnumValues = new List<string> { "exact", "smart", "fuzzy" } };
             if (includeKinds)
                 parameters["kinds"] = new McpToolParameter { Type = "array", Description = "搜索类型数组或逗号字符串：cells,elements,buildings,items,resources,dupes；默认 all", Required = false };
             parameters["returnMode"] = new McpToolParameter { Type = "string", Description = "返回形态：clusters 返回连通区域/对象组，summary 只返回统计，hits 返回逐项命中。默认 clusters", Required = false, EnumValues = new List<string> { "clusters", "summary", "hits" } };
@@ -224,6 +231,297 @@ namespace OniMcp.Tools
                 });
             }
             return hits;
+        }
+
+        private static Dictionary<string, object> BuildPatternResult(SearchRequest request)
+        {
+            var terms = ParsePatternTerms(request.Pattern).ToList();
+            var matches = new List<Dictionary<string, object>>();
+            int scannedStarts = 0;
+
+            if (terms.Count == 0)
+            {
+                return new Dictionary<string, object>
+                {
+                    ["v"] = 1,
+                    ["tool"] = "world_search",
+                    ["returnMode"] = "pattern",
+                    ["pattern"] = request.Pattern,
+                    ["error"] = "pattern/sequence did not contain any terms"
+                };
+            }
+
+            var directions = PatternDirections(request.PatternDirection).ToList();
+            for (int y = request.Rect["y1"]; y <= request.Rect["y2"]; y++)
+            {
+                for (int x = request.Rect["x1"]; x <= request.Rect["x2"]; x++)
+                {
+                    foreach (var direction in directions)
+                    {
+                        scannedStarts++;
+                        Dictionary<string, object> match;
+                        if (TryMatchPatternAt(request, terms, x, y, direction.dx, direction.dy, out match))
+                        {
+                            matches.Add(match);
+                            if (matches.Count >= request.Limit)
+                                return PatternResultDictionary(request, terms, scannedStarts, matches, truncated: true);
+                        }
+                    }
+                }
+            }
+
+            return PatternResultDictionary(request, terms, scannedStarts, matches, truncated: false);
+        }
+
+        private static Dictionary<string, object> PatternResultDictionary(SearchRequest request, List<string> terms, int scannedStarts, List<Dictionary<string, object>> matches, bool truncated)
+        {
+            return new Dictionary<string, object>
+            {
+                ["v"] = 1,
+                ["tool"] = "world_search",
+                ["returnMode"] = "pattern",
+                ["pattern"] = request.Pattern,
+                ["terms"] = terms,
+                ["direction"] = request.PatternDirection,
+                ["matchMode"] = request.MatchMode,
+                ["worldId"] = request.WorldId,
+                ["rect"] = new[] { request.Rect["x1"], request.Rect["y1"], request.Rect["x2"], request.Rect["y2"] },
+                ["visibleOnly"] = request.VisibleOnly,
+                ["scannedStarts"] = scannedStarts,
+                ["matched"] = matches.Count,
+                ["returned"] = matches.Count,
+                ["truncated"] = truncated,
+                ["items"] = matches,
+                ["syntax"] = "separators: -, >, ->, comma, slash, whitespace; term: element/state/id/name; wildcard: * or ?; alternatives: A|B; repeat: term{N}; matchMode: exact/smart/fuzzy; direction scans forward and reverse."
+            };
+        }
+
+        private static bool TryMatchPatternAt(SearchRequest request, List<string> terms, int startX, int startY, int dx, int dy, out Dictionary<string, object> match)
+        {
+            match = null;
+            var cells = new List<Dictionary<string, object>>();
+            for (int i = 0; i < terms.Count; i++)
+            {
+                int x = startX + dx * i;
+                int y = startY + dy * i;
+                if (x < request.Rect["x1"] || x > request.Rect["x2"] || y < request.Rect["y1"] || y > request.Rect["y2"])
+                    return false;
+                int cell = Grid.XYToCell(x, y);
+                if (!Grid.IsValidCell(cell) || !Grid.IsWorldValidCell(cell))
+                    return false;
+                if (request.WorldId >= 0 && Grid.WorldIdx[cell] != request.WorldId)
+                    return false;
+                if (request.VisibleOnly && !Grid.IsVisible(cell))
+                    return false;
+
+                var element = Grid.Element[cell];
+                string elementId = element?.id.ToString() ?? "Unknown";
+                string elementName = ToolUtil.CleanName(element?.name ?? elementId);
+                string state = ToolUtil.GetElementState(element);
+                if (!PatternTermMatches(terms[i], request.MatchMode, elementId, elementName, state))
+                    return false;
+
+                cells.Add(new Dictionary<string, object>
+                {
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["cell"] = cell,
+                    ["elementId"] = elementId,
+                    ["elementName"] = elementName,
+                    ["state"] = state,
+                    ["kg"] = Math.Round(ToolUtil.SafeFloat(Grid.Mass[cell]), 3)
+                });
+            }
+
+            int endX = startX + dx * (terms.Count - 1);
+            int endY = startY + dy * (terms.Count - 1);
+            var rect = new Dictionary<string, int>
+            {
+                ["x1"] = Math.Min(startX, endX),
+                ["y1"] = Math.Min(startY, endY),
+                ["x2"] = Math.Max(startX, endX),
+                ["y2"] = Math.Max(startY, endY)
+            };
+            int worldId = Grid.WorldIdx[Grid.XYToCell(startX, startY)];
+            var area = AreaHandleRegistry.Define(rect, worldId, "pattern:" + request.Pattern);
+            match = new Dictionary<string, object>
+            {
+                ["areaId"] = area.Id,
+                ["worldId"] = worldId,
+                ["direction"] = PatternDirectionName(dx, dy),
+                ["start"] = new Dictionary<string, int> { ["x"] = startX, ["y"] = startY },
+                ["end"] = new Dictionary<string, int> { ["x"] = endX, ["y"] = endY },
+                ["rect"] = rect,
+                ["length"] = terms.Count,
+                ["anchor"] = new Dictionary<string, int> { ["x"] = startX, ["y"] = startY },
+                ["cells"] = cells
+            };
+            return true;
+        }
+
+        private static IEnumerable<string> ParsePatternTerms(string pattern)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+                yield break;
+
+            string normalized = pattern
+                .Replace("->", "-")
+                .Replace(">", "-")
+                .Replace("→", "-")
+                .Replace("，", ",")
+                .Replace("/", "-");
+
+            foreach (string raw in normalized.Split(new[] { '-', ',', ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string term = raw.Trim();
+                if (string.IsNullOrWhiteSpace(term))
+                    continue;
+
+                int repeat = ParseRepeatSuffix(ref term);
+                for (int i = 0; i < repeat; i++)
+                    yield return term;
+            }
+        }
+
+        private static int ParseRepeatSuffix(ref string term)
+        {
+            int open = term.EndsWith("}", StringComparison.Ordinal) ? term.LastIndexOf('{') : -1;
+            if (open < 0 || open >= term.Length - 2)
+                return 1;
+
+            string countText = term.Substring(open + 1, term.Length - open - 2);
+            int count;
+            if (!int.TryParse(countText, out count))
+                return 1;
+
+            term = term.Substring(0, open).Trim();
+            return Math.Max(1, Math.Min(count, 32));
+        }
+
+        private static IEnumerable<(int dx, int dy)> PatternDirections(string direction)
+        {
+            string value = (direction ?? "both").Trim().ToLowerInvariant();
+            if (value == "horizontal" || value == "x" || value == "row" || value == "both")
+            {
+                yield return (1, 0);
+                yield return (-1, 0);
+            }
+            if (value == "vertical" || value == "y" || value == "column" || value == "both")
+            {
+                yield return (0, 1);
+                yield return (0, -1);
+            }
+        }
+
+        private static string PatternDirectionName(int dx, int dy)
+        {
+            if (dx > 0) return "right";
+            if (dx < 0) return "left";
+            if (dy > 0) return "up";
+            if (dy < 0) return "down";
+            return "none";
+        }
+
+        private static bool PatternTermMatches(string term, string matchMode, params string[] values)
+        {
+            if (IsWildcardPatternTerm(term))
+                return true;
+
+            foreach (string alternative in SplitPatternAlternatives(term))
+            {
+                foreach (string value in values)
+                {
+                    if (PatternValueMatches(alternative, value, matchMode))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool IsWildcardPatternTerm(string term)
+        {
+            string value = (term ?? "").Trim();
+            return value == "*" || value == "?" || value == "." || value.Equals("any", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static IEnumerable<string> SplitPatternAlternatives(string term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                yield break;
+
+            string value = term.Trim();
+            if (value.Length >= 2 && value[0] == '(' && value[value.Length - 1] == ')')
+                value = value.Substring(1, value.Length - 2);
+
+            foreach (string part in value.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string alternative = part.Trim();
+                if (!string.IsNullOrWhiteSpace(alternative))
+                    yield return alternative;
+            }
+        }
+
+        private static bool PatternValueMatches(string term, string value, string matchMode)
+        {
+            if (string.IsNullOrWhiteSpace(term) || string.IsNullOrWhiteSpace(value))
+                return false;
+            string mode = (matchMode ?? "smart").Trim().ToLowerInvariant();
+            if (string.Equals(term.Trim(), value.Trim(), StringComparison.OrdinalIgnoreCase))
+                return true;
+            string termNorm = NormalizePatternText(term);
+            string valueNorm = NormalizePatternText(value);
+            if (termNorm.Length == 0 || valueNorm.Length == 0)
+                return false;
+            if (termNorm == valueNorm)
+                return true;
+            if (mode == "exact")
+                return false;
+            if (valueNorm.Contains(termNorm) || termNorm.Contains(valueNorm))
+                return true;
+            if (mode == "fuzzy")
+            {
+                int maxDistance = termNorm.Length <= 4 ? 1 : termNorm.Length <= 8 ? 2 : 3;
+                return BoundedEditDistance(valueNorm, termNorm, maxDistance) >= 0;
+            }
+            return false;
+        }
+
+        private static string NormalizePatternText(string value)
+        {
+            var chars = new List<char>(value.Length);
+            foreach (char ch in value)
+            {
+                if (char.IsLetterOrDigit(ch))
+                    chars.Add(char.ToLowerInvariant(ch));
+            }
+            return new string(chars.ToArray());
+        }
+
+        private static int BoundedEditDistance(string left, string right, int maxDistance)
+        {
+            if (Math.Abs(left.Length - right.Length) > maxDistance)
+                return -1;
+            int[] previous = new int[right.Length + 1];
+            int[] current = new int[right.Length + 1];
+            for (int j = 0; j <= right.Length; j++)
+                previous[j] = j;
+            for (int i = 1; i <= left.Length; i++)
+            {
+                current[0] = i;
+                int rowMin = current[0];
+                for (int j = 1; j <= right.Length; j++)
+                {
+                    int cost = left[i - 1] == right[j - 1] ? 0 : 1;
+                    current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+                    rowMin = Math.Min(rowMin, current[j]);
+                }
+                if (rowMin > maxDistance)
+                    return -1;
+                var temp = previous;
+                previous = current;
+                current = temp;
+            }
+            return previous[right.Length] <= maxDistance ? previous[right.Length] : -1;
         }
 
         private static IEnumerable<SearchHit> SearchBuildings(SearchRequest request)
@@ -510,8 +808,12 @@ namespace OniMcp.Tools
             public float? MaxMassKg;
             public float? MinTempC;
             public float? MaxTempC;
+            public string Pattern;
+            public string PatternDirection;
+            public string MatchMode;
 
             public bool HasNear => NearX.HasValue && NearY.HasValue;
+            public bool HasPattern => !string.IsNullOrWhiteSpace(Pattern);
 
             public static SearchRequest From(JObject args, string defaultReturnMode)
             {
@@ -530,12 +832,15 @@ namespace OniMcp.Tools
                     NearY = ToolUtil.GetInt(args, "nearY"),
                     ReturnMode = NormalizeReturnMode(args["returnMode"]?.ToString(), defaultReturnMode),
                     State = NormalizeState(args["state"]?.ToString()),
-                    Solid = args["solid"] == null ? (bool?)null : ToolUtil.GetBool(args, "solid", false),
-                    MinMassKg = ToolUtil.GetFloat(args, "minMassKg"),
-                    MaxMassKg = ToolUtil.GetFloat(args, "maxMassKg"),
-                    MinTempC = ToolUtil.GetFloat(args, "minTempC"),
-                    MaxTempC = ToolUtil.GetFloat(args, "maxTempC")
-                };
+                Solid = args["solid"] == null ? (bool?)null : ToolUtil.GetBool(args, "solid", false),
+                MinMassKg = ToolUtil.GetFloat(args, "minMassKg"),
+                MaxMassKg = ToolUtil.GetFloat(args, "maxMassKg"),
+                MinTempC = ToolUtil.GetFloat(args, "minTempC"),
+                MaxTempC = ToolUtil.GetFloat(args, "maxTempC"),
+                Pattern = FirstNonEmpty(args["pattern"], args["sequence"]),
+                PatternDirection = NormalizePatternDirection(args["direction"]?.ToString()),
+                MatchMode = NormalizeMatchMode(args["matchMode"]?.ToString())
+            };
                 return request;
             }
 
@@ -656,6 +961,37 @@ namespace OniMcp.Tools
                     return "any";
                 string state = value.Trim().ToLowerInvariant();
                 return state == "gas" || state == "liquid" || state == "solid" || state == "vacuum" ? state : "any";
+            }
+
+            private static string FirstNonEmpty(params JToken[] values)
+            {
+                foreach (var value in values)
+                {
+                    string text = value?.ToString();
+                    if (!string.IsNullOrWhiteSpace(text))
+                        return text.Trim();
+                }
+                return null;
+            }
+
+            private static string NormalizePatternDirection(string value)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    return "both";
+                string direction = value.Trim().ToLowerInvariant();
+                if (direction == "horizontal" || direction == "x" || direction == "row")
+                    return "horizontal";
+                if (direction == "vertical" || direction == "y" || direction == "column")
+                    return "vertical";
+                return "both";
+            }
+
+            private static string NormalizeMatchMode(string value)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    return "smart";
+                string mode = value.Trim().ToLowerInvariant();
+                return mode == "exact" || mode == "fuzzy" ? mode : "smart";
             }
         }
 

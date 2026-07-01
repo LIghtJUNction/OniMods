@@ -42,6 +42,10 @@ namespace OniMcp.Tools
                     ["blockHeight"] = new McpToolParameter { Type = "integer", Description = "domain=area action=blocks 的块高度；建议 20..50", Required = false },
                     ["maxCells"] = new McpToolParameter { Type = "integer", Description = "domain=area action=blocks 的每块目标最大格子数，默认 1600", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "domain=area action=merge 时只返回拼接预览，不创建新 areaId", Required = false },
+                    ["pattern"] = new McpToolParameter { Type = "string", Description = "domain=world action=search 的连续格子排列，例如 粉砂岩-泥土-氧气、SiltStone>Dirt>Oxygen、Dirt{3}", Required = false },
+                    ["sequence"] = new McpToolParameter { Type = "string", Description = "pattern 的别名；支持 * 任意格、A|B 备选、term{N} 重复", Required = false },
+                    ["direction"] = new McpToolParameter { Type = "string", Description = "pattern/sequence 搜索方向：horizontal、vertical 或 both，默认 both", Required = false, EnumValues = new List<string> { "horizontal", "vertical", "both" } },
+                    ["matchMode"] = new McpToolParameter { Type = "string", Description = "pattern/query 匹配模式：exact 精确、smart 规范化/包含、fuzzy 少量拼写误差，默认 smart", Required = false, EnumValues = new List<string> { "exact", "smart", "fuzzy" } },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；按子动作语义使用", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "resources set_pin 等写入动作需要确认时传 true", Required = false }
                 },

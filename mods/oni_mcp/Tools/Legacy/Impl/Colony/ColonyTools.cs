@@ -23,14 +23,14 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Aliases = new List<string> { "colony_status_control", "colony_ops_control" },
-                Tags = new List<string> { "colony", "snapshot", "diagnostics", "alerts", "report", "notifications", "dupes", "worlds", "management", "schedule", "diet", "research", "medical", "bio", "farming", "ranching" },
-                Description = "殖民地组合入口：domain=snapshot/read/report/diagnostic/notification/management/bio。读取高效状态快照、殖民地基础状态、报告、诊断/告警/诊断设置、HUD 通知、殖民地管理和生物生产；写/点击类操作保留底层 confirm/force 语义。",
+                Tags = new List<string> { "colony", "snapshot", "diagnostics", "alerts", "survival", "long-run", "report", "notifications", "dupes", "worlds", "management", "schedule", "diet", "research", "medical", "bio", "farming", "ranching" },
+                Description = "殖民地组合入口：domain=snapshot/read/report/diagnostic/survival/notification/management/bio。读取高效状态快照、殖民地基础状态、报告、诊断/告警/诊断设置、生存长跑分诊、HUD 通知、殖民地管理和生物生产；写/点击类操作保留底层 confirm/force 语义。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["domain"] = new McpToolParameter { Type = "string", Description = "snapshot、read、report、diagnostic、notification、management 或 bio，默认 read", Required = false, EnumValues = new List<string> { "snapshot", "read", "report", "diagnostic", "notification", "management", "bio" } },
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "snapshot、read、report、diagnostic、survival、notification、management 或 bio，默认 read", Required = false, EnumValues = new List<string> { "snapshot", "read", "report", "diagnostic", "survival", "notification", "management", "bio" } },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "domain=management 时为 schedule、diet、research 或 medical；domain=bio 且 bioDomain=ranching 时为 critters/dropoff/incubator", Required = false },
                     ["bioDomain"] = new McpToolParameter { Type = "string", Description = "domain=bio 时为 farming 或 ranching；兼容把 kind=farming/ranching 当作 bioDomain", Required = false },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=snapshot: get；read: status/dupes/worlds/resources；report: report/summary；diagnostic: diagnostics/alerts/list_settings/set_settings/set_auto_disinfect；notification: list/click/dismiss；management: schedule/diet/research/medical 的子动作；bio: farming/ranching 的子动作", Required = true },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=snapshot: get；read: status/dupes/worlds/resources；report: report/summary；diagnostic: diagnostics/alerts/list_settings/set_settings/set_auto_disinfect；survival: plan/status；notification: list/click/dismiss；management: schedule/diet/research/medical 的子动作；bio: farming/ranching 的子动作", Required = true },
                     ["profile"] = new McpToolParameter { Type = "string", Description = "domain=snapshot：minimal/brief/standard/full", Required = false, EnumValues = new List<string> { "minimal", "brief", "standard", "full" } },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，按 action 解释", Required = false },
                     ["includeDupes"] = new McpToolParameter { Type = "boolean", Description = "domain=snapshot：是否包含复制人摘要，默认 true", Required = false },
@@ -81,10 +81,14 @@ namespace OniMcp.Tools
                         case "report":
                         case "reports":
                             return ColonyReportTools.ControlColonyReport().Handler(forwarded);
-                        case "diagnostic":
-                        case "diagnostics":
-                            return DiagnosticsTools.ControlDiagnostics().Handler(forwarded);
-                        case "notification":
+                    case "diagnostic":
+                    case "diagnostics":
+                        return DiagnosticsTools.ControlDiagnostics().Handler(forwarded);
+                    case "survival":
+                    case "survive":
+                    case "long_run":
+                        return SurvivalPlanTools.ControlSurvivalPlan().Handler(forwarded);
+                    case "notification":
                         case "notifications":
                             return NotificationTools.ControlNotification().Handler(forwarded);
                         case "management":

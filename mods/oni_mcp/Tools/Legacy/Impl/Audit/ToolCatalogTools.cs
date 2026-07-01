@@ -104,14 +104,16 @@ namespace OniMcp.Tools
                     string groupFilter = (args["group"]?.ToString() ?? "").ToLowerInvariant();
                     string mode = (args["mode"]?.ToString() ?? "any").ToLowerInvariant();
                     string risk = (args["risk"]?.ToString() ?? "any").ToLowerInvariant();
-                    string detail = string.IsNullOrWhiteSpace(args["detail"]?.ToString()) ? "brief" : NormalizeDetail(args["detail"]?.ToString().ToLowerInvariant());
-                    int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 80, 100));
+            string detail = string.IsNullOrWhiteSpace(args["detail"]?.ToString()) ? "brief" : NormalizeDetail(args["detail"]?.ToString().ToLowerInvariant());
+            int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 80, 100));
+            string exactLookup = ExactVisibleToolLookup(query);
 
-                    var matchedTools = OniToolRegistry.GetVisibleTools()
-                        .Where(tool => string.IsNullOrEmpty(groupFilter) || tool.Group.ToLowerInvariant() == groupFilter)
-                        .Where(tool => mode == "any" || string.IsNullOrEmpty(mode) || tool.Mode.ToLowerInvariant() == mode)
-                        .Where(tool => risk == "any" || string.IsNullOrEmpty(risk) || tool.Risk.ToLowerInvariant() == risk)
-                        .Select(tool => new { Tool = tool, Score = Score(tool, expandedQuery) })
+            var matchedTools = OniToolRegistry.GetVisibleTools()
+                .Where(tool => string.IsNullOrEmpty(groupFilter) || tool.Group.ToLowerInvariant() == groupFilter)
+                .Where(tool => mode == "any" || string.IsNullOrEmpty(mode) || tool.Mode.ToLowerInvariant() == mode)
+                .Where(tool => risk == "any" || string.IsNullOrEmpty(risk) || tool.Risk.ToLowerInvariant() == risk)
+                .Where(tool => string.IsNullOrEmpty(exactLookup) || string.Equals(tool.Name, exactLookup, StringComparison.Ordinal))
+                .Select(tool => new { Tool = tool, Score = Score(tool, expandedQuery, query) })
                         .Where(item => string.IsNullOrEmpty(query) || item.Score > 0)
                         .OrderByDescending(item => item.Score)
                         .ThenBy(item => item.Tool.Group)
@@ -188,12 +190,14 @@ namespace OniMcp.Tools
                     string risk = (args["risk"]?.ToString() ?? "any").ToLowerInvariant();
                     string detail = (args["detail"]?.ToString() ?? "compact").ToLowerInvariant();
                     int limit = ToolUtil.ClampLimit(args, 20, 100);
+                    string exactLookup = ExactVisibleToolLookup(query);
 
                     var matches = OniToolRegistry.GetVisibleTools()
                         .Where(tool => string.IsNullOrEmpty(group) || tool.Group.ToLowerInvariant() == group)
                         .Where(tool => mode == "any" || string.IsNullOrEmpty(mode) || tool.Mode.ToLowerInvariant() == mode)
                         .Where(tool => risk == "any" || string.IsNullOrEmpty(risk) || tool.Risk.ToLowerInvariant() == risk)
-                        .Select(tool => new { Tool = tool, Score = Score(tool, expandedQuery) })
+                        .Where(tool => string.IsNullOrEmpty(exactLookup) || string.Equals(tool.Name, exactLookup, StringComparison.Ordinal))
+                        .Select(tool => new { Tool = tool, Score = Score(tool, expandedQuery, query) })
                         .Where(item => item.Score > 0)
                         .OrderByDescending(item => item.Score)
                         .ThenBy(item => item.Tool.Group)
@@ -350,10 +354,22 @@ namespace OniMcp.Tools
             };
         }
 
-        private static int Score(McpTool tool, string query)
+        private static int Score(McpTool tool, string query, string rawQuery = null)
         {
             if (string.IsNullOrEmpty(query))
                 return 1;
+
+            string raw = NormalizeToolLookup(rawQuery ?? query);
+            int score = 0;
+            if (!string.IsNullOrEmpty(raw))
+            {
+                if (NormalizeToolLookup(tool.Name) == raw)
+                    score += 1000;
+                if (tool.Aliases != null && tool.Aliases.Any(alias => NormalizeToolLookup(alias) == raw))
+                    score += 900;
+                if (NormalizeToolLookup(tool.Name).Contains(raw))
+                    score += 120;
+            }
 
             string haystack = string.Join(" ", new[]
             {
@@ -367,7 +383,6 @@ namespace OniMcp.Tools
                 string.Join(" ", tool.Parameters.Keys)
             }).ToLowerInvariant();
 
-            int score = 0;
             foreach (string token in query.Split(new[] { ' ', '\t', '\r', '\n', '_', '-', ',', '.', '/', ':' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string normalized = token.ToLowerInvariant();
@@ -377,6 +392,27 @@ namespace OniMcp.Tools
                     score++;
             }
             return score;
+        }
+
+        private static string NormalizeToolLookup(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+            return new string(value
+                .Where(char.IsLetterOrDigit)
+                .Select(char.ToLowerInvariant)
+                .ToArray());
+        }
+
+        private static string ExactVisibleToolLookup(string query)
+        {
+            string normalized = NormalizeToolLookup(query);
+            if (string.IsNullOrEmpty(normalized))
+                return null;
+            var match = OniToolRegistry.GetVisibleTools()
+                .FirstOrDefault(tool => NormalizeToolLookup(tool.Name) == normalized
+                    || (tool.Aliases != null && tool.Aliases.Any(alias => NormalizeToolLookup(alias) == normalized)));
+            return match?.Name;
         }
 
         private static string NormalizeDetail(string detail)

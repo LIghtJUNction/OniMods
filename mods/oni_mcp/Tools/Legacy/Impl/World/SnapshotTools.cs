@@ -281,7 +281,7 @@ namespace OniMcp.Tools
                 if (Contains(prefabId, "ResearchCenter") || Contains(prefabId, "AdvancedResearchCenter")) snapshot.ResearchStations++;
                 if (Contains(prefabId, "Battery")) snapshot.Batteries++;
                 if (Contains(prefabId, "ManualGenerator") || Contains(prefabId, "Generator")) snapshot.Generators++;
-                if (Contains(prefabId, "OxygenDiffuser") || Contains(prefabId, "Electrolyzer")) snapshot.OxygenProducers++;
+                if (Contains(prefabId, "OxygenDiffuser") || Contains(prefabId, "MineralDeoxidizer") || Contains(prefabId, "Electrolyzer")) snapshot.OxygenProducers++;
             }
             return snapshot;
         }

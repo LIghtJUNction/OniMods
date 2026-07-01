@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Klei.AI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,7 +12,7 @@ using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
-    public static class FacilitySideScreenTools
+    public static partial class FacilitySideScreenTools
     {
         public static McpTool ControlFacilitySideScreen()
         {
@@ -344,12 +345,15 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "printing_pod_control", "telepad_open_screen" },
                 Tags = new List<string> { "story", "telepad", "printing-pod", "immigration", "side-screen" },
-                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=telepad action=open_immigrants/open_colony_summary/open_skills/open_research",
+                Description = "兼容入口：请使用 building_control domain=side_surface surface=facility kind=telepad action=list_rewards/claim/open_immigrants/open_colony_summary/open_skills/open_research",
                 Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "open_immigrants、open_colony_summary、open_skills 或 open_research", Required = true, EnumValues = new List<string> { "open_immigrants", "open_colony_summary", "open_skills", "open_research" } },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认打开游戏 UI", Required = true }
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list_rewards/status/rewards、claim、open_immigrants、open_colony_summary、open_skills 或 open_research", Required = true, EnumValues = new List<string> { "list_rewards", "rewards", "status", "claim", "open_immigrants", "open_colony_summary", "open_skills", "open_research" } },
+                    ["rewardIndex"] = new McpToolParameter { Type = "integer", Description = "action=claim 时领取 rewards[index]，默认 0", Required = false },
+                    ["itemId"] = new McpToolParameter { Type = "string", Description = "action=claim 时按奖励 prefab/tag/id 匹配", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "action=claim 时只预览不领取，默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "打开 UI 或领取奖励时必须为 true；list_rewards/status 不需要", Required = false }
                 }),
                 Handler = args =>
                 {
@@ -361,6 +365,22 @@ namespace OniMcp.Tools
                     var telepad = go.GetComponent<Telepad>();
                     string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
                     var before = TelepadInfo(telepad, includeVictory: false);
+
+                    if (action == "list_rewards" || action == "rewards" || action == "status")
+                    {
+                        return JsonResult(new Dictionary<string, object>
+                        {
+                            ["target"] = TargetInfo(go),
+                            ["telepad"] = before,
+                            ["printingRewards"] = PrintingRewardStatus()
+                        });
+                    }
+
+                    if (action == "claim")
+                        return ClaimPrintingReward(args, telepad, before);
+
+                    if (!ToolUtil.GetBool(args, "confirm", false))
+                        return CallToolResult.Error("confirm=true required telepad UI actions");
 
                     if (action == "open_immigrants")
                     {
@@ -704,6 +724,142 @@ namespace OniMcp.Tools
             result["content"] = lore.content;
             result["sortOrder"] = lore.GetSideScreenSortOrder();
             return result;
+        }
+
+        private static CallToolResult ClaimPrintingReward(JObject args, Telepad telepad, Dictionary<string, object> before)
+        {
+            if (Immigration.Instance == null)
+                return CallToolResult.Error("Immigration system is not available");
+            if (!Immigration.Instance.ImmigrantsAvailable)
+                return CallToolResult.Error("No printing pod rewards available right now");
+
+            var rewards = CurrentCarePackages().ToList();
+            var selected = ResolvePrintingReward(args, rewards);
+            if (selected == null)
+                return CallToolResult.Error("rewardIndex/itemId/query did not match an available care package reward");
+
+            var selectedInfo = CarePackageInfoDictionary(selected, rewards.IndexOf(selected));
+            bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
+            if (dryRun)
+            {
+                return JsonResult(new Dictionary<string, object>
+                {
+                    ["dryRun"] = true,
+                    ["wouldClaim"] = selectedInfo,
+                    ["before"] = before,
+                    ["printingRewards"] = PrintingRewardStatus()
+                });
+            }
+
+            if (!ToolUtil.GetBool(args, "confirm", false))
+                return CallToolResult.Error("confirm=true required claim printing pod reward");
+
+            telepad.OnAcceptDelivery(selected);
+            int nextSpawnIndex = Immigration.Instance.EndImmigration();
+            return JsonResult(new Dictionary<string, object>
+            {
+                ["claimed"] = true,
+                ["reward"] = selectedInfo,
+                ["nextSpawnIndex"] = nextSpawnIndex,
+                ["before"] = before,
+                ["telepad"] = TelepadInfo(telepad, includeVictory: false),
+                ["printingRewards"] = PrintingRewardStatus()
+            });
+        }
+
+        private static Dictionary<string, object> PrintingRewardStatus()
+        {
+            var immigration = Immigration.Instance;
+            var rewards = CurrentCarePackages().Select(item => CarePackageInfoDictionary(item)).ToList();
+            return new Dictionary<string, object>
+            {
+                ["available"] = immigration != null && immigration.ImmigrantsAvailable,
+                ["timeRemainingSeconds"] = immigration == null ? (object)null : Math.Round(ToolUtil.SafeFloat(immigration.GetTimeRemaining()), 1),
+                ["timeRemainingCycles"] = immigration == null ? (object)null : Math.Round(ToolUtil.SafeFloat(immigration.GetTimeRemaining() / 600f), 3),
+                ["rewardCount"] = rewards.Count,
+                ["rewards"] = rewards,
+                ["claimSupport"] = "care_package_only",
+                ["dupeClaimSupport"] = "open_immigrants UI only; automatic duplicant selection is intentionally not claimed by action=claim"
+            };
+        }
+
+        private static CarePackageInfo ResolvePrintingReward(JObject args, List<CarePackageInfo> rewards)
+        {
+            if (rewards == null || rewards.Count == 0)
+                return null;
+
+            int? rewardIndex = ToolUtil.GetInt(args, "rewardIndex") ?? ToolUtil.GetInt(args, "itemIndex");
+            if (rewardIndex.HasValue && rewardIndex.Value >= 0 && rewardIndex.Value < rewards.Count)
+                return rewards[rewardIndex.Value];
+
+            string query = FirstNonEmpty(args["itemId"], args["query"], args["target"], args["name"]);
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                foreach (var reward in rewards)
+                {
+                    var info = CarePackageInfoDictionary(reward, rewards.IndexOf(reward));
+                    if (MatchesQuery(info, query))
+                        return reward;
+                }
+            }
+
+            return rewards[0];
+        }
+
+        private static IEnumerable<CarePackageInfo> CurrentCarePackages()
+        {
+            var immigration = Immigration.Instance;
+            if (immigration == null)
+                return new List<CarePackageInfo>();
+
+            var field = typeof(Immigration).GetField("carePackages", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var value = field == null ? null : field.GetValue(immigration) as IEnumerable<CarePackageInfo>;
+            return value ?? new List<CarePackageInfo>();
+        }
+
+        private static Dictionary<string, object> CarePackageInfoDictionary(CarePackageInfo info)
+        {
+            return CarePackageInfoDictionary(info, -1);
+        }
+
+        private static Dictionary<string, object> CarePackageInfoDictionary(CarePackageInfo info, int index)
+        {
+            var prefab = info == null || string.IsNullOrWhiteSpace(info.id) ? null : Assets.GetPrefab(info.id);
+            return new Dictionary<string, object>
+            {
+                ["index"] = index,
+                ["kind"] = "care_package",
+                ["id"] = info?.id,
+                ["prefabId"] = info?.id,
+                ["name"] = prefab == null ? info?.id : ToolUtil.CleanName(prefab.GetProperName()),
+                ["quantity"] = info == null ? (object)null : Math.Round(ToolUtil.SafeFloat(info.quantity), 3),
+                ["facadeId"] = info?.facadeID,
+                ["requirementMet"] = info?.requirement == null ? (object)null : SafeRequirement(info.requirement),
+                ["claimable"] = true
+            };
+        }
+
+        private static string FirstNonEmpty(params JToken[] values)
+        {
+            foreach (var value in values)
+            {
+                string text = value?.ToString();
+                if (!string.IsNullOrWhiteSpace(text))
+                    return text;
+            }
+            return null;
+        }
+
+        private static bool SafeRequirement(Func<bool> requirement)
+        {
+            try
+            {
+                return requirement == null || requirement();
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static Dictionary<string, object> TelepadInfo(Telepad telepad, bool includeVictory)
@@ -1188,10 +1344,11 @@ namespace OniMcp.Tools
             return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
             {
                 ["kind"] = new McpToolParameter { Type = "string", Description = "dispenser、suit_locker、lore_bearer、telepad 或 artifact", Required = true },
-                ["action"] = new McpToolParameter { Type = "string", Description = "list/status 或对应操作：select_item/order/cancel、request_suit/no_suit/drop_suit、press、open_immigrants/open_colony_summary/open_skills/open_research、open", Required = false },
+                ["action"] = new McpToolParameter { Type = "string", Description = "list/status 或对应操作：select_item/order/cancel、request_suit/no_suit/drop_suit、press、list_rewards/claim/open_immigrants/open_colony_summary/open_skills/open_research、open", Required = false },
                 ["query"] = new McpToolParameter { Type = "string", Description = "action=list 时按名称、prefabId、状态或物品筛选；artifact 也可筛选 artifact id", Required = false },
                 ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 返回上限", Required = false },
-                ["itemId"] = new McpToolParameter { Type = "string", Description = "kind=dispenser action=select_item 时的目标 Tag/prefab id", Required = false },
+                ["itemId"] = new McpToolParameter { Type = "string", Description = "kind=dispenser action=select_item 或 kind=telepad action=claim 时的目标 Tag/prefab id", Required = false },
+                ["rewardIndex"] = new McpToolParameter { Type = "integer", Description = "kind=telepad action=claim 时领取 rewards[index]，默认 0", Required = false },
                 ["itemIndex"] = new McpToolParameter { Type = "integer", Description = "kind=dispenser action=select_item 时的可分发物品序号", Required = false },
                 ["artifactId"] = new McpToolParameter { Type = "string", Description = "kind=artifact action=open 时的已分析 artifact prefab id", Required = false },
                 ["interactableOnly"] = new McpToolParameter { Type = "boolean", Description = "kind=lore_bearer action=list 时只返回可交互对象", Required = false },

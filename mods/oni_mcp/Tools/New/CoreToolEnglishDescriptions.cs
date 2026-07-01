@@ -17,7 +17,7 @@ namespace OniMcp.Tools
                     Describe(tool, BuildingDescriptions());
                     break;
                 case "colony_control":
-                    tool.Description = "Unified colony entrypoint for snapshots, colony reads, reports, diagnostics, notifications, management, and biological production. Write or click actions keep their lower-level confirm and force semantics.";
+                    tool.Description = "Unified colony entrypoint: snapshots, diagnostics, survival planning (domain=survival action=plan), notifications, management, bio.";
                     Describe(tool, ColonyDescriptions());
                     break;
                 case "dupes_control":
@@ -168,7 +168,7 @@ namespace OniMcp.Tools
         private static Dictionary<string, string> GameDescriptions()
         {
             var d = CommonDescriptions();
-            d["domain"] = "Game subsystem: speed, state, save, dlc, sandbox, or ui.";
+            d["domain"] = "Game subsystem: launch, speed, state, save, dlc, sandbox, or ui.";
             d["action"] = "Game action for the selected subsystem.";
             d["kind"] = "Sandbox or UI subtype.";
             d["uiDomain"] = "UI subsystem: action, feedback, or edit_mark.";
@@ -189,6 +189,8 @@ namespace OniMcp.Tools
             d["saveName"] = "Save file name.";
             d["overwrite"] = "Overwrite an existing save file.";
             d["path"] = "Full save path.";
+            d["forceLoad"] = "Launch domain: force loading target save even when already in game.";
+            d["resume"] = "Launch domain: unpause after loading or when already in game.";
             d["target"] = "Target for save quit actions, or semantic target for other actions.";
             return d;
         }

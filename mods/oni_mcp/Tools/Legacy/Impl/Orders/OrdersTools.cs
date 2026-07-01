@@ -51,7 +51,7 @@ namespace OniMcp.Tools
                     ["refillMassKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 补料阈值 kg", Required = false },
                     ["minimumMassKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 单次搬运最小质量 kg", Required = false },
                     ["requestNow"] = new McpToolParameter { Type = "boolean", Description = "manual_delivery 立即请求一次搬运", Required = false },
-                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep 返回逐项诊断", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep 返回逐项坐标样本；默认 false，优先读取 execution/preview 摘要", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "读取/诊断最多返回数量", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作或大区域确认；沿用具体动作原规则", Required = false }
                 }),
@@ -341,7 +341,7 @@ namespace OniMcp.Tools
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "是否设为红色最高优先级，默认 false", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只扫描并返回会标记/跳过的对象，不实际下达清扫，默认 false；dryRun 不要求 confirm", Required = false },
                     ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "是否把已存储对象纳入诊断；默认 false，通常不应清扫已存储对象", Required = false },
-                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐项目标诊断，默认 true", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐项目标坐标样本，默认 false；通常先看摘要字段", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "逐项诊断最多返回数量，默认 120，最大 500", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "区域超过 100 格时必须为 true", Required = false },
                     ["previewToken"] = new McpToolParameter { Type = "string", Description = "dryRun 返回的预览令牌；提供后可省略重复参数", Required = false }
@@ -370,7 +370,7 @@ namespace OniMcp.Tools
 
                     int worldId = ToolUtil.ResolveWorldId(args);
                     bool includeStored = ToolUtil.GetBool(args, "includeStored", false);
-                    bool detail = ToolUtil.GetBool(args, "detail", true);
+                    bool detail = ToolUtil.GetBool(args, "detail", false);
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 120, 500));
                     int marked = 0;
                     double kgTotal = 0;
@@ -382,6 +382,8 @@ namespace OniMcp.Tools
                     int skippedNoClearable = 0;
                     var liquidScan = ScanLiquidCells(rect, worldId, 12);
                     var targets = new List<Dictionary<string, object>>();
+                    var targetCells = new List<int>();
+                    var executionSkipped = new Dictionary<string, int>();
 
                     foreach (var pickupable in Components.Pickupables.Items)
                     {
@@ -393,6 +395,7 @@ namespace OniMcp.Tools
                         if (!Grid.IsValidCell(cell))
                         {
                             skippedNoCell++;
+                            IncrementSkip(executionSkipped, "invalid_cell");
                             AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_invalid_cell");
                             continue;
                         }
@@ -404,12 +407,14 @@ namespace OniMcp.Tools
                         if (kpid != null && kpid.HasTag(GameTags.Equipped))
                         {
                             skippedEquipped++;
+                            IncrementSkip(executionSkipped, "equipped");
                             AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_equipped");
                             continue;
                         }
                         if (!includeStored && kpid != null && (kpid.HasTag(GameTags.Stored) || pickupable.storage != null))
                         {
                             skippedStored++;
+                            IncrementSkip(executionSkipped, "stored");
                             AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_stored");
                             continue;
                         }
@@ -418,6 +423,7 @@ namespace OniMcp.Tools
                         if (clearable == null)
                         {
                             skippedNoClearable++;
+                            IncrementSkip(executionSkipped, "no_clearable");
                             AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_no_clearable");
                             continue;
                         }
@@ -432,6 +438,7 @@ namespace OniMcp.Tools
                             ApplyPriority(pickupable.gameObject, args);
                         }
                         marked++;
+                        targetCells.Add(cell);
                         AddSweepTarget(targets, detail, limit, pickupable, cell, dryRun ? "would_mark" : "marked");
                     }
 
@@ -448,6 +455,7 @@ namespace OniMcp.Tools
                             ["equipped"] = skippedEquipped,
                             ["noClearable"] = skippedNoClearable
                         },
+                        ["execution"] = CellExecutionMetadata("sweep", worldId, targetCells, executionSkipped, detail, limit),
                         ["worldId"] = worldId,
                         ["rect"] = rect,
                         ["preview"] = new Dictionary<string, object>
@@ -495,7 +503,7 @@ namespace OniMcp.Tools
                     ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "sweep 支持：是否纳入已存储对象，默认 false", Required = false },
                     ["includeAttack"] = new McpToolParameter { Type = "boolean", Description = "cancel 支持：是否取消攻击标记，默认 true", Required = false },
                     ["includeCapture"] = new McpToolParameter { Type = "boolean", Description = "cancel 支持：是否取消抓捕标记，默认 true", Required = false },
-                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep 支持：是否返回逐项诊断", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep 支持：是否返回逐项坐标样本；默认 false，优先读取摘要", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "dig/sweep 支持：逐项诊断最多返回数量", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作或大区域确认；dig 执行时必须 true", Required = false }
                 }),
@@ -589,7 +597,7 @@ namespace OniMcp.Tools
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只预检并返回 preview，不实际下达挖掘，默认 false；dryRun 不要求 confirm", Required = false },
-                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐格目标，默认 true", Required = false },
+                    ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐格坐标样本，默认 false；通常先看 execution 摘要", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "preview.targets 最多返回数量，默认 300，最大 1000", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认；dryRun=false 时必须为 true", Required = false },
                     ["previewToken"] = new McpToolParameter { Type = "string", Description = "dryRun 返回的预览令牌；提供后可省略重复参数", Required = false }
@@ -617,25 +625,49 @@ namespace OniMcp.Tools
 
                     var rect = ToolUtil.GetRect(args);
                     int worldId = ToolUtil.ResolveWorldId(args);
-                    bool detail = ToolUtil.GetBool(args, "detail", true);
+                    bool detail = ToolUtil.GetBool(args, "detail", false);
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 300, 1000));
                     int marked = 0;
                     int dist = 0;
                     double kgTotal = 0;
                     var targets = new List<Dictionary<string, object>>();
+                    var targetCells = new List<int>();
+                    var skipped = new Dictionary<string, int>();
                     var riskBuilder = new DigRiskBuilder();
                     for (int y = rect["y1"]; y <= rect["y2"]; y++)
                     {
                         for (int x = rect["x1"]; x <= rect["x2"]; x++)
                         {
                             int cell = Grid.XYToCell(x, y);
-                            if (!Grid.IsValidCell(cell) || !Grid.IsVisible(cell) || !ToolUtil.CellMatchesWorld(cell, worldId)) continue;
-                            if (!Grid.Solid[cell] || Grid.Foundation[cell]) continue;
-                            if (Grid.Objects[cell, (int)ObjectLayer.DigPlacer] != null)
+                            if (!Grid.IsValidCell(cell) || !ToolUtil.CellMatchesWorld(cell, worldId))
+                            {
+                                IncrementSkip(skipped, "invalid_or_wrong_world");
                                 continue;
+                            }
+                            if (!Grid.IsVisible(cell))
+                            {
+                                IncrementSkip(skipped, "not_visible");
+                                continue;
+                            }
+                            if (!Grid.Solid[cell])
+                            {
+                                IncrementSkip(skipped, "not_solid");
+                                continue;
+                            }
+                            if (Grid.Foundation[cell])
+                            {
+                                IncrementSkip(skipped, "foundation_or_constructed_tile");
+                                continue;
+                            }
+                            if (Grid.Objects[cell, (int)ObjectLayer.DigPlacer] != null)
+                            {
+                                IncrementSkip(skipped, "already_queued");
+                                continue;
+                            }
 
                             kgTotal += ToolUtil.SafeFloat(Grid.Mass[cell]);
                             riskBuilder.ScanTarget(cell, x, y, worldId);
+                            targetCells.Add(cell);
                             if (detail && targets.Count < limit)
                                 targets.Add(DigTarget(cell, x, y, dryRun ? "would_dig" : "marked"));
 
@@ -650,6 +682,7 @@ namespace OniMcp.Tools
                         }
                     }
 
+                    var execution = DigExecutionMetadata(rect, worldId, targetCells, skipped, detail, limit);
                     var responseDict = new Dictionary<string, object>
                     {
                         ["dryRun"] = dryRun,
@@ -657,6 +690,7 @@ namespace OniMcp.Tools
                         ["wouldMark"] = dryRun ? marked : (object)null,
                         ["worldId"] = worldId,
                         ["rect"] = rect,
+                        ["execution"] = execution,
                         ["preview"] = new Dictionary<string, object>
                         {
                             ["targets"] = targets,
@@ -805,6 +839,8 @@ namespace OniMcp.Tools
                     int marked = 0;
                     int skipped = 0;
                     var results = new List<Dictionary<string, object>>();
+                    var targetCells = new List<int>();
+                    var executionSkipped = new Dictionary<string, int>();
                     for (int y = rect["y1"]; y <= rect["y2"]; y++)
                     {
                         for (int x = rect["x1"]; x <= rect["x2"]; x++)
@@ -814,27 +850,30 @@ namespace OniMcp.Tools
                                 continue;
                             if (Grid.Solid[cell] || !Grid.Element[cell].IsLiquid)
                                 continue;
-                            if (Grid.Objects[cell, (int)ObjectLayer.MopPlacer] != null)
-                            {
-                                skipped++;
-                                continue;
-                            }
+                        if (Grid.Objects[cell, (int)ObjectLayer.MopPlacer] != null)
+                        {
+                            skipped++;
+                            IncrementSkip(executionSkipped, "already_queued");
+                            continue;
+                        }
                             bool onFloor = Grid.IsValidCell(Grid.CellBelow(cell)) && Grid.Solid[Grid.CellBelow(cell)];
                             bool smallEnough = Grid.Mass[cell] <= MopTool.maxMopAmt;
-                            if (!onFloor || !smallEnough)
-                            {
-                                skipped++;
-                                results.Add(CellResult(cell, onFloor ? "skipped_too_much_liquid" : "skipped_no_floor"));
-                                continue;
-                            }
+                        if (!onFloor || !smallEnough)
+                        {
+                            skipped++;
+                            IncrementSkip(executionSkipped, onFloor ? "too_much_liquid" : "no_floor");
+                            results.Add(CellResult(cell, onFloor ? "skipped_too_much_liquid" : "skipped_no_floor"));
+                            continue;
+                        }
 
                             if (DebugHandler.InstantBuildMode)
                             {
-                                Moppable.MopCell(cell, 1000000f, null);
-                                marked++;
-                                results.Add(CellResult(cell, "instant_mopped"));
-                                continue;
-                            }
+                            Moppable.MopCell(cell, 1000000f, null);
+                            marked++;
+                            targetCells.Add(cell);
+                            results.Add(CellResult(cell, "instant_mopped"));
+                            continue;
+                        }
 
                             var placer = Util.KInstantiate(prefab);
                             Grid.Objects[cell, (int)ObjectLayer.MopPlacer] = placer;
@@ -842,9 +881,10 @@ namespace OniMcp.Tools
                             position.z -= 0.15f;
                             placer.transform.SetPosition(position);
                             placer.SetActive(true);
-                            ApplyPriority(placer, args);
-                            marked++;
-                            results.Add(CellResult(cell, "marked"));
+                        ApplyPriority(placer, args);
+                        marked++;
+                        targetCells.Add(cell);
+                        results.Add(CellResult(cell, "marked"));
                         }
                     }
 
@@ -852,6 +892,7 @@ namespace OniMcp.Tools
                     {
                         ["marked"] = marked,
                         ["skipped"] = skipped,
+                        ["execution"] = CellExecutionMetadata("mop", worldId, targetCells, executionSkipped, false, 200),
                         ["worldId"] = worldId,
                         ["rect"] = rect,
                         ["targets"] = results.Take(200).ToList(),
@@ -1219,6 +1260,8 @@ namespace OniMcp.Tools
                     int matched = 0;
                     int notReady = 0;
                     var results = new List<Dictionary<string, object>>();
+                    var targetCells = new List<int>();
+                    var executionSkipped = new Dictionary<string, int>();
 
                     foreach (var harvestable in Components.HarvestDesignatables.Items)
                     {
@@ -1238,6 +1281,7 @@ namespace OniMcp.Tools
                                 harvestable.SetHarvestWhenReady(false);
                             }
                             changed++;
+                            targetCells.Add(cell);
                             results.Add(ObjectResult(go, dryRun ? "would_cancel" : "cancelled"));
                         }
                         else if (mode == "when_ready")
@@ -1245,6 +1289,7 @@ namespace OniMcp.Tools
                             if (!dryRun)
                                 harvestable.SetHarvestWhenReady(true);
                             changed++;
+                            targetCells.Add(cell);
                             results.Add(ObjectResult(go, dryRun ? "would_when_ready" : "when_ready"));
                         }
                         else
@@ -1254,12 +1299,14 @@ namespace OniMcp.Tools
                             {
                                 notReady++;
                                 skipped++;
+                                IncrementSkip(executionSkipped, "not_ready");
                                 results.Add(ObjectResult(go, "skipped_not_ready"));
                                 continue;
                             }
                             if (!dryRun)
                                 harvestable.MarkForHarvest();
                             changed++;
+                            targetCells.Add(cell);
                             results.Add(ObjectResult(go, dryRun ? "would_mark" : "marked"));
                         }
                     }
@@ -1272,6 +1319,7 @@ namespace OniMcp.Tools
                         ["matched"] = matched,
                         ["skipped"] = skipped,
                         ["skipReasons"] = HarvestSkipReasons(matched, notReady, skipped),
+                        ["execution"] = CellExecutionMetadata("harvest", worldId, targetCells, executionSkipped, false, 200),
                         ["worldId"] = worldId,
                         ["rect"] = rect,
                         ["targets"] = results.Take(200).ToList(),
@@ -1750,6 +1798,277 @@ namespace OniMcp.Tools
                 ["kg"] = Grid.IsValidCell(cell) ? Math.Round(ToolUtil.SafeFloat(Grid.Mass[cell]), 3) : 0,
                 ["temperatureC"] = Grid.IsValidCell(cell) ? Math.Round(ToolUtil.SafeFloat(Grid.Temperature[cell]) - 273.15f, 1) : 0
             };
+        }
+
+        private static Dictionary<string, object> DigExecutionMetadata(
+            Dictionary<string, int> rect,
+            int worldId,
+            List<int> targetCells,
+            Dictionary<string, int> skipped,
+            bool detail,
+            int limit)
+        {
+            var navigators = ActiveNavigators(worldId);
+            int reachableTargets = 0;
+            var unreachableSamples = new List<Dictionary<string, object>>();
+            var reachableSamples = new List<Dictionary<string, object>>();
+            int sampleLimit = Math.Min(limit, 12);
+
+            foreach (int cell in targetCells)
+            {
+                int workCell;
+                bool reachable = TryFindReachableDigWorkCell(cell, worldId, navigators, out workCell);
+                if (reachable)
+                {
+                    reachableTargets++;
+                    if (detail && reachableSamples.Count < sampleLimit)
+                        reachableSamples.Add(DigReachabilitySample(cell, workCell, "reachable"));
+                }
+                else if (detail && unreachableSamples.Count < sampleLimit)
+                {
+                    unreachableSamples.Add(DigReachabilitySample(cell, -1, "unreachable"));
+                }
+            }
+
+            int unreachableTargets = Math.Max(0, targetCells.Count - reachableTargets);
+            bool hasNavigators = navigators.Count > 0;
+            string status = targetCells.Count == 0
+                ? "no_diggable_targets"
+                : !hasNavigators
+                    ? "unknown_no_active_navigators"
+                    : unreachableTargets == 0
+                        ? "all_targets_reachable"
+                        : reachableTargets == 0
+                            ? "no_targets_reachable"
+                            : "partially_reachable";
+
+            var result = new Dictionary<string, object>
+            {
+                ["status"] = status,
+                ["canIssueDig"] = targetCells.Count > 0,
+                ["hasActiveNavigators"] = hasNavigators,
+                ["navigatorCount"] = navigators.Count,
+                ["diggableTargets"] = targetCells.Count,
+                ["reachableTargets"] = reachableTargets,
+                ["unreachableTargets"] = unreachableTargets,
+                ["allTargetsReachable"] = hasNavigators && targetCells.Count > 0 && unreachableTargets == 0,
+                ["anyTargetReachable"] = hasNavigators && reachableTargets > 0,
+                ["skipped"] = skipped,
+                ["tokenHint"] = "Use status/reachableTargets/unreachableTargets first; request detail=true only when samples are needed."
+            };
+
+            if (detail)
+            {
+                result["reachableSamples"] = reachableSamples;
+                result["unreachableSamples"] = unreachableSamples;
+                result["truncatedReachabilitySamples"] = Math.Max(0, targetCells.Count - reachableSamples.Count - unreachableSamples.Count);
+            }
+
+            return result;
+        }
+
+        private static Dictionary<string, object> CellExecutionMetadata(
+            string action,
+            int worldId,
+            List<int> targetCells,
+            Dictionary<string, int> skipped,
+            bool detail,
+            int limit)
+        {
+            var navigators = ActiveNavigators(worldId);
+            int reachableTargets = 0;
+            var reachableSamples = new List<Dictionary<string, object>>();
+            var unreachableSamples = new List<Dictionary<string, object>>();
+            int sampleLimit = Math.Min(limit, 12);
+
+            foreach (int cell in targetCells)
+            {
+                int workCell;
+                bool reachable = TryFindReachableWorkCell(cell, worldId, navigators, out workCell);
+                if (reachable)
+                {
+                    reachableTargets++;
+                    if (detail && reachableSamples.Count < sampleLimit)
+                        reachableSamples.Add(ReachabilitySample(cell, workCell, "reachable"));
+                }
+                else if (detail && unreachableSamples.Count < sampleLimit)
+                {
+                    unreachableSamples.Add(ReachabilitySample(cell, -1, "unreachable"));
+                }
+            }
+
+            int targetCount = targetCells.Count;
+            int unreachableTargets = Math.Max(0, targetCount - reachableTargets);
+            bool hasNavigators = navigators.Count > 0;
+            string status = targetCount == 0
+                ? "no_targets"
+                : !hasNavigators
+                    ? "unknown_no_active_navigators"
+                    : unreachableTargets == 0
+                        ? "all_targets_reachable"
+                        : reachableTargets == 0
+                            ? "no_targets_reachable"
+                            : "partially_reachable";
+
+            var result = new Dictionary<string, object>
+            {
+                ["action"] = action,
+                ["status"] = status,
+                ["hasActiveNavigators"] = hasNavigators,
+                ["navigatorCount"] = navigators.Count,
+                ["targetCount"] = targetCount,
+                ["reachableTargets"] = reachableTargets,
+                ["unreachableTargets"] = unreachableTargets,
+                ["allTargetsReachable"] = hasNavigators && targetCount > 0 && unreachableTargets == 0,
+                ["anyTargetReachable"] = hasNavigators && reachableTargets > 0,
+                ["skipped"] = skipped ?? new Dictionary<string, int>(),
+                ["tokenHint"] = "Use status/reachableTargets/unreachableTargets first; request detail=true only when samples are needed."
+            };
+
+            if (detail)
+            {
+                result["reachableSamples"] = reachableSamples;
+                result["unreachableSamples"] = unreachableSamples;
+                result["truncatedReachabilitySamples"] = Math.Max(0, targetCount - reachableSamples.Count - unreachableSamples.Count);
+            }
+
+            return result;
+        }
+
+        private static bool TryFindReachableWorkCell(int targetCell, int worldId, List<Navigator> navigators, out int workCell)
+        {
+            workCell = -1;
+            if (navigators == null || navigators.Count == 0 || !Grid.IsValidCell(targetCell))
+                return false;
+
+            foreach (int candidate in TargetAndAdjacentCells(targetCell))
+            {
+                if (!Grid.IsValidCell(candidate) || !Grid.IsVisible(candidate) || !ToolUtil.CellMatchesWorld(candidate, worldId))
+                    continue;
+                if (Grid.Solid[candidate] || Grid.Foundation[candidate])
+                    continue;
+
+                foreach (var navigator in navigators)
+                {
+                    if (SafeCanReach(navigator, candidate))
+                    {
+                        workCell = candidate;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static IEnumerable<int> TargetAndAdjacentCells(int cell)
+        {
+            yield return cell;
+            foreach (int adjacent in AdjacentDigWorkCells(cell))
+                yield return adjacent;
+        }
+
+        private static Dictionary<string, object> ReachabilitySample(int targetCell, int workCell, string status)
+        {
+            var sample = CellResult(targetCell, status);
+            if (Grid.IsValidCell(workCell))
+            {
+                sample["workCell"] = new Dictionary<string, object>
+                {
+                    ["cell"] = workCell,
+                    ["x"] = Grid.CellColumn(workCell),
+                    ["y"] = Grid.CellRow(workCell)
+                };
+            }
+            return sample;
+        }
+
+        private static List<Navigator> ActiveNavigators(int worldId)
+        {
+            var navigators = new List<Navigator>();
+            foreach (var dupe in Components.LiveMinionIdentities.Items)
+            {
+                if (dupe == null || (worldId >= 0 && dupe.GetMyWorldId() != worldId))
+                    continue;
+                var navigator = dupe.GetComponent<Navigator>();
+                if (navigator != null)
+                    navigators.Add(navigator);
+            }
+            return navigators;
+        }
+
+        private static bool TryFindReachableDigWorkCell(int targetCell, int worldId, List<Navigator> navigators, out int workCell)
+        {
+            workCell = -1;
+            if (navigators == null || navigators.Count == 0 || !Grid.IsValidCell(targetCell))
+                return false;
+
+            foreach (int candidate in AdjacentDigWorkCells(targetCell))
+            {
+                if (!Grid.IsValidCell(candidate) || !Grid.IsVisible(candidate) || !ToolUtil.CellMatchesWorld(candidate, worldId))
+                    continue;
+                if (Grid.Solid[candidate] || Grid.Foundation[candidate])
+                    continue;
+
+                foreach (var navigator in navigators)
+                {
+                    if (SafeCanReach(navigator, candidate))
+                    {
+                        workCell = candidate;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static IEnumerable<int> AdjacentDigWorkCells(int cell)
+        {
+            int x = Grid.CellColumn(cell);
+            int y = Grid.CellRow(cell);
+            for (int yy = y - 1; yy <= y + 1; yy++)
+            {
+                for (int xx = x - 1; xx <= x + 1; xx++)
+                {
+                    if (xx == x && yy == y)
+                        continue;
+                    yield return Grid.XYToCell(xx, yy);
+                }
+            }
+        }
+
+        private static bool SafeCanReach(Navigator navigator, int cell)
+        {
+            try
+            {
+                return navigator != null && Grid.IsValidCell(cell) && navigator.CanReach(cell);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static Dictionary<string, object> DigReachabilitySample(int targetCell, int workCell, string status)
+        {
+            var sample = DigTarget(targetCell, Grid.CellColumn(targetCell), Grid.CellRow(targetCell), status);
+            if (Grid.IsValidCell(workCell))
+            {
+                sample["workCell"] = new Dictionary<string, object>
+                {
+                    ["cell"] = workCell,
+                    ["x"] = Grid.CellColumn(workCell),
+                    ["y"] = Grid.CellRow(workCell)
+                };
+            }
+            return sample;
+        }
+
+        private static void IncrementSkip(Dictionary<string, int> skipped, string reason)
+        {
+            int count;
+            skipped[reason] = skipped.TryGetValue(reason, out count) ? count + 1 : 1;
         }
 
         private sealed class DigRiskBuilder

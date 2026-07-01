@@ -146,10 +146,13 @@ namespace OniMcp.Tools
             int? nearX = GetInt(args, "nearX");
             int? nearY = GetInt(args, "nearY");
             int bestCell = -1;
+            int bestScore = int.MinValue;
             int bestDistance = int.MaxValue;
 
-            Action<int> considerCell = cell =>
+            Action<int, int> considerCell = (cell, score) =>
             {
+                if (score <= 0)
+                    return;
                 if (!Grid.IsValidCell(cell) || !Grid.IsWorldValidCell(cell))
                     return;
                 if (worldId >= 0 && Grid.WorldIdx[cell] != worldId)
@@ -159,9 +162,10 @@ namespace OniMcp.Tools
                 int distance = nearX.HasValue && nearY.HasValue
                     ? Math.Abs(cx - nearX.Value) + Math.Abs(cy - nearY.Value)
                     : 0;
-                if (bestCell < 0 || distance < bestDistance)
+                if (bestCell < 0 || score > bestScore || (score == bestScore && distance < bestDistance))
                 {
                     bestCell = cell;
+                    bestScore = score;
                     bestDistance = distance;
                 }
             };
@@ -174,8 +178,7 @@ namespace OniMcp.Tools
                     continue;
                 var kpid = building.GetComponent<KPrefabID>();
                 string prefabId = building.Def?.PrefabID ?? kpid?.PrefabTag.Name;
-                if (ContainsMatch(prefabId, query) || ContainsMatch(CleanName(building.GetProperName()), query))
-                    considerCell(Grid.PosToCell(building));
+                considerCell(Grid.PosToCell(building), BestMatchScore(query, prefabId, CleanName(building.GetProperName()), building.name));
             }
 
             foreach (var pickupable in Components.Pickupables.Items)
@@ -187,10 +190,7 @@ namespace OniMcp.Tools
                 var kpid = pickupable.GetComponent<KPrefabID>();
                 var primary = pickupable.GetComponent<PrimaryElement>();
                 string elementId = primary != null ? primary.ElementID.ToString() : null;
-                if (ContainsMatch(kpid?.PrefabTag.Name, query)
-                    || ContainsMatch(elementId, query)
-                    || ContainsMatch(CleanName(pickupable.GetProperName()), query))
-                    considerCell(Grid.PosToCell(pickupable));
+                considerCell(Grid.PosToCell(pickupable), BestMatchScore(query, kpid?.PrefabTag.Name, elementId, CleanName(pickupable.GetProperName()), pickupable.name));
             }
 
             foreach (var dupe in Components.LiveMinionIdentities.Items)
@@ -200,8 +200,7 @@ namespace OniMcp.Tools
                 if (!GameObjectMatchesWorld(dupe.gameObject, worldId))
                     continue;
                 var kpid = dupe.GetComponent<KPrefabID>();
-                if (ContainsMatch(kpid?.PrefabTag.Name, query) || ContainsMatch(CleanName(dupe.GetProperName()), query))
-                    considerCell(Grid.PosToCell(dupe));
+                considerCell(Grid.PosToCell(dupe), BestMatchScore(query, kpid?.PrefabTag.Name, CleanName(dupe.GetProperName()), dupe.name));
             }
 
             if (bestCell < 0)
@@ -215,11 +214,80 @@ namespace OniMcp.Tools
             return true;
         }
 
-        private static bool ContainsMatch(string value, string query)
+        private static int BestMatchScore(string query, params string[] values)
         {
-            return !string.IsNullOrWhiteSpace(value)
-                && !string.IsNullOrWhiteSpace(query)
-                && value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+            int best = 0;
+            foreach (string value in values)
+                best = Math.Max(best, MatchScore(value, query));
+            return best;
+        }
+
+        private static int MatchScore(string value, string query)
+        {
+            if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(query))
+                return 0;
+
+            string valueTrimmed = value.Trim();
+            string queryTrimmed = query.Trim();
+            if (string.Equals(valueTrimmed, queryTrimmed, StringComparison.OrdinalIgnoreCase))
+                return 1000;
+
+            string valueNorm = NormalizeSearchText(valueTrimmed);
+            string queryNorm = NormalizeSearchText(queryTrimmed);
+            if (valueNorm.Length == 0 || queryNorm.Length == 0)
+                return 0;
+            if (valueNorm == queryNorm)
+                return 950;
+            if (valueNorm.StartsWith(queryNorm, StringComparison.Ordinal))
+                return 850;
+            if (valueNorm.Contains(queryNorm))
+                return 700;
+
+            int maxDistance = queryNorm.Length <= 4 ? 1 : queryNorm.Length <= 8 ? 2 : 3;
+            int distance = BoundedEditDistance(valueNorm, queryNorm, maxDistance);
+            return distance >= 0 ? 520 - distance * 40 : 0;
+        }
+
+        private static string NormalizeSearchText(string value)
+        {
+            var chars = new List<char>(value.Length);
+            foreach (char ch in value)
+            {
+                if (char.IsLetterOrDigit(ch))
+                    chars.Add(char.ToLowerInvariant(ch));
+            }
+            return new string(chars.ToArray());
+        }
+
+        private static int BoundedEditDistance(string left, string right, int maxDistance)
+        {
+            if (Math.Abs(left.Length - right.Length) > maxDistance)
+                return -1;
+
+            int[] previous = new int[right.Length + 1];
+            int[] current = new int[right.Length + 1];
+            for (int j = 0; j <= right.Length; j++)
+                previous[j] = j;
+
+            for (int i = 1; i <= left.Length; i++)
+            {
+                current[0] = i;
+                int rowMin = current[0];
+                for (int j = 1; j <= right.Length; j++)
+                {
+                    int cost = left[i - 1] == right[j - 1] ? 0 : 1;
+                    current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+                    rowMin = Math.Min(rowMin, current[j]);
+                }
+                if (rowMin > maxDistance)
+                    return -1;
+
+                var temp = previous;
+                previous = current;
+                current = temp;
+            }
+
+            return previous[right.Length] <= maxDistance ? previous[right.Length] : -1;
         }
 
         public static float SafeFloat(float value)
