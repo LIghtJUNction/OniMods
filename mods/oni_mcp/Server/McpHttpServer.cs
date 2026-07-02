@@ -161,8 +161,14 @@ namespace OniMcp.Server
 
             try
             {
-                if (!ApplyCors(request, response))
+                string corsOrigin;
+                if (!TryValidateCors(request, out corsOrigin))
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Forbidden CORS origin"), 403);
                     return;
+                }
+
+                ApplyCorsHeaders(response, corsOrigin);
 
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS");
                 response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Accept, Authorization, X-Oni-Mcp-Token");
@@ -338,35 +344,44 @@ namespace OniMcp.Server
             DispatchPostResponse(response, rpcRequest, sessionId);
         }
 
-        private bool ApplyCors(HttpListenerRequest request, HttpListenerResponse response)
+        private bool TryValidateCors(HttpListenerRequest request, out string origin)
         {
-            string origin = request.Headers["Origin"];
+            origin = request.Headers["Origin"];
             if (string.IsNullOrWhiteSpace(origin))
                 return true;
 
             Uri originUri;
-            if (!Uri.TryCreate(origin, UriKind.Absolute, out originUri) || !IsLoopbackHost(originUri.Host))
-            {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Forbidden CORS origin"), 403);
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out originUri) || !originUri.IsLoopback)
                 return false;
-            }
 
-            response.Headers["Access-Control-Allow-Origin"] = origin;
-            response.Headers["Vary"] = "Origin";
             return true;
         }
 
-        private static bool IsLoopbackHost(string host)
+        private static void ApplyCorsHeaders(HttpListenerResponse response, string origin)
         {
-            if (string.IsNullOrWhiteSpace(host))
-                return false;
+            if (string.IsNullOrWhiteSpace(origin))
+                return;
 
-            host = host.Trim().Trim('[', ']').ToLowerInvariant();
-            if (host == "localhost")
-                return true;
+            response.Headers["Access-Control-Allow-Origin"] = origin;
+            AppendVaryOrigin(response);
+        }
 
-            IPAddress address;
-            return IPAddress.TryParse(host, out address) && IPAddress.IsLoopback(address);
+        private static void AppendVaryOrigin(HttpListenerResponse response)
+        {
+            string existingVary = response.Headers["Vary"];
+            if (string.IsNullOrEmpty(existingVary))
+            {
+                response.Headers["Vary"] = "Origin";
+                return;
+            }
+
+            foreach (var value in existingVary.Split(','))
+            {
+                if (string.Equals(value.Trim(), "Origin", StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+
+            response.Headers["Vary"] = existingVary + ", Origin";
         }
 
         private bool ValidateAuth(HttpListenerRequest request, HttpListenerResponse response)
