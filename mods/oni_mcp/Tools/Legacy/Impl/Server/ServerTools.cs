@@ -13,11 +13,13 @@ namespace OniMcp.Tools
 {
     public static class ServerTools
     {
+        internal const string ToolName = "server_control";
+
         public static McpTool ControlServer()
         {
             return new McpTool
             {
-                Name = "server_control",
+                Name = ToolName,
                 Group = "server",
                 Mode = "read/execute",
                 Risk = "medium",
@@ -93,6 +95,25 @@ namespace OniMcp.Tools
                     return CallToolResult.Error("domain must be diagnostics, client_request, catalog, batch, or program");
                 }
             };
+        }
+
+        internal static bool IsServerControlDomainCall(string name, JObject arguments, params string[] domains)
+        {
+            McpTool tool;
+            if (!OniToolRegistry.TryGetTool(name, out tool)
+                || !string.Equals(tool.Name, ToolName, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string domain = (arguments?["domain"]?.ToString() ?? "diagnostics").Trim().ToLowerInvariant();
+            foreach (var candidate in domains)
+            {
+                if (string.Equals(domain, candidate, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         public static McpTool DiagnosticsControl()

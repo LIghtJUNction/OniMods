@@ -427,13 +427,13 @@ namespace OniMcp.Tools
             private void ExecuteCall(string toolName, JObject rawArgs, string saveAs, bool continueOnError, string path)
             {
                 referencedTools.Add(toolName);
+                JObject args = ResolveObject(rawArgs);
                 if (IsBlockedChildTool(toolName))
                     throw new AgentProgramException("agent program cannot call nested program or batch tools: " + toolName);
                 if (childToolCalls >= MaxChildToolCalls)
                     throw new AgentProgramException("maxChildToolCalls exceeded at " + path);
                 childToolCalls++;
 
-                JObject args = ResolveObject(rawArgs);
                 if (toolName == "world_cell_info" && (args["x"] == null || args["y"] == null))
                     FillCurrentPointerCell(args);
 
@@ -465,6 +465,18 @@ namespace OniMcp.Tools
 
                 if ((result == null || result.IsError) && !continueOnError)
                     throw new AgentProgramException("tool call failed at " + path + ": " + toolName + " -> " + text);
+            }
+
+            private static bool IsProgramCall(string toolName, JObject arguments)
+            {
+                McpTool tool;
+                if (OniToolRegistry.TryGetTool(toolName, out tool)
+                    && string.Equals(tool.Name, ToolName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                return ServerTools.IsServerControlDomainCall(toolName, arguments, "program", "agent_program", "flow", "script");
             }
 
             private void FillCurrentPointerCell(JObject args)
