@@ -340,11 +340,10 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("utility_auto_connect only supports linear utility prefabs such as Wire, LiquidConduit, GasConduit, SolidConduit and LogicWire");
 
                     string error;
-                    var path = ResolveUtilityPath(args, out error);
+                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
+                    var path = ResolveUtilityPath(args, maxCells, out error);
                     if (error != null)
                         return CallToolResult.Error(error);
-
-                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
                     if (path.Count > maxCells)
                         return CallToolResult.Error($"Path too large: {path.Count} cells, maxCells={maxCells}");
 
@@ -965,7 +964,7 @@ namespace OniMcp.Tools
             }
         }
 
-        private static List<CellCoord> ResolveUtilityPath(JObject args, out string error)
+        private static List<CellCoord> ResolveUtilityPath(JObject args, int maxCells, out string error)
         {
             error = null;
             var points = ParsePathPoints(args["points"]);
@@ -995,7 +994,10 @@ namespace OniMcp.Tools
 
             var path = new List<CellCoord>();
             for (int i = 0; i < points.Count - 1; i++)
-                AddManhattanSegment(path, points[i], points[i + 1]);
+            {
+                if (!AddManhattanSegment(path, points[i], points[i + 1], maxCells, out error))
+                    return path;
+            }
             return path;
         }
 
@@ -1346,21 +1348,37 @@ namespace OniMcp.Tools
             return result;
         }
 
-        private static void AddManhattanSegment(List<CellCoord> path, CellCoord from, CellCoord to)
+        private static bool AddManhattanSegment(List<CellCoord> path, CellCoord from, CellCoord to, int maxCells, out string error)
         {
+            error = null;
+
+            long dx = Math.Abs((long)to.x - from.x);
+            long dy = Math.Abs((long)to.y - from.y);
+            long cellsToAdd = dx + dy + 1;
+            if (path.Count > 0 && path[path.Count - 1].x == from.x && path[path.Count - 1].y == from.y)
+                cellsToAdd--;
+
+            long resultingCount = (long)path.Count + cellsToAdd;
+            if (resultingCount > maxCells)
+            {
+                error = $"Path too large: {resultingCount} cells, maxCells={maxCells}";
+                return false;
+            }
+
             int x = from.x;
             int y = from.y;
             AddPathPoint(path, x, y);
             while (x != to.x)
             {
-                x += Math.Sign(to.x - x);
+                x += to.x > x ? 1 : -1;
                 AddPathPoint(path, x, y);
             }
             while (y != to.y)
             {
-                y += Math.Sign(to.y - y);
+                y += to.y > y ? 1 : -1;
                 AddPathPoint(path, x, y);
             }
+            return true;
         }
 
         private static void AddPathPoint(List<CellCoord> path, int x, int y)
@@ -1739,10 +1757,10 @@ namespace OniMcp.Tools
                 };
             }
 
-            var path = new List<CellCoord>();
-            AddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell));
             int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
-            if (path.Count > maxCells)
+            var path = new List<CellCoord>();
+            string pathError;
+            if (!AddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell), maxCells, out pathError))
             {
                 return new Dictionary<string, object>
                 {
@@ -1750,6 +1768,7 @@ namespace OniMcp.Tools
                     ["status"] = "path_too_large",
                     ["input"] = CellCoordDictionary(inputCell),
                     ["source"] = CellCoordDictionary(sourceCell),
+                    ["error"] = pathError,
                     ["pathCells"] = path.Count,
                     ["maxCells"] = maxCells,
                     ["planned"] = 0,
