@@ -161,8 +161,15 @@ namespace OniMcp.Server
 
             try
             {
-                // CORS
-                response.Headers.Add("Access-Control-Allow-Origin", "*");
+                string corsOrigin;
+                if (!TryValidateCors(request, out corsOrigin))
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Forbidden CORS origin"), 403);
+                    return;
+                }
+
+                ApplyCorsHeaders(response, corsOrigin);
+
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS");
                 response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Accept, Authorization, X-Oni-Mcp-Token");
                 response.Headers.Add("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
@@ -335,6 +342,46 @@ namespace OniMcp.Server
             }
 
             DispatchPostResponse(response, rpcRequest, sessionId);
+        }
+
+        private bool TryValidateCors(HttpListenerRequest request, out string origin)
+        {
+            origin = request.Headers["Origin"];
+            if (string.IsNullOrWhiteSpace(origin))
+                return true;
+
+            Uri originUri;
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out originUri) || !originUri.IsLoopback)
+                return false;
+
+            return true;
+        }
+
+        private static void ApplyCorsHeaders(HttpListenerResponse response, string origin)
+        {
+            if (string.IsNullOrWhiteSpace(origin))
+                return;
+
+            response.Headers["Access-Control-Allow-Origin"] = origin;
+            AppendVaryOrigin(response);
+        }
+
+        private static void AppendVaryOrigin(HttpListenerResponse response)
+        {
+            string existingVary = response.Headers["Vary"];
+            if (string.IsNullOrEmpty(existingVary))
+            {
+                response.Headers["Vary"] = "Origin";
+                return;
+            }
+
+            foreach (var value in existingVary.Split(','))
+            {
+                if (string.Equals(value.Trim(), "Origin", StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+
+            response.Headers["Vary"] = existingVary + ", Origin";
         }
 
         private bool ValidateAuth(HttpListenerRequest request, HttpListenerResponse response)

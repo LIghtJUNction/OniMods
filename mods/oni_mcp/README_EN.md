@@ -1,5 +1,7 @@
 # ONI MCP Server
 
+[![ONI MCP Server preview](preview.png)](README_EN.md)
+
 ONI MCP Server is an Oxygen Not Included mod that starts a local MCP Streamable HTTP server inside the game. It lets MCP-compatible AI clients read colony state, query game data, inspect the map, and perform explicit actions after player confirmation.
 
 Default endpoint:

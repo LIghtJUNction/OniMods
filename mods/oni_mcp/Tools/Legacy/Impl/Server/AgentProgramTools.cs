@@ -12,6 +12,12 @@ namespace OniMcp.Tools
     public static class AgentProgramTools
     {
         private const string ToolName = "agent_program_execute";
+        private const int DefaultMaxSteps = 100;
+        private const int HardMaxSteps = 200;
+        private const int DefaultMaxLoopIterations = 10;
+        private const int HardMaxLoopIterations = 25;
+        private const int MaxChildToolCalls = 50;
+        private const int MaxStoredResultChars = 4000;
 
         public static McpTool ExecuteProgram()
         {
@@ -41,19 +47,19 @@ namespace OniMcp.Tools
                     ["maxSteps"] = new McpToolParameter
                     {
                         Type = "integer",
-                        Description = "最大执行语句数，防止死循环，默认 200，最大 2000",
+                        Description = "最大执行语句数，防止死循环，默认 100，最大 200",
                         Required = false
                     },
                     ["maxLoopIterations"] = new McpToolParameter
                     {
                         Type = "integer",
-                        Description = "单个 while/repeat 最大迭代次数，默认 100，最大 1000",
+                        Description = "单个 while/repeat 最大迭代次数，默认 10，最大 25",
                         Required = false
                     },
                     ["trace"] = new McpToolParameter
                     {
                         Type = "boolean",
-                        Description = "是否返回详细执行 trace，默认 true；关闭后只返回摘要和最终变量",
+                        Description = "是否返回详细执行 trace，默认 false；trace 中的子调用结果会被截断",
                         Required = false
                     }
                 },
@@ -65,9 +71,9 @@ namespace OniMcp.Tools
                         return CallToolResult.Error(error);
 
                     bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
-                    int maxSteps = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxSteps") ?? 200, 2000));
-                    int maxLoopIterations = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxLoopIterations") ?? 100, 1000));
-                    bool includeTrace = ToolUtil.GetBool(args, "trace", true);
+                    int maxSteps = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxSteps") ?? DefaultMaxSteps, HardMaxSteps));
+                    int maxLoopIterations = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxLoopIterations") ?? DefaultMaxLoopIterations, HardMaxLoopIterations));
+                    bool includeTrace = ToolUtil.GetBool(args, "trace", false);
 
                     var runner = new AgentProgramRunner(dryRun, maxSteps, maxLoopIterations, includeTrace);
                     var payload = runner.Run(program);
@@ -124,6 +130,7 @@ namespace OniMcp.Tools
             private readonly HashSet<string> referencedTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             private JToken last = JValue.CreateNull();
             private int executedSteps;
+            private int childToolCalls;
             private bool returned;
             private JToken returnValue = JValue.CreateNull();
 
@@ -169,6 +176,8 @@ namespace OniMcp.Tools
                     ["dryRun"] = dryRun,
                     ["valid"] = valid,
                     ["executedSteps"] = dryRun ? 0 : executedSteps,
+                    ["childToolCalls"] = dryRun ? 0 : childToolCalls,
+                    ["maxChildToolCalls"] = MaxChildToolCalls,
                     ["maxSteps"] = maxSteps,
                     ["maxLoopIterations"] = maxLoopIterations,
                     ["referencedTools"] = referencedTools.OrderBy(name => name).ToList(),
@@ -269,8 +278,8 @@ namespace OniMcp.Tools
                 if (TryResolveCallShape(stmt, out toolName, out ignored, out ignoredSave))
                 {
                     referencedTools.Add(toolName);
-                    if (IsProgramCall(toolName, ignored))
-                        throw new AgentProgramException(path + " agent program cannot call itself");
+                    if (IsBlockedChildTool(toolName))
+                        throw new AgentProgramException(path + " cannot reference nested program or batch tool: " + toolName);
                     McpTool tool;
                     if (!OniToolRegistry.TryGetTool(toolName, out tool))
                         throw new AgentProgramException(path + " references unknown tool: " + toolName);
@@ -419,16 +428,17 @@ namespace OniMcp.Tools
             {
                 referencedTools.Add(toolName);
                 JObject args = ResolveObject(rawArgs);
-                if (IsProgramCall(toolName, args))
-                {
-                    throw new AgentProgramException("agent program cannot call itself");
-                }
+                if (IsBlockedChildTool(toolName))
+                    throw new AgentProgramException("agent program cannot call nested program or batch tools: " + toolName);
+                if (childToolCalls >= MaxChildToolCalls)
+                    throw new AgentProgramException("maxChildToolCalls exceeded at " + path);
+                childToolCalls++;
 
                 if (toolName == "world_cell_info" && (args["x"] == null || args["y"] == null))
                     FillCurrentPointerCell(args);
 
                 var result = OniToolRegistry.CallTool(toolName, args);
-                string text = ResultText(result);
+                string text = Truncate(ResultText(result), MaxStoredResultChars);
                 JToken json = TryParseJson(text);
                 var wrapped = new JObject
                 {
@@ -869,6 +879,22 @@ namespace OniMcp.Tools
                 if (result == null || result.Content == null || result.Content.Count == 0 || result.Content[0] == null)
                     return "";
                 return result.Content[0].Text ?? "";
+            }
+
+            private static bool IsBlockedChildTool(string toolName)
+            {
+                return string.Equals(toolName, ToolName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(toolName, "agent_script_run", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(toolName, "agent_flow_execute", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(toolName, "agent_program_run", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(toolName, ToolBatchTools.ToolName, StringComparison.OrdinalIgnoreCase);
+            }
+
+            private static string Truncate(string text, int maxChars)
+            {
+                if (string.IsNullOrEmpty(text) || text.Length <= maxChars)
+                    return text ?? "";
+                return text.Substring(0, maxChars) + "...[truncated]";
             }
 
             private static JToken TryParseJson(string text)

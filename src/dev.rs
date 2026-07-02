@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
+use serde_json::Value;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::build;
@@ -40,6 +41,7 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
         .with_context(|| format!("创建 Dev 目录失败：{}", dev_dir.display()))?;
 
     unzip(&zip, &dev_dir)?;
+    enable_dev_mod(cfg, selected, &dev_dir)?;
 
     println!("✅ 已安装到游戏 Dev 目录");
 
@@ -50,6 +52,109 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Result<()> {
+    let static_id = read_static_id(dev_dir).unwrap_or_else(|| format!("local.{}", selected.name));
+    let mods_file = cfg.game_mods_dir()?.join("mods.json");
+    if !mods_file.exists() {
+        println!(
+            "⚠️  未找到 mods.json，首次进游戏后仍需确认启用 '{}'",
+            selected.name
+        );
+        return Ok(());
+    }
+
+    let content = fs::read_to_string(&mods_file)
+        .with_context(|| format!("读取 mods.json 失败：{}", mods_file.display()))?;
+    let mut data: Value = serde_json::from_str(&content)
+        .with_context(|| format!("解析 mods.json 失败：{}", mods_file.display()))?;
+    let mods = data
+        .get_mut("mods")
+        .and_then(Value::as_array_mut)
+        .context("mods.json 缺少 mods 数组")?;
+
+    let mut found = false;
+    for item in mods.iter_mut() {
+        let same_static_id = item
+            .get("staticID")
+            .and_then(Value::as_str)
+            .map(|value| value == static_id)
+            .unwrap_or(false);
+        let same_dev_id = item
+            .get("label")
+            .and_then(|label| label.get("id"))
+            .and_then(Value::as_str)
+            .map(|value| value == selected.name)
+            .unwrap_or(false);
+        if same_static_id || same_dev_id {
+            item["enabled"] = Value::Bool(true);
+            item["status"] = Value::Number(1.into());
+            ensure_expansion_enabled(item);
+            found = true;
+        }
+    }
+
+    if !found {
+        mods.push(new_dev_mod_entry(selected, &static_id));
+    }
+    data["mod_load_in_progress"] = Value::Bool(false);
+
+    let formatted = serde_json::to_string_pretty(&data)?;
+    fs::write(&mods_file, format!("{}\n", formatted))
+        .with_context(|| format!("写入 mods.json 失败：{}", mods_file.display()))?;
+    println!("✅ 已在 mods.json 启用 Dev mod：{}", static_id);
+    Ok(())
+}
+
+fn read_static_id(dev_dir: &Path) -> Option<String> {
+    let content = fs::read_to_string(dev_dir.join("mod.yaml")).ok()?;
+    content.lines().find_map(|line| {
+        let (key, value) = line.split_once(':')?;
+        if key.trim() != "staticID" {
+            return None;
+        }
+        let cleaned = value
+            .trim()
+            .trim_matches('"')
+            .trim_matches('\'')
+            .to_string();
+        if cleaned.is_empty() {
+            None
+        } else {
+            Some(cleaned)
+        }
+    })
+}
+
+fn ensure_expansion_enabled(item: &mut Value) {
+    let Some(array) = item.get_mut("enabledForDlc").and_then(Value::as_array_mut) else {
+        item["enabledForDlc"] = Value::Array(vec![Value::String("EXPANSION1_ID".to_string())]);
+        return;
+    };
+    if !array
+        .iter()
+        .any(|value| value.as_str() == Some("EXPANSION1_ID"))
+    {
+        array.push(Value::String("EXPANSION1_ID".to_string()));
+    }
+}
+
+fn new_dev_mod_entry(selected: &SelectedMod, static_id: &str) -> Value {
+    serde_json::json!({
+     "label": {
+      "distribution_platform": 4,
+      "id": selected.name,
+      "title": selected.name,
+      "version": 0
+     },
+     "status": 1,
+     "enabled": true,
+     "enabledForDlc": ["EXPANSION1_ID"],
+     "crash_count": 0,
+     "reinstall_path": null,
+     "staticID": static_id
+    })
 }
 
 fn unzip(zip: &PathBuf, dest: &PathBuf) -> Result<()> {

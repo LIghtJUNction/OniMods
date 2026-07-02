@@ -24,7 +24,8 @@ namespace OniMcp.Tools
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "plan 或 status，默认 plan", Required = false },
                     ["targetCycles"] = new McpToolParameter { Type = "integer", Description = "目标长跑周期数，默认 100", Required = false },
-                    ["foodKcalPerDupe"] = new McpToolParameter { Type = "number", Description = "每个复制人的最低食物库存阈值，默认 2000 kcal", Required = false }
+                    ["foodKcalPerDupe"] = new McpToolParameter { Type = "number", Description = "每个复制人的最低食物库存阈值，默认 2000 kcal", Required = false },
+                    ["includeConstructionPlan"] = new McpToolParameter { Type = "boolean", Description = "是否执行较重的梯子/楼梯开路构造搜索，默认 false；快速长跑分诊优先返回 frontier/map next calls", Required = false }
                 },
                 Handler = args =>
                 {
@@ -46,14 +47,15 @@ namespace OniMcp.Tools
             int oxygenProducers = CountMatching(buildings, "OxygenDiffuser", "MineralDeoxidizer", "Electrolyzer");
             int toilets = CountMatching(buildings, "Outhouse", "FlushToilet");
             int beds = CountMatching(buildings, "Bed", "LuxuryBed");
-            var allReadyHarvestables = ReadyHarvestables().Take(40).ToList();
+            bool includeConstructionPlan = ToolUtil.GetBool(args, "includeConstructionPlan", false);
+            var allReadyHarvestables = ReadyHarvestables().Take(12).ToList();
             var reachableHarvestables = allReadyHarvestables
                 .Where(item => item.TryGetValue("reachable", out var value) && value is bool reachable && reachable)
-                .Take(20)
+                .Take(8)
                 .ToList();
-            var readyHarvestables = (reachableHarvestables.Count > 0 ? reachableHarvestables : allReadyHarvestables).Take(20).ToList();
-            var harvestIds = reachableHarvestables.Select(item => item["id"]).Where(id => Convert.ToInt32(id) > 0).Take(8).ToList();
-            var foodAccessPlan = BuildFoodAccessPlan(allReadyHarvestables, reachableHarvestables);
+            var readyHarvestables = (reachableHarvestables.Count > 0 ? reachableHarvestables : allReadyHarvestables).Take(8).ToList();
+            var harvestIds = reachableHarvestables.Select(item => item["id"]).Where(id => Convert.ToInt32(id) > 0).Take(6).ToList();
+            var foodAccessPlan = BuildFoodAccessPlan(allReadyHarvestables, reachableHarvestables, includeConstructionPlan);
             float foodNeed = dupes * foodPerDupe;
             var blockers = new List<Dictionary<string, object>>();
             var nextCalls = new List<string>();
@@ -95,7 +97,7 @@ namespace OniMcp.Tools
 
             bool hasCritical = blockers.Any(item => string.Equals(item["severity"]?.ToString(), "critical", StringComparison.OrdinalIgnoreCase));
             var constructionPlan = ExtractConstructionPlan(foodAccessPlan);
-            var nextActions = BuildNextActions(constructionPlan);
+            var nextActions = BuildNextActions(foodAccessPlan, constructionPlan);
             return new Dictionary<string, object>
             {
                 ["targetCycles"] = targetCycles,
@@ -127,6 +129,7 @@ namespace OniMcp.Tools
                 ["nextActions"] = nextActions,
                 ["readyHarvestables"] = readyHarvestables.Take(6).ToList(),
                 ["harvestActionAvailable"] = harvestIds.Count > 0,
+                ["includeConstructionPlan"] = includeConstructionPlan,
                 ["harvestAction"] = harvestIds.Count == 0 ? null : new Dictionary<string, object>
                 {
                     ["tool"] = "colony_control",
@@ -226,7 +229,8 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> BuildFoodAccessPlan(
             List<Dictionary<string, object>> allReadyHarvestables,
-            List<Dictionary<string, object>> reachableHarvestables)
+            List<Dictionary<string, object>> reachableHarvestables,
+            bool includeConstructionPlan)
         {
             if (allReadyHarvestables.Count == 0 || reachableHarvestables.Count > 0)
                 return null;
@@ -245,9 +249,7 @@ namespace OniMcp.Tools
             var safeFrontier = frontier
                 .Where(item => string.Equals(item["risk"]?.ToString(), "none", StringComparison.OrdinalIgnoreCase))
                 .ToList();
-            var constructionPlan = safeFrontier.Count == 0
-                ? SurvivalAccessConstructionPlanner.BuildLadderPlan(target, worldId, navigators, frontier)
-                : null;
+        Dictionary<string, object> constructionPlan = null;
 
             var result = new Dictionary<string, object>
             {
@@ -258,12 +260,16 @@ namespace OniMcp.Tools
                     ? "Dry-run the first frontier dig cell, then rerun survival plan after reachable area changes."
                     : constructionPlan != null
                     ? "Dry-run constructionPlan.buildAction before risky digging."
-                    : frontier.Count > 0
+ : !includeConstructionPlan
+ ? "Fast plan skipped construction search; inspect compact map and rerun with includeConstructionPlan=true only if needed."
+ : frontier.Count > 0
                     ? "Only risky frontier dig cells remain; inspect compact map or place safer ladder/stair access before digging."
                     : "Read a compact map around target and current dupe reachable samples before placing stairs/ladders."
             };
             if (constructionPlan != null)
                 result["constructionPlan"] = constructionPlan;
+            if (includeConstructionPlan && constructionPlan == null && safeFrontier.Count == 0 && frontier.Count > 6)
+                result["constructionPlanSkippedReason"] = "frontier_count_above_fast_limit";
 
             if (safeFrontier.Count > 0)
             {
@@ -333,10 +339,11 @@ namespace OniMcp.Tools
             int limit)
         {
             var candidates = new List<Dictionary<string, object>>();
-            int minX = Math.Max(0, targetX - 40);
-            int maxX = targetX + 40;
-            int minY = Math.Max(0, targetY - 40);
-            int maxY = targetY + 40;
+            const int searchRadius = 18;
+            int minX = Math.Max(0, targetX - searchRadius);
+            int maxX = targetX + searchRadius;
+            int minY = Math.Max(0, targetY - searchRadius);
+            int maxY = targetY + searchRadius;
 
             foreach (var navigator in navigators)
             {

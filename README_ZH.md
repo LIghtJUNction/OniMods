@@ -2,6 +2,8 @@
 
 [English](README.md)
 
+[![ONI MCP Server 预览图](mods/oni_mcp/preview.png)](mods/oni_mcp/README.md)
+
 <div align="center">
   <p>
     <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust-2024-f46623?logo=rust&logoColor=white" /></a>
