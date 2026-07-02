@@ -213,9 +213,6 @@ namespace OniMcp.Tools
 
             string callId = call["id"]?.ToString() ?? call["key"]?.ToString();
 
-            if (string.Equals(name, ToolName, StringComparison.OrdinalIgnoreCase))
-                return ErrorResult(index, name, call, $"{ToolName} cannot call itself");
-
             var argumentsToken = call["arguments"] ?? call["args"] ?? call["a"];
             JObject arguments;
             if (argumentsToken == null || argumentsToken.Type == JTokenType.Null)
@@ -226,6 +223,9 @@ namespace OniMcp.Tools
                 return ErrorResult(index, name, call, "arguments must be an object");
 
             MergeDefaults(arguments, defaults);
+
+            if (IsBatchCall(name, arguments))
+                return ErrorResult(index, name, call, $"{ToolName} cannot call itself");
 
             McpTool tool;
             if (!OniToolRegistry.TryGetTool(name, out tool))
@@ -290,9 +290,6 @@ namespace OniMcp.Tools
             if (preflight.ContainsKey("isError") && (bool)preflight["isError"])
                 return preflight;
 
-            if (string.Equals(name, ToolName, StringComparison.OrdinalIgnoreCase))
-                return ErrorResult(index, name, call, $"{ToolName} cannot call itself");
-
             var argumentsToken = call["arguments"] ?? call["args"] ?? call["a"];
             JObject arguments;
             if (argumentsToken == null || argumentsToken.Type == JTokenType.Null)
@@ -309,6 +306,9 @@ namespace OniMcp.Tools
             }
 
             MergeDefaults(arguments, defaults);
+
+            if (IsBatchCall(name, arguments))
+                return ErrorResult(index, name, call, $"{ToolName} cannot call itself");
 
             McpTool tool;
             if (OniToolRegistry.TryGetTool(name, out tool)
@@ -343,6 +343,18 @@ namespace OniMcp.Tools
                 result["text"] = text;
             }
             return result;
+        }
+
+        private static bool IsBatchCall(string name, JObject arguments)
+        {
+            McpTool tool;
+            if (OniToolRegistry.TryGetTool(name, out tool)
+                && string.Equals(tool.Name, ToolName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return ServerTools.IsServerControlDomainCall(name, arguments, "batch", "call_many", "many");
         }
 
         private static void MergeDefaults(JObject target, JObject defaults)
