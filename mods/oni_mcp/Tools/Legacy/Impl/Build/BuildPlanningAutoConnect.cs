@@ -226,7 +226,13 @@ namespace OniMcp.Tools
                             continue;
 
                         var wire = Grid.Objects[candidate, (int)layer];
-                        if (wire == null || !TryGetConnectedCircuitId(wire, out _))
+                        if (wire == null)
+                            continue;
+
+                        var kpid = wire.GetComponent<KPrefabID>();
+                        string prefabName = kpid?.PrefabTag.Name;
+                        bool isWire = prefabName != null && prefabName.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) >= 0;
+                        if (!isWire)
                             continue;
 
                         bestDistance = distance;

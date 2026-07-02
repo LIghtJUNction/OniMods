@@ -88,9 +88,10 @@ namespace OniMcp.Tools
                 AgentPointerRegistry.UpdateDrag(ToolSessionContext.SessionId, args["agentId"]?.ToString(), Grid.XYToCell(cell.x, cell.y));
                 var result = TryPlanOne(prefabId, cell.x, cell.y, args, plannedSupportCells, autoDigContext);
                 bool ok = result.ContainsKey("planned") && (bool)result["planned"];
+                bool alreadyPresent = result.ContainsKey("alreadyPresent") && (bool)result["alreadyPresent"];
                 bool validPlacement = result.ContainsKey("valid") && (bool)result["valid"];
                 autoDigQueued += GetAutoDigInt(result, "marked");
-                if (ok || (IsDryRun(args) && validPlacement))
+                if (ok || alreadyPresent || (IsDryRun(args) && validPlacement))
                 {
                     valid++;
                     if (ok)

@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "oni": {
+      "serverUrl": "http://localhost:8788/mcp/"
+    }
+  }
+}

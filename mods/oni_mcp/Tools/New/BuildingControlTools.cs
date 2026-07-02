@@ -66,6 +66,8 @@ namespace OniMcp.Tools
                 Handler = args =>
                 {
                     string domain = NormalizeDomain(args);
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    OniMcp.Support.OniMcpLog.Debug($"[OniMcp] building_control: domain={domain}, action={action}");
                     switch (domain)
                     {
                         case "planning":

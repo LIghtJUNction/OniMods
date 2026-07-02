@@ -1563,7 +1563,7 @@ namespace OniMcp.Tools
             if (payload["planned"] != null)
                 return ToolUtil.GetBool(payload, "dryRun", false)
                     ? GetTruthyResultCount(payload, "valid") > 0
-                    : GetTruthyResultCount(payload, "planned") > 0;
+                    : (GetTruthyResultCount(payload, "planned") > 0 || GetTruthyResultCount(payload, "valid") > 0);
             if (payload["valid"] != null && payload["error"] != null)
                 return GetTruthyResultCount(payload, "valid") > 0;
             return true;

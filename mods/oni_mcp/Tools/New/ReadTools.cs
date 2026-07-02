@@ -52,6 +52,8 @@ namespace OniMcp.Tools
                 Handler = args =>
                 {
                     string domain = (args["domain"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                    OniMcp.Support.OniMcpLog.Debug($"[OniMcp] read_control: domain={domain}, action={action}");
                     switch (domain)
                     {
                         case "world":
