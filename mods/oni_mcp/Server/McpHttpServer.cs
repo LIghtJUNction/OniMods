@@ -161,8 +161,9 @@ namespace OniMcp.Server
 
             try
             {
-                // CORS
-                response.Headers.Add("Access-Control-Allow-Origin", "*");
+                if (!ApplyCors(request, response))
+                    return;
+
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS");
                 response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Accept, Authorization, X-Oni-Mcp-Token");
                 response.Headers.Add("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
@@ -335,6 +336,37 @@ namespace OniMcp.Server
             }
 
             DispatchPostResponse(response, rpcRequest, sessionId);
+        }
+
+        private bool ApplyCors(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            string origin = request.Headers["Origin"];
+            if (string.IsNullOrWhiteSpace(origin))
+                return true;
+
+            Uri originUri;
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out originUri) || !IsLoopbackHost(originUri.Host))
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Forbidden CORS origin"), 403);
+                return false;
+            }
+
+            response.Headers["Access-Control-Allow-Origin"] = origin;
+            response.Headers["Vary"] = "Origin";
+            return true;
+        }
+
+        private static bool IsLoopbackHost(string host)
+        {
+            if (string.IsNullOrWhiteSpace(host))
+                return false;
+
+            host = host.Trim().Trim('[', ']').ToLowerInvariant();
+            if (host == "localhost")
+                return true;
+
+            IPAddress address;
+            return IPAddress.TryParse(host, out address) && IPAddress.IsLoopback(address);
         }
 
         private bool ValidateAuth(HttpListenerRequest request, HttpListenerResponse response)
