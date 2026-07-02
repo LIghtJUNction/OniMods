@@ -269,6 +269,8 @@ namespace OniMcp.Tools
                 if (TryResolveCallShape(stmt, out toolName, out ignored, out ignoredSave))
                 {
                     referencedTools.Add(toolName);
+                    if (IsProgramCall(toolName, ignored))
+                        throw new AgentProgramException(path + " agent program cannot call itself");
                     McpTool tool;
                     if (!OniToolRegistry.TryGetTool(toolName, out tool))
                         throw new AgentProgramException(path + " references unknown tool: " + toolName);
@@ -416,15 +418,12 @@ namespace OniMcp.Tools
             private void ExecuteCall(string toolName, JObject rawArgs, string saveAs, bool continueOnError, string path)
             {
                 referencedTools.Add(toolName);
-                if (string.Equals(toolName, ToolName, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(toolName, "agent_script_run", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(toolName, "agent_flow_execute", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(toolName, "agent_program_run", StringComparison.OrdinalIgnoreCase))
+                JObject args = ResolveObject(rawArgs);
+                if (IsProgramCall(toolName, args))
                 {
                     throw new AgentProgramException("agent program cannot call itself");
                 }
 
-                JObject args = ResolveObject(rawArgs);
                 if (toolName == "world_cell_info" && (args["x"] == null || args["y"] == null))
                     FillCurrentPointerCell(args);
 
@@ -456,6 +455,18 @@ namespace OniMcp.Tools
 
                 if ((result == null || result.IsError) && !continueOnError)
                     throw new AgentProgramException("tool call failed at " + path + ": " + toolName + " -> " + text);
+            }
+
+            private static bool IsProgramCall(string toolName, JObject arguments)
+            {
+                McpTool tool;
+                if (OniToolRegistry.TryGetTool(toolName, out tool)
+                    && string.Equals(tool.Name, ToolName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                return ServerTools.IsServerControlDomainCall(toolName, arguments, "program", "agent_program", "flow", "script");
             }
 
             private void FillCurrentPointerCell(JObject args)
