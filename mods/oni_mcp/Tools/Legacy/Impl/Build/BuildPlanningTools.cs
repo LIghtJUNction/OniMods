@@ -996,7 +996,7 @@ namespace OniMcp.Tools
             var path = new List<CellCoord>();
             for (int i = 0; i < points.Count - 1; i++)
             {
-                if (!TryAddManhattanSegment(path, points[i], points[i + 1], maxCells, out error))
+                if (!AddManhattanSegment(path, points[i], points[i + 1], maxCells, out error))
                     return path;
             }
             return path;
@@ -1349,9 +1349,23 @@ namespace OniMcp.Tools
             return result;
         }
 
-        private static bool TryAddManhattanSegment(List<CellCoord> path, CellCoord from, CellCoord to, int maxCells, out string error)
+        private static bool AddManhattanSegment(List<CellCoord> path, CellCoord from, CellCoord to, int maxCells, out string error)
         {
             error = null;
+
+            long dx = Math.Abs((long)to.x - from.x);
+            long dy = Math.Abs((long)to.y - from.y);
+            long cellsToAdd = dx + dy + 1;
+            if (path.Count > 0 && path[path.Count - 1].x == from.x && path[path.Count - 1].y == from.y)
+                cellsToAdd--;
+
+            long resultingCount = (long)path.Count + cellsToAdd;
+            if (resultingCount > maxCells)
+            {
+                error = $"Path too large: {resultingCount} cells, maxCells={maxCells}";
+                return false;
+            }
+
             int x = from.x;
             int y = from.y;
             AddPathPoint(path, x, y);
@@ -1760,9 +1774,9 @@ namespace OniMcp.Tools
             }
 
             int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
-            string pathError;
             var path = new List<CellCoord>();
-            if (!TryAddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell), maxCells, out pathError))
+            string pathError;
+            if (!AddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell), maxCells, out pathError))
             {
                 return new Dictionary<string, object>
                 {
@@ -1770,21 +1784,7 @@ namespace OniMcp.Tools
                     ["status"] = "path_too_large",
                     ["input"] = CellCoordDictionary(inputCell),
                     ["source"] = CellCoordDictionary(sourceCell),
-                    ["pathCells"] = path.Count,
-                    ["maxCells"] = maxCells,
-                    ["planned"] = 0,
-                    ["failed"] = 0,
-                    ["error"] = pathError
-                };
-            }
-            if (path.Count > maxCells)
-            {
-                return new Dictionary<string, object>
-                {
-                    ["enabled"] = true,
-                    ["status"] = "path_too_large",
-                    ["input"] = CellCoordDictionary(inputCell),
-                    ["source"] = CellCoordDictionary(sourceCell),
+                    ["error"] = pathError,
                     ["pathCells"] = path.Count,
                     ["maxCells"] = maxCells,
                     ["planned"] = 0,
