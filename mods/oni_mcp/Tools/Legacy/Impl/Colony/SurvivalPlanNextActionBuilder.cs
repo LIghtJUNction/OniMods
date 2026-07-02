@@ -119,6 +119,19 @@ namespace OniMcp.Tools
             int worldId = target.ContainsKey("worldId") ? Convert.ToInt32(target["worldId"]) : 0;
             string status = accessPlan.ContainsKey("status") ? accessPlan["status"]?.ToString() : "no_construction_plan";
 
+            if (accessPlan.TryGetValue("frontierDigAction", out var frontierAction))
+            {
+                actions.Add(new Dictionary<string, object>
+                {
+                    ["kind"] = "open_path_to_food",
+                    ["reason"] = status,
+                    ["target"] = target,
+                    ["action"] = frontierAction,
+                    ["then"] = "execute_this_action_to_open_the_next_reachable_food_frontier_then_rerun_survival_plan"
+                });
+                return;
+            }
+
             actions.Add(new Dictionary<string, object>
             {
                 ["kind"] = "access_map_probe",
@@ -138,7 +151,7 @@ namespace OniMcp.Tools
                         ["maxCells"] = 260
                     }
                 },
-                ["then"] = "choose_safe_ladder_or_dig_route_then_rerun_survival_plan"
+                ["then"] = "read_the_area_snapshot_and_choose_the_next_safe_ladder_or_dig_route_before_rerunning_survival_plan"
             });
         }
 

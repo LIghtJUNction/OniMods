@@ -42,6 +42,7 @@ namespace OniMcp.Tools
             {
                 result["caloriesKcal"] = Math.Round(SafeFloat(edible.Calories) / 1000f, 1);
                 result["foodQuality"] = edible.GetQuality();
+                result["isFood"] = true;
             }
 
             AddItemSearchActionMetadata(result, cell, worldId, stored);
@@ -72,9 +73,38 @@ namespace OniMcp.Tools
                 return true;
 
             string q = query.Trim();
+            if (IsFoodQuery(q) && IsFoodItem(info))
+                return true;
+
             return Contains(Value(info, "prefabId"), q)
                 || Contains(Value(info, "name"), q)
                 || Contains(Value(info, "elementId"), q);
+        }
+
+        private static bool IsFoodQuery(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return false;
+            string q = query.Trim().ToLowerInvariant();
+            return q == "food"
+                || q == "foods"
+                || q == "edible"
+                || q == "edibles"
+                || q == "harvestable"
+                || q == "harvestables"
+                || q == "食物"
+                || q == "吃的"
+                || q == "粮食"
+                || q == "可收获";
+        }
+
+        private static bool IsFoodItem(Dictionary<string, object> info)
+        {
+            object value;
+            return info != null
+                && info.TryGetValue("isFood", out value)
+                && value is bool isFood
+                && isFood;
         }
 
         private static string Value(Dictionary<string, object> info, string key)

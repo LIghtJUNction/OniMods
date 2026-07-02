@@ -41,7 +41,7 @@ namespace OniMcp.Tools
             int targetCycles = ToolUtil.GetInt(args, "targetCycles") ?? 100;
             float foodPerDupe = ToolUtil.GetFloat(args, "foodKcalPerDupe") ?? 2000f;
             int dupes = Components.LiveMinionIdentities.Count;
-            float foodKcal = Components.Edibles.Items.Where(e => e != null).Sum(e => ToolUtil.SafeFloat(e.Calories) / 1000f);
+            float foodKcal = UsableFoodKcal();
             float maxStress = MaxStress();
             var buildings = CountBuildings();
             int oxygenProducers = CountMatching(buildings, "OxygenDiffuser", "MineralDeoxidizer", "Electrolyzer");

@@ -166,19 +166,20 @@ namespace OniMcp.Tools
         /// </summary>
         public static CallToolResult CallTool(string name, JObject arguments)
         {
+            var middlewareNotifications = ToolCallMiddleware.DrainNotifications();
             if (!_tools.TryGetValue(name, out var tool))
             {
                 if (!_aliases.TryGetValue(name, out var canonicalName) || !_tools.TryGetValue(canonicalName, out tool))
-                    return CallToolResult.Error($"Tool not found: {name}");
+                    return ToolCallMiddleware.Inject(CallToolResult.Error($"Tool not found: {name}"), middlewareNotifications);
             }
 
             try
             {
-                return tool.Handler(arguments ?? new JObject());
+                return ToolCallMiddleware.Inject(tool.Handler(arguments ?? new JObject()), middlewareNotifications);
             }
             catch (Exception ex)
             {
-                return CallToolResult.Error($"Tool execution error: {ex.Message}");
+                return ToolCallMiddleware.Inject(CallToolResult.Error($"Tool execution error: {ex.Message}"), middlewareNotifications);
             }
         }
     }

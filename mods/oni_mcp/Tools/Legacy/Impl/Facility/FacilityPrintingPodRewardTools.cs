@@ -40,10 +40,17 @@ namespace OniMcp.Tools
         {
             if (Immigration.Instance == null)
                 return CallToolResult.Error("Immigration system not available");
-            if (!Immigration.Instance.ImmigrantsAvailable)
-                return CallToolResult.Error("No printing pod rewards available right now");
 
             var rewards = CurrentCarePackages().ToList();
+            bool initializedScreenForClaim = false;
+            if (rewards.Count == 0)
+            {
+                if (!Immigration.Instance.ImmigrantsAvailable)
+                    return CallToolResult.Error("No printing pod rewards available right now");
+
+                return CallToolResult.Error("No current claimable care-package reward is materialized yet. This tool no longer opens the immigrant screen automatically; wait for the reward list to appear or use action=open_immigrants manually.");
+            }
+
             var selected = ResolvePrintingReward(args, rewards);
             if (selected == null)
                 return CallToolResult.Error("No current claimable care-package reward matched. If the printing pod offers duplicants, use action=open_immigrants for manual UI selection.");
@@ -58,7 +65,8 @@ namespace OniMcp.Tools
                     ["before"] = before,
                     ["selectedReward"] = reward,
                     ["priorityPlan"] = priorityPlan,
-                    ["printingRewards"] = PrintingRewardStatus(telepad)
+                    ["printingRewards"] = PrintingRewardStatus(telepad),
+                    ["initializedScreenForClaim"] = initializedScreenForClaim
                 });
             }
 
@@ -67,6 +75,7 @@ namespace OniMcp.Tools
 
             telepad.OnAcceptDelivery(selected);
             Immigration.Instance.EndImmigration();
+            bool screenClosed = CloseImmigrantScreen();
             return JsonResult(new Dictionary<string, object>
             {
                 ["claimed"] = true,
@@ -75,7 +84,9 @@ namespace OniMcp.Tools
                 ["selectedReward"] = reward,
                 ["priorityAction"] = priorityPlan["priorityAction"],
                 ["nextActions"] = priorityPlan["nextActions"],
-                ["printingRewards"] = PrintingRewardStatus(telepad)
+                ["printingRewards"] = PrintingRewardStatus(telepad),
+                ["initializedScreenForClaim"] = initializedScreenForClaim,
+                ["screenClosed"] = screenClosed
             });
         }
 
@@ -98,7 +109,7 @@ namespace OniMcp.Tools
                 ["dupeClaimSupport"] = "open_immigrants UI only; automatic duplicant selection is intentionally not claimed by action=claim",
                 ["notes"] = rewards.Count > 0
                     ? "Only currently materialized care-package choices are listed."
-                    : "No current care-package containers are materialized. This tool will not open or initialize the immigrant screen during list/status because that can mutate UI state."
+                    : "No current care-package containers are materialized. This tool will not open or initialize the immigrant screen during list/status or claim."
             };
         }
 
@@ -140,6 +151,24 @@ namespace OniMcp.Tools
                 .Select(container => container.Info)
                 .ToList();
         }
+
+        private static bool CloseImmigrantScreen()
+
+        {
+            try
+            {
+                if (ImmigrantScreen.instance == null)
+                    return false;
+
+                ImmigrantScreen.instance.Show(false);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
 
         private static Dictionary<string, object> CarePackageInfoDictionary(CarePackageInfo info, int index)
         {

@@ -13,7 +13,7 @@ namespace OniMcp.Tools
 {
     public static class ServerTools
     {
-        internal const string ToolName = "server_control";
+        private const string ToolName = "server_control";
 
         public static McpTool ControlServer()
         {
@@ -27,8 +27,8 @@ namespace OniMcp.Tools
                 Description = "服务器/MCP 组合入口：domain=diagnostics action=status/capabilities/logs_tail；domain=client_request action=create_sampling/create_elicitation；domain=catalog action=manifest/search/guide/coverage/static_audit/surface_audit；domain=batch action=call_many 批量调用工具；domain=program action=execute 执行受限流程 DSL",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["domain"] = new McpToolParameter { Type = "string", Description = "diagnostics、client_request、catalog、batch 或 program，默认 diagnostics", Required = false, EnumValues = new List<string> { "diagnostics", "client_request", "catalog", "batch", "program" } },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "diagnostics: status/capabilities/logs_tail；client_request: create_sampling/create_elicitation；catalog: manifest/search/guide/coverage/static_audit/surface_audit；batch: call_many；program: execute", Required = true },
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "diagnostics、client_request、catalog、batch、program 或 middleware，默认 diagnostics", Required = false, EnumValues = new List<string> { "diagnostics", "client_request", "catalog", "batch", "program", "middleware" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "diagnostics: status/capabilities/logs_tail；client_request: create_sampling/create_elicitation；catalog: manifest/search/guide/coverage/static_audit/surface_audit；batch: call_many；program: execute；middleware: queue/status/clear", Required = true },
                     ["file"] = new McpToolParameter { Type = "string", Description = "diagnostics logs_tail：current 或 previous", Required = false },
                     ["lines"] = new McpToolParameter { Type = "integer", Description = "diagnostics logs_tail：返回末尾行数，默认 120，最大 1000", Required = false },
                     ["filter"] = new McpToolParameter { Type = "string", Description = "diagnostics logs_tail：可选关键词过滤", Required = false },
@@ -63,7 +63,8 @@ namespace OniMcp.Tools
                     ["maxTokens"] = new McpToolParameter { Type = "integer", Description = "client_request create_sampling：最大 token 数，默认 1000", Required = false },
                     ["temperature"] = new McpToolParameter { Type = "number", Description = "client_request create_sampling：可选 temperature", Required = false },
                     ["includeContext"] = new McpToolParameter { Type = "string", Description = "client_request create_sampling：上下文范围", Required = false, EnumValues = new List<string> { "none", "thisServer", "allServers" } },
-                    ["message"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：展示给用户的问题或说明", Required = false },
+                    ["message"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation 或 middleware queue：展示给用户的问题、说明或下一次工具调用通知", Required = false },
+                    ["level"] = new McpToolParameter { Type = "string", Description = "middleware queue：通知级别，默认 info", Required = false, EnumValues = new List<string> { "info", "warning", "error" } },
                     ["fieldName"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：结构化响应字段名，默认 response", Required = false },
                     ["fieldDescription"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：结构化响应字段说明", Required = false },
                     ["fieldType"] = new McpToolParameter { Type = "string", Description = "client_request create_elicitation：字段类型，默认 string", Required = false, EnumValues = new List<string> { "string", "boolean", "integer", "number" } },
@@ -85,6 +86,8 @@ namespace OniMcp.Tools
                     }
                     if (domain == "batch" || domain == "call_many" || domain == "many")
                         return ToolBatchTools.CallMany().Handler(args);
+                    if (domain == "middleware" || domain == "tool_middleware" || domain == "notice")
+                        return ToolCallMiddlewareControl(args);
                     if (domain == "program" || domain == "agent_program" || domain == "flow" || domain == "script")
                     {
                         string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
@@ -92,7 +95,7 @@ namespace OniMcp.Tools
                             return AgentProgramTools.ExecuteProgram().Handler(args);
                         return CallToolResult.Error("domain=program action must be execute");
                     }
-                    return CallToolResult.Error("domain must be diagnostics, client_request, catalog, batch, or program");
+                    return CallToolResult.Error("domain must be diagnostics, client_request, catalog, batch, program, or middleware");
                 }
             };
         }
@@ -114,6 +117,31 @@ namespace OniMcp.Tools
             }
 
             return false;
+        }
+
+        private static CallToolResult ToolCallMiddlewareControl(JObject args)
+        {
+            string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+            Dictionary<string, object> payload;
+
+            if (action == "queue" || action == "notify" || action == "notification")
+            {
+                string message = args["message"]?.ToString();
+                if (string.IsNullOrWhiteSpace(message))
+                    return CallToolResult.Error("message is required for domain=middleware action=queue");
+                payload = ToolCallMiddleware.QueueNotification(message, args["level"]?.ToString());
+                payload["queued"] = true;
+                payload["delivery"] = "next tools/call response";
+                return CallToolResult.Text(JsonConvert.SerializeObject(payload, McpJsonUtil.Settings));
+            }
+
+            if (action == "status")
+                return CallToolResult.Text(JsonConvert.SerializeObject(ToolCallMiddleware.Status(), McpJsonUtil.Settings));
+
+            if (action == "clear")
+                return CallToolResult.Text(JsonConvert.SerializeObject(ToolCallMiddleware.Clear(), McpJsonUtil.Settings));
+
+            return CallToolResult.Error("domain=middleware action must be queue, status, or clear");
         }
 
         public static McpTool DiagnosticsControl()
