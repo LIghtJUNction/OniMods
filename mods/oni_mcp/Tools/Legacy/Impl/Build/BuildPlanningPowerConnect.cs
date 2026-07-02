@@ -61,10 +61,10 @@ namespace OniMcp.Tools
                 };
             }
 
-            var path = new List<CellCoord>();
-            AddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell));
             int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
-            if (path.Count > maxCells)
+            var path = new List<CellCoord>();
+            string pathError;
+            if (!AddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell), maxCells, out pathError))
             {
                 return new Dictionary<string, object>
                 {
@@ -72,6 +72,7 @@ namespace OniMcp.Tools
                     ["status"] = "path_too_large",
                     ["input"] = CellCoordDictionary(inputCell),
                     ["source"] = CellCoordDictionary(sourceCell),
+                    ["error"] = pathError,
                     ["pathCells"] = path.Count,
                     ["maxCells"] = maxCells,
                     ["planned"] = 0,

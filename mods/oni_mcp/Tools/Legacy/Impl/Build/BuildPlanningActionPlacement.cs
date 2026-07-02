@@ -61,14 +61,11 @@ namespace OniMcp.Tools
                     if (!IsLinearUtilityPrefab(def.PrefabID))
                         return CallToolResult.Error("utility_auto_connect only supports linear utility prefabs such as Wire, LiquidConduit, GasConduit, SolidConduit and LogicWire");
 
+                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
                     string error;
-                    var path = ResolveUtilityPath(args, out error);
+                    var path = ResolveUtilityPath(args, maxCells, out error);
                     if (error != null)
                         return CallToolResult.Error(error);
-
-                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
-                    if (path.Count > maxCells)
-                        return CallToolResult.Error($"Path too large: {path.Count} cells, maxCells={maxCells}");
 
                     if (args["worldId"] == null)
                         args["worldId"] = ToolUtil.ResolveWorldId(args);
