@@ -1368,32 +1368,33 @@ namespace OniMcp.Tools
 
             int x = from.x;
             int y = from.y;
+            if (!TryAddPathPoint(path, x, y, maxCells, out error))
+                return false;
+            while (x != to.x)
+            {
+                x += Math.Sign(to.x - x);
+                if (!TryAddPathPoint(path, x, y, maxCells, out error))
+                    return false;
+            }
+            while (y != to.y)
+            {
+                y += Math.Sign(to.y - y);
+                if (!TryAddPathPoint(path, x, y, maxCells, out error))
+                    return false;
+            }
+            return true;
+        }
+
+        private static bool TryAddPathPoint(List<CellCoord> path, int x, int y, int maxCells, out string error)
+        {
             AddPathPoint(path, x, y);
             if (path.Count > maxCells)
             {
                 error = $"Path too large: {path.Count} cells, maxCells={maxCells}";
                 return false;
             }
-            while (x != to.x)
-            {
-                x += to.x > x ? 1 : -1;
-                AddPathPoint(path, x, y);
-                if (path.Count > maxCells)
-                {
-                    error = $"Path too large: {path.Count} cells, maxCells={maxCells}";
-                    return false;
-                }
-            }
-            while (y != to.y)
-            {
-                y += to.y > y ? 1 : -1;
-                AddPathPoint(path, x, y);
-                if (path.Count > maxCells)
-                {
-                    error = $"Path too large: {path.Count} cells, maxCells={maxCells}";
-                    return false;
-                }
-            }
+
+            error = null;
             return true;
         }
 
