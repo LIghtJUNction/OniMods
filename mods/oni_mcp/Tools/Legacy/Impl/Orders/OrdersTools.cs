@@ -10,7 +10,7 @@ using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
-    public static class OrdersTools
+    public static partial class OrdersTools
     {
         private const int CancelEvent = 2127324410;
 
@@ -291,36 +291,6 @@ namespace OniMcp.Tools
                 default:
                     return "";
             }
-        }
-
-        public static McpTool DeconstructBuilding()
-        {
-            return new McpTool
-            {
-                Name = "buildings_deconstruct",
-                Hidden = true,
-                Group = "buildings",
-                Mode = "execute",
-                Risk = "dangerous",
-                Description = "兼容入口：请优先使用 orders_control domain=designation action=deconstruct。将指定建筑标记为拆除，需要 confirm=true",
-                Parameters = LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认，必须为 true", Required = true }
-                }),
-                Handler = args =>
-                {
-                    if (!ToolUtil.GetBool(args, "confirm", false))
-                        return CallToolResult.Error("confirm=true is required for deconstruction");
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-                    var deconstructable = go.GetComponent<Deconstructable>();
-                    if (deconstructable == null)
-                        return CallToolResult.Error("Target is not deconstructable");
-                    deconstructable.QueueDeconstruction(userTriggered: true);
-                    return CallToolResult.Text($"Queued deconstruction for {go.GetProperName()}");
-                }
-            };
         }
 
         public static McpTool SweepArea()

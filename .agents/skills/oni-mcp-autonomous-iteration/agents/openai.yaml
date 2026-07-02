@@ -1,0 +1,4 @@
+interface:
+  display_name: "ONI MCP Autonomous Iteration"
+  short_description: "Automated ONI MCP iteration loop"
+  default_prompt: "Use the ONI MCP autonomous iteration workflow to build, deploy, launch a save, run runtime tests, and iterate from tester feedback."

@@ -2,6 +2,8 @@
 
 [简体中文](README_ZH.md)
 
+[![ONI MCP Server preview](mods/oni_mcp/preview.png)](mods/oni_mcp/README_EN.md)
+
 An Oxygen Not Included mod repository containing:
 
 - `onim`: the built-in ONI mod development CLI in this repo, used to initialize, build, install, uninstall, and publish mods.

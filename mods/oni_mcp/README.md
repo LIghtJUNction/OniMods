@@ -1,5 +1,7 @@
 # ONI MCP Server
 
+[![ONI MCP Server 预览图](preview.png)](README.md)
+
 ONI MCP Server 是一个 Oxygen Not Included Mod。它会在游戏内启动本地 MCP Streamable HTTP 服务，让支持 MCP 的 AI 客户端读取殖民地状态、查询游戏数据、分析地图，并在玩家确认后执行明确的游戏操作。
 
 默认端点:
