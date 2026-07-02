@@ -339,11 +339,12 @@ namespace OniMcp.Tools
                     if (!IsLinearUtilityPrefab(def.PrefabID))
                         return CallToolResult.Error("utility_auto_connect only supports linear utility prefabs such as Wire, LiquidConduit, GasConduit, SolidConduit and LogicWire");
 
-                    string error;
                     int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
+                    string error;
                     var path = ResolveUtilityPath(args, maxCells, out error);
                     if (error != null)
                         return CallToolResult.Error(error);
+
                     if (path.Count > maxCells)
                         return CallToolResult.Error($"Path too large: {path.Count} cells, maxCells={maxCells}");
 
@@ -1367,17 +1368,33 @@ namespace OniMcp.Tools
 
             int x = from.x;
             int y = from.y;
-            AddPathPoint(path, x, y);
+            if (!TryAddPathPoint(path, x, y, maxCells, out error))
+                return false;
             while (x != to.x)
             {
-                x += to.x > x ? 1 : -1;
-                AddPathPoint(path, x, y);
+                x += Math.Sign(to.x - x);
+                if (!TryAddPathPoint(path, x, y, maxCells, out error))
+                    return false;
             }
             while (y != to.y)
             {
-                y += to.y > y ? 1 : -1;
-                AddPathPoint(path, x, y);
+                y += Math.Sign(to.y - y);
+                if (!TryAddPathPoint(path, x, y, maxCells, out error))
+                    return false;
             }
+            return true;
+        }
+
+        private static bool TryAddPathPoint(List<CellCoord> path, int x, int y, int maxCells, out string error)
+        {
+            AddPathPoint(path, x, y);
+            if (path.Count > maxCells)
+            {
+                error = $"Path too large: {path.Count} cells, maxCells={maxCells}";
+                return false;
+            }
+
+            error = null;
             return true;
         }
 
@@ -1841,8 +1858,8 @@ namespace OniMcp.Tools
 
         private static IEnumerable<CellCoord> LineCells(int x1, int y1, int x2, int y2, HashSet<string> seen)
         {
-            int dx = Math.Sign(x2 - x1);
-            int dy = Math.Sign(y2 - y1);
+            int dx = x2 == x1 ? 0 : x2 > x1 ? 1 : -1;
+            int dy = y2 == y1 ? 0 : y2 > y1 ? 1 : -1;
             int x = x1;
             int y = y1;
             while (true)
