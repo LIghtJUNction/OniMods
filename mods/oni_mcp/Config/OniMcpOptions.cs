@@ -23,10 +23,10 @@ namespace OniMcp.Config
         public int Port { get; set; } = 8788;
 
         [Option("Require token", "Require clients to send the configured bearer token.", "Authentication")]
-        public bool AuthEnabled { get; set; } = false;
+        public bool AuthEnabled { get; set; } = true;
 
         [Option("Token", "Bearer token required when token authentication is enabled.", "Authentication")]
-        public string AuthToken { get; set; } = "";
+        public string AuthToken { get; set; } = CreateAuthToken();
 
         [Option("Disable auto disinfect globally", "Keep ONI's global auto disinfect setting disabled when the mod applies this policy.", "Gameplay")]
         public bool GlobalAutoDisinfectDisabled { get; set; } = false;
@@ -192,11 +192,16 @@ namespace OniMcp.Config
             if (options.Port < 1024 || options.Port > 65535)
                 options.Port = 8788;
             options.AuthToken = (options.AuthToken ?? "").Trim();
-            if (string.IsNullOrEmpty(options.AuthToken))
-                options.AuthEnabled = false;
+            if (options.AuthEnabled && string.IsNullOrEmpty(options.AuthToken))
+                options.AuthToken = CreateAuthToken();
             options.ScreenshotRetentionMinutes = Clamp(options.ScreenshotRetentionMinutes, 1, 10080);
             options.ScreenshotMaxFiles = Clamp(options.ScreenshotMaxFiles, 1, 1000);
             return options;
+        }
+
+        private static string CreateAuthToken()
+        {
+            return Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
         }
 
         private static string NormalizeHost(string host)
