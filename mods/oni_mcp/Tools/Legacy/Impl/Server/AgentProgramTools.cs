@@ -278,7 +278,7 @@ namespace OniMcp.Tools
                 if (TryResolveCallShape(stmt, out toolName, out ignored, out ignoredSave))
                 {
                     referencedTools.Add(toolName);
-                    if (IsBlockedChildTool(toolName))
+if (IsBlockedChildTool(toolName, ignored))
                         throw new AgentProgramException(path + " cannot reference nested program or batch tool: " + toolName);
                     McpTool tool;
                     if (!OniToolRegistry.TryGetTool(toolName, out tool))
@@ -428,7 +428,7 @@ namespace OniMcp.Tools
             {
                 referencedTools.Add(toolName);
                 JObject args = ResolveObject(rawArgs);
-                if (IsBlockedChildTool(toolName))
+if (IsBlockedChildTool(toolName, args))
                     throw new AgentProgramException("agent program cannot call nested program or batch tools: " + toolName);
                 if (childToolCalls >= MaxChildToolCalls)
                     throw new AgentProgramException("maxChildToolCalls exceeded at " + path);
@@ -881,13 +881,14 @@ namespace OniMcp.Tools
                 return result.Content[0].Text ?? "";
             }
 
-            private static bool IsBlockedChildTool(string toolName)
+private static bool IsBlockedChildTool(string toolName, JObject arguments)
             {
-                return string.Equals(toolName, ToolName, StringComparison.OrdinalIgnoreCase)
+return IsProgramCall(toolName, arguments)
                     || string.Equals(toolName, "agent_script_run", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(toolName, "agent_flow_execute", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(toolName, "agent_program_run", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(toolName, ToolBatchTools.ToolName, StringComparison.OrdinalIgnoreCase);
+|| string.Equals(toolName, ToolBatchTools.ToolName, StringComparison.OrdinalIgnoreCase)
+|| ServerTools.IsServerControlDomainCall(toolName, arguments, "batch", "call_many", "many");
             }
 
             private static string Truncate(string text, int maxChars)
