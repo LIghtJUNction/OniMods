@@ -682,12 +682,6 @@ namespace OniMcp.Server
                             return CreateToolTask(callParams, sessionId);
                         return OniToolRegistry.CallTool(callParams.Name, callParams.Arguments);
 
-                    case "prompts/list":
-                        return new ListPromptsResult { Prompts = OniPromptRegistry.GetPromptInfos() };
-
-                    case "prompts/get":
-                        return HandleGetPrompt(request);
-
                     case "resources/list":
                         return new ListResourcesResult { Resources = OniResourceRegistry.GetResourceInfos() };
 
@@ -759,7 +753,6 @@ namespace OniMcp.Server
                 Capabilities = new ServerCapabilities
                 {
                     Tools = new ToolsCapability { ListChanged = false },
-                    Prompts = new PromptsCapability { ListChanged = false },
                     Resources = new ResourcesCapability { Subscribe = false, ListChanged = false },
                     Tasks = new TasksCapability
                     {
@@ -788,20 +781,6 @@ namespace OniMcp.Server
                 }
             };
         }
-
-        private object HandleGetPrompt(JsonRpcRequest request)
-        {
-            var @params = request.Params?.ToObject<GetPromptParams>();
-            if (@params == null || string.IsNullOrEmpty(@params.Name))
-                return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, "Missing prompt name");
-
-            var prompt = OniPromptRegistry.GetPrompt(@params.Name, @params.Arguments);
-            if (prompt == null)
-                return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, $"Prompt not found: {@params.Name}");
-
-            return prompt;
-        }
-
         private object HandleReadResource(JsonRpcRequest request)
         {
             var @params = request.Params?.ToObject<ReadResourceParams>();

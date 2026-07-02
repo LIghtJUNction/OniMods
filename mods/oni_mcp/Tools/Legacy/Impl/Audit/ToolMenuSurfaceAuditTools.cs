@@ -93,8 +93,6 @@ namespace OniMcp.Tools
             yield return Covered(order++, "basic", "HarvestTool", "Harvest", "Designate harvest errands over an area", new[] { "colony_control domain=bio bioDomain=farming", "orders_control" }, new[] { "colony_control domain=bio bioDomain=farming" });
             yield return Covered(order++, "basic", "EmptyPipeTool", "EmptyPipe", "Empty pipe/duct/conveyor contents over an area", new[] { "read_control domain=world action=text_map", "orders_control domain=designation action=empty_conduits" }, new[] { "read_control domain=world action=text_map" });
             yield return Covered(order++, "basic", "DisconnectTool", "Disconnect", "Cut wire/pipe/duct/conveyor/travel tube connections over an area", new[] { "read_control domain=world action=text_map", "orders_control domain=designation action=cut_conduits" }, new[] { "read_control domain=world action=text_map" });
-            yield return Covered(order++, "basic", "OniMcpEditMarker", "Invalid", "Create an MCP edit marker request from a selected area", new[] { "game_control domain=ui uiDomain=edit_mark" }, new[] { "tools_read_resource" });
-
             order = 0;
             yield return Covered(order++, "sandbox", "SandboxBrushTool", "SandboxBrush", "Replace cells with selected element, mass, temperature and disease", new[] { "game_control" }, new[] { "game_control" });
             yield return Covered(order++, "sandbox", "SandboxSprinkleTool", "SandboxSprinkle", "Noise-scattered replace cells with selected element settings", new[] { "game_control" }, new[] { "game_control" });

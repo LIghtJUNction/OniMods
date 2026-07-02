@@ -23,29 +23,21 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "low",
                 Aliases = new List<string> { "ui_signal_control", "player_feedback_control" },
-                Tags = new List<string> { "ui", "feedback", "hint", "marker", "notification", "edit-mark", "planning" },
-                Description = "UI 反馈/编辑标记组合入口：domain=hint/edit_mark。hint 创建通知、浮字和地图标记；edit_mark 创建、列出和清除框选区域编辑请求。",
+                Tags = new List<string> { "ui", "feedback", "hint", "marker", "notification" },
+                Description = "UI 反馈组合入口：domain=hint。hint 创建通知、浮字和地图标记。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["domain"] = new McpToolParameter { Type = "string", Description = "hint 或 edit_mark，默认 hint", Required = false, EnumValues = new List<string> { "hint", "edit_mark" } },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=hint: notification/popup/marker；domain=edit_mark: create/list/clear", Required = true },
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "hint，默认 hint", Required = false, EnumValues = new List<string> { "hint" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=hint: notification/popup/marker", Required = true },
                     ["markerAction"] = new McpToolParameter { Type = "string", Description = "domain=hint action=marker 时的子动作：create/list/clear", Required = false, EnumValues = new List<string> { "create", "list", "clear" } },
                     ["title"] = new McpToolParameter { Type = "string", Description = "domain=hint action=notification 时通知标题", Required = false },
                     ["message"] = new McpToolParameter { Type = "string", Description = "domain=hint action=notification 时通知正文", Required = false },
                     ["text"] = new McpToolParameter { Type = "string", Description = "domain=hint action=popup 时浮动提示文字", Required = false },
                     ["style"] = new McpToolParameter { Type = "string", Description = "domain=hint action=popup 时图标风格", Required = false },
                     ["label"] = new McpToolParameter { Type = "string", Description = "domain=hint action=marker markerAction=create 时标签文字", Required = false },
-                    ["prompt"] = new McpToolParameter { Type = "string", Description = "domain=edit_mark action=create 时用户对框选区域的修改提示词", Required = false },
-                    ["areaId"] = new McpToolParameter { Type = "string", Description = "domain=edit_mark action=create 时可选区域句柄", Required = false },
                     ["x"] = new McpToolParameter { Type = "integer", Description = "目标格 X，按 action 解释", Required = false },
                     ["y"] = new McpToolParameter { Type = "integer", Description = "目标格 Y，按 action 解释", Required = false },
-                    ["x1"] = new McpToolParameter { Type = "integer", Description = "domain=edit_mark action=create 时区域起点 X", Required = false },
-                    ["y1"] = new McpToolParameter { Type = "integer", Description = "domain=edit_mark action=create 时区域起点 Y", Required = false },
-                    ["x2"] = new McpToolParameter { Type = "integer", Description = "domain=edit_mark action=create 时区域终点 X", Required = false },
-                    ["y2"] = new McpToolParameter { Type = "integer", Description = "domain=edit_mark action=create 时区域终点 Y", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false },
-                    ["includeTextMap"] = new McpToolParameter { Type = "boolean", Description = "domain=edit_mark action=create 时是否内联文本地图，默认 true", Required = false },
-                    ["includeScreenshot"] = new McpToolParameter { Type = "boolean", Description = "domain=edit_mark action=create 时是否附带截图路径，默认 false", Required = false },
                     ["duration"] = new McpToolParameter { Type = "number", Description = "domain=hint action=popup/marker 时显示或保留秒数", Required = false },
                     ["focus"] = new McpToolParameter { Type = "boolean", Description = "是否移动相机到目标，按 action 解释", Required = false },
                     ["id"] = new McpToolParameter { Type = "string", Description = "action=clear 时目标 ID", Required = false },
@@ -64,12 +56,8 @@ namespace OniMcp.Tools
                         case "hints":
                         case "ui_hint":
                             return ControlUiHint().Handler(forwarded);
-                        case "edit_mark":
-                        case "edit_marks":
-                        case "edit_marker":
-                            return EditMarkTools.ControlEditMarkRequest().Handler(forwarded);
                         default:
-                            return CallToolResult.Error("domain must be hint or edit_mark");
+                            return CallToolResult.Error("domain must be hint");
                     }
                 }
             };

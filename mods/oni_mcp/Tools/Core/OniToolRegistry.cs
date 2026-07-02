@@ -276,7 +276,7 @@ namespace OniMcp.Tools
             if (name.StartsWith("server_") || name.StartsWith("logs_") || name.StartsWith("mcp_") || name.Contains("mcp")) return "server";
             if (name.StartsWith("database_")) return "database";
             if (name.StartsWith("research_")) return "research";
-            if (name.StartsWith("edit_mark_") || name.StartsWith("ui_")) return "ui";
+            if (name.StartsWith("ui_")) return "ui";
             if (name.StartsWith("map_")) return "map";
             if (name.StartsWith("sandbox_") || name.StartsWith("debug_")) return "sandbox";
             if (name.StartsWith("rocket") || name.StartsWith("launch_") || name.StartsWith("assignment_group_") || name.Contains("spacecraft")) return "rockets";

@@ -22,8 +22,8 @@ namespace OniMcp.Config
         [Limit(1024, 65535, 1)]
         public int Port { get; set; } = 8788;
 
-        [Option("Require token", "Require clients to send the configured bearer token.", "Authentication")]
-        public bool AuthEnabled { get; set; } = true;
+        [Option("Require token", "Require clients to send the configured bearer token. Disabled by default for local-only use.", "Authentication")]
+        public bool AuthEnabled { get; set; } = false;
 
         [Option("Token", "Bearer token required when token authentication is enabled.", "Authentication")]
         public string AuthToken { get; set; } = CreateAuthToken();
@@ -168,18 +168,38 @@ namespace OniMcp.Config
         {
             string path = ConfigPath;
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
-                return new OniMcpOptions();
+            {
+                var created = Sanitize(new OniMcpOptions());
+                TrySave(created);
+                return created;
+            }
 
             try
             {
                 string json = File.ReadAllText(path);
                 var loaded = JsonConvert.DeserializeObject<OniMcpOptions>(json);
-                return Sanitize(loaded ?? new OniMcpOptions());
+                var options = Sanitize(loaded ?? new OniMcpOptions());
+                TrySave(options);
+                return options;
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 OniMcpLog.Warning("[OniMcp] Failed to read config " + path + ": " + ex.Message);
-                return new OniMcpOptions();
+                var fallback = Sanitize(new OniMcpOptions());
+                TrySave(fallback);
+                return fallback;
+            }
+        }
+
+        private static void TrySave(OniMcpOptions options)
+        {
+            try
+            {
+                Save(options);
+            }
+            catch (Exception ex)
+            {
+                OniMcpLog.Warning("[OniMcp] Failed to write config " + ConfigPath + ": " + ex.Message);
             }
         }
 
@@ -191,9 +211,11 @@ namespace OniMcp.Config
             options.Host = NormalizeHost(options.Host);
             if (options.Port < 1024 || options.Port > 65535)
                 options.Port = 8788;
+
             options.AuthToken = (options.AuthToken ?? "").Trim();
             if (options.AuthEnabled && string.IsNullOrEmpty(options.AuthToken))
                 options.AuthToken = CreateAuthToken();
+
             options.ScreenshotRetentionMinutes = Clamp(options.ScreenshotRetentionMinutes, 1, 10080);
             options.ScreenshotMaxFiles = Clamp(options.ScreenshotMaxFiles, 1, 1000);
             return options;

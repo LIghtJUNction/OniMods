@@ -81,10 +81,6 @@ namespace OniMcp.Tools
             registerHidden(UiTools.ListUiActions());
             registerHidden(UiTools.OpenManagementScreen());
             registerHidden(UiTools.TriggerUiAction());
-            registerHidden(EditMarkTools.ControlEditMarkRequest());
-            registerHidden(EditMarkTools.CreateEditMarkRequest());
-            registerHidden(EditMarkTools.ListEditMarkRequests());
-            registerHidden(EditMarkTools.ClearEditMarkRequest());
             registerHidden(DuplicantTools.ControlDupeInfo());
             registerHidden(DuplicantTools.GetDupeStatusCheck());
             registerHidden(DuplicantTools.GetDupeDetails());

@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -41,13 +40,14 @@ namespace OniMcp.Support
             {
                 foreach (string candidate in ConfigCandidates)
                 {
-                    if (File.Exists(candidate))
+                    if (!string.IsNullOrEmpty(candidate) && File.Exists(candidate))
                         return candidate;
                 }
 
                 string configDir = Application.persistentDataPath;
                 if (string.IsNullOrEmpty(configDir))
                     configDir = ModPath;
+
                 return string.IsNullOrEmpty(configDir) ? ConfigFileName : Path.Combine(configDir, ConfigFileName);
             }
         }
@@ -56,12 +56,12 @@ namespace OniMcp.Support
         {
             get
             {
-                string modPath = ModPath;
                 string persistentPath = Application.persistentDataPath;
+                string modPath = ModPath;
                 return new[]
                 {
-                    string.IsNullOrEmpty(modPath) ? null : Path.Combine(modPath, ConfigFileName),
-                    string.IsNullOrEmpty(persistentPath) ? null : Path.Combine(persistentPath, ConfigFileName)
+                    string.IsNullOrEmpty(persistentPath) ? null : Path.Combine(persistentPath, ConfigFileName),
+                    string.IsNullOrEmpty(modPath) ? null : Path.Combine(modPath, ConfigFileName)
                 };
             }
         }

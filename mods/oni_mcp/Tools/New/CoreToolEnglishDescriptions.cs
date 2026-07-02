@@ -171,7 +171,7 @@ namespace OniMcp.Tools
             d["domain"] = "Game subsystem: launch, speed, state, save, dlc, sandbox, or ui.";
             d["action"] = "Game action for the selected subsystem.";
             d["kind"] = "Sandbox or UI subtype.";
-            d["uiDomain"] = "UI subsystem: action, feedback, or edit_mark.";
+            d["uiDomain"] = "UI subsystem: action, feedback.";
             d["speed"] = "Game speed level.";
             d["redAlert"] = "Red alert enabled state.";
             d["sandboxEnabled"] = "Sandbox mode enabled state.";

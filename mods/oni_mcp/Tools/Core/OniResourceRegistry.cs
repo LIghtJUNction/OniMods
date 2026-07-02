@@ -2072,9 +2072,6 @@ namespace OniMcp.Tools
                 case "feedback":
                 case "hint":
                 case "hints":
-                case "edit_mark":
-                case "edit_marks":
-                case "edit_marker":
                     arguments["uiDomain"] = domain;
                     arguments["domain"] = "ui";
                     return;
