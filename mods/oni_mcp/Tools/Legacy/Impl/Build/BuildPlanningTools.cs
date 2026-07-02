@@ -339,12 +339,12 @@ namespace OniMcp.Tools
                     if (!IsLinearUtilityPrefab(def.PrefabID))
                         return CallToolResult.Error("utility_auto_connect only supports linear utility prefabs such as Wire, LiquidConduit, GasConduit, SolidConduit and LogicWire");
 
+                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
                     string error;
-                    var path = ResolveUtilityPath(args, out error);
+                    var path = ResolveUtilityPath(args, maxCells, out error);
                     if (error != null)
                         return CallToolResult.Error(error);
 
-                    int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
                     if (path.Count > maxCells)
                         return CallToolResult.Error($"Path too large: {path.Count} cells, maxCells={maxCells}");
 
@@ -965,7 +965,7 @@ namespace OniMcp.Tools
             }
         }
 
-        private static List<CellCoord> ResolveUtilityPath(JObject args, out string error)
+        private static List<CellCoord> ResolveUtilityPath(JObject args, int maxCells, out string error)
         {
             error = null;
             var points = ParsePathPoints(args["points"]);
@@ -995,7 +995,10 @@ namespace OniMcp.Tools
 
             var path = new List<CellCoord>();
             for (int i = 0; i < points.Count - 1; i++)
-                AddManhattanSegment(path, points[i], points[i + 1]);
+            {
+                if (!TryAddManhattanSegment(path, points[i], points[i + 1], maxCells, out error))
+                    return path;
+            }
             return path;
         }
 
@@ -1346,21 +1349,38 @@ namespace OniMcp.Tools
             return result;
         }
 
-        private static void AddManhattanSegment(List<CellCoord> path, CellCoord from, CellCoord to)
+        private static bool TryAddManhattanSegment(List<CellCoord> path, CellCoord from, CellCoord to, int maxCells, out string error)
         {
+            error = null;
             int x = from.x;
             int y = from.y;
             AddPathPoint(path, x, y);
+            if (path.Count > maxCells)
+            {
+                error = $"Path too large: {path.Count} cells, maxCells={maxCells}";
+                return false;
+            }
             while (x != to.x)
             {
-                x += Math.Sign(to.x - x);
+                x += to.x > x ? 1 : -1;
                 AddPathPoint(path, x, y);
+                if (path.Count > maxCells)
+                {
+                    error = $"Path too large: {path.Count} cells, maxCells={maxCells}";
+                    return false;
+                }
             }
             while (y != to.y)
             {
-                y += Math.Sign(to.y - y);
+                y += to.y > y ? 1 : -1;
                 AddPathPoint(path, x, y);
+                if (path.Count > maxCells)
+                {
+                    error = $"Path too large: {path.Count} cells, maxCells={maxCells}";
+                    return false;
+                }
             }
+            return true;
         }
 
         private static void AddPathPoint(List<CellCoord> path, int x, int y)
@@ -1739,9 +1759,24 @@ namespace OniMcp.Tools
                 };
             }
 
-            var path = new List<CellCoord>();
-            AddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell));
             int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 200, 500));
+            string pathError;
+            var path = new List<CellCoord>();
+            if (!TryAddManhattanSegment(path, CellCoordFromCell(sourceCell), CellCoordFromCell(inputCell), maxCells, out pathError))
+            {
+                return new Dictionary<string, object>
+                {
+                    ["enabled"] = true,
+                    ["status"] = "path_too_large",
+                    ["input"] = CellCoordDictionary(inputCell),
+                    ["source"] = CellCoordDictionary(sourceCell),
+                    ["pathCells"] = path.Count,
+                    ["maxCells"] = maxCells,
+                    ["planned"] = 0,
+                    ["failed"] = 0,
+                    ["error"] = pathError
+                };
+            }
             if (path.Count > maxCells)
             {
                 return new Dictionary<string, object>
@@ -1822,8 +1857,8 @@ namespace OniMcp.Tools
 
         private static IEnumerable<CellCoord> LineCells(int x1, int y1, int x2, int y2, HashSet<string> seen)
         {
-            int dx = Math.Sign(x2 - x1);
-            int dy = Math.Sign(y2 - y1);
+            int dx = x2 == x1 ? 0 : x2 > x1 ? 1 : -1;
+            int dy = y2 == y1 ? 0 : y2 > y1 ? 1 : -1;
             int x = x1;
             int y = y1;
             while (true)
