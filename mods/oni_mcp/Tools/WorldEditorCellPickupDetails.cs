@@ -23,12 +23,21 @@ var entries = new List<CellPickupDetail>();
 
                 var primary = pickupable.PrimaryElement ?? pickupable.GetComponent<PrimaryElement>();
                 var prefab = pickupable.KPrefabID ?? pickupable.GetComponent<KPrefabID>();
+                int objectCell = Grid.PosToCell(pickupable.gameObject);
+                bool stored = pickupable.storage != null
+                    || (pickupable.KPrefabID != null && pickupable.KPrefabID.HasTag(GameTags.Stored));
+                Vector3 pos = pickupable.gameObject.transform.position;
                 entries.Add(new CellPickupDetail
                 {
                     Name = StripLinkTags(pickupable.GetProperName()),
                     PrefabId = prefab != null && prefab.PrefabTag.IsValid ? prefab.PrefabTag.Name : pickupable.gameObject.name,
                     ElementId = primary != null ? primary.ElementID.ToString() : "?",
-                    MassKg = primary != null ? primary.Mass : 0f
+                    MassKg = primary != null ? primary.Mass : 0f,
+                    Stored = stored,
+                    CachedCell = pickupable.cachedCell,
+                    ObjectCell = objectCell,
+                    X = pos.x,
+                    Y = pos.y
                 });
             }
 
@@ -37,7 +46,9 @@ var entries = new List<CellPickupDetail>();
 
             sb.AppendLine();
 sb.AppendLine("## Pickup Summary");
-sb.AppendLine("- 掉落物: " + entries.Count + " 项, " + entries.Sum(item => item.MassKg).ToString("F2") + " kg");
+            sb.AppendLine("- 掉落物: " + entries.Count + " 项, " + entries.Sum(item => item.MassKg).ToString("F2") + " kg"
+                + ", loose=" + entries.Count(item => !item.Stored)
+                + ", stored=" + entries.Count(item => item.Stored));
 sb.AppendLine("- 明细: shown=" + Math.Min(entries.Count, limit)
 + ", truncated=" + (entries.Count > limit).ToString().ToLowerInvariant()
 + ", itemLimit=" + limit);
@@ -61,7 +72,11 @@ foreach (CellPickupDetail item in entries.OrderByDescending(item => item.MassKg)
                 sb.AppendLine("  - " + item.Name
                     + " | ID=" + item.PrefabId
                     + " | 元素=" + item.ElementId
-                    + " | " + item.MassKg.ToString("F2") + " kg");
+                    + " | " + item.MassKg.ToString("F2") + " kg"
+                    + " | state=" + (item.Stored ? "stored" : "loose")
+                    + " | cachedCell=" + item.CachedCell
+                    + " | objectCell=" + item.ObjectCell
+                    + " | pos=(" + item.X.ToString("F2") + "," + item.Y.ToString("F2") + ")");
             }
         }
 
@@ -78,6 +93,11 @@ foreach (CellPickupDetail item in entries.OrderByDescending(item => item.MassKg)
             public string PrefabId;
             public string ElementId;
             public float MassKg;
+            public bool Stored;
+            public int CachedCell;
+            public int ObjectCell;
+            public float X;
+            public float Y;
         }
     }
 }
