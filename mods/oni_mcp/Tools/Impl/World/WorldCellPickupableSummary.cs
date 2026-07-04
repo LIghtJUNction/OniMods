@@ -18,7 +18,7 @@ namespace OniMcp.Tools
             {
                 if (pickupable == null || pickupable.gameObject == null)
                     continue;
-                if (pickupable.cachedCell != cell || !MatchesWorld(pickupable.gameObject, worldId))
+                if (!PickupableTouchesCell(pickupable, cell) || !MatchesWorld(pickupable.gameObject, worldId))
                     continue;
 
                 count++;
@@ -66,6 +66,13 @@ namespace OniMcp.Tools
                     .ToList(),
                 ["truncated"] = Math.Max(0, groups.Count - 16)
             };
+        }
+
+        private static bool PickupableTouchesCell(Pickupable pickupable, int cell)
+        {
+            if (pickupable == null || pickupable.gameObject == null)
+                return false;
+            return pickupable.cachedCell == cell || Grid.PosToCell(pickupable.gameObject) == cell;
         }
 
         private static string PrefabId(GameObject go)
