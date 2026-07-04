@@ -178,11 +178,11 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders_area", "area_order", "area_designate" },
-                Tags = new List<string> { "orders", "area", "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "扫", "擦", "毒", "消", "收" },
-                Description = "统一区域命令入口。action=dig/挖、sweep/扫、mop/擦、disinfect/毒、cancel/消、harvest/收；复用各具体订单参数，危险或大区域仍需 confirm=true。",
+                Tags = new List<string> { "orders", "area", "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "扫", "清扫", "擦", "毒", "消", "收" },
+                Description = "统一区域命令入口。action=dig/挖/挖掘、sweep/扫/清扫/clean、mop/擦/擦拭、disinfect/毒/消毒、cancel/消/取消、harvest/收/收获；复用各具体订单参数，危险或大区域仍需 confirm=true。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "区域命令：dig/挖、sweep/扫、mop/擦、disinfect/毒、cancel/消、harvest/收", Required = true, EnumValues = new List<string> { "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "扫", "擦", "毒", "消", "收" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "区域命令：dig/挖/挖掘、sweep/扫/清扫/clean、mop/擦/擦拭、disinfect/毒/消毒、cancel/消/取消、harvest/收/收获", Required = true, EnumValues = new List<string> { "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "挖掘", "扫", "清扫", "清理", "clean", "擦", "擦拭", "毒", "消毒", "消", "取消", "收", "收获" } },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "支持该参数的命令使用：差事优先级 1-9，默认 5", Required = false },
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "支持该参数的命令使用：是否设为红色最高优先级，默认 false", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep/harvest 支持：只预览不执行", Required = false },
@@ -209,16 +209,16 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders_designation_control", "map_designation_control" },
-                Tags = new List<string> { "orders", "designation", "deconstruct", "attack", "capture", "conduit", "manual-delivery", "拆", "杀", "捕" },
-                Description = "统一指定/取消类入口：action=deconstruct/拆、attack/杀、capture/捕、empty_conduits、cut_conduits、manual_delivery。只做路由聚合，保留各旧工具的 confirm 和安全限制。",
+                Tags = new List<string> { "orders", "designation", "deconstruct", "attack", "capture", "conduit", "manual-delivery", "拆", "杀", "捕", "捕捉", "抓捕" },
+                Description = "统一指定/取消类入口：action=deconstruct/拆/拆除、attack/杀/攻击、capture/捕/捕捉/抓捕/wrangle、empty_conduits、cut_conduits、manual_delivery。只做路由聚合，保留各旧工具的 confirm 和安全限制。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter
                     {
                         Type = "string",
-                        Description = "指定动作：deconstruct/拆、attack/杀、capture/捕、empty_conduits、cut_conduits、manual_delivery",
+                        Description = "指定动作：deconstruct/拆/拆除、attack/杀/攻击、capture/捕/捕捉/抓捕/wrangle、empty_conduits、cut_conduits、manual_delivery",
                         Required = true,
-                        EnumValues = new List<string> { "deconstruct", "attack", "capture", "empty_conduits", "cut_conduits", "manual_delivery", "拆", "杀", "捕" }
+                        EnumValues = new List<string> { "deconstruct", "attack", "capture", "empty_conduits", "cut_conduits", "manual_delivery", "拆", "拆除", "杀", "攻击", "捕", "捕捉", "抓捕", "wrangle" }
                     },
                     ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID；适用于 deconstruct/attack/capture/manual_delivery", Required = false },
                     ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；适用于 deconstruct/attack/cut_conduits/manual_delivery", Required = false },
@@ -308,6 +308,7 @@ namespace OniMcp.Tools
                 case "pickup":
                 case "pick_up":
                 case "clear":
+                case "clean":
                     return "sweep";
                 case "擦":
                 case "擦拭":
