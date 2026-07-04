@@ -294,10 +294,13 @@ namespace OniMcp.Tools
             case "挖":
             case "挖掘":
                 return "dig";
-            case "扫":
-            case "清扫":
-            case "收拾":
-                return "sweep";
+                case "扫":
+                case "清扫":
+                case "清理":
+                case "拾取":
+                case "搬运":
+                case "收拾":
+                    return "sweep";
             case "擦":
             case "擦拭":
             case "拖":
@@ -328,10 +331,11 @@ namespace OniMcp.Tools
             case "杀":
             case "攻击":
                 return "attack";
-            case "捕":
-            case "捕捉":
-            case "抓":
-                return "capture";
+                case "捕":
+                case "捕捉":
+                case "抓捕":
+                case "抓":
+                    return "capture";
             case "清管":
             case "清空管道":
                 return "empty_conduits";

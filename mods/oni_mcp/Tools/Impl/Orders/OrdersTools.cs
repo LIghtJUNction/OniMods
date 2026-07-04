@@ -68,6 +68,8 @@ Description = "Unified orders entrypoint. Supports priority plus work orders: ar
 
         private static string InferOrdersDomain(string action)
         {
+            string areaAction = NormalizeAreaAction(action);
+            string designationAction = NormalizeDesignationAction(action);
             switch (action)
             {
                 case "dig":
@@ -96,6 +98,10 @@ Description = "Unified orders entrypoint. Supports priority plus work orders: ar
                 case "delivery":
                     return "designation";
                 default:
+                    if (areaAction != action)
+                        return "area";
+                    if (designationAction != action)
+                        return "designation";
                     return "";
             }
         }
