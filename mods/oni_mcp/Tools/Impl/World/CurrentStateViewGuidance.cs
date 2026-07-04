@@ -100,7 +100,7 @@ namespace OniMcp.Tools
                 DetailHint("screenshot", "world_editor command=screenshot views=default,power,temperature waitFrames=2", "Capture current viewport across overlays; use as visual proof after map/connection edits."),
                 DetailHint("cell", "/active/map/cell_X_Y.md", "Exact cell: temperature suitability, objects, ports, lines, pickup stacks, Decision Hints for dig/mop/sweep/network risks."),
                 DetailHint("ports", "read_control domain=infrastructure action=nearby_ports x=... y=... radius=8 kind=all", "Local power/liquid/gas/logic/rail ports without broad scans."),
-                DetailHint("reachability", "read_control domain=world action=reachable_area radius=12 sampleLimit=12", "Compact duplicant movement range before rescue, dig, construction planning."),
+                DetailHint("reachability", "read_control domain=state action=current includeReachability=true reachabilityRadius=12", "Compact duplicant movement range before rescue, dig, construction planning; use standalone reachable_area only for repeated checks."),
                 DetailHint("ops", "world_editor command=read path=/active/ops/tools.md", "Grep-friendly operation file/tool index before issuing natural orders."),
                 DetailHint("edit", "/active/ops/orders.md, /active/ops/dupes.md, or /active/map/viewport.md SEARCH/REPLACE", "Execute typed orders, duplicant moves, or map-token edits after inspecting local detail.")
             };
