@@ -44,6 +44,7 @@ namespace OniMcp.Tools
                 ["why"] = "One-call starter build: auto-selects room candidate, digs interiors, builds toilet, wash basin, research station.",
                 ["expectedResult"] = "Returns executionPlan, priorityAction, rooms, generated calls, compact results, verificationPlan, nextActions.",
                 ["postRunReads"] = StarterPostRunReads(),
+                ["verificationAfterCall"] = StarterVerificationAfterCall(),
                 ["successCriteria"] = StarterSuccessCriteria(),
                 ["onFailure"] = StarterFailureReads()
             };
