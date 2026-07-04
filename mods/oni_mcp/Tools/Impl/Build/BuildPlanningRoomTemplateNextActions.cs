@@ -31,14 +31,16 @@ namespace OniMcp.Tools
 
             return new JObject
             {
-                ["tool"] = "tools_call_many",
+                ["tool"] = "server_control",
                 ["arguments"] = new JObject
                 {
+                    ["domain"] = "batch",
+                    ["action"] = "call_many",
                     ["responseMode"] = "summary",
                     ["maxTextChars"] = 900,
                     ["calls"] = calls
                 },
-                ["why"] = "Verify Outhouse, WashBasin, and ResearchCenter core cells in one low-token call; each cell shows debris, temperature, ports, Decision Hints, quick ops."
+                ["why"] = "Use the public batch endpoint to verify Outhouse, WashBasin, and ResearchCenter core cells in one low-token call; each cell shows debris, temperature, ports, Decision Hints, quick ops."
             };
         }
 
