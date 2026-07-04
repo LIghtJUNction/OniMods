@@ -34,7 +34,7 @@ namespace OniMcp.Tools
                     priority, "Build shell, door, core building."));
                 steps.Add(RoomStep("optional_sweep_debris", "orders_control", "sweep",
                     Rect(anchor.X + 1, anchor.Y + 1, anchor.X + anchor.Width - 2, anchor.Y + anchor.Height - 2),
-                    priority, "Sweep newly dug debris after placement if pathing allows."));
+                    priority, "Sweep newly dug debris if pathing allows."));
             }
 
             return steps;
@@ -43,25 +43,36 @@ namespace OniMcp.Tools
         private static JArray BuildRoomTemplateVerificationPlan(string kind, RoomTemplateAnchor anchor, int priority)
         {
             string purpose = kind == "starter"
-                ? "Confirm toilet, wash station, research station, interior digs, temperature, oxygen, and power anchors in one compact view."
-                : "Confirm room shell, door, core building, interior dig, temperature, and oxygen.";
+                ? "Confirm toilet, wash station, research station, interior digs, temperature, oxygen, power anchors in one compact view."
+                : "Confirm room shell, door, core building, interior dig, temperature, oxygen.";
             var plan = new JArray
             {
                 new JObject
                 {
                     ["step"] = "inspect_compact_result",
-                    ["why"] = "Use results[].summary/errors first; avoid broad map reads unless a blocker appears."
+                    ["why"] = "Use results[].summary/errors first; avoid broad map reads unless blocker appears."
                 },
                 ZoomRead("verify_local_zoom", anchor, purpose)
             };
 
             if (kind == "starter")
             {
-                AddCellRead(plan, "verify_outhouse_cell", anchor.X + 2, anchor.Y + 1,
-                    "Verify outhouse blueprint/building, debris, temperature, element, and Decision Hints.");
-                AddCellRead(plan, "verify_wash_basin_cell", anchor.X + 4, anchor.Y + 1,
-                    "Verify wash basin blueprint/building, ports if any, debris, and Decision Hints.");
                 int roomWidth = Math.Max(7, (anchor.Width - 1) / 2);
+                plan.Add(new JObject
+                {
+                    ["step"] = "expected_anchor_cells",
+                    ["why"] = "Use these exact cells to verify the one-call starter template without counting columns.",
+                    ["cells"] = new JArray
+                    {
+                        ExpectedCell("Outhouse", anchor.X + 2, anchor.Y + 1),
+                        ExpectedCell("WashBasin", anchor.X + 4, anchor.Y + 1),
+                        ExpectedCell("ResearchCenter", anchor.X + roomWidth + 3, anchor.Y + 1)
+                    }
+                });
+                AddCellRead(plan, "verify_outhouse_cell", anchor.X + 2, anchor.Y + 1,
+                    "Verify outhouse blueprint/building, debris, temperature, element, Decision Hints.");
+                AddCellRead(plan, "verify_wash_basin_cell", anchor.X + 4, anchor.Y + 1,
+                    "Verify wash basin blueprint/building, ports if any, debris, Decision Hints.");
                 AddCellRead(plan, "verify_research_station_cell", anchor.X + roomWidth + 3, anchor.Y + 1,
                     "Verify lab research station blueprint/building without counting columns.");
             }
@@ -100,7 +111,8 @@ namespace OniMcp.Tools
                     ["priority"] = priority,
                     ["dryRun"] = true
                 },
-                ["call"] = "扫 x1=" + anchor.X + " y1=" + anchor.Y
+                ["call"] = "orders_control domain=area action=sweep x1=" + anchor.X
+                    + " y1=" + anchor.Y
                     + " x2=" + (anchor.X + anchor.Width - 1)
                     + " y2=" + (anchor.Y + anchor.Height - 1)
                     + " priority=" + priority + " dryRun=true",
@@ -117,7 +129,7 @@ namespace OniMcp.Tools
                     ["logLimit"] = 220
                 },
                 ["call"] = "world_editor command=read path=/active/diagnostics/logs.md logLimit=220",
-                ["why"] = "Only read logs when a generated call fails, crashes, or returns unsafe diagnostics."
+                ["why"] = "Only read logs when generated work fails, crashes, or returns unsafe diagnostics."
             });
             return plan;
         }
@@ -140,9 +152,21 @@ namespace OniMcp.Tools
                 ["tool"] = "world_editor",
                 ["arguments"] = args,
                 ["call"] = "world_editor command=zoom views=default,power,oxygen,temperature compact=true x1="
-                    + anchor.X + " y1=" + anchor.Y + " x2=" + (anchor.X + anchor.Width - 1)
+                    + anchor.X + " y1=" + anchor.Y
+                    + " x2=" + (anchor.X + anchor.Width - 1)
                     + " y2=" + (anchor.Y + anchor.Height - 1),
                 ["why"] = why
+            };
+        }
+
+        private static JObject ExpectedCell(string prefabId, int x, int y)
+        {
+            return new JObject
+            {
+                ["prefabId"] = prefabId,
+                ["x"] = x,
+                ["y"] = y,
+                ["cellPath"] = "/active/map/cell_" + x + "_" + y + ".md"
             };
         }
 
@@ -174,13 +198,7 @@ namespace OniMcp.Tools
 
         private static JObject Rect(int x1, int y1, int x2, int y2)
         {
-            return new JObject
-            {
-                ["x1"] = x1,
-                ["y1"] = y1,
-                ["x2"] = x2,
-                ["y2"] = y2
-            };
+            return new JObject { ["x1"] = x1, ["y1"] = y1, ["x2"] = x2, ["y2"] = y2 };
         }
     }
 }
