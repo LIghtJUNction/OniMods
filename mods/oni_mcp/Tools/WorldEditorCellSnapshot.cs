@@ -200,6 +200,7 @@ namespace OniMcp.Tools
             AppendCellEndpointSnapshot(sb, "气管", OverlayModes.GasConduits.ID, cell);
             AppendCellEndpointSnapshot(sb, "信号", OverlayModes.Logic.ID, cell);
             AppendCellEndpointSnapshot(sb, "运输", OverlayModes.SolidConveyor.ID, cell);
+            AppendCellInfrastructureDetailHint(sb, cell);
         }
 
         private static void AppendCellEndpointSnapshot(StringBuilder sb, string label, HashedString mode, int cell)
