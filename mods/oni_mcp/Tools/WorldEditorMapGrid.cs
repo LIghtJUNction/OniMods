@@ -323,6 +323,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             foreach (var item in legend.OrderBy(kv => kv.Key))
                 sb.AppendLine(IsConnectionGlyph(item.Key) ? "- `" + item.Key + "` : 连接 (Connection) | " + item.Value : FormatLegendLine(item.Key, item.Value));
             AppendInfrastructureLegend(sb, activeMode);
+            AppendInfrastructureReadHints(sb, activeMode);
             sb.AppendLine();
         }
 
