@@ -42,6 +42,12 @@ Send one comment using `.env`:
 python .agents/skills/bilibili-live-comments/scripts/bilibili_live_comments.py --room-id 31882282 --send 'message'
 ```
 
+Send assistant status comments without putting a literal `>` in the shell:
+
+```bash
+python .agents/skills/bilibili-live-comments/scripts/bilibili_live_comments.py --room-id 31882282 --assistant-send 'message'
+```
+
 ## Notes
 
 - The script automatically searches upward from the current working directory for `.env`.

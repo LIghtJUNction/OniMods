@@ -155,17 +155,24 @@ def main():
     parser.add_argument("--timeout", type=float, default=8.0)
     parser.add_argument("--print-existing", action="store_true")
     parser.add_argument("--send", help="Send one live-room comment, then exit.")
+    parser.add_argument("--assistant-send", help="Send one assistant status comment; prefixes '> ' internally.")
     parser.add_argument("--send-max-length", type=int, default=32)
     parser.add_argument("--send-delay", type=float, default=1.0)
     args = parser.parse_args()
 
     cookie = os.environ.get("BILI_COOKIE")
-    if args.send:
+    send_message = args.send
+    if args.assistant_send:
+        send_message = args.assistant_send.strip()
+        if not send_message.startswith(">"):
+            send_message = "> " + send_message
+
+    if send_message:
         if not cookie:
-            raise SystemExit("BILI_COOKIE missing. Ask user for Bilibili cookie and save it in .env.")
+            raise SystemExit("BILI_COOKIE missing. Ask user for a fresh Bilibili cookie and save it in .env.")
         result = send_with_segments(
             args.room_id,
-            args.send,
+            send_message,
             args.timeout,
             cookie,
             max(8, args.send_max_length),
