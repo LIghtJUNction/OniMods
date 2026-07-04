@@ -168,10 +168,10 @@ private static JArray ManagementQuickEdits()
                 QuickEdit("rename_dupe", "/active/management/dupes.md", "rename name=\"Dig\" newName=\"矿工\""),
                 QuickEdit("schedule", "/active/management/schedule.md", "set_block schedule=\"AI轮班-1\" hour=7 group=Worktime"),
                 QuickEdit("assign_schedule", "/active/management/schedule.md", "assign_dupe name=\"Dig\" schedule=\"AI轮班-1\""),
-                QuickEdit("priorities", "/active/management/priorities.md", "priority name=\"Dig\" category=\"Dig\" value=7"),
-                QuickEdit("food", "/active/management/food.md", "food name=\"Dig\" food=\"MushBar\" allowed=false"),
+                QuickEdit("priorities", "/active/management/priorities.md", "priority name=\"Dig\" choreGroup=\"Dig\" priority=5 confirm=true"),
+                QuickEdit("food", "/active/management/food.md", "food name=\"Dig\" food=\"MushBar\" allow=false"),
                 QuickEdit("skill", "/active/management/skills.md", "learn_skill name=\"Dig\" skillId=\"Mining1\" confirm=true"),
-                QuickEdit("research", "/active/management/research.md", "research techId=\"BasicFarming\"")
+                QuickEdit("research", "/active/management/research.md", "research id=\"BasicFarming\"")
             };
         }
 
