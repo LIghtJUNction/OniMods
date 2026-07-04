@@ -120,6 +120,35 @@ namespace OniMcp.Tools
             return CallToolResult.Text(sb.ToString());
         }
 
+        private static CallToolResult ReadDupesManagementMarkdown(JObject args, string path)
+        {
+            var state = DupesControlEntryTools.ControlDupes().Handler(new JObject { ["domain"] = "info", ["action"] = "attributes" });
+            if (WantsManagementJson(args))
+                return StateJsonResult(state);
+            var sb = ManagementHeader("Duplicant Files", path, "dupes_control domain=command");
+            sb.AppendLine("## Duplicants");
+            sb.AppendLine("| Name | ID | World | Cell | Detail File |");
+            sb.AppendLine("| --- | ---: | ---: | --- | --- |");
+            foreach (var dupe in LiveDupes().OrderBy(dupe => dupe.GetProperName()))
+            {
+                int id = dupe.GetComponent<KPrefabID>()?.InstanceID ?? -1;
+                int cell = Grid.PosToCell(dupe.transform.GetPosition());
+                string pos = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) + "," + Grid.CellRow(cell) : "?";
+                sb.AppendLine("| " + Esc(dupe.GetProperName()) + " | " + id
+                    + " | " + dupe.GetMyWorldId()
+                    + " | " + pos
+                    + " | `/active/dupes/" + Esc(GetDupeDetailFileName(dupe)) + "` |");
+            }
+            AppendEditCommands(sb, new[]
+            {
+                "rename name=\"Dig\" newName=\"矿工\"",
+                "改名 name=\"Ran\" newName=\"研究\""
+            });
+            sb.AppendLine();
+            sb.AppendLine("Tip: each detail file also supports editing its `Name:` line directly.");
+            return CallToolResult.Text(sb.ToString());
+        }
+
         private static CallToolResult ReadFoodManagementMarkdown(JObject args, string path)
         {
             var state = ManagementTools.ControlManagement().Handler(new JObject { ["domain"] = "diet", ["action"] = "status", ["includeAllFoods"] = false });
@@ -213,6 +242,7 @@ namespace OniMcp.Tools
             sb.AppendLine("| --- | --- | --- | --- |");
             sb.AppendLine("| `/active/management/schedule.md` | Schedule | `set_block`, `assign_dupe`, `create_schedule` | `set_block schedule=\"AI轮班-1\" hour=7 group=Worktime` |");
             sb.AppendLine("| `/active/management/priorities.md` | Priorities | `priority`, `priority_settings` | `priority name=\"Dig\" choreGroup=\"Dig\" priority=9` |");
+            sb.AppendLine("| `/active/management/dupes.md` | Duplicants | `rename` | `rename name=\"Dig\" newName=\"矿工\"` |");
             sb.AppendLine("| `/active/management/food.md` | Food | `food`, `food_policy` | `food allDupes=true food=\"MushBar\" allow=false` |");
             sb.AppendLine("| `/active/management/skills.md` | Skills | `learn_skill` | `learn_skill name=\"Dig\" skillId=\"Mining1\" confirm=true` |");
             sb.AppendLine("| `/active/management/research.md` | Research | `research`, `clear_research` | `research id=\"ImprovedOxygen\" confirm=true` |");

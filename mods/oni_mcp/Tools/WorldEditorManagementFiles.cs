@@ -15,6 +15,7 @@ namespace OniMcp.Tools
             return relative == "management/index.md"
                 || relative == "management/schedule.md"
                 || relative == "management/priorities.md"
+                || relative == "management/dupes.md"
                 || relative == "management/food.md"
                 || relative == "management/skills.md"
                 || relative == "management/research.md";
@@ -29,6 +30,8 @@ namespace OniMcp.Tools
                 return ReadScheduleManagementMarkdown(args, path);
             if (relative == "management/priorities.md")
                 return ReadPrioritiesManagementMarkdown(args, path);
+            if (relative == "management/dupes.md")
+                return ReadDupesManagementMarkdown(args, path);
             if (relative == "management/food.md")
                 return ReadFoodManagementMarkdown(args, path);
             if (relative == "management/skills.md")
@@ -88,6 +91,7 @@ namespace OniMcp.Tools
             string head = NormalizeManagementVerb(FirstWord(line));
             return head == "set_block" || head == "assign_dupe" || head == "create_schedule"
                 || head == "priority" || head == "priority_settings"
+                || head == "rename"
                 || head == "food" || head == "food_policy"
                 || head == "learn_skill" || head == "research" || head == "clear_research";
         }
@@ -100,6 +104,8 @@ namespace OniMcp.Tools
                 return ExecuteScheduleCommand(verb, kv);
             if (relative == "management/priorities.md")
                 return ExecutePriorityCommand(verb, kv);
+            if (relative == "management/dupes.md")
+                return ExecuteDupeCommand(verb, kv);
             if (relative == "management/food.md")
                 return ExecuteFoodCommand(verb, kv);
             if (relative == "management/skills.md")
@@ -130,6 +136,11 @@ namespace OniMcp.Tools
                 case "优先级设置":
                 case "工作优先级":
                     return "priority_settings";
+                case "改名":
+                case "命名":
+                case "重命名":
+                case "名字":
+                    return "rename";
                 case "食物":
                 case "饮食":
                     return "food";
@@ -168,6 +179,13 @@ namespace OniMcp.Tools
             if (verb == "priority_settings")
                 return DupesControlEntryTools.ControlDupes().Handler(WithDomain(kv, "priority", "settings_set"));
             return CallToolResult.Error("priorities.md supports priority, priority_settings");
+        }
+
+        private static CallToolResult ExecuteDupeCommand(string verb, JObject kv)
+        {
+            if (verb == "rename")
+                return DupesControlEntryTools.ControlDupes().Handler(WithDomain(kv, "command", "rename"));
+            return CallToolResult.Error("dupes.md supports rename");
         }
 
         private static CallToolResult ExecuteFoodCommand(string verb, JObject kv)
