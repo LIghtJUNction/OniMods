@@ -338,7 +338,9 @@ namespace OniMcp.Tools
                     ["command"] = "read",
                     ["path"] = "/active/map/cell_" + (anchor.X + 2) + "_" + (anchor.Y + 1) + ".md"
                     },
-                    ["why"] = "Verify core building cell, debris, material status, temperature, ports, Decision Hints, and quick ops."
+                    ["why"] = kind == "starter"
+                        ? "Verify every returned rooms[].coreCells[].cellPath for Outhouse, WashBasin, ResearchCenter; each cell shows debris, material status, temperature, ports, Decision Hints, and quick ops."
+                        : "Verify core building cell, debris, material status, temperature, ports, Decision Hints, and quick ops."
                 },
                 new JObject
                 {
