@@ -178,11 +178,11 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders_area", "area_order", "area_designate" },
-                Tags = new List<string> { "orders", "area", "dig", "sweep", "mop", "disinfect", "cancel", "harvest" },
-                Description = "统一区域命令入口。action=dig/sweep/mop/disinfect/cancel/harvest；复用各具体订单参数，危险或大区域仍需 confirm=true。",
+                Tags = new List<string> { "orders", "area", "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "扫", "擦", "毒", "消", "收" },
+                Description = "统一区域命令入口。action=dig/挖、sweep/扫、mop/擦、disinfect/毒、cancel/消、harvest/收；复用各具体订单参数，危险或大区域仍需 confirm=true。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "区域命令：dig、sweep、mop、disinfect、cancel、harvest", Required = true, EnumValues = new List<string> { "dig", "sweep", "mop", "disinfect", "cancel", "harvest" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "区域命令：dig/挖、sweep/扫、mop/擦、disinfect/毒、cancel/消、harvest/收", Required = true, EnumValues = new List<string> { "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "扫", "擦", "毒", "消", "收" } },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "支持该参数的命令使用：差事优先级 1-9，默认 5", Required = false },
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "支持该参数的命令使用：是否设为红色最高优先级，默认 false", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep/harvest 支持：只预览不执行", Required = false },
@@ -209,16 +209,16 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders_designation_control", "map_designation_control" },
-                Tags = new List<string> { "orders", "designation", "deconstruct", "attack", "capture", "conduit", "manual-delivery" },
-                Description = "统一指定/取消类入口：action=deconstruct/attack/capture/empty_conduits/cut_conduits/manual_delivery。只做路由聚合，保留各旧工具的 confirm 和安全限制。",
+                Tags = new List<string> { "orders", "designation", "deconstruct", "attack", "capture", "conduit", "manual-delivery", "拆", "杀", "捕" },
+                Description = "统一指定/取消类入口：action=deconstruct/拆、attack/杀、capture/捕、empty_conduits、cut_conduits、manual_delivery。只做路由聚合，保留各旧工具的 confirm 和安全限制。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter
                     {
                         Type = "string",
-                        Description = "指定动作：deconstruct、attack、capture、empty_conduits、cut_conduits、manual_delivery",
+                        Description = "指定动作：deconstruct/拆、attack/杀、capture/捕、empty_conduits、cut_conduits、manual_delivery",
                         Required = true,
-                        EnumValues = new List<string> { "deconstruct", "attack", "capture", "empty_conduits", "cut_conduits", "manual_delivery" }
+                        EnumValues = new List<string> { "deconstruct", "attack", "capture", "empty_conduits", "cut_conduits", "manual_delivery", "拆", "杀", "捕" }
                     },
                     ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID；适用于 deconstruct/attack/capture/manual_delivery", Required = false },
                     ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；适用于 deconstruct/attack/cut_conduits/manual_delivery", Required = false },
@@ -238,7 +238,7 @@ namespace OniMcp.Tools
                 }),
                 Handler = args =>
                 {
-                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+                    string action = NormalizeDesignationAction(args["action"]?.ToString());
                     switch (action)
                     {
                         case "deconstruct":
@@ -259,7 +259,7 @@ namespace OniMcp.Tools
                         case "delivery":
                             return ConfigureManualDelivery().Handler(args);
                         default:
-                            return CallToolResult.Error("action must be deconstruct, attack, capture, empty_conduits, cut_conduits, or manual_delivery");
+                    return CallToolResult.Error("action must be deconstruct/拆, attack/杀, capture/捕, empty_conduits, cut_conduits, or manual_delivery");
                     }
                 }
             };
@@ -267,7 +267,7 @@ namespace OniMcp.Tools
 
         private static CallToolResult RunAreaAction(JObject args)
         {
-            string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
+            string action = NormalizeAreaAction(args["action"]?.ToString());
             switch (action)
             {
                 case "dig":
@@ -283,7 +283,68 @@ namespace OniMcp.Tools
                 case "harvest":
                     return HarvestArea().Handler(args);
                 default:
-                    return CallToolResult.Error("action must be dig, sweep, mop, disinfect, cancel, or harvest");
+                    return CallToolResult.Error("action must be dig/挖, sweep/扫, mop/擦, disinfect/毒, cancel/消, or harvest/收");
+            }
+        }
+
+        private static string NormalizeAreaAction(string action)
+        {
+            switch ((action ?? string.Empty).Trim().ToLowerInvariant())
+            {
+            case "挖":
+            case "挖掘":
+                return "dig";
+            case "扫":
+            case "清扫":
+            case "收拾":
+                return "sweep";
+            case "擦":
+            case "擦拭":
+            case "拖":
+            case "拖地":
+                return "mop";
+            case "毒":
+            case "消毒":
+                return "disinfect";
+            case "收":
+            case "收获":
+            case "采收":
+                return "harvest";
+            case "消":
+            case "取消":
+                return "cancel";
+            default:
+                return (action ?? string.Empty).Trim().ToLowerInvariant();
+            }
+        }
+
+        private static string NormalizeDesignationAction(string action)
+        {
+            switch ((action ?? string.Empty).Trim().ToLowerInvariant())
+            {
+            case "拆":
+            case "拆除":
+                return "deconstruct";
+            case "杀":
+            case "攻击":
+                return "attack";
+            case "捕":
+            case "捕捉":
+            case "抓":
+                return "capture";
+            case "清管":
+            case "清空管道":
+                return "empty_conduits";
+            case "剪":
+            case "剪断":
+            case "剪管":
+                return "cut_conduits";
+            case "送":
+            case "送货":
+            case "手动送货":
+                return "manual_delivery";
+            default:
+                return (action ?? string.Empty).Trim().ToLowerInvariant();
             }
         }
 
