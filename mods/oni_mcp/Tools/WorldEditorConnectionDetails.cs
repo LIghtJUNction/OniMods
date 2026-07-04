@@ -57,9 +57,9 @@ namespace OniMcp.Tools
 
             sb.AppendLine("## Connection Details (" + title + ")");
             sb.AppendLine("- format: `(x,y): glyph=符号 dirs=UDLR links=U:(x,y),R:(x,y) to=(neighbor...) extra`");
-            sb.AppendLine("- legend: U=up D=down L=left R=right; bridgePorts shows the building-side jump from input to output.");
+            sb.AppendLine("- legend: U=up D=down L=left R=right; `⌒`=bridge, `⊗`=input port, `⊙`=output port.");
             sb.AppendLine("- read: `dirs=.` means an endpoint or disconnected segment; compare `links`/`to` to verify actual neighbor cells instead of counting columns.");
-            sb.AppendLine("- bridge: cells with `bridgePorts` jump through the building; do not infer a direct wire/pipe connection across the bridge footprint.");
+            sb.AppendLine("- bridge: `bridgeRoute=from:(x,y) via:⌒ to:(x,y)` jumps through the building; do not infer direct wire/pipe connection across bridge footprint.");
             sb.AppendLine("- inspect: open `/active/map/cell_X_Y.md` for exact ports, building role, bridge, dropped items, and quick orders.");
             foreach (string line in connections.Distinct())
                 sb.AppendLine(line);
@@ -248,13 +248,22 @@ namespace OniMcp.Tools
                 parts.Add("out=" + CellCoord(building.GetPowerOutputCell()));
             var consumer = building.GetComponent<EnergyConsumer>();
             if (consumer != null)
+            {
+                parts.Add("role=consumer");
                 parts.Add("load=" + consumer.WattsNeededWhenActive.ToString("F0") + "W");
+            }
             var generator = building.GetComponent<Generator>();
             if (generator != null)
+            {
+                parts.Add("role=generator");
                 parts.Add("gen=" + generator.WattageRating.ToString("F0") + "W");
+            }
             var battery = building.GetComponent<Battery>();
             if (battery != null)
+            {
+                parts.Add("role=battery");
                 parts.Add("battery=" + battery.JoulesAvailable.ToString("F0") + "/" + battery.Capacity.ToString("F0") + "J");
+            }
             return parts.Count == 0 ? null : EndpointPrefix(cell, building) + string.Join(" ", parts.ToArray());
         }
 
@@ -322,7 +331,7 @@ namespace OniMcp.Tools
             string ports = BridgePortText(go, building, mode);
             return string.IsNullOrEmpty(ports)
                 ? "bridge=" + id
-                : "bridge=" + id + " bridgePorts=" + ports;
+                : "bridge=" + id + " bridgePorts=" + ports + " bridgeRoute=" + ports;
         }
 
         private static string BridgePortText(GameObject go, Building building, HashedString mode)
@@ -362,7 +371,7 @@ return BridgePortRoute(input, output);
 
 private static string BridgePortRoute(int input, int output)
 {
-return "⊗" + CellCoord(input) + "->⌒->⊙" + CellCoord(output);
+        return "from:" + CellCoord(input) + " via:⌒ to:" + CellCoord(output);
 }
 
 private static int FirstLogicPortCell(LogicPorts ports, LogicPorts.Port[] info)
