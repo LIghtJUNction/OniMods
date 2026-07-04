@@ -8,7 +8,7 @@ namespace OniMcp.Tools
         {
             return action == "dig" || action == "deconstruct" || action == "mop"
                 || action == "attack" || action == "harvest" || action == "cancel"
-                || action == "sweep" || action == "disinfect";
+                || action == "sweep" || action == "disinfect" || action == "capture";
         }
 
         private static string ParseOrderAction(string token)
@@ -32,10 +32,19 @@ namespace OniMcp.Tools
                 case "消毒":
                 case "杀菌":
                 case "灭菌": return "disinfect";
-                case "扫":
-                case "清扫": return "sweep";
-                default: return string.Empty;
-            }
+            case "扫":
+            case "清扫":
+            case "打扫":
+            case "收拾":
+            case "捡":
+            case "捡起":
+            case "拾取":
+            case "搬运": return "sweep";
+            case "捕":
+            case "捕捉":
+            case "抓捕": return "capture";
+            default: return string.Empty;
+        }
         }
 
         private static bool IsEmptyMapSymbol(char symbol)

@@ -250,6 +250,7 @@ namespace OniMcp.Tools
             case "捡起":
             case "拾取":
             case "搬运":
+            case "收拾":
             case "扫地":
             case "sweep":
             case "pickup":

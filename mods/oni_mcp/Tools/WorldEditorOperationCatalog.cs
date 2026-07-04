@@ -55,7 +55,7 @@ namespace OniMcp.Tools
             sb.AppendLine("| --- | --- | --- | --- | --- |");
             sb.AppendLine("| 挖/挖掘 | `/active/ops/orders.md` | cell/rect/areaId | dig | room interiors and access paths |");
             sb.AppendLine("| 擦/拖地 | `/active/ops/orders.md` | cell/rect/areaId | mop | liquid cleanup |");
-            sb.AppendLine("| 扫/清扫 | `/active/ops/orders.md` | cell/rect/areaId | sweep | dropped items to storage |");
+            sb.AppendLine("| 扫/清扫/打扫/收拾 | `/active/ops/orders.md` | cell/rect/areaId | sweep | dropped items to storage |");
             sb.AppendLine("| 毒/消毒 | `/active/ops/orders.md` | cell/rect/areaId | disinfect | germ cleanup |");
             sb.AppendLine("| 拆/拆除 | `/active/ops/orders.md` | building cell or id | deconstruct | designation target |");
             sb.AppendLine("| 杀/攻击 | `/active/ops/orders.md` | critter cell or id | attack | designation target |");

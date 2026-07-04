@@ -101,7 +101,7 @@ namespace OniMcp.Tools
                     orderArgs["priority"] = priority;
                     orderArgs["confirm"] = ToolUtil.GetBool(parentArgs, "confirm", false);
 
-                    if (action == "deconstruct" || action == "attack")
+                    if (action == "deconstruct" || action == "attack" || action == "capture")
                     {
                         orderArgs["domain"] = "designation";
                         orderArgs["action"] = action;
@@ -224,7 +224,7 @@ namespace OniMcp.Tools
         private static CallToolResult UnsupportedMapEdit(IEnumerable<MapEditCell> cells)
         {
             var sample = cells.Take(8).Select(c => $"({c.X},{c.Y}) {c.FromToken}->{c.ToToken}");
-            return CallToolResult.Error("Unsupported map cell transitions. Use empty -> 建筑名:优先级 for build, or replace cells with 挖/拆/擦/杀/收/消 plus optional :priority for orders. Unsupported: " + string.Join(", ", sample));
+            return CallToolResult.Error("Unsupported map cell transitions. Use empty -> 建筑名:优先级 for build, or replace cells with 挖/拆/擦/扫/毒/杀/收/消/捕 plus optional :priority for orders. Unsupported: " + string.Join(", ", sample));
         }
 
         private static List<MapEditCell> ParseMapEditChanges(string current, string search, string replacement, out string error)
