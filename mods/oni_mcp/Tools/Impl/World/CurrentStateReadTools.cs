@@ -359,6 +359,7 @@ private static JArray StarterDecisionTree()
                 },
                 ["why"] = "Compact duplicant movement ranges before planning dig/build/rescue work."
             },
+            LocalZoomNextCall(),
             new JObject
             {
                 ["tool"] = "read_control",
@@ -372,7 +373,41 @@ private static JArray StarterDecisionTree()
                     },
                     ["why"] = "Compact default viewport map if visual context is needed."
                 }
-            };
-        }
+        };
     }
+
+    private static JObject LocalZoomNextCall()
+    {
+        var args = new JObject
+        {
+            ["command"] = "zoom",
+            ["views"] = "default,power,temperature",
+            ["compact"] = true,
+            ["syncView"] = true,
+            ["focusCamera"] = true
+        };
+
+        var camera = Camera.main;
+        if (camera != null)
+        {
+            int cx = Mathf.Clamp(Mathf.RoundToInt(camera.transform.position.x), 0, Grid.WidthInCells - 1);
+            int cy = Mathf.Clamp(Mathf.RoundToInt(camera.transform.position.y), 0, Grid.HeightInCells - 1);
+            args["x1"] = Mathf.Clamp(cx - 10, 0, Grid.WidthInCells - 1);
+            args["y1"] = Mathf.Clamp(cy - 7, 0, Grid.HeightInCells - 1);
+            args["x2"] = Mathf.Clamp(cx + 10, 0, Grid.WidthInCells - 1);
+            args["y2"] = Mathf.Clamp(cy + 7, 0, Grid.HeightInCells - 1);
+        }
+        else
+        {
+            args["path"] = "/active/map/zoom_X1_Y1_X2_Y2.md";
+        }
+
+        return new JObject
+        {
+            ["tool"] = "world_editor",
+            ["arguments"] = args,
+            ["why"] = "Preferred local visual context: multi-view zoom syncs live camera/view, then use cell_X_Y only for exact details."
+        };
+    }
+}
 }
