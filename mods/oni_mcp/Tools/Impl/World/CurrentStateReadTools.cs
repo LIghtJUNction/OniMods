@@ -167,6 +167,7 @@ return new JArray
                 FileHint("/active/map/viewport.md", "Editable map for current camera viewport; move the camera to change this visible range."),
                 FileHint("/active/map/cell_X_Y.md", "Exact cell detail: element, objects, footprint/pivot, ports, line links, power role, pickup stacks, decision hints, quick ops."),
 FileHint("/active/map/zoom_X1_Y1_X2_Y2.md", "Local multi-view zoom; can sync camera and live overlay."),
+FileHint("/active/screenshots/index.md", "Viewport screenshots: current view or multi-view overlay captures for stream/visual verification."),
 FileHint("/active/dupes/reachability.md", "Optional duplicant movement range: compact reachable cells before rescue, dig, build, or access fixes."),
 FileHint("/active/infrastructure/power.md", "Low-token power audit: per-cell glyph/dirs/links/to, bridges, circuits, producers, consumers, batteries."),
 FileHint("/active/infrastructure/liquid_conduits.md", "Low-token liquid audit: pipe glyph/dirs/links/to, bridges, input ports, output ports."),
@@ -219,6 +220,7 @@ private static JArray ManagementQuickEdits()
                 ["bounds"] = new JObject { ["x1"] = x1, ["y1"] = y1, ["x2"] = x2, ["y2"] = y2 },
                 ["readVisible"] = "world_editor command=read path=/active/map/viewport.md compact=true view=default",
                 ["readPowerVisible"] = "world_editor command=read path=/active/infrastructure/power.md compact=true syncView=true",
+                ["captureVisible"] = "world_editor command=screenshot views=default,power,temperature waitFrames=2",
                 ["zoomHere"] = "world_editor command=zoom x1=" + x1 + " y1=" + y1 + " x2=" + x2 + " y2=" + y2 + " views=default,power,temperature compact=true"
             };
         }
@@ -288,6 +290,7 @@ private static JArray ManagementQuickEdits()
 DetailHint("overview", "read_control domain=state action=current", "Small first call: colony snapshot, editable files, next actions."),
 DetailHint("logs", "world_editor command=read path=/active/diagnostics/logs.md logLimit=220", "Low-token Player.log stability check after crashes, tester failures, or mod exceptions."),
                 DetailHint("zoom", "world_editor command=zoom x1=... y1=... x2=... y2=... views=default,power,temperature", "Local multi-view map; syncs live camera/view for the stream."),
+                DetailHint("screenshot", "world_editor command=screenshot views=default,power,temperature waitFrames=2", "Capture current viewport across overlays; use as visual proof after map/connection edits."),
                 DetailHint("cell", "/active/map/cell_X_Y.md", "Exact cell: temperature suitability, objects, ports, lines, pickup stacks, Decision Hints for dig/mop/sweep/network risks."),
                 DetailHint("ports", "read_control domain=infrastructure action=nearby_ports x=... y=... radius=8 kind=all", "Local power/liquid/gas/logic/rail ports without broad scans."),
                 DetailHint("reachability", "read_control domain=world action=reachable_area radius=12 sampleLimit=12", "Compact duplicant movement range before rescue, dig, or construction planning."),
