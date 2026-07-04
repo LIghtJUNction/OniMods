@@ -43,10 +43,13 @@ namespace OniMcp.Tools
                 ["editableFiles"] = EditableFiles(),
                 ["viewFiles"] = ViewFiles(),
                 ["managementQuickEdits"] = ManagementQuickEdits(),
+                ["liveViewport"] = LiveViewport(),
                 ["lookAroundPlan"] = LookAroundPlan(),
+                ["firstCallWorkflow"] = FirstCallWorkflow(),
                 ["progressiveDetail"] = ProgressiveDetail(),
                 ["infrastructureWorkflow"] = BuildInfrastructureWorkflow(),
                 ["stabilityWorkflow"] = BuildStabilityWorkflow(),
+                ["tokenBudget"] = TokenBudget(),
                 ["tokenHint"] = "First call agents. Default avoids broad map scans; pass includeInfrastructure/includeLogs only when needed.",
                 ["recommendedSecondCall"] = StarterRoomTemplateCall(),
                 ["starterPreflight"] = StarterPreflight(),
@@ -190,6 +193,55 @@ private static JArray ManagementQuickEdits()
         private static JObject QuickEdit(string action, string path, string example)
         {
             return new JObject { ["action"] = action, ["path"] = path, ["example"] = example };
+        }
+
+        private static JObject LiveViewport()
+        {
+            var camera = Camera.main;
+            if (camera == null)
+                return new JObject { ["ok"] = false, ["reason"] = "Camera not initialized" };
+
+            float size = camera.orthographicSize;
+            float aspect = camera.aspect;
+            int x1 = Mathf.Clamp(Mathf.RoundToInt(camera.transform.position.x - size * aspect), 0, Grid.WidthInCells - 1);
+            int x2 = Mathf.Clamp(Mathf.RoundToInt(camera.transform.position.x + size * aspect), 0, Grid.WidthInCells - 1);
+            int y1 = Mathf.Clamp(Mathf.RoundToInt(camera.transform.position.y - size), 0, Grid.HeightInCells - 1);
+            int y2 = Mathf.Clamp(Mathf.RoundToInt(camera.transform.position.y + size), 0, Grid.HeightInCells - 1);
+
+            return new JObject
+            {
+                ["ok"] = true,
+                ["center"] = new JObject
+                {
+                    ["x"] = Mathf.RoundToInt(camera.transform.position.x),
+                    ["y"] = Mathf.RoundToInt(camera.transform.position.y)
+                },
+                ["bounds"] = new JObject { ["x1"] = x1, ["y1"] = y1, ["x2"] = x2, ["y2"] = y2 },
+                ["readVisible"] = "world_editor command=read path=/active/map/viewport.md compact=true view=default",
+                ["readPowerVisible"] = "world_editor command=read path=/active/infrastructure/power.md compact=true syncView=true",
+                ["zoomHere"] = "world_editor command=zoom x1=" + x1 + " y1=" + y1 + " x2=" + x2 + " y2=" + y2 + " views=default,power,temperature compact=true"
+            };
+        }
+
+        private static JArray FirstCallWorkflow()
+        {
+            return new JArray
+            {
+                new JObject { ["step"] = 1, ["call"] = "read_control domain=state action=current", ["why"] = "Low-token colony, camera, editable files, recommended second call." },
+                new JObject { ["step"] = 2, ["call"] = "building_control domain=planning action=room_template kind=starter autoLayout=true priority=7 execute=true confirm=true", ["why"] = "One-call toilet, wash basin, research station, shell, doors, interior digs." },
+                new JObject { ["step"] = 3, ["call"] = "Use response.verificationPlan first; otherwise read /active/map/cell_X_Y.md only for failed cells.", ["why"] = "Verify locally without broad map scans." }
+            };
+        }
+
+        private static JObject TokenBudget()
+        {
+            return new JObject
+            {
+                ["default"] = "snapshot + file index + next calls only",
+                ["avoidByDefault"] = new JArray { "broad viewport maps", "Player.log tail", "all infrastructure ports", "full atmosphere scan" },
+                ["expandWith"] = new JArray { "includeState=true", "includeInfrastructure=true infrastructureKind=power", "includeLogs=true logLimit=160" },
+                ["editLoop"] = "current -> one write -> compact result -> only failed cell/detail reads"
+            };
         }
 
         private static JArray LookAroundPlan()
