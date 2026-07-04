@@ -291,33 +291,47 @@ namespace OniMcp.Tools
         {
             switch ((action ?? string.Empty).Trim().ToLowerInvariant())
             {
-            case "挖":
-            case "挖掘":
-                return "dig";
+                case "挖":
+                case "挖掘":
+                case "开挖":
+                    return "dig";
                 case "扫":
+                case "清":
                 case "清扫":
                 case "清理":
+                case "打扫":
                 case "捡":
                 case "捡起":
                 case "拾取":
                 case "搬运":
                 case "收拾":
+                case "pickup":
+                case "pick_up":
+                case "clear":
                     return "sweep";
-            case "擦":
-            case "擦拭":
-            case "拖":
-            case "拖地":
-                return "mop";
-            case "毒":
-            case "消毒":
-                return "disinfect";
-            case "收":
-            case "收获":
-            case "采收":
-                return "harvest";
-            case "消":
-            case "取消":
-                return "cancel";
+                case "擦":
+                case "擦拭":
+                case "擦水":
+                case "拖":
+                case "拖地":
+                case "wipe":
+                    return "mop";
+                case "毒":
+                case "消毒":
+                case "杀菌":
+                case "灭菌":
+                case "sanitize":
+                    return "disinfect";
+                case "收":
+                case "收获":
+                case "收割":
+                case "采收":
+                    return "harvest";
+                case "消":
+                case "取消":
+                case "取消任务":
+                case "取消命令":
+                    return "cancel";
             default:
                 return (action ?? string.Empty).Trim().ToLowerInvariant();
             }

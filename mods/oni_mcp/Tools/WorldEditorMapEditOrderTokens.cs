@@ -67,7 +67,8 @@ namespace OniMcp.Tools
                 case "sweep":
                 case "pickup":
                 case "pick_up":
-                case "clear": return "sweep";
+                case "clear":
+                case "clean": return "sweep";
                 case "捕":
                 case "捕捉":
                 case "抓捕":
