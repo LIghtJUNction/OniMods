@@ -52,6 +52,7 @@ namespace OniMcp.Tools
             string toolName = OperationFileTools[relative];
             var sb = new StringBuilder();
             sb.AppendLine("# Operation File");
+            AppendOperationSemanticCheatsheet(sb, relative);
             sb.AppendLine();
             sb.AppendLine("- path: `" + path + "`");
             sb.AppendLine("- mode: edit lines under `## Edit Commands`, then submit SEARCH/REPLACE.");
@@ -76,6 +77,34 @@ namespace OniMcp.Tools
                 sb.AppendLine("# " + line);
             sb.AppendLine("```");
             return CallToolResult.Text(sb.ToString());
+        }
+
+        private static void AppendOperationSemanticCheatsheet(StringBuilder sb, string relative)
+        {
+            if (relative != "ops/orders.md" && relative != "ops/ranching.md" && relative != "ops/dupes.md")
+                return;
+
+            sb.AppendLine();
+            sb.AppendLine("## Semantic Shortcuts");
+            if (relative == "ops/orders.md" || relative == "ops/ranching.md")
+            {
+                sb.AppendLine("- 挖/挖掘 -> area dig; target @(x,y), x1/y1/x2/y2, or areaId.");
+                sb.AppendLine("- 擦/擦拭/拖地 -> area mop; target liquid cells or area.");
+                sb.AppendLine("- 扫/清扫/拾取/搬运 -> area sweep; target debris/item cell or area.");
+                sb.AppendLine("- 毒/消毒 -> area disinfect; target germy cells or area.");
+                sb.AppendLine("- 收/收获 -> area harvest; target plant cell or area.");
+                sb.AppendLine("- 消/取消 -> area cancel; target designated cell or area.");
+                sb.AppendLine("- 拆/拆除 -> designation deconstruct; target 建筑@(x,y) or id.");
+                sb.AppendLine("- 杀/攻击 -> designation attack; target 小动物@(x,y) or id.");
+                sb.AppendLine("- 捕/捕捉/抓捕 -> designation capture; target 小动物@(x,y) or x/y.");
+                sb.AppendLine("- suffix `:7` sets priority; add `dryRun=true` before risky or broad orders.");
+            }
+            if (relative == "ops/dupes.md")
+            {
+                sb.AppendLine("- 移/移动/去 -> dupe move_to; use `移 人@Name -> target confirm=true`.");
+                sb.AppendLine("- 小动物 cannot move directly; use `/active/ops/orders.md` 捕 小动物@(x,y):7.");
+                sb.AppendLine("- 物品 cannot move directly; use `/active/ops/orders.md` 扫 物品@(x,y):6 or storage tools.");
+            }
         }
 
     private static CallToolResult ApplyOperationMarkdownEdit(string relative, string replacement)
