@@ -155,7 +155,8 @@ namespace OniMcp.Tools
             string text = "glyph=" + glyph
                 + " dirs=" + (dirs.Count == 0 ? "." : string.Join("", dirs.Select(d => d.Dir).ToArray()))
                 + " links=" + ConnectionLinkText(dirs)
-                + " to=" + (dirs.Count == 0 ? "." : string.Join(",", dirs.Select(d => CellCoord(d.Cell)).ToArray()));
+                 + " open=" + OpenAdjacentConnectionText(cell, layers, dirs)
+            + " to=" + (dirs.Count == 0 ? "." : string.Join(",", dirs.Select(d => CellCoord(d.Cell)).ToArray()));
             if (mode == OverlayModes.Power.ID)
                 text += " " + PowerCircuitText(cell);
             string bridge = BridgeText(cell, mode);
