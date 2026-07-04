@@ -51,11 +51,7 @@ namespace OniMcp.Tools
                 if (IsBlueprintVirtualFile(relative))
                     return ReadBlueprintVirtualFile(relative);
                 if (IsInfrastructureMapMarkdown(relative))
-                {
-                    if (ToolUtil.GetBool(args, "syncView", true))
-                        ApplyZoomOverlayMode(ModeForInfrastructurePath(relative), ToolUtil.GetBool(args, "allowSound", false));
-                    return CallToolResult.Text(ReadInfrastructureMapMarkdown(path, relative));
-                }
+                    return CallToolResult.Text(ReadInfrastructureMapMarkdown(args, path, relative));
                 if (IsManagementMarkdown(relative))
                     return ReadManagementMarkdown(args, path, relative);
                 if (IsOperationMarkdown(relative))

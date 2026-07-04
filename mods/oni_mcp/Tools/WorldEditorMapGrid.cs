@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace OniMcp.Tools
@@ -23,10 +24,33 @@ namespace OniMcp.Tools
                 || relative == "infrastructure/solid_conveyor.md";
         }
 
-        private static string ReadInfrastructureMapMarkdown(string path, string relative)
+        private static string ReadInfrastructureMapMarkdown(JObject args, string path, string relative)
         {
             if (Camera.main == null)
                 return "# " + path + "\n\nCamera not initialized.";
+
+            HashedString mode = ModeForInfrastructurePath(relative);
+            string syncNote = string.Empty;
+            if (TryReadMapFocusBounds(args, out int focusXMin, out int focusYMin, out int focusXMax, out int focusYMax, out string focusError))
+            {
+                if (!string.IsNullOrWhiteSpace(focusError))
+                    return "# " + path + "\n\n" + focusError;
+
+                string viewName = GetOverlayViewName(mode);
+                syncNote = SyncZoomCameraAndView(args, focusXMin, focusYMin, focusXMax, focusYMax, new List<ZoomView>
+                {
+                    new ZoomView { Name = viewName, Mode = mode }
+                });
+            }
+            else if (ToolUtil.GetBool(args, "syncView", true))
+            {
+                ApplyZoomOverlayMode(mode, ToolUtil.GetBool(args, "allowSound", false));
+                syncNote = "覆盖层=" + GetOverlayViewName(mode);
+            }
+            else
+            {
+                syncNote = "未同步(syncView=false)";
+            }
 
             var cam = Camera.main;
             var pos = cam.transform.position;
@@ -36,8 +60,8 @@ namespace OniMcp.Tools
             int xMax = Mathf.Clamp(Mathf.RoundToInt(pos.x + size * aspect), 0, Grid.WidthInCells - 1);
             int yMin = Mathf.Clamp(Mathf.RoundToInt(pos.y - size), 0, Grid.HeightInCells - 1);
             int yMax = Mathf.Clamp(Mathf.RoundToInt(pos.y + size), 0, Grid.HeightInCells - 1);
-            HashedString mode = ModeForInfrastructurePath(relative);
-            return GetMapMd("[视图: " + GetOverlayViewName(mode) + "] " + path, xMin, xMax, yMin, yMax, mode);
+            string map = GetMapMd("[视图: " + GetOverlayViewName(mode) + "] " + path, xMin, xMax, yMin, yMax, mode, ShouldCompactMap(args));
+            return map + "\n## View Sync\n- 直播视角: " + syncNote + "\n";
         }
 
         private static HashedString ModeForInfrastructurePath(string relative)
