@@ -107,16 +107,17 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                         var result = TryPlanOne(def.PrefabID, point.x, point.y, args, plannedSupportCells, autoDigContext);
                         bool ok = result.ContainsKey("planned") && (bool)result["planned"];
                         bool validPlacement = result.ContainsKey("valid") && (bool)result["valid"];
-                        bool alreadyConnected = result.ContainsKey("alreadyConnected") && (bool)result["alreadyConnected"];
+                    bool alreadyPresent = result.ContainsKey("alreadyPresent") && (bool)result["alreadyPresent"];
+                    bool alreadyConnected = result.ContainsKey("alreadyConnected") && (bool)result["alreadyConnected"];
                         autoMarked += GetAutoDigInt(result, "marked") + GetAutoDigInt(result, "uprootMarked") + GetAutoDigInt(result, "alreadyMarked") + GetAutoDigInt(result, "alreadyUprootMarked");
-                        if (ok || (dryRun && validPlacement) || IsAutoDigResult(result))
-                        {
-                            valid++;
-                            if (ok)
-                                planned++;
-                            if (alreadyConnected)
-                                reused++;
-                        }
+                    if (ok || alreadyPresent || alreadyConnected || (dryRun && validPlacement) || IsAutoDigResult(result))
+                    {
+                        valid++;
+                        if (ok)
+                            planned++;
+                        if (alreadyPresent || alreadyConnected)
+                            reused++;
+                    }
                         else
                         {
                             errors.Add(result);

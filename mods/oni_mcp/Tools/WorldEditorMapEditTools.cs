@@ -191,7 +191,11 @@ namespace OniMcp.Tools
                 if (!TryResolveBuildPrefabFromToken(group.Key, buildSymbol, out prefabId))
                     return CallToolResult.Error($"Cannot map building token '{group.Key}' to a buildable prefab.");
 
-                var anchors = new JArray(group.Select(c => new JObject { ["x"] = c.X, ["y"] = c.Y }));
+                string footprintError;
+                JArray anchors;
+                if (!TryBuildAnchorsForPrefabFootprints(parentArgs, prefabId, group, out anchors, out footprintError))
+                    return CallToolResult.Error(footprintError);
+
                 var buildArgs = CopyPayload(parentArgs);
                 buildArgs["domain"] = "planning";
                 buildArgs["action"] = "build_area";

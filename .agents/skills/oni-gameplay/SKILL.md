@@ -23,26 +23,17 @@ Verify (Check)     → re-call read tools, compare before/after
 
 Every control action must complete the full loop. Never act without prior observation, never stop without verification.
 
-## Pointer-First Policy
+## Semantic Tool Policy
 
-All map actions must be driven through the visible agent pointer unless the tool is configuration-only or no pointer equivalent exists.
-
-Default action workflow:
-
-```
-navigation_control action=jump or action=aim_cell
-navigation_control action=select_tool tool=<build|dig|cancel|sweep|mop|disinfect|harvest|deconstruct> prefabId? material? priority?
-navigation_control action=left_click confirm=true
-# or for straight lines:
-navigation_control action=hold_left direction=<right|left|up|down> length=<cells> confirm=true
-```
+Agent pointer control has been removed. Do not use `navigation_control action=select_tool`, `navigation_control action=left_click`, or `navigation_control action=hold_left`.
 
 Rules:
-- Legacy coordinate building tools are removed from the public MCP surface. Do not call or suggest them.
-- Treat direct `orders_*_area` calls as compatibility/debug paths. Do not use them as the first choice for normal play.
-- Use `navigation_control action=hold_left` for wires, pipes, ladders, tiles, straight digs, sweep lines, mop lines, cancel lines, and harvest lines.
-- Use `navigation_control action=jump code=home|p1|p2` or `action=jump x/y|dx/dy|direction+steps` for navigation. Use `navigation_control action=jump_point jumpPointAction=set code=p1` to save repeat work locations.
-- If a coordinate is known from a read tool, jump the pointer to it and act with the pointer; do not pass that coordinate directly to build/order tools.
+- Use semantic MCP tools with explicit task text for build, dig, cancel, sweep, mop, disinfect, harvest, and deconstruct actions.
+- Legacy coordinate building tools remain compatibility/debug paths. Prefer public aggregate tools (`building_control`, `orders_control`, `world_editor`) and verify schemas through `server_control domain=catalog`.
+- For wires, pipes, conveyors, logic wires, and travel tubes, use layered utility designation instead of generic building deconstruct: `orders_control domain=designation action=cut_conduits type=wire|liquid|gas|solid|logic|travel_tube ... confirm=true`.
+- For normal buildings, prefer object-specific deconstruction: `orders_control domain=designation action=deconstruct id=<instanceId> confirm=true`.
+- If only a cell is known and multiple objects share it, list or dry-run first, inspect returned candidates, then choose the exact `id` or explicit utility `type`.
+- For virtual infrastructure edits such as `power.md`, prefer coordinate-stable explicit cells: `world_editor action=edit ... editCells=[{"x":85,"y":148,"value":"拆"}]`.
 
 ### Control Modes
 

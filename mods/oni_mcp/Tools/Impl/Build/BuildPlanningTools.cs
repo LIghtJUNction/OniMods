@@ -49,10 +49,18 @@ namespace OniMcp.Tools
                         case "candidates":
                         case "anchors":
                             return FindPlacementCandidates().Handler(forwardArgs);
-                        case "auto_connect":
-                        case "utility_auto_connect":
-                        case "connect":
-                            return AutoConnectUtility().Handler(forwardArgs);
+                    case "auto_connect":
+                    case "utility_auto_connect":
+                    case "connect":
+                        return AutoConnectUtility().Handler(forwardArgs);
+                    case "repair_line":
+                    case "connect_line":
+                    case "fix_line":
+                    case "repair_wire":
+                    case "connect_wire":
+                    case "接线":
+                    case "修线":
+                        return RepairUtilityLine(forwardArgs);
  case "build_area":
  case "area":
  case "batch_build":
@@ -61,8 +69,8 @@ namespace OniMcp.Tools
  case "room_plan":
  case "quick_room":
  return RoomTemplatePlan().Handler(forwardArgs);
- default:
- return CallToolResult.Error("action must be parse_plan, search_defs, materials, preview, placement_candidates, auto_connect, build_area, or room_template");
+                    default:
+                        return CallToolResult.Error("action must be parse_plan, search_defs, materials, preview, placement_candidates, auto_connect, repair_line, build_area, or room_template");
                     }
                 }
             };

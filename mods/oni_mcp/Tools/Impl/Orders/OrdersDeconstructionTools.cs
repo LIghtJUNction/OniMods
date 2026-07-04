@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using OniMcp.Core;
 using OniMcp.Support;
+using UnityEngine;
 
 namespace OniMcp.Tools
 {
@@ -24,13 +25,10 @@ namespace OniMcp.Tools
                 }),
                 Handler = args =>
                 {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
-
-                    var deconstructable = go.GetComponent<Deconstructable>();
-                    if (deconstructable == null)
-                        return CallToolResult.Error("Target is not deconstructable");
+                    GameObject go;
+                    var resolveResult = ResolvePreciseDeconstructTarget(args, out go);
+                    if (resolveResult != null)
+                        return resolveResult;
 
                     if (ToolUtil.GetBool(args, "dryRun", false))
                     {
@@ -46,7 +44,9 @@ namespace OniMcp.Tools
                     if (!ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required for deconstruction");
 
-                    deconstructable.QueueDeconstruction(userTriggered: true);
+                    string error;
+                    if (!TryQueueObjectDeconstruction(go, args, out error))
+                        return CallToolResult.Error(error);
                     return CallToolResult.Text($"Queued deconstruction for {go.GetProperName()}");
                 }
             };

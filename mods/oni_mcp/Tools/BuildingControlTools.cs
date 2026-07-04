@@ -16,11 +16,11 @@ namespace OniMcp.Tools
                 Risk = "dangerous",
                 Aliases = new List<string> { "buildings_control", "building_system_control" },
                 Tags = new List<string> { "buildings", "planning", "config", "production", "storage", "facility", "side-screen", "materials", "preview", "rocket", "space", "auto-connect", "wire", "power", "conduit", "utility" },
-                Description = "Unified building entrypoint: domain=planning/config/production/storage/filter/tile_selection/receptacle/side_surface/space_building/space_story/special/story_facility/rocket. Use action plus query/target/search/id/areaId to locate and execute targets; coordinate input is only allowed through coordinate_control as an auxiliary gateway. Second-call starter setup: domain=planning action=room_template kind=starter autoLayout=true priority=7 execute=true confirm=true builds toilet, wash basin, research station, room shells, doors, and interior dig orders. planning also supports parse_plan/build_area/auto_connect for one-step wire, power, pipe, or rail connection. Preserves each child tool's action/kind/confirm rules.",
+                Description = "Unified building entrypoint: domain=planning/config/production/storage/filter/tile_selection/receptacle/side_surface/space_building/space_story/special/story_facility/rocket. Use action plus query/target/search/id/areaId to locate and execute targets; coordinate input is only allowed through coordinate_control as an auxiliary gateway. Second-call starter setup: domain=planning action=room_template kind=starter autoLayout=true priority=7 execute=true confirm=true builds toilet, wash basin, research station, room shells, doors, and interior dig orders. planning also supports parse_plan/build_area/auto_connect/repair_line for one-step wire, power, pipe, or rail connection. Preserves each child tool's action/kind/confirm rules.",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "Route domain: planning, config, production, storage, filter, tile_selection, receptacle, side_surface, space_building, space_story, special, story_facility, or rocket.", Required = true, EnumValues = new List<string> { "planning", "config", "production", "storage", "filter", "tile_selection", "receptacle", "side_surface", "space_building", "space_story", "special", "story_facility", "rocket" } },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "Sub-action. planning=parse_plan/search_defs/materials/preview/placement_candidates/auto_connect/build_area/room_template; config=list/list_automation/set_*; production=list_fabricators/list_recipes/set/batch/mutant_seed_*; storage=list/detail/set_filter; filter=list/set; tile_selection=list/set/batch; receptacle=list/request/cancel_request/remove_occupant/cancel_remove/batch; side_surface=list/press/focus/batch/list_rewards/claim; rocket=ops/module/flight_utility/restriction/usage/crew_request/assignment_group/cargo_status/self_destruct; facility=list/set/assign/consume.", Required = false },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "Sub-action. planning=parse_plan/search_defs/materials/preview/placement_candidates/auto_connect/repair_line/build_area/room_template; config=list/list_automation/set_*; production=list_fabricators/list_recipes/set/batch/mutant_seed_*; storage=list/detail/set_filter; filter=list/set; tile_selection=list/set/batch; receptacle=list/request/cancel_request/remove_occupant/cancel_remove/batch; side_surface=list/press/focus/batch/list_rewards/claim; rocket=ops/module/flight_utility/restriction/usage/crew_request/assignment_group/cargo_status/self_destruct; facility=list/set/assign/consume.", Required = false },
                     ["surface"] = new McpToolParameter { Type = "string", Description = "Original side-screen surface domain for domain=side_surface: generic, option, activation, automation, facility, misc, geo_tuner, user_menu, or maintenance.", Required = false },
                     ["rocketDomain"] = new McpToolParameter { Type = "string", Description = "Original rocket subsystem for domain=rocket: ops, module, flight_utility, restriction, usage, crew_request, assignment_group, cargo_status, or self_destruct.", Required = false },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "Subtype for config/facility/filter/side_surface, or room template kind for planning room_template. filter supports any/single/tree/flat; side_surface supports button/checklist/progress/related/automatable/critter_sensor; room_template supports toilet/restroom/lab/research/starter/toilet_lab. Use starter/toilet_lab for one-call toilet + wash basin + research station + interior dig.", Required = false },
@@ -31,6 +31,8 @@ namespace OniMcp.Tools
                     ["sequence"] = new McpToolParameter { Type = "string", Description = "Alias for plan; used for combined search-and-action text sequences.", Required = false },
                     ["text"] = new McpToolParameter { Type = "string", Description = "Alias for plan.", Required = false },
                     ["material"] = new McpToolParameter { Type = "string", Description = "Material for planning preview/auto_connect; supports auto.", Required = false },
+                    ["orientation"] = new McpToolParameter { Type = "string", Description = "Planning/build orientation passed to ONI placement, e.g. Neutral, R90, R180, R270.", Required = false },
+                    ["rotation"] = new McpToolParameter { Type = "string", Description = "Alias for orientation; accepts 0/90/180/270, right/left, clockwise/counterclockwise.", Required = false },
                     ["recipeId"] = new McpToolParameter { Type = "string", Description = "Target recipe ID for production set/batch/list_recipes.", Required = false },
                     ["categoryId"] = new McpToolParameter { Type = "string", Description = "Recipe category ID for production list_recipes.", Required = false },
                     ["count"] = new McpToolParameter { Type = "integer", Description = "Queue count for production set/batch, interpreted by mode.", Required = false },
@@ -67,7 +69,10 @@ namespace OniMcp.Tools
                     ["template"] = new McpToolParameter { Type = "string", Description = "Template alias for planning room_template.", Required = false },
                     ["width"] = new McpToolParameter { Type = "integer", Description = "Room width for planning room_template.", Required = false },
                     ["height"] = new McpToolParameter { Type = "integer", Description = "Room height for planning room_template.", Required = false },
-                    ["execute"] = new McpToolParameter { Type = "boolean", Description = "For planning room_template, immediately execute the generated calls.", Required = false }
+                    ["execute"] = new McpToolParameter { Type = "boolean", Description = "For planning room_template, immediately execute the generated calls.", Required = false },
+                    ["direction"] = new McpToolParameter { Type = "string", Description = "For planning repair_line, missing edge direction right/left/up/down or R/L/U/D/右/左/上/下 from x/y.", Required = false },
+                    ["dir"] = new McpToolParameter { Type = "string", Description = "Alias of direction for planning repair_line.", Required = false },
+                    ["steps"] = new McpToolParameter { Type = "integer", Description = "For planning repair_line, cells to connect in direction, default 1.", Required = false }
                 },
                 Handler = args =>
                 {
@@ -142,7 +147,14 @@ namespace OniMcp.Tools
                 case "anchors":
                 case "auto_connect":
                 case "utility_auto_connect":
- case "connect":
+                case "connect":
+                case "repair_line":
+                case "connect_line":
+                case "fix_line":
+                case "repair_wire":
+                case "connect_wire":
+                case "接线":
+                case "修线":
  case "build_area":
  case "batch_build":
  case "room_template":
@@ -216,8 +228,41 @@ namespace OniMcp.Tools
         private static CallToolResult Forward(JObject args, McpTool tool)
         {
             var forwarded = args == null ? new JObject() : (JObject)args.DeepClone();
+            if (forwarded["orientation"] == null && forwarded["rotation"] != null)
+                forwarded["orientation"] = NormalizeOrientationAlias(forwarded["rotation"]?.ToString());
             forwarded.Remove("domain");
             return tool.Handler(forwarded);
+        }
+
+        private static string NormalizeOrientationAlias(string value)
+        {
+            string normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
+            switch (normalized)
+            {
+                case "0":
+                case "neutral":
+                case "none":
+                case "default":
+                    return "Neutral";
+                case "90":
+                case "r90":
+                case "right":
+                case "clockwise":
+                case "cw":
+                    return "R90";
+                case "180":
+                case "r180":
+                    return "R180";
+                case "270":
+                case "-90":
+                case "r270":
+                case "left":
+                case "counterclockwise":
+                case "ccw":
+                    return "R270";
+                default:
+                    return value;
+            }
         }
 
         private static CallToolResult ForwardRocket(JObject args)

@@ -24,9 +24,9 @@ namespace OniMcp.Tools
                 ["action"] = new McpToolParameter
                 {
                     Type = "string",
- Description = "操作：parse_plan/search_defs/materials/preview/placement_candidates/auto_connect/build_area/room_template",
- Required = true,
- EnumValues = new List<string> { "parse_plan", "search_defs", "materials", "preview", "placement_candidates", "auto_connect", "build_area", "room_template" }
+                    Description = "操作：parse_plan/search_defs/materials/preview/placement_candidates/auto_connect/repair_line/build_area/room_template",
+                    Required = true,
+                    EnumValues = new List<string> { "parse_plan", "search_defs", "materials", "preview", "placement_candidates", "auto_connect", "repair_line", "connect_line", "build_area", "room_template" }
                 }
             };
 
@@ -35,8 +35,11 @@ namespace OniMcp.Tools
             MergeParameters(parameters, ListBuildMaterials().Parameters);
             MergeParameters(parameters, PreviewBuild().Parameters);
             MergeParameters(parameters, FindPlacementCandidates().Parameters);
- MergeParameters(parameters, AutoConnectUtility().Parameters);
- MergeParameters(parameters, BuildArea().Parameters);
+            MergeParameters(parameters, AutoConnectUtility().Parameters);
+            parameters["direction"] = new McpToolParameter { Type = "string", Description = "repair_line: missing edge direction right/left/up/down or R/L/U/D/右/左/上/下 from x/y.", Required = false };
+            parameters["dir"] = new McpToolParameter { Type = "string", Description = "Alias of direction for repair_line.", Required = false };
+            parameters["steps"] = new McpToolParameter { Type = "integer", Description = "repair_line: cells to connect in direction, default 1.", Required = false };
+            MergeParameters(parameters, BuildArea().Parameters);
  MergeParameters(parameters, RoomTemplatePlan().Parameters);
             return parameters;
         }

@@ -233,22 +233,7 @@ namespace OniMcp.Tools
 
         private static bool QueueDeconstruct(GameObject go, Newtonsoft.Json.Linq.JObject args, out string error)
         {
-            var deconstructable = go.GetComponent<Deconstructable>();
-            if (deconstructable == null)
-            {
-                error = "Target is not deconstructable";
-                return false;
-            }
-            if (!deconstructable.allowDeconstruction && !DebugHandler.InstantBuildMode)
-            {
-                error = "Target does not allow deconstruction";
-                return false;
-            }
-
-            deconstructable.QueueDeconstruction(userTriggered: true);
-            ApplyPriority(go, args);
-            error = null;
-            return true;
+            return TryQueueObjectDeconstruction(go, args, out error);
         }
 
         private static Dictionary<string, object> CutResult(GameObject go, int cell, string status, string error)

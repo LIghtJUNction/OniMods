@@ -345,7 +345,8 @@ namespace OniMcp.Tools
                 candidates.AddRange(FallbackMaterialCandidates(terms, aliases));
 
             foreach (var candidate in candidates
-                .OrderByDescending(item => item.ValidForBuilding)
+                .OrderByDescending(item => item.Score >= 900)
+                .ThenByDescending(item => item.ValidForBuilding)
                 .ThenByDescending(item => item.Score)
                 .ThenByDescending(item => item.AvailableKg)
                 .ThenBy(item => item.Tag))
@@ -492,9 +493,5 @@ namespace OniMcp.Tools
             }
             return null;
         }
-
-
-
-
     }
 }
