@@ -109,14 +109,20 @@ namespace OniMcp.Tools
                 .Where(IsInterestingLogLine)
                 .Take(80)
                 .ToArray();
+            JArray lines = new JArray(matches);
+            JObject summary = LogDiagnosticsSummary.Analyze(lines);
 
             return new JObject
             {
                 ["ok"] = true,
                 ["path"] = path,
+                ["status"] = summary["status"]?.ToString(),
+                ["severity"] = summary["severity"]?.ToString(),
                 ["scannedTailLines"] = tail.Length,
                 ["matches"] = matches.Length,
-                ["lines"] = new JArray(matches)
+                ["categories"] = summary["categories"]?.DeepClone(),
+                ["recommendation"] = summary["recommendation"]?.ToString(),
+                ["lines"] = lines
             };
         }
 
@@ -139,6 +145,10 @@ namespace OniMcp.Tools
             return line.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0
                 || line.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0
                 || line.IndexOf("SIGSEGV", StringComparison.OrdinalIgnoreCase) >= 0
+                || line.IndexOf("Native Crash", StringComparison.OrdinalIgnoreCase) >= 0
+                || line.IndexOf("NullReferenceException", StringComparison.OrdinalIgnoreCase) >= 0
+                || line.IndexOf("mono_thread", StringComparison.OrdinalIgnoreCase) >= 0
+                || line.IndexOf("libnvidia", StringComparison.OrdinalIgnoreCase) >= 0
                 || line.IndexOf("Assertion", StringComparison.OrdinalIgnoreCase) >= 0
                 || line.IndexOf("[OniMcp]", StringComparison.OrdinalIgnoreCase) >= 0;
         }
