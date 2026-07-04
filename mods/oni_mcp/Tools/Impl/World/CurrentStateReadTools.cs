@@ -196,7 +196,14 @@ private static JArray ManagementQuickEdits()
             return new JArray
             {
                 new JObject { ["step"] = 1, ["call"] = "read_control domain=state action=current", ["why"] = "Low-token colony, camera, editable files, recommended second call. Add includeReachability=true only before dig/build/rescue reach checks." },
-                new JObject { ["step"] = 2, ["call"] = "building_control domain=planning action=room_template kind=starter autoLayout=true priority=7 execute=true confirm=true", ["why"] = "One-call toilet, wash basin, research station, shell, doors, interior digs." },
+                new JObject
+                {
+                    ["step"] = 2,
+                    ["call"] = "building_control domain=planning action=room_template kind=starter autoLayout=true priority=7 execute=true confirm=true",
+                    ["structuredCall"] = StarterRoomTemplateCall()["exactSecondCall"]?.DeepClone(),
+                    ["recommendedSecondCallRef"] = "response.recommendedSecondCall.exactSecondCall",
+                    ["why"] = "One-call toilet, wash basin, research station, shell, doors, interior digs."
+                },
                 new JObject { ["step"] = 3, ["call"] = "Use response.verificationPlan first; otherwise read /active/map/cell_X_Y.md only for failed cells.", ["why"] = "Verify locally without broad map scans." }
             };
         }
