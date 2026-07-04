@@ -5,7 +5,7 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
-const CONFIG_FILE: &str = "oni-mods.toml";
+const CONFIG_FILE: &str = "onim.toml";
 const BUILD_PROPS: &str = "Directory.Build.props";
 
 fn check_command(cmd: &str) -> bool {
@@ -205,7 +205,7 @@ pub fn run() -> Result<()> {
         println!("✅ 所有关键文件验证通过");
     }
 
-    // 3. 写入 oni-mods.toml（只包含 Mod 列表，游戏路径在 Directory.Build.props 中）
+    // 3. 写入 onim.toml（只包含 Mod 列表，游戏路径在 Directory.Build.props 中）
     let toml_content = r#"# onim 配置文件
 # 游戏路径在 Directory.Build.props 中统一管理
 

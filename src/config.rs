@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
-const DEFAULT_CONFIG_NAME: &str = "oni-mods.toml";
+const DEFAULT_CONFIG_NAME: &str = "onim.toml";
 const BUILD_PROPS: &str = "Directory.Build.props";
 
 /// 单个 Mod 配置

@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 const TEMPLATE_DIR: &str = "mods/OniModTemplate";
-const CONFIG_FILE: &str = "oni-mods.toml";
+const CONFIG_FILE: &str = "onim.toml";
 
 fn pascal_case(input: &str) -> String {
     let mut result = String::new();
@@ -141,7 +141,7 @@ pub fn run(
         )?;
     }
 
-    // 6. 更新 oni-mods.toml
+    // 6. 更新 onim.toml
     let config_path = cwd.join(CONFIG_FILE);
     if config_path.exists() {
         let content = fs::read_to_string(&config_path)?;

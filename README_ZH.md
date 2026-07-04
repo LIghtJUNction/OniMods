@@ -107,7 +107,7 @@ onim publish -m MyMod      # 上传到 Steam 创意工坊
 onim uninstall -m MyMod    # 从游戏目录卸载
 ```
 
-`-m <name>` 用于指定 Mod。不指定时，`onim` 使用 [oni-mods.toml](oni-mods.toml) 中的 `default_mod`。
+`-m <name>` 用于指定 Mod。不指定时，`onim` 使用 [onim.toml](onim.toml) 中的 `default_mod`。
 
 首次构建前需要生成本机 MSBuild 配置：
 
@@ -136,7 +136,7 @@ cp Directory.Build.props.example Directory.Build.props
 
 ```text
 .
-├── oni-mods.toml          # onim 配置文件，记录默认 Mod 和 Mod 列表
+├── onim.toml          # onim 配置文件，记录默认 Mod 和 Mod 列表
 ├── Directory.Build.props.example  # 本机 MSBuild 配置模板
 ├── Directory.Build.props          # 本机生成配置，不提交
 ├── Cargo.toml             # onim CLI

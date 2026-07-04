@@ -89,7 +89,7 @@ onim publish -m MyMod      # upload to Steam Workshop
 onim uninstall -m MyMod    # uninstall from the game directory
 ```
 
-`-m <name>` selects the mod. If omitted, `onim` uses `default_mod` from [oni-mods.toml](oni-mods.toml).
+`-m <name>` selects the mod. If omitted, `onim` uses `default_mod` from [onim.toml](onim.toml).
 
 Before the first build, create the local MSBuild config:
 
@@ -118,7 +118,7 @@ You can also run `onim setup` to detect and write the config automatically.
 
 ```text
 .
-├── oni-mods.toml          # onim config file, stores default mod and mod list
+├── onim.toml          # onim config file, stores default mod and mod list
 ├── Directory.Build.props.example  # local MSBuild config template
 ├── Directory.Build.props          # generated local config, not committed
 ├── Cargo.toml             # onim CLI
