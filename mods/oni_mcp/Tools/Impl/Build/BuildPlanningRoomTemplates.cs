@@ -288,6 +288,11 @@ namespace OniMcp.Tools
             var core = kind == "toilet"
                 ? new JArray("Outhouse", "WashBasin")
                 : new JArray("ResearchCenter");
+            var coreCells = kind == "toilet"
+                ? new JArray(
+                    CoreCell("Outhouse", anchor.X + 2, anchor.Y + 1),
+                    CoreCell("WashBasin", anchor.X + Math.Max(4, anchor.Width - 3), anchor.Y + 1))
+                : new JArray(CoreCell("ResearchCenter", anchor.X + 2, anchor.Y + 1));
             return new JObject
             {
                 ["kind"] = kind,
@@ -305,7 +310,19 @@ namespace OniMcp.Tools
                     ["x2"] = anchor.X + anchor.Width - 2,
                     ["y2"] = anchor.Y + anchor.Height - 2
                 },
-                ["coreBuildings"] = core
+                ["coreBuildings"] = core,
+                ["coreCells"] = coreCells
+            };
+        }
+
+        private static JObject CoreCell(string prefabId, int x, int y)
+        {
+            return new JObject
+            {
+                ["prefabId"] = prefabId,
+                ["x"] = x,
+                ["y"] = y,
+                ["cellPath"] = "/active/map/cell_" + x + "_" + y + ".md"
             };
         }
 
