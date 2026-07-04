@@ -17,34 +17,64 @@ namespace OniMcp.Tools
             switch (name)
             {
                 case "挖":
-                case "挖掘": return "dig";
+                case "挖掘":
+                case "开挖":
+                case "dig": return "dig";
                 case "拆":
-                case "拆除": return "deconstruct";
+                case "拆除":
+                case "拆建筑":
+                case "拆除建筑":
+                case "deconstruct": return "deconstruct";
                 case "擦":
-                case "擦拭": return "mop";
+                case "擦拭":
+                case "擦水":
+                case "拖":
+                case "拖地":
+                case "mop":
+                case "wipe": return "mop";
                 case "杀":
-                case "攻击": return "attack";
+                case "攻":
+                case "攻击":
+                case "击杀":
+                case "attack": return "attack";
                 case "收":
-                case "收获": return "harvest";
+                case "收获":
+                case "收割":
+                case "采收":
+                case "harvest": return "harvest";
                 case "消":
-                case "取消": return "cancel";
+                case "取消":
+                case "取消任务":
+                case "取消命令":
+                case "cancel": return "cancel";
                 case "毒":
                 case "消毒":
                 case "杀菌":
-                case "灭菌": return "disinfect";
-            case "扫":
-            case "清扫":
-            case "打扫":
-            case "收拾":
-            case "捡":
-            case "捡起":
-            case "拾取":
-            case "搬运": return "sweep";
-            case "捕":
-            case "捕捉":
-            case "抓捕": return "capture";
-            default: return string.Empty;
-        }
+                case "灭菌":
+                case "disinfect":
+                case "sanitize": return "disinfect";
+                case "扫":
+                case "清":
+                case "清扫":
+                case "清理":
+                case "打扫":
+                case "收拾":
+                case "捡":
+                case "捡起":
+                case "拾取":
+                case "搬运":
+                case "扫地":
+                case "sweep":
+                case "pickup":
+                case "pick_up":
+                case "clear": return "sweep";
+                case "捕":
+                case "捕捉":
+                case "抓捕":
+                case "capture":
+                case "wrangle": return "capture";
+                default: return string.Empty;
+            }
         }
 
         private static bool IsEmptyMapSymbol(char symbol)
