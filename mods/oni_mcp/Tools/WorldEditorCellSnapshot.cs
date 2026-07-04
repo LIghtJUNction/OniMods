@@ -169,7 +169,7 @@ namespace OniMcp.Tools
         {
             int limit = CellPickupItemLimit(args);
             var allItems = Components.Pickupables.Items
-                .Where(item => item != null && item.gameObject != null && Grid.PosToCell(item.gameObject) == cell)
+                .Where(item => PickupableTouchesCell(item, cell))
                 .ToList();
 
             if (allItems.Count == 0)

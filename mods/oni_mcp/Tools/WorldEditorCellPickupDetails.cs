@@ -18,7 +18,7 @@ var entries = new List<CellPickupDetail>();
             {
                 if (pickupable == null || pickupable.gameObject == null)
                     continue;
-                if (Grid.PosToCell(pickupable.gameObject) != cell)
+                if (!PickupableTouchesCell(pickupable, cell))
                     continue;
 
                 var primary = pickupable.PrimaryElement ?? pickupable.GetComponent<PrimaryElement>();
@@ -85,6 +85,13 @@ foreach (CellPickupDetail item in entries.OrderByDescending(item => item.MassKg)
             if (ToolUtil.GetBool(args, "includeAllItems", false) || ToolUtil.GetBool(args, "fullItems", false))
                 return 1000;
             return Math.Max(1, Math.Min(ToolUtil.GetInt(args, "itemLimit") ?? 8, 1000));
+        }
+
+        private static bool PickupableTouchesCell(Pickupable pickupable, int cell)
+        {
+            if (pickupable == null || pickupable.gameObject == null)
+                return false;
+            return pickupable.cachedCell == cell || Grid.PosToCell(pickupable.gameObject) == cell;
         }
 
         private sealed class CellPickupDetail
