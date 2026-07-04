@@ -227,6 +227,7 @@ namespace OniMcp.Tools
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "支持该参数的动作使用：差事优先级 1-9，默认 5", Required = false },
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "支持该参数的动作使用：是否设为红色最高优先级", Required = false },
                     ["mode"] = new McpToolParameter { Type = "string", Description = "attack/capture 支持：mark、cancel；capture 额外支持 release", Required = false, EnumValues = new List<string> { "mark", "cancel", "release" } },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "capture 支持：只预览会标记/取消/释放的目标，不实际修改；dryRun 不要求 confirm", Required = false },
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "attack 支持：允许标记友方/协助阵营目标", Required = false },
                     ["attackAreaConfirm"] = new McpToolParameter { Type = "string", Description = "attack 区域 mark 二次确认，必须精确为 attack area", Required = false },
                     ["paused"] = new McpToolParameter { Type = "boolean", Description = "manual_delivery 支持：true 暂停手动补料，false 恢复", Required = false },

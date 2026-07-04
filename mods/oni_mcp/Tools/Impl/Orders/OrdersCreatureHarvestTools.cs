@@ -150,12 +150,14 @@ namespace OniMcp.Tools
                     ["action"] = new McpToolParameter { Type = "string", Description = "mark、cancel、release；默认 mark", Required = false, EnumValues = new List<string> { "mark", "cancel", "release" } },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "抓捕差事优先级 1-9，默认 5", Required = false },
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "是否设为红色最高优先级，默认 false", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "区域超过 100 格时必须为 true；release 必须为 true", Required = false }
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "区域超过 100 格时必须为 true；release 必须为 true", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只预览会标记/取消/释放的目标，不实际修改；dryRun 不要求 confirm", Required = false }
                 }),
                 Handler = args =>
                 {
                     string action = (args["action"]?.ToString() ?? "mark").Trim().ToLowerInvariant();
-                    if (action == "release" && !ToolUtil.GetBool(args, "confirm", false))
+                    bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
+                    if (action == "release" && !dryRun && !ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required for releasing critters");
 
                     int? id = ToolUtil.GetInt(args, "id");
@@ -164,7 +166,7 @@ namespace OniMcp.Tools
 
                     var rect = ToolUtil.GetRect(args);
                     int cells = RectCellCount(rect);
-                    if (!id.HasValue && cells > 100 && !ToolUtil.GetBool(args, "confirm", false))
+                    if (!id.HasValue && cells > 100 && !dryRun && !ToolUtil.GetBool(args, "confirm", false))
                         return CallToolResult.Error("confirm=true is required when changing capture orders in more than 100 cells");
 
                     int worldId = ToolUtil.ResolveWorldId(args);
@@ -200,9 +202,10 @@ namespace OniMcp.Tools
                                 results.Add(ObjectResult(go, "skipped_not_wrangled"));
                                 continue;
                             }
-                            baggable.Free();
+                            if (!dryRun)
+                                baggable.Free();
                             changed++;
-                            results.Add(ObjectResult(go, "released"));
+                            results.Add(ObjectResult(go, dryRun ? "would_release" : "released"));
                         }
                         else
                         {
@@ -213,14 +216,16 @@ namespace OniMcp.Tools
                                 results.Add(ObjectResult(go, "skipped_not_capturable"));
                                 continue;
                             }
-                            capturable.MarkForCapture(mark, setting, updateMarkedPriority: true);
+                            if (!dryRun)
+                                capturable.MarkForCapture(mark, setting, updateMarkedPriority: true);
                             changed++;
-                            results.Add(ObjectResult(go, mark ? "marked" : "cancelled"));
+                            results.Add(ObjectResult(go, dryRun ? (mark ? "would_mark" : "would_cancel") : (mark ? "marked" : "cancelled")));
                         }
                     }
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
+                        ["dryRun"] = dryRun,
                         ["action"] = action == "cancel" || action == "release" ? action : "mark",
                         ["changed"] = changed,
                         ["skipped"] = skipped,
