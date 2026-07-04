@@ -39,6 +39,7 @@ namespace OniMcp.Tools
                 ["kind"] = "current_state",
                 ["snapshot"] = TryParseJson(text) ?? text,
                 ["infrastructure"] = ReadInfrastructureIfRequested(args),
+                ["reachability"] = ReadReachabilityIfRequested(args),
                 ["logErrors"] = ReadLogErrorsIfRequested(args),
                 ["editableFiles"] = EditableFiles(),
                 ["viewFiles"] = ViewFiles(),
@@ -206,7 +207,7 @@ private static JArray ManagementQuickEdits()
             {
                 ["default"] = "snapshot + file index + next calls only",
                 ["avoidByDefault"] = new JArray { "broad viewport maps", "Player.log tail", "all infrastructure ports", "full atmosphere scan" },
-                ["expandWith"] = new JArray { "includeState=true", "includeInfrastructure=true infrastructureKind=power", "includeLogs=true logLimit=160" },
+                ["expandWith"] = new JArray { "includeState=true", "includeInfrastructure=true infrastructureKind=power", "includeReachability=true reachabilityRadius=12", "includeLogs=true logLimit=160" },
                 ["editLoop"] = "current -> one write -> compact result -> only failed cell/detail reads"
             };
         }
