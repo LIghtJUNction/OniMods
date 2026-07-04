@@ -66,7 +66,7 @@ namespace OniMcp.Tools
                 return;
 
             sb.AppendLine("## Connection Details (" + title + ")");
-            sb.AppendLine("- format: `(x,y): glyph=符号 dirs=UDLR links=U:(x,y),R:(x,y) to=(neighbor...) extra`");
+            sb.AppendLine("- format: `(x,y): glyph=符号 dirs=UDLR links=U:(x,y),R:(x,y) open=U:(x,y) to=(neighbor...) extra`");
             sb.AppendLine("- legend: U=up D=down L=left R=right; `⌒`=bridge, `⊗`=input port, `⊙`=output port.");
             sb.AppendLine("- read: `dirs=.` means an endpoint or disconnected segment; compare `links`/`to` to verify actual neighbor cells instead of counting columns.");
             sb.AppendLine("- bridge: `bridgeRoute=from:(x,y) via:⌒ to:(x,y)` jumps through the building; do not infer direct wire/pipe connection across bridge footprint.");
@@ -168,19 +168,46 @@ namespace OniMcp.Tools
                 + " glyph=" + glyph
                 + " dirs=" + (dirs.Count == 0 ? "." : string.Join("", dirs.Select(d => d.Dir).ToArray()))
                 + " links=" + ConnectionLinkText(dirs)
-                + " to=" + (dirs.Count == 0 ? "." : string.Join(",", dirs.Select(d => CellCoord(d.Cell)).ToArray()))
+                 + " open=" + OpenAdjacentConnectionText(cell, layers, dirs)
+            + " to=" + (dirs.Count == 0 ? "." : string.Join(",", dirs.Select(d => CellCoord(d.Cell)).ToArray()))
                 + (string.IsNullOrEmpty(extra) ? string.Empty : " " + extra);
         }
 
-        private static string ConnectionLinkText(List<ConnectionNeighbor> dirs)
-        {
-            if (dirs.Count == 0)
-                return ".";
-            return string.Join(",", dirs.Select(d => d.Dir + ":" + CellCoord(d.Cell)).ToArray());
-        }
+private static string ConnectionLinkText(List<ConnectionNeighbor> dirs)
+{
+if (dirs.Count == 0)
+return ".";
+return string.Join(",", dirs.Select(d => d.Dir + ":" + CellCoord(d.Cell)).ToArray());
+}
 
-        private static List<ConnectionNeighbor> ConnectionDirections(
-            int cell,
+private static string OpenAdjacentConnectionText(int cell, ObjectLayer[] layers, List<ConnectionNeighbor> dirs)
+{
+var open = new List<ConnectionNeighbor>();
+AddOpenAdjacentIf(open, cell, "U", 0, 1, layers, dirs);
+AddOpenAdjacentIf(open, cell, "D", 0, -1, layers, dirs);
+AddOpenAdjacentIf(open, cell, "L", -1, 0, layers, dirs);
+AddOpenAdjacentIf(open, cell, "R", 1, 0, layers, dirs);
+return open.Count == 0 ? "." : ConnectionLinkText(open);
+}
+
+private static void AddOpenAdjacentIf(
+List<ConnectionNeighbor> open,
+int cell,
+string dir,
+int dx,
+int dy,
+ObjectLayer[] layers,
+List<ConnectionNeighbor> linked)
+{
+if (linked.Any(d => d.Dir == dir))
+return;
+int neighbor = NeighborCell(cell, dx, dy);
+if (Grid.IsValidCell(neighbor) && HasLayer(neighbor, layers))
+open.Add(new ConnectionNeighbor(dir, neighbor));
+}
+
+private static List<ConnectionNeighbor> ConnectionDirections(
+int cell,
             ObjectLayer[] layers,
             bool power)
         {
