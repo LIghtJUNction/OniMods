@@ -171,7 +171,7 @@ private static JArray ManagementQuickEdits()
                 QuickEdit("priorities", "/active/management/priorities.md", "priority name=\"Dig\" choreGroup=\"Dig\" priority=5 confirm=true"),
                 QuickEdit("food", "/active/management/food.md", "food name=\"Dig\" food=\"MushBar\" allow=false"),
                 QuickEdit("skill", "/active/management/skills.md", "learn_skill name=\"Dig\" skillId=\"Mining1\" confirm=true"),
-                QuickEdit("research", "/active/management/research.md", "research id=\"BasicFarming\"")
+                QuickEdit("research", "/active/management/research.md", "research id=\"ImprovedOxygen\"")
             };
         }
 
