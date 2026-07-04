@@ -27,15 +27,15 @@ namespace OniMcp.Tools
 
             string lower = haystack.ToLowerInvariant();
             string category = null;
-            if (lower.Contains("obstruct") || lower.Contains("blocked") || lower.Contains("occupied"))
+            if (ContainsAny(lower, "obstruct", "blocked", "occupied", "阻挡", "堵塞", "占用", "被占", "挡住"))
                 category = "obstructed";
-            else if (lower.Contains("material") || lower.Contains("resource"))
+            else if (ContainsAny(lower, "material", "resource", "材料", "资源", "原料", "缺少"))
                 category = "missing_material";
-            else if (lower.Contains("support") || lower.Contains("foundation"))
+            else if (ContainsAny(lower, "support", "foundation", "支撑", "地基", "依托"))
                 category = "missing_support";
-            else if (lower.Contains("reach") || lower.Contains("access"))
+            else if (ContainsAny(lower, "reach", "access", "不可达", "无法到达", "够不到", "路径"))
                 category = "unreachable";
-            else if (lower.Contains("confirm"))
+            else if (ContainsAny(lower, "confirm", "确认", "confirm=true"))
                 category = "missing_confirm";
 
             if (!string.IsNullOrEmpty(category))
@@ -48,6 +48,17 @@ namespace OniMcp.Tools
             }
 
             return diagnostic;
+        }
+
+        private static bool ContainsAny(string text, params string[] needles)
+        {
+            foreach (string needle in needles)
+            {
+                if (!string.IsNullOrEmpty(needle) && text.Contains(needle))
+                    return true;
+            }
+
+            return false;
         }
     }
 }
