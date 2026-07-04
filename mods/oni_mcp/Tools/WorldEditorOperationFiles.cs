@@ -90,7 +90,7 @@ namespace OniMcp.Tools
             {
                 sb.AppendLine("- 挖/挖掘 -> area dig; target @(x,y), x1/y1/x2/y2, or areaId.");
                 sb.AppendLine("- 擦/擦拭/拖地 -> area mop; target liquid cells or area.");
-                sb.AppendLine("- 扫/清扫/拾取/搬运 -> area sweep; target debris/item cell or area.");
+            sb.AppendLine("- 扫/清扫/捡/捡起/拾取/搬运 -> area sweep; target debris/item cell or area.");
                 sb.AppendLine("- 毒/消毒 -> area disinfect; target germy cells or area.");
                 sb.AppendLine("- 收/收获 -> area harvest; target plant cell or area.");
                 sb.AppendLine("- 消/取消 -> area cancel; target designated cell or area.");

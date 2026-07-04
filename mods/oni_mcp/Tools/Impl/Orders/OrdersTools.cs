@@ -18,11 +18,11 @@ namespace OniMcp.Tools
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders", "orders_unified_control", "orders_action_control", "map_orders_control" },
 Tags = new List<string> { "orders", "priority", "area", "designation", "dig", "sweep", "mop", "disinfect", "deconstruct", "capture" },
-Description = "Unified orders entrypoint. Supports priority plus work orders: area dig/sweep/mop/disinfect/cancel/harvest and designation deconstruct/attack/capture(wrangle)/empty_conduits/cut_conduits/manual_delivery. Chinese map-edit verbs are supported in operation files: 挖/扫/擦/毒/消/收/拆/杀/捕.",
+                Description = "Unified orders entrypoint. Supports priority plus work orders: area dig/sweep/mop/disinfect/cancel/harvest and designation deconstruct/attack/capture(wrangle)/empty_conduits/cut_conduits/manual_delivery. Chinese map-edit verbs are supported in operation files: 挖/扫/捡/擦/毒/消/收/拆/杀/捕.",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "priority, area, or designation. Omit to infer from action.", Required = false, EnumValues = new List<string> { "priority", "area", "designation" } },
-["action"] = new McpToolParameter { Type = "string", Description = "priority: list/set_building/set_area; area: dig/sweep(扫)/mop(擦)/disinfect(毒|消毒)/cancel(消)/harvest(收); designation: deconstruct(拆)/attack(杀)/capture|wrangle(捕)/empty_conduits|empty_pipe/cut_conduits|cut/manual_delivery.", Required = true },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "priority: list/set_building/set_area; area: dig/sweep(扫|捡|捡起)/mop(擦)/disinfect(毒|消毒)/cancel(消)/harvest(收); designation: deconstruct(拆)/attack(杀)/capture|wrangle(捕)/empty_conduits|empty_pipe/cut_conduits|cut/manual_delivery.", Required = true },
                     ["id"] = new McpToolParameter { Type = "integer", Description = "Single target InstanceID.", Required = false },
                     ["x"] = new McpToolParameter { Type = "integer", Description = "Single target X for designation actions.", Required = false },
                     ["y"] = new McpToolParameter { Type = "integer", Description = "Single target Y for designation actions.", Required = false },

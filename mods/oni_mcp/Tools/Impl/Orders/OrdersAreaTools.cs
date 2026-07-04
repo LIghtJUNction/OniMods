@@ -297,6 +297,8 @@ namespace OniMcp.Tools
                 case "扫":
                 case "清扫":
                 case "清理":
+                case "捡":
+                case "捡起":
                 case "拾取":
                 case "搬运":
                 case "收拾":
