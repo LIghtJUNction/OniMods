@@ -223,7 +223,7 @@ namespace OniMcp.Tools
             sb.AppendLine("- path: `" + path + "`");
             sb.AppendLine("- backing tool: `" + tool + "`");
             sb.AppendLine("- JSON: `?format=json`");
-            sb.AppendLine("- edit: change command lines under `## Edit Commands`, then submit SEARCH/REPLACE.");
+            sb.AppendLine("- edit: tables are read-only snapshots; add or uncomment command lines under `## Edit Commands`, then submit SEARCH/REPLACE.");
             sb.AppendLine();
             return sb;
         }
@@ -234,7 +234,7 @@ namespace OniMcp.Tools
             sb.AppendLine("# Management Files");
             sb.AppendLine();
             sb.AppendLine("- path: `" + path + "`");
-            sb.AppendLine("- edit model: each table is a Markdown control file; changing command lines under `## Edit Commands` changes the in-game panel.");
+            sb.AppendLine("- edit model: each table is a compact Markdown snapshot; only uncommented command lines under `## Edit Commands` change the in-game panel.");
             sb.AppendLine("- JSON fallback: append `?format=json` to any table path only when raw state is needed.");
             sb.AppendLine();
             sb.AppendLine("## Files");
@@ -249,8 +249,8 @@ namespace OniMcp.Tools
             sb.AppendLine();
             sb.AppendLine("## Fast Path");
             sb.AppendLine("1. Read the target file.");
-            sb.AppendLine("2. Replace only the relevant command line under `## Edit Commands`.");
-            sb.AppendLine("3. Submit SEARCH/REPLACE against that same file.");
+            sb.AppendLine("2. Add one command line or remove `# ` from an example under `## Edit Commands`.");
+            sb.AppendLine("3. Submit SEARCH/REPLACE against the same file; table rows are context, not patches.");
             return sb.ToString();
         }
 
@@ -260,6 +260,8 @@ namespace OniMcp.Tools
             sb.AppendLine("## Edit Commands");
             sb.AppendLine("```text");
             sb.AppendLine("# Lines beginning with # are ignored.");
+            sb.AppendLine("# Add one command per line, or remove '# ' from an example and edit its values.");
+            sb.AppendLine("# Do not rewrite the table above; it is a compact read-only snapshot.");
             foreach (string example in examples)
                 sb.AppendLine("# " + example);
             sb.AppendLine("```");
