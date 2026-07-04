@@ -288,7 +288,10 @@ namespace OniMcp.Tools
             if (inputs == 0 && outputs == 0)
                 return null;
             var building = go.GetComponent<Building>();
-            return EndpointPrefix(cell, building) + "logicIn=" + inputs + " logicOut=" + outputs;
+            return EndpointPrefix(cell, building)
+                + LogicPortText("logicIn", true, ports, ports.inputPortInfo)
+                + " "
+                + LogicPortText("logicOut", false, ports, ports.outputPortInfo);
         }
 
         private static string SolidEndpointLine(int cell, GameObject go, Building building)
@@ -310,6 +313,16 @@ namespace OniMcp.Tools
         private static string PortCellText(string label, bool input, int cell)
         {
             return label + "=" + (input ? "⊗" : "⊙") + CellCoord(cell);
+        }
+
+        private static string LogicPortText(string label, bool input, LogicPorts ports, LogicPorts.Port[] info)
+        {
+            int count = info?.Length ?? 0;
+            if (count == 0)
+                return label + "=.";
+            int cell = FirstLogicPortCell(ports, info);
+            return label + "=" + (input ? "⊗" : "⊙") + CellCoord(cell)
+                + (count > 1 ? "x" + count : string.Empty);
         }
 
         private static string PowerCircuitText(int cell)
