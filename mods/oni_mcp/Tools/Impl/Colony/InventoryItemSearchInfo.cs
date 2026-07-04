@@ -14,9 +14,7 @@ namespace OniMcp.Tools
             var primary = pickupable.PrimaryElement ?? go.GetComponent<PrimaryElement>();
             var edible = go.GetComponent<Edible>();
             var storage = pickupable.storage;
-            int cell = pickupable.cachedCell;
-            if (!Grid.IsValidCell(cell))
-                cell = Grid.PosToCell(go);
+            int cell = ToolUtil.PickupableCell(pickupable);
             int x = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1;
             int y = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1;
             int worldId = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell) ? Grid.WorldIdx[cell] : pickupable.GetMyWorldId();

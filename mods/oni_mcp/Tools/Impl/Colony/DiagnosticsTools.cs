@@ -19,12 +19,16 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Hidden = true,
                 Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=diagnostics",
+                Parameters = new Dictionary<string, McpToolParameter>
+                {
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只统计已揭示格子内食物，默认 true；调试可传 false", Required = false }
+                },
                 Handler = args =>
                 {
                     if (Game.Instance == null)
                         return CallToolResult.Error("Game not initialized");
 
-                    var diagnostics = BuildDiagnostics();
+                    var diagnostics = BuildDiagnostics(args);
                     return CallToolResult.Text(JsonConvert.SerializeObject(diagnostics, McpJsonUtil.Settings));
                 }
             };
@@ -42,7 +46,7 @@ namespace OniMcp.Tools
                 Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=alerts",
                 Handler = args =>
                 {
-                    var diagnostics = BuildDiagnostics();
+                    var diagnostics = BuildDiagnostics(args);
                     return CallToolResult.Text(JsonConvert.SerializeObject(diagnostics["alerts"], McpJsonUtil.Settings));
                 }
             };
@@ -239,6 +243,7 @@ namespace OniMcp.Tools
                     ["criteriaId"] = new McpToolParameter { Type = "string", Description = "action=set_settings 时子条件 ID；传 criteriaEnabled 时必填", Required = false },
                     ["criteriaEnabled"] = new McpToolParameter { Type = "boolean", Description = "action=set_settings 时是否启用指定子条件", Required = false },
                     ["debugNotificationsDisabled"] = new McpToolParameter { Type = "boolean", Description = "action=set_settings 时是否禁用 Debug 通知", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "action=diagnostics/alerts 时是否只统计已揭示格子内食物，默认 true；调试可传 false", Required = false },
                     ["disabled"] = new McpToolParameter { Type = "boolean", Description = "action=set_auto_disinfect 时 true=全局禁用自动消毒；false=允许游戏默认自动消毒行为", Required = false },
                     ["applyNow"] = new McpToolParameter { Type = "boolean", Description = "action=set_auto_disinfect 时是否立即同步现有对象，默认 true", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set_settings/set_auto_disinfect 时必须为 true", Required = false }
@@ -261,10 +266,13 @@ namespace OniMcp.Tools
             };
         }
 
-        private static Dictionary<string, object> BuildDiagnostics()
+        private static Dictionary<string, object> BuildDiagnostics(Newtonsoft.Json.Linq.JObject args)
         {
             int dupes = Components.LiveMinionIdentities.Count;
-            float caloriesKcal = Components.Edibles.Items.Where(e => e != null).Sum(e => ToolUtil.SafeFloat(e.Calories) / 1000f);
+            bool visibleOnly = ToolUtil.GetBool(args, "visibleOnly", true);
+            float caloriesKcal = Components.Edibles.Items
+                .Where(e => e != null && e.gameObject != null && ToolUtil.VisibleCellAllowed(Grid.PosToCell(e), visibleOnly))
+                .Sum(e => ToolUtil.SafeFloat(e.Calories) / 1000f);
             float stressMax = 0f;
             foreach (var dupe in Components.LiveMinionIdentities.Items)
             {
@@ -315,6 +323,7 @@ namespace OniMcp.Tools
                 ["cycle"] = GameUtil.GetCurrentCycle(),
                 ["duplicants"] = dupes,
                 ["foodKcal"] = Math.Round(caloriesKcal, 1),
+                ["visibleOnly"] = visibleOnly,
                 ["oxygenKgVisible"] = Math.Round(oxygenKg, 1),
                 ["pollutedOxygenKgVisible"] = Math.Round(pollutedOxygenKg, 1),
                 ["breathableCellsVisible"] = breathableCells,

@@ -34,6 +34,7 @@ namespace OniMcp.Tools
                     ["includeBuildings"] = new McpToolParameter { Type = "boolean", Description = "是否包含关键建筑计数，默认 true", Required = false },
                     ["includeAlerts"] = new McpToolParameter { Type = "boolean", Description = "是否包含快照告警，默认 true", Required = false },
                     ["includeAtmosphere"] = new McpToolParameter { Type = "boolean", Description = "是否扫描可见大气格子；这是全图扫描，默认 false", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只统计已揭示格子内资源/食物，默认 true；调试可传 false", Required = false },
                     ["dupeLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回复制人明细数量，默认 brief=0 standard=12 full=50", Required = false },
                     ["foodLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回食物类型数量，默认 brief=0 standard=8 full=50", Required = false },
                     ["delta"] = new McpToolParameter { Type = "boolean", Description = "只返回相对同 session/同 deltaKey 上次调用的变化；首次或 resetDelta=true 返回 baseline", Required = false },
@@ -56,6 +57,7 @@ namespace OniMcp.Tools
                     bool includeBuildings = ToolUtil.GetBool(args, "includeBuildings", true);
                     bool includeAlerts = ToolUtil.GetBool(args, "includeAlerts", true);
                     bool includeAtmosphere = ToolUtil.GetBool(args, "includeAtmosphere", false);
+                    bool visibleOnly = ToolUtil.GetBool(args, "visibleOnly", true);
                     int dupeLimit = Clamp(ToolUtil.GetInt(args, "dupeLimit") ?? DefaultDupeLimit(profile), 0, 100);
                     int foodLimit = Clamp(ToolUtil.GetInt(args, "foodLimit") ?? DefaultFoodLimit(profile), 0, 100);
                     bool minimal = profile == "minimal";
@@ -64,7 +66,7 @@ namespace OniMcp.Tools
                     bool needAtmosphere = includeAtmosphere || WatchNeedsAtmosphere(watchKeys);
 
                     List<DupeSnapshot> dupes = (includeDupes || includeAlerts || minimal || watchOnly || watchKeys.Count > 0) ? BuildDupes(worldId) : new List<DupeSnapshot>();
-                    FoodSnapshot food = (includeFood || includeAlerts || minimal || watchOnly || watchKeys.Count > 0) ? BuildFood(worldId, foodLimit) : null;
+                    FoodSnapshot food = (includeFood || includeAlerts || minimal || watchOnly || watchKeys.Count > 0) ? BuildFood(worldId, foodLimit, visibleOnly) : null;
                     BuildingSnapshot buildings = (includeBuildings || includeAlerts || minimal || watchOnly || watchKeys.Count > 0) ? BuildBuildings(worldId) : null;
                     Dictionary<string, object> atmosphere = needAtmosphere ? BuildAtmosphere(worldId) : null;
                     var redAlert = BuildRedAlert(worldId);
@@ -82,6 +84,7 @@ namespace OniMcp.Tools
                             ["v"] = 2,
                             ["profile"] = profile,
                             ["worldId"] = worldId,
+                            ["visibleOnly"] = visibleOnly,
                             ["time"] = time,
                             ["colony"] = colony
                         };

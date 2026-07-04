@@ -6,7 +6,7 @@ namespace OniMcp.Tools
 {
     public static partial class SurvivalPlanTools
     {
-        private static float UsableFoodKcal()
+        private static float UsableFoodKcal(bool visibleOnly)
         {
             float total = 0f;
             foreach (var edible in Components.Edibles.Items)
@@ -15,10 +15,12 @@ namespace OniMcp.Tools
                     continue;
 
                 var pickupable = edible.GetComponent<Pickupable>();
-                int cell = pickupable != null ? pickupable.cachedCell : Grid.PosToCell(edible);
+                int cell = pickupable != null ? ToolUtil.PickupableCell(pickupable) : Grid.PosToCell(edible);
+                if (!ToolUtil.VisibleCellAllowed(cell, visibleOnly))
+                    continue;
                 bool stored = pickupable != null && pickupable.storage != null;
 
-                if (!stored && !IsReachableLooseFood(cell, edible.GetMyWorldId()))
+                if (!stored && !IsReachableLooseFood(cell, edible.GetMyWorldId(), visibleOnly))
                     continue;
 
                 total += ToolUtil.SafeFloat(edible.Calories) / 1000f;
@@ -27,16 +29,18 @@ namespace OniMcp.Tools
             return total;
         }
 
-        private static float TotalFoodKcal()
+        private static float TotalFoodKcal(bool visibleOnly)
         {
             return Components.Edibles.Items
-                .Where(e => e != null)
+                .Where(e => e != null && e.gameObject != null && ToolUtil.VisibleCellAllowed(Grid.PosToCell(e), visibleOnly))
                 .Sum(e => ToolUtil.SafeFloat(e.Calories) / 1000f);
         }
 
-        private static bool IsReachableLooseFood(int cell, int fallbackWorldId)
+        private static bool IsReachableLooseFood(int cell, int fallbackWorldId, bool visibleOnly)
         {
             if (!Grid.IsValidCell(cell))
+                return false;
+            if (!ToolUtil.VisibleCellAllowed(cell, visibleOnly))
                 return false;
 
             var element = Grid.Element[cell];
@@ -56,13 +60,14 @@ namespace OniMcp.Tools
             return false;
         }
 
-        private static Dictionary<string, object> FoodMetricSummary(float usableFoodKcal)
+        private static Dictionary<string, object> FoodMetricSummary(float usableFoodKcal, bool visibleOnly)
         {
             return new Dictionary<string, object>
             {
                 ["usableFoodKcal"] = System.Math.Round(usableFoodKcal, 1),
-                ["totalKnownFoodKcal"] = System.Math.Round(TotalFoodKcal(), 1),
-                ["policy"] = "usableFoodKcal counts stored food plus reachable loose food outside liquid"
+                ["totalKnownFoodKcal"] = System.Math.Round(TotalFoodKcal(visibleOnly), 1),
+                ["visibleOnly"] = visibleOnly,
+                ["policy"] = "usableFoodKcal counts visible stored food plus visible reachable loose food outside liquid"
             };
         }
     }

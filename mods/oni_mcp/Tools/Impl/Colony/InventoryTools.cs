@@ -30,6 +30,7 @@ namespace OniMcp.Tools
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "按世界 ID 过滤，留空返回全部世界或当前激活世界", Required = false },
                     ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "inventory/search_items 时是否包含已储存在容器/复制人身上的物品", Required = false },
                     ["looseOnly"] = new McpToolParameter { Type = "boolean", Description = "search_items 时仅返回地上散落物；等价于 includeStored=false", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只统计已揭示格子内资源，默认 true；调试可传 false", Required = false },
                     ["includeUnpinned"] = new McpToolParameter { Type = "boolean", Description = "pins 时是否包含未固定且未通知的已发现资源，默认 false", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量；各 action 使用原工具默认值和上限", Required = false },
                     ["pinned"] = new McpToolParameter { Type = "boolean", Description = "set_pin 时是否固定在资源面板；不传则不修改", Required = false },
@@ -84,6 +85,7 @@ namespace OniMcp.Tools
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "按世界 ID 过滤，留空返回全部世界", Required = false },
                     ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "action=inventory/search_items 时是否包含已储存在容器/复制人身上的物品", Required = false },
                     ["looseOnly"] = new McpToolParameter { Type = "boolean", Description = "action=search_items 时仅返回地上散落物；等价于 includeStored=false", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只返回已揭示格子内资源，默认 true；调试可传 false", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量；各 action 使用原工具默认值和上限", Required = false }
                 },
                 Handler = args =>
@@ -141,6 +143,12 @@ namespace OniMcp.Tools
                         Type = "integer",
                         Description = "最多返回多少组资源，默认 100，最大 500",
                         Required = false
+                    },
+                    ["visibleOnly"] = new McpToolParameter
+                    {
+                        Type = "boolean",
+                        Description = "是否只统计已揭示格子内资源，默认 true；调试可传 false",
+                        Required = false
                     }
                 },
                 Handler = args =>
@@ -148,9 +156,10 @@ namespace OniMcp.Tools
                     if (Game.Instance == null)
                         return CallToolResult.Error("Game not initialized");
 
-                    string filter = args["resource"]?.ToString()?.ToLowerInvariant();
+                    string filter = (args["resource"] ?? args["query"])?.ToString()?.ToLowerInvariant();
                     int? worldId = TryGetInt(args, "worldId");
                     bool includeStored = TryGetBool(args, "includeStored", true);
+                    bool visibleOnly = TryGetBool(args, "visibleOnly", true);
                     int limit = ClampLimit(args, 100, 500);
 
                     var groups = new Dictionary<string, InventoryAggregate>();
@@ -167,7 +176,9 @@ namespace OniMcp.Tools
                         bool stored = pickupable.storage != null || pickupable.KPrefabID.HasTag(GameTags.Stored);
                         if (!includeStored && stored) continue;
 
-                        int cell = pickupable.cachedCell;
+                        int cell = ToolUtil.PickupableCell(pickupable);
+                        if (!ToolUtil.VisibleCellAllowed(cell, visibleOnly))
+                            continue;
                         int itemWorldId = Grid.IsValidCell(cell) ? Grid.WorldIdx[cell] : pickupable.GetMyWorldId();
                         if (worldId.HasValue && itemWorldId != worldId.Value) continue;
 
@@ -224,6 +235,7 @@ namespace OniMcp.Tools
                     var result = new Dictionary<string, object>
                     {
                         ["scannedPickupables"] = scanned,
+                        ["visibleOnly"] = visibleOnly,
                         ["totalGroups"] = groups.Count,
                         ["returned"] = items.Count,
                         ["items"] = items
@@ -258,6 +270,12 @@ namespace OniMcp.Tools
                         Type = "integer",
                         Description = "最多返回多少种食物，默认 100，最大 500",
                         Required = false
+                    },
+                    ["visibleOnly"] = new McpToolParameter
+                    {
+                        Type = "boolean",
+                        Description = "是否只统计已揭示格子内食物，默认 true；调试可传 false",
+                        Required = false
                     }
                 },
                 Handler = args =>
@@ -266,6 +284,7 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("Game not initialized");
 
                     int? worldId = TryGetInt(args, "worldId");
+                    bool visibleOnly = TryGetBool(args, "visibleOnly", true);
                     int limit = ClampLimit(args, 100, 500);
                     var groups = new Dictionary<string, FoodAggregate>();
                     float totalCaloriesKcal = 0f;
@@ -276,7 +295,9 @@ namespace OniMcp.Tools
 
                         var pickupable = edible.GetComponent<Pickupable>();
                         var primary = edible.GetComponent<PrimaryElement>();
-                        int cell = pickupable != null ? pickupable.cachedCell : Grid.PosToCell(edible);
+                        int cell = pickupable != null ? ToolUtil.PickupableCell(pickupable) : Grid.PosToCell(edible);
+                        if (!ToolUtil.VisibleCellAllowed(cell, visibleOnly))
+                            continue;
                         int itemWorldId = Grid.IsValidCell(cell) ? Grid.WorldIdx[cell] : edible.GetMyWorldId();
                         if (worldId.HasValue && itemWorldId != worldId.Value) continue;
 
@@ -316,6 +337,7 @@ namespace OniMcp.Tools
                     var result = new Dictionary<string, object>
                     {
                         ["totalCaloriesKcal"] = Math.Round(totalCaloriesKcal, 1),
+                        ["visibleOnly"] = visibleOnly,
                         ["foodTypes"] = groups.Count,
                         ["returned"] = foods.Count,
                         ["foods"] = foods
@@ -345,6 +367,7 @@ namespace OniMcp.Tools
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "按世界 ID 过滤；留空搜索全部世界", Required = false },
                     ["includeStored"] = new McpToolParameter { Type = "boolean", Description = "是否包含储物箱/复制人/建筑内物品，默认 true", Required = false },
                     ["looseOnly"] = new McpToolParameter { Type = "boolean", Description = "仅返回地上散落物；等价于 includeStored=false", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只返回已揭示格子内物品，默认 true；调试可传 false", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回实例数，默认 120，最大 1000", Required = false }
                 },
                 Handler = args =>
@@ -356,6 +379,7 @@ namespace OniMcp.Tools
                     int? worldId = TryGetInt(args, "worldId");
                     bool looseOnly = TryGetBool(args, "looseOnly", false);
                     bool includeStored = !looseOnly && TryGetBool(args, "includeStored", true);
+                    bool visibleOnly = TryGetBool(args, "visibleOnly", true);
                     int limit = ClampLimit(args, 120, 1000);
 
                     int scanned = 0;
@@ -370,6 +394,9 @@ namespace OniMcp.Tools
 
                         bool stored = pickupable.storage != null || (pickupable.KPrefabID != null && pickupable.KPrefabID.HasTag(GameTags.Stored));
                         if (!includeStored && stored)
+                            continue;
+                        int cell = ToolUtil.PickupableCell(pickupable);
+                        if (!ToolUtil.VisibleCellAllowed(cell, visibleOnly))
                             continue;
 
                         var info = ItemSearchInfo(pickupable);
@@ -390,6 +417,7 @@ namespace OniMcp.Tools
                         ["query"] = string.IsNullOrWhiteSpace(query) ? null : query,
                         ["worldId"] = worldId.HasValue ? (object)worldId.Value : null,
                         ["includeStored"] = includeStored,
+                        ["visibleOnly"] = visibleOnly,
                         ["scannedPickupables"] = scanned,
                         ["matched"] = matched,
                         ["returned"] = results.Count,

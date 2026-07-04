@@ -92,6 +92,19 @@ namespace OniMcp.Tools
             return component == null || component.GetMyWorldId() == worldId;
         }
 
+        public static int PickupableCell(Pickupable pickupable)
+        {
+            if (pickupable == null)
+                return -1;
+            int cell = pickupable.cachedCell;
+            return Grid.IsValidCell(cell) || pickupable.gameObject == null ? cell : Grid.PosToCell(pickupable.gameObject);
+        }
+
+        public static bool VisibleCellAllowed(int cell, bool visibleOnly)
+        {
+            return !visibleOnly || (Grid.IsValidCell(cell) && Grid.IsVisible(cell));
+        }
+
         public static MinionIdentity FindDupe(JObject args)
         {
             int id;

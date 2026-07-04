@@ -25,6 +25,7 @@ namespace OniMcp.Tools
                     ["action"] = new McpToolParameter { Type = "string", Description = "plan 或 status，默认 plan", Required = false },
                     ["targetCycles"] = new McpToolParameter { Type = "integer", Description = "目标长跑周期数，默认 100", Required = false },
                     ["foodKcalPerDupe"] = new McpToolParameter { Type = "number", Description = "每个复制人的最低食物库存阈值，默认 2000 kcal", Required = false },
+                    ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只统计已揭示格子内食物，默认 true；调试可传 false", Required = false },
                     ["includeConstructionPlan"] = new McpToolParameter { Type = "boolean", Description = "是否执行较重的梯子/楼梯开路构造搜索，默认 false；快速长跑分诊优先返回 frontier/map next calls", Required = false }
                 },
                 Handler = args =>
@@ -40,15 +41,16 @@ namespace OniMcp.Tools
         {
             int targetCycles = ToolUtil.GetInt(args, "targetCycles") ?? 100;
             float foodPerDupe = ToolUtil.GetFloat(args, "foodKcalPerDupe") ?? 2000f;
+            bool visibleOnly = ToolUtil.GetBool(args, "visibleOnly", true);
             int dupes = Components.LiveMinionIdentities.Count;
-            float foodKcal = UsableFoodKcal();
+            float foodKcal = UsableFoodKcal(visibleOnly);
             float maxStress = MaxStress();
             var buildings = CountBuildings();
             int oxygenProducers = CountMatching(buildings, "OxygenDiffuser", "MineralDeoxidizer", "Electrolyzer");
             int toilets = CountMatching(buildings, "Outhouse", "FlushToilet");
             int beds = CountMatching(buildings, "Bed", "LuxuryBed");
             bool includeConstructionPlan = ToolUtil.GetBool(args, "includeConstructionPlan", false);
-            var allReadyHarvestables = ReadyHarvestables().Take(12).ToList();
+            var allReadyHarvestables = ReadyHarvestables(visibleOnly).Take(12).ToList();
             var reachableHarvestables = allReadyHarvestables
                 .Where(item => item.TryGetValue("reachable", out var value) && value is bool reachable && reachable)
                 .Take(8)
@@ -108,6 +110,7 @@ namespace OniMcp.Tools
                     ["cycle"] = GameUtil.GetCurrentCycle(),
                     ["dupes"] = dupes,
                     ["foodKcal"] = Math.Round(foodKcal, 1),
+                    ["visibleOnly"] = visibleOnly,
                     ["foodNeedKcal"] = Math.Round(foodNeed, 1),
                     ["maxStress"] = Math.Round(maxStress, 1),
                     ["oxygenProducers"] = oxygenProducers,
@@ -178,7 +181,7 @@ namespace OniMcp.Tools
             return counts.Where(kv => needles.Any(needle => kv.Key.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0)).Sum(kv => kv.Value);
         }
 
-        private static IEnumerable<Dictionary<string, object>> ReadyHarvestables()
+        private static IEnumerable<Dictionary<string, object>> ReadyHarvestables(bool visibleOnly)
         {
             foreach (var harvestable in Components.HarvestDesignatables.Items)
             {
@@ -187,6 +190,8 @@ namespace OniMcp.Tools
                     continue;
                 var kpid = go.GetComponent<KPrefabID>();
                 int cell = Grid.PosToCell(go);
+                if (!ToolUtil.VisibleCellAllowed(cell, visibleOnly))
+                    continue;
                 yield return new Dictionary<string, object>
                 {
                     ["id"] = kpid?.InstanceID ?? 0,

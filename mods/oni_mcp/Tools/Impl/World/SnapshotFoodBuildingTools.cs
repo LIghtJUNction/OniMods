@@ -8,7 +8,7 @@ namespace OniMcp.Tools
 {
     public static partial class SnapshotTools
     {
-        private static FoodSnapshot BuildFood(int worldId, int limit)
+        private static FoodSnapshot BuildFood(int worldId, int limit, bool visibleOnly)
         {
             var groups = new Dictionary<string, FoodAggregate>();
             float totalKcal = 0f;
@@ -17,6 +17,8 @@ namespace OniMcp.Tools
                 if (edible == null || edible.gameObject == null)
                     continue;
                 int cell = Grid.PosToCell(edible);
+                if (!ToolUtil.VisibleCellAllowed(cell, visibleOnly))
+                    continue;
                 int itemWorld = Grid.IsValidCell(cell) ? Grid.WorldIdx[cell] : edible.GetMyWorldId();
                 if (worldId >= 0 && itemWorld != worldId)
                     continue;
