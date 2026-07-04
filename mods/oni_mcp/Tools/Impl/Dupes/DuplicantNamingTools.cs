@@ -24,7 +24,7 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "rename_dupe", "dupe_rename", "duplicant_rename", "rename_duplicant" },
                 Tags = new List<string> { "dupes", "dupe", "duplicants", "duplicant", "rename", "name", "复制人", "改名", "命名", "名字" },
-                Description = "兼容旧工具：请改用 dupes_control domain=command action=rename。修改指定复制人的名字",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=rename。修改指定复制人的名字",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -57,7 +57,7 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "auto_rename_dupes", "duplicants_auto_rename", "dupes_rename_by_role", "duplicants_rename_by_role" },
                 Tags = new List<string> { "dupes", "duplicants", "rename", "auto-rename", "name", "role", "job", "apply", "复制人", "改名", "重命名", "命名", "职业", "属性" },
-                Description = "兼容旧工具：请改用 dupes_control domain=command action=auto_rename。按复制人属性/兴趣自动生成职业化名字；apply=false 只预览，apply=true 立即应用重命名",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=auto_rename。按复制人属性/兴趣自动生成职业化名字；apply=false 只预览，apply=true 立即应用重命名",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["style"] = new McpToolParameter { Type = "string", Description = "命名风格：role_prefix、cn_job、short，默认 role_prefix", Required = false },

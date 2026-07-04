@@ -106,7 +106,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "ranching_critters_list", "creatures_list" },
                 Tags = new List<string> { "ranching", "critters", "creatures", "capture", "wrangle" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=bio bioDomain=ranching action=critters",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=bio bioDomain=ranching action=critters",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按名称或 prefabId 筛选", Required = false },

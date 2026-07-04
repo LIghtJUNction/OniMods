@@ -22,7 +22,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "area_snapshot", "world_snapshot_area" },
                 Tags = new List<string> { "map", "snapshot", "text", "grid", "screenshot", "overlay", "地图", "截图", "快照" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 read_control domain=world action=area_snapshot",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=area_snapshot",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；返回结果包含 origin/relativeRect 和世界绝对坐标范围", Required = false },

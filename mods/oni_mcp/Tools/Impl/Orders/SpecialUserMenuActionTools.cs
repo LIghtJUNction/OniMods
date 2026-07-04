@@ -49,7 +49,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "accept_mutant_seeds_list", "mutated_seed_toggles_list" },
                 Tags = new List<string> { "production", "farming", "mutant-seeds", "fish-feeder", "spice-grinder", "fabricator", "user-menu" },
-                Description = "兼容旧工具：请改用 building_control domain=production action=mutant_seed_list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=production action=mutant_seed_list",
                 Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -85,7 +85,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "accept_mutant_seeds_set", "mutated_seed_toggle_set" },
                 Tags = new List<string> { "production", "farming", "mutant-seeds", "fish-feeder", "spice-grinder", "fabricator", "user-menu" },
-                Description = "兼容旧工具：请改用 building_control domain=production action=mutant_seed_set",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=production action=mutant_seed_set",
                 Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
@@ -152,7 +152,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "rocket_usage_restrictions_list", "rocket_controlled_buildings_list" },
                 Tags = new List<string> { "rocket", "usage", "restriction", "control-station", "user-menu" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=usage action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=usage action=list",
                 Hidden = true,
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -188,7 +188,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "rocket_usage_restriction_set", "rocket_controlled_building_set" },
                 Tags = new List<string> { "rocket", "usage", "restriction", "control-station", "user-menu" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=usage action=set",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=usage action=set",
                 Hidden = true,
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {

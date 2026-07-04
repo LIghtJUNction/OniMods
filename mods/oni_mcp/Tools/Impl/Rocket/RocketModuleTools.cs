@@ -22,7 +22,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "reorderable_modules_list", "rocket_module_side_screen_list" },
                 Tags = new List<string> { "rockets", "modules", "reorder", "side-screen", "buildings" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=module action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=module action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按模块名、prefabId 或火箭名筛选", Required = false },
@@ -73,7 +73,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "rocket_module_buildables_list" },
                 Tags = new List<string> { "rockets", "modules", "build", "replace", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=module action=list_defs",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=module action=list_defs",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["mode"] = new McpToolParameter { Type = "string", Description = "any、add 或 replace；提供目标时默认 any", Required = false, EnumValues = new List<string> { "any", "add", "replace" } },

@@ -55,7 +55,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "resources_pins", "resources_notifications_list", "resource_pins_list" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
-                Description = "兼容旧工具：请改用 read_control domain=resources action=pins",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=pins",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
@@ -103,7 +103,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "set_resource_pin", "resources_notification_set", "resource_pin_set" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
-                Description = "兼容旧工具：请改用 read_control domain=resources action=set_pin；需 confirm=true",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=set_pin；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["resource"] = new McpToolParameter { Type = "string", Description = "资源 tag、prefabId 或名称，例如 Water、Oxygen、Dirt", Required = true },

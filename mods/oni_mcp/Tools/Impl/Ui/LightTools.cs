@@ -46,7 +46,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "light_color_controls_list" },
                 Tags = new List<string> { "lights", "color", "user-menu", "buildings" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=light action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=light action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId 或颜色名筛选", Required = false },
@@ -97,7 +97,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "light_color_set" },
                 Tags = new List<string> { "lights", "color", "user-menu", "buildings" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=light action=set_color",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=light action=set_color",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["colorIndex"] = new McpToolParameter { Type = "integer", Description = "颜色预设索引；可先用 building_control domain=special kind=light action=list 查询", Required = false },

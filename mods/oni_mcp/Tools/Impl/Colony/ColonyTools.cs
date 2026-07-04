@@ -173,7 +173,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_colony_info" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=read action=status",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=read action=status",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {
@@ -220,7 +220,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_duplicants" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=read action=dupes",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=read action=dupes",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {
@@ -276,7 +276,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_worlds" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=read action=worlds",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=read action=worlds",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {
@@ -315,7 +315,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_resources" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=read action=resources",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=read action=resources",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {

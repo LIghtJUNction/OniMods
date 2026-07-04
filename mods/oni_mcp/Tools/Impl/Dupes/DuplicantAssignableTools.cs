@@ -58,7 +58,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "beds_list", "medical_assignables_list" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 dupes_control domain=assignable action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=assignable action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["slotId"] = new McpToolParameter { Type = "string", Description = "按分配槽过滤，如 Bed、MedicalBed、SuitLocker；可留空", Required = false },
@@ -102,7 +102,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "bed_assign", "medical_bed_assign", "assignable_set" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 dupes_control domain=assignable action=set，并用 assignmentAction=assign/unassign/public",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=assignable action=set，并用 assignmentAction=assign/unassign/public",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["targetId"] = new McpToolParameter { Type = "integer", Description = "可分配对象 InstanceID", Required = false },
@@ -162,7 +162,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "equipment_slot_set", "ownables_slot_set", "bionic_upgrade_slot_set" },
                 Tags = new List<string> { "dupes", "equipment", "assignables", "ownables", "bionic", "side-screen" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 dupes_control domain=assignable action=set_slot，并用 slotAction=assign/unassign/none",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=assignable action=set_slot，并用 slotAction=assign/unassign/none",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；也可用 dupeId", Required = false },

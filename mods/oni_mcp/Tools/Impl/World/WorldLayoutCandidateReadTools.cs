@@ -22,7 +22,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "world_layout_candidates", "base_layout_candidates", "room_candidates" },
                 Tags = new List<string> { "layout", "planning", "room", "base", "map", "平面", "规划", "房间" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 read_control domain=world action=layout_candidates",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=layout_candidates",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；提供后可省略 x1/y1/x2/y2/worldId", Required = false },

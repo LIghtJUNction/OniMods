@@ -20,7 +20,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "get_world_element_summary" },
                 Tags = new List<string> { "world", "elements", "summary", "statistics", "mass", "temperature", "map", "元素", "统计" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 read_control domain=world action=element_summary",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=element_summary",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter

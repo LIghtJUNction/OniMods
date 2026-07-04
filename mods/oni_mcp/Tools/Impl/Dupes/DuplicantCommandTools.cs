@@ -82,7 +82,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Hidden = true,
                 Aliases = new List<string> { "dupe_move", "move_dupe", "duplicant_move_to" },
-                Description = "兼容旧工具：请改用 dupes_control domain=command action=move_to。对复制人下达“移动到这里”命令，使用游戏原生 MoveToLocationMonitor/MoveChore",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=move_to。对复制人下达“移动到这里”命令，使用游戏原生 MoveToLocationMonitor/MoveChore",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -141,7 +141,7 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "dupe_force_action", "duplicant_force_action", "dupe_cancel_all" },
                 Tags = new List<string> { "dupes", "force", "cancel", "move", "direct", "rescue" },
-                Description = "兼容旧工具：请改用 dupes_control domain=command action=force_action commandAction=cancel_all/move_to/cancel_all_and_move。对复制人执行强制动作；需 confirm=true",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=force_action commandAction=cancel_all/move_to/cancel_all_and_move。对复制人执行强制动作；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -221,7 +221,7 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "dupes_move_many", "move_dupes_batch", "duplicants_move_batch", "batch_move_dupes" },
                 Tags = new List<string> { "dupes", "commands", "move", "batch", "direct" },
-                Description = "兼容旧工具：请改用 dupes_control domain=command action=move_batch_to。批量下达复制人“移动到这里”命令。items 支持 {id|i,name|n,x,y,worldId|w}，顶层 x/y/worldId 可作为默认目标",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=move_batch_to。批量下达复制人“移动到这里”命令。items 支持 {id|i,name|n,x,y,worldId|w}，顶层 x/y/worldId 可作为默认目标",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["items"] = new McpToolParameter { Type = "array", Description = "移动命令数组；每项含 id/i 或 name/n，x/y 可省略以使用顶层默认目标", Required = true },

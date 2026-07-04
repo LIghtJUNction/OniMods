@@ -183,27 +183,45 @@ namespace OniMcp.Tools
         public static CallToolResult CallTool(string name, JObject arguments)
         {
             var middlewareNotifications = ToolCallMiddleware.DrainNotifications();
+            bool usedLegacyAlias = false;
             if (!_tools.TryGetValue(name, out var tool))
             {
                 if (!_aliases.TryGetValue(name, out var canonicalName) || !_tools.TryGetValue(canonicalName, out tool))
                     return ToolCallMiddleware.Inject(CallToolResult.Error($"Tool not found: {name}"), middlewareNotifications);
+                usedLegacyAlias = true;
             }
 
             try
             {
                 if (!ToolCallMiddleware.TryGetTaskDescription(arguments, out var taskDescription))
-                    return ToolCallMiddleware.MissingTaskDescription(tool.Name, middlewareNotifications);
+                {
+                    var missingTaskResult = ToolCallMiddleware.MissingTaskDescription(tool.Name, middlewareNotifications);
+                    return usedLegacyAlias
+                        ? ToolMetadata.AddLegacyAliasDeprecationWarning(missingTaskResult, name, tool.Name)
+                        : missingTaskResult;
+                }
 
                 ToolCallMiddleware.PresentTaskDescription(taskDescription);
 
                 if (!IsCoordinateTool(tool.Name) && ContainsCoordinateArguments(arguments))
-                    return ToolCallMiddleware.Inject(CallToolResult.Error("Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool."), middlewareNotifications);
+                {
+                    var coordinateResult = ToolCallMiddleware.Inject(CallToolResult.Error("Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool."), middlewareNotifications);
+                    return usedLegacyAlias
+                        ? ToolMetadata.AddLegacyAliasDeprecationWarning(coordinateResult, name, tool.Name)
+                        : coordinateResult;
+                }
 
-                return ToolCallMiddleware.Inject(tool.Handler(arguments ?? new JObject()), middlewareNotifications);
+                var result = ToolCallMiddleware.Inject(tool.Handler(arguments ?? new JObject()), middlewareNotifications);
+                return usedLegacyAlias
+                    ? ToolMetadata.AddLegacyAliasDeprecationWarning(result, name, tool.Name)
+                    : result;
             }
             catch (Exception ex)
             {
-                return ToolCallMiddleware.Inject(CallToolResult.Error($"Tool execution error: {ex.Message}"), middlewareNotifications);
+                var errorResult = ToolCallMiddleware.Inject(CallToolResult.Error($"Tool execution error: {ex.Message}"), middlewareNotifications);
+                return usedLegacyAlias
+                    ? ToolMetadata.AddLegacyAliasDeprecationWarning(errorResult, name, tool.Name)
+                    : errorResult;
             }
         }
 
@@ -324,6 +342,8 @@ namespace OniMcp.Tools
 
     internal static class ToolMetadata
     {
+        private const string LegacyAliasRemovalVersion = "0.3.0";
+
         public static void ApplyDefaults(McpTool tool)
         {
             if (string.IsNullOrEmpty(tool.Group))
@@ -344,6 +364,31 @@ namespace OniMcp.Tools
         {
             return $"[{tool.Group}/{tool.Mode}/{tool.Risk}] {tool.Description}";
         }
+
+        public static bool HasLegacyAliases(McpTool tool)
+        {
+            return tool?.Aliases != null && tool.Aliases.Count > 0;
+        }
+
+        public static string LegacyAliasesDeprecationWarning(McpTool tool)
+        {
+            return $"DEPRECATED: legacy aliases for '{tool.Name}' will be removed in {LegacyAliasRemovalVersion}; use '{tool.Name}' directly.";
+        }
+
+        public static CallToolResult AddLegacyAliasDeprecationWarning(CallToolResult result, string alias, string canonicalName)
+        {
+            if (result == null)
+                result = CallToolResult.Text(string.Empty);
+            if (result.Content == null)
+                result.Content = new List<ToolContent>();
+
+            result.Content.Insert(0, new ToolContent
+            {
+                Text = $"DEPRECATED: legacy tool name/alias '{alias}' will be removed in {LegacyAliasRemovalVersion}; use '{canonicalName}' instead."
+            });
+            return result;
+        }
+
 
         private static string InferGroup(string name)
         {

@@ -108,7 +108,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "pixel_pack_colors_list", "pixelpack_list" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=pixel_pack action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=pixel_pack action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名或 prefabId 筛选", Required = false },
@@ -162,7 +162,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "pixelpack_color_set" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=pixel_pack action=set_color",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=pixel_pack action=set_color",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["panelIndex"] = new McpToolParameter { Type = "integer", Description = "面板索引 0-3", Required = true },
@@ -223,7 +223,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "pixelpack_colors_copy", "pixel_pack_colors_swap" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=pixel_pack action=copy_colors",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=pixel_pack action=copy_colors",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["operation"] = new McpToolParameter { Type = "string", Description = "active_to_standby、standby_to_active 或 swap", Required = true, EnumValues = new List<string> { "active_to_standby", "standby_to_active", "swap" } }

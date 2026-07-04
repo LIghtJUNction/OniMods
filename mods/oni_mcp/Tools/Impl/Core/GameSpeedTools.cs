@@ -27,7 +27,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "get_game_time" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 game_control domain=speed action=time",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 game_control domain=speed action=time",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
                 {

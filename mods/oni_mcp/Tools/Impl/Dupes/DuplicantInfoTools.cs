@@ -69,7 +69,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Description = "兼容旧工具：请改用 dupes_control domain=info action=detail。获取复制人详细信息：位置、日程、技能、属性、需求和当前状态",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=info action=detail。获取复制人详细信息：位置、日程、技能、属性、需求和当前状态",
                 Parameters = DupeLookupParams(),
                 Handler = args =>
                 {
@@ -90,7 +90,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Description = "兼容旧工具：请改用 dupes_control domain=info action=attributes。获取一个或所有复制人的属性、兴趣倾向和已掌握技能",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=info action=attributes。获取一个或所有复制人的属性、兴趣倾向和已掌握技能",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID，留空返回全部", Required = false },
@@ -114,7 +114,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Description = "兼容旧工具：请改用 dupes_control domain=info action=needs。获取复制人的核心需求数值，如卡路里、压力、膀胱、体温等",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=info action=needs。获取复制人的核心需求数值，如卡路里、压力、膀胱、体温等",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID，留空返回全部", Required = false },
@@ -140,7 +140,7 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "duplicants_status_check", "dupes_stuck_check", "dupe_rescue_check" },
                 Tags = new List<string> { "dupes", "duplicants", "status", "stuck", "trapped", "navigation", "rescue", "复制人", "被困", "状态" },
-                Description = "兼容旧工具：请改用 dupes_control domain=info action=status_check。【复制人状态/被困检查首选】一次返回复制人位置、当前差事、关键需求、周边可达格和疑似被困风险；只读，不移动复制人。",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=info action=status_check。【复制人状态/被困检查首选】一次返回复制人位置、当前差事、关键需求、周边可达格和疑似被困风险；只读，不移动复制人。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID；留空检查全部", Required = false },

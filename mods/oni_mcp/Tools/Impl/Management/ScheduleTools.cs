@@ -67,7 +67,7 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "read",
                 Risk = "none",
-                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=list",
                 Handler = args =>
                 {
                     if (ScheduleManager.Instance == null)
@@ -102,7 +102,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "set_schedule_block", "schedule_block_set", "change_schedule_block" },
                 Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "blocks", "日程", "作息", "轮班", "时间段" },
-                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=set_block",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=set_block",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["schedule"] = new McpToolParameter { Type = "string", Description = "日程名称", Required = true },
@@ -138,7 +138,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "create_schedule", "schedule_add", "add_schedule" },
                 Tags = new List<string> { "schedule", "schedules", "shift", "timetable", "create", "日程", "作息", "轮班", "创建" },
-                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=create",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=create",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["name"] = new McpToolParameter { Type = "string", Description = "新日程名称", Required = true },
@@ -183,7 +183,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "assign_dupe_schedule", "schedule_assign_duplicant", "assign_duplicant_schedule" },
                 Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "assign", "shift", "日程", "复制人", "分配", "轮班" },
-                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=assign_dupe",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=assign_dupe",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID", Required = false },
@@ -222,7 +222,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "optimize_schedules", "schedule_stagger_shifts", "stagger_dupe_schedules" },
                 Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "shift", "stagger", "optimize", "日程", "复制人", "错峰", "轮班", "优化" },
-                Description = "兼容旧工具：请改用 colony_control domain=management kind=schedule action=optimize",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=optimize",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["shifts"] = new McpToolParameter { Type = "integer", Description = "轮班数量，默认按人数自动：1-2 人用 1 班，3-5 人用 3 班，最多 4 班", Required = false },

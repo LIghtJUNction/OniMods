@@ -117,7 +117,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "get_inventory" },
-                Description = "兼容旧工具：请改用 read_control domain=resources action=inventory",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=inventory",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["resource"] = new McpToolParameter
@@ -256,7 +256,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Aliases = new List<string> { "get_food_inventory" },
-                Description = "兼容旧工具：请改用 read_control domain=resources action=food",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=food",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter
@@ -359,7 +359,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "find_items", "resources_find_items", "pickupables_search", "map_items_search" },
                 Tags = new List<string> { "items", "pickupables", "resources", "search", "map", "物品", "搜索", "全图" },
-                Description = "兼容旧工具：请改用 read_control domain=resources action=search_items",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=search_items",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按物品名、prefabId、元素或 tag 模糊搜索；留空返回全部", Required = false },

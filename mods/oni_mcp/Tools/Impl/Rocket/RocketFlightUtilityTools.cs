@@ -22,7 +22,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "rocket_emptyable_cargo_list", "module_flight_utility_list" },
                 Tags = new List<string> { "rocket", "module", "cargo", "deploy", "jettison", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=flight_utility action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=flight_utility action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["rocketId"] = new McpToolParameter { Type = "integer", Description = "可选火箭 InstanceID", Required = false },
@@ -171,7 +171,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "rocket_control_station_restrictions_list" },
                 Tags = new List<string> { "rocket", "control-station", "restriction", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=restriction action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=restriction action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId 或火箭名筛选", Required = false },
@@ -216,7 +216,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "rocket_control_station_restriction_set" },
                 Tags = new List<string> { "rocket", "control-station", "restriction", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=restriction action=set",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=restriction action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["mode"] = new McpToolParameter { Type = "string", Description = "none 或 space", Required = true, EnumValues = new List<string> { "none", "space" } },

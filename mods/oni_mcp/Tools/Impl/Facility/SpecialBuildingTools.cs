@@ -107,7 +107,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "artwork_selection_list", "artable_facades_list" },
                 Tags = new List<string> { "buildings", "art", "decor", "facade", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=artable action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=artable action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、阶段 id 或阶段名筛选", Required = false },
@@ -157,7 +157,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "artwork_selection_set", "artable_facade_set" },
                 Tags = new List<string> { "buildings", "art", "decor", "facade", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=artable action=set_stage",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=artable action=set_stage",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["stageId"] = new McpToolParameter { Type = "string", Description = "目标 ArtableStage id；clear=true 时忽略", Required = false },
@@ -237,7 +237,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "lures_list", "creature_lure_baits_list" },
                 Tags = new List<string> { "buildings", "ranching", "lure", "bait", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=creature_lure action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=creature_lure action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId 或诱饵 tag 筛选", Required = false },
@@ -258,7 +258,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "lure_bait_set" },
                 Tags = new List<string> { "buildings", "ranching", "lure", "bait", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=creature_lure action=set_bait",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=creature_lure action=set_bait",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["baitTag"] = new McpToolParameter { Type = "string", Description = "诱饵 tag，如 SlimeMold 或 Phosphorite；clear=true 时忽略", Required = false },
@@ -302,7 +302,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "neural_vacillators_list" },
                 Tags = new List<string> { "buildings", "gene-shuffler", "trait", "recharge", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=gene_shuffler action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=gene_shuffler action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按名称、prefabId 或分配对象筛选", Required = false },
@@ -424,7 +424,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "missile_ammunition_list" },
                 Tags = new List<string> { "buildings", "rocket", "missile", "ammunition", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=missile_launcher action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=missile_launcher action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId 或弹药 tag 筛选", Required = false },
@@ -468,7 +468,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "missile_launcher_ammunition_set" },
                 Tags = new List<string> { "buildings", "rocket", "missile", "ammunition", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=missile_launcher action=set_ammunition",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=missile_launcher action=set_ammunition",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["ammoTag"] = new McpToolParameter { Type = "string", Description = "弹药 tag，如 MissileBasic、MissileLongRange 或 DLC cosmic blast 类型", Required = true },
@@ -536,7 +536,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "monument_facades_list" },
                 Tags = new List<string> { "buildings", "monument", "decor", "facade", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=monument_part action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=monument_part action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、part 或外观 id 筛选", Required = false },
@@ -582,7 +582,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "monument_facade_set" },
                 Tags = new List<string> { "buildings", "monument", "decor", "facade", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=special kind=monument_part action=set",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=monument_part action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["partId"] = new McpToolParameter { Type = "string", Description = "MonumentPartResource id；rotate=true 时可省略", Required = false },

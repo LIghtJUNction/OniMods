@@ -22,7 +22,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "overheat_risk_scan", "thermal_risk_scan" },
                 Tags = new List<string> { "thermal", "temperature", "overheat", "buildings", "heat", "温度", "过热" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 read_control domain=world action=thermal_overheat_risk",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=thermal_overheat_risk",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID；默认当前激活世界，传 -1 扫描全部世界", Required = false },

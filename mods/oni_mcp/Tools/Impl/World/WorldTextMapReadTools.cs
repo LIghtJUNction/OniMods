@@ -23,7 +23,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "get_world_text_map", "world_serialize_area" },
                 Tags = new List<string> { "map", "text", "markdown", "sequence", "world", "地图", "格子" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 read_control domain=world action=text_map",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=text_map",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["areaId"] = new McpToolParameter { Type = "string", Description = "可选区域句柄；返回结果会把该区域左下角作为 origin，并同时显示世界绝对坐标", Required = false },

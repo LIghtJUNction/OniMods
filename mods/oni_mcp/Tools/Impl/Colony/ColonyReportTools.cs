@@ -58,7 +58,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "daily_report", "get_colony_report" },
                 Tags = new List<string> { "report", "daily", "colony", "殖民地报告" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=report action=report",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=report action=report",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["day"] = new McpToolParameter { Type = "integer", Description = "报告周期；留空则按 which 选择", Required = false },
@@ -118,7 +118,7 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "get_colony_summary" },
                 Tags = new List<string> { "summary", "retired colony", "colony", "殖民地概要" },
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=report action=summary",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=report action=summary",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["includeStats"] = new McpToolParameter { Type = "boolean", Description = "是否包含概要统计曲线，默认 true", Required = false },

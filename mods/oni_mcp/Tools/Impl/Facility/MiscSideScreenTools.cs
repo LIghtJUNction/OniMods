@@ -24,7 +24,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "spice_grinders_list", "consumer_options_list" },
                 Tags = new List<string> { "production", "side-screen", "configurable-consumer", "spice" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=configurable_consumer action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=configurable_consumer action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId、选项名或 optionId 筛选", Required = false },
@@ -45,7 +45,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "spice_grinder_option_set", "consumer_option_set" },
                 Tags = new List<string> { "production", "side-screen", "configurable-consumer", "spice" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=configurable_consumer action=set_option",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=configurable_consumer action=set_option",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["optionIndex"] = new McpToolParameter { Type = "integer", Description = "GetSettingOptions() 中的选项序号", Required = false },
@@ -196,7 +196,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "multi_toggle_controls_list", "n_toggle_controls_list" },
                 Tags = new List<string> { "controls", "side-screen", "toggle", "multi-option" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=n_toggle action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=n_toggle action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId、标题或选项筛选", Required = false },
@@ -217,7 +217,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "multi_toggle_set", "n_toggle_option_set" },
                 Tags = new List<string> { "controls", "side-screen", "toggle", "multi-option" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=n_toggle action=set",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=n_toggle action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["optionIndex"] = new McpToolParameter { Type = "integer", Description = "目标选项序号", Required = false },
@@ -400,7 +400,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "liquid_tepidizers_list", "turbo_mode_heaters_list" },
                 Tags = new List<string> { "building", "heater", "liquid", "turbo", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=turbo_heater action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=turbo_heater action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑或 prefabId 筛选", Required = false },
@@ -421,7 +421,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "liquid_tepidizer_turbo_set", "turbo_mode_set" },
                 Tags = new List<string> { "building", "heater", "liquid", "turbo", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=misc kind=turbo_heater action=set",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=turbo_heater action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["enabled"] = new McpToolParameter { Type = "boolean", Description = "true=最大功耗，false=最小功耗", Required = true }
@@ -457,7 +457,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "self_destruct_modules_list" },
                 Tags = new List<string> { "rocket", "self-destruct", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=self_destruct action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=self_destruct action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId 或火箭名筛选", Required = false },
@@ -478,7 +478,7 @@ namespace OniMcp.Tools
                 Risk = "high",
                 Aliases = new List<string> { "self_destruct_trigger" },
                 Tags = new List<string> { "rocket", "self-destruct", "destructive", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=rocket rocketDomain=self_destruct action=trigger",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=self_destruct action=trigger",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "必须为 true，确认自毁火箭", Required = true }

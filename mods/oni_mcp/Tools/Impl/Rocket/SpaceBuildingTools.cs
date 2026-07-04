@@ -102,7 +102,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "space_scanners_list", "comet_detector_targets_list" },
                 Tags = new List<string> { "automation", "space", "comet", "rocket", "sensor", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=space_building kind=comet_detector action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=comet_detector action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、目标类型或火箭名筛选", Required = false },
@@ -151,7 +151,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "space_scanner_target_set" },
                 Tags = new List<string> { "automation", "space", "comet", "rocket", "sensor", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=space_building kind=comet_detector action=set_target。DLC 模式支持 meteor_shower、ballistic_object、rocket；基础版支持 meteor_shower 或 rocket",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=comet_detector action=set_target。DLC 模式支持 meteor_shower、ballistic_object、rocket；基础版支持 meteor_shower 或 rocket",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["targetType"] = new McpToolParameter { Type = "string", Description = "meteor_shower、ballistic_object 或 rocket", Required = true, EnumValues = new List<string> { "meteor_shower", "ballistic_object", "rocket" } },
@@ -250,7 +250,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "cluster_location_filters_list" },
                 Tags = new List<string> { "automation", "space", "cluster", "location", "sensor", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=space_building kind=cluster_location_sensor action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=cluster_location_sensor action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、星体名或坐标筛选", Required = false },
@@ -271,7 +271,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "cluster_location_filter_set" },
                 Tags = new List<string> { "automation", "space", "cluster", "location", "sensor", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=space_building kind=cluster_location_sensor action=set",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=cluster_location_sensor action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["target"] = new McpToolParameter { Type = "string", Description = "space 或 location", Required = true, EnumValues = new List<string> { "space", "location" } },
@@ -352,7 +352,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "railgun_launch_mass_list" },
                 Tags = new List<string> { "space", "railgun", "launcher", "mass", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=space_building kind=railgun action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=railgun action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名或 prefabId 筛选", Required = false },
@@ -373,7 +373,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "railgun_mass_set" },
                 Tags = new List<string> { "space", "railgun", "launcher", "mass", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=space_building kind=railgun action=set_launch_mass",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=railgun action=set_launch_mass",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["massKg"] = new McpToolParameter { Type = "number", Description = "目标发射质量 kg，按轨道炮 min/max 夹取", Required = true }

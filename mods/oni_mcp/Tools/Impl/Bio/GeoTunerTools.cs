@@ -51,7 +51,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "geotuners_list", "geo_tuner_assignments_list" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=geo_tuner action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=geo_tuner action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑名、prefabId、喷泉名或喷泉类型筛选", Required = false },
@@ -98,7 +98,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "geotuner_geysers_list", "geotuner_targets_list" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=geo_tuner action=list_geysers",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=geo_tuner action=list_geysers",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按喷泉名、prefabId 或喷泉类型筛选", Required = false },
@@ -149,7 +149,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "geotuner_assign", "geo_tuner_set_geyser" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
-                Description = "兼容旧工具：请改用 building_control domain=side_surface surface=geo_tuner action=assign",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=geo_tuner action=assign",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["geyserId"] = new McpToolParameter { Type = "integer", Description = "目标喷泉 InstanceID；clear=true 时忽略", Required = false },

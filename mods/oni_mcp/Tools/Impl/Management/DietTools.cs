@@ -48,7 +48,7 @@ namespace OniMcp.Tools
                 Group = "diet",
                 Mode = "read",
                 Risk = "none",
-                Description = "兼容旧工具：请改用 colony_control domain=management kind=diet action=status",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=diet action=status",
                 Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -94,7 +94,7 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "set_diet_food" },
-                Description = "兼容旧工具：请改用 colony_control domain=management kind=diet action=set",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=diet action=set",
                 Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -142,7 +142,7 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Aliases = new List<string> { "apply_diet_policy" },
-                Description = "兼容旧工具：请改用 colony_control domain=management kind=diet action=policy",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=diet action=policy",
                 Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
                 {

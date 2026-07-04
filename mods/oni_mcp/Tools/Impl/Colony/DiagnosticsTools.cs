@@ -18,7 +18,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=diagnostics",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=diagnostic action=diagnostics",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只统计已揭示格子内食物，默认 true；调试可传 false", Required = false }
@@ -43,7 +43,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=alerts",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=diagnostic action=alerts",
                 Handler = args =>
                 {
                     var diagnostics = BuildDiagnostics(args);
@@ -63,7 +63,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "diagnostic_settings_list", "all_diagnostics_settings_list" },
                 Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria" },
-                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=list_settings",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=diagnostic action=list_settings",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界", Required = false },
@@ -106,7 +106,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "set_diagnostic_settings", "diagnostic_settings_set", "all_diagnostics_settings_set" },
                 Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria" },
-                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=set_settings；需 confirm=true",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=diagnostic action=set_settings；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["diagnosticId"] = new McpToolParameter { Type = "string", Description = "诊断 ID；修改 displaySetting 或 criteriaId 时必填", Required = false },
@@ -189,7 +189,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "auto_disinfect_set", "global_auto_disinfect_set", "disable_auto_disinfect_global" },
                 Tags = new List<string> { "auto-disinfect", "disinfect", "global", "care", "消毒", "全局", "禁用消毒" },
-                Description = "兼容旧工具：请改用 colony_control domain=diagnostic action=set_auto_disinfect；disabled=true 会关闭现有和新出现对象的 AutoDisinfectable",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=diagnostic action=set_auto_disinfect；disabled=true 会关闭现有和新出现对象的 AutoDisinfectable",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["disabled"] = new McpToolParameter { Type = "boolean", Description = "true=全局禁用自动消毒；false=允许游戏默认自动消毒行为", Required = true },

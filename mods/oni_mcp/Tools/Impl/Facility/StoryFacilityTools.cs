@@ -66,7 +66,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "hijacked_headquarters_list", "printerceptor_status_list" },
                 Tags = new List<string> { "story", "printerceptor", "immigration", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=printerceptor action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=printerceptor action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、prefabId 或状态筛选", Required = false },
@@ -87,7 +87,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "hijacked_headquarters_control" },
                 Tags = new List<string> { "story", "printerceptor", "immigration", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=printerceptor action=intercept/open_print_interface",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=printerceptor action=intercept/open_print_interface",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "intercept 或 open_print_interface", Required = true, EnumValues = new List<string> { "intercept", "open_print_interface" } },
@@ -143,7 +143,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "research_portals_list", "information_transmission_channels_list", "info_transmission_channels_list" },
                 Tags = new List<string> { "story", "poi", "tech", "unlock", "research-portal", "information-transmission-channel", "信息传送通道", "信息传输通道", "解锁信息传输通道" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=poi_tech_unlock action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=poi_tech_unlock action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按对象、prefabId、按钮文本或解锁科技筛选", Required = false },
@@ -197,7 +197,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "research_portal_control", "information_transmission_channel_control", "info_transmission_channel_control" },
                 Tags = new List<string> { "story", "poi", "tech", "unlock", "research-portal", "information-transmission-channel", "信息传送通道", "信息传输通道", "解锁信息传输通道" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=poi_tech_unlock action=start/cancel/toggle；需 confirm=true",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=poi_tech_unlock action=start/cancel/toggle；需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "start、cancel 或 toggle", Required = true, EnumValues = new List<string> { "start", "cancel", "toggle" } },
@@ -267,7 +267,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "remote_work_terminal_docks_list" },
                 Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=remote_work_terminal action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=remote_work_terminal action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按终端、dock、prefabId 或世界筛选", Required = false },
@@ -289,7 +289,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "remote_work_dock_set" },
                 Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=remote_work_terminal action=set_dock",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=remote_work_terminal action=set_dock",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["dockId"] = new McpToolParameter { Type = "integer", Description = "目标 RemoteWorkerDock InstanceID", Required = false },
@@ -336,7 +336,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "remote_work_dock_control" },
                 Tags = new List<string> { "remote-work", "dock", "side-screen", "building" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=remote_work_terminal；action=list 查询可选 dock，action=set_dock 设置或清空目标 dock",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=remote_work_terminal；action=list 查询可选 dock，action=set_dock 设置或清空目标 dock",
                 Parameters = RemoteWorkTerminalControlParams(),
                 Handler = args =>
                 {
@@ -361,7 +361,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "botanical_analyzers_list", "seed_analysis_stations_list" },
                 Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=genetic_analysis_station action=list",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=genetic_analysis_station action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按建筑、种子、植物或状态筛选", Required = false },
@@ -382,7 +382,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "botanical_analyzer_seed_set", "seed_analysis_allowed_set" },
                 Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=genetic_analysis_station action=set_seed",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=genetic_analysis_station action=set_seed",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {
                     ["seedId"] = new McpToolParameter { Type = "string", Description = "种子 tag/prefab id，例如 BasicFabricPlantSeed；与 speciesId 二选一", Required = false },
@@ -425,7 +425,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "botanical_analyzer_control", "seed_analysis_station_control" },
                 Tags = new List<string> { "farming", "seed", "mutation", "analysis", "side-screen" },
-                Description = "兼容旧工具：请改用 building_control domain=story_facility kind=genetic_analysis_station；action=list 查询可分析种子，action=set_seed 设置允许/禁用",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=genetic_analysis_station；action=list 查询可分析种子，action=set_seed 设置允许/禁用",
                 Parameters = GeneticAnalysisStationControlParams(),
                 Handler = args =>
                 {

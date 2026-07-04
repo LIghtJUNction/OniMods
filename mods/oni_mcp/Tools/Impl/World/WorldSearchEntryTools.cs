@@ -22,7 +22,7 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "map_search", "world_find", "find_on_map" },
                 Tags = new List<string> { "world", "map", "search", "find", "elements", "buildings", "items", "dupes", "地图", "搜索", "查找" },
-                Description = "兼容旧工具：请改用 read_control domain=world action=search。按自然语言/query 在同一区域内搜索格子元素、建筑、物品和复制人；支持 nearX/nearY 最近排序。",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=search。按自然语言/query 在同一区域内搜索格子元素、建筑、物品和复制人；支持 nearX/nearY 最近排序。",
                 Parameters = CommonSearchParameters(includeKinds: true),
                 Handler = args =>
                 {

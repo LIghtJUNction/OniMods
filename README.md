@@ -49,6 +49,21 @@ Idea note: implement a second "agent pointer" that always snaps to cell centers 
 
 Short version: do not expect current AI systems to play a complex simulation game like ONI well over long autonomous sessions. A more realistic direction for now is letting AI read more game data, execute small explicit tasks, and assist with local planning after player confirmation.
 
+### 0.2.0 Revolution
+
+The 0.2.0 direction no longer asks the agent to imitate a human player. That approach is simply too slow for real ONI work.
+
+After a lot of testing, two rules became clear:
+
+1. Do not ask the agent to calculate coordinates.
+2. Let the agent play the game as if it were editing a file.
+
+The solution is to abstract the game map as virtual files. For cross-platform compatibility this does not use FUSE or similar filesystem implementations. Instead, the agent generates search/replace text patches against a textual map, and the mod parses those patches into real game operations.
+
+In practice the result has been surprisingly strong. A single tool call can create the basic frame of an entire base: doors, enclosed rooms, hollowed interiors, and precise priority tuning for individual cells.
+
+This is a large change with higher implementation difficulty and more edge cases, so it needs more testing feedback before it can be treated as stable.
+
 </details>
 
 ## onim

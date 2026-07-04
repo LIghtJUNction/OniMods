@@ -111,6 +111,7 @@ namespace OniMcp.Tools
             if (required.Count > 0)
                 result["req"] = required;
 
+            AddLegacyAliasDeprecation(result, tool);
             return result;
         }
 
@@ -125,7 +126,7 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> ToolToCompactManifest(McpTool tool, int score)
         {
-            return new Dictionary<string, object>
+            var result = new Dictionary<string, object>
             {
                 ["name"] = tool.Name,
                 ["group"] = tool.Group,
@@ -140,11 +141,13 @@ namespace OniMcp.Tools
                     .ToList(),
                 ["aliases"] = tool.Aliases != null && tool.Aliases.Count > 0 ? (object)tool.Aliases : null
             };
+            AddLegacyAliasDeprecation(result, tool);
+            return result;
         }
 
         private static Dictionary<string, object> ToolToManifest(McpTool tool)
         {
-            return new Dictionary<string, object>
+            var result = new Dictionary<string, object>
             {
                 ["name"] = tool.Name,
                 ["group"] = tool.Group,
@@ -166,6 +169,17 @@ namespace OniMcp.Tools
                         }),
                 ["exampleArguments"] = ExampleArguments(tool)
             };
+            AddLegacyAliasDeprecation(result, tool);
+            return result;
+        }
+
+        private static void AddLegacyAliasDeprecation(Dictionary<string, object> result, McpTool tool)
+        {
+            if (!ToolMetadata.HasLegacyAliases(tool))
+                return;
+
+            result["deprecatedAliases"] = tool.Aliases.OrderBy(alias => alias).ToList();
+            result["deprecationWarning"] = ToolMetadata.LegacyAliasesDeprecationWarning(tool);
         }
 
         private static Dictionary<string, object> ExampleArguments(McpTool tool)
