@@ -225,9 +225,37 @@ private static JArray ManagementQuickEdits()
                     ["autoLayout"] = true,
                     ["priority"] = 7,
                     ["execute"] = true,
-                    ["confirm"] = true
-                },
-                ["why"] = "One-call starter build: auto-selects room candidate, digs interiors, builds toilet, wash basin, research station.",
+["confirm"] = true
+},
+["exactSecondCall"] = new JObject
+{
+["tool"] = "building_control",
+["arguments"] = new JObject
+{
+["domain"] = "planning",
+["action"] = "room_template",
+["kind"] = "starter",
+["autoLayout"] = true,
+["priority"] = 7,
+["execute"] = true,
+["confirm"] = true
+}
+},
+["dryRunVariant"] = new JObject
+{
+["tool"] = "building_control",
+["arguments"] = new JObject
+{
+["domain"] = "planning",
+["action"] = "room_template",
+["kind"] = "starter",
+["autoLayout"] = true,
+["priority"] = 7,
+["execute"] = false,
+["dryRun"] = true
+}
+},
+["why"] = "One-call starter build: auto-selects room candidate, digs interiors, builds toilet, wash basin, research station.",
                 ["expectedResult"] = "Returns executionPlan, priorityAction, rooms, generated calls, compact results, verificationPlan, and nextActions.",
                 ["postRunReads"] = StarterPostRunReads(),
                 ["successCriteria"] = StarterSuccessCriteria(),
