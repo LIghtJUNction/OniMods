@@ -24,8 +24,10 @@ namespace OniMcp.Tools
 
             var connections = new List<string>();
             var endpoints = new List<string>();
+            var bridges = new List<string>();
             int connectionTotal = 0;
             int endpointTotal = 0;
+            int bridgeTotal = 0;
 
             for (int y = yMax; y >= yMin; y--)
             {
@@ -43,16 +45,24 @@ namespace OniMcp.Tools
                     }
 
                     var endpoint = EndpointDetailLine(mode, cell);
-                    if (!string.IsNullOrEmpty(endpoint))
-                    {
-                        endpointTotal++;
-                        if (endpoints.Count < MaxEndpointDetailRows)
-                            endpoints.Add(endpoint);
-                    }
+                if (!string.IsNullOrEmpty(endpoint))
+                {
+                    endpointTotal++;
+                    if (endpoints.Count < MaxEndpointDetailRows)
+                        endpoints.Add(endpoint);
+                }
+
+                var bridge = BridgeDetailLine(mode, cell);
+                if (!string.IsNullOrEmpty(bridge))
+                {
+                    bridgeTotal++;
+                    if (bridges.Count < MaxEndpointDetailRows)
+                        bridges.Add(bridge);
                 }
             }
+        }
 
-            if (connectionTotal == 0 && endpointTotal == 0)
+            if (connectionTotal == 0 && endpointTotal == 0 && bridgeTotal == 0)
                 return;
 
             sb.AppendLine("## Connection Details (" + title + ")");
@@ -65,6 +75,17 @@ namespace OniMcp.Tools
                 sb.AppendLine(line);
             if (connectionTotal > connections.Count)
                 sb.AppendLine("- ... " + (connectionTotal - connections.Count) + " more connection cells; use `/active/map/cell_X_Y.md` for exact detail.");
+
+            if (bridges.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("## Bridges (" + title + ")");
+                sb.AppendLine("- route: `from` is input side, `to` is output side, `via:⌒` means jump through bridge building.");
+                foreach (string line in bridges.Distinct())
+                    sb.AppendLine(line);
+                if (bridgeTotal > bridges.Count)
+                    sb.AppendLine("- ... " + (bridgeTotal - bridges.Count) + " more bridges in viewport.");
+            }
 
             if (endpoints.Count > 0)
             {
@@ -219,6 +240,16 @@ namespace OniMcp.Tools
             int x = Grid.CellColumn(cell) + dx;
             int y = Grid.CellRow(cell) + dy;
             return Grid.XYToCell(x, y);
+        }
+
+        private static string BridgeDetailLine(HashedString mode, int cell)
+        {
+            string bridge = BridgeText(cell, mode);
+            if (string.IsNullOrEmpty(bridge))
+                return null;
+            var go = Grid.Objects[cell, (int)ObjectLayer.Building];
+            var building = go != null ? go.GetComponent<Building>() : null;
+            return EndpointPrefix(cell, building) + bridge;
         }
 
         private static string EndpointDetailLine(HashedString mode, int cell)
