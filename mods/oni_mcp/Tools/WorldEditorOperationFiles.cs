@@ -88,15 +88,15 @@ namespace OniMcp.Tools
             sb.AppendLine("## Semantic Shortcuts");
             if (relative == "ops/orders.md" || relative == "ops/ranching.md")
             {
-                sb.AppendLine("- 挖/挖掘 -> area dig; target @(x,y), x1/y1/x2/y2, or areaId.");
-                sb.AppendLine("- 擦/擦拭/拖地 -> area mop; target liquid cells or area.");
-            sb.AppendLine("- 扫/清扫/打扫/捡/捡起/拾取/搬运/收拾 -> area sweep; target debris/item cell or area.");
-                sb.AppendLine("- 毒/消毒 -> area disinfect; target germy cells or area.");
-                sb.AppendLine("- 收/收获 -> area harvest; target plant cell or area.");
-                sb.AppendLine("- 消/取消 -> area cancel; target designated cell or area.");
-                sb.AppendLine("- 拆/拆除 -> designation deconstruct; target 建筑@(x,y) or id.");
-                sb.AppendLine("- 杀/攻击 -> designation attack; target 小动物@(x,y) or id.");
-                sb.AppendLine("- 捕/捕捉/抓捕 -> designation capture; target 小动物@(x,y) or x/y.");
+                sb.AppendLine("- 挖/挖掘/开挖/dig -> area dig; target @(x,y), x1/y1/x2/y2, or areaId.");
+                sb.AppendLine("- 擦/擦拭/擦水/拖地/mop -> area mop; target liquid cells or area.");
+                sb.AppendLine("- 扫/清扫/清理/打扫/捡/拾取/搬运/收拾/pickup -> area sweep; target debris/item cell or area.");
+                sb.AppendLine("- 毒/消毒/杀菌/灭菌/disinfect -> area disinfect; target germy cells or area.");
+                sb.AppendLine("- 收/收获/收割/采收/harvest -> area harvest; target plant cell or area.");
+                sb.AppendLine("- 消/取消/取消任务/cancel -> area cancel; target designated cell or area.");
+                sb.AppendLine("- 拆/拆除/拆建筑/deconstruct -> designation deconstruct; target 建筑@(x,y) or id.");
+                sb.AppendLine("- 杀/攻击/击杀/attack -> designation attack; target 小动物@(x,y) or id.");
+                sb.AppendLine("- 捕/捕捉/抓捕/wrangle -> designation capture; target 小动物@(x,y) or x/y.");
                 sb.AppendLine("- suffix `:7` sets priority; add `dryRun=true` before risky or broad orders.");
             }
             if (relative == "ops/dupes.md")
