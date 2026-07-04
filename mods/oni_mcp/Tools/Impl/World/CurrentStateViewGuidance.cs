@@ -66,28 +66,30 @@ namespace OniMcp.Tools
 
             return new JArray
             {
-                LookAroundStep("center", cx, cy, halfWidth, halfHeight),
-                LookAroundStep("north", cx, cy + stepY, halfWidth, halfHeight),
-                LookAroundStep("south", cx, cy - stepY, halfWidth, halfHeight),
-                LookAroundStep("east", cx + stepX, cy, halfWidth, halfHeight),
-                LookAroundStep("west", cx - stepX, cy, halfWidth, halfHeight),
-                LookAroundStep("north_east", cx + stepX, cy + stepY, halfWidth, halfHeight),
-                LookAroundStep("north_west", cx - stepX, cy + stepY, halfWidth, halfHeight),
-                LookAroundStep("south_east", cx + stepX, cy - stepY, halfWidth, halfHeight),
-                LookAroundStep("south_west", cx - stepX, cy - stepY, halfWidth, halfHeight),
-                LookAroundStep("overview", cx, cy, halfWidth * 2, halfHeight * 2)
+                LookAroundStep("center_detail", cx, cy, halfWidth, halfHeight, "detail", "default,power,temperature"),
+                LookAroundStep("overview", cx, cy, halfWidth * 2, halfHeight * 2, "overview", "default,oxygen,temperature"),
+                LookAroundStep("north", cx, cy + stepY, halfWidth, halfHeight, "detail", "default,power,temperature"),
+                LookAroundStep("south", cx, cy - stepY, halfWidth, halfHeight, "detail", "default,power,temperature"),
+                LookAroundStep("east", cx + stepX, cy, halfWidth, halfHeight, "detail", "default,power,temperature"),
+                LookAroundStep("west", cx - stepX, cy, halfWidth, halfHeight, "detail", "default,power,temperature"),
+                LookAroundStep("north_east", cx + stepX, cy + stepY, halfWidth, halfHeight, "detail", "default,power,temperature"),
+                LookAroundStep("north_west", cx - stepX, cy + stepY, halfWidth, halfHeight, "detail", "default,power,temperature"),
+                LookAroundStep("south_east", cx + stepX, cy - stepY, halfWidth, halfHeight, "detail", "default,power,temperature"),
+                LookAroundStep("south_west", cx - stepX, cy - stepY, halfWidth, halfHeight, "detail", "default,power,temperature")
             };
         }
 
-        private static JObject LookAroundStep(string direction, int cx, int cy, int halfWidth, int halfHeight)
+        private static JObject LookAroundStep(string direction, int cx, int cy, int halfWidth, int halfHeight, string focusMode, string views)
         {
             int x1 = Mathf.Clamp(cx - halfWidth, 0, Grid.WidthInCells - 1);
             int x2 = Mathf.Clamp(cx + halfWidth, 0, Grid.WidthInCells - 1);
             int y1 = Mathf.Clamp(cy - halfHeight, 0, Grid.HeightInCells - 1);
             int y2 = Mathf.Clamp(cy + halfHeight, 0, Grid.HeightInCells - 1);
+            var args = new JObject { ["command"] = "zoom", ["x1"] = x1, ["y1"] = y1, ["x2"] = x2, ["y2"] = y2, ["views"] = views, ["compact"] = true, ["syncView"] = true, ["focusCamera"] = true, ["focusMode"] = focusMode };
             string call = "world_editor command=zoom x1=" + x1 + " y1=" + y1 + " x2=" + x2 + " y2=" + y2
-                + " views=default,power,oxygen,temperature compact=true";
-            return new JObject { ["direction"] = direction, ["call"] = call };
+                + " views=" + views + " compact=true syncView=true focusMode=" + focusMode;
+            string why = focusMode == "overview" ? "Zoom out to anchor global layout before planning edits." : "Zoom in to inspect local cells, overlays, anchors, and stream-visible detail.";
+            return new JObject { ["direction"] = direction, ["tool"] = "world_editor", ["arguments"] = args, ["call"] = call, ["why"] = why };
         }
 
         private static JArray ProgressiveDetail()
