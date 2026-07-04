@@ -144,6 +144,25 @@ namespace OniMcp.Tools
             string powerInfo = GetPowerInfo(building);
             if (!string.IsNullOrEmpty(powerInfo))
                 sb.AppendLine("- 电力设备: " + powerInfo);
+            AppendCellEndpointSnapshot(sb, "电力", OverlayModes.Power.ID, cell);
+            AppendCellEndpointSnapshot(sb, "液管", OverlayModes.LiquidConduits.ID, cell);
+            AppendCellEndpointSnapshot(sb, "气管", OverlayModes.GasConduits.ID, cell);
+            AppendCellEndpointSnapshot(sb, "信号", OverlayModes.Logic.ID, cell);
+            AppendCellEndpointSnapshot(sb, "运输", OverlayModes.SolidConveyor.ID, cell);
+        }
+
+        private static void AppendCellEndpointSnapshot(StringBuilder sb, string label, HashedString mode, int cell)
+        {
+            string endpoint = EndpointDetailLine(mode, cell);
+            if (!string.IsNullOrEmpty(endpoint))
+                sb.AppendLine("- 端口(" + label + "): " + TrimListBullet(endpoint));
+        }
+
+        private static string TrimListBullet(string text)
+        {
+            return text != null && text.StartsWith("- ", StringComparison.Ordinal)
+                ? text.Substring(2)
+                : text;
         }
 
         private static string CellConnectionText(HashedString mode, int cell, string layerName, ObjectLayer[] layers)
