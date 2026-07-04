@@ -58,6 +58,7 @@ namespace OniMcp.Tools
             if (kind == "starter")
             {
                 int roomWidth = Math.Max(7, (anchor.Width - 1) / 2);
+                int washBasinX = anchor.X + Math.Max(4, roomWidth - 3);
                 plan.Add(new JObject
                 {
                     ["step"] = "expected_anchor_cells",
@@ -65,13 +66,13 @@ namespace OniMcp.Tools
                     ["cells"] = new JArray
                     {
                         ExpectedCell("Outhouse", anchor.X + 2, anchor.Y + 1),
-                        ExpectedCell("WashBasin", anchor.X + 4, anchor.Y + 1),
+                        ExpectedCell("WashBasin", washBasinX, anchor.Y + 1),
                         ExpectedCell("ResearchCenter", anchor.X + roomWidth + 3, anchor.Y + 1)
                     }
                 });
                 AddCellRead(plan, "verify_outhouse_cell", anchor.X + 2, anchor.Y + 1,
                     "Verify outhouse blueprint/building, debris, temperature, element, Decision Hints.");
-                AddCellRead(plan, "verify_wash_basin_cell", anchor.X + 4, anchor.Y + 1,
+                AddCellRead(plan, "verify_wash_basin_cell", washBasinX, anchor.Y + 1,
                     "Verify wash basin blueprint/building, ports if any, debris, Decision Hints.");
                 AddCellRead(plan, "verify_research_station_cell", anchor.X + roomWidth + 3, anchor.Y + 1,
                     "Verify lab research station blueprint/building without counting columns.");
@@ -141,6 +142,8 @@ namespace OniMcp.Tools
                 ["command"] = "zoom",
                 ["views"] = "default,power,oxygen,temperature",
                 ["compact"] = true,
+                ["syncView"] = true,
+                ["focusCamera"] = true,
                 ["x1"] = anchor.X,
                 ["y1"] = anchor.Y,
                 ["x2"] = anchor.X + anchor.Width - 1,
