@@ -148,6 +148,7 @@ namespace OniMcp.Tools
             return new JArray
             {
                 FileHint("/active/dupes/index.md", "List duplicant detail files; edit detail file Name line to rename."),
+                FileHint("/active/management/dupes.md", "Edit commands: rename; links each dupe detail file."),
                 FileHint("/active/management/schedule.md", "Edit commands: set_block, assign_dupe, create_schedule."),
                 FileHint("/active/management/priorities.md", "Edit commands: priority, priority_settings."),
                 FileHint("/active/management/food.md", "Edit commands: food, food_policy."),
@@ -164,7 +165,7 @@ private static JArray ManagementQuickEdits()
         {
             return new JArray
             {
-                QuickEdit("rename_dupe", "/active/dupes/index.md", "Open the listed detail file, replace `Name:`; only name is writable there."),
+                QuickEdit("rename_dupe", "/active/management/dupes.md", "rename name=\"Dig\" newName=\"矿工\""),
                 QuickEdit("schedule", "/active/management/schedule.md", "set_block schedule=\"AI轮班-1\" hour=7 group=Worktime"),
                 QuickEdit("assign_schedule", "/active/management/schedule.md", "assign_dupe name=\"Dig\" schedule=\"AI轮班-1\""),
                 QuickEdit("priorities", "/active/management/priorities.md", "priority name=\"Dig\" category=\"Dig\" value=7"),
