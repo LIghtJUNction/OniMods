@@ -12,10 +12,33 @@ namespace OniMcp.Tools
             sb.AppendLine("- same cell: `world_editor command=read path=/active/map/cell_" + x + "_" + y + ".md`");
             sb.AppendLine("- local zoom: `" + LocalZoomCall(x, y, "default,power,oxygen,temperature") + "`");
 
+            AppendCellReachabilityRead(sb, x, y, cell);
             AppendCellPortReads(sb, x, y, cell);
             AppendCellInfrastructureReads(sb, x, y, cell);
             AppendCellThermalReads(sb, x, y, cell);
             AppendCellOperationHints(sb, x, y, cell);
+        }
+
+        private static void AppendCellReachabilityRead(StringBuilder sb, int x, int y, int cell)
+        {
+            if (!CellLikelyNeedsReachability(cell))
+                return;
+
+            sb.AppendLine("- reachability: `world_editor command=read path=/active/dupes/reachability.md x="
+                + x + " y=" + y + " radius=12 sampleLimit=12` before rescue/dig/build/sweep work.");
+        }
+
+        private static bool CellLikelyNeedsReachability(int cell)
+        {
+            if (Grid.Objects[cell, (int)ObjectLayer.Building] != null)
+                return true;
+            if (BuildCritterCellMap().ContainsKey(cell))
+                return true;
+            if (HasPickupAtCell(cell))
+                return true;
+
+            Element element = Grid.Element[cell];
+            return element != null && (element.IsSolid || element.IsLiquid);
         }
 
         private static void AppendCellPortReads(StringBuilder sb, int x, int y, int cell)
