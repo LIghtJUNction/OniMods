@@ -11,8 +11,8 @@ namespace OniMcp.Tools
             {
                 FileHint("/active/map/viewport.md", "Editable map current camera viewport; move camera change this visible range."),
                 FileHint("/active/map/cell_X_Y.md", "Exact cell detail: element, objects, footprint/pivot, ports, line links, power role, pickup stacks, decision hints, quick ops."),
-                FileHint("/active/map/zoom_X1_Y1_X2_Y2.md", "Local multi-view zoom; can sync camera live overlay."),
-                FileHint("/active/screenshots/index.md", "Viewport screenshots: current view or multi-view overlay captures stream/visual verification."),
+                FileHint("/active/map/zoom_X1_Y1_X2_Y2.md", "Local multi-view zoom; pass views=default,power,temperature compact=true to sync camera and inspect details."),
+                FileHint("/active/screenshots/index.md", "Viewport screenshots; use captureVisible=true views=default,power,temperature waitFrames=2 for stream verification."),
                 FileHint("/active/dupes/reachability.md", "Optional duplicant movement range: compact reachable cells before rescue, dig, build, or access fixes."),
                 FileHint("/active/infrastructure/power.md", "Low-token power audit: per-cell glyph/dirs/links/to, bridges, circuits, producers, consumers, batteries."),
                 FileHint("/active/infrastructure/liquid_conduits.md", "Low-token liquid audit: pipe glyph/dirs/links/to, bridges, input ports, output ports."),
