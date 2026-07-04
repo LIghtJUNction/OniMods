@@ -68,7 +68,7 @@ namespace OniMcp.Tools
             sb.AppendLine("- Viewport map: `world_editor command=read path=/active/map/viewport.md format=edit compact=false view=default`; move the camera to change this visible range.");
             sb.AppendLine("- Switch live view: pass `view=power|liquid|gas|logic|solid|temperature|decor|germs|farming|rooms|materials` on map reads.");
             sb.AppendLine("- Multi-view zoom: `world_editor command=zoom x1=80 y1=140 x2=105 y2=155 views=default,power,oxygen,temperature`");
-            sb.AppendLine("- Look around: first current-state response includes `lookAroundPlan` center/north/south/east/west zoom calls.");
+            sb.AppendLine("- Look around: first current-state response includes `lookAroundPlan` center/cardinal/diagonal/overview zoom calls.");
             sb.AppendLine("- Cell details: `world_editor command=read path=/active/map/cell_X_Y.md` includes element, building, dupe/critter, pivot, footprint, ports, lines, dropped pickups, and Decision Hints for dig/mop/sweep/network risks.");
             sb.AppendLine("- Dupe reachability: `world_editor command=read path=/active/dupes/reachability.md radius=12 sampleLimit=12` before rescue/dig/build plans.");
             sb.AppendLine("- Stability logs: `world_editor command=read path=/active/diagnostics/logs.md logLimit=220` after crashes or tester failures.");

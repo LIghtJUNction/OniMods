@@ -261,7 +261,12 @@ private static JArray ManagementQuickEdits()
                 LookAroundStep("north", cx, cy + stepY, halfWidth, halfHeight),
                 LookAroundStep("south", cx, cy - stepY, halfWidth, halfHeight),
                 LookAroundStep("east", cx + stepX, cy, halfWidth, halfHeight),
-                LookAroundStep("west", cx - stepX, cy, halfWidth, halfHeight)
+                LookAroundStep("west", cx - stepX, cy, halfWidth, halfHeight),
+                LookAroundStep("north_east", cx + stepX, cy + stepY, halfWidth, halfHeight),
+                LookAroundStep("north_west", cx - stepX, cy + stepY, halfWidth, halfHeight),
+                LookAroundStep("south_east", cx + stepX, cy - stepY, halfWidth, halfHeight),
+                LookAroundStep("south_west", cx - stepX, cy - stepY, halfWidth, halfHeight),
+                LookAroundStep("overview", cx, cy, halfWidth * 2, halfHeight * 2)
             };
         }
 
