@@ -243,9 +243,9 @@ namespace OniMcp.Tools
         {
             var parts = new List<string>();
             if (building.Def.RequiresPowerInput)
-                parts.Add("in=" + CellCoord(building.GetPowerInputCell()));
+                parts.Add(PortCellText("in", true, building.GetPowerInputCell()));
             if (building.Def.RequiresPowerOutput)
-                parts.Add("out=" + CellCoord(building.GetPowerOutputCell()));
+                parts.Add(PortCellText("out", false, building.GetPowerOutputCell()));
             var consumer = building.GetComponent<EnergyConsumer>();
             if (consumer != null)
             {
@@ -272,9 +272,9 @@ namespace OniMcp.Tools
             ConduitType type = mode == OverlayModes.GasConduits.ID ? ConduitType.Gas : ConduitType.Liquid;
             var parts = new List<string>();
             if (go.GetComponents<ConduitConsumer>().Any(c => c.ConduitType == type))
-                parts.Add("in=" + CellCoord(building.GetUtilityInputCell()));
+                parts.Add(PortCellText("in", true, building.GetUtilityInputCell()));
             if (go.GetComponents<ConduitDispenser>().Any(d => d.ConduitType == type))
-                parts.Add("out=" + CellCoord(building.GetUtilityOutputCell()));
+                parts.Add(PortCellText("out", false, building.GetUtilityOutputCell()));
             return parts.Count == 0 ? null : EndpointPrefix(cell, building) + string.Join(" ", parts.ToArray());
         }
 
@@ -295,9 +295,9 @@ namespace OniMcp.Tools
         {
             var parts = new List<string>();
             if (go.GetComponents<SolidConduitConsumer>().Any())
-                parts.Add("in=" + CellCoord(building.GetUtilityInputCell()));
+                parts.Add(PortCellText("in", true, building.GetUtilityInputCell()));
             if (go.GetComponents<SolidConduitDispenser>().Any())
-                parts.Add("out=" + CellCoord(building.GetUtilityOutputCell()));
+                parts.Add(PortCellText("out", false, building.GetUtilityOutputCell()));
             return parts.Count == 0 ? null : EndpointPrefix(cell, building) + string.Join(" ", parts.ToArray());
         }
 
@@ -305,6 +305,11 @@ namespace OniMcp.Tools
         {
             string name = building != null ? StripLinkTags(building.gameObject.GetProperName()) : "Building";
             return "- " + MapTokenPart(name) + "@" + CellCoord(cell) + ": ";
+        }
+
+        private static string PortCellText(string label, bool input, int cell)
+        {
+            return label + "=" + (input ? "⊗" : "⊙") + CellCoord(cell);
         }
 
         private static string PowerCircuitText(int cell)
