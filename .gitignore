@@ -25,6 +25,9 @@ oni/
 # Rust build
 target/
 
+# Node artifacts
+node_modules/
+
 # Mod output
 mods/*/publish/
 mods/*/dll/
@@ -38,3 +41,7 @@ dist/
 deps/
 
 __pycache__
+.env
+.tokensave/
+.codegraph/
+.agent_backups/
