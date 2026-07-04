@@ -90,15 +90,26 @@ namespace OniMcp.Tools
             float tempC = Grid.Temperature[cell] - 273.15f;
             sb.AppendLine("- 温度: " + tempC.ToString("F1") + "°C");
             sb.AppendLine("- 温度适宜: " + TemperatureSuitabilityText(tempC));
+            sb.AppendLine("- 温度适宜详情: band=" + TemperatureSuitabilityBand(tempC)
+                + " dupeComfortC=10~40 cautionC=-20~10/40~72 dangerC=<-20/>=72");
         }
 
         private static string TemperatureSuitabilityText(float tempC)
         {
-            if (tempC >= 72f) return "危险-烫伤风险; comfort=10~37°C, caution=37~72°C";
-            if (tempC <= -20f) return "危险-低温风险; comfort=10~37°C, caution=-20~10°C";
-            if (tempC > 37f) return "偏热; comfort=10~37°C";
-            if (tempC < 10f) return "偏冷; comfort=10~37°C";
-            return "适宜; comfort=10~37°C";
+            if (tempC >= 72f) return "危险-烫伤风险; comfort=10~40°C, caution=40~72°C";
+            if (tempC <= -20f) return "危险-低温风险; comfort=10~40°C, caution=-20~10°C";
+            if (tempC > 40f) return "偏热; comfort=10~40°C";
+            if (tempC < 10f) return "偏冷; comfort=10~40°C";
+            return "适宜; comfort=10~40°C";
+        }
+
+        private static string TemperatureSuitabilityBand(float tempC)
+        {
+            if (tempC >= 72f) return "danger_hot";
+            if (tempC <= -20f) return "danger_cold";
+            if (tempC > 40f) return "hot";
+            if (tempC < 10f) return "cold";
+            return "dupe_comfort";
         }
 
         private static void AppendCellObjectSnapshot(StringBuilder sb, int x, int y, int cell)
