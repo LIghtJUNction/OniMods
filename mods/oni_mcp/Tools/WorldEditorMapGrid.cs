@@ -205,7 +205,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             }
 
             AppendGrid(sb, xMin, xMax, gridLines, compact);
-            AppendLegend(sb, legend);
+            AppendLegend(sb, legend, activeMode);
             AppendConnectionDetails(sb, activeMode, xMin, xMax, yMin, yMax);
             if (details.Count > 0)
             {
@@ -317,12 +317,25 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             sb.AppendLine();
         }
 
-        private static void AppendLegend(StringBuilder sb, Dictionary<char, string> legend)
+        private static void AppendLegend(StringBuilder sb, Dictionary<char, string> legend, HashedString activeMode)
         {
             sb.AppendLine("## Legend");
             foreach (var item in legend.OrderBy(kv => kv.Key))
                 sb.AppendLine(IsConnectionGlyph(item.Key) ? "- `" + item.Key + "` : 连接 (Connection) | " + item.Value : FormatLegendLine(item.Key, item.Value));
+            AppendInfrastructureLegend(sb, activeMode);
             sb.AppendLine();
+        }
+
+        private static void AppendInfrastructureLegend(StringBuilder sb, HashedString activeMode)
+        {
+            if (!IsInfrastructureOverlayMode(activeMode))
+                return;
+
+            sb.AppendLine("- `⌒xxx` : 桥/跨线建筑锚点，桥本体与下方线路可同时显示");
+            sb.AppendLine("- `⊗xxx` : 输入端口锚点；电力=耗电端，管道/轨道=入口，信号=输入");
+            sb.AppendLine("- `⊙xxx` : 输出端口锚点；电力=发电端，管道/轨道=出口，信号=输出");
+            sb.AppendLine("- `⊗⊙xxx` : 同一判定格同时是输入和输出端口");
+            sb.AppendLine("- `*xxx` : 该格存在未连接/孤立线路，同时保留建筑、生物或复制人锚点");
         }
 
         private static string FormatMapCellToken(HashedString mode, char symbol, int x, int y, int cell, GameObject building, GameObject minion, GameObject critter, string buildingId, string buildingName, string previousRunKey, out string runKey)
