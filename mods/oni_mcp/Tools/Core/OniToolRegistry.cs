@@ -24,7 +24,9 @@ namespace OniMcp.Tools
             "navigation_control",
             "orders_control",
             "read_control",
+            "search_control",
             "server_control",
+            "world_editor",
         };
         private static bool _initialized;
         private static List<McpToolInfo> _cachedCoreToolInfos;
@@ -39,15 +41,16 @@ namespace OniMcp.Tools
             _initialized = true;
 
             Register(CoreToolEnglishDescriptions.Apply(ColonyControlEntryTools.ControlColony()));
+            Register(CoreToolEnglishDescriptions.Apply(ServerControlEntryTools.ControlServer()));
+            Register(CoreToolEnglishDescriptions.Apply(WorldEditorTools.ControlWorldEditor()));
             Register(CoreToolEnglishDescriptions.Apply(NavigationControlTools.ControlNavigation()));
             Register(CoreToolEnglishDescriptions.Apply(DupesControlEntryTools.ControlDupes()));
             Register(CoreToolEnglishDescriptions.Apply(ReadTools.ControlRead()));
             Register(CoreToolEnglishDescriptions.Apply(BuildingControlTools.ControlBuilding()));
             Register(CoreToolEnglishDescriptions.Apply(GameControlEntryTools.ControlGame()));
             Register(CoreToolEnglishDescriptions.Apply(OrdersControlEntryTools.ControlOrders()));
-            Register(CoreToolEnglishDescriptions.Apply(ServerControlEntryTools.ControlServer()));
-            LegacyToolRegistry.RegisterAll(tool => Register(HiddenCompat(tool)));
-
+            Register(CoreToolEnglishDescriptions.Apply(SearchControlTools.ControlSearch()));
+            Register(HiddenCompat(CoreToolEnglishDescriptions.Apply(CoordinateControlTools.ControlCoordinate())));
             BuildToolInfoCache();
         }
 
@@ -130,6 +133,12 @@ namespace OniMcp.Tools
                 {
                     foreach (var param in tool.Parameters)
                     {
+                        if (param.Key == ToolCallMiddleware.TaskDescriptionParameter)
+                            continue;
+
+                        if (IsCoordinateParameter(param.Key) && !IsCoordinateTool(tool.Name))
+                            continue;
+
                         properties[param.Key] = new SchemaProperty
                         {
                             Type = param.Value.Type,
@@ -140,6 +149,13 @@ namespace OniMcp.Tools
                             required.Add(param.Key);
                     }
                 }
+
+                properties[ToolCallMiddleware.TaskDescriptionParameter] = new SchemaProperty
+                {
+                    Type = "string",
+                    Description = "Required for every tool call: briefly describe what you are doing so it can be shown near the player's mouse in-game."
+                };
+                required.Add(ToolCallMiddleware.TaskDescriptionParameter);
 
                 infos.Add(new McpToolInfo
                 {
@@ -175,12 +191,73 @@ namespace OniMcp.Tools
 
             try
             {
+                if (!ToolCallMiddleware.TryGetTaskDescription(arguments, out var taskDescription))
+                    return ToolCallMiddleware.MissingTaskDescription(tool.Name, middlewareNotifications);
+
+                ToolCallMiddleware.PresentTaskDescription(taskDescription);
+
+                if (!IsCoordinateTool(tool.Name) && ContainsCoordinateArguments(arguments))
+                    return ToolCallMiddleware.Inject(CallToolResult.Error("Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool."), middlewareNotifications);
+
                 return ToolCallMiddleware.Inject(tool.Handler(arguments ?? new JObject()), middlewareNotifications);
             }
             catch (Exception ex)
             {
                 return ToolCallMiddleware.Inject(CallToolResult.Error($"Tool execution error: {ex.Message}"), middlewareNotifications);
             }
+        }
+
+        internal static bool IsCoordinateTool(string name)
+        {
+            return string.Equals(name, "coordinate_control", StringComparison.Ordinal)
+                || string.Equals(name, "world_editor", StringComparison.Ordinal);
+        }
+
+        internal static bool IsCoordinateParameter(string name)
+        {
+            switch (name)
+            {
+                case "x":
+                case "y":
+                case "x1":
+                case "y1":
+                case "x2":
+                case "y2":
+                case "dx":
+                case "dy":
+                case "cell":
+                case "cells":
+                case "points":
+                case "anchors":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool ContainsCoordinateArguments(JToken token)
+        {
+            if (token == null)
+                return false;
+
+            if (token.Type == JTokenType.Object)
+            {
+                foreach (var property in ((JObject)token).Properties())
+                {
+                    if (IsCoordinateParameter(property.Name) || ContainsCoordinateArguments(property.Value))
+                        return true;
+                }
+            }
+            else if (token.Type == JTokenType.Array)
+            {
+                foreach (var item in (JArray)token)
+                {
+                    if (ContainsCoordinateArguments(item))
+                        return true;
+                }
+            }
+
+            return false;
         }
     }
 

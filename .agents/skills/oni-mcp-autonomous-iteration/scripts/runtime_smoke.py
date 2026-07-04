@@ -58,6 +58,8 @@ class McpClient:
         self.post(payload, parse=False)
 
     def call_tool(self, name, arguments, timeout=30):
+        arguments = dict(arguments)
+        arguments.setdefault("task", f"runtime smoke: {name}")
         return self.request(
             "tools/call",
             {"name": name, "arguments": arguments},
@@ -97,6 +99,22 @@ def result_json(result):
 def assert_true(condition, message):
     if not condition:
         raise AssertionError(message)
+
+
+def is_error_payload(payload):
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("ok") is False:
+        return True
+    text = payload.get("text")
+    if not isinstance(text, str):
+        return False
+    error_markers = (
+        "task is required",
+        "Tool execution error:",
+        "Tool call error:",
+    )
+    return any(marker in text for marker in error_markers)
 
 
 def call_json_with_retry(client, name, args, attempts=3, delay=1.0):
@@ -170,6 +188,7 @@ def main():
     results = []
     for name, args in checks:
         payload = call_json_with_retry(client, name, args)
+        assert_true(not is_error_payload(payload), f"{name} failed: {payload}")
         results.append({"tool": name, "args": args, "payload": payload})
 
     snapshot = next(item["payload"] for item in results if item["tool"] == "colony_control")

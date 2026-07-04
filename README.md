@@ -28,16 +28,15 @@ An Oxygen Not Included mod repository containing:
 <details>
 <summary>Expand Mod Overview</summary>
 
-`oni_mcp` is an MCP server mod tailored for Oxygen Not Included. After installation, MCP-capable AI clients can use a local HTTP interface to read colony state, analyze situations, and, with authorization, perform selected in-game actions.
+`oni_mcp` is an MCP server mod tailored for Oxygen Not Included. After installation, MCP-capable AI clients can use a local HTTP interface to read colony state, analyze situations, and safely perform in-game actions.
 
-Right now it is best suited as an "AI colony advisor" and a "semi-automated operations assistant":
+Right now the public interface is a compact set of aggregate tools listed by `tools/list`:
 
-- Read colony state, resource inventory, duplicant needs, power, rooms, temperature, rockets, and more.
-- Perform simple, explicit actions such as pausing the game, taking screenshots, adjusting schedules, changing building settings, setting door permissions, and renaming duplicants.
-- Help agents learn the large MCP tool surface through tool grouping, tool search, and skill docs in `.agents/skills`.
-- Provide risk levels and confirmation requirements for dangerous actions such as digging and deconstruction.
+- `world_editor`: Code-file style world editor. Saves are virtual folders; clients read files to observe status and edit files using SEARCH/REPLACE blocks to apply changes (like digging, building, wire/pipe routing, and setting priorities).
+- `colony_control`: Colony-wide diagnostic status, schedules, research, medical, and general control.
+- `server_control`: Server health checks, tool catalogs, screenshot utility, and tasks.
 
-It is not a full autonomous gameplay agent. Complex world planning, long-term autonomous colony play, and high-quality tactical decision-making still require significant constraints, validation, and human supervision.
+It acts as a semi-automated operations assistant. Complex world planning, long-term autonomous colony play, and high-quality tactical decision-making still require human supervision.
 
 Related AI Skill reference: [zhuiyun.skill](https://github.com/LIghtJUNction/zhuiyun.skill)
 

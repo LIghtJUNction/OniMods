@@ -2,9 +2,15 @@
 
 [![ONI MCP Server preview](preview.png)](README_EN.md)
 
-ONI MCP Server is an Oxygen Not Included mod. It starts a local MCP Streamable HTTP service inside the game so MCP-compatible AI clients can read colony state, query game data, inspect maps, and run explicit player-approved actions.
+ONI MCP Server is an Oxygen Not Included mod. It starts a local MCP Streamable HTTP service inside the game so MCP-compatible AI clients can read colony state, query game data, inspect maps, and run explicit player-approved actions using a virtual filesystem-style interface.
 
-Default endpoint:
+Browser feedback page:
+
+```text
+http://localhost:8788/
+```
+
+MCP endpoint:
 
 ```text
 http://localhost:8788/mcp/
@@ -12,12 +18,15 @@ http://localhost:8788/mcp/
 
 Source code: https://github.com/LIghtJUNction/OniMods/
 
+> **Steam Workshop Short Description:**
+> An Oxygen Not Included Mod that runs a local Model Context Protocol (MCP) server inside the game. It allows AI assistants to connect, read colony status (oxygen, resources, duplicants), and safely execute player-approved actions (pause, change speed, schedules, building control) via a virtual filesystem-style world editor.
+
 ## What It Can Do
 
 * Check oxygen, food, power, temperature, Duplicants, rooms, and alerts.
 * Read live `oni://...` resources instead of relying only on screenshots.
+* Navigate and edit the game world using virtual save folders and files via the `world_editor` (using SEARCH/REPLACE blocks).
 * Run small confirmed actions such as pause, speed changes, screenshots, schedules, doors, storage filters, priorities, and Duplicant renaming.
-* Read text maps, define areas, preview layouts, and assist planning.
 * Serve as an ONI + MCP + agent experiment platform.
 
 ## What It Is Not
@@ -43,7 +52,8 @@ If the Configure button is missing:
 
 1. Confirm the mod is enabled and the game has been restarted.
 2. Confirm the installed package contains the `OniMcp.dll` built with PLib included.
-3. Edit `OniMcpConfig.json` directly. The mod creates it automatically when it starts.
+3. If the button is still missing, use v0.2.0 or newer; that version explicitly initializes the PLib Options ModsScreen patch.
+4. Edit `OniMcpConfig.json` directly. The mod creates it automatically when it starts.
 
 ## Configuration File
 
@@ -140,7 +150,7 @@ Do not modify the save yet. Check colony status and list the three most urgent r
 
 ## Main Tools
 
-The public tool surface is intentionally small. The runtime manifest is the source of truth:
+The public tool surface is a compact set of aggregate entrypoints. The runtime manifest is the source of truth:
 
 ```text
 server_control domain=catalog action=manifest
@@ -152,15 +162,15 @@ or read:
 oni://tools/manifest
 ```
 
-Common aggregate tools:
+Public aggregate tools:
 
-* `server_control`: server status, sessions, screenshots, tasks, manifest.
-* `read_control`: colony state, map, inventory, rooms, buildings, database data.
-* `navigation_control`: pause, resume, speed, camera, selection, pointer, overlays.
-* `building_control`: planning, materials, previews, construction, storage filters, production queues.
-* `orders_control`: dig, sweep, mop, deconstruct, priorities, area orders, conduit and wire cuts.
-* `dupes_control`: Duplicant status, details, priorities, commands, renaming, skills, hats.
-* `colony_control`: reports, diagnostics, notifications, schedules, diet, research, medical, farming, ranching.
+* `world_editor`: Code-file style world editor. Saves are virtual folders; use commands `cd`, `ls`, `read`, `search` to inspect world files, and `edit` with SEARCH/REPLACE blocks to apply changes (digging, building, priorities, wires, pipes).
+* `colony_control`: Colony-wide diagnostic status, schedules, research, medical, notifications, and management.
+* `server_control`: Server health checks, tool catalogs, screenshot utility, background tasks, and manifest.
+
+* `read_control`, `building_control`, `orders_control`, `dupes_control`, `game_control`, `navigation_control`, `search_control`: current aggregate entrypoints listed directly by `tools/list`; agents do not need hidden tool names.
+
+`coordinate_control` remains a dedicated locator helper; prefer semantic queries, area handles, and `world_editor` file views for normal work.
 
 ## Common Resources
 

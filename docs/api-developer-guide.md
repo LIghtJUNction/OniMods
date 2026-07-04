@@ -79,27 +79,48 @@ Mcp-Protocol-Version: 2025-11-25
 
 ## 推荐工具面
 
-默认公开 8 个核心聚合工具:
+Authoritative `world_editor` model:
+
+- Saves are directories; `latest/` is the fixed alias for the current/latest save.
+- `cd latest` enters a save; `cd` or `cd ~` exits to `/`.
+- The world is represented as structured files, not action endpoints.
+- The only world-changing operation is a SEARCH/REPLACE edit against one file.
+- Do not add `*.patch` action files; route edits by the file being edited.
+
+Default public surface: compact aggregate tools:
+
+| Tool | Purpose |
+|------|---------|
+| `world_editor` | Filesystem-style world editor. Supports `ls/read/search/plan/apply/connect/coordinate` over virtual save/world files. |
+| `colony_control` | Colony-wide snapshots, diagnostics, survival plans, notifications, reports, and management. |
+| `server_control` | MCP diagnostics, catalog, batch calls, resources, and server operations. |
+
+The `read_control`, `building_control`, `orders_control`, `dupes_control`, `game_control`, `navigation_control`, and `search_control` are public aggregate entrypoints for normal play. `coordinate_control` remains a dedicated locator helper; new integrations should not depend on hidden legacy tool names.
+
+Legacy public surface before `world_editor` consolidation:
 
 | 工具 | 用途 |
 |------|------|
 | `server_control` | 服务、目录、工具搜索、批量、agent program |
 | `read_control` | 世界、区域、资源、建筑、机制知识、基础设施摘要 |
+| `search_control` | Dedicated search for tools, world objects, resources, buildings, dupes, and knowledge with action-ready `nextActions` |
 | `game_control` | 暂停、调速、存档、沙盒、UI |
 | `navigation_control` | 相机、覆盖层、截图、可视指针、点击和拖拽 |
+| `coordinate_control` | Coordinate auxiliary gateway for explicit x/y, rectangle, point-list, or anchor forwarding |
 | `building_control` | 建造规划、材料、配置、储存、过滤、生产、侧屏、火箭 |
 | `orders_control` | 区域订单、优先级、指定/取消、剪断 |
 | `dupes_control` | 复制人状态、命令、优先级、改名、技能、分配 |
 | `colony_control` | 快照、报告、诊断、通知、管理、农牧 |
 
-旧版细粒度工具仍隐藏注册为 compatibility。新集成应优先使用 8 个聚合入口。
+Legacy fine-grained implementations are internal compatibility only. New integrations should prefer the public aggregate entrypoints from `tools/list`.
 
 ## 参数设计约定
 
 新工具面采用搜索/动作优先:
 
+- Prefer `search_control` for discovery. It returns `searchResult`, `nextActions`, and `searchActionPatch`, so selected results can be passed directly into action tools like a search/replace edit.
 - 优先传 `query`、`target`、`search`、`name`、`id`、`areaId`。
-- `x/y`、`x1/y1/x2/y2` 仍支持，但作为精确坐标后备。
+- Except for `coordinate_control`, public tools do not accept `x/y`, `x1/y1/x2/y2`, `dx/dy`, `points`, or `anchors`. Coordinate operations must be explicitly forwarded through `coordinate_control`.
 - 写入和执行动作应支持 `dryRun` 或 `confirm`。
 - 面向任务的结果应返回 `reachable`、`executable`、失败原因、缺失条件和建议下一步。
 - 建造相关结果应返回材料可行性，至少说明需要材料、可用材料和缺口。
@@ -240,7 +261,7 @@ curl -sS -X POST http://localhost:8788/mcp/ \
 }
 ```
 
-`Wire`、`LogicWire`、`GasConduit`、`LiquidConduit`、`SolidConduit` 在传入 `points`、`anchors` 或端点坐标时会自动按路径连接，不需要再调用单独连接步骤。
+`Wire`, `LogicWire`, `GasConduit`, `LiquidConduit`, and `SolidConduit` support automatic path connection. For semantic calls, prefer `plan`, `blueprint`, `areaId`, or search results; when `points`, `anchors`, or endpoint coordinates are required, forward to `building_control` through `coordinate_control`.
 
 ### 剪断线路
 
@@ -299,23 +320,23 @@ curl -sS -X POST http://localhost:8788/mcp/ \
 ```text
 mods/oni_mcp/Tools/
 ├── Core/      # 工具和资源注册
-├── New/       # 默认公开的 8 个聚合工具入口和英文描述
+├── New/       # Default-public 10 aggregate tool entrypoints and English descriptions
 ├── Shared/    # 搜索、定位、JSON、工具辅助逻辑
-└── Legacy/    # 隐藏兼容注册和旧版细粒度实现
+└── Legacy/    # 内部兼容和旧版细粒度实现
 ```
 
 开发建议:
 
 1. 新公开能力优先扩展 `Tools/New/` 的聚合入口。
 2. 旧版兼容逻辑放在 `Tools/Legacy/Impl/`。
-3. 共享搜索、材料、可达性、坐标后备逻辑放在 `Tools/Shared/`。
-4. 默认公开工具的说明维护在 `CoreToolEnglishDescriptions`，保持英文。
+3. Shared search, material, and reachability logic lives in `Tools/Shared/`; coordinate entry is centralized in `coordinate_control`.
+4. Default-public tool descriptions are maintained in `CoreToolEnglishDescriptions`; keep them in English.
 5. 使用 `server_control domain=catalog action=static_audit` 和 `manifest` 验证注册结果。
 
 ## 客户端兼容建议
 
 - 不要硬编码旧版细粒度工具列表。
-- 不要假设坐标是唯一定位方式。
+- Do not pass coordinates to ordinary tools; call `coordinate_control` only when exact coordinates are required.
 - 先读取 manifest，再按 `domain/action` 组织调用。
 - 对缺失字段、未知 action 和 `executable=false` 做兼容处理。
 - 对危险动作始终要求用户确认，并在执行后读取状态验证。

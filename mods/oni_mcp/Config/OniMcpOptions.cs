@@ -70,6 +70,8 @@ namespace OniMcp.Config
             {
                 if (Host == "localhost")
                 {
+                    yield return $"http://localhost:{Port}/";
+                    yield return $"http://127.0.0.1:{Port}/";
                     yield return $"http://localhost:{Port}/mcp/";
                     yield return $"http://127.0.0.1:{Port}/mcp/";
                     yield return $"http://localhost:{Port}/screenshots/";
@@ -77,6 +79,7 @@ namespace OniMcp.Config
                 }
                 else
                 {
+                    yield return $"http://{ListenHost}:{Port}/";
                     yield return $"http://{ListenHost}:{Port}/mcp/";
                     yield return $"http://{ListenHost}:{Port}/screenshots/";
                 }
@@ -109,6 +112,15 @@ namespace OniMcp.Config
                     "Endpoint: " + EndpointUrl + "\nConfig: " + ConfigPath,
                     "Current ONI MCP endpoint and configuration file path.",
                     "Status"));
+
+            var browseButton = new ButtonOptionsEntry(
+                "OpenBrowser",
+                new OptionAttribute(
+                    "Open File Browser",
+                    "Open the virtual file browser in your web browser.",
+                    "Status"));
+            browseButton.Value = (Action<object>)(_ => UnityEngine.Application.OpenURL("http://localhost:" + Current.Port + "/"));
+            yield return browseButton;
 
             var restartButton = new ButtonOptionsEntry(
                 "RestartMcpServer",

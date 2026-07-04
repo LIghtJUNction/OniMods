@@ -4,6 +4,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::build;
 use crate::config::{Config, SelectedMod};
@@ -69,42 +70,84 @@ fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Resul
         .with_context(|| format!("读取 mods.json 失败：{}", mods_file.display()))?;
     let mut data: Value = serde_json::from_str(&content)
         .with_context(|| format!("解析 mods.json 失败：{}", mods_file.display()))?;
-    let mods = data
-        .get_mut("mods")
-        .and_then(Value::as_array_mut)
-        .context("mods.json 缺少 mods 数组")?;
+    let (before_enabled, after_enabled) = {
+        let mods = data
+            .get_mut("mods")
+            .and_then(Value::as_array_mut)
+            .context("mods.json 缺少 mods 数组")?;
+        let before_enabled = count_enabled_mods(mods);
 
-    let mut found = false;
-    for item in mods.iter_mut() {
-        let same_static_id = item
-            .get("staticID")
-            .and_then(Value::as_str)
-            .map(|value| value == static_id)
-            .unwrap_or(false);
-        let same_dev_id = item
-            .get("label")
-            .and_then(|label| label.get("id"))
-            .and_then(Value::as_str)
-            .map(|value| value == selected.name)
-            .unwrap_or(false);
-        if same_static_id || same_dev_id {
-            item["enabled"] = Value::Bool(true);
-            item["status"] = Value::Number(1.into());
-            ensure_expansion_enabled(item);
-            found = true;
+        let mut found = false;
+        for item in mods.iter_mut() {
+            let same_static_id = item
+                .get("staticID")
+                .and_then(Value::as_str)
+                .map(|value| value == static_id)
+                .unwrap_or(false);
+            let same_dev_id = item
+                .get("label")
+                .and_then(|label| label.get("id"))
+                .and_then(Value::as_str)
+                .map(|value| value == selected.name)
+                .unwrap_or(false);
+            if same_static_id || same_dev_id {
+                item["enabled"] = Value::Bool(true);
+                item["status"] = Value::Number(1.into());
+                ensure_expansion_enabled(item);
+                found = true;
+            }
         }
-    }
 
-    if !found {
-        mods.push(new_dev_mod_entry(selected, &static_id));
-    }
+        if !found {
+            mods.push(new_dev_mod_entry(selected, &static_id));
+        }
+
+        (before_enabled, count_enabled_mods(mods))
+    };
     data["mod_load_in_progress"] = Value::Bool(false);
+    if after_enabled < before_enabled {
+        anyhow::bail!(
+            "refusing to write mods.json: enabled mod count would drop from {} to {}",
+            before_enabled,
+            after_enabled
+        );
+    }
+    if after_enabled <= 1 {
+        println!(
+            "⚠️  mods.json currently has only {} enabled mod(s). If this save depends on other mods, restore them in the ONI Mods menu before loading the save.",
+            after_enabled
+        );
+    }
 
     let formatted = serde_json::to_string_pretty(&data)?;
+    let backup = mods_file.with_extension(format!(
+        "json.onim-backup-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs())
+            .unwrap_or(0)
+    ));
+    fs::write(&backup, &content)
+        .with_context(|| format!("备份 mods.json 失败：{}", backup.display()))?;
     fs::write(&mods_file, format!("{}\n", formatted))
         .with_context(|| format!("写入 mods.json 失败：{}", mods_file.display()))?;
-    println!("✅ 已在 mods.json 启用 Dev mod：{}", static_id);
+    println!(
+        "✅ 已在 mods.json 启用 Dev mod：{}（启用数 {} -> {}，备份：{}）",
+        static_id,
+        before_enabled,
+        after_enabled,
+        backup.display()
+    );
     Ok(())
+}
+
+fn count_enabled_mods(mods: &[Value]) -> usize {
+    mods.iter()
+        .filter(|item| {
+            item.get("enabled").and_then(Value::as_bool) == Some(true)
+                || item.get("status").and_then(Value::as_i64) == Some(1)
+        })
+        .count()
 }
 
 fn read_static_id(dev_dir: &Path) -> Option<String> {

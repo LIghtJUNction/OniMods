@@ -115,6 +115,49 @@ namespace OniMcp.Server
             Instance.EnqueueInstance(action, allowInline: false);
         }
 
+        public static T Invoke<T>(Func<T> func, int timeoutMs = 10000)
+        {
+            if (func == null)
+                throw new ArgumentNullException(nameof(func));
+
+            if (Instance == null)
+            {
+                OniMcpLog.Warning("[OniMcp] MainThreadBridge not initialized, executing inline");
+                return func();
+            }
+
+            if (Instance.IsMainThread())
+                return func();
+
+            T result = default(T);
+            Exception error = null;
+            using (var done = new ManualResetEventSlim(false))
+            {
+                Instance.EnqueueInstance(() =>
+                {
+                    try
+                    {
+                        result = func();
+                    }
+                    catch (Exception ex)
+                    {
+                        error = ex;
+                    }
+                    finally
+                    {
+                        done.Set();
+                    }
+                }, allowInline: false);
+
+                if (!done.Wait(timeoutMs))
+                    throw new TimeoutException("Timed out waiting for Unity main thread.");
+            }
+
+            if (error != null)
+                throw error;
+            return result;
+        }
+
         private void OnDestroy()
         {
             if (Instance == this)

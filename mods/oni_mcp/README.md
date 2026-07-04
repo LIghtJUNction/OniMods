@@ -2,9 +2,15 @@
 
 [![ONI MCP Server 预览图](preview.png)](README.md)
 
-ONI MCP Server 是一个 Oxygen Not Included Mod。它会在游戏内启动本地 MCP Streamable HTTP 服务，让支持 MCP 的 AI 客户端读取殖民地状态、查询游戏数据、分析地图，并在玩家确认后执行明确的游戏操作。
+ONI MCP Server 是一个 Oxygen Not Included Mod。它会在游戏内启动本地 MCP Streamable HTTP 服务，让支持 MCP 的 AI 客户端以虚拟文件系统的方式读取殖民地状态、查询游戏数据、分析地图，并在玩家确认后执行明确的游戏操作。
 
-默认端点:
+浏览器反馈页:
+
+```text
+http://localhost:8788/
+```
+
+MCP 端点:
 
 ```text
 http://localhost:8788/mcp/
@@ -12,12 +18,15 @@ http://localhost:8788/mcp/
 
 源代码: https://github.com/LIghtJUNction/OniMods/
 
+> **Steam 创意工坊简短描述 (Steam Workshop Short Description):**
+> 一个在《缺氧》游戏内启动本地 Model Context Protocol (MCP) 服务器的 Mod。它允许 AI 助手（如 Claude、Gemini 等）连接到游戏，读取殖民地状态（氧气、食物、复制人、电力），并使用虚拟文件系统模式（通过 SEARCH/REPLACE 块）或经玩家确认的安全命令（暂停、调速、日程、门禁等）辅助规划和管理殖民地。
+
 ## 能做什么
 
 * 检查氧气、食物、电力、温度、复制人、房间和警报。
 * 读取 `oni://...` 资源，获得比截图更可靠的游戏状态。
+* 使用 `world_editor` 提供的虚拟存档目录和文件（通过 SEARCH/REPLACE 块）来分析和修改游戏世界。
 * 执行暂停、调速、截图、日程、门禁、储存过滤、优先级、复制人命名等小任务。
-* 读取文本地图，定义区域，辅助规划布局。
 * 作为 ONI + MCP + Agent 的实验平台。
 
 ## 不适合做什么
@@ -43,7 +52,8 @@ http://localhost:8788/mcp/
 
 1. 确认已经启用 Mod 并重启游戏。
 2. 确认当前安装包包含 `PLib.dll` 合并后的 `OniMcp.dll`。
-3. 直接编辑下方的 `OniMcpConfig.json`。Mod 启动时会自动生成该文件。
+3. 如果仍缺失，请使用 v0.2.0 或更新版本；该版本显式初始化 PLib Options 的 ModsScreen 补丁。
+4. 直接编辑下方的 `OniMcpConfig.json`。Mod 启动时会自动生成该文件。
 
 ## 配置文件
 
@@ -132,7 +142,7 @@ Claude Desktop 示例:
 
 如果已关闭 token 校验，可以去掉 `headers`。
 
-首次使用建议先让 AI 只读检查:
+For first use, start with a read-only prompt:
 
 ```text
 先不要修改存档，检查我的殖民地状态，列出最紧急的 3 个风险。
@@ -140,7 +150,7 @@ Claude Desktop 示例:
 
 ## 主要工具
 
-当前公开工具面会尽量保持小而稳定，运行时清单是事实来源:
+公开工具面已精简为一组聚合入口，运行时清单是事实来源:
 
 ```text
 server_control domain=catalog action=manifest
@@ -152,15 +162,15 @@ server_control domain=catalog action=manifest
 oni://tools/manifest
 ```
 
-常见聚合工具:
+公开的聚合工具:
 
-* `server_control`: 服务器状态、会话、截图、任务、清单。
-* `read_control`: 殖民地状态、地图、库存、房间、建筑、百科数据。
-* `navigation_control`: 暂停、恢复、调速、视角、选择、指针、覆盖层。
-* `building_control`: 规划、材料、预览、建造、储存过滤、生产队列。
-* `orders_control`: 挖掘、清扫、拖地、拆除、优先级、区域命令、管线电线切断。
-* `dupes_control`: 复制人状态、详情、优先级、命令、改名、技能、帽子。
-* `colony_control`: 报告、诊断、通知、日程、饮食、研究、医疗、种植、养殖。
+* `world_editor`: 代码文件风格的世界编辑器。将存档视为虚拟目录，通过 `cd`, `ls`, `read`, `search` 来观察游戏内文件，通过 `edit` 配合 SEARCH/REPLACE 块来下达修改意图（挖掘、建造、调整优先级、连接管道等）。
+* `colony_control`: 殖民地全局诊断、日程表、研究进度、医疗、通知与整体计划管理。
+* `server_control`: MCP 服务状态、会话清单、截图任务、后台任务以及清单/开发指南获取。
+
+* `read_control`, `building_control`, `orders_control`, `dupes_control`, `game_control`, `navigation_control`, `search_control`: 当前聚合入口，会直接出现在 `tools/list` 中；agent 不需要依赖隐藏工具名。
+
+`coordinate_control` 仍是专用定位辅助入口；优先使用语义查询、区域句柄和 `world_editor` 文件视图完成操作。
 
 ## 常见资源
 

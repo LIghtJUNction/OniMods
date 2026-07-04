@@ -6,18 +6,52 @@
 
 - MCP 地址: `http://localhost:8788/mcp/`
 - 协议版本: `2025-11-25`
-- 默认公开工具: 8 个核心聚合入口
+- Default public tools: 3 core aggregate entrypoints: `world_editor`, `colony_control`, `server_control`
 - 旧版细粒度工具: 隐藏注册为 compatibility，可按精确名称继续调用
-- 工具描述: 默认公开工具的描述和参数描述使用英文
+- Tool descriptions: default-public tool descriptions and parameter descriptions are in English
 
 非 `initialize` 请求必须携带会话协商后的 `Mcp-Session-Id` 和 `Mcp-Protocol-Version`。
 
 ## 定位与执行原则
 
+Authoritative model:
+
+- Saves are directories. `latest/` is the fixed alias for the current/latest save.
+- `cd latest` enters the save; `cd` or `cd ~` exits back to `/`, representing the main menu/root.
+- Save contents are structured world files such as `map/terrain.oni`, `buildings/plans.oni`, `infrastructure/power.oni`, and `views/power.png`.
+- There are no action patch files. The only world-changing operation is `world_editor command=edit` with one SEARCH/REPLACE block.
+- Reading the same file again is the observation step after an edit.
+
+Example edit:
+
+```text
+`<<<<<<< SEARCH`
+# observed or empty planning text
+`=======`
+用铜矿连接电池到制氧机
+`>>>>>>> REPLACE`
+```
+
+`world_editor` is the default world interaction tool. It treats the loaded save as
+a virtual folder and exposes map views as files:
+
+- `world_editor command=ls path=/`
+- `world_editor command=read path=/world/map/text.txt`
+- `world_editor command=read path=/world/views/power.png`
+- `world_editor command=search domain=buildings query="wire"`
+- `world_editor command=plan plan="用铜矿连接电池到制氧机"`
+- `world_editor command=connect plan="connect battery to oxygen diffuser"`
+
+Search, planning, actions, building, orders, navigation, game actions, dupe
+actions, and coordinate fallback are routed through `world_editor`. `colony_control`
+and `server_control` remain separate public tools for colony-wide state and MCP
+server operations.
+
 新工具面按搜索/动作优先设计:
 
 - 优先使用 `query`、`target`、`search`、`name`、`id`、`areaId`。
-- `x/y` 和 `x1/y1/x2/y2` 仍可用，但只作为无法语义定位时的精确后备。
+- Use `search_control` for dedicated search. It returns `searchResult`, `nextActions`, and `searchActionPatch`, so selecting a result is structurally tied to the next action call like a search/replace edit.
+- Except for `coordinate_control`, public tools do not accept `x/y`, `x1/y1/x2/y2`, `dx/dy`, `points`, or `anchors`; coordinates are an auxiliary gateway capability only.
 - 面向任务的返回应尽量包含 `reachable`、`executable`、失败原因、缺失条件和建议下一步。
 - 区域动作优先先用 `read_control domain=area action=define` 生成 `areaId`，再传给支持区域的工具。
 - 写入、执行和危险动作应支持 `dryRun` 或 `confirm`，并在执行后重新读取状态验证。
@@ -28,8 +62,10 @@
 |------|--------------------|------|------|
 | `server_control` | `catalog`, `batch`, `program` | read/execute | 健康检查、工具清单、工具搜索、目标指南、批量调用、agent program |
 | `read_control` | `world`, `area`, `resources`, `buildings`, `knowledge`, `infrastructure` | read | 世界地图、区域、资源、建筑、机制知识、电力和房间摘要 |
+| `search_control` | `tools`, `world`, `resources`, `buildings`, `dupes`, `knowledge` | read | Dedicated search with action-ready `nextActions` |
 | `game_control` | `speed`, `state`, `save`, `sandbox`, `ui` | read/execute/dangerous | 暂停、恢复、调速、存档、沙盒、UI 编辑标记 |
 | `navigation_control` | `camera`, `pointer` 或按 `action` 推断 | execute | 相机、覆盖层、截图、可视 agent 指针、鼠标格、点击、拖拽 |
+| `coordinate_control` | `targetTool` gateway | execute/dangerous | The only coordinate auxiliary entrypoint; explicitly forwards x/y, rectangles, path points, or anchors to an underlying tool |
 | `building_control` | `planning`, `config`, `storage`, `filter`, `production`, `side_surface`, `rocket` | read/write/execute | 建造规划、材料检查、蓝图、建筑侧屏配置、储存过滤、生产队列、火箭 |
 | `orders_control` | `area`, `priority`, `designation`, `conduit` | execute/dangerous | 挖掘、清扫、拖地、拆除、优先级、区域订单、线路/管线剪断 |
 | `dupes_control` | `info`, `priority`, `command`, `skill`, `hat`, `assignable` | read/write/execute | 复制人状态、命令、优先级、改名、技能、帽子、可分配物 |
@@ -79,21 +115,19 @@
 - `LiquidConduit`
 - `SolidConduit`
 
-支持输入:
-
-- `points`: 路径点数组
-- `anchors`: 锚点数组
-- `x/y -> x2/y2`
-- `x1/y1 -> x2/y2`
+For semantic building, prefer `plan`, `blueprint`, `areaId`, or search results. When endpoint coordinates, path point arrays, or anchor arrays are required, forward to `building_control` through `coordinate_control`.
 
 示例:
 
 ```json
 {
+  "targetTool": "building_control",
   "domain": "planning",
   "action": "build_area",
-  "prefabId": "Wire",
-  "material": "Copper",
+  "payload": {
+    "prefabId": "Wire",
+    "material": "Copper"
+  },
   "x": 10,
   "y": 20,
   "x2": 18,
@@ -102,11 +136,11 @@
 }
 ```
 
-这会直接生成连续线路，不再需要后续单独调用连接步骤。
+This directly creates a continuous line, with no separate follow-up connection step required.
 
 ## 订单与剪断
 
-`orders_control` 支持语义目标、区域句柄和精确坐标。推荐形式:
+`orders_control` supports semantic targets and area handles. Exact coordinate orders must be forwarded through `coordinate_control`.
 
 ```json
 {
@@ -168,18 +202,18 @@
 ```text
 mods/oni_mcp/Tools/
 ├── Core/      # 工具和资源注册
-├── New/       # 默认公开的 8 个聚合工具入口和英文描述
+├── New/       # Default-public 10 aggregate tool entrypoints and English descriptions
 ├── Shared/    # 搜索、定位、JSON、工具辅助逻辑
-└── Legacy/    # 隐藏兼容注册和旧版细粒度实现
+└── Legacy/    # 内部兼容和旧版细粒度实现
 ```
 
-新增公开能力优先扩展 `Tools/New/` 的聚合入口。旧版兼容逻辑放入 `Tools/Legacy/Impl/`，通过 `Tools/Legacy/LegacyToolRegistry.cs` 注册。共享搜索、可达性、材料检查和坐标后备逻辑放在 `Tools/Shared/`。
+Prefer extending aggregate entrypoints in `Tools/New/` for new public capabilities. Put legacy compatibility logic in `Tools/Legacy/Impl/`, registered through `Tools/Legacy/LegacyToolRegistry.cs`. Shared search, reachability, and material checks belong in `Tools/Shared/`; coordinate entry is centralized in `coordinate_control`.
 
 ## 兼容性说明
 
 旧版工具仍可用于兼容历史客户端，但不再推荐新集成直接依赖。新客户端应:
 
-1. 调用 `tools/list` 获取 8 个公开入口。
+1. Call `tools/list` to get the 10 public entrypoints.
 2. 调用 `server_control domain=catalog action=search` 或读取 `oni://tools/guide` 查找目标流程。
 3. 优先传语义定位参数。
 4. 对危险动作传 `confirm: true`。

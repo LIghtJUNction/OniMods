@@ -2,11 +2,14 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import sys
 import time
 import urllib.parse
 import urllib.request
+from pathlib import Path
+
+
+LENGTH_RETRY_CODES = {1003212}
 
 
 def load_dotenv():
@@ -19,9 +22,7 @@ def load_dotenv():
             if not line or line.startswith("#") or "=" not in line:
                 continue
             key, value = line.split("=", 1)
-            key = key.strip()
-            value = value.strip().strip("'\"")
-            os.environ.setdefault(key, value)
+            os.environ.setdefault(key.strip(), value.strip().strip("'\""))
         return env_path
     return None
 
@@ -49,7 +50,6 @@ def send_room_message(room_id, message, timeout, cookie):
     csrf = csrf_from_cookie(cookie)
     if not csrf:
         raise RuntimeError("BILI_COOKIE is missing bili_jct csrf token")
-
     data = urllib.parse.urlencode(
         {
             "bubble": 0,
@@ -80,6 +80,62 @@ def send_room_message(room_id, message, timeout, cookie):
         return json.loads(response.read().decode())
 
 
+def split_message(message, max_len):
+    message = (message or "").strip()
+    if not message:
+        return []
+    if len(message) <= max_len:
+        return [message]
+
+    prefix = "> " if message.startswith("> ") else ""
+    body = message[len(prefix) :].strip() if prefix else message
+    chunk_len = max(4, max_len - len(prefix))
+    chunks = []
+    while body:
+        if len(body) <= chunk_len:
+            chunks.append(prefix + body)
+            break
+
+        cut = best_cut(body, chunk_len)
+        part = body[:cut].strip()
+        if part:
+            chunks.append(prefix + part)
+        body = body[cut:].strip()
+    return chunks
+
+
+def best_cut(text, limit):
+    window = text[:limit]
+    for marks in ("。！？；，、,.!?; ", "\n"):
+        positions = [window.rfind(mark) for mark in marks]
+        cut = max(positions)
+        if cut >= max(4, limit // 2):
+            return cut + 1
+    return limit
+
+
+def send_with_segments(room_id, message, timeout, cookie, max_len, delay):
+    pending = split_message(message, max_len)
+    results = []
+    index = 0
+    while index < len(pending):
+        part = pending[index]
+        result = send_room_message(room_id, part, timeout, cookie)
+        code = result.get("code")
+        if code in LENGTH_RETRY_CODES and len(part) > 8:
+            smaller = split_message(part, max(8, max_len // 2))
+            if len(smaller) > 1:
+                pending[index : index + 1] = smaller
+                continue
+        results.append({"part": index + 1, "message": part, "result": result})
+        index += 1
+        if index < len(pending) and delay > 0:
+            time.sleep(delay)
+
+    ok = all(item["result"].get("code") == 0 for item in results)
+    return {"ok": ok, "segmented": len(results) > 1, "count": len(results), "results": results}
+
+
 def message_id(item):
     return item.get("id_str") or f"{item.get('timeline')}|{item.get('uid')}|{item.get('text')}"
 
@@ -99,13 +155,22 @@ def main():
     parser.add_argument("--timeout", type=float, default=8.0)
     parser.add_argument("--print-existing", action="store_true")
     parser.add_argument("--send", help="Send one live-room comment, then exit.")
+    parser.add_argument("--send-max-length", type=int, default=32)
+    parser.add_argument("--send-delay", type=float, default=1.0)
     args = parser.parse_args()
-    cookie = os.environ.get("BILI_COOKIE")
 
+    cookie = os.environ.get("BILI_COOKIE")
     if args.send:
         if not cookie:
-            raise SystemExit("BILI_COOKIE is missing. Ask the user for a Bilibili cookie and save it in .env.")
-        result = send_room_message(args.room_id, args.send, args.timeout, cookie)
+            raise SystemExit("BILI_COOKIE missing. Ask user for Bilibili cookie and save it in .env.")
+        result = send_with_segments(
+            args.room_id,
+            args.send,
+            args.timeout,
+            cookie,
+            max(8, args.send_max_length),
+            max(0.0, args.send_delay),
+        )
         print(json.dumps(result, ensure_ascii=False))
         return
 
@@ -114,7 +179,7 @@ def main():
     while True:
         try:
             payload = fetch_room_messages(args.room_id, args.timeout, cookie)
-            items = payload.get("data", {}).get("room", []) if isinstance(payload, dict) else []
+            items = payload.get("data", {}).get("room", [])
             new_items = []
             for item in items:
                 mid = message_id(item)
@@ -122,16 +187,16 @@ def main():
                     continue
                 seen.add(mid)
                 new_items.append(item)
-
-            if first and not args.print_existing:
-                first = False
-            else:
+            if args.print_existing:
+                for item in items:
+                    print(format_message(item))
+                return
+            if not first:
                 for item in new_items:
                     print(format_message(item), flush=True)
-                first = False
+            first = False
         except Exception as exc:
             print(f"[poll-error] {exc}", file=sys.stderr, flush=True)
-
         time.sleep(max(5.0, args.interval))
 
 

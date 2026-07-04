@@ -125,7 +125,6 @@ namespace OniMcp.Tools
             Resource("oni://ui/actions", "game_control", "UI Action 白名单", "可安全触发的管理菜单、覆盖层、建造分类和导航 Action。", "game_control domain=ui uiDomain=action action=list", new JObject { ["domain"] = "ui", ["uiDomain"] = "action", ["action"] = "list" }),
             Resource("oni://tools/manifest", "server_control", "工具清单", "ONI MCP 工具目录。", "server_control domain=catalog action=manifest", new JObject { ["domain"] = "catalog", ["action"] = "manifest" }),
             Resource("oni://tools/guide", "server_control", "工具意图指南", "按玩家目标推荐资源、工具链和批量策略。", "server_control domain=catalog action=guide", new JObject { ["domain"] = "catalog", ["action"] = "guide" }),
-            Resource("oni://guide/mechanics", "read_control", "缺氧机制速查", "结构化缺氧机制、公式、边界条件和工程注意事项；不包含攻略长文本。", "read_control domain=knowledge kind=guide action=query", new JObject { ["domain"] = "knowledge", ["kind"] = "guide", ["action"] = "query" }),
             Resource("oni://tools/player-action-coverage", "server_control", "玩家操作覆盖审计", "玩家可执行操作面、对应 MCP 工具和缺口状态。", "server_control domain=catalog action=coverage", new JObject { ["domain"] = "catalog", ["action"] = "coverage" }),
             Resource("oni://tools/side-screen-surfaces", "server_control", "侧屏 surface 审计", "运行时 SideScreenContent 类型到 MCP 工具/资源覆盖的映射审计。", "server_control domain=catalog action=surface_audit surface=side_screen", new JObject { ["domain"] = "catalog", ["action"] = "surface_audit", ["surface"] = "side_screen" }),
             Resource("oni://tools/user-menu-surfaces", "server_control", "用户菜单 surface 审计", "源码 UserMenu/context-menu 按钮来源到 MCP 工具/资源覆盖的映射审计。", "server_control domain=catalog action=surface_audit surface=user_menu", new JObject { ["domain"] = "catalog", ["action"] = "surface_audit", ["surface"] = "user_menu" }),
@@ -232,14 +231,6 @@ namespace OniMcp.Tools
                 Name = "server_control",
                 Title = "工具意图指南",
                 Description = "通过 server_control domain=catalog action=guide 按目标生成低 token 工具使用指南，推荐资源、搜索词、工具链、批量策略和规划 harness 流程。",
-                MimeType = "application/json"
-            },
-            new McpResourceTemplateInfo
-            {
-                UriTemplate = "oni://guide/mechanics{?query,category,detail,limit}",
-                Name = "read_control",
-                Title = "缺氧机制速查",
-                Description = "查询结构化缺氧机制/公式：热量、制氧、保鲜、养殖、电力、自动化、太空等；detail=brief/full。",
                 MimeType = "application/json"
             },
             new McpResourceTemplateInfo
@@ -1146,11 +1137,7 @@ namespace OniMcp.Tools
 
             if (parsed.Host == "guide" && parsed.AbsolutePath == "/mechanics")
             {
-                var query = ParseQuery(parsed.Query);
-                query["domain"] = "knowledge";
-                query["kind"] = "guide";
-                query["action"] = "query";
-                return ReadToolResource(uri, "read_control", query, "application/json");
+                return ErrorResource(uri, "guide/mechanics is disabled because in-game database queries are crash-prone on this runtime.");
             }
 
             if (parsed.Host == "tools" && parsed.AbsolutePath == "/manifest")

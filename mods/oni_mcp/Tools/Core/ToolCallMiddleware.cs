@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Support;
 
@@ -8,13 +9,15 @@ namespace OniMcp.Tools
 {
     public static class ToolCallMiddleware
     {
+        public const string TaskDescriptionParameter = "task";
+
         private static readonly object Sync = new object();
         private static readonly Queue<PendingNotification> PendingNotifications = new Queue<PendingNotification>();
 
         public static Dictionary<string, object> QueueNotification(string message, string level = null)
         {
             if (string.IsNullOrWhiteSpace(message))
-                throw new ArgumentException("message is required", nameof(message));
+                throw new ArgumentException("message required", nameof(message));
 
             var item = new PendingNotification
             {
@@ -58,6 +61,23 @@ namespace OniMcp.Tools
             return Status();
         }
 
+        public static bool TryGetTaskDescription(JObject arguments, out string description)
+        {
+            description = arguments?[TaskDescriptionParameter]?.ToString()?.Trim();
+            return !string.IsNullOrWhiteSpace(description);
+        }
+
+        public static void PresentTaskDescription(string description)
+        {
+            ToolCallSpeechOverlay.ShowNearPlayerMouse(description);
+        }
+
+        public static CallToolResult MissingTaskDescription(string toolName, List<Dictionary<string, object>> notifications)
+        {
+            ToolCallSpeechOverlay.NotifyMissingDescription(toolName);
+            return Inject(CallToolResult.Error("task is required: describe what you are doing before every tool call."), notifications);
+        }
+
         public static CallToolResult Inject(CallToolResult result, List<Dictionary<string, object>> notifications)
         {
             if (notifications == null || notifications.Count == 0)
@@ -89,8 +109,8 @@ namespace OniMcp.Tools
             {
                 return new Dictionary<string, object>
                 {
-                    ["level"] = Level,
                     ["message"] = Message,
+                    ["level"] = Level,
                     ["createdAtUtc"] = CreatedAtUtc.ToString("o")
                 };
             }
