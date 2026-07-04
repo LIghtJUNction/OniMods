@@ -178,11 +178,11 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders_area", "area_order", "area_designate" },
-                Tags = new List<string> { "orders", "area", "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "扫", "清扫", "擦", "毒", "消", "收" },
-                Description = "统一区域命令入口。action=dig/挖/挖掘、sweep/扫/清扫/clean、mop/擦/擦拭、disinfect/毒/消毒、cancel/消/取消、harvest/收/收获；复用各具体订单参数，危险或大区域仍需 confirm=true。",
+                Tags = new List<string> { "orders", "area", "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "扫", "清扫", "打扫", "拾取", "擦", "毒", "消", "收" },
+                Description = "统一区域命令入口。action=dig/挖/挖掘、sweep/扫/清扫/打扫/拾取/搬运/clean、mop/擦/擦拭/拖地、disinfect/毒/消毒/杀菌、cancel/消/取消、harvest/收/收获/采摘；复用各具体订单参数，危险或大区域仍需 confirm=true。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "区域命令：dig/挖/挖掘、sweep/扫/清扫/clean、mop/擦/擦拭、disinfect/毒/消毒、cancel/消/取消、harvest/收/收获", Required = true, EnumValues = new List<string> { "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "挖掘", "扫", "清扫", "清理", "clean", "擦", "擦拭", "毒", "消毒", "消", "取消", "收", "收获" } },
+                        ["action"] = new McpToolParameter { Type = "string", Description = "区域命令：dig/挖/挖掘、sweep/扫/清扫/打扫/拾取/搬运/clean、mop/擦/擦拭/拖地、disinfect/毒/消毒/杀菌、cancel/消/取消、harvest/收/收获/采摘", Required = true, EnumValues = new List<string> { "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "挖掘", "开挖", "扫", "清", "清扫", "清理", "打扫", "捡", "捡起", "拾取", "搬运", "收拾", "clean", "擦", "擦拭", "擦水", "拖", "拖地", "毒", "消毒", "杀菌", "灭菌", "消", "取消", "取消任务", "取消命令", "收", "收获", "收割", "采收", "采摘" } },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "支持该参数的命令使用：差事优先级 1-9，默认 5", Required = false },
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "支持该参数的命令使用：是否设为红色最高优先级，默认 false", Required = false },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "dig/sweep/harvest 支持：只预览不执行", Required = false },
@@ -209,16 +209,16 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "dangerous",
                 Aliases = new List<string> { "orders_designation_control", "map_designation_control" },
-                Tags = new List<string> { "orders", "designation", "deconstruct", "attack", "capture", "conduit", "manual-delivery", "拆", "杀", "捕", "捕捉", "抓捕" },
-                Description = "统一指定/取消类入口：action=deconstruct/拆/拆除、attack/杀/攻击、capture/捕/捕捉/抓捕/wrangle、empty_conduits、cut_conduits、manual_delivery。只做路由聚合，保留各旧工具的 confirm 和安全限制。",
+                Tags = new List<string> { "orders", "designation", "deconstruct", "attack", "capture", "conduit", "manual-delivery", "拆", "杀", "攻击", "捕", "捕捉", "抓捕", "捕获" },
+                Description = "统一指定/取消类入口：action=deconstruct/拆/拆除/拆毁、attack/杀/攻击/进攻、capture/捕/捕捉/抓捕/捕获/wrangle、empty_conduits/清空管道、cut_conduits/剪断、manual_delivery/手动送货。只做路由聚合，保留各旧工具的 confirm 和安全限制。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter
                     {
                         Type = "string",
-                        Description = "指定动作：deconstruct/拆/拆除、attack/杀/攻击、capture/捕/捕捉/抓捕/wrangle、empty_conduits、cut_conduits、manual_delivery",
+                            Description = "指定动作：deconstruct/拆/拆除/拆毁、attack/杀/攻击/进攻、capture/捕/捕捉/抓捕/捕获/wrangle、empty_conduits/清空管道、cut_conduits/剪断、manual_delivery/手动送货",
                         Required = true,
-                        EnumValues = new List<string> { "deconstruct", "attack", "capture", "empty_conduits", "cut_conduits", "manual_delivery", "拆", "拆除", "杀", "攻击", "捕", "捕捉", "抓捕", "wrangle" }
+                            EnumValues = new List<string> { "deconstruct", "attack", "capture", "empty_conduits", "cut_conduits", "manual_delivery", "拆", "拆除", "拆毁", "拆掉", "杀", "攻击", "打", "进攻", "捕", "捕捉", "抓捕", "抓", "捕获", "wrangle", "清管", "清空管道", "剪", "剪断", "剪管", "送", "送货", "手动送货" }
                     },
                     ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID；适用于 deconstruct/attack/capture/manual_delivery", Required = false },
                     ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；适用于 deconstruct/attack/cut_conduits/manual_delivery", Required = false },
@@ -344,14 +344,19 @@ namespace OniMcp.Tools
             {
             case "拆":
             case "拆除":
+            case "拆毁":
+            case "拆掉":
                 return "deconstruct";
             case "杀":
             case "攻击":
+            case "打":
+            case "进攻":
                 return "attack";
                 case "捕":
                 case "捕捉":
                 case "抓捕":
                 case "抓":
+                case "捕获":
                     return "capture";
             case "清管":
             case "清空管道":
