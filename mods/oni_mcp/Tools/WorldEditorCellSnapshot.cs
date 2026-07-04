@@ -92,6 +92,57 @@ namespace OniMcp.Tools
             sb.AppendLine("- 温度适宜: " + TemperatureSuitabilityText(tempC));
             sb.AppendLine("- 温度适宜详情: band=" + TemperatureSuitabilityBand(tempC)
                 + " dupeComfortC=10~40 cautionC=-20~10/40~72 dangerC=<-20/>=72");
+            sb.AppendLine("- 环境判定: " + CellEnvironmentText(element, Grid.Mass[cell], tempC));
+        }
+
+        private static string CellEnvironmentText(Element element, float massKg, float tempC)
+        {
+            string phase = CellPhase(element, massKg);
+            string breathable = IsBreathableElement(element, massKg) ? "yes" : "no";
+            string pressure = CellPressureBand(element, massKg);
+            string liquidRisk = element != null && element.IsLiquid && massKg > 1f ? "yes" : "no";
+            return "phase=" + phase
+                + " breathable=" + breathable
+                + " pressure=" + pressure
+                + " liquidRisk=" + liquidRisk
+                + " tempBand=" + TemperatureSuitabilityBand(tempC);
+        }
+
+        private static string CellPhase(Element element, float massKg)
+        {
+            if (element == null || massKg <= 0.001f)
+                return "vacuum";
+            if (element.IsSolid)
+                return "solid";
+            if (element.IsLiquid)
+                return "liquid";
+            if (element.IsGas)
+                return "gas";
+            return "unknown";
+        }
+
+        private static bool IsBreathableElement(Element element, float massKg)
+        {
+            return element != null
+                && massKg > 0.01f
+                && (element.id == SimHashes.Oxygen || element.id == SimHashes.ContaminatedOxygen);
+        }
+
+        private static string CellPressureBand(Element element, float massKg)
+        {
+            if (element == null || massKg <= 0.001f)
+                return "vacuum";
+            if (element.IsLiquid)
+                return massKg > 1f ? "liquid_blocking" : "liquid_trace";
+            if (!element.IsGas)
+                return "solid";
+            if (massKg < 0.05f)
+                return "near_vacuum";
+            if (massKg < 0.2f)
+                return "thin";
+            if (massKg > 3f)
+                return "overpressure";
+            return "normal";
         }
 
         private static string TemperatureSuitabilityText(float tempC)
