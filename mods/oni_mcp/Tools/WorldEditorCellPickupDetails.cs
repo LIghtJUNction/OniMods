@@ -2,15 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json.Linq;
+using OniMcp.Support;
 using UnityEngine;
 
 namespace OniMcp.Tools
 {
     public static partial class WorldEditorTools
     {
-        private static void AppendCellPickupDetailSnapshot(StringBuilder sb, int cell)
-        {
-            var entries = new List<CellPickupDetail>();
+private static void AppendCellPickupDetailSnapshot(StringBuilder sb, int cell, JObject args)
+{
+int limit = CellPickupItemLimit(args);
+var entries = new List<CellPickupDetail>();
             foreach (var pickupable in Components.Pickupables.Items)
             {
                 if (pickupable == null || pickupable.gameObject == null)
@@ -33,13 +36,16 @@ namespace OniMcp.Tools
                 return;
 
             sb.AppendLine();
-            sb.AppendLine("## Pickup Summary");
-            sb.AppendLine("- 掉落物: " + entries.Count + " 项, " + entries.Sum(item => item.MassKg).ToString("F2") + " kg");
-            sb.AppendLine("- 聚合:");
+sb.AppendLine("## Pickup Summary");
+sb.AppendLine("- 掉落物: " + entries.Count + " 项, " + entries.Sum(item => item.MassKg).ToString("F2") + " kg");
+sb.AppendLine("- 明细: shown=" + Math.Min(entries.Count, limit)
++ ", truncated=" + (entries.Count > limit).ToString().ToLowerInvariant()
++ ", itemLimit=" + limit);
+sb.AppendLine("- 聚合:");
             foreach (var group in entries
                          .GroupBy(item => item.PrefabId + "|" + item.ElementId + "|" + item.Name)
                          .OrderByDescending(group => group.Sum(item => item.MassKg))
-                         .Take(8))
+.Take(limit))
             {
                 CellPickupDetail first = group.First();
                 sb.AppendLine("  - " + first.Name
@@ -49,14 +55,21 @@ namespace OniMcp.Tools
                     + ", mass=" + group.Sum(item => item.MassKg).ToString("F2") + " kg");
             }
 
-            sb.AppendLine("- 明细(前8):");
-            foreach (CellPickupDetail item in entries.OrderByDescending(item => item.MassKg).Take(8))
+sb.AppendLine("- 明细:");
+foreach (CellPickupDetail item in entries.OrderByDescending(item => item.MassKg).Take(limit))
             {
                 sb.AppendLine("  - " + item.Name
                     + " | ID=" + item.PrefabId
                     + " | 元素=" + item.ElementId
                     + " | " + item.MassKg.ToString("F2") + " kg");
             }
+        }
+
+        static int CellPickupItemLimit(JObject args)
+        {
+            if (ToolUtil.GetBool(args, "includeAllItems", false) || ToolUtil.GetBool(args, "fullItems", false))
+                return 1000;
+            return Math.Max(1, Math.Min(ToolUtil.GetInt(args, "itemLimit") ?? 8, 1000));
         }
 
         private sealed class CellPickupDetail

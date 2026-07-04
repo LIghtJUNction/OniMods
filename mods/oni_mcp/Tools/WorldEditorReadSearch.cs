@@ -42,7 +42,7 @@ namespace OniMcp.Tools
                         ShouldCompactMap(args)));
                 }
                 if (TryParseCellSnapshotPath(relative, out int cellX, out int cellY))
-                    return CallToolResult.Text(ReadCellSnapshotMarkdown(cellX, cellY));
+                    return CallToolResult.Text(ReadCellSnapshotMarkdown(args, cellX, cellY));
                 if (relative.StartsWith("map/layers/", StringComparison.Ordinal)
                     && (relative.EndsWith(".html", StringComparison.Ordinal) || relative.EndsWith(".md", StringComparison.Ordinal)))
                     return CallToolResult.Text(ReadFileDirectly(path));

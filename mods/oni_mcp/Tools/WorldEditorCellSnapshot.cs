@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace OniMcp.Tools
@@ -24,7 +25,7 @@ namespace OniMcp.Tools
             return parts.Length == 2 && int.TryParse(parts[0], out x) && int.TryParse(parts[1], out y);
         }
 
-        private static string ReadCellSnapshotMarkdown(int x, int y)
+        private static string ReadCellSnapshotMarkdown(JObject args, int x, int y)
         {
             int cell = Grid.XYToCell(x, y);
             var sb = new StringBuilder();
@@ -41,8 +42,8 @@ namespace OniMcp.Tools
             AppendCellObjectSnapshot(sb, x, y, cell);
             AppendCellInfrastructureSnapshot(sb, cell);
             AppendCellPortSnapshot(sb, cell);
-            AppendCellItemSnapshot(sb, cell);
-            AppendCellPickupDetailSnapshot(sb, cell);
+            AppendCellItemSnapshot(sb, cell, args);
+            AppendCellPickupDetailSnapshot(sb, cell, args);
             AppendCellPickupSummary(sb, cell);
             AppendCellDecisionHints(sb, x, y, cell);
             AppendCellQuickOps(sb, x, y, cell);
@@ -152,22 +153,31 @@ namespace OniMcp.Tools
             return "layer=" + layerName + " " + text;
         }
 
-        private static void AppendCellItemSnapshot(StringBuilder sb, int cell)
+        private static void AppendCellItemSnapshot(StringBuilder sb, int cell, JObject args)
         {
-            var items = Components.Pickupables.Items
+            int limit = CellPickupItemLimit(args);
+            var allItems = Components.Pickupables.Items
                 .Where(item => item != null && item.gameObject != null && Grid.PosToCell(item.gameObject) == cell)
-                .Take(8)
+                .ToList();
+
+            if (allItems.Count == 0)
+                return;
+
+            var items = allItems.Take(limit)
                 .Select(item => "- " + StripLinkTags(item.GetProperName()) + " | "
                     + (item.PrimaryElement != null ? item.PrimaryElement.Mass.ToString("F2") + " kg" : "mass=?"))
                 .ToList();
 
-            if (items.Count == 0)
-                return;
-
             sb.AppendLine();
             sb.AppendLine("## Items");
+            sb.AppendLine("- total=" + allItems.Count
+                + ", shown=" + items.Count
+                + ", truncated=" + (items.Count < allItems.Count).ToString().ToLowerInvariant()
+                + ", itemLimit=" + limit);
             foreach (string item in items)
                 sb.AppendLine(item);
+            if (items.Count < allItems.Count)
+                sb.AppendLine("- ... +" + (allItems.Count - items.Count) + " more; reread with `itemLimit=" + allItems.Count + "` or `includeAllItems=true`.");
         }
 
         private static char InfrastructureGlyph(int cell, ObjectLayer[] layers)

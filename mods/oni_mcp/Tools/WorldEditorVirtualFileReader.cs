@@ -171,7 +171,7 @@ namespace OniMcp.Tools
 
             if (path.StartsWith("/active/", StringComparison.Ordinal)
                 && TryParseCellSnapshotPath(SaveRelativePath(path), out int cellX, out int cellY))
-                return ReadCellSnapshotMarkdown(cellX, cellY);
+                return ReadCellSnapshotMarkdown(new JObject(), cellX, cellY);
 
             if (path.StartsWith("/active/", StringComparison.Ordinal)
                 && TryParseZoomPath(SaveRelativePath(path), out int zoomX1, out int zoomY1, out int zoomX2, out int zoomY2))
