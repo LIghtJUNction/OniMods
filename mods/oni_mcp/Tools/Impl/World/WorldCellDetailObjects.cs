@@ -164,6 +164,7 @@ namespace OniMcp.Tools
                 if (go != null)
                     result[layer.ToString()] = ObjectInfo(go, layer.ToString(), cell);
             }
+            result["connectionSummary"] = CellUtilityConnectionSummary(cell);
             return result;
         }
 
