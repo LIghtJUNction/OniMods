@@ -84,6 +84,7 @@ namespace OniMcp.Tools
             sb.AppendLine("## Editable Files");
             sb.AppendLine("- `/active/dupes/index.md`");
             sb.AppendLine("- `/active/dupes/reachability.md`");
+            sb.AppendLine("- `/active/management/index.md`");
             sb.AppendLine("- `/active/management/schedule.md`");
             sb.AppendLine("- `/active/management/priorities.md`");
             sb.AppendLine("- `/active/management/food.md`");

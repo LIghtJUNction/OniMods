@@ -141,6 +141,7 @@ namespace OniMcp.Tools
             }
             else if (relative == "management/")
  {
+ add("index.md", "file", "Management control file index. Lists editable schedule, priority, food, skill, and research files.");
  add("schedule.md", "file", "Editable schedule table. SEARCH/REPLACE applies schedule block and assignment changes.");
  add("priorities.md", "file", "Editable duplicant priority table. SEARCH/REPLACE applies job priority changes.");
  add("food.md", "file", "Editable food permission table. SEARCH/REPLACE applies consumable permission changes.");

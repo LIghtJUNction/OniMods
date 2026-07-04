@@ -199,6 +199,31 @@ namespace OniMcp.Tools
             return sb;
         }
 
+        private static string ReadManagementIndexMarkdown(string path)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("# Management Files");
+            sb.AppendLine();
+            sb.AppendLine("- path: `" + path + "`");
+            sb.AppendLine("- edit model: each table is a Markdown control file; changing command lines under `## Edit Commands` changes the in-game panel.");
+            sb.AppendLine("- JSON fallback: append `?format=json` to any table path only when raw state is needed.");
+            sb.AppendLine();
+            sb.AppendLine("## Files");
+            sb.AppendLine("| File | Panel | Edit commands | Example |");
+            sb.AppendLine("| --- | --- | --- | --- |");
+            sb.AppendLine("| `/active/management/schedule.md` | Schedule | `set_block`, `assign_dupe`, `create_schedule` | `set_block schedule=\"AI轮班-1\" hour=7 group=Worktime` |");
+            sb.AppendLine("| `/active/management/priorities.md` | Priorities | `priority`, `priority_settings` | `priority name=\"Dig\" choreGroup=\"Dig\" priority=9` |");
+            sb.AppendLine("| `/active/management/food.md` | Food | `food`, `food_policy` | `food allDupes=true food=\"MushBar\" allow=false` |");
+            sb.AppendLine("| `/active/management/skills.md` | Skills | `learn_skill` | `learn_skill name=\"Dig\" skillId=\"Mining1\" confirm=true` |");
+            sb.AppendLine("| `/active/management/research.md` | Research | `research`, `clear_research` | `research id=\"ImprovedOxygen\" confirm=true` |");
+            sb.AppendLine();
+            sb.AppendLine("## Fast Path");
+            sb.AppendLine("1. Read the target file.");
+            sb.AppendLine("2. Replace only the relevant command line under `## Edit Commands`.");
+            sb.AppendLine("3. Submit SEARCH/REPLACE against that same file.");
+            return sb.ToString();
+        }
+
         private static void AppendEditCommands(StringBuilder sb, IEnumerable<string> examples)
         {
             sb.AppendLine();

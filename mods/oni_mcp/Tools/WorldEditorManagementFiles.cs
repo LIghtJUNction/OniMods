@@ -12,7 +12,8 @@ namespace OniMcp.Tools
         private static bool IsManagementMarkdown(string relative)
         {
             relative = StripManagementQuery(relative);
-            return relative == "management/schedule.md"
+            return relative == "management/index.md"
+                || relative == "management/schedule.md"
                 || relative == "management/priorities.md"
                 || relative == "management/food.md"
                 || relative == "management/skills.md"
@@ -22,6 +23,8 @@ namespace OniMcp.Tools
         private static CallToolResult ReadManagementMarkdown(JObject args, string path, string relative)
         {
             relative = StripManagementQuery(relative);
+            if (relative == "management/index.md")
+                return CallToolResult.Text(ReadManagementIndexMarkdown(path));
             if (relative == "management/schedule.md")
                 return ReadScheduleManagementMarkdown(args, path);
             if (relative == "management/priorities.md")
