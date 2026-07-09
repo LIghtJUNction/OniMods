@@ -243,8 +243,13 @@ namespace OniMcp.Tools
             // Keep original casing for MatchesQuery / CleanName (Chinese display names).
             string queryRaw = args["query"]?.ToString()?.Trim();
             string query = string.IsNullOrEmpty(queryRaw) ? null : queryRaw.ToLowerInvariant();
-            int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
-            if (!cell.HasValue)
+            bool explicitCell = x.HasValue && y.HasValue;
+            int? cell = explicitCell ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
+            // Live bug: TryResolveSearchCell("研究站") can resolve a wrong cell. Then the
+            // cell-scoped loop runs, finds nothing matching the Chinese query, and returns
+            // null without ever using CleanName matching. Prefer name matching when the
+            // caller only passed query (no explicit id/x/y).
+            if (!cell.HasValue && string.IsNullOrEmpty(queryRaw))
             {
                 int searchX;
                 int searchY;
@@ -264,7 +269,7 @@ namespace OniMcp.Tools
                     return go;
                 if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
                 {
-                    if (!string.IsNullOrEmpty(query) && !go.name.ToLowerInvariant().Contains(query) && (kpid == null || !kpid.PrefabTag.Name.ToLowerInvariant().Contains(query)) && !MatchesQuery(go, queryRaw))
+                    if (!string.IsNullOrEmpty(queryRaw) && !MatchesQuery(go, queryRaw))
                         continue;
                     return go;
                 }
@@ -280,15 +285,14 @@ namespace OniMcp.Tools
                     return go;
                 if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
                 {
-                    if (!string.IsNullOrEmpty(query) && !go.name.ToLowerInvariant().Contains(query) && (kpid == null || !kpid.PrefabTag.Name.ToLowerInvariant().Contains(query)) && !MatchesQuery(go, queryRaw))
+                    if (!string.IsNullOrEmpty(queryRaw) && !MatchesQuery(go, queryRaw))
                         continue;
                     return go;
                 }
             }
 
-            // query-only: match localized CleanName / prefabId the same way list does.
-            // Without this, Chinese names like "研究站" fail while English prefab "ResearchCenter" may still resolve via TryResolveSearchCell.
-            if (!id.HasValue && !cell.HasValue && !string.IsNullOrEmpty(queryRaw))
+            // query-only (or query after failed cell filter): match CleanName / prefabId like list.
+            if (!id.HasValue && !string.IsNullOrEmpty(queryRaw))
             {
                 foreach (var prioritizable in Components.Prioritizables.Items)
                 {
