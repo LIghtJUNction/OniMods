@@ -302,8 +302,19 @@ fn game_user_data_dir() -> Result<PathBuf> {
 
     #[cfg(target_os = "windows")]
     {
-        let local_low = env::var_os("USERPROFILE").context("无法获取 USERPROFILE")?;
-        Ok(PathBuf::from(local_low).join("AppData/LocalLow/Klei/Oxygen Not Included"))
+        // ONI loads Steam/Dev/Local mods from Documents\Klei\OxygenNotIncluded\mods.
+        // LocalLow\...\Oxygen Not Included holds logs/config for some installs, not the
+        // mod folders used by this Windows layout (see Player.log Loaded assembly path).
+        let profile = env::var_os("USERPROFILE").context("无法获取 USERPROFILE")?;
+        let documents = PathBuf::from(&profile).join("Documents/Klei/OxygenNotIncluded");
+        let local_low = PathBuf::from(&profile).join("AppData/LocalLow/Klei/Oxygen Not Included");
+        if documents.join("mods").exists() {
+            Ok(documents)
+        } else if local_low.join("mods").exists() {
+            Ok(local_low)
+        } else {
+            Ok(documents)
+        }
     }
 
     #[cfg(target_os = "macos")]

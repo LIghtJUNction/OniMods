@@ -203,16 +203,16 @@ fn new_dev_mod_entry(selected: &SelectedMod, static_id: &str) -> Value {
 fn unzip(zip: &PathBuf, dest: &PathBuf) -> Result<()> {
     #[cfg(target_os = "windows")]
     {
+        // Quote paths: unquoted Expand-Archive splits on spaces in
+        // "Oxygen Not Included" and fails with ParameterBindingException.
+        let zip_s = zip.to_string_lossy().replace('\'', "''");
+        let dest_s = dest.to_string_lossy().replace('\'', "''");
+        let ps = format!(
+            "Expand-Archive -LiteralPath '{}' -DestinationPath '{}' -Force",
+            zip_s, dest_s
+        );
         let status = Command::new("powershell")
-            .args([
-                "-Command",
-                "Expand-Archive",
-                "-Path",
-                &zip.to_string_lossy(),
-                "-DestinationPath",
-                &dest.to_string_lossy(),
-                "-Force",
-            ])
+            .args(["-NoProfile", "-Command", &ps])
             .status()
             .context("解压失败（PowerShell Expand-Archive）")?;
         if !status.success() {
