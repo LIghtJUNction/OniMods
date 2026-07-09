@@ -83,6 +83,7 @@ namespace OniMcp.Tools
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "uproot 时是否设为红色最高优先级，默认 false", Required = false },
                     ["emptyOnly"] = new McpToolParameter { Type = "boolean", Description = "action=batch 时只处理没有当前植物的种植槽，默认 true", Required = false },
                     ["removeOccupant"] = new McpToolParameter { Type = "boolean", Description = "若已有植物，是否先调用 OrderRemoveOccupant 铲除，默认 false", Required = false },
+                    ["cropSeedOnly"] = new McpToolParameter { Type = "boolean", Description = "seed_catalog 时仅返回带 CropSeed 标签的候选种子；最终兼容性仍需具体 plot 验证", Required = false },
                     ["query"] = new McpToolParameter { Type = "string", Description = "按种植槽/植物名称、prefabId、当前植物或请求种子筛选", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "list/batch 最多返回或处理数量", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "set 中 removeOccupant=true 时需要；batch 必须为 true；大区域 uproot 时必须为 true", Required = false }
@@ -238,21 +239,24 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "plantable_seeds_list", "seeds_catalog" },
                 Tags = new List<string> { "farming", "plants", "seeds", "catalog" },
-                Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=seed_catalog。列出游戏内 PlantableSeed prefab，可用于 colony_control domain=bio bioDomain=farming action=set/batch 的 seedTag",
+                Description = "兼容入口：请优先使用 farming_planting_control action=seed_catalog。列出 PlantableSeed prefab 及其标签事实；planterBoxCandidate 仅表示 CropSeed 候选，最终兼容性必须由具体 plot 的 IsValidEntity/预览状态验证。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string", Description = "按种子、植物或显示名筛选", Required = false },
-                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量，默认 100，最大 500", Required = false }
+                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量，默认 100，最大 500", Required = false },
+                    ["cropSeedOnly"] = new McpToolParameter { Type = "boolean", Description = "仅返回带 CropSeed 标签的候选种子，默认 false；不代表与任意具体种植槽兼容", Required = false }
                 },
                 Handler = args =>
                 {
                     string query = args["query"]?.ToString();
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 100, 500));
+                    bool cropSeedOnly = ToolUtil.GetBool(args, "cropSeedOnly", false);
                     var seeds = Assets.Prefabs
                         .Where(prefab => prefab != null && prefab.gameObject != null)
                         .Select(prefab => prefab.GetComponent<PlantableSeed>())
                         .Where(seed => seed != null)
                         .Where(seed => SeedMatches(seed, query))
+                        .Where(seed => !cropSeedOnly || HasCropSeedTag(seed))
                         .OrderBy(seed => TargetName(seed.gameObject))
                         .Take(limit)
                         .Select(SeedInfo)
@@ -261,6 +265,8 @@ namespace OniMcp.Tools
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
                         ["returned"] = seeds.Count,
+                        ["cropSeedOnly"] = cropSeedOnly,
+                        ["hint"] = "cropSeedOnly/planterBoxCandidate only report the CropSeed tag. Validate the chosen seed against the concrete plot with set_planting diagnostics or a plot preview.",
                         ["seeds"] = seeds
                     }, McpJsonUtil.Settings));
                 }
@@ -615,14 +621,35 @@ namespace OniMcp.Tools
         private static Dictionary<string, object> SeedInfo(PlantableSeed seed)
         {
             var kpid = seed.GetComponent<KPrefabID>();
+            var seedGo = seed.gameObject;
+            var seedTag = kpid?.PrefabTag ?? Tag.Invalid;
+            // Tags agents need when matching list_planting.acceptedSeedTags (e.g. CropSeed).
+            var depositTags = new List<string>();
+            if (kpid != null)
+            {
+                foreach (var tag in kpid.Tags)
+                {
+                    if (tag.IsValid && !string.IsNullOrEmpty(tag.Name))
+                        depositTags.Add(tag.Name);
+                }
+                depositTags = depositTags.Distinct().OrderBy(name => name).ToList();
+            }
+
+            // Live play: agents saw acceptedSeedTags=["CropSeed"] but seed_catalog only
+            // returned seedTag/plantId, so they tried BasicSingleHarvestPlantSeed and got
+            // "Seed is not valid for this planter direction/type" with no catalog guidance.
             return new Dictionary<string, object>
             {
-                ["seedTag"] = kpid?.PrefabTag.Name ?? seed.gameObject.name,
-                ["name"] = TargetName(seed.gameObject),
+                ["seedTag"] = seedTag.IsValid ? seedTag.Name : seedGo.name,
+                ["name"] = TargetName(seedGo),
                 ["plantId"] = seed.PlantID.Name,
                 ["previewId"] = seed.PreviewID.Name,
                 ["direction"] = seed.Direction.ToString(),
-                ["replantGroundTag"] = seed.replantGroundTag.IsValid ? seed.replantGroundTag.Name : null
+                ["replantGroundTag"] = seed.replantGroundTag.IsValid ? seed.replantGroundTag.Name : null,
+                ["seedTags"] = depositTags,
+                ["hasCropSeedTag"] = depositTags.Any(tag => tag == "CropSeed"),
+                ["isCropSeed"] = depositTags.Any(tag => tag == "CropSeed"),
+                ["planterBoxCandidate"] = depositTags.Any(tag => tag == "CropSeed")
             };
         }
 
@@ -657,7 +684,14 @@ namespace OniMcp.Tools
             return Contains(TargetName(seed.gameObject), q)
                 || Contains(kpid?.PrefabTag.Name ?? seed.gameObject.name, q)
                 || Contains(seed.PlantID.Name, q)
-                || Contains(seed.PreviewID.Name, q);
+                || Contains(seed.PreviewID.Name, q)
+                || (kpid != null && kpid.Tags.Any(tag => Contains(tag.Name, q)));
+        }
+
+        private static bool HasCropSeedTag(PlantableSeed seed)
+        {
+            var kpid = seed?.GetComponent<KPrefabID>();
+            return kpid != null && kpid.Tags.Any(tag => tag.Name == "CropSeed");
         }
 
         private static void ApplyPriority(GameObject go, JObject args)

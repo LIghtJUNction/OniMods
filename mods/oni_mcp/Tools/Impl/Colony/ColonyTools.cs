@@ -48,6 +48,7 @@ namespace OniMcp.Tools
                     ["watchOnly"] = new McpToolParameter { Type = "boolean", Description = "domain=snapshot：只返回 watch 指标、告警级别和摘要", Required = false },
                     ["thresholds"] = new McpToolParameter { Type = "object", Description = "domain=snapshot：关注阈值，例如 {\"stress\":\">60\"}", Required = false },
                     ["query"] = new McpToolParameter { Type = "string", Description = "搜索/过滤文本，按 action 解释", Required = false },
+                    ["cropSeedOnly"] = new McpToolParameter { Type = "boolean", Description = "domain=bio、bioDomain=farming、action=seed_catalog 时仅返回带 CropSeed 标签的候选种子", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回数量", Required = false },
                     ["includePending"] = new McpToolParameter { Type = "boolean", Description = "domain=notification action=list 时是否包含 pending 通知", Required = false },
                     ["index"] = new McpToolParameter { Type = "integer", Description = "domain=notification action=click/dismiss 时通知索引", Required = false },
