@@ -324,8 +324,22 @@ namespace OniMcp.Tools
                     var seed = seedPrefab == null ? null : seedPrefab.GetComponent<PlantableSeed>();
                     if (seed == null)
                         return CallToolResult.Error("seedTag is not a PlantableSeed prefab");
-                    if (!plot.HasDepositTag(seedTag) || !plot.IsValidEntity(seedPrefab))
-                        return CallToolResult.Error("Seed is not valid for this planter direction/type");
+                    bool hasDeposit = plot.HasDepositTag(seedTag);
+                    bool validEntity = plot.IsValidEntity(seedPrefab);
+                    if (!hasDeposit || !validEntity)
+                    {
+                        var plotInfo = PlotInfo(plot);
+                        var seedInfo = SeedInfo(seed);
+                        return CallToolResult.Error(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        {
+                            ["error"] = "Seed is not valid for this planter direction/type",
+                            ["hasDepositTag"] = hasDeposit,
+                            ["isValidEntity"] = validEntity,
+                            ["seed"] = seedInfo,
+                            ["plot"] = plotInfo,
+                            ["hint"] = "Use seed_catalog (cropSeedOnly=true) and match seedTags to plot.acceptedSeedTags before set_planting. Decorative/non-crop seeds fail on PlanterBox."
+                        }, McpJsonUtil.Settings));
+                    }
 
                     var mutationTag = string.IsNullOrWhiteSpace(args["mutationTag"]?.ToString())
                         ? Tag.Invalid
