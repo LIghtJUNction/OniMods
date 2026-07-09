@@ -324,7 +324,10 @@ namespace OniMcp.Tools
                     var seed = seedPrefab == null ? null : seedPrefab.GetComponent<PlantableSeed>();
                     if (seed == null)
                         return CallToolResult.Error("seedTag is not a PlantableSeed prefab");
-                    bool hasDeposit = plot.HasDepositTag(seedTag);
+                    // Live bug: PlanterBox.possibleDepositObjectTags is often [CropSeed], while
+                    // HasDepositTag(BasicSingleHarvestPlantSeed) checks the seed prefab tag itself
+                    // and returns false even when the seed carries CropSeed and IsValidEntity is true.
+                    bool hasDeposit = SeedMatchesPlotDepositTags(plot, seedPrefab, seedTag);
                     bool validEntity = plot.IsValidEntity(seedPrefab);
                     if (!hasDeposit || !validEntity)
                     {
@@ -337,7 +340,7 @@ namespace OniMcp.Tools
                             ["isValidEntity"] = validEntity,
                             ["seed"] = seedInfo,
                             ["plot"] = plotInfo,
-                            ["hint"] = "Use seed_catalog (cropSeedOnly=true) and match seedTags to plot.acceptedSeedTags before set_planting. Decorative/non-crop seeds fail on PlanterBox."
+                            ["hint"] = "Use seed_catalog (cropSeedOnly=true). Deposit checks use seed tags (e.g. CropSeed), not only the seed prefab id."
                         }, McpJsonUtil.Settings));
                     }
 
@@ -428,7 +431,7 @@ namespace OniMcp.Tools
                             continue;
                         }
 
-                        if (!plot.HasDepositTag(seedTag) || !plot.IsValidEntity(seedPrefab))
+                        if (!SeedMatchesPlotDepositTags(plot, seedPrefab, seedTag) || !plot.IsValidEntity(seedPrefab))
                             continue;
                         if (plot.Occupant != null)
                         {
@@ -706,6 +709,24 @@ namespace OniMcp.Tools
         {
             var kpid = seed?.GetComponent<KPrefabID>();
             return kpid != null && kpid.Tags.Any(tag => tag.Name == "CropSeed");
+        }
+
+        private static bool SeedMatchesPlotDepositTags(PlantablePlot plot, GameObject seedPrefab, Tag seedTag)
+        {
+            if (plot == null || seedPrefab == null)
+                return false;
+            if (plot.HasDepositTag(seedTag))
+                return true;
+            var kpid = seedPrefab.GetComponent<KPrefabID>();
+            if (kpid == null)
+                return false;
+            // Category deposit tags (CropSeed) must match tags on the seed prefab, not only seed prefab id.
+            foreach (var tag in kpid.Tags)
+            {
+                if (tag.IsValid && plot.HasDepositTag(tag))
+                    return true;
+            }
+            return false;
         }
 
         private static void ApplyPriority(GameObject go, JObject args)
