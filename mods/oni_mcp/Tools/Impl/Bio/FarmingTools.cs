@@ -347,10 +347,32 @@ namespace OniMcp.Tools
                     var mutationTag = string.IsNullOrWhiteSpace(args["mutationTag"]?.ToString())
                         ? Tag.Invalid
                         : TagManager.Create(args["mutationTag"].ToString().Trim());
+                    float worldInventoryAmount = AvailableSeedAmount(plot.gameObject, seedTag);
                     plot.CancelActiveRequest();
                     plot.CreateOrder(seedTag, mutationTag);
+                    var after = PlotInfo(plot);
+                    bool requestedPlantingMatches = RequestedPlantingMatches(plot, seedTag, mutationTag);
+                    bool requestActive = plot.GetActiveRequest != null;
+                    if (!requestedPlantingMatches)
+                    {
+                        return CallToolResult.Error(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        {
+                            ["error"] = "CreateOrder did not establish the requested seed and active planting request",
+                            ["seedTag"] = seedTag.Name,
+                            ["mutationTag"] = mutationTag.IsValid ? mutationTag.Name : null,
+                            ["requestedPlantingMatches"] = requestedPlantingMatches,
+                            ["hasActiveRequest"] = requestActive,
+                            ["hasDepositTag"] = hasDeposit,
+                            ["isValidEntity"] = validEntity,
+                            ["worldInventoryAmount"] = Math.Round(worldInventoryAmount, 3),
+                            ["inventoryNote"] = "World inventory amount is informational only; it does not prove fetchability or explain CreateOrder outcome.",
+                            ["seed"] = SeedInfo(seed),
+                            ["plot"] = after,
+                            ["hint"] = "Inspect plot.validPreview, requestedSeed, hasActiveRequest, occupant, and acceptedSeedTags; validate the exact seed against this plot before retrying."
+                        }, McpJsonUtil.Settings));
+                    }
 
-                    return CallToolResult.Text(JsonConvert.SerializeObject(PlotInfo(plot), McpJsonUtil.Settings));
+                    return CallToolResult.Text(JsonConvert.SerializeObject(after, McpJsonUtil.Settings));
                 }
             };
         }
@@ -416,7 +438,13 @@ namespace OniMcp.Tools
                     bool emptyOnly = ToolUtil.GetBool(args, "emptyOnly", true);
                     bool removeOccupant = ToolUtil.GetBool(args, "removeOccupant", false);
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 100, 500));
+                    var seedInfo = isSet ? SeedInfo(seedPrefab.GetComponent<PlantableSeed>()) : null;
+                    int changedCount = 0;
+                    int failedCount = 0;
+                    int unchangedCount = 0;
                     var changed = new List<Dictionary<string, object>>();
+                    var failures = new List<Dictionary<string, object>>();
+                    var unchanged = new List<Dictionary<string, object>>();
                     foreach (var plot in Components.BuildingCompletes.Items
                                  .Select(building => building?.GetComponent<PlantablePlot>())
                                  .Where(plot => plot != null && ToolUtil.GameObjectMatchesWorld(plot.gameObject, worldId))
@@ -426,34 +454,104 @@ namespace OniMcp.Tools
                     {
                         if (!isSet)
                         {
+                            bool hadRequestedTag = plot.requestedEntityTag.IsValid;
+                            bool hadActiveRequest = plot.GetActiveRequest != null;
+                            if (!hadRequestedTag && !hadActiveRequest)
+                            {
+                                unchangedCount++;
+                                AddBatchDetail(unchanged, BatchPlotOutcome("no_active_request", plot));
+                                continue;
+                            }
+
+                            var before = PlotInfo(plot);
                             plot.CancelActiveRequest();
-                            changed.Add(PlotInfo(plot));
+                            bool cleared = !plot.requestedEntityTag.IsValid && plot.GetActiveRequest == null;
+                            if (cleared)
+                            {
+                                changedCount++;
+                                AddBatchDetail(changed, PlotInfo(plot));
+                            }
+                            else
+                            {
+                                failedCount++;
+                                var failure = BatchPlotOutcome("cancel_did_not_clear_request", plot);
+                                failure["before"] = before;
+                                AddBatchDetail(failures, failure);
+                            }
                             continue;
                         }
 
-                        if (!SeedMatchesPlotDepositTags(plot, seedPrefab, seedTag) || !plot.IsValidEntity(seedPrefab))
+                        bool hasDeposit = SeedMatchesPlotDepositTags(plot, seedPrefab, seedTag);
+                        bool validEntity = plot.IsValidEntity(seedPrefab);
+                        if (!hasDeposit || !validEntity)
+                        {
+                            failedCount++;
+                            var failure = BatchPlotOutcome("seed_not_valid_for_plot", plot);
+                            failure["hasDepositTag"] = hasDeposit;
+                            failure["isValidEntity"] = validEntity;
+                            failure["seed"] = seedInfo;
+                            AddBatchDetail(failures, failure);
                             continue;
+                        }
+                        if (RequestedPlantingMatches(plot, seedTag, mutationTag))
+                        {
+                            unchangedCount++;
+                            AddBatchDetail(unchanged, BatchPlotOutcome("request_already_active", plot));
+                            continue;
+                        }
                         if (plot.Occupant != null)
                         {
                             if (emptyOnly)
+                            {
+                                unchangedCount++;
+                                AddBatchDetail(unchanged, BatchPlotOutcome("occupant_present_empty_only", plot));
                                 continue;
+                            }
                             if (!removeOccupant)
+                            {
+                                unchangedCount++;
+                                AddBatchDetail(unchanged, BatchPlotOutcome("occupant_present_remove_disabled", plot));
                                 continue;
+                            }
                             plot.OrderRemoveOccupant();
                         }
                         plot.CancelActiveRequest();
                         plot.CreateOrder(seedTag, mutationTag);
-                        changed.Add(PlotInfo(plot));
+                        bool requestedPlantingMatches = RequestedPlantingMatches(plot, seedTag, mutationTag);
+                        bool requestActive = plot.GetActiveRequest != null;
+                        if (requestedPlantingMatches)
+                        {
+                            changedCount++;
+                            AddBatchDetail(changed, PlotInfo(plot));
+                        }
+                        else
+                        {
+                            failedCount++;
+                            var failure = BatchPlotOutcome("create_order_postcondition_failed", plot);
+                            failure["requestedPlantingMatches"] = requestedPlantingMatches;
+                            failure["hasActiveRequest"] = requestActive;
+                            failure["hasDepositTag"] = hasDeposit;
+                            failure["isValidEntity"] = validEntity;
+                            failure["worldInventoryAmount"] = Math.Round(AvailableSeedAmount(plot.gameObject, seedTag), 3);
+                            failure["inventoryNote"] = "World inventory amount is informational only; it does not prove fetchability or explain CreateOrder outcome.";
+                            failure["seed"] = seedInfo;
+                            AddBatchDetail(failures, failure);
+                        }
                     }
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
                         ["action"] = action,
                         ["seedTag"] = seedTag.IsValid ? seedTag.Name : null,
-                        ["changed"] = changed.Count,
+                        ["changed"] = changedCount,
+                        ["failed"] = failedCount,
+                        ["unchanged"] = unchangedCount,
                         ["worldId"] = worldId,
                         ["rect"] = rect,
-                        ["plots"] = changed
+                        ["detailLimit"] = 20,
+                        ["plots"] = changed,
+                        ["failures"] = failures,
+                        ["unchangedPlots"] = unchanged
                     }, McpJsonUtil.Settings));
                 }
             };
@@ -727,6 +825,48 @@ namespace OniMcp.Tools
                     return true;
             }
             return false;
+        }
+
+        private static bool RequestedPlantingMatches(PlantablePlot plot, Tag seedTag, Tag mutationTag)
+        {
+            if (plot == null || plot.GetActiveRequest == null)
+                return false;
+            if (!plot.requestedEntityTag.IsValid || !seedTag.IsValid
+                || !string.Equals(plot.requestedEntityTag.Name, seedTag.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var requestedMutationTag = plot.requestedEntityAdditionalFilterTag;
+            if (requestedMutationTag.IsValid != mutationTag.IsValid)
+                return false;
+            return !mutationTag.IsValid
+                || string.Equals(requestedMutationTag.Name, mutationTag.Name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static Dictionary<string, object> BatchPlotOutcome(string reason, PlantablePlot plot)
+        {
+            return new Dictionary<string, object>
+            {
+                ["reason"] = reason,
+                ["plot"] = PlotInfo(plot)
+            };
+        }
+
+        private static void AddBatchDetail(List<Dictionary<string, object>> details, Dictionary<string, object> item)
+        {
+            if (details.Count < 20)
+                details.Add(item);
+        }
+
+        private static float AvailableSeedAmount(GameObject target, Tag seedTag)
+        {
+            if (target == null || !seedTag.IsValid)
+                return 0f;
+            var world = target.GetMyWorld();
+            if (world == null)
+                return 0f;
+            return ToolUtil.SafeFloat(world.worldInventory.GetTotalAmount(seedTag, includeRelatedWorlds: true));
         }
 
         private static void ApplyPriority(GameObject go, JObject args)
