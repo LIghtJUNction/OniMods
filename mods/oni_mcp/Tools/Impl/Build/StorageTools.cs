@@ -144,6 +144,8 @@ namespace OniMcp.Tools
                     ["id"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑 InstanceID", Required = false },
                     ["x"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑所在格子 X", Required = false },
                     ["y"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑所在格子 Y", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=detail/set_filter 时按本地化名或 prefabId 查找", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
                     ["tags"] = new McpToolParameter { Type = "array", Description = "action=set_filter 时资源 Tag 列表，如 Dirt、Algae、SandStone", Required = false },
                     ["mode"] = new McpToolParameter { Type = "string", Description = "action=set_filter 时为 replace、add、remove，默认 replace", Required = false, EnumValues = new List<string> { "replace", "add", "remove" } }
                 },
@@ -248,7 +250,9 @@ namespace OniMcp.Tools
             {
                 ["id"] = new McpToolParameter { Type = "integer", Description = "建筑 InstanceID", Required = false },
                 ["x"] = new McpToolParameter { Type = "integer", Description = "建筑所在格子 X", Required = false },
-                ["y"] = new McpToolParameter { Type = "integer", Description = "建筑所在格子 Y", Required = false }
+                ["y"] = new McpToolParameter { Type = "integer", Description = "建筑所在格子 Y", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "按本地化建筑名或 prefabId 查找，如 洗手盆 / WashBasin", Required = false },
+                ["name"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false }
             };
         }
 
@@ -258,10 +262,13 @@ namespace OniMcp.Tools
             int? x = ToolUtil.GetInt(args, "x");
             int? y = ToolUtil.GetInt(args, "y");
             int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
+            string query = args["query"]?.ToString() ?? args["name"]?.ToString() ?? args["resource"]?.ToString();
+            string filter = string.IsNullOrWhiteSpace(query) ? null : query.Trim().ToLowerInvariant();
 
             return GetStorageBuildings().FirstOrDefault(item =>
                 (id.HasValue && item.Id == id.Value) ||
-                (cell.HasValue && item.Cell == cell.Value));
+                (cell.HasValue && item.Cell == cell.Value) ||
+                (!string.IsNullOrEmpty(filter) && item.Matches(filter)));
         }
 
         private static List<StorageInfo> GetStorageBuildings()

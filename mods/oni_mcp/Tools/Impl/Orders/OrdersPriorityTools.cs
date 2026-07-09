@@ -240,7 +240,9 @@ namespace OniMcp.Tools
             int? id = ToolUtil.GetInt(args, "id");
             int? x = ToolUtil.GetInt(args, "x");
             int? y = ToolUtil.GetInt(args, "y");
-            string query = args["query"]?.ToString()?.Trim().ToLowerInvariant();
+            // Keep original casing for MatchesQuery / CleanName (Chinese display names).
+            string queryRaw = args["query"]?.ToString()?.Trim();
+            string query = string.IsNullOrEmpty(queryRaw) ? null : queryRaw.ToLowerInvariant();
             int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
             if (!cell.HasValue)
             {
@@ -262,7 +264,7 @@ namespace OniMcp.Tools
                     return go;
                 if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
                 {
-                    if (!string.IsNullOrEmpty(query) && !go.name.ToLowerInvariant().Contains(query) && (kpid == null || !kpid.PrefabTag.Name.ToLowerInvariant().Contains(query)))
+                    if (!string.IsNullOrEmpty(query) && !go.name.ToLowerInvariant().Contains(query) && (kpid == null || !kpid.PrefabTag.Name.ToLowerInvariant().Contains(query)) && !MatchesQuery(go, queryRaw))
                         continue;
                     return go;
                 }
@@ -278,9 +280,32 @@ namespace OniMcp.Tools
                     return go;
                 if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
                 {
-                    if (!string.IsNullOrEmpty(query) && !go.name.ToLowerInvariant().Contains(query) && (kpid == null || !kpid.PrefabTag.Name.ToLowerInvariant().Contains(query)))
+                    if (!string.IsNullOrEmpty(query) && !go.name.ToLowerInvariant().Contains(query) && (kpid == null || !kpid.PrefabTag.Name.ToLowerInvariant().Contains(query)) && !MatchesQuery(go, queryRaw))
                         continue;
                     return go;
+                }
+            }
+
+            // query-only: match localized CleanName / prefabId the same way list does.
+            // Without this, Chinese names like "研究站" fail while English prefab "ResearchCenter" may still resolve via TryResolveSearchCell.
+            if (!id.HasValue && !cell.HasValue && !string.IsNullOrEmpty(queryRaw))
+            {
+                foreach (var prioritizable in Components.Prioritizables.Items)
+                {
+                    var go = prioritizable?.gameObject;
+                    if (go == null) continue;
+                    if (!ToolUtil.GameObjectMatchesWorld(go, worldId)) continue;
+                    if (MatchesQuery(go, queryRaw))
+                        return go;
+                }
+
+                foreach (var building in Components.BuildingCompletes.Items)
+                {
+                    var go = building?.gameObject;
+                    if (go == null) continue;
+                    if (!ToolUtil.GameObjectMatchesWorld(go, worldId)) continue;
+                    if (MatchesQuery(go, queryRaw))
+                        return go;
                 }
             }
 
