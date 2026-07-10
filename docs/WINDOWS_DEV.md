@@ -8,10 +8,10 @@
 
 ## Fixes in this tree
 
-- Prefer `Documents\Klei\OxygenNotIncluded` when its `mods` folder exists; fall back to LocalLow.
-- Quote `Expand-Archive -LiteralPath` / `-DestinationPath` in `dev` and `install`.
-- Use double-quoted tar paths and do not fail the mod package if the optional source tarball errors.
-- Optional helper: `scripts/install_onim.bat` runs `vcvars64` then `cargo install --path .`.
+- Resolve the real Windows Documents Known Folder through `[Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)`, then install under `Klei\OxygenNotIncluded`; there is no `USERPROFILE\Documents` or LocalLow fallback.
+- Use the shared archive helper for `dev` and `install`. On Windows it invokes PowerShell with `-NoProfile -NonInteractive` and safely single-quotes `Expand-Archive -LiteralPath` / `-DestinationPath`; other platforms pass paths directly to `unzip` without a shell.
+- Use double-quoted tar paths and fail the build if the source tarball cannot be created.
+- Optional helper: `scripts/install_onim.bat` uses `vswhere` to find the latest Visual Studio instance containing `Microsoft.VisualStudio.Component.VC.Tools.x86.x64`, runs `vcvars64`, then installs with Cargo. Set `ONIM_VCVARS64` to override the discovered `vcvars64.bat` path.
 
 ## Verify
 

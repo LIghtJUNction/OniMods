@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::archive;
 use crate::build;
 use crate::config::{Config, SelectedMod};
 
@@ -41,7 +42,7 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     fs::create_dir_all(&dev_dir)
         .with_context(|| format!("创建 Dev 目录失败：{}", dev_dir.display()))?;
 
-    unzip(&zip, &dev_dir)?;
+    archive::unzip(&zip, &dev_dir)?;
     enable_dev_mod(cfg, selected, &dev_dir)?;
 
     println!("✅ 已安装到游戏 Dev 目录");
@@ -198,40 +199,6 @@ fn new_dev_mod_entry(selected: &SelectedMod, static_id: &str) -> Value {
      "reinstall_path": null,
      "staticID": static_id
     })
-}
-
-fn unzip(zip: &PathBuf, dest: &PathBuf) -> Result<()> {
-    #[cfg(target_os = "windows")]
-    {
-        // Quote paths: unquoted Expand-Archive splits on spaces in
-        // "Oxygen Not Included" and fails with ParameterBindingException.
-        let zip_s = zip.to_string_lossy().replace('\'', "''");
-        let dest_s = dest.to_string_lossy().replace('\'', "''");
-        let ps = format!(
-            "Expand-Archive -LiteralPath '{}' -DestinationPath '{}' -Force",
-            zip_s, dest_s
-        );
-        let status = Command::new("powershell")
-            .args(["-NoProfile", "-Command", &ps])
-            .status()
-            .context("解压失败（PowerShell Expand-Archive）")?;
-        if !status.success() {
-            anyhow::bail!("解压失败");
-        }
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        let status = Command::new("unzip")
-            .args(["-o", &zip.to_string_lossy(), "-d", &dest.to_string_lossy()])
-            .status()
-            .context("解压失败（unzip），请确认已安装 unzip")?;
-        if !status.success() {
-            anyhow::bail!("解压失败");
-        }
-    }
-
-    Ok(())
 }
 
 fn is_game_running() -> bool {

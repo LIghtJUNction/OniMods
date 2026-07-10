@@ -161,8 +161,8 @@
     <!-- 打包成 zip (mod 发布包) -->
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
 
-    <!-- 打包源码成 tar.gz。Windows tar 不能用单引号包路径；源码包失败不阻断 mod zip。 -->
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." IgnoreExitCode="true" />
+    <!-- 打包源码成 tar.gz。Windows tar 不能用单引号包路径；源码包失败会使构建失败。 -->
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
