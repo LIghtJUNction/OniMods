@@ -7,7 +7,7 @@ namespace OniMcp.Tools
 {
     public static partial class OniResourceRegistry
     {
-        private static ReadResourceResult ReadDynamicResourceRoutesPart1(string uri, Uri parsed)
+        private static ReadResourceResult ReadWorldAndColonyResourceRoutes(string uri, Uri parsed)
         {
             if (!Uri.TryCreate(uri, UriKind.Absolute, out parsed) || parsed.Scheme != "oni")
                                     return null;

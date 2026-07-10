@@ -7,7 +7,7 @@ namespace OniMcp.Tools
 {
     public static partial class OniResourceRegistry
     {
-        private static ReadResourceResult ReadDynamicResourceRoutesPart3(string uri, Uri parsed)
+        private static ReadResourceResult ReadDuplicantAndUiResourceRoutes(string uri, Uri parsed)
         {
             if (parsed.Host == "ranching" && parsed.AbsolutePath == "/dropoffs")
                                 {

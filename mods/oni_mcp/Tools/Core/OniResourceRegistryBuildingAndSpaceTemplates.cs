@@ -5,7 +5,7 @@ namespace OniMcp.Tools
 {
     public static partial class OniResourceRegistry
     {
-        private static void AddResourceTemplatesPart2(List<McpResourceTemplateInfo> templates)
+        private static void AddBuildingAndSpaceResourceTemplates(List<McpResourceTemplateInfo> templates)
         {
             templates.AddRange(new[]
             {

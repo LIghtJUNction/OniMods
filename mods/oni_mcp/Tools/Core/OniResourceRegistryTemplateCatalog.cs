@@ -8,9 +8,9 @@ namespace OniMcp.Tools
         private static List<McpResourceTemplateInfo> BuildResourceTemplates()
         {
             var templates = new List<McpResourceTemplateInfo>();
-            AddResourceTemplatesPart1(templates);
-            AddResourceTemplatesPart2(templates);
-            AddResourceTemplatesPart3(templates);
+            AddWorldAndColonyResourceTemplates(templates);
+            AddBuildingAndSpaceResourceTemplates(templates);
+            AddDuplicantAndUiResourceTemplates(templates);
             return templates;
         }
     }

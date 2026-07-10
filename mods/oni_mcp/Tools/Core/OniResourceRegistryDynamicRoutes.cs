@@ -12,15 +12,15 @@ namespace OniMcp.Tools
                 return null;
 
             ReadResourceResult result;
-            result = ReadDynamicResourceRoutesPart1(uri, parsed);
+            result = ReadWorldAndColonyResourceRoutes(uri, parsed);
             if (result != null)
                 return result;
 
-            result = ReadDynamicResourceRoutesPart2(uri, parsed);
+            result = ReadBuildingAndSpaceResourceRoutes(uri, parsed);
             if (result != null)
                 return result;
 
-            result = ReadDynamicResourceRoutesPart3(uri, parsed);
+            result = ReadDuplicantAndUiResourceRoutes(uri, parsed);
             if (result != null)
                 return result;
 
