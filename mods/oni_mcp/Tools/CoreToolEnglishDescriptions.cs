@@ -21,7 +21,7 @@ namespace OniMcp.Tools
                     Describe(tool, ColonyDescriptions());
                     break;
                 case "coordinate_control":
-                    tool.Description = "Coordinate auxiliary gateway. This is the only public tool that accepts x/y, x1/y1/x2/y2, dx/dy, coordinate point lists, or coordinate anchors; use it only when semantic targets, search, areaId, or the visible pointer cannot express the operation.";
+                    tool.Description = "Coordinate auxiliary gateway. This is the only registered compatibility tool that accepts x/y, x1/y1/x2/y2, dx/dy, coordinate point lists, or coordinate anchors; use it only when semantic targets, search, areaId, or virtual-file operations cannot express the operation.";
                     Describe(tool, CoordinateDescriptions());
                     break;
                 case "dupes_control":
@@ -33,7 +33,7 @@ namespace OniMcp.Tools
                     Describe(tool, GameDescriptions());
                     break;
                 case "navigation_control":
-                    tool.Description = "Unified spatial navigation entrypoint for camera, overlays, screenshots, and the visible agent pointer. Use saved jump points, labels, mouse/user context, and semantic actions; coordinate input is isolated in coordinate_control.";
+                    tool.Description = "Unified camera and view entrypoint for camera movement, world switching, overlays, focus, and screenshots.";
                     Describe(tool, NavigationDescriptions());
                     break;
                 case "orders_control":
@@ -245,38 +245,33 @@ namespace OniMcp.Tools
         private static Dictionary<string, string> NavigationDescriptions()
         {
             var d = CommonDescriptions();
-            d["domain"] = "camera or pointer. If omitted, the tool infers the domain from action.";
-            d["action"] = "Navigation action.";
-            d["agentId"] = "Stable pointer name. Defaults to the standard agent pointer.";
-            d["displayText"] = "Short text displayed near the pointer.";
-            d["tool"] = "Pointer tool to select.";
-            d["prefabId"] = "Build tool prefab id.";
-            d["material"] = "Build material tag.";
-            d["facade"] = "Build facade id.";
-            d["priority"] = "Build or tool priority value.";
-            d["message"] = "Short pointer speech message.";
-            d["durationSeconds"] = "Message display duration in seconds.";
-            d["code"] = "Jump point code.";
-            d["label"] = "Pointer, jump point, or camera label.";
-            d["direction"] = "Direction for nudge, hold, or jump actions.";
-            d["steps"] = "Number of directional steps.";
-            d["moveCamera"] = "Also move the camera.";
+            d["domain"] = "Camera domain. If omitted, the tool accepts known camera actions.";
+            d["action"] = "Camera action: get_view, set_active_world, set_view, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot.";
+            d["worldId"] = "Target world id; required by set_active_world and otherwise defaults to the active world.";
+            d["requireDiscovered"] = "Require the target world to be discovered before switching.";
+            d["lookAtSurface"] = "Reveal the target world's surface before switching when needed.";
+            d["x"] = "Target world X for set_view/move, or cell X for focus_cell.";
+            d["y"] = "Target world Y for set_view/move, or cell Y for focus_cell.";
             d["zoom"] = "Camera zoom level.";
             d["snap"] = "Snap immediately instead of moving smoothly.";
-            d["mode"] = "Camera move mode.";
+            d["mode"] = "Camera move mode: pan or jump.";
+            d["dx"] = "Relative camera X offset in move pan mode.";
+            d["dy"] = "Relative camera Y offset in move pan mode.";
             d["duration"] = "Smooth movement duration.";
             d["view"] = "Overlay view name.";
             d["screenshot"] = "Capture a screenshot.";
             d["filename"] = "Screenshot filename.";
             d["waitFrames"] = "Frames to wait before screenshot capture.";
             d["allowSound"] = "Allow UI sounds.";
-            d["targetId"] = "Target object instance id.";
-            d["button"] = "Mouse button or UI button name.";
-            d["holdSeconds"] = "Mouse hold duration in seconds.";
-            d["allowFootprintDrag"] = "Allow multi-cell footprint dragging.";
-            d["autoDigObstructions"] = "Automatically mark diggable build obstructions.";
-            d["maxAutoDigCells"] = "Maximum number of cells to auto-dig.";
-            d["clear"] = "Clear pointer speech or remove the pointer.";
+            d["id"] = "Duplicant instance id for focus_dupe.";
+            d["name"] = "Duplicant name for focus_dupe.";
+            d["areaId"] = "Reusable area handle for coordinate_screenshot.";
+            d["focusCamera"] = "Move the camera to frame a coordinate screenshot area.";
+            d["paddingCells"] = "Padding around a coordinate screenshot area.";
+            d["showGrid"] = "Show the coordinate screenshot grid.";
+            d["showCoordinates"] = "Show coordinates around the screenshot edge.";
+            d["includeCellLabels"] = "Show sparse coordinate labels inside the screenshot.";
+            d["step"] = "Coordinate label interval.";
             return d;
         }
 

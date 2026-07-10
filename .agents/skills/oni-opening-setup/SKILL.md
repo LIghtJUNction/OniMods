@@ -181,21 +181,22 @@ read_control domain=world action=area_snapshot preset=utilities encoding=plain i
 
 - 从打印舱向左和向右扩张。
 - 两侧排入小型保守挖掘矩形，避开液体和危险空腔。
-- 使用 `navigation_control action=select_tool tool=build` + `navigation_control action=hold_left` 放置直线地基/平台。
+- 使用 `building_control domain=planning action=build_area` 的 anchors 放置直线地基、平台、砖块和梯子。
 - 保留打印舱附近区域作为早期实验室。
 - 研究/电力设置必须先有地板/支撑，再放人力发电机、电池、研究站和连接电线。
 
-第一波保持小规模。普通 Cycle 1 开局工作优先使用一次紧凑快照，然后用指针点击/拖拽执行。不要为了挖一小块材料或放短平台创建正式计划。
+第一波保持小规模。普通 Cycle 1 开局工作优先使用一次紧凑快照，然后用 `building_control` / `orders_control` 的语义动作执行。不要为了挖一小块材料或放短平台创建正式计划。
 
 放置：
 
 ```
-navigation_control action=jump x=<startX> y=<startY>
-navigation_control action=select_tool tool=build prefabId=<PrefabId> material=auto
-navigation_control action=hold_left direction=<dir> length=<cells> confirm=true
+building_control domain=planning action=placement_candidates prefabId=<PrefabId> areaId=<area> limit=8
+building_control domain=planning action=preview prefabId=<PrefabId> material=auto x=<candidate.x> y=<candidate.y> dryRun=true
+building_control domain=planning action=build_area prefabId=<PrefabId> material=auto anchors=<lower-left anchors> dryRun=true
+building_control domain=planning action=build_area prefabId=<PrefabId> material=auto anchors=<lower-left anchors> confirm=true
 ```
 
-utility 路线同样使用指针拖拽；水平/垂直拆成多段 `navigation_control action=hold_left`。
+电线、管道和轨道 utility 路线可使用 `build_area` 的 points；普通砖块、梯子和建筑只使用 anchors。水平和垂直线路按需要拆成多段，先 dry-run 再 confirm。
 
 挖掘：
 
@@ -235,8 +236,7 @@ plan_harness_validate id=<planId>
 - 用户回答命名风格后才允许 `dupes_control domain=command action=auto_rename apply=true`
 - `colony_control domain=diagnostic action=set_auto_disinfect disabled=true applyNow=true confirm=true`
 - `orders_control domain=area action=dig`
-- `navigation_control action=left_click`
-- `navigation_control action=hold_left`
+- `building_control domain=planning action=placement_candidates/preview/build_area`
 
 建造放置前仍要检查 prefab、材料和支撑。
 

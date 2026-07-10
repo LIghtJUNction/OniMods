@@ -73,19 +73,14 @@ read_control domain=world action=area_snapshot x1=<scanRect[0]> y1=<scanRect[1]>
 
 默认只读。除非用户明确要求修复/救援/执行，否则不要调用：
 
-- `orders_control domain=area action=dig`
-- `navigation_control action=left_click`
-- `navigation_control action=hold_left`
-- `dupes_control domain=command action=move_to`
-- `dupes_control domain=command action=move_batch_to`
-- `game_control domain=speed action=resume`
+- 任何挖掘、建造、移动复制人、恢复游戏或其他会改变游戏状态的写入/执行工具
 
 救援动作前：
 
 1. 如果用户要求思考或规划，先暂停。
 2. 检查被标记的 `scanRect`。
 3. 优先通过挖掘/建造支撑打开可达路径，不要盲目移动复制人。
-4. 用 `building_control domain=planning action=search_defs/materials` 检查建造选择，再用指针点击/拖拽放置支撑。
+4. 用 `building_control domain=planning action=search_defs/materials/placement_candidates/preview` 检查支撑方案；获得明确授权后才以单 anchor `build_area` dry-run，再 confirm 执行。
 5. 动作完成后用 `dupes_control domain=info action=status_check` 验证。
 
 除非 `dupes_control domain=info action=status_check targetX/targetY` 或 `dupes_control domain=command action=move_to` 的可达性校验确认目标可达，否则不要把复制人移动到该格子。

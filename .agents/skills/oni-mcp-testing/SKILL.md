@@ -1,6 +1,6 @@
 ---
 name: oni-mcp-testing
-description: 当用户要求测试、验证或审计 ONI MCP 服务器功能、连接状态、工具可用性，或评估 MCP 操作体验和易用性时使用。指导 agent 执行系统化的功能测试流程，覆盖连接、查询、地图、建造、指针、订单等核心能力，并生成测试报告。
+description: 当用户要求测试、验证或审计 ONI MCP 服务器功能、连接状态、工具可用性，或评估 MCP 操作体验和易用性时使用。指导 agent 执行系统化的功能测试流程，覆盖连接、查询、地图、建造、相机、订单等核心能力，并生成测试报告。
 ---
 
 # ONI MCP 功能测试
@@ -141,27 +141,26 @@ orders_control domain=area action=sweep areaId=... dryRun=true detail=true
 - [ ] `orders_control domain=area action=dig` 返回目标元素、质量、温度、风险列表
 - [ ] `previewToken` 支持复用，避免重复扫描
 
-### 阶段 6: 指针与相机控制（精简版）
+### 阶段 6: 相机与视图控制（精简版）
 
 合并为少量调用，验证可用即可：
 
 ```
-navigation_control action=get
-navigation_control action=aim_cell x=... y=...
-navigation_control action=select_tool tool=build prefabId=Ladder material=auto
-navigation_control action=jump_point jumpPointAction=set code=p1
-navigation_control action=say message="MCP 规划测试运行中"
+navigation_control action=get_view
+navigation_control action=focus_cell x=... y=...
+navigation_control action=switch_view view=power screenshot=false
+navigation_control action=coordinate_screenshot areaId=... focusCamera=true
 ```
 
 检查项：
-- [ ] 指针定位、工具切换、跳转点、气泡消息正常
+- [ ] 相机读取、格子聚焦、覆盖层切换和坐标截图正常
 
 ### 阶段 7: 批量调用与游戏控制（可选）
 
 ```
 server_control domain=batch action=call_many responseMode=summary
   items:
-    - { t: navigation_control, a: { action: get } }
+    - { t: navigation_control, a: { action: get_view } }
     - { t: building_control, a: { domain: planning, action: search_defs, query: 梯子, limit: 3 } }
 ```
 
@@ -174,11 +173,10 @@ server_control domain=batch action=call_many responseMode=summary
 
 ```
 building_control domain=planning action=preview prefabId=Ladder x=... y=... dryRun=true
-navigation_control action=aim_cell x=... y=...
-navigation_control action=select_tool tool=build prefabId=Ladder material=auto
-navigation_control action=hold_left direction=down length=3 confirm=true
+building_control domain=planning action=build_area prefabId=Ladder material=auto anchors=[[x1,y1],[x2,y2],[x3,y3]] dryRun=true
+building_control domain=planning action=build_area prefabId=Ladder material=auto anchors=[[x1,y1],[x2,y2],[x3,y3]] confirm=true
 read_control domain=world action=text_map x1=... y1=... x2=... y2=...
-  → 验证拖拽建造后地图是否正确显示 bp 标记
+  → 验证直线建造后地图是否正确显示 bp 标记
 ```
 
 规则：
@@ -210,7 +208,7 @@ read_control domain=world action=text_map x1=... y1=... x2=... y2=...
 | 规划候选质量 | ✅/❌ | read_control domain=world action=layout_candidates 评分与分类 |
 | 建造预检复杂度 | ✅/❌ | 多格/支撑/阻碍检测 |
 | 批量与区域 | ✅/❌ | 原子性、areaId 复用 |
-| 指针/相机 | ✅/❌ | |
+| 相机/视图 | ✅/❌ | |
 | 实际建造 | ✅/❌/跳过 | |
 
 ### 发现的问题

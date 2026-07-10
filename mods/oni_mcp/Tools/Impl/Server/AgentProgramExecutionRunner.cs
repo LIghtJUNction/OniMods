@@ -327,9 +327,6 @@ namespace OniMcp.Tools
                     throw new AgentProgramException("maxChildToolCalls exceeded at " + path);
                 childToolCalls++;
 
-                if (toolName == "world_cell_info" && (args["x"] == null || args["y"] == null))
-                    FillCurrentPointerCell(args);
-
                 var result = OniToolRegistry.CallTool(toolName, args);
                 string text = Truncate(ResultText(result), MaxStoredResultChars);
                 JToken json = TryParseJson(text);
@@ -370,24 +367,6 @@ namespace OniMcp.Tools
                 }
 
                 return ServerTools.IsServerControlDomainCall(toolName, arguments, "program", "agent_program", "flow", "script");
-            }
-
-            private void FillCurrentPointerCell(JObject args)
-            {
-                var pointerArgs = new JObject();
-                if (args["agentId"] != null)
-                    pointerArgs["agentId"] = args["agentId"].DeepClone();
-                pointerArgs["action"] = "get";
-                var pointerResult = OniToolRegistry.CallTool("navigation_control", pointerArgs);
-                if (pointerResult == null || pointerResult.IsError)
-                    throw new AgentProgramException("readCell requires x/y or an aimed pointer");
-                var pointerJson = TryParseJson(ResultText(pointerResult)) as JObject;
-                if (pointerJson == null || pointerJson["x"] == null || pointerJson["y"] == null)
-                    throw new AgentProgramException("readCell could not resolve current pointer x/y");
-                args["x"] = pointerJson["x"].DeepClone();
-                args["y"] = pointerJson["y"].DeepClone();
-                if (args["worldId"] == null && pointerJson["worldId"] != null)
-                    args["worldId"] = pointerJson["worldId"].DeepClone();
             }
 
         }

@@ -24,14 +24,14 @@ namespace OniMcp.Tools
             return new Dictionary<string, object>
             {
                 ["anchor"] = "lowerLeftCell",
-                ["anchorDescription"] = "agent_pointer cell is treated as the lower-left footprint cell, not the visual center",
+                ["anchorDescription"] = "building_control planning treats each anchor as the lower-left footprint cell, not the visual center",
                 ["width"] = width,
                 ["height"] = height,
                 ["footprintCells"] = width * height,
                 ["singleCellDragSafe"] = width == 1 && height == 1,
                 ["dragGuidance"] = width == 1 && height == 1
-                    ? "May be placed with navigation_control action=hold_left for straight lines."
-                    : "Recommended: use navigation_control action=left_click on each lower-left anchor. navigation_control action=left_click works but is less predictable for multi-cell footprints."
+                    ? "Use building_control domain=planning action=build_area with anchors for repeated tiles, ladders, or buildings; points are only for wire, conduit, or rail utility routes."
+                    : "Use building_control domain=planning action=build_area with one lower-left anchor per multi-cell footprint."
             };
         }
 

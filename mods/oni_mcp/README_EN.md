@@ -165,10 +165,13 @@ oni://tools/manifest
 Public aggregate tools:
 
 * `world_editor`: Code-file style world editor. Saves are virtual folders; use commands `cd`, `ls`, `read`, `search` to inspect world files, and `edit` with SEARCH/REPLACE blocks to apply changes (digging, building, priorities, wires, pipes).
-* `colony_control`: Colony-wide diagnostic status, schedules, research, medical, notifications, and management.
+* `game_control`: Game state, speed, saves, UI, and other game-level actions.
+* `navigation_control`: Camera, view, overlay, and screenshot operations.
+* `building_control`: Building planning, placement, configuration, production, and utility connections.
+* `orders_control`: Digging, sweeping, mopping, deconstruction, and other designations.
 * `server_control`: Server health checks, tool catalogs, screenshot utility, background tasks, and manifest.
 
-* `read_control`, `building_control`, `orders_control`, `dupes_control`, `game_control`, `navigation_control`, `search_control`: current aggregate entrypoints listed directly by `tools/list`; agents do not need hidden tool names.
+Other aggregate entrypoints, including `colony_control`, `dupes_control`, `read_control`, and `search_control`, remain registered for internal virtual-file routing and compatibility clients, but are not returned by the default `tools/list` response.
 
 `coordinate_control` remains a dedicated locator helper; prefer semantic queries, area handles, and `world_editor` file views for normal work.
 

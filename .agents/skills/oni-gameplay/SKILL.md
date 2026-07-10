@@ -25,7 +25,7 @@ Every control action must complete the full loop. Never act without prior observ
 
 ## Semantic Tool Policy
 
-Agent pointer control has been removed. Do not use `navigation_control action=select_tool`, `navigation_control action=left_click`, or `navigation_control action=hold_left`.
+Use `navigation_control` only for camera movement, focus, overlays, and screenshots. Game actions use semantic aggregate tools and virtual-file edits.
 
 Rules:
 - Use semantic MCP tools with explicit task text for build, dig, cancel, sweep, mop, disinfect, harvest, and deconstruct actions.
@@ -85,7 +85,7 @@ Resource URIs are idempotent and cacheable. Tools with parameters are not. Promp
 
 ## Observation: Camera, Views, Screenshots, Maps
 
-Spatial ONI control starts with the visible agent pointer. Use text maps only as supporting context for unknown terrain, hazards, or verification. Do not make the model's primary action interface raw coordinates.
+Spatial ONI control starts with semantic search, virtual-file reads, or a compact structured map. Use camera tools only when a visual view or screenshot materially helps. Do not make raw coordinates the primary action interface.
 
 ### Camera Navigation
 
@@ -142,22 +142,22 @@ Use `navigation_control action=screenshot` only after the camera and overlay are
 
 Screenshot is weak for exact coordinates. If a decision affects digging, building, sweeping, mopping, wiring, piping, or deconstruction, read `read_control domain=world action=area_snapshot` or `read_control domain=world action=text_map` before acting.
 
-### Pointer Build Discipline
+### Semantic Build Discipline
 
-For any build/dig/deconstruct action, screenshots and text maps are observation only. The actual command path should be pointer selection plus click/drag.
+For any build/dig/deconstruct action, observe first, then call the matching semantic aggregate directly.
 
 Rules:
-- Before placing a line, aim the pointer at the start cell with `navigation_control action=jump/aim_cell`.
-- Select the current tool with `navigation_control action=select_tool`.
-- Treat `building_control domain=planning action=search_defs` placement anchor `lowerLeftCell` as the build anchor. Do not treat screenshot center, tooltip position, or blueprint center as the anchor.
-- For horizontal/vertical 1x1 work (tiles, ladders, wires, conduits), use `navigation_control action=hold_left direction=... length=... confirm=true`.
-- For furniture/machines or any footprint wider/taller than 1 cell, use `navigation_control action=left_click` once per lower-left anchor. `navigation_control action=hold_left` rejects these by default; pass `allowFootprintDrag=true` only when repeated footprint placement is intentional.
-- Preflight uncertain multi-cell placements with `navigation_control action=left_click dryRun=true`, then execute with `confirm=true`.
-- After execution, compare `placementCheck` with a targeted `read_control domain=world action=area_snapshot`/`read_control domain=world action=text_map`. If the blueprint is shifted, cancel it with the pointer's cancel tool before replacing.
+- Start with `world_editor command=read`/`command=edit`, or `building_control domain=planning action=search_defs/materials/placement_candidates`.
+- Treat each placement anchor as the `lowerLeftCell`; do not use screenshot center, tooltip position, or blueprint center as the anchor.
+- For horizontal/vertical tiles and ladders, use `building_control domain=planning action=build_area` with explicit lower-left anchors. Use points only for wire, conduit, or rail utility routes.
+- For furniture, machines, or any multi-cell footprint, use `build_area` with one lower-left anchor per placement.
+- Preflight with `preview` or `dryRun=true`, then execute with `confirm=true`.
+- Dig, sweep, mop, disinfect, cancel, harvest, capture, and deconstruct through `orders_control` area/designation actions; never simulate UI clicks.
+- After execution, verify with a targeted virtual-file read, `area_snapshot`, or `text_map`.
 
 ### World Map Reads
 
-Use `read_control domain=world action=area_snapshot` only when pointer/camera state and compact status do not provide enough spatial context:
+Use `read_control domain=world action=area_snapshot` when virtual-file reads, camera context, and compact status do not provide enough spatial context:
 
 ```
 read_control domain=world action=area_snapshot
@@ -205,8 +205,7 @@ For a spatial task:
 ```
 game_control domain=speed action=pause
 colony_control domain=snapshot action=get profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
-navigation_control action=get
-navigation_control action=jump/aim_cell if target is known
+world_editor command=read path=/active/map/viewport.md when spatial context is needed
 targeted read_control domain=world action=area_snapshot only if terrain/hazard context is missing
 ```
 
@@ -250,7 +249,7 @@ server_control domain=batch action=call_many
 verify with colony_control domain=snapshot action=get, read_control domain=world action=area_snapshot, or targeted read
 ```
 
-For map actions, the `items` should usually be pointer tool calls, not coordinate order/build calls. Do not create separate planning records for trivial single-step actions. It adds latency without improving safety.
+For map actions, the `items` should use semantic `building_control` or `orders_control` calls with bounded areaId/query/anchors/points. Do not create separate planning records for trivial single-step actions. It adds latency without improving safety.
 
 ### Sequence 3: Execute A Complex Plan
 
@@ -305,8 +304,8 @@ navigation_control action=switch_view
 navigation_control action=screenshot
 → Optional visual confirmation only after structured maps
 → Define reusable area: read_control domain=area action=define → areaId when the same region will be reused
-→ Plan: choose pointer start, build/order tool, and click/drag gestures
-→ Execute: navigation_control action=left_click or action=hold_left
+→ Plan: choose semantic target/areaId and building_control or orders_control action
+→ Execute: build_area with one or more lower-left anchors, or the matching area/designation action after dry-run
 → Verify: read_control domain=world action=area_snapshot or read_control domain=world action=text_map over the same area
 ```
 
@@ -351,7 +350,7 @@ Always fetch `colony_control domain=read action=dupes` first to resolve name →
 ### confirm
 - `confirm: true` required for all medium/dangerous write tools
 - `server_control domain=batch action=call_many` with `dryRun: true` pre-validates confirm requirements
-- Use `building_control domain=planning action=materials/search_defs` before construction; build placement itself must go through the visible pointer.
+- Use `building_control domain=planning action=materials/search_defs/placement_candidates/preview` before construction; execute placement through `build_area`, using one lower-left anchor for a single building.
 - Never bypass confirm for dangerous tools (`orders_dig`, `orders_deconstruct`, `orders_sweep`)
 - Do not repeat the same write/execute tool with identical coordinates after a zero-effect result. Read the result fields, re-read state if needed, then choose a different tool or corrected parameters.
 - Use `orders_control domain=area action=sweep` only for solid debris/pickupables. Use `orders_control domain=area action=mop` for water, polluted water, spills, "地上的水", or other liquid cells on a floor.
@@ -380,7 +379,7 @@ GOOD: colony_control domain=management kind=schedule action=list → identify ta
 2. Reuse `areaId` in subsequent calls (`read_control domain=world action=text_map?areaId=xyz`)
    or temporarily join adjacent blocks with `areaId=b1+b2+b3`
 3. For repeated use, call `read_control domain=area action=merge areaIds=[...]` to create one merged `a*` handle
-4. Bulk operations within an area should be decomposed into visible pointer clicks/drags; use direct area tools only when no pointer equivalent exists
+4. Execute bulk work with the matching semantic area tool; use dry-run, bounded areaId, and returned risk details before confirm
 5. Clean up temporary `a*` areas with `read_control domain=area action=forget` when no longer needed; keep `b*` blocks while scanning the world
 
 ### Pattern C: Differential Updates
@@ -409,9 +408,9 @@ Do NOT batch interdependent calls where a later call needs an id or result from 
 
 Use `colony_control domain=snapshot action=get profile=brief|standard` as the default first read. It replaces the common `game_control domain=speed action=time + colony_control domain=read action=status + colony_control domain=diagnostic action=diagnostics + colony_control domain=diagnostic action=alerts + read_control domain=resources action=food + colony_control domain=read action=dupes + colony_control domain=management kind=research action=status` bundle. Keep `includeAtmosphere=false` unless oxygen totals are needed, because atmosphere requires a full grid scan.
 
-### Pattern F: Pointer Build First
+### Pattern F: Semantic Build First
 
-For construction, choose prefab/material with read tools, aim the pointer at the exact start cell, then use `navigation_control action=left_click/hold_left`. `BuildLocationRule=OnFloor` buildings must have floor/support cells below them; place visible support tiles first with the pointer before machines, beds, toilets, batteries, and research stations.
+For construction, choose prefab/material with `search_defs` and `materials`, find candidates, preview one candidate with explicit x/y, then use `build_area` with lower-left anchors. `BuildLocationRule=OnFloor` buildings must have floor/support cells below them; place support tiles first before machines, beds, toilets, batteries, and research stations.
 
 ## Error Recovery
 
@@ -453,7 +452,7 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 - [ ] Validate parameters (type, range, existence)
 - [ ] Check confirm requirement for write/execute tools
 - [ ] Use `dryRun` or `validateOnly` if available
-- [ ] For construction, confirm prefab/material and support cells before pointer click/drag
+- [ ] For construction, confirm prefab/material, support cells, and lower-left anchors before `build_area`
 - [ ] Define rollback read tools for verification
 - [ ] Ensure game is paused (`game_control domain=speed action=pause`) for complex multi-step operations
 
@@ -488,7 +487,7 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 | **schedules** | `colony_control domain=management kind=schedule action=list` | `colony_control domain=management kind=schedule action=create/set_block/assign_dupe/optimize` | — |
 | **resources** | `read_control domain=resources action=inventory/food/search_items`, `read_control domain=resources action=pins`, `building_control domain=storage action=list/detail`, `colony_control domain=management kind=diet action=status` | `read_control domain=resources action=set_pin`, `building_control domain=storage action=set_filter`, `colony_control domain=management kind=diet action=set/policy` | — |
 | **buildings** | `read_control domain=buildings action=list/summary`, `building_control domain=planning action=search_defs/materials/placement_candidates`, `building_control domain=config action=list`, `building_control domain=special kind=artable action=list`, `building_control domain=config action=visual kind=light visualAction=list`, `building_control domain=config action=visual kind=pixel_pack visualAction=list` | `building_control domain=planning action=preview/auto_connect`, `building_control domain=config action=set_enabled/set_toggle/copy_settings`, `orders_control domain=designation action=manual_delivery`, `building_control domain=special kind=artable action=set_stage`, `building_control domain=config action=visual kind=light visualAction=set_color`, `building_control domain=config action=visual kind=pixel_pack visualAction=set_color` | — |
-| **orders** | `orders_control domain=priority action=list` | `orders_control domain=priority action=set_building`, `orders_control domain=priority action=set_area` | `navigation_control action=left_click/hold_left`, `orders_control domain=designation action=deconstruct`, `orders_control domain=area action=sweep`, `orders_control domain=area action=dig`, `orders_control domain=area action=mop`, `orders_control domain=area action=disinfect`, `orders_control domain=area action=cancel`, `orders_control domain=area action=harvest`, `orders_control domain=designation action=capture`, `orders_control domain=designation action=empty_conduits`, `orders_control domain=designation action=cut_conduits` |
+| **orders** | `orders_control domain=priority action=list` | `orders_control domain=priority action=set_building`, `orders_control domain=priority action=set_area` | `orders_control domain=designation action=deconstruct`, `orders_control domain=area action=sweep`, `orders_control domain=area action=dig`, `orders_control domain=area action=mop`, `orders_control domain=area action=disinfect`, `orders_control domain=area action=cancel`, `orders_control domain=area action=harvest`, `orders_control domain=designation action=capture`, `orders_control domain=designation action=empty_conduits`, `orders_control domain=designation action=cut_conduits` |
 | **power** | `read_control domain=infrastructure action=power_summary/power_ports` | — | — |
 | **rooms** | `read_control domain=infrastructure action=rooms` | — | — |
 | **world** | `colony_control domain=read action=worlds`, `read_control domain=world action=cell_info`, `read_control domain=world action=element_summary`, `read_control domain=world action=text_map`, `read_control domain=world action=thermal_overheat_risk` | `read_control domain=area action=define`, `read_control domain=area action=forget` | — |
@@ -539,7 +538,7 @@ Resource templates accept query params: `oni://power/summary?worldId=2&includeDe
 |-----------|-----------|-------------|--------------|
 | "What's happening?" | `colony_control domain=diagnostic action=diagnostics` | `colony_control domain=diagnostic action=alerts` | `colony_control domain=read action=status` |
 | "Fix power" | `read_control domain=infrastructure action=power_summary` | `building_control domain=config action=list` (power subset) | `read_control domain=infrastructure action=power_summary` |
-| "Build something" | `building_control domain=planning action=search_defs` | `navigation_control action=select_tool` + `action=left_click/hold_left` | `read_control domain=world action=text_map` |
+| "Build something" | `building_control domain=planning action=search_defs/materials` | `building_control domain=planning action=placement_candidates/preview/build_area` | `read_control domain=world action=text_map` |
 | "Manage dupes" | `colony_control domain=read action=dupes` | `dupes_control domain=info action=detail/needs` | `colony_control domain=read action=dupes` |
 | "Check heat" | `read_control domain=world action=thermal_overheat_risk` | `read_control domain=world action=element_summary` | `read_control domain=world action=thermal_overheat_risk` |
 | "Plan actions" | `server_control domain=catalog action=guide` | `server_control domain=catalog action=search` + dryRun-capable tools | relevant read tools |

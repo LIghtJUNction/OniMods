@@ -105,10 +105,7 @@ read_control domain=world action=area_snapshot areaId=<request.areaId> preset=ut
 
 不允许：
 
-- `orders_*`
-- `navigation_control action=left_click`
-- `navigation_control action=hold_left`
-- `game_control domain=speed action=resume`
-- 配置/写入/执行工具
+- 任何 `orders_control`、`building_control`、`dupes_control`、`game_control` 写入或执行动作
+- 任何其他会改变游戏状态的配置/写入/执行工具
 
 如果用户在摘要后要求动作，切换到规划/建造控制技能，并在执行前 dry-run。

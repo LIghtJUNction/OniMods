@@ -92,20 +92,20 @@ namespace OniMcp.Tools
                     order++,
                     "build_category",
                     action,
-                    "Open build category " + suffix + ", discover available buildings/materials/facades, then place blueprints through the agent pointer",
+                    "Open build category " + suffix + ", discover available buildings/materials/facades, then plan and place through building_control",
                     NormalizeBuildCategory(suffix),
-                    new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs", "building_control domain=planning action=materials", "navigation_control action=select_tool", "navigation_control action=left_click", "navigation_control action=hold_left" },
-                    new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs" });
+                    new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs", "building_control domain=planning action=materials", "building_control domain=planning action=placement_candidates", "building_control domain=planning action=build_area" },
+                    new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs", "building_control domain=planning action=materials", "building_control domain=planning action=placement_candidates", "building_control domain=planning action=build_area" });
             }
 
             yield return Covered(
                 0,
                 "build_hotkeys",
                 "BuildMenuKeyA-Z",
-                "Trigger whitelisted build-menu item hotkeys after a build category is open; placement uses the agent pointer with prefab ids plus optional material/facade ids",
+                "Trigger whitelisted build-menu item hotkeys after a build category is open; resolve prefab, material, facade, and lower-left anchors through building_control planning",
                 "build_menu_keys",
-                new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs", "building_control domain=planning action=materials", "navigation_control action=select_tool", "navigation_control action=left_click", "navigation_control action=hold_left" },
-                new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs" });
+                new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs", "building_control domain=planning action=materials", "building_control domain=planning action=placement_candidates", "building_control domain=planning action=build_area" },
+                new[] { "game_control domain=ui uiDomain=action", "building_control domain=planning action=search_defs", "building_control domain=planning action=materials", "building_control domain=planning action=placement_candidates", "building_control domain=planning action=build_area" });
 
             yield return Covered(
                 0,

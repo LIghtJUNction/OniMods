@@ -33,8 +33,13 @@ An Oxygen Not Included mod repository containing:
 Right now the public interface is a compact set of aggregate tools listed by `tools/list`:
 
 - `world_editor`: Code-file style world editor. Saves are virtual folders; clients read files to observe status and edit files using SEARCH/REPLACE blocks to apply changes (like digging, building, wire/pipe routing, and setting priorities).
-- `colony_control`: Colony-wide diagnostic status, schedules, research, medical, and general control.
+- `game_control`: Game state, speed, saves, UI, and other game-level actions.
+- `navigation_control`: Camera, view, overlay, and screenshot operations.
+- `building_control`: Building planning, placement, configuration, production, and utility connections.
+- `orders_control`: Digging, sweeping, mopping, deconstruction, and other designations.
 - `server_control`: Server health checks, tool catalogs, screenshot utility, and tasks.
+
+Other aggregate entrypoints, including `colony_control`, `dupes_control`, `read_control`, and `search_control`, remain registered for internal virtual-file routing and compatibility clients, but are not returned by the default `tools/list` response.
 
 It acts as a semi-automated operations assistant. Complex world planning, long-term autonomous colony play, and high-quality tactical decision-making still require human supervision.
 
@@ -45,7 +50,7 @@ Related AI Skill reference: [zhuiyun.skill](https://github.com/LIghtJUNction/zhu
 <details>
 <summary>Expand Development Notes</summary>
 
-Idea note: implement a second "agent pointer" that always snaps to cell centers and renders on screen, so all AI actions can be executed through a visible pointer. Compared with issuing direct coordinate commands, this may be more stable and easier to observe and debug.
+Current interaction note: use semantic searches and virtual-file edits for game actions. Every tool call requires a short task description, which is shown near the player's mouse automatically.
 
 Short version: do not expect current AI systems to play a complex simulation game like ONI well over long autonomous sessions. A more realistic direction for now is letting AI read more game data, execute small explicit tasks, and assist with local planning after player confirmation.
 

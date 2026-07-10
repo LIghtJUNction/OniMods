@@ -6,8 +6,9 @@
 
 - MCP 地址: `http://localhost:8788/mcp/`
 - 协议版本: `2025-11-25`
-- Default public tools: 3 core aggregate entrypoints: `world_editor`, `colony_control`, `server_control`
-- 旧版细粒度工具: 隐藏注册为 compatibility，可按精确名称继续调用
+- Default public tools: 6 aggregate entrypoints: `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
+- 其他聚合入口: 仍保持注册，供虚拟文件内部路由和兼容客户端按精确名称调用，但默认 `tools/list` 不返回
+- `coordinate_control`: 保持隐藏注册的专用兼容入口
 - Tool descriptions: default-public tool descriptions and parameter descriptions are in English
 
 非 `initialize` 请求必须携带会话协商后的 `Mcp-Session-Id` 和 `Mcp-Protocol-Version`。
@@ -43,9 +44,11 @@ a virtual folder and exposes map views as files:
 - `world_editor command=connect plan="connect battery to oxygen diffuser"`
 
 Search, planning, actions, building, orders, navigation, game actions, dupe
-actions, and coordinate fallback are routed through `world_editor`. `colony_control`
-and `server_control` remain separate public tools for colony-wide state and MCP
-server operations.
+actions, and coordinate fallback are routed through `world_editor`. The default
+public surface also keeps `game_control`, `navigation_control`, `building_control`,
+`orders_control`, and `server_control` available for direct focused calls. Other
+aggregate entrypoints remain registered for internal virtual-file routing and
+compatibility clients.
 
 新工具面按搜索/动作优先设计:
 
@@ -64,7 +67,7 @@ server operations.
 | `read_control` | `world`, `area`, `resources`, `buildings`, `knowledge`, `infrastructure` | read | 世界地图、区域、资源、建筑、机制知识、电力和房间摘要 |
 | `search_control` | `tools`, `world`, `resources`, `buildings`, `dupes`, `knowledge` | read | Dedicated search with action-ready `nextActions` |
 | `game_control` | `speed`, `state`, `save`, `sandbox`, `ui` | read/execute/dangerous | 暂停、恢复、调速、存档、沙盒、UI 编辑标记 |
-| `navigation_control` | `camera`, `pointer` 或按 `action` 推断 | execute | 相机、覆盖层、截图、可视 agent 指针、鼠标格、点击、拖拽 |
+| `navigation_control` | `camera` 或按已知相机 `action` 推断 | execute | 相机移动、世界切换、覆盖层、聚焦和截图 |
 | `coordinate_control` | `targetTool` gateway | execute/dangerous | The only coordinate auxiliary entrypoint; explicitly forwards x/y, rectangles, path points, or anchors to an underlying tool |
 | `building_control` | `planning`, `config`, `storage`, `filter`, `production`, `side_surface`, `rocket` | read/write/execute | 建造规划、材料检查、蓝图、建筑侧屏配置、储存过滤、生产队列、火箭 |
 | `orders_control` | `area`, `priority`, `designation`, `conduit` | execute/dangerous | 挖掘、清扫、拖地、拆除、优先级、区域订单、线路/管线剪断 |
@@ -158,22 +161,18 @@ This directly creates a continuous line, with no separate follow-up connection s
 - `type=logic` 只剪逻辑线。
 - `type=all` 适合明确需要更大范围时使用。
 
-## 导航与指针
+## 相机与视图
 
-`navigation_control` 用于可视定位和 UI 操作。`agentId` 是逻辑指针名；省略时使用默认 `agent`。同一个 `agentId` 会跨 MCP session 复用，避免重连后留下多个指针。
+`navigation_control` 仅用于相机、覆盖层和截图。支持的动作包括：
 
-常用动作:
+- `get_view`：读取当前相机位置、缩放和激活世界。
+- `set_active_world`：切换激活世界并移动相机。
+- `set_view` / `move`：设置或平移相机。
+- `switch_view`：切换氧气、电力、管线、温度等覆盖层，可选截图。
+- `focus_cell` / `focus_dupe`：聚焦格子或复制人。
+- `screenshot` / `coordinate_screenshot`：保存普通截图或带坐标网格的区域截图。
 
-- `get`: 获取指针状态。
-- `user_mouse`: 读取玩家当前鼠标格。
-- `jump`: 跳到指定格、保存点或 `code=mouse`。
-- `aim_cell`: 指向精确格。
-- `select_tool`: 选择游戏工具。
-- `left_click` / `hold_left`: 点击或拖拽。
-- `say`: 在指针旁显示短消息。
-- `clear`: 清理指针和跳转点。
-
-需要给玩家解释意图时，传 `displayText` 或 `message`。
+建造和任务操作应直接使用 `building_control` 与 `orders_control`。每次工具调用必填的 `task` 文本会自动显示在玩家鼠标附近，无需额外定位流程。
 
 ## 常用资源
 
@@ -202,7 +201,7 @@ This directly creates a continuous line, with no separate follow-up connection s
 ```text
 mods/oni_mcp/Tools/
 ├── Core/      # 工具和资源注册
-├── New/       # Default-public 10 aggregate tool entrypoints and English descriptions
+├── New/       # Default-public 6 aggregate tool entrypoints and English descriptions
 ├── Shared/    # 搜索、定位、JSON、工具辅助逻辑
 └── Legacy/    # 内部兼容和旧版细粒度实现
 ```
@@ -213,7 +212,7 @@ Prefer extending aggregate entrypoints in `Tools/New/` for new public capabiliti
 
 旧版工具仍可用于兼容历史客户端，但不再推荐新集成直接依赖。新客户端应:
 
-1. Call `tools/list` to get the 10 public entrypoints.
+1. Call `tools/list` to get the 6 default-public entrypoints.
 2. 调用 `server_control domain=catalog action=search` 或读取 `oni://tools/guide` 查找目标流程。
 3. 优先传语义定位参数。
 4. 对危险动作传 `confirm: true`。

@@ -208,26 +208,7 @@ namespace OniMcp.Tools
                         break;
                 }
             }
-            AddPointerExampleArguments(tool, example);
             return example;
-        }
-
-        private static void AddPointerExampleArguments(McpTool tool, Dictionary<string, object> example)
-        {
-            if (tool == null || !string.Equals(tool.Name, "navigation_control", StringComparison.Ordinal))
-                return;
-
-            if (!example.ContainsKey("action"))
-                example["action"] = "get";
-            if (tool.Parameters.ContainsKey("agentId") && !example.ContainsKey("agentId"))
-                example["agentId"] = "planner";
-            if (tool.Parameters.ContainsKey("displayText") && !example.ContainsKey("displayText"))
-                example["displayText"] = PointerDisplayTextExample(tool.Name);
-        }
-
-        private static string PointerDisplayTextExample(string toolName)
-        {
-            return "正在操作指针";
         }
 
         private static string GroupDescription(string group)

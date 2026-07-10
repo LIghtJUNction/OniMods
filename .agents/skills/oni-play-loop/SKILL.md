@@ -71,10 +71,10 @@ server_control domain=batch action=call_many dryRun=false responseMode=summary r
 建造：
 
 ```
-navigation_control action=jump x=<startX> y=<startY>
-navigation_control action=select_tool tool=build prefabId=<PrefabId> material=auto
-navigation_control action=left_click confirm=true
-# or navigation_control action=hold_left direction=<dir> length=<cells> confirm=true
+building_control domain=planning action=placement_candidates prefabId=<PrefabId> areaId=<area> limit=8
+building_control domain=planning action=preview prefabId=<PrefabId> material=auto x=<candidate.x> y=<candidate.y> dryRun=true
+building_control domain=planning action=build_area prefabId=<PrefabId> material=auto anchors=<lower-left anchors> dryRun=true
+building_control domain=planning action=build_area prefabId=<PrefabId> material=auto anchors=<lower-left anchors> confirm=true
 ```
 
 挖掘：

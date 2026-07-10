@@ -97,7 +97,7 @@ namespace OniMcp.Tools
                 ["y"] = y,
                 ["worldId"] = worldId,
                 ["coordRole"] = "lowerLeftCell",
-                ["note"] = "Anchor is the lower-left footprint cell used by build_preview/build_area/agent pointer placement."
+                ["note"] = "Anchor is the lower-left footprint cell used by build_preview and build_area."
             };
         }
 
