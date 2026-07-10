@@ -80,9 +80,10 @@ namespace OniMcp.Tools
                 }),
                 Handler = args =>
                 {
-                    var go = FindTarget(args);
-                    if (go == null)
-                        return CallToolResult.Error("Target not found");
+                    GameObject go;
+                    string error;
+                    if (!TryFindPriorityTarget(args, out go, out error))
+                        return CallToolResult.Error(error);
                     var prioritizable = go.GetComponent<Prioritizable>();
                     if (prioritizable == null)
                         return CallToolResult.Error("Target is not prioritizable");
@@ -181,7 +182,7 @@ namespace OniMcp.Tools
                     ["y"] = new McpToolParameter { Type = "integer", Description = "action=set_building 时的目标格子 Y", Required = false },
                     ["priority"] = new McpToolParameter { Type = "integer", Description = "action=set_building/set_area 时的优先级 1-9", Required = false },
                     ["topPriority"] = new McpToolParameter { Type = "boolean", Description = "action=set_building/set_area 时是否设为红色最高优先级，默认 false", Required = false },
-                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list/set_area 时按名称或 prefabId 关键词筛选", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=list/set_building/set_area 时按名称或 prefabId 关键词筛选", Required = false },
                     ["includeInactive"] = new McpToolParameter { Type = "boolean", Description = "action=list/set_area 时是否包含当前不可设置优先级的对象，默认 false", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list/set_area 时最多返回或修改数量", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set_area 且区域超过 100 格时必须为 true", Required = false }
@@ -207,12 +208,12 @@ namespace OniMcp.Tools
             ["id"] = new McpToolParameter { Type = "integer", Description = "目标对象 InstanceID", Required = false },
             ["x"] = new McpToolParameter { Type = "integer", Description = "目标格子 X；省略时可用 query/target/search 搜索定位", Required = false },
             ["y"] = new McpToolParameter { Type = "integer", Description = "目标格子 Y；省略时可用 query/target/search 搜索定位", Required = false },
-            ["query"] = new McpToolParameter { Type = "string", Description = "按对象名称、prefabId、元素或复制人搜索目标格", Required = false },
+            ["query"] = new McpToolParameter { Type = "string", Description = "按对象名称或 prefabId 搜索；多个匹配会报错并要求使用 id/x/y", Required = false },
             ["target"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
             ["search"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
-            ["nearX"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 X 最近排序", Required = false },
-            ["nearY"] = new McpToolParameter { Type = "integer", Description = "搜索定位时按距该 Y 最近排序", Required = false },
-            ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；按坐标查找时默认当前激活世界", Required = false }
+            ["nearX"] = new McpToolParameter { Type = "integer", Description = "兼容参数；不用于自动消除多目标歧义，请改用 id/x/y", Required = false },
+            ["nearY"] = new McpToolParameter { Type = "integer", Description = "兼容参数；不用于自动消除多目标歧义，请改用 id/x/y", Required = false },
+            ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，默认当前激活世界", Required = false }
         };
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
@@ -233,58 +234,6 @@ namespace OniMcp.Tools
             foreach (var item in extra)
                 parameters[item.Key] = item.Value;
             return parameters;
-        }
-
-        private static GameObject FindTarget(Newtonsoft.Json.Linq.JObject args)
-        {
-            int? id = ToolUtil.GetInt(args, "id");
-            int? x = ToolUtil.GetInt(args, "x");
-            int? y = ToolUtil.GetInt(args, "y");
-            string query = args["query"]?.ToString()?.Trim().ToLowerInvariant();
-            int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
-            if (!cell.HasValue)
-            {
-                int searchX;
-                int searchY;
-                string searchError;
-                if (ToolUtil.TryResolveSearchCell(args, out searchX, out searchY, out searchError))
-                    cell = Grid.XYToCell(searchX, searchY);
-            }
-            int worldId = cell.HasValue ? ToolUtil.ResolveWorldId(args) : (ToolUtil.GetInt(args, "worldId") ?? -1);
-
-            foreach (var prioritizable in Components.Prioritizables.Items)
-            {
-                var go = prioritizable?.gameObject;
-                if (go == null) continue;
-                if (!ToolUtil.GameObjectMatchesWorld(go, worldId)) continue;
-                var kpid = go.GetComponent<KPrefabID>();
-                if (id.HasValue && kpid != null && kpid.InstanceID == id.Value)
-                    return go;
-                if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
-                {
-                    if (!string.IsNullOrEmpty(query) && !go.name.ToLowerInvariant().Contains(query) && (kpid == null || !kpid.PrefabTag.Name.ToLowerInvariant().Contains(query)))
-                        continue;
-                    return go;
-                }
-            }
-
-            foreach (var building in Components.BuildingCompletes.Items)
-            {
-                var go = building?.gameObject;
-                if (go == null) continue;
-                if (!ToolUtil.GameObjectMatchesWorld(go, worldId)) continue;
-                var kpid = go.GetComponent<KPrefabID>();
-                if (id.HasValue && kpid != null && kpid.InstanceID == id.Value)
-                    return go;
-                if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
-                {
-                    if (!string.IsNullOrEmpty(query) && !go.name.ToLowerInvariant().Contains(query) && (kpid == null || !kpid.PrefabTag.Name.ToLowerInvariant().Contains(query)))
-                        continue;
-                    return go;
-                }
-            }
-
-            return null;
         }
 
         private static PrioritySetting ParsePrioritySetting(Newtonsoft.Json.Linq.JObject args)

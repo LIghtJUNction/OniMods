@@ -46,5 +46,79 @@ namespace OniMcp.Tools
                     var component = go.GetComponent<KMonoBehaviour>();
                     return component != null ? component.GetMyWorldId() : -1;
                 }
+
+                private static GameObject FindTarget(JObject args)
+                {
+                    int? id = ToolUtil.GetInt(args, "id");
+                    int? x = ToolUtil.GetInt(args, "x");
+                    int? y = ToolUtil.GetInt(args, "y");
+                    string queryRaw = args["query"]?.ToString()?.Trim();
+                    bool explicitCell = x.HasValue && y.HasValue;
+                    int? cell = explicitCell ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
+                    if (!cell.HasValue && string.IsNullOrEmpty(queryRaw))
+                    {
+                        int searchX;
+                        int searchY;
+                        string searchError;
+                        if (ToolUtil.TryResolveSearchCell(args, out searchX, out searchY, out searchError))
+                            cell = Grid.XYToCell(searchX, searchY);
+                    }
+                    int worldId = cell.HasValue ? ToolUtil.ResolveWorldId(args) : (ToolUtil.GetInt(args, "worldId") ?? -1);
+
+                    foreach (var prioritizable in Components.Prioritizables.Items)
+                    {
+                        var go = prioritizable?.gameObject;
+                        if (go == null) continue;
+                        if (!ToolUtil.GameObjectMatchesWorld(go, worldId)) continue;
+                        var kpid = go.GetComponent<KPrefabID>();
+                        if (id.HasValue && kpid != null && kpid.InstanceID == id.Value)
+                            return go;
+                        if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
+                        {
+                            if (!string.IsNullOrEmpty(queryRaw) && !MatchesQuery(go, queryRaw))
+                                continue;
+                            return go;
+                        }
+                    }
+
+                    foreach (var building in Components.BuildingCompletes.Items)
+                    {
+                        var go = building?.gameObject;
+                        if (go == null) continue;
+                        if (!ToolUtil.GameObjectMatchesWorld(go, worldId)) continue;
+                        var kpid = go.GetComponent<KPrefabID>();
+                        if (id.HasValue && kpid != null && kpid.InstanceID == id.Value)
+                            return go;
+                        if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
+                        {
+                            if (!string.IsNullOrEmpty(queryRaw) && !MatchesQuery(go, queryRaw))
+                                continue;
+                            return go;
+                        }
+                    }
+
+                    if (!id.HasValue && !string.IsNullOrEmpty(queryRaw))
+                    {
+                        foreach (var prioritizable in Components.Prioritizables.Items)
+                        {
+                            var go = prioritizable?.gameObject;
+                            if (go == null) continue;
+                            if (!ToolUtil.GameObjectMatchesWorld(go, worldId)) continue;
+                            if (MatchesQuery(go, queryRaw))
+                                return go;
+                        }
+
+                        foreach (var building in Components.BuildingCompletes.Items)
+                        {
+                            var go = building?.gameObject;
+                            if (go == null) continue;
+                            if (!ToolUtil.GameObjectMatchesWorld(go, worldId)) continue;
+                            if (MatchesQuery(go, queryRaw))
+                                return go;
+                        }
+                    }
+
+                    return null;
+                }
     }
 }

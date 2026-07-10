@@ -8,7 +8,7 @@ using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
-    public static class StorageTools
+    public static partial class StorageTools
     {
         public static McpTool GetStorageList()
         {
@@ -64,9 +64,10 @@ namespace OniMcp.Tools
                 Parameters = StorageLookupParams(),
                 Handler = args =>
                 {
-                    var target = FindStorage(args);
-                    if (target == null)
-                        return CallToolResult.Error("Storage building not found");
+                    StorageInfo target;
+                    string error;
+                    if (!TryFindStorage(args, out target, out error))
+                        return CallToolResult.Error(error);
                     return CallToolResult.Text(JsonConvert.SerializeObject(target.ToDictionary(includeItems: true), McpJsonUtil.Settings));
                 }
             };
@@ -82,19 +83,17 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Description = "兼容入口：请优先使用 building_control domain=storage action=set_filter。设置储存建筑的资源过滤标签；默认替换当前过滤器，也可 add/remove",
-                Parameters = new Dictionary<string, McpToolParameter>
+                Parameters = StorageLookupParams(new Dictionary<string, McpToolParameter>
                 {
-                    ["id"] = new McpToolParameter { Type = "integer", Description = "建筑 InstanceID", Required = false },
-                    ["x"] = new McpToolParameter { Type = "integer", Description = "建筑所在格子 X", Required = false },
-                    ["y"] = new McpToolParameter { Type = "integer", Description = "建筑所在格子 Y", Required = false },
                     ["tags"] = new McpToolParameter { Type = "array", Description = "资源 Tag 列表，如 Dirt、Algae、SandStone", Required = true },
                     ["mode"] = new McpToolParameter { Type = "string", Description = "replace、add、remove，默认 replace", Required = false, EnumValues = new List<string> { "replace", "add", "remove" } }
-                },
+                }),
                 Handler = args =>
                 {
-                    var target = FindStorage(args);
-                    if (target == null)
-                        return CallToolResult.Error("Storage building not found");
+                    StorageInfo target;
+                    string error;
+                    if (!TryFindStorage(args, out target, out error))
+                        return CallToolResult.Error(error);
 
                     var filterable = target.GameObject.GetComponent<TreeFilterable>();
                     if (filterable == null)
@@ -139,11 +138,13 @@ namespace OniMcp.Tools
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "list、detail 或 set_filter", Required = true, EnumValues = new List<string> { "list", "detail", "set_filter" } },
                     ["resource"] = new McpToolParameter { Type = "string", Description = "action=list 时按储存过滤标签或建筑名筛选", Required = false },
-                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "action=list 时按世界 ID 过滤", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；detail/set_filter 的 query-only 默认当前激活世界", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "action=list 时最多返回数量，默认 100，最大 500", Required = false },
                     ["id"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑 InstanceID", Required = false },
                     ["x"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑所在格子 X", Required = false },
                     ["y"] = new McpToolParameter { Type = "integer", Description = "action=detail/set_filter 时的建筑所在格子 Y", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "action=detail/set_filter 时按本地化名或 prefabId 查找", Required = false },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
                     ["tags"] = new McpToolParameter { Type = "array", Description = "action=set_filter 时资源 Tag 列表，如 Dirt、Algae、SandStone", Required = false },
                     ["mode"] = new McpToolParameter { Type = "string", Description = "action=set_filter 时为 replace、add、remove，默认 replace", Required = false, EnumValues = new List<string> { "replace", "add", "remove" } }
                 },
@@ -242,26 +243,23 @@ namespace OniMcp.Tools
             };
         }
 
-        private static Dictionary<string, McpToolParameter> StorageLookupParams()
+        private static Dictionary<string, McpToolParameter> StorageLookupParams(Dictionary<string, McpToolParameter> extra = null)
         {
-            return new Dictionary<string, McpToolParameter>
+            var parameters = new Dictionary<string, McpToolParameter>
             {
                 ["id"] = new McpToolParameter { Type = "integer", Description = "建筑 InstanceID", Required = false },
                 ["x"] = new McpToolParameter { Type = "integer", Description = "建筑所在格子 X", Required = false },
-                ["y"] = new McpToolParameter { Type = "integer", Description = "建筑所在格子 Y", Required = false }
+                ["y"] = new McpToolParameter { Type = "integer", Description = "建筑所在格子 Y", Required = false },
+                ["query"] = new McpToolParameter { Type = "string", Description = "按本地化建筑名或 prefabId 查找，如 洗手盆 / WashBasin", Required = false },
+                ["name"] = new McpToolParameter { Type = "string", Description = "query 的别名", Required = false },
+                ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；query-only 默认当前激活世界", Required = false }
             };
-        }
-
-        private static StorageInfo FindStorage(Newtonsoft.Json.Linq.JObject args)
-        {
-            int? id = ToolUtil.GetInt(args, "id");
-            int? x = ToolUtil.GetInt(args, "x");
-            int? y = ToolUtil.GetInt(args, "y");
-            int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
-
-            return GetStorageBuildings().FirstOrDefault(item =>
-                (id.HasValue && item.Id == id.Value) ||
-                (cell.HasValue && item.Cell == cell.Value));
+            if (extra != null)
+            {
+                foreach (var item in extra)
+                    parameters[item.Key] = item.Value;
+            }
+            return parameters;
         }
 
         private static List<StorageInfo> GetStorageBuildings()
@@ -343,6 +341,12 @@ namespace OniMcp.Tools
                 return Name.ToLowerInvariant().Contains(filter) ||
                        PrefabId.ToLowerInvariant().Contains(filter) ||
                        AcceptedTags.Any(tag => tag.ToLowerInvariant().Contains(filter));
+            }
+
+            public bool MatchesIdentity(string query)
+            {
+                return Name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                       PrefabId.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
             }
 
             public Dictionary<string, object> ToDictionary(bool includeItems)
