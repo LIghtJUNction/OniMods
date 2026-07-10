@@ -14,6 +14,8 @@ namespace OniMcp.Tools
 {
     public static partial class WorldEditorTools
     {
+        private const int VirtualMapLayerSize = 32;
+
         public static string ReadFileDirectly(string path)
         {
             bool isMd = path.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
@@ -184,15 +186,29 @@ namespace OniMcp.Tools
                     string filename = Path.GetFileNameWithoutExtension(path);
                     string parts = filename.Substring("layer_".Length);
                     string[] split = parts.Split('_');
-                    if (split.Length == 2)
+                    if (split.Length == 2
+                        && int.TryParse(split[0], out int relYMin)
+                        && int.TryParse(split[1], out int relYMax))
                     {
-                        int relYMin = int.Parse(split[0]);
-                        int relYMax = int.Parse(split[1]);
-
                         int worldId = ClusterManager.Instance?.activeWorldId ?? 0;
                         var world = ClusterManager.Instance?.GetWorld(worldId);
                         if (world != null)
                         {
+                            int height = world.WorldSize.y;
+                            if (relYMin < 0
+                                || relYMax < relYMin
+                                || relYMax >= height
+                                || relYMin % VirtualMapLayerSize != 0)
+                            {
+                                return "<h1>Invalid map layer</h1><p>Requested map layer must match a listed 32-cell layer within the active world bounds.</p>";
+                            }
+
+                            int expectedRelYMax = Math.Min(relYMin + VirtualMapLayerSize - 1, height - 1);
+                            if (relYMax != expectedRelYMax)
+                            {
+                                return "<h1>Invalid map layer</h1><p>Requested map layer must match a listed 32-cell layer within the active world bounds.</p>";
+                            }
+
                             int xMin = world.WorldOffset.x;
                             int xMax = world.WorldOffset.x + world.WorldSize.x - 1;
                             int yMin = world.WorldOffset.y + relYMin;
