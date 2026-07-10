@@ -33,6 +33,7 @@ namespace OniMcp.Tools
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，按子动作语义使用", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "返回或处理上限", Required = false },
                     ["seedTag"] = new McpToolParameter { Type = "string", Description = "domain=farming 设置种植请求时的种子 prefab/tag", Required = false },
+                    ["cropSeedOnly"] = new McpToolParameter { Type = "boolean", Description = "domain=farming action=seed_catalog 时仅返回带 CropSeed 标签的候选种子", Required = false },
                     ["eggTag"] = new McpToolParameter { Type = "string", Description = "domain=ranching kind=incubator 设置蛋请求时的蛋 prefab/tag", Required = false },
                     ["critterTags"] = new McpToolParameter { Type = "array", Description = "domain=ranching kind=dropoff 的小动物 prefab/tag 列表", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "批量或危险写操作确认，按子工具规则使用", Required = false }
