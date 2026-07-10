@@ -38,9 +38,10 @@ fn auto_detect() -> Option<PathBuf> {
 
     #[cfg(target_os = "linux")]
     {
-        let p = PathBuf::from(&home)
-            .join(".local/share/Steam/steamapps/common/OxygenNotIncluded");
-        if p.join("OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll").exists() {
+        let p = PathBuf::from(&home).join(".local/share/Steam/steamapps/common/OxygenNotIncluded");
+        if p.join("OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll")
+            .exists()
+        {
             return Some(p);
         }
     }
@@ -49,8 +50,9 @@ fn auto_detect() -> Option<PathBuf> {
     {
         let p = PathBuf::from(&home)
             .join("Library/Application Support/Steam/steamapps/common/OxygenNotIncluded");
-        let mac_managed = p
-            .join("OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll");
+        let mac_managed = p.join(
+            "OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll",
+        );
         if mac_managed.exists() {
             return Some(p);
         }
@@ -63,7 +65,9 @@ fn auto_detect() -> Option<PathBuf> {
             "C:\\Program Files\\Steam\\steamapps\\common\\OxygenNotIncluded",
         ] {
             let p = PathBuf::from(base);
-            if p.join("OxygenNotIncluded_Data\\Managed\\Assembly-CSharp.dll").exists() {
+            if p.join("OxygenNotIncluded_Data\\Managed\\Assembly-CSharp.dll")
+                .exists()
+            {
                 return Some(p);
             }
         }
@@ -75,9 +79,12 @@ fn auto_detect() -> Option<PathBuf> {
 fn validate_game_path(path: &PathBuf) -> Result<Vec<String>> {
     let mut errors = vec![];
     let managed = if cfg!(target_os = "macos") {
-        let mac = path
-            .join("OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed");
-        if mac.exists() { mac } else { path.join("OxygenNotIncluded_Data/Managed") }
+        let mac = path.join("OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed");
+        if mac.exists() {
+            mac
+        } else {
+            path.join("OxygenNotIncluded_Data/Managed")
+        }
     } else if cfg!(target_os = "windows") {
         path.join("OxygenNotIncluded_Data\\Managed")
     } else {
@@ -217,8 +224,7 @@ path = "mods/OniModTemplate"
 "#;
 
     println!("\n📝 写入 {} ...", CONFIG_FILE);
-    fs::write(&config_path, toml_content)
-        .with_context(|| format!("写入 {} 失败", CONFIG_FILE))?;
+    fs::write(&config_path, toml_content).with_context(|| format!("写入 {} 失败", CONFIG_FILE))?;
 
     // 4. 写入 Directory.Build.props
     let sep = std::path::MAIN_SEPARATOR_STR;
@@ -242,12 +248,12 @@ path = "mods/OniModTemplate"
 </Project>
 "#,
         game_path.to_string_lossy().replace('"', "&quot;"),
-        sep, sep
+        sep,
+        sep
     );
 
     println!("📝 写入 {} ...", BUILD_PROPS);
-    fs::write(&props_path, props_content)
-        .with_context(|| format!("写入 {} 失败", BUILD_PROPS))?;
+    fs::write(&props_path, props_content).with_context(|| format!("写入 {} 失败", BUILD_PROPS))?;
 
     println!("\n✅ 初始化完成！");
     println!("   游戏路径：{}", game_path.display());

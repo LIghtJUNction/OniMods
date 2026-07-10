@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "windows")]
+use std::process::Command;
 
 const DEFAULT_CONFIG_NAME: &str = "onim.toml";
 const BUILD_PROPS: &str = "Directory.Build.props";
@@ -302,8 +304,34 @@ fn game_user_data_dir() -> Result<PathBuf> {
 
     #[cfg(target_os = "windows")]
     {
-        let local_low = env::var_os("USERPROFILE").context("无法获取 USERPROFILE")?;
-        Ok(PathBuf::from(local_low).join("AppData/LocalLow/Klei/Oxygen Not Included"))
+        // ONI loads Steam/Dev/Local mods from Documents\Klei\OxygenNotIncluded\mods.
+        // LocalLow\...\Oxygen Not Included holds logs/config for some installs, not the
+        // mod folders used by this Windows layout (see Player.log Loaded assembly path).
+        let output = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); [Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)",
+            ])
+            .output()
+            .context("无法通过 Windows Known Folder API 获取 Documents 目录")?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!(
+                "通过 Windows Known Folder API 获取 Documents 目录失败（{}）：{}",
+                output.status,
+                stderr.trim()
+            );
+        }
+
+        let documents = String::from_utf8(output.stdout)
+            .context("Windows Known Folder API 返回的 Documents 目录不是有效 UTF-8")?;
+        let documents = documents.trim();
+        if documents.is_empty() {
+            anyhow::bail!("Windows Known Folder API 返回了空的 Documents 目录");
+        }
+        Ok(PathBuf::from(documents).join("Klei/OxygenNotIncluded"))
     }
 
     #[cfg(target_os = "macos")]

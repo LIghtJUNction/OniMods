@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 
+use crate::archive;
 use crate::build;
 use crate::config::{Config, SelectedMod};
 
@@ -34,44 +34,10 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     fs::create_dir_all(&local_dir)
         .with_context(|| format!("创建 Local 目录失败：{}", local_dir.display()))?;
 
-    unzip(&zip, &local_dir)?;
+    archive::unzip(&zip, &local_dir)?;
 
     println!("✅ 已正式安装到游戏 Local 目录");
     println!("   启动游戏 → Mod 列表 → 启用 '{}'", selected.name);
-
-    Ok(())
-}
-
-fn unzip(zip: &PathBuf, dest: &PathBuf) -> Result<()> {
-    #[cfg(target_os = "windows")]
-    {
-        let status = Command::new("powershell")
-            .args([
-                "-Command",
-                "Expand-Archive",
-                "-Path",
-                &zip.to_string_lossy(),
-                "-DestinationPath",
-                &dest.to_string_lossy(),
-                "-Force",
-            ])
-            .status()
-            .context("解压失败（PowerShell Expand-Archive）")?;
-        if !status.success() {
-            anyhow::bail!("解压失败");
-        }
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        let status = Command::new("unzip")
-            .args(["-o", &zip.to_string_lossy(), "-d", &dest.to_string_lossy()])
-            .status()
-            .context("解压失败（unzip），请确认已安装 unzip")?;
-        if !status.success() {
-            anyhow::bail!("解压失败");
-        }
-    }
 
     Ok(())
 }
