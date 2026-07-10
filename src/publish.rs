@@ -36,7 +36,9 @@ fn uploader_path() -> Option<PathBuf> {
             "C:\\Program Files\\Steam\\steamapps\\common\\OxygenNotIncludedUploader\\OxygenNotIncludedUploader.exe",
         ] {
             let pb = PathBuf::from(p);
-            if pb.exists() { return Some(pb); }
+            if pb.exists() {
+                return Some(pb);
+            }
         }
     }
 
