@@ -44,6 +44,11 @@ namespace OniMcp.Tools
             return OperationFileTools.ContainsKey(relative);
         }
 
+        private static bool IsEditableOperationMarkdown(string relative)
+        {
+            return IsOperationMarkdown(relative) && relative != "ops/tools.md";
+        }
+
         private static CallToolResult ReadOperationMarkdown(string path, string relative)
         {
             if (relative == "ops/tools.md")
@@ -56,6 +61,7 @@ namespace OniMcp.Tools
             sb.AppendLine();
             sb.AppendLine("- path: `" + path + "`");
             sb.AppendLine("- mode: edit lines under `## Edit Commands`, then submit SEARCH/REPLACE.");
+            sb.AppendLine("- safety limit: one executable command per edit; split additional commands into separate reviewed edits.");
             sb.AppendLine("- edit tip: use an empty SEARCH block to run fresh commands, or copy the current snippet exactly.");
             sb.AppendLine("- result: each command returns `ok`, exact arguments, and the raw tool result/error text.");
             sb.AppendLine("- syntax: `call tool=<tool_name> key=value ...`; in typed files, `tool=` is optional.");
@@ -107,66 +113,134 @@ namespace OniMcp.Tools
             }
         }
 
-    private static CallToolResult ApplyOperationMarkdownEdit(string relative, string replacement)
+    private static CallToolResult ApplyOperationMarkdownEdit(JObject parentArgs, string relative, string replacement)
     {
         var lines = ExtractOperationCommandLines(replacement).ToList();
-        if (lines.Count > 12)
+        if (lines.Count > 1)
+            return CallToolResult.Error("Operation edits support exactly one executable command because child game mutations are not transactional.");
+        var compiled = new List<System.Tuple<string, string, JObject, bool>>();
+        var preflightErrors = new JArray();
+        foreach (string line in lines)
         {
-            return JsonResult(new JObject
+            string error;
+            string toolName;
+            JObject arguments;
+            if (!TryParseOperationLine(relative, line, out toolName, out arguments, out bool semanticCoordinates, out error))
+            {
+                preflightErrors.Add(new JObject { ["line"] = line, ["error"] = error });
+                continue;
+            }
+            arguments = InheritWorldEditorExecutionPolicy(parentArgs, arguments);
+            if (!ValidateOperationCapability(toolName, arguments, semanticCoordinates, out error))
+            {
+                preflightErrors.Add(new JObject { ["line"] = line, ["error"] = error });
+                continue;
+            }
+            if (!ToolCallMiddleware.TryGetTaskDescription(arguments, out _))
+            {
+                preflightErrors.Add(new JObject { ["line"] = line, ["error"] = "task is required" });
+                continue;
+            }
+            compiled.Add(System.Tuple.Create(line, toolName, arguments, semanticCoordinates));
+        }
+
+        if (preflightErrors.Count > 0)
+            return CallToolResult.Error(JsonResultText(new JObject
             {
                 ["ok"] = false,
-                ["file"] = relative,
+                ["phase"] = "preflight",
                 ["executed"] = 0,
-                ["blocked"] = "too_many_operation_commands",
-                ["maxCommandsPerEdit"] = 12,
-                ["requested"] = lines.Count,
-                ["reason"] = "Large operation edits currently execute as multiple Unity mutations, not as a true render transaction. Split into smaller edits until transaction support is added.",
-                ["firstCommands"] = new JArray(lines.Take(12))
-            });
-        }
+                ["errors"] = preflightErrors
+            }));
+        if (compiled.Count == 0)
+            return CallToolResult.Error("No executable operation lines found. Add commands under ## Edit Commands.");
+
+        var previewLines = new JArray(compiled.Select(item => new JObject
+        {
+            ["line"] = item.Item1,
+            ["tool"] = item.Item2,
+            ["arguments"] = item.Item3
+        }));
+        if (!WorldEditorExecutionAllowed(parentArgs))
+            return WorldEditorPreview("operation", "/active/" + relative, previewLines);
 
         var results = new JArray();
         bool anyError = false;
+        bool partial = false;
         int executed = 0;
-        foreach (string line in lines)
+        bool stopOnError = parentArgs?["stopOnError"] == null || ToolUtil.GetBool(parentArgs, "stopOnError", true);
+        foreach (var item in compiled)
         {
-                string error;
-                string toolName;
-                JObject arguments;
-                if (!TryParseOperationLine(relative, line, out toolName, out arguments, out error))
-                {
-                    anyError = true;
-                    results.Add(new JObject { ["line"] = line, ["ok"] = false, ["error"] = error });
-                    continue;
-                }
+            string line = item.Item1;
+            string toolName = item.Item2;
+            JObject arguments = item.Item3;
+            bool semanticCoordinates = item.Item4;
+            if (ToolUtil.GetBool(arguments, "dryRun", false) || !ToolUtil.GetBool(arguments, "confirm", false))
+            {
+                results.Add(new JObject { ["line"] = line, ["tool"] = toolName, ["ok"] = true, ["preview"] = true, ["arguments"] = arguments });
+                continue;
+            }
 
-            CallToolResult result = OniToolRegistry.CallTool(toolName, arguments);
-            anyError = anyError || result.IsError;
-            executed++;
+            CallToolResult result = OniToolRegistry.CallToolFromWorldEditor(toolName, arguments, semanticCoordinates);
+            bool failed = WorldEditorResultFailed(result, arguments);
+            anyError = anyError || failed;
+            partial = partial || ResultReportsPartial(result);
+            if (!failed)
+                executed += ResultAppliedCount(result);
             string text = result.Content?.FirstOrDefault()?.Text ?? string.Empty;
-            var item = new JObject
+            var resultItem = new JObject
             {
                 ["line"] = line,
                 ["tool"] = toolName,
-                ["ok"] = !result.IsError,
-                ["isError"] = result.IsError
+                ["ok"] = !failed,
+                ["isError"] = failed
             };
-            if (result.IsError)
-                item["error"] = TrimOperationText(text, 4000);
+            if (failed)
+                resultItem["error"] = TrimOperationText(text, 4000);
             else
-                item["summary"] = SummarizeOperationResult(text);
+                resultItem["summary"] = SummarizeOperationResult(text);
             if (ToolUtil.GetBool(arguments, "detail", false))
             {
-                item["arguments"] = arguments;
-                item["result"] = TrimOperationText(text, 12000);
+                resultItem["arguments"] = arguments;
+                resultItem["result"] = TrimOperationText(text, 12000);
             }
-            results.Add(item);
+            results.Add(resultItem);
+            if (failed && stopOnError)
+                break;
         }
 
-            if (results.Count == 0)
-                return CallToolResult.Error("No executable operation lines found. Add commands under ## Edit Commands.");
+        var summary = new JObject
+        {
+            ["ok"] = !anyError,
+            ["partial"] = partial || (anyError && executed > 0),
+            ["file"] = relative,
+            ["applied"] = executed,
+            ["failed"] = anyError ? 1 : 0,
+            ["results"] = results
+        };
+        return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
+    }
 
-        return JsonResult(new JObject { ["ok"] = !anyError, ["file"] = relative, ["executed"] = executed, ["results"] = results });
+    private static CallToolResult PreflightOperationMarkdownEdit(JObject parentArgs, string relative, string replacement)
+    {
+        var lines = ExtractOperationCommandLines(replacement).ToList();
+        if (lines.Count == 0)
+            return CallToolResult.Error("No executable operation lines found. Add commands under ## Edit Commands.");
+        if (lines.Count > 1)
+            return CallToolResult.Error("Operation edits support exactly one executable command because child game mutations are not transactional.");
+        var compiled = new JArray();
+        foreach (string line in lines)
+        {
+            if (!TryParseOperationLine(relative, line, out string toolName, out JObject arguments, out bool semanticCoordinates, out string error))
+                return CallToolResult.Error("Operation preflight failed for `" + line + "`: " + error);
+            arguments = InheritWorldEditorExecutionPolicy(parentArgs, arguments);
+            if (!ValidateOperationCapability(toolName, arguments, semanticCoordinates, out error))
+                return CallToolResult.Error("Operation preflight failed for `" + line + "`: " + error);
+            if (!ToolCallMiddleware.TryGetTaskDescription(arguments, out _))
+                return CallToolResult.Error("Operation preflight failed for `" + line + "`: task is required");
+            compiled.Add(new JObject { ["line"] = line, ["tool"] = toolName, ["arguments"] = arguments });
+        }
+        return JsonResult(new JObject { ["ok"] = true, ["phase"] = "preflight", ["commands"] = compiled });
     }
 
     private static string SummarizeOperationResult(string text)
@@ -231,10 +305,14 @@ namespace OniMcp.Tools
             return head == "call" || head.EndsWith("_control", StringComparison.Ordinal) || head == "tool" || IsSemanticOperationHead(head);
         }
 
-        private static bool TryParseOperationLine(string relative, string line, out string toolName, out JObject arguments, out string error)
+        private static bool TryParseOperationLine(string relative, string line, out string toolName, out JObject arguments, out bool semanticCoordinates, out string error)
         {
+            semanticCoordinates = false;
             if (TryParseSemanticOperationLine(relative, line, out toolName, out arguments, out error))
+            {
+                semanticCoordinates = true;
                 return true;
+            }
             if (!string.IsNullOrWhiteSpace(error))
                 return false;
 
@@ -260,7 +338,37 @@ namespace OniMcp.Tools
                 error = "Tool not found: " + toolName;
                 return false;
             }
+            toolName = tool.Name;
             error = null;
+            return true;
+        }
+
+        private static bool ValidateOperationCapability(string toolName, JObject arguments, bool semanticCoordinates, out string error)
+        {
+            error = null;
+            if (toolName == "world_editor")
+            {
+                error = "ops cannot invoke child world_editor commands or recursive batches";
+                return false;
+            }
+            if (!semanticCoordinates && toolName != "coordinate_control" && OniToolRegistry.HasCoordinateArguments(arguments))
+            {
+                error = "Raw ops calls cannot pass coordinates to ordinary tools; use a supported semantic command or coordinate_control.";
+                return false;
+            }
+            if (toolName != "server_control")
+                return true;
+            string domain = (arguments["domain"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+            string action = (arguments["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+            bool safeDomain = (domain == "catalog" && (action == "manifest" || action == "search" || action == "guide" || action == "list" || action == "status"))
+                || (domain == "diagnostics" && (action == "status" || action == "health" || action == "logs" || action == "doctor"));
+            bool recursive = action == "batch" || action == "program" || action == "script" || action == "flow"
+                || domain == "batch" || domain == "program" || domain == "script" || domain == "flow";
+            if (!safeDomain || recursive)
+            {
+                error = "ops server_control is restricted to read-only catalog/diagnostics actions; batch/program/script/flow are forbidden.";
+                return false;
+            }
             return true;
         }
 
@@ -321,7 +429,7 @@ namespace OniMcp.Tools
             else if (relative == "ops/dupes.md")
                 yield return "call domain=info action=status_check";
             else if (relative == "ops/navigation.md")
-                yield return "call action=jump query=\"printing pod\"";
+                yield return "call action=get_view";
             else if (relative == "ops/coordinate.md")
                 yield return "call action=inspect x=80 y=145";
             else if (relative == "ops/server.md")
@@ -343,7 +451,7 @@ namespace OniMcp.Tools
             else if (relative == "ops/resources.md")
                 yield return "call tool=read_control domain=resources action=inventory";
             else if (relative == "ops/ui.md")
-                yield return "call tool=game_control domain=camera action=status";
+                yield return "call tool=navigation_control domain=camera action=get_view";
             else if (relative == "ops/medical.md")
                 yield return "call tool=search_control domain=tools query=\"medical\"";
             else if (relative == "ops/rooms.md")

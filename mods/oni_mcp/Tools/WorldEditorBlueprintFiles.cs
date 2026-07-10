@@ -35,7 +35,8 @@ namespace OniMcp.Tools
         private static bool IsBlueprintMarkdown(string relative)
         {
             return relative.StartsWith(BlueprintPrefix, StringComparison.Ordinal)
-                && relative.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
+                && relative.EndsWith(".md", StringComparison.OrdinalIgnoreCase)
+                && relative != "blueprints/index.md";
         }
 
         private static CallToolResult ReadBlueprintVirtualFile(string relative)
@@ -46,27 +47,18 @@ namespace OniMcp.Tools
             if (path == null)
                 return CallToolResult.Error("Blueprint not found: /active/" + relative);
             if (relative.EndsWith(".blueprint", StringComparison.OrdinalIgnoreCase))
-                return CallToolResult.Text(File.ReadAllText(path));
+                return CallToolResult.Text(ReadBlueprintText(path));
             return CallToolResult.Text(ReadBlueprintMarkdown(path));
         }
 
-        private static CallToolResult ApplyBlueprintMarkdownEdit(string relative, string search, string replace)
+        private static CallToolResult ApplyBlueprintMarkdownEdit(JObject args, string relative, string search, string replace)
         {
-            string path = ResolveBlueprintPath(relative);
-            if (path == null)
-                return CallToolResult.Error("Blueprint not found: /active/" + relative);
-            string current = ReadBlueprintMarkdown(path);
-            string next = string.IsNullOrWhiteSpace(search)
-                ? replace
-                : current.Replace(NormalizeSearchText(search), NormalizeSearchText(replace));
-            if (next == current && !string.IsNullOrWhiteSpace(search))
-                return CallToolResult.Error("Blueprint SEARCH did not match current markdown exactly; re-read /active/" + relative);
-
-            string error;
-            JObject updated = MarkdownToBlueprint(ReadBlueprintJson(path), next, out error);
-            if (updated == null)
+            if (!TryPrepareBlueprintMarkdownEdit(relative, search, replace, out string path, out JObject updated, out string error))
                 return CallToolResult.Error(error);
-            File.WriteAllText(path, updated.ToString(Formatting.Indented));
+            if (!WorldEditorExecutionAllowed(args))
+                return WorldEditorPreview("blueprint", "/active/" + relative, new JObject { ["buildings"] = (updated["buildings"] as JArray)?.Count ?? 0 });
+            if (!AtomicWriteBlueprint(path, updated.ToString(Formatting.Indented), out error))
+                return CallToolResult.Error(error);
             return JsonResult(new JObject
             {
                 ["ok"] = true,
@@ -74,6 +66,59 @@ namespace OniMcp.Tools
                 ["buildings"] = (updated["buildings"] as JArray)?.Count ?? 0,
                 ["message"] = "blueprint markdown converted back to Blueprints Expanded JSON"
             });
+        }
+
+        private static CallToolResult PreflightBlueprintMarkdownEdit(string relative, string search, string replace)
+        {
+            if (!TryPrepareBlueprintMarkdownEdit(relative, search, replace, out string path, out JObject updated, out string error))
+                return CallToolResult.Error(error);
+            return JsonResult(new JObject
+            {
+                ["ok"] = true,
+                ["phase"] = "preflight",
+                ["path"] = path,
+                ["buildings"] = (updated["buildings"] as JArray)?.Count ?? 0
+            });
+        }
+
+        private static bool TryPrepareBlueprintMarkdownEdit(string relative, string search, string replace, out string path, out JObject updated, out string error)
+        {
+            updated = null;
+            path = ResolveBlueprintPath(relative);
+            if (path == null)
+            {
+                error = "Blueprint not found: /active/" + relative;
+                return false;
+            }
+            JObject original = ReadBlueprintJson(path);
+            string current = ReadBlueprintMarkdown(path);
+            if (!ValidateBlueprintMarkdownRoundTrip(original, current, out error))
+                return false;
+
+            string normalizedSearch = NormalizeSearchText(search);
+            string normalizedCurrent = NormalizeSearchText(current);
+            if (!string.IsNullOrWhiteSpace(normalizedSearch) && CountOccurrences(normalizedCurrent, normalizedSearch) != 1)
+            {
+                error = "Blueprint SEARCH must match exactly once; re-read /active/" + relative;
+                return false;
+            }
+            string next = string.IsNullOrWhiteSpace(normalizedSearch)
+                ? replace
+                : normalizedCurrent.Replace(normalizedSearch, NormalizeSearchText(replace));
+            updated = MarkdownToBlueprint(original, next, out error);
+            return updated != null;
+        }
+
+        private static int CountOccurrences(string text, string value)
+        {
+            int count = 0;
+            int offset = 0;
+            while (!string.IsNullOrEmpty(value) && (offset = text.IndexOf(value, offset, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                offset += value.Length;
+            }
+            return count;
         }
 
         private static CallToolResult BlueprintCommand(JObject args)
@@ -110,7 +155,7 @@ namespace OniMcp.Tools
             if (path == null)
                 return CallToolResult.Error("Blueprint not found. Pass name=...");
             bool json = FirstZoomText(args, "format", "profile").Equals("json", StringComparison.OrdinalIgnoreCase);
-            return CallToolResult.Text(json ? File.ReadAllText(path) : ReadBlueprintMarkdown(path));
+            return CallToolResult.Text(json ? ReadBlueprintText(path) : ReadBlueprintMarkdown(path));
         }
 
         private static CallToolResult CreateBlueprint(JObject args)
@@ -118,18 +163,18 @@ namespace OniMcp.Tools
             string name = Text(args, "name", "target");
             if (string.IsNullOrWhiteSpace(name))
                 return CallToolResult.Error("blueprint create requires name");
-            string path = Path.Combine(BlueprintDirectory(), SafeBlueprintFileName(name));
+            if (!TryGetBlueprintPath(name, false, out string path, out string pathError))
+                return CallToolResult.Error(pathError);
             if (File.Exists(path) && !ToolUtil.GetBool(args, "overwrite", false))
                 return CallToolResult.Error("Blueprint already exists; pass overwrite=true or choose another name.");
-            if (!ToolUtil.GetBool(args, "confirm", false))
-                return JsonResult(new JObject { ["dryRun"] = true, ["wouldCreate"] = path });
-
-            Directory.CreateDirectory(BlueprintDirectory());
             string content = Text(args, "content", "text", "map");
             JObject root = BuildBlueprintCreateJson(path, content, out string error);
             if (root == null)
                 return CallToolResult.Error(error);
-            File.WriteAllText(path, root.ToString(Formatting.Indented));
+            if (!WorldEditorExecutionAllowed(args))
+                return WorldEditorPreview("blueprint_create", "/active/blueprints/" + Path.GetFileName(path), new JObject { ["wouldCreate"] = path });
+            if (!AtomicWriteBlueprint(path, root.ToString(Formatting.Indented), out error))
+                return CallToolResult.Error(error);
             return JsonResult(new JObject { ["ok"] = true, ["created"] = path });
         }
 
@@ -148,8 +193,10 @@ namespace OniMcp.Tools
             string path = FindBlueprintPath(Text(args, "name", "path", "target"));
             if (path == null)
                 return CallToolResult.Error("Blueprint not found. Pass name=...");
-            if (!ToolUtil.GetBool(args, "confirm", false))
-                return JsonResult(new JObject { ["dryRun"] = true, ["wouldDelete"] = path });
+            if (!WorldEditorExecutionAllowed(args))
+                return WorldEditorPreview("blueprint_delete", "/active/blueprints/" + Path.GetFileName(path), new JObject { ["wouldDelete"] = path });
+            if (!ValidateBlueprintIoPath(path, out string deleteError))
+                return CallToolResult.Error(deleteError);
             File.Delete(path);
             return JsonResult(new JObject { ["ok"] = true, ["deleted"] = path });
         }
@@ -167,7 +214,9 @@ namespace OniMcp.Tools
             JObject root = ReadBlueprintJson(path);
             BlueprintRect rect = BlueprintBounds(root);
             int count = (root["buildings"] as JArray)?.Count ?? 0;
-            if (ToolUtil.GetBool(args, "dryRun", true) || !ToolUtil.GetBool(args, "confirm", false))
+            if (args["dryRun"] == null)
+                args["dryRun"] = true;
+            if (!WorldEditorExecutionAllowed(args))
             {
                 return JsonResult(new JObject
                 {
@@ -180,6 +229,8 @@ namespace OniMcp.Tools
                 });
             }
 
+            if (!ValidateBlueprintIoPath(path, out string pathError))
+                return CallToolResult.Error(pathError);
             if (!InvokeBlueprintsExpandedUse(path, x.Value, y.Value, out string error))
                 return CallToolResult.Error(error);
             return JsonResult(new JObject

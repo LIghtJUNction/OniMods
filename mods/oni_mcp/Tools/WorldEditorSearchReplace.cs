@@ -67,7 +67,7 @@ namespace OniMcp.Tools
             return edits.Count > 0;
         }
 
-        private static bool ValidateVirtualFileSearch(string path, string relative, string search, out string error)
+        private static bool ValidateVirtualFileSearch(JObject request, string path, string relative, string search, out string error)
         {
             error = null;
             if (IsBlankOrTemplateSearch(search))
@@ -75,7 +75,7 @@ namespace OniMcp.Tools
 
             string current;
             string readError;
-            if (!TryReadVirtualFileText(path, out current, out readError))
+            if (!TryReadVirtualFileText(request, path, out current, out readError))
             {
                 error = "Cannot validate SEARCH against current virtual file: " + readError;
                 return false;
@@ -111,11 +111,22 @@ namespace OniMcp.Tools
 
         private static bool TryReadVirtualFileText(string path, out string text, out string error)
         {
+            return TryReadVirtualFileText(null, path, out text, out error);
+        }
+
+        private static bool TryReadVirtualFileText(JObject request, string path, out string text, out string error)
+        {
             text = string.Empty;
             error = null;
             try
             {
-                var result = Read(new JObject { ["path"] = path });
+                var readArgs = request == null ? new JObject() : (JObject)request.DeepClone();
+                readArgs.Remove("content");
+                readArgs.Remove("editCells");
+                readArgs.Remove("editLines");
+                readArgs["command"] = "read";
+                readArgs["path"] = path;
+                var result = Read(readArgs);
                 if (result == null)
                 {
                     error = "read returned no result";

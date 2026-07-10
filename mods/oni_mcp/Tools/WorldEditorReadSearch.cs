@@ -78,7 +78,7 @@ namespace OniMcp.Tools
                 if (relative == "buildings/plans.oni")
                     return ReadEditableTemplate(path, "Add or change desired buildings by replacing text in this file.");
                 if (relative == "orders/orders.oni")
-                    return ReadEditableTemplate(path, "Add dig/sweep/mop/deconstruct/cancel orders by replacing text in this file.");
+                    return CallToolResult.Text("# " + path + "\n\nThis legacy file is read-only. Use `/active/ops/orders.md` for executable orders.\n");
                 if (relative == "resources/inventory.oni")
                     return ReadTools.ControlRead().Handler(Child(args, "resources", "inventory"));
                 if (relative == "resources/food.oni")
@@ -93,6 +93,8 @@ namespace OniMcp.Tools
                     return DupesControlEntryTools.ControlDupes().Handler(Child(args, "info", "status"));
                 if (relative == "diagnostics/logs.md")
                     return CallToolResult.Text(ReadLogDiagnosticsMarkdown(args));
+                if (relative == "screenshots/index.md")
+                    return CallToolResult.Text(ReadFileDirectly(path));
 
                 return CallToolResult.Error("unknown /active/ virtual file: " + path);
             }

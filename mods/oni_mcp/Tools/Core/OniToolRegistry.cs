@@ -178,6 +178,21 @@ namespace OniMcp.Tools
         /// </summary>
         public static CallToolResult CallTool(string name, JObject arguments)
         {
+            return CallToolCore(name, arguments, false);
+        }
+
+        internal static CallToolResult CallToolFromWorldEditor(string name, JObject arguments, bool allowValidatedCoordinates)
+        {
+            return CallToolCore(name, arguments, allowValidatedCoordinates);
+        }
+
+        internal static bool HasCoordinateArguments(JToken token)
+        {
+            return ContainsCoordinateArguments(token);
+        }
+
+        private static CallToolResult CallToolCore(string name, JObject arguments, bool allowValidatedCoordinates)
+        {
             var middlewareNotifications = ToolCallMiddleware.DrainNotifications();
             bool usedLegacyAlias = false;
             if (!_tools.TryGetValue(name, out var tool))
@@ -199,7 +214,7 @@ namespace OniMcp.Tools
 
                 ToolCallMiddleware.PresentTaskDescription(taskDescription);
 
-                if (!IsCoordinateTool(tool.Name) && ContainsCoordinateArguments(arguments))
+                if (!allowValidatedCoordinates && !IsCoordinateTool(tool.Name) && ContainsCoordinateArguments(arguments))
                 {
                     var coordinateResult = ToolCallMiddleware.Inject(CallToolResult.Error("Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool."), middlewareNotifications);
                     return usedLegacyAlias

@@ -31,6 +31,12 @@ namespace OniMcp.Tools
             routed.Remove("editCells");
             routed.Remove("editLines");
             routed["sourcePath"] = path;
+            if (!ValidateExplicitMapChangesAgainstSource(routed, path, changes, out error))
+                return CallToolResult.Error(error);
+            if (!ValidateCompiledMapChanges(routed, changes, out error))
+                return CallToolResult.Error(error);
+            if (!WorldEditorExecutionAllowed(routed))
+                return WorldEditorPreview("explicit_map", path, new JObject { ["changedCells"] = changes.Count });
             return ApplyExplicitMapEditChanges(routed, changes);
         }
 
@@ -185,6 +191,8 @@ namespace OniMcp.Tools
 
             var results = new JArray();
             bool anyError = false;
+            bool childPartial = false;
+            int appliedCells = 0;
             foreach (var group in executableChanges.GroupBy(ChangeKind))
             {
                 CallToolResult result;
@@ -199,32 +207,42 @@ namespace OniMcp.Tools
                 else
                     result = UnsupportedMapEdit(group);
 
-                anyError = anyError || result.IsError;
+                bool failed = WorldEditorResultFailed(result, args);
+                anyError = anyError || failed;
+                childPartial = childPartial || ResultReportsPartial(result);
+                if (!failed)
+                    appliedCells += ResultAppliedCount(result);
                 results.Add(new JObject
                 {
                     ["action"] = group.Key,
                     ["cells"] = group.Count(),
-                    ["ok"] = !result.IsError,
-                    ["error"] = result.IsError ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
+                    ["ok"] = !failed,
+                    ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
                     ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
                 });
+                if (failed)
+                    break;
             }
 
-            return JsonResult(new JObject
+            var summary = new JObject
             {
+                ["ok"] = !anyError,
                 ["source"] = args["sourcePath"]?.ToString(),
                 ["requested"] = changes.Count,
-                ["applied"] = executableChanges.Count,
-                ["deferred"] = Math.Max(0, changes.Count - executableChanges.Count),
-                ["status"] = anyError ? "partial_or_failed" : partial ? "partial_budget" : "complete",
+                ["applied"] = appliedCells,
+                ["failed"] = anyError ? 1 : 0,
+                ["deferred"] = Math.Max(0, changes.Count - appliedCells),
+                ["status"] = anyError ? "partial_or_failed" : partial || childPartial ? "partial_budget" : "complete",
                 ["results"] = results
-            });
+            };
+            return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
         }
 
         private static CallToolResult ApplyExplicitDeconstructCells(JObject parentArgs, IEnumerable<MapEditCell> cells)
         {
             var results = new JArray();
             bool anyError = false;
+            int applied = 0;
             foreach (var cell in cells)
             {
                 var orderArgs = CopyPayload(parentArgs);
@@ -237,24 +255,30 @@ namespace OniMcp.Tools
                     orderArgs["type"] = parentArgs["type"];
 
                 var result = OrdersControlEntryTools.ControlOrders().Handler(orderArgs);
-                anyError = anyError || result.IsError;
+                bool failed = WorldEditorResultFailed(result, parentArgs);
+                anyError = anyError || failed;
+                if (!failed)
+                    applied += ResultAppliedCount(result);
                 results.Add(new JObject
                 {
                     ["x"] = cell.X,
                     ["y"] = cell.Y,
-                    ["ok"] = !result.IsError,
-                    ["error"] = result.IsError ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
+                    ["ok"] = !failed,
+                    ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
                     ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
                 });
             }
 
-            return JsonResult(new JObject
+            var summary = new JObject
             {
                 ["ok"] = !anyError,
                 ["action"] = "deconstruct",
                 ["cells"] = cells.Count(),
+                ["applied"] = applied,
+                ["failed"] = anyError ? 1 : 0,
                 ["results"] = results
-            });
+            };
+            return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
         }
 
         private static string FirstNonEmptyCellEditValue(JObject item, params string[] keys)

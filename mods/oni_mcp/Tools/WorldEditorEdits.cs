@@ -29,26 +29,74 @@ namespace OniMcp.Tools
             List<KeyValuePair<string, string>> edits;
             if (!TryParseSearchReplaceBlocks(block, out edits))
                 return CallToolResult.Error("edit requires at least one <<<<<<< SEARCH / ======= / >>>>>>> REPLACE block");
+            if (edits.Count > 1 && !ToolUtil.GetBool(args, "allowPartial", false))
+                return CallToolResult.Error("Multiple write blocks require allowPartial=true because game mutations cannot be rolled back transactionally.");
 
-            CallToolResult last = null;
+            var preflight = new JArray();
             for (int i = 0; i < edits.Count; i++)
             {
-                last = ApplySingleEditBlock(args, path, relative, edits[i].Key, edits[i].Value);
-                if (last == null || last.IsError)
-                    return last ?? CallToolResult.Error("edit failed");
+                var result = PreflightSingleEditBlock(args, path, relative, edits[i].Key, edits[i].Value);
+                if (WorldEditorResultFailed(result))
+                    return CallToolResult.Error(JsonResultText(new JObject
+                    {
+                        ["ok"] = false,
+                        ["phase"] = "preflight",
+                        ["block"] = i,
+                        ["error"] = result.Content?.FirstOrDefault()?.Text ?? "preflight failed",
+                        ["applied"] = 0
+                    }));
+                preflight.Add(new JObject { ["block"] = i, ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty });
             }
 
-            return last ?? CallToolResult.Error("edit produced no result");
+            if (!WorldEditorExecutionAllowed(args))
+                return WorldEditorPreview("search_replace", path, preflight);
+
+            var results = new JArray();
+            int applied = 0;
+            bool partial = false;
+            for (int i = 0; i < edits.Count; i++)
+            {
+                var result = ApplySingleEditBlock(args, path, relative, edits[i].Key, edits[i].Value);
+                results.Add(new JObject
+                {
+                    ["block"] = i,
+                    ["ok"] = !WorldEditorResultFailed(result),
+                    ["result"] = result?.Content?.FirstOrDefault()?.Text ?? "edit failed"
+                });
+                if (WorldEditorResultFailed(result))
+                    return WorldEditorExecutionFailure("search_replace", path, applied + ResultAppliedCount(result), results);
+                partial = partial || ResultReportsPartial(result);
+                applied++;
+            }
+
+            return JsonResult(new JObject { ["ok"] = true, ["partial"] = partial, ["applied"] = applied, ["failed"] = 0, ["results"] = results });
+        }
+
+        private static CallToolResult PreflightSingleEditBlock(JObject args, string path, string relative, string search, string replace)
+        {
+            if (!ValidateVirtualFileSearch(args, path, relative, search, out string searchError))
+                return CallToolResult.Error(searchError);
+            var routed = CopyPayload(args);
+            routed["sourcePath"] = path;
+            if (IsEditableMapMarkdown(relative))
+                return PreflightMapEdit(routed, search, replace);
+            if (IsEditableBuildCommandFile(relative))
+                return PreflightBuildEdit(routed, relative, replace);
+            if (IsEditableManagementMarkdown(relative))
+                return PreflightManagementMarkdownEdit(relative, replace);
+            if (IsBlueprintMarkdown(relative))
+                return PreflightBlueprintMarkdownEdit(relative, search, replace);
+            if (IsEditableOperationMarkdown(relative))
+                return PreflightOperationMarkdownEdit(args, relative, replace);
+            if (IsDupeDetailMarkdown(relative))
+                return PreflightDupeDetailEdit(relative, replace);
+            return CallToolResult.Error("file is read-only for edits: " + path);
         }
 
         private static CallToolResult ApplySingleEditBlock(JObject args, string path, string relative, string search, string replace)
         {
             string searchError;
-            List<MapEditCell> patchChanges;
-            string patchError;
-            bool pinnedMapPatch = IsEditableMapMarkdown(relative)
-                && TryParseMapEditChangesFromPatchCoordinates(search, replace, out patchChanges, out patchError);
-            if (!pinnedMapPatch && !ValidateVirtualFileSearch(path, relative, search, out searchError))
+            if (!ValidateVirtualFileSearch(args, path, relative, search, out searchError))
                 return CallToolResult.Error(searchError);
             var routed = CopyPayload(args);
             routed.Remove("content");
@@ -58,20 +106,16 @@ namespace OniMcp.Tools
 
             if (IsEditableMapMarkdown(relative))
                 return ApplyMapEdit(routed, search, replace);
-            if (relative == "buildings/plans.oni" || relative.StartsWith("infrastructure/", StringComparison.Ordinal))
+            if (IsEditableBuildCommandFile(relative))
                 return ApplyBuildEdit(routed, relative, replace);
-if (IsManagementMarkdown(relative))
-return ApplyManagementMarkdownEdit(routed, relative, replace);
-if (IsBlueprintMarkdown(relative))
-return ApplyBlueprintMarkdownEdit(relative, search, replace);
-if (IsOperationMarkdown(relative))
-return ApplyOperationMarkdownEdit(relative, replace);
-if (relative == "orders/orders.oni" || relative == "map/terrain.oni")
-                return ApplyOrderEdit(routed, replace);
+            if (IsEditableManagementMarkdown(relative))
+                return ApplyManagementMarkdownEdit(routed, relative, replace);
+            if (IsBlueprintMarkdown(relative))
+                return ApplyBlueprintMarkdownEdit(routed, relative, search, replace);
+            if (IsEditableOperationMarkdown(relative))
+                return ApplyOperationMarkdownEdit(routed, relative, replace);
             if (IsDupeDetailMarkdown(relative))
                 return ApplyDupeDetailEdit(routed, relative, replace);
-            if (relative == "dupes/index.oni")
-                return ApplyDupeEdit(routed, replace);
 
             return CallToolResult.Error("file is read-only for edits: " + path);
         }
@@ -88,32 +132,25 @@ if (relative == "orders/orders.oni" || relative == "map/terrain.oni")
             return BuildingControlTools.ControlBuilding().Handler(args);
         }
 
-        private static CallToolResult ApplyOrderEdit(JObject args, string replacement)
+        private static CallToolResult PreflightBuildEdit(JObject args, string relative, string replacement)
         {
-            string lower = replacement.ToLowerInvariant();
-            args["target"] = replacement.Trim();
-            if (string.IsNullOrWhiteSpace(args["action"]?.ToString()))
-            {
-                if (lower.Contains("dig") || replacement.Contains("挖"))
-                    args["action"] = "dig";
-                else if (lower.Contains("sweep") || replacement.Contains("扫"))
-                    args["action"] = "sweep";
-                else if (lower.Contains("mop") || replacement.Contains("拖"))
-                    args["action"] = "mop";
-                else if (lower.Contains("deconstruct") || replacement.Contains("拆"))
-                    args["action"] = "deconstruct";
-                else if (lower.Contains("cancel") || replacement.Contains("取消"))
-                    args["action"] = "cancel";
-            }
-            return OrdersControlEntryTools.ControlOrders().Handler(args);
+            var preview = (JObject)args.DeepClone();
+            preview["domain"] = "planning";
+            preview["plan"] = replacement.Trim();
+            preview["dryRun"] = true;
+            preview["confirm"] = false;
+            preview["action"] = relative == "buildings/plans.oni" ? "build_area" : "auto_connect";
+            return PromoteWorldEditorFailure(BuildingControlTools.ControlBuilding().Handler(preview));
         }
 
-        private static CallToolResult ApplyDupeEdit(JObject args, string replacement)
+        private static bool IsEditableBuildCommandFile(string relative)
         {
-            if (string.IsNullOrWhiteSpace(args["action"]?.ToString()))
-                args["action"] = "command";
-            args["target"] = replacement.Trim();
-            return DupesControlEntryTools.ControlDupes().Handler(args);
+            return relative == "buildings/plans.oni"
+                || relative == "infrastructure/power.oni"
+                || relative == "infrastructure/liquid_conduits.oni"
+                || relative == "infrastructure/gas_conduits.oni"
+                || relative == "infrastructure/logic.oni"
+                || relative == "infrastructure/solid_conveyor.oni";
         }
 
     }

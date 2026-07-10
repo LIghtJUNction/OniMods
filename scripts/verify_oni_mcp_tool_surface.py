@@ -377,7 +377,11 @@ def main() -> None:
             alias_owner[alias] = canonical
 
     assert_dispatch_path(registry, "public static bool TryGetTool")
-    assert_dispatch_path(registry, "public static CallToolResult CallTool")
+    call_tool = extract_block(registry, "public static CallToolResult CallTool")
+    if "CallToolCore" in call_tool:
+        assert_dispatch_path(registry, "private static CallToolResult CallToolCore")
+    else:
+        assert_dispatch_path(registry, "public static CallToolResult CallTool")
     get_tools = extract_block(registry, "public static List<McpTool> GetTools()")
     if "_tools.Values" not in get_tools or ".Where" in get_tools:
         fail("GetTools must return all registered tools without Hidden filtering")

@@ -98,8 +98,22 @@ namespace OniMcp.Tools
                 for (int x = 0; x < row.Value.Length; x++)
                 {
                     string token = row.Value[x];
-                    if (token == "." || token == "?")
+                    if (token == ".")
                         continue;
+                    if (token == "?")
+                    {
+                        if (originalByCell.TryGetValue(Key(x, row.Key), out List<JObject> preserved))
+                        {
+                            foreach (JObject originalItem in preserved)
+                            {
+                                if (originalItem.Value<string>("buildingdef") == "dig")
+                                    digs.Add(new JObject { ["x"] = x, ["y"] = row.Key });
+                                else
+                                    buildings.Add(WithOffset((JObject)originalItem.DeepClone(), x, row.Key));
+                            }
+                        }
+                        continue;
+                    }
                     foreach (string part in token.Split(new[] { '+' }, StringSplitOptions.RemoveEmptyEntries))
                     {
                         JObject entry = BuildBlueprintEntry(part.Trim(), x, row.Key, originalByCell, templates, digs, out error);
@@ -238,43 +252,14 @@ namespace OniMcp.Tools
 
         private static string ResolveBlueprintPath(string relative)
         {
-            string name = relative.Substring(BlueprintPrefix.Length);
-            if (name == "index.md")
+            if (relative == "blueprints/index.md")
                 return null;
-            if (name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
-                name = name.Substring(0, name.Length - 3) + ".blueprint";
-            string path = Path.Combine(BlueprintDirectory(), name);
-            return File.Exists(path) ? path : null;
+            return TryGetBlueprintPath(relative, true, out string path, out _) ? path : null;
         }
 
         private static string FindBlueprintPath(string name)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                return null;
-            name = name.Trim();
-            if (name.StartsWith("/active/blueprints/", StringComparison.Ordinal))
-                return ResolveBlueprintPath(name.Substring("/active/".Length));
-            if (File.Exists(name))
-                return name;
-            string file = SafeBlueprintFileName(name);
-            string exact = Path.Combine(BlueprintDirectory(), file);
-            if (File.Exists(exact))
-                return exact;
-            return BlueprintFiles().FirstOrDefault(path =>
-                string.Equals(Path.GetFileName(path), file, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(Path.GetFileNameWithoutExtension(path), Path.GetFileNameWithoutExtension(file), StringComparison.OrdinalIgnoreCase));
-        }
-
-        private static string SafeBlueprintFileName(string name)
-        {
-            string file = Path.GetFileName(name.Trim());
-            if (file.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
-                file = file.Substring(0, file.Length - 3) + ".blueprint";
-            if (!file.EndsWith(".blueprint", StringComparison.OrdinalIgnoreCase))
-                file += ".blueprint";
-            foreach (char c in Path.GetInvalidFileNameChars())
-                file = file.Replace(c, '_');
-            return file;
+            return TryGetBlueprintPath(name, true, out string path, out _) ? path : null;
         }
 
         private static IEnumerable<string> BlueprintFiles()
@@ -282,8 +267,11 @@ namespace OniMcp.Tools
             string dir = BlueprintDirectory();
             if (!Directory.Exists(dir))
                 yield break;
+            if (!ValidateBlueprintPathComponents(dir, out _))
+                yield break;
             foreach (string path in Directory.GetFiles(dir, "*.blueprint").OrderBy(Path.GetFileName))
-                yield return path;
+                if (IsBlueprintDiskPath(path) && ValidateBlueprintPathComponents(path, out _))
+                    yield return Path.GetFullPath(path);
         }
 
         private static string BlueprintDirectory()
@@ -293,7 +281,9 @@ namespace OniMcp.Tools
 
         private static JObject ReadBlueprintJson(string path)
         {
-            return JObject.Parse(File.ReadAllText(path));
+            if (!ValidateBlueprintIoPath(path, out string error))
+                throw new InvalidOperationException("Refusing to read a blueprint outside the blueprint directory.");
+            return JObject.Parse(ReadBlueprintText(path));
         }
 
         private static JObject EmptyBlueprint(string name)
@@ -411,7 +401,7 @@ namespace OniMcp.Tools
 
             try
             {
-                object blueprint = ctor.Invoke(new object[] { new StringBuilder(File.ReadAllText(path)) });
+                object blueprint = ctor.Invoke(new object[] { new StringBuilder(ReadBlueprintText(path)) });
                 var origin = new Vector2I(x, y);
                 visualize.Invoke(null, new[] { origin, blueprint });
                 use.Invoke(null, new[] { origin, blueprint });

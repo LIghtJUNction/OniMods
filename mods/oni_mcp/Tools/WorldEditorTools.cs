@@ -136,29 +136,80 @@ namespace OniMcp.Tools
                 return CallToolResult.Error("batch supports at most 20 steps");
 
             bool stopOnError = Bool(args, "stopOnError");
-            var results = new JArray();
+            if (args["stopOnError"] == null)
+                stopOnError = true;
+            var compiled = new JArray();
+            int plannedMutations = 0;
             for (int i = 0; i < items.Count; i++)
             {
-                if (!(items[i] is JObject step))
-                {
-                    results.Add(StepResult(i, "world_editor", "invalid", CallToolResult.Error("step must be object")));
-                    if (stopOnError) break;
-                    continue;
-                }
-
+                if (!(items[i] is JObject rawStep))
+                    return CallToolResult.Error("batch preflight failed at step " + i + ": step must be object");
+                var step = InheritWorldEditorExecutionPolicy(args, rawStep);
                 string tool = (step["tool"]?.ToString() ?? "world_editor").Trim().ToLowerInvariant();
-                var result = CallBatchStep(tool, step);
-                results.Add(StepResult(i, tool, Text(step, "command", "action"), result));
-                if (stopOnError && result.IsError)
-                    break;
+                if (!PreflightBatchStep(tool, step, out string error))
+                    return CallToolResult.Error("batch preflight failed at step " + i + ": " + error);
+                bool mutating = StepMayMutate(tool, step);
+                if (!mutating && IsWorldEditorReadStep(tool, step))
+                {
+                    step["syncView"] = false;
+                    step["focusCamera"] = false;
+                }
+                if (mutating && plannedMutations > 0)
+                    return CallToolResult.Error("batch supports at most one potentially mutating step");
+                if (mutating && i != items.Count - 1)
+                    return CallToolResult.Error("the potentially mutating batch step must be last; preceding steps must be read-only");
+                if (mutating)
+                    plannedMutations++;
+                compiled.Add(new JObject { ["index"] = i, ["tool"] = tool, ["mutating"] = mutating, ["step"] = step });
             }
 
-            return JsonResult(new JObject
+            if (!WorldEditorExecutionAllowed(args))
+                return WorldEditorPreview("batch", string.Empty, compiled);
+
+            var results = new JArray();
+            int applied = 0;
+            bool partial = false;
+            bool anyFailure = false;
+            int mutatedSteps = 0;
+            foreach (JObject compiledStep in compiled)
+            {
+                int i = compiledStep.Value<int>("index");
+                string tool = compiledStep.Value<string>("tool");
+                bool mutating = compiledStep.Value<bool>("mutating");
+                var step = (JObject)compiledStep["step"];
+                if (!WorldEditorExecutionAllowed(step))
+                {
+                    results.Add(new JObject { ["index"] = i, ["tool"] = tool, ["mutating"] = mutating, ["preview"] = true, ["isError"] = false, ["partial"] = false, ["applied"] = 0, ["step"] = step });
+                    continue;
+                }
+                var result = CallBatchStep(tool, step);
+                bool failed = WorldEditorResultFailed(result, step);
+                int childActual = ResultAppliedCount(result);
+                anyFailure = anyFailure || failed;
+                if (mutating && (!failed || childActual > 0))
+                    mutatedSteps++;
+                applied += BatchStepAppliedCount(childActual, mutating, failed);
+                partial = partial || BatchStepReportsPartial(result, failed, childActual);
+                results.Add(StepResult(i, tool, Text(step, "command", "action"), result, mutating, step));
+                if (stopOnError && failed)
+                    break;
+            }
+            partial = partial || (anyFailure && mutatedSteps > 0);
+
+            var summary = new JObject
             {
                 ["ok"] = results.All(item => !(bool)item["isError"]),
+                ["partial"] = partial,
+                ["applied"] = applied,
+                ["mutatedSteps"] = mutatedSteps,
                 ["requested"] = items.Count,
+                ["executed"] = results.Count,
+                ["failed"] = results.Count(item => (bool)item["isError"]),
                 ["results"] = results
-            });
+            };
+            return ToolUtil.GetBool(summary, "ok", false)
+                ? JsonResult(summary)
+                : CallToolResult.Error(JsonResultText(summary));
         }
 
         private static CallToolResult CallBatchStep(string tool, JObject step)
@@ -183,16 +234,35 @@ namespace OniMcp.Tools
             }
         }
 
-        private static JObject StepResult(int index, string tool, string action, CallToolResult result)
+        private static JObject StepResult(int index, string tool, string action, CallToolResult result, bool mutating, JObject args = null)
         {
+            bool failed = WorldEditorResultFailed(result, args);
+            int childActual = ResultAppliedCount(result);
             return new JObject
             {
                 ["index"] = index,
                 ["tool"] = tool,
                 ["action"] = action ?? string.Empty,
-                ["isError"] = result == null || result.IsError,
+                ["mutating"] = mutating,
+                ["isError"] = failed,
+                ["partial"] = BatchStepReportsPartial(result, failed, childActual),
+                ["applied"] = BatchStepAppliedCount(childActual, mutating, failed),
                 ["text"] = TrimText(result?.Content?.FirstOrDefault()?.Text ?? string.Empty, 900)
             };
+        }
+
+        private static int BatchStepAppliedCount(int childActual, bool mutating, bool failed)
+        {
+            if (!mutating)
+                return 0;
+            if (failed)
+                return childActual;
+            return childActual > 0 ? childActual : 1;
+        }
+
+        private static bool BatchStepReportsPartial(CallToolResult result, bool failed, int childActual)
+        {
+            return failed ? childActual > 0 : ResultReportsPartial(result);
         }
 
         private static string TrimText(string text, int max)
@@ -250,6 +320,7 @@ namespace OniMcp.Tools
                 ["confirm"] = new McpToolParameter { Type = "boolean", Description = "Required for edits that create orders or blueprints.", Required = false },
                 ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "Preview edit translation without applying where supported.", Required = false },
                 ["stopOnError"] = new McpToolParameter { Type = "boolean", Description = "Batch mode: stop after first failed step.", Required = false },
+                ["allowPartial"] = new McpToolParameter { Type = "boolean", Description = "Explicitly allow multi-block or child partial results when rollback is unavailable; default false.", Required = false },
                 ["payload"] = new McpToolParameter { Type = "object", Description = "Advanced routing payload merged into generated child tool calls.", Required = false }
             };
         }

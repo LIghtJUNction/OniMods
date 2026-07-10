@@ -189,14 +189,32 @@ namespace OniMcp.Tools
             if (string.Equals(oldName, newName, StringComparison.Ordinal))
                 return CallToolResult.Text(JsonConvert.SerializeObject(new { ok = true, changed = false, name = oldName }, McpJsonUtil.Settings));
 
-            var renameArgs = CopyPayload(args);
+            var renameArgs = InheritWorldEditorExecutionPolicy(args, CopyPayload(args));
             renameArgs["domain"] = "command";
             renameArgs["action"] = "rename";
             renameArgs["id"] = dupe.GetComponent<KPrefabID>()?.InstanceID ?? -1;
             renameArgs["newName"] = newName.Trim();
-            renameArgs["confirm"] = true;
 
             return DupesControlEntryTools.ControlDupes().Handler(renameArgs);
+        }
+
+        private static CallToolResult PreflightDupeDetailEdit(string relative, string replacement)
+        {
+            string error;
+            var dupe = ResolveDupeDetailFile(relative, out error);
+            if (dupe == null)
+                return CallToolResult.Error(error);
+            string newName = MarkdownField(replacement, "Name", "姓名", "名称");
+            if (string.IsNullOrWhiteSpace(newName))
+                return CallToolResult.Error("Duplicant detail edits require a non-empty Name field.");
+            return JsonResult(new JObject
+            {
+                ["ok"] = true,
+                ["phase"] = "preflight",
+                ["id"] = dupe.GetComponent<KPrefabID>()?.InstanceID ?? -1,
+                ["oldName"] = dupe.GetProperName(),
+                ["newName"] = newName.Trim()
+            });
         }
 
         private static string MarkdownField(string markdown, params string[] fieldNames)

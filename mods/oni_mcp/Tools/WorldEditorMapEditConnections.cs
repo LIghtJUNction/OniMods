@@ -21,6 +21,7 @@ namespace OniMcp.Tools
             var results = new JArray();
             var seen = new HashSet<string>(StringComparer.Ordinal);
             bool anyError = false;
+            int applied = 0;
             string prefabId = PrefabForConnectionMap(parentArgs["sourcePath"]?.ToString());
 
             foreach (var cell in cells)
@@ -50,7 +51,10 @@ namespace OniMcp.Tools
                     };
 
                     var result = BuildingControlTools.ControlBuilding().Handler(call);
-                    anyError = anyError || result.IsError;
+                    bool failed = WorldEditorResultFailed(result, parentArgs);
+                    anyError = anyError || failed;
+                    if (!failed)
+                        applied += ResultAppliedCount(result);
                     results.Add(new JObject
                     {
                         ["from"] = new JObject { ["x"] = cell.X, ["y"] = cell.Y },
@@ -58,21 +62,24 @@ namespace OniMcp.Tools
                         ["glyph"] = glyph.ToString(),
                         ["dir"] = dir.Name,
                         ["prefabId"] = prefabId,
-                        ["ok"] = !result.IsError,
-                        ["error"] = result.IsError ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
+                        ["ok"] = !failed,
+                        ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
                         ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
                     });
                 }
             }
 
-            return JsonResult(new JObject
+            var summary = new JObject
             {
                 ["ok"] = !anyError,
                 ["kind"] = "connection",
                 ["prefabId"] = prefabId,
                 ["segments"] = results.Count,
+                ["applied"] = applied,
+                ["failed"] = anyError ? 1 : 0,
                 ["results"] = results
-            });
+            };
+            return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
         }
 
         private static bool TryGetConnectionGlyph(string token, out char glyph)

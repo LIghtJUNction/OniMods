@@ -261,6 +261,7 @@ namespace OniMcp.Tools
             sb.AppendLine("```text");
             sb.AppendLine("# Lines beginning with # are ignored.");
             sb.AppendLine("# Add one command per line, or remove '# ' from an example and edit its values.");
+            sb.AppendLine("# Safety limit: submit exactly one executable command per edit.");
             sb.AppendLine("# Do not rewrite the table above; it is a compact read-only snapshot.");
             foreach (string example in examples)
                 sb.AppendLine("# " + example);

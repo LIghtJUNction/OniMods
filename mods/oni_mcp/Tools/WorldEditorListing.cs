@@ -59,6 +59,7 @@ namespace OniMcp.Tools
                 {
                     add("index.html", "file", "Visual floor layout HTML page of the CURRENT visible camera screen.");
                     add("index.md", "file", "Token-efficient Markdown map of the CURRENT visible camera screen.");
+                    add("viewport.md", "file", "Editable Markdown map of the current camera viewport; read with format=edit before changing cells.");
                     add("layers/", "dir", "Visual floor layout pages divided by height layers.");
                 }
                 else if (relative == "map/layers/")
@@ -117,7 +118,7 @@ namespace OniMcp.Tools
                     add("plans.oni", "file", "Desired building plan. SEARCH/REPLACE creates blueprints.");
                 }
                 else if (relative == "orders/")
-                    add("orders.oni", "file", "Desired orders. SEARCH/REPLACE creates dig/sweep/mop/cancel/deconstruct orders.");
+                    add("orders.oni", "file", "Read-only legacy guide. Use /active/ops/orders.md for executable orders.");
                 else if (relative == "resources/")
                 {
                     add("inventory.oni", "file", "Resource inventory.");
@@ -146,6 +147,7 @@ namespace OniMcp.Tools
  add("priorities.md", "file", "Editable duplicant priority table. SEARCH/REPLACE applies job priority changes.");
  add("food.md", "file", "Editable food permission table. SEARCH/REPLACE applies consumable permission changes.");
  add("skills.md", "file", "Editable duplicant skill tree table. SEARCH/REPLACE learns skills.");
+                add("dupes.md", "file", "Editable duplicant rename command table.");
                 add("research.md", "file", "Editable research queue/tree file. SEARCH/REPLACE sets or clears research.");
             }
             else if (relative == "ops/")

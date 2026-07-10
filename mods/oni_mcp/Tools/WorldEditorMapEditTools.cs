@@ -28,20 +28,10 @@ namespace OniMcp.Tools
 
         private static CallToolResult ApplyMapEdit(JObject args, string search, string replacement)
         {
-            string error;
-            List<MapEditCell> changes;
-            if (!TryParseMapEditChangesFromPatchCoordinates(search, replacement, out changes, out error))
-            {
-                string current;
-                string readError;
-                if (!TryReadVirtualFileText(args["sourcePath"]?.ToString(), out current, out readError))
-                    return CallToolResult.Error("Cannot read current map before applying map edit: " + readError);
-                changes = ParseMapEditChanges(current, search, replacement, out error);
-            }
-            if (changes == null)
+            if (!TryCompileMapEdit(args, search, replacement, out List<MapEditCell> changes, out string error))
                 return CallToolResult.Error(error);
-            if (changes.Count == 0)
-                return CallToolResult.Error("Map edit changed no grid cells; edit copied map characters directly.");
+            if (!WorldEditorExecutionAllowed(args))
+                return WorldEditorPreview("map", args["sourcePath"]?.ToString(), new JObject { ["changedCells"] = changes.Count });
 
             int writeBudget = MapEditWriteBudget(args);
             bool partial = changes.Count > writeBudget;
@@ -49,6 +39,8 @@ namespace OniMcp.Tools
 
             var results = new JArray();
             bool anyError = false;
+            bool childPartial = false;
+            int appliedCells = 0;
             foreach (var group in executableChanges.GroupBy(ChangeKind))
             {
                 CallToolResult result;
@@ -61,26 +53,33 @@ namespace OniMcp.Tools
                 else
                     return UnsupportedMapEdit(group);
 
-                anyError = anyError || result.IsError;
+                bool failed = WorldEditorResultFailed(result, args);
+                anyError = anyError || failed;
+                childPartial = childPartial || ResultReportsPartial(result);
+                if (!failed)
+                    appliedCells += ResultAppliedCount(result);
                 results.Add(new JObject
                 {
                     ["kind"] = group.Key,
-                    ["ok"] = !result.IsError,
+                    ["ok"] = !failed,
                     ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
                 });
+                if (failed)
+                    break;
             }
 
-            return JsonResult(new JObject
+            var summary = new JObject
             {
                 ["ok"] = !anyError,
                 ["sourcePath"] = args["sourcePath"]?.ToString(),
                 ["changedCells"] = changes.Count,
-                ["executedCells"] = executableChanges.Count,
-                ["remainingCells"] = Math.Max(0, changes.Count - executableChanges.Count),
-                ["partial"] = partial,
-                ["next"] = partial ? "Re-run the same SEARCH/REPLACE edit to continue; already-applied cells will be skipped." : "complete",
+                ["executedCells"] = appliedCells,
+                ["remainingCells"] = Math.Max(0, changes.Count - appliedCells),
+                ["partial"] = partial || childPartial || (anyError && appliedCells > 0),
+                ["next"] = partial ? "Re-read the map, then submit a fresh patch for the remaining cells." : "complete",
                 ["results"] = results
-            });
+            };
+            return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
         }
 
         private static CallToolResult ApplyOrderMapEdit(JObject parentArgs, string action, IEnumerable<MapEditCell> cells)
@@ -88,6 +87,7 @@ namespace OniMcp.Tools
             var byToken = cells.GroupBy(c => c.ToToken);
             var results = new JArray();
             bool anyError = false;
+            int applied = 0;
             foreach (var group in byToken)
             {
                 int priority = Math.Max(1, Math.Min(ParsePriority(group.Key) ?? ToolUtil.GetInt(parentArgs, "priority") ?? 5, 9));
@@ -117,7 +117,10 @@ namespace OniMcp.Tools
                     }
 
                     var result = OrdersControlEntryTools.ControlOrders().Handler(orderArgs);
-                    anyError = anyError || result.IsError;
+                    bool failed = WorldEditorResultFailed(result, parentArgs);
+                    anyError = anyError || failed;
+                    if (!failed)
+                        applied += ResultAppliedCount(result);
                     results.Add(new JObject
                     {
                         ["token"] = group.Key,
@@ -125,14 +128,15 @@ namespace OniMcp.Tools
                         ["priority"] = priority,
                         ["area"] = RectObject(bounds),
                         ["cells"] = RectCellCount(bounds),
-                        ["ok"] = !result.IsError,
-                        ["error"] = result.IsError ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
+                        ["ok"] = !failed,
+                        ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
                         ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
                     });
                 }
             }
 
-            return JsonResult(new JObject { ["ok"] = !anyError, ["results"] = results });
+            var summary = new JObject { ["ok"] = !anyError, ["applied"] = applied, ["failed"] = anyError ? 1 : 0, ["results"] = results };
+            return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
         }
 
         private static int MapEditWriteBudget(JObject args)
@@ -177,6 +181,7 @@ namespace OniMcp.Tools
         {
             var results = new JArray();
             bool anyError = false;
+            int applied = 0;
             foreach (var group in cells.GroupBy(c => c.ToToken))
             {
                 char buildSymbol;
@@ -207,7 +212,10 @@ namespace OniMcp.Tools
                     buildArgs["material"] = material;
 
                 var result = BuildingControlTools.ControlBuilding().Handler(buildArgs);
-                anyError = anyError || result.IsError;
+                bool failed = WorldEditorResultFailed(result, parentArgs);
+                anyError = anyError || failed;
+                if (!failed)
+                    applied += ResultAppliedCount(result);
                 results.Add(new JObject
                 {
                     ["token"] = group.Key,
@@ -216,13 +224,14 @@ namespace OniMcp.Tools
                     ["priority"] = priority,
                     ["material"] = material,
                     ["anchors"] = anchors,
-                    ["ok"] = !result.IsError,
-                    ["error"] = result.IsError ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
+                    ["ok"] = !failed,
+                    ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
                     ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
                 });
             }
 
-            return JsonResult(new JObject { ["ok"] = !anyError, ["results"] = results });
+            var summary = new JObject { ["ok"] = !anyError, ["applied"] = applied, ["failed"] = anyError ? 1 : 0, ["results"] = results };
+            return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
         }
 
         private static CallToolResult UnsupportedMapEdit(IEnumerable<MapEditCell> cells)
@@ -276,15 +285,30 @@ namespace OniMcp.Tools
                     return null;
                 }
 
-                int offset = FindTokenSequence(currentSymbols, item.Value);
+                int offset = FindUniqueTokenSequence(currentSymbols, item.Value);
+                if (offset == -2)
+                {
+                    error = "SEARCH row Y=" + item.Key + " is ambiguous in the current map; include explicit X headers.";
+                    return null;
+                }
                 if (offset < 0)
                 {
                     error = "SEARCH row Y=" + item.Key + " no longer matches current map. `?` matches one token; `*` matches one token; `/regex/` or `~regex` matches one token by regex.";
                     return null;
                 }
 
-                int count = Math.Min(item.Value.Length, replacementSymbols.Length);
-                for (int i = 0; i < count && offset + i < width; i++)
+                if (item.Value.Length != replacementSymbols.Length)
+                {
+                    error = "SEARCH and REPLACE row Y=" + item.Key + " must have exactly the same expanded token length.";
+                    return null;
+                }
+                int count = item.Value.Length;
+                if (offset + count > currentSymbols.Length || offset + count > width)
+                {
+                    error = "SEARCH/REPLACE row Y=" + item.Key + " exceeds the current row or X header width.";
+                    return null;
+                }
+                for (int i = 0; i < count; i++)
                 {
                     string currentToken = currentSymbols[offset + i];
                     if (ReplacementKeepsOriginal(replacementSymbols[i]))
@@ -349,14 +373,32 @@ namespace OniMcp.Tools
                 .Trim()
                 .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
                 .Where(token => token != "┆")
+                .SelectMany(ExpandMapRowToken)
                 .ToArray();
             return symbols.Length > 0;
         }
 
-        private static int FindTokenSequence(string[] haystack, string[] needle)
+        private static IEnumerable<string> ExpandMapRowToken(string token)
+        {
+            token = (token ?? string.Empty).Trim();
+            int marker = token.LastIndexOf('x');
+            if (marker > 0 && marker + 1 < token.Length
+                && int.TryParse(token.Substring(marker + 1), out int count)
+                && count >= 2 && count <= 5)
+            {
+                string value = token.Substring(0, marker);
+                for (int i = 0; i < count; i++)
+                    yield return value;
+                yield break;
+            }
+            yield return token;
+        }
+
+        private static int FindUniqueTokenSequence(string[] haystack, string[] needle)
         {
             if (needle == null || needle.Length == 0 || haystack == null || haystack.Length < needle.Length)
                 return -1;
+            int match = -1;
             for (int i = 0; i <= haystack.Length - needle.Length; i++)
             {
                 bool ok = true;
@@ -368,10 +410,13 @@ namespace OniMcp.Tools
                         break;
                     }
                 }
-                if (ok)
-                    return i;
+                if (!ok)
+                    continue;
+                if (match >= 0)
+                    return -2;
+                match = i;
             }
-            return -1;
+            return match;
         }
 
         private static bool MapSearchMatchesCurrent(string current, string search)
@@ -396,7 +441,7 @@ namespace OniMcp.Tools
                 string[] currentSymbols;
                 if (!currentRows.TryGetValue(row.Key, out currentSymbols))
                     return false;
-                if (FindTokenSequence(currentSymbols, row.Value) < 0)
+                if (FindUniqueTokenSequence(currentSymbols, row.Value) < 0)
                     return false;
             }
 
@@ -425,7 +470,7 @@ namespace OniMcp.Tools
         {
             return (text ?? string.Empty).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
                 .Where(part => part != "┆")
-                .Select(part => { int value; return int.TryParse(part, out value) ? value : 0; })
+                .Select(part => { int value; return int.TryParse(part, out value) ? value : -1; })
                 .ToArray();
         }
 

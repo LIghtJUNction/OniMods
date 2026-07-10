@@ -21,6 +21,11 @@ namespace OniMcp.Tools
                 || relative == "management/research.md";
         }
 
+        private static bool IsEditableManagementMarkdown(string relative)
+        {
+            return IsManagementMarkdown(relative) && StripManagementQuery(relative) != "management/index.md";
+        }
+
         private static CallToolResult ReadManagementMarkdown(JObject args, string path, string relative)
         {
             relative = StripManagementQuery(relative);
@@ -49,25 +54,64 @@ namespace OniMcp.Tools
 
         private static CallToolResult ApplyManagementMarkdownEdit(JObject args, string relative, string replacement)
         {
+            var lines = ExtractManagementCommandLines(replacement).ToList();
+            if (lines.Count == 0)
+                return CallToolResult.Error("No executable management edit lines found. Put command lines under ## Edit Commands.");
+            if (lines.Count > 1)
+                return CallToolResult.Error("Management edits support exactly one write command because game mutations are not transactional.");
+            foreach (string line in lines)
+            {
+                string verb = NormalizeManagementVerb(FirstWord(line));
+                if (!ManagementCommandSupported(relative, verb))
+                    return CallToolResult.Error("Unsupported management command before execution: " + line);
+            }
+
             var results = new JArray();
             bool anyError = false;
+            int applied = 0;
 
-            foreach (string line in ExtractManagementCommandLines(replacement))
+            foreach (string line in lines)
             {
-                var result = ExecuteManagementCommand(relative, line, args);
-                anyError = anyError || result.IsError;
+                string verb = NormalizeManagementVerb(FirstWord(line));
+                var childArgs = InheritWorldEditorExecutionPolicy(args, ParseCommandKeyValues(line));
+                if (ToolUtil.GetBool(childArgs, "dryRun", false) || !ToolUtil.GetBool(childArgs, "confirm", false))
+                {
+                    results.Add(new JObject { ["line"] = line, ["ok"] = true, ["preview"] = true, ["arguments"] = childArgs });
+                    continue;
+                }
+                var result = ExecuteManagementCommand(relative, verb, childArgs);
+                bool failed = WorldEditorResultFailed(result, childArgs);
+                anyError = anyError || failed;
+                if (!failed)
+                    applied++;
                 results.Add(new JObject
                 {
                     ["line"] = line,
-                    ["ok"] = !result.IsError,
+                    ["ok"] = !failed,
                     ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
                 });
+                if (failed)
+                    break;
             }
 
-            if (results.Count == 0)
-                return CallToolResult.Error("No executable management edit lines found. Put command lines under ## Edit Commands.");
+            var summary = new JObject { ["ok"] = !anyError, ["partial"] = anyError && applied > 0, ["applied"] = applied, ["failed"] = anyError ? 1 : 0, ["file"] = relative, ["results"] = results };
+            return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
+        }
 
-            return JsonResult(new JObject { ["ok"] = !anyError, ["file"] = relative, ["results"] = results });
+        private static CallToolResult PreflightManagementMarkdownEdit(string relative, string replacement)
+        {
+            var lines = ExtractManagementCommandLines(replacement).ToList();
+            if (lines.Count == 0)
+                return CallToolResult.Error("No executable management edit lines found. Put command lines under ## Edit Commands.");
+            if (lines.Count > 1)
+                return CallToolResult.Error("Management edits support exactly one write command because game mutations are not transactional.");
+            foreach (string line in lines)
+            {
+                string verb = NormalizeManagementVerb(FirstWord(line));
+                if (!ManagementCommandSupported(relative, verb))
+                    return CallToolResult.Error("Unsupported management command: " + line);
+            }
+            return JsonResult(new JObject { ["ok"] = true, ["phase"] = "preflight", ["commands"] = new JArray(lines) });
         }
 
         private static IEnumerable<string> ExtractManagementCommandLines(string text)
@@ -96,10 +140,19 @@ namespace OniMcp.Tools
                 || head == "learn_skill" || head == "research" || head == "clear_research";
         }
 
-        private static CallToolResult ExecuteManagementCommand(string relative, string line, JObject parentArgs)
+        private static bool ManagementCommandSupported(string relative, string verb)
         {
-            string verb = NormalizeManagementVerb(FirstWord(line));
-            var kv = ParseCommandKeyValues(line);
+            if (relative == "management/schedule.md") return verb == "set_block" || verb == "assign_dupe" || verb == "create_schedule";
+            if (relative == "management/priorities.md") return verb == "priority" || verb == "priority_settings";
+            if (relative == "management/dupes.md") return verb == "rename";
+            if (relative == "management/food.md") return verb == "food" || verb == "food_policy";
+            if (relative == "management/skills.md") return verb == "learn_skill";
+            if (relative == "management/research.md") return verb == "research" || verb == "clear_research";
+            return false;
+        }
+
+        private static CallToolResult ExecuteManagementCommand(string relative, string verb, JObject kv)
+        {
             if (relative == "management/schedule.md")
                 return ExecuteScheduleCommand(verb, kv);
             if (relative == "management/priorities.md")
