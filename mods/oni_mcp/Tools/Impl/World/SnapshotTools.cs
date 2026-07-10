@@ -4,6 +4,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
+using OniMcp.Server;
 using OniMcp.Support;
 using UnityEngine;
 
@@ -121,7 +122,7 @@ namespace OniMcp.Tools
                     if (ToolUtil.GetBool(args, "delta", false))
                     {
                         string deltaKey = BuildDeltaKey(args, profile, worldId, watchKeys, watchOnly);
-                        var delta = DeltaCache.Apply(ToolSessionContext.SessionId, deltaKey, snapshot, ToolUtil.GetBool(args, "resetDelta", false));
+                        var delta = DeltaCache.Apply(McpHttpServer.CurrentSessionId ?? "global", deltaKey, snapshot, ToolUtil.GetBool(args, "resetDelta", false));
                         return CallToolResult.Text(JsonConvert.SerializeObject(delta, McpJsonUtil.Settings));
                     }
 

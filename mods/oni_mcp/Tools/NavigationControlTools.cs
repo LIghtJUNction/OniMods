@@ -15,8 +15,8 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Aliases = new List<string> { "spatial_control", "view_control" },
-                Tags = new List<string> { "camera", "navigation", "screenshot", "overlay" },
-                Description = "空间导航聚合入口：domain=camera；处理视角、覆盖层和截图。不传 domain 时按 action 自动判断。",
+                Tags = new List<string> { "camera", "view", "screenshot", "overlay" },
+                Description = "相机与视图聚合入口：domain=camera；处理相机移动、世界切换、覆盖层和截图。不传 domain 时按已知相机 action 自动判断。",
                 Parameters = Params(),
                 Handler = args =>
                 {
@@ -41,7 +41,7 @@ namespace OniMcp.Tools
                         case "mouse":
                             return CallToolResult.Error("agent pointer control has been removed. Use regular semantic tools with the required task text; the task text is shown near the player's mouse automatically.");
                         default:
-                            return CallToolResult.Error("domain must be camera");
+                            return CallToolResult.Error("domain must be camera and action must be get_view, set_active_world, set_view, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot");
                     }
                 }
             };
@@ -67,7 +67,7 @@ namespace OniMcp.Tools
                 case "coord_screenshot":
                     return "camera";
                 default:
-                    return "pointer";
+                    return string.Empty;
             }
         }
 
@@ -75,37 +75,20 @@ namespace OniMcp.Tools
         {
             return new Dictionary<string, McpToolParameter>
             {
-                ["domain"] = new McpToolParameter { Type = "string", Description = "camera 或 pointer；省略时按 action 自动判断", Required = false, EnumValues = new List<string> { "camera", "pointer" } },
-                ["action"] = new McpToolParameter { Type = "string", Description = "camera=get_view/set_active_world/set_view/move/switch_view/focus_cell/focus_dupe/screenshot/coordinate_screenshot；pointer=get/user_mouse/aim_cell/aim_world/nudge/select_tool/say/left_click/hold_left/jump/jump_point/clear", Required = true },
-                ["agentId"] = new McpToolParameter { Type = "string", Description = "domain=pointer：稳定指针名，省略使用默认 agent", Required = false },
-                ["displayText"] = new McpToolParameter { Type = "string", Description = "domain=pointer：显示在指针旁的短说明", Required = false },
-                ["jumpPointAction"] = new McpToolParameter { Type = "string", Description = "domain=pointer action=jump_point：set/list/clear", Required = false, EnumValues = new List<string> { "set", "list", "clear" } },
-                ["tool"] = new McpToolParameter { Type = "string", Description = "domain=pointer action=select_tool：inspect/build/dig/cancel/sweep/mop/disinfect/harvest/deconstruct", Required = false },
-                ["prefabId"] = new McpToolParameter { Type = "string", Description = "domain=pointer action=select_tool tool=build：建筑 prefabId", Required = false },
-                ["material"] = new McpToolParameter { Type = "string", Description = "domain=pointer action=select_tool tool=build：材料 Tag；auto 自动选择", Required = false },
-                ["facade"] = new McpToolParameter { Type = "string", Description = "domain=pointer action=select_tool tool=build：外观 ID", Required = false },
-                ["priority"] = new McpToolParameter { Type = "integer", Description = "domain=pointer action=select_tool：优先级 1-9", Required = false },
-                ["message"] = new McpToolParameter { Type = "string", Description = "domain=pointer action=say：短消息", Required = false },
-                ["durationSeconds"] = new McpToolParameter { Type = "number", Description = "domain=pointer action=say：显示秒数", Required = false },
-                ["code"] = new McpToolParameter { Type = "string", Description = "domain=pointer action=jump/jump_point：跳转点代号；code=mouse 跳到玩家鼠标格", Required = false },
-                ["label"] = new McpToolParameter { Type = "string", Description = "指针、跳转点或相机标签；按 action 解释", Required = false },
-                ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；按 action 解释", Required = false },
-                ["x"] = new McpToolParameter { Type = "number", Description = "目标 X；camera 用世界/格子坐标，pointer 用格子或世界坐标", Required = false },
-                ["y"] = new McpToolParameter { Type = "number", Description = "目标 Y；camera 用世界/格子坐标，pointer 用格子或世界坐标", Required = false },
+                ["domain"] = new McpToolParameter { Type = "string", Description = "相机域；省略时按已知相机 action 自动判断", Required = false, EnumValues = new List<string> { "camera" } },
+                ["action"] = new McpToolParameter { Type = "string", Description = "相机动作：get_view、set_active_world、set_view、move、switch_view、focus_cell、focus_dupe、screenshot、coordinate_screenshot", Required = true, EnumValues = new List<string> { "get_view", "set_active_world", "set_view", "move", "switch_view", "focus_cell", "focus_dupe", "screenshot", "coordinate_screenshot" } },
+                ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID；set_active_world 必填，其他 action 默认当前激活世界", Required = false },
+                ["requireDiscovered"] = new McpToolParameter { Type = "boolean", Description = "set_active_world：是否要求目标世界已被发现，默认 true", Required = false },
+                ["lookAtSurface"] = new McpToolParameter { Type = "boolean", Description = "set_active_world：世界未被访问时是否 LookAtSurface，默认 true", Required = false },
+                ["x"] = new McpToolParameter { Type = "number", Description = "set_view/move jump 的目标 X，或 focus_cell 的格子 X", Required = false },
+                ["y"] = new McpToolParameter { Type = "number", Description = "set_view/move jump 的目标 Y，或 focus_cell 的格子 Y", Required = false },
                 ["x1"] = new McpToolParameter { Type = "integer", Description = "domain=camera action=coordinate_screenshot：区域左下 X", Required = false },
                 ["y1"] = new McpToolParameter { Type = "integer", Description = "domain=camera action=coordinate_screenshot：区域左下 Y", Required = false },
                 ["x2"] = new McpToolParameter { Type = "integer", Description = "domain=camera action=coordinate_screenshot：区域右上 X", Required = false },
                 ["y2"] = new McpToolParameter { Type = "integer", Description = "domain=camera action=coordinate_screenshot：区域右上 Y", Required = false },
                 ["areaId"] = new McpToolParameter { Type = "string", Description = "domain=camera action=coordinate_screenshot：区域句柄", Required = false },
-                ["direction"] = new McpToolParameter { Type = "string", Description = "domain=pointer action=nudge/hold_left/jump：right/left/up/down", Required = false, EnumValues = new List<string> { "right", "left", "up", "down" } },
-                ["steps"] = new McpToolParameter { Type = "integer", Description = "domain=pointer action=nudge/jump：方向移动格数", Required = false },
-                ["dx"] = new McpToolParameter { Type = "number", Description = "相对 X 偏移；camera move pan 或 pointer jump/nudge", Required = false },
-                ["dy"] = new McpToolParameter { Type = "number", Description = "相对 Y 偏移；camera move pan 或 pointer jump/nudge", Required = false },
-                ["length"] = new McpToolParameter { Type = "integer", Description = "domain=pointer action=hold_left：覆盖格数，包含起点", Required = false },
-                ["allowFootprintDrag"] = new McpToolParameter { Type = "boolean", Description = "domain=pointer action=hold_left：允许多格 footprint 拖拽", Required = false },
-                ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "domain=pointer build：自动标记可挖阻挡", Required = false },
-                ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "domain=pointer build：单次最多自动挖掘格", Required = false },
-                ["moveCamera"] = new McpToolParameter { Type = "boolean", Description = "domain=pointer action=jump：是否同步移动相机", Required = false },
+                ["dx"] = new McpToolParameter { Type = "number", Description = "move pan：X 方向偏移，默认 0", Required = false },
+                ["dy"] = new McpToolParameter { Type = "number", Description = "move pan：Y 方向偏移，默认 0", Required = false },
                 ["zoom"] = new McpToolParameter { Type = "number", Description = "相机缩放；按 action 解释", Required = false },
                 ["snap"] = new McpToolParameter { Type = "boolean", Description = "domain=camera action=set_view/move：是否立即跳转", Required = false },
                 ["mode"] = new McpToolParameter { Type = "string", Description = "domain=camera action=move：pan 或 jump", Required = false, EnumValues = new List<string> { "pan", "jump" } },
@@ -122,10 +105,7 @@ namespace OniMcp.Tools
                 ["showGrid"] = new McpToolParameter { Type = "boolean", Description = "domain=camera action=coordinate_screenshot：是否显示格线", Required = false },
                 ["showCoordinates"] = new McpToolParameter { Type = "boolean", Description = "domain=camera action=coordinate_screenshot：是否显示坐标", Required = false },
                 ["includeCellLabels"] = new McpToolParameter { Type = "boolean", Description = "domain=camera action=coordinate_screenshot：是否标注格心坐标", Required = false },
-                ["step"] = new McpToolParameter { Type = "integer", Description = "domain=camera action=coordinate_screenshot：坐标标签步长", Required = false },
-                ["confirm"] = new McpToolParameter { Type = "boolean", Description = "domain=pointer left_click/hold_left 执行修改必须 true；dryRun=true 可省略", Required = false },
-                ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "domain=pointer left_click/hold_left：仅预检", Required = false },
-                ["clear"] = new McpToolParameter { Type = "boolean", Description = "domain=pointer action=say：清除气泡；action=clear 删除指针", Required = false }
+                ["step"] = new McpToolParameter { Type = "integer", Description = "domain=camera action=coordinate_screenshot：坐标标签步长", Required = false }
             };
         }
     }

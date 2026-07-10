@@ -105,7 +105,7 @@ Legacy public surface before `world_editor` consolidation:
 | `read_control` | 世界、区域、资源、建筑、机制知识、基础设施摘要 |
 | `search_control` | Dedicated search for tools, world objects, resources, buildings, dupes, and knowledge with action-ready `nextActions` |
 | `game_control` | 暂停、调速、存档、沙盒、UI |
-| `navigation_control` | 相机、覆盖层、截图、可视指针、点击和拖拽 |
+| `navigation_control` | 相机移动、世界切换、覆盖层、聚焦和截图 |
 | `coordinate_control` | Coordinate auxiliary gateway for explicit x/y, rectangle, point-list, or anchor forwarding |
 | `building_control` | 建造规划、材料、配置、储存、过滤、生产、侧屏、火箭 |
 | `orders_control` | 区域订单、优先级、指定/取消、剪断 |

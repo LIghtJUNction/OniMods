@@ -11,6 +11,8 @@ namespace OniMcp.Tools
 {
     public static partial class WorldSearchTools
     {
+        private const int MaxSearchCells = 20000;
+
         public static McpTool SearchWorld()
         {
             return new McpTool

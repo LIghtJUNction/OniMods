@@ -81,11 +81,7 @@ game_control domain=ui uiDomain=edit_mark action=list limit=5
 
 除非用户明确说执行/应用/照做，否则不要调用：
 
-- `orders_*`
-- `navigation_control action=left_click`
-- `navigation_control action=hold_left`
-- `game_control domain=speed action=resume`、`game_control domain=speed action=set_speed`
-- 任何会改变游戏状态的写入/执行工具
+- 任何会改变游戏状态的订单、建造、游戏速度或其他写入/执行工具
 
 明确执行前允许：
 
@@ -107,9 +103,9 @@ game_control domain=ui uiDomain=edit_mark action=list limit=5
 
 - 先用 `preset=construction` 快照。
 - 电力、管道、自动化或运输轨道使用 `preset=utilities`。
-- 在规划机器/家具前检查 `building_control domain=planning action=search_defs` 的 placement、支撑/地板需求和 footprint。指针格是 `lowerLeftCell` 锚点，不是建筑视觉中心。
-- 候选动作必须表达为指针跳转、选工具、点击/拖拽；支撑砖要先于落地建筑放置。
-- 只对 1x1 footprint 使用 `navigation_control action=hold_left`。床、厕所、机器等多格建筑逐个 anchor 用 `navigation_control action=left_click`，必要时先 `dryRun=true` 预检，再执行并用地图验证 `placementCheck`。
+- 在规划机器/家具前检查 `building_control domain=planning action=search_defs/materials/placement_candidates/preview` 的 placement、支撑/地板需求和 footprint。每个 anchor 都表示 `lowerLeftCell`，不是建筑视觉中心。
+- 候选动作使用 `building_control domain=planning action=build_area`；单体建筑传一个 lower-left anchor，支撑砖要先于落地建筑放置。
+- 砖块、梯子和建筑直线使用 `build_area` 的 anchors；points 只用于电线、管道和轨道 utility 路线。床、厕所、机器等多格建筑逐个 lower-left anchor。先 `dryRun=true` 或 `preview x/y`，再 `confirm=true` 执行并用地图验证 `placementCheck`。
 
 对于区域命令：
 
@@ -126,9 +122,7 @@ game_control domain=ui uiDomain=edit_mark action=list limit=5
 {
   "defaults": { "confirm": true },
   "plannedCalls": [
-    { "name": "navigation_control", "arguments": { "action": "jump", "x": 70, "y": 132 } },
-    { "name": "navigation_control", "arguments": { "action": "select_tool", "tool": "build", "prefabId": "Tile", "material": "auto" } },
-    { "name": "navigation_control", "arguments": { "action": "hold_left", "direction": "right", "length": 9 } }
+    { "name": "building_control", "arguments": { "domain": "planning", "action": "build_area", "prefabId": "Tile", "material": "auto", "anchors": [[70,132],[71,132],[72,132]], "dryRun": true } }
   ]
 }
 ```
@@ -137,9 +131,7 @@ game_control domain=ui uiDomain=edit_mark action=list limit=5
 
 ```text
 read_control domain=world action=area_snapshot {"areaId":"a3","preset":"construction"}
-navigation_control {"action":"jump","x":70,"y":132}
-navigation_control {"action":"select_tool","tool":"build","prefabId":"Tile","material":"auto"}
-navigation_control {"action":"hold_left","direction":"right","length":9,"confirm":true}
+building_control {"domain":"planning","action":"build_area","prefabId":"Tile","material":"auto","anchors":[[70,132],[71,132],[72,132]],"dryRun":true}
 ```
 
 ## 最终响应格式

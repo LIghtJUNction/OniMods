@@ -1,35 +1,27 @@
 ---
 name: oni-mcp-game-advisor
-description: 当用户询问 ONI 游戏问题、建筑/资源/小动物/元素用途、策略建议、机制解释，或在没有明确授权控制游戏时问“我该做什么”时使用。回答事实性游戏问题前必须查询游戏内百科/数据库工具 read_control domain=knowledge kind=database action=query；只有建议依赖当前存档时才使用只读殖民地/地图工具。
+description: 当用户询问 ONI 游戏机制、建筑/资源/元素/动植物用途、策略建议，或在未授权控制游戏时问“我该做什么”时使用。事实性答案优先依据可验证的外部文档或静态仓库资料；仅当建议依赖当前存档时读取只读殖民地、世界和资源状态，不调用已禁用的游戏内 knowledge/database/guide 查询。
 ---
 
 # ONI MCP 游戏顾问
 
 ## 目的
 
-作为顾问回答 ONI 游戏问题，而不是自动驾驶。给出事实性答案前，先通过 MCP 使用游戏内 Database/Codex。
+作为只读顾问回答 ONI 游戏问题，而不是自动驾驶。把可验证的游戏事实、当前存档观察和策略推断明确分开。
 
-## 必需百科查询
+## 事实来源
 
-关于建筑、元素、资源、食物、小动物、植物、疾病、房间、研究或机制的事实性问题，调用：
+关于建筑、元素、资源、食物、小动物、植物、疾病、房间、研究或机制的事实性问题：
 
-```
-read_control domain=knowledge kind=database action=query query=<user terms> includeContent=true limit=5
-```
-
-如果用户给出精确内部 ID，或第一次查询找到可能条目：
-
-```
-read_control domain=knowledge kind=database action=query id=<entryId> includeContent=true limit=1
-```
-
-只有需要时才用别名：`wiki_query` 和 `codex_query` 映射到同一个工具。
-
-除非问题只是高层策略且不需要事实查询，否则不要只凭记忆回答。如果 `read_control domain=knowledge kind=database action=query` 没有返回有用结果，说明游戏内百科没有找到匹配条目，并谨慎回答。
+1. 优先查阅可验证的外部文档或静态仓库资料。
+2. 交叉检查版本、DLC 和对象名称，避免把旧机制当成当前机制。
+3. 如果没有可验证来源，明确说明不确定，不要伪称查过游戏内百科。
+4. 禁止调用 `read_control` 的 `knowledge`、`database` 或 `guide` 域；这些入口运行时会返回 disabled。
+5. 不要使用已移除的 `database_query`、`guide_mechanics_query`、`wiki_query` 或 `codex_query` 工具名。
 
 ## 当前存档上下文
 
-如果答案取决于玩家当前殖民地，在百科查询后使用只读上下文：
+只有答案取决于玩家当前殖民地时，才读取最小必要的只读上下文：
 
 ```
 colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
@@ -42,26 +34,30 @@ read_control domain=infrastructure action=rooms
 read_control domain=world action=layout_candidates purpose=<goal>
 ```
 
+验证当前存档可用建材时，可使用只读规划动作：
+
+```
+building_control domain=planning action=materials prefabId=<building> includeUnavailable=true
+```
+
 只读必要信息。优先使用聚合工具，避免大量小读取。
 
-## 工具策略
+## 工具边界
 
 允许：
 
-- `read_control domain=knowledge kind=database action=query`
-- 只读状态/地图/资源工具
-- 用户询问 MCP 能力时使用 `server_control domain=catalog action=guide` / `server_control domain=catalog action=search`
+- 可验证的外部文档和静态仓库资料
+- 当前存档的只读 colony/read/world/resources/dupes 状态
+- `building_control domain=planning action=search_defs/materials/placement_candidates/preview` 等只读或 dry-run 规划动作
+- 用户询问 MCP 能力时使用 `server_control domain=catalog action=guide/search`
 
 除非用户明确要求行动，否则不允许：
 
-- `orders_*`
-- `navigation_control action=left_click`
-- `navigation_control action=hold_left`
-- `game_control domain=speed action=resume`
-- 配置/写入/执行工具
+- 任何订单、建造、复制人、游戏状态或配置写入
+- 任何其他会改变游戏状态的执行工具
 - 执行计划
 
-如果用户问“我该做什么”，给建议和可选的下一步安全读取。不要下达命令。
+如果用户问“我该做什么”，给建议和可选的下一步安全读取，不要下达命令。
 
 ## 回答风格
 
@@ -69,13 +65,14 @@ read_control domain=world action=layout_candidates purpose=<goal>
 
 ```
 结论:
-依据:
+事实依据:
 当前存档影响:
 建议:
+不确定项:
 可选下一步:
 ```
 
-相关时提到游戏内百科结果的标题/id。如果使用了当前存档工具，把百科事实和存档推断分开。
+如果读取了当前存档，把外部/静态事实与存档推断分开。
 
 ## 示例
 
@@ -83,20 +80,25 @@ read_control domain=world action=layout_candidates purpose=<goal>
 
 流程：
 
+1. 从外部文档或静态仓库资料核对厕所的合法材料类别。
+2. 如果问题涉及当前存档是否有材料，再调用：
+
 ```
-read_control domain=knowledge kind=database action=query query="Outhouse toilet" includeContent=true limit=5
-read_control domain=knowledge kind=database action=query query="SiltStone sandstone" includeContent=true limit=5
+building_control domain=planning action=materials prefabId=Outhouse includeUnavailable=true
 ```
 
-然后根据百科/数据库结果回答；如有需要，建议在建造前用 `building_control domain=planning action=materials prefabId=Outhouse includeUnavailable=true` 验证。
+如果无法取得可靠材料规则，明确说明不确定，不要声称查过游戏内百科。
 
 问题：“现在该先研究什么？”
 
 流程：
 
+1. 从外部文档或静态资料核对候选科技的用途和前置。
+2. 只读当前存档：
+
 ```
-read_control domain=knowledge kind=database action=query query="research station research" includeContent=true limit=5
 colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
+colony_control domain=management kind=research action=status
 ```
 
 然后给出结合当前存档的建议；除非用户授权，不要修改研究队列。

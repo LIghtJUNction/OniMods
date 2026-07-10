@@ -15,16 +15,12 @@ namespace OniMcp.Tools
     {
         private static readonly Dictionary<string, McpTool> _tools = new Dictionary<string, McpTool>();
         private static readonly Dictionary<string, string> _aliases = new Dictionary<string, string>();
-        private static readonly HashSet<string> CoreToolNames = new HashSet<string>(StringComparer.Ordinal)
+        private static readonly HashSet<string> DefaultPublicToolNames = new HashSet<string>(StringComparer.Ordinal)
         {
             "building_control",
-            "colony_control",
-            "dupes_control",
             "game_control",
             "navigation_control",
             "orders_control",
-            "read_control",
-            "search_control",
             "server_control",
             "world_editor",
         };
@@ -96,7 +92,7 @@ namespace OniMcp.Tools
         }
 
         /// <summary>
-        /// 获取 Tool 元信息（默认供 tools/list 暴露低 token 核心入口）
+        /// 获取 Tool 元信息（默认供 tools/list 暴露低 token 公开入口）
         /// </summary>
         public static List<McpToolInfo> GetToolInfos(bool includeAll = false)
         {
@@ -122,7 +118,7 @@ namespace OniMcp.Tools
         {
             var infos = new List<McpToolInfo>();
             foreach (var tool in _tools.Values
-                .Where(tool => !tool.Hidden && (includeAll || CoreToolNames.Contains(tool.Name)))
+                .Where(tool => !tool.Hidden && (includeAll || DefaultPublicToolNames.Contains(tool.Name)))
                 .OrderBy(tool => tool.Group)
                 .ThenBy(tool => tool.Name))
             {
@@ -174,7 +170,7 @@ namespace OniMcp.Tools
 
         public static int GetDefaultToolInfoCount()
         {
-            return _cachedCoreToolInfos?.Count ?? _tools.Values.Count(tool => CoreToolNames.Contains(tool.Name));
+            return _cachedCoreToolInfos?.Count ?? _tools.Values.Count(tool => DefaultPublicToolNames.Contains(tool.Name));
         }
 
         /// <summary>

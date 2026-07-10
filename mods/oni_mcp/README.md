@@ -165,10 +165,13 @@ oni://tools/manifest
 公开的聚合工具:
 
 * `world_editor`: 代码文件风格的世界编辑器。将存档视为虚拟目录，通过 `cd`, `ls`, `read`, `search` 来观察游戏内文件，通过 `edit` 配合 SEARCH/REPLACE 块来下达修改意图（挖掘、建造、调整优先级、连接管道等）。
-* `colony_control`: 殖民地全局诊断、日程表、研究进度、医疗、通知与整体计划管理。
+* `game_control`: 游戏状态、速度、存档、UI 与游戏级操作。
+* `navigation_control`: 相机、视图、覆盖层和截图操作。
+* `building_control`: 建筑规划、放置、配置、生产与管线连接。
+* `orders_control`: 挖掘、清扫、拖地、拆除等任务标记。
 * `server_control`: MCP 服务状态、会话清单、截图任务、后台任务以及清单/开发指南获取。
 
-* `read_control`, `building_control`, `orders_control`, `dupes_control`, `game_control`, `navigation_control`, `search_control`: 当前聚合入口，会直接出现在 `tools/list` 中；agent 不需要依赖隐藏工具名。
+`colony_control`、`dupes_control`、`read_control`、`search_control` 等其他聚合入口仍保持注册，供虚拟文件内部路由和兼容客户端调用，但不会出现在默认 `tools/list` 中。
 
 `coordinate_control` 仍是专用定位辅助入口；优先使用语义查询、区域句柄和 `world_editor` 文件视图完成操作。
 
