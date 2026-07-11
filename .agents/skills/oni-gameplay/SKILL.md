@@ -29,11 +29,11 @@ Use `navigation_control` only for camera movement, focus, overlays, and screensh
 
 Rules:
 - Use semantic MCP tools with explicit task text for build, dig, cancel, sweep, mop, disinfect, harvest, and deconstruct actions.
-- Legacy coordinate building tools remain compatibility/debug paths. Prefer public aggregate tools (`building_control`, `orders_control`, `world_editor`) and verify schemas through `server_control domain=catalog`.
+- `coordinate_control` is not part of the current public runtime. Ordinary aggregate tools reject raw coordinates; use semantic `areaId`/`plan` calls or the typed operation files exposed by `world_editor`.
 - For wires, pipes, conveyors, logic wires, and travel tubes, use layered utility designation instead of generic building deconstruct: `orders_control domain=designation action=cut_conduits type=wire|liquid|gas|solid|logic|travel_tube ... confirm=true`.
 - For normal buildings, prefer object-specific deconstruction: `orders_control domain=designation action=deconstruct id=<instanceId> confirm=true`.
 - If only a cell is known and multiple objects share it, list or dry-run first, inspect returned candidates, then choose the exact `id` or explicit utility `type`.
-- For virtual infrastructure edits such as `power.md`, prefer coordinate-stable explicit cells: `world_editor action=edit ... editCells=[{"x":85,"y":148,"value":"拆"}]`.
+- For exact orders, read `/active/ops/tools.md`, select only current public typed files/tools, ignore hidden `coordinate_control` and `/active/ops/coordinate.md`, then edit `/active/ops/orders.md`. For exact construction, edit map tokens in `/active/map/viewport.md`; `/active/ops/build.md` is only for semantic coordinate-free plans.
 
 ### Control Modes
 
@@ -147,11 +147,11 @@ Screenshot is weak for exact coordinates. If a decision affects digging, buildin
 For any build/dig/deconstruct action, observe first, then call the matching semantic aggregate directly.
 
 Rules:
-- Start with `world_editor command=read`/`command=edit`, or `building_control domain=planning action=search_defs/materials/placement_candidates`.
-- Treat each placement anchor as the `lowerLeftCell`; do not use screenshot center, tooltip position, or blueprint center as the anchor.
-- For horizontal/vertical tiles and ladders, use `building_control domain=planning action=build_area` with explicit lower-left anchors. Use points only for wire, conduit, or rail utility routes.
-- For furniture, machines, or any multi-cell footprint, use `build_area` with one lower-left anchor per placement.
-- Preflight with `preview` or `dryRun=true`, then execute with `confirm=true`.
+- Start with `world_editor command=read`/`command=edit`, or semantic `building_control domain=planning action=search_defs/materials/placement_candidates`.
+- Keep semantic `areaId`/`plan` calls on ordinary aggregate tools. Never pass raw anchors, points, or x/y to them.
+- For exact placement, read `/active/map/viewport.md` (zoom or read `symbols/glyphs.md` if needed), then replace target empty-cell tokens with `建筑名:优先级` and optional `#材料字`. This translates internally to `building_control build_area` anchors.
+- Prefer one SEARCH/REPLACE block. Multiple blocks require outer `allowPartial=true` and cannot be transactionally rolled back. Each operation-file replacement must contain exactly one executable command.
+- Preview with outer `world_editor edit` `dryRun=true` and `confirm=false` (or omitted). Execute with a new edit using outer `dryRun=false`, `confirm=true`, and non-conflicting command flags; then re-read the map/state.
 - Dig, sweep, mop, disinfect, cancel, harvest, capture, and deconstruct through `orders_control` area/designation actions; never simulate UI clicks.
 - After execution, verify with a targeted virtual-file read, `area_snapshot`, or `text_map`.
 
@@ -249,7 +249,7 @@ server_control domain=batch action=call_many
 verify with colony_control domain=snapshot action=get, read_control domain=world action=area_snapshot, or targeted read
 ```
 
-For map actions, the `items` should use semantic `building_control` or `orders_control` calls with bounded areaId/query/anchors/points. Do not create separate planning records for trivial single-step actions. It adds latency without improving safety.
+For map actions, batch items may use semantic `building_control` or `orders_control` calls with bounded `areaId`/query/plan. Exact coordinates must use typed operation files and cannot be embedded as raw anchors or points in the batch.
 
 ### Sequence 3: Execute A Complex Plan
 
@@ -305,7 +305,7 @@ navigation_control action=screenshot
 → Optional visual confirmation only after structured maps
 → Define reusable area: read_control domain=area action=define → areaId when the same region will be reused
 → Plan: choose semantic target/areaId and building_control or orders_control action
-→ Execute: build_area with one or more lower-left anchors, or the matching area/designation action after dry-run
+→ Execute: use semantic area/designation actions, or edit exact construction tokens in `/active/map/viewport.md` after dry-run
 → Verify: read_control domain=world action=area_snapshot or read_control domain=world action=text_map over the same area
 ```
 
@@ -350,15 +350,15 @@ Always fetch `colony_control domain=read action=dupes` first to resolve name →
 ### confirm
 - `confirm: true` required for all medium/dangerous write tools
 - `server_control domain=batch action=call_many` with `dryRun: true` pre-validates confirm requirements
-- Use `building_control domain=planning action=materials/search_defs/placement_candidates/preview` before construction; execute placement through `build_area`, using one lower-left anchor for a single building.
+- Use semantic `building_control domain=planning action=materials/search_defs/placement_candidates` before construction; route exact placement through editable map tokens in `/active/map/viewport.md`.
 - Never bypass confirm for dangerous tools (`orders_dig`, `orders_deconstruct`, `orders_sweep`)
 - Do not repeat the same write/execute tool with identical coordinates after a zero-effect result. Read the result fields, re-read state if needed, then choose a different tool or corrected parameters.
 - Use `orders_control domain=area action=sweep` only for solid debris/pickupables. Use `orders_control domain=area action=mop` for water, polluted water, spills, "地上的水", or other liquid cells on a floor.
 
 ### x1, y1, x2, y2 (area coordinates)
-- Always specify in world cell coordinates
-- `x1 < x2`, `y1 < y2` (origin is bottom-left)
-- Large areas → high token cost; shrink the rectangle first, and use `encoding=rle` only when token budget matters more than readability
+- Raw coordinates are valid for read-only map inspection and inside the typed operation-file syntax, not as parameters to ordinary aggregate action tools.
+- In `/active/ops/orders.md`, use world cell coordinates with `x1 < x2`, `y1 < y2` (origin is bottom-left).
+- Large or dangerous rectangles require the full pause -> read/plan -> dry-run -> confirm -> verify sequence.
 
 ## Batch and Efficiency Patterns
 
@@ -410,7 +410,7 @@ Use `colony_control domain=snapshot action=get profile=brief|standard` as the de
 
 ### Pattern F: Semantic Build First
 
-For construction, choose prefab/material with `search_defs` and `materials`, find candidates, preview one candidate with explicit x/y, then use `build_area` with lower-left anchors. `BuildLocationRule=OnFloor` buildings must have floor/support cells below them; place support tiles first before machines, beds, toilets, batteries, and research stations.
+For construction, choose prefab/material with `search_defs` and `materials`, then use semantic `areaId`/plan calls or edit `/active/map/viewport.md` tokens. Read the viewport, zoom or consult `symbols/glyphs.md` if needed, and replace empty tokens with `建筑名:优先级` plus optional `#材料字`. `BuildLocationRule=OnFloor` buildings still require support cells below them.
 
 ## Error Recovery
 
@@ -452,7 +452,7 @@ Risk is inferred from tool name by the server. `InferRisk` logic: `deconstruct` 
 - [ ] Validate parameters (type, range, existence)
 - [ ] Check confirm requirement for write/execute tools
 - [ ] Use `dryRun` or `validateOnly` if available
-- [ ] For construction, confirm prefab/material, support cells, and lower-left anchors before `build_area`
+- [ ] For exact construction, confirm prefab/material and support cells through a `/active/map/viewport.md` map-token edit dry-run before the separate confirm edit
 - [ ] Define rollback read tools for verification
 - [ ] Ensure game is paused (`game_control domain=speed action=pause`) for complex multi-step operations
 
@@ -538,7 +538,7 @@ Resource templates accept query params: `oni://power/summary?worldId=2&includeDe
 |-----------|-----------|-------------|--------------|
 | "What's happening?" | `colony_control domain=diagnostic action=diagnostics` | `colony_control domain=diagnostic action=alerts` | `colony_control domain=read action=status` |
 | "Fix power" | `read_control domain=infrastructure action=power_summary` | `building_control domain=config action=list` (power subset) | `read_control domain=infrastructure action=power_summary` |
-| "Build something" | `building_control domain=planning action=search_defs/materials` | `building_control domain=planning action=placement_candidates/preview/build_area` | `read_control domain=world action=text_map` |
+| "Build something" | `building_control domain=planning action=search_defs/materials` | semantic plan/areaId, or `/active/map/viewport.md` token edits for exact placement | re-read the map |
 | "Manage dupes" | `colony_control domain=read action=dupes` | `dupes_control domain=info action=detail/needs` | `colony_control domain=read action=dupes` |
 | "Check heat" | `read_control domain=world action=thermal_overheat_risk` | `read_control domain=world action=element_summary` | `read_control domain=world action=thermal_overheat_risk` |
 | "Plan actions" | `server_control domain=catalog action=guide` | `server_control domain=catalog action=search` + dryRun-capable tools | relevant read tools |

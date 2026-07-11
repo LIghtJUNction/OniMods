@@ -22,8 +22,8 @@ namespace OniMcp.Tools
                 return CallToolResult.Error("Cannot apply edits to historical or unloaded saves. Edits can only be performed under the '/active/' directory representing the currently active game.");
             }
             string relative = SaveRelativePath(path);
-            if (args["editCells"] is JArray || args["editLines"] is JArray)
-                return ApplyExplicitMapEditCells(args, path, relative, args["editCells"] as JArray, args["editLines"] as JArray);
+            if (args["editCells"] != null || args["editLines"] != null)
+                return CallToolResult.Error("Coordinate map edits are forbidden. Read /active/map/viewport.md and submit content as a SEARCH/REPLACE patch.");
 
             string block = Text(args, "content");
             List<KeyValuePair<string, string>> edits;

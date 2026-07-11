@@ -173,7 +173,7 @@ oni://tools/manifest
 
 `colony_control`、`dupes_control`、`read_control`、`search_control` 等其他聚合入口仍保持注册，供虚拟文件内部路由和兼容客户端调用，但不会出现在默认 `tools/list` 中。
 
-`coordinate_control` 仍是专用定位辅助入口；优先使用语义查询、区域句柄和 `world_editor` 文件视图完成操作。
+`coordinate_control` 不属于当前公开运行时，普通聚合工具也会拒绝 raw coordinates。精确订单先读 `/active/ops/tools.md`，再编辑 `/active/ops/orders.md`；精确建造则读取并编辑 `/active/map/viewport.md` 中的地图 token。只选择当前公开的 typed files/tools，忽略 hidden `coordinate_control` 和 `/active/ops/coordinate.md` 兼容入口。
 
 ## 常见资源
 

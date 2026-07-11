@@ -36,10 +36,17 @@ namespace OniMcp.Tools
                     float size = cam.orthographicSize;
                     float aspect = cam.aspect;
 
-                    int xMin = Mathf.Clamp(Mathf.RoundToInt(pos.x - size * aspect), 0, Grid.WidthInCells - 1);
-                    int xMax = Mathf.Clamp(Mathf.RoundToInt(pos.x + size * aspect), 0, Grid.WidthInCells - 1);
-                    int yMin = Mathf.Clamp(Mathf.RoundToInt(pos.y - size), 0, Grid.HeightInCells - 1);
-                    int yMax = Mathf.Clamp(Mathf.RoundToInt(pos.y + size), 0, Grid.HeightInCells - 1);
+                    int xMin;
+                    int xMax;
+                    int yMin;
+                    int yMax;
+                    if (!TryGetSynchronizedViewportBounds(out xMin, out yMin, out xMax, out yMax))
+                    {
+                        xMin = Mathf.Clamp(Mathf.RoundToInt(pos.x - size * aspect), 0, Grid.WidthInCells - 1);
+                        xMax = Mathf.Clamp(Mathf.RoundToInt(pos.x + size * aspect), 0, Grid.WidthInCells - 1);
+                        yMin = Mathf.Clamp(Mathf.RoundToInt(pos.y - size), 0, Grid.HeightInCells - 1);
+                        yMax = Mathf.Clamp(Mathf.RoundToInt(pos.y + size), 0, Grid.HeightInCells - 1);
+                    }
 
                     int width = xMax - xMin + 1;
 

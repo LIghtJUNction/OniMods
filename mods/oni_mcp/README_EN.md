@@ -173,7 +173,7 @@ Public aggregate tools:
 
 Other aggregate entrypoints, including `colony_control`, `dupes_control`, `read_control`, and `search_control`, remain registered for internal virtual-file routing and compatibility clients, but are not returned by the default `tools/list` response.
 
-`coordinate_control` remains a dedicated locator helper; prefer semantic queries, area handles, and `world_editor` file views for normal work.
+`coordinate_control` is not part of the current public runtime, and ordinary aggregate tools reject raw coordinates. For exact orders, read `/active/ops/tools.md` and edit `/active/ops/orders.md`; for exact construction, read and edit map tokens in `/active/map/viewport.md`. Select only currently public typed files/tools, ignoring the hidden `coordinate_control` and `/active/ops/coordinate.md` compatibility entries.
 
 ## Common Resources
 

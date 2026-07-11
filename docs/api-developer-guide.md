@@ -84,18 +84,18 @@ Authoritative `world_editor` model:
 - Saves are directories; `latest/` is the fixed alias for the current/latest save.
 - `cd latest` enters a save; `cd` or `cd ~` exits to `/`.
 - The world is represented as structured files, not action endpoints.
-- The only world-changing operation is a SEARCH/REPLACE edit against one file.
+- World changes use SEARCH/REPLACE edits against one file. Prefer one block; multiple blocks require outer `allowPartial=true` and cannot be transactionally rolled back.
 - Do not add `*.patch` action files; route edits by the file being edited.
 
 Default public surface: compact aggregate tools:
 
 | Tool | Purpose |
 |------|---------|
-| `world_editor` | Filesystem-style world editor. Supports `ls/read/search/plan/apply/connect/coordinate` over virtual save/world files. |
+| `world_editor` | Filesystem-style world editor. Supports read/search and SEARCH/REPLACE edits over virtual save/world files, including typed operation files under `/active/ops/`. |
 | `colony_control` | Colony-wide snapshots, diagnostics, survival plans, notifications, reports, and management. |
 | `server_control` | MCP diagnostics, catalog, batch calls, resources, and server operations. |
 
-The `read_control`, `building_control`, `orders_control`, `dupes_control`, `game_control`, `navigation_control`, and `search_control` are public aggregate entrypoints for normal play. `coordinate_control` remains a dedicated locator helper; new integrations should not depend on hidden legacy tool names.
+The `read_control`, `building_control`, `orders_control`, `dupes_control`, `game_control`, `navigation_control`, and `search_control` are aggregate entrypoints for normal play. `coordinate_control` is not part of the current public runtime; ordinary aggregate tools reject raw coordinates.
 
 Legacy public surface before `world_editor` consolidation:
 
@@ -106,7 +106,6 @@ Legacy public surface before `world_editor` consolidation:
 | `search_control` | Dedicated search for tools, world objects, resources, buildings, dupes, and knowledge with action-ready `nextActions` |
 | `game_control` | 暂停、调速、存档、沙盒、UI |
 | `navigation_control` | 相机移动、世界切换、覆盖层、聚焦和截图 |
-| `coordinate_control` | Coordinate auxiliary gateway for explicit x/y, rectangle, point-list, or anchor forwarding |
 | `building_control` | 建造规划、材料、配置、储存、过滤、生产、侧屏、火箭 |
 | `orders_control` | 区域订单、优先级、指定/取消、剪断 |
 | `dupes_control` | 复制人状态、命令、优先级、改名、技能、分配 |
@@ -120,8 +119,9 @@ Legacy fine-grained implementations are internal compatibility only. New integra
 
 - Prefer `search_control` for discovery. It returns `searchResult`, `nextActions`, and `searchActionPatch`, so selected results can be passed directly into action tools like a search/replace edit.
 - 优先传 `query`、`target`、`search`、`name`、`id`、`areaId`。
-- Except for `coordinate_control`, public tools do not accept `x/y`, `x1/y1/x2/y2`, `dx/dy`, `points`, or `anchors`. Coordinate operations must be explicitly forwarded through `coordinate_control`.
+- Public tools do not accept raw `x/y`, `x1/y1/x2/y2`, `dx/dy`, `points`, or `anchors`. Exact orders read `/active/ops/tools.md` and edit `/active/ops/orders.md`; select only current public typed files/tools and ignore hidden `coordinate_control` and `/active/ops/coordinate.md` compatibility entries.
 - 写入和执行动作应支持 `dryRun` 或 `confirm`。
+- 危险或大范围精确操作必须保持 pause -> read/plan -> dry-run -> confirm -> verify。
 - 面向任务的结果应返回 `reachable`、`executable`、失败原因、缺失条件和建议下一步。
 - 建造相关结果应返回材料可行性，至少说明需要材料、可用材料和缺口。
 
@@ -237,31 +237,9 @@ curl -sS -X POST http://localhost:8788/mcp/ \
 
 如果 `materials.satisfied=false`，客户端应向用户展示需求、可用材料和缺口，不应继续执行建造。
 
-### 放置自动连接电线
+### 放置精确建造计划
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 7,
-  "method": "tools/call",
-  "params": {
-    "name": "building_control",
-    "arguments": {
-      "domain": "planning",
-      "action": "build_area",
-      "prefabId": "Wire",
-      "material": "CopperOre",
-      "x": 10,
-      "y": 20,
-      "x2": 18,
-      "y2": 20,
-      "confirm": true
-    }
-  }
-}
-```
-
-`Wire`, `LogicWire`, `GasConduit`, `LiquidConduit`, and `SolidConduit` support automatic path connection. For semantic calls, prefer `plan`, `blueprint`, `areaId`, or search results; when `points`, `anchors`, or endpoint coordinates are required, forward to `building_control` through `coordinate_control`.
+精确建造先读 `/active/map/viewport.md`（需要时 zoom 或读 `symbols/glyphs.md`），再对可编辑地图 Markdown 执行 SEARCH/REPLACE，把目标空格 token 改为 `建筑名:优先级`，可选加 `#材料字`。该路由内部翻译为 `building_control build_area` anchors；`/active/ops/build.md` 只用于不带 raw coordinates 的语义 `plan`/`auto_connect` 等 typed calls。默认建议单 block；多 block 只在外层 `allowPartial=true` 时允许，且无法事务回滚。预览时外层 edit 用 `dryRun=true`、`confirm=false`（或省略）；执行必须新建独立 edit，外层用 `dryRun=false`、`confirm=true`，并确保内层命令标志不冲突。执行后重读地图/状态验证。
 
 ### 剪断线路
 
@@ -329,14 +307,14 @@ mods/oni_mcp/Tools/
 
 1. 新公开能力优先扩展 `Tools/New/` 的聚合入口。
 2. 旧版兼容逻辑放在 `Tools/Legacy/Impl/`。
-3. Shared search, material, and reachability logic lives in `Tools/Shared/`; coordinate entry is centralized in `coordinate_control`.
+3. Shared search, material, and reachability logic lives in `Tools/Shared/`; exact spatial operations are routed through typed files under `/active/ops/`.
 4. Default-public tool descriptions are maintained in `CoreToolEnglishDescriptions`; keep them in English.
 5. 使用 `server_control domain=catalog action=static_audit` 和 `manifest` 验证注册结果。
 
 ## 客户端兼容建议
 
 - 不要硬编码旧版细粒度工具列表。
-- Do not pass coordinates to ordinary tools; call `coordinate_control` only when exact coordinates are required.
+- Do not pass coordinates to ordinary tools. Exact orders use `/active/ops/orders.md`; exact construction edits map tokens in `/active/map/viewport.md`. Ignore hidden coordinate compatibility entries.
 - 先读取 manifest，再按 `domain/action` 组织调用。
 - 对缺失字段、未知 action 和 `executable=false` 做兼容处理。
 - 对危险动作始终要求用户确认，并在执行后读取状态验证。

@@ -16,7 +16,7 @@ namespace OniMcp.Tools
                 Risk = "dangerous",
                 Aliases = new List<string> { "buildings_control", "building_system_control" },
                 Tags = new List<string> { "buildings", "planning", "config", "production", "storage", "facility", "side-screen", "materials", "preview", "rocket", "space", "auto-connect", "wire", "power", "conduit", "utility" },
-                Description = "Unified building entrypoint: domain=planning/config/production/storage/filter/tile_selection/receptacle/side_surface/space_building/space_story/special/story_facility/rocket. Use action plus query/target/search/id/areaId to locate and execute targets; coordinate input is only allowed through coordinate_control as an auxiliary gateway. Second-call starter setup: domain=planning action=room_template kind=starter autoLayout=true priority=7 execute=true confirm=true builds toilet, wash basin, research station, room shells, doors, and interior dig orders. planning also supports parse_plan/build_area/auto_connect/repair_line for one-step wire, power, pipe, or rail connection. Preserves each child tool's action/kind/confirm rules.",
+                Description = "Unified building entrypoint: domain=planning/config/production/storage/filter/tile_selection/receptacle/side_surface/space_building/space_story/special/story_facility/rocket. Exact construction planning is virtual-file only: edit /active/map/viewport.md with world_editor. Public build_area coordinate/anchor calls are forbidden. Preserves each child tool's action/kind/confirm rules.",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "Route domain: planning, config, production, storage, filter, tile_selection, receptacle, side_surface, space_building, space_story, special, story_facility, or rocket.", Required = true, EnumValues = new List<string> { "planning", "config", "production", "storage", "filter", "tile_selection", "receptacle", "side_surface", "space_building", "space_story", "special", "story_facility", "rocket" } },
@@ -79,6 +79,15 @@ namespace OniMcp.Tools
                     string domain = NormalizeDomain(args);
                     string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
                     OniMcp.Support.OniMcpLog.Debug($"[OniMcp] building_control: domain={domain}, action={action}");
+                    if ((domain == "planning" || domain == "plan" || domain == "build" || domain == "placement")
+                        && action == "build_area"
+                        && !ToolUtil.GetBool(args, "_virtualFileEdit", false))
+                    {
+                        return CallToolResult.Error(
+                            "Direct building_control build_area planning is forbidden. "
+                            + "Read and edit /active/map/viewport.md with world_editor for exact construction. "
+                            + "Use /active/ops/orders.md for exact dig orders. Do not calculate or submit anchors, points, x/y, or rectangles manually.");
+                    }
                     switch (domain)
                     {
                         case "planning":
@@ -124,6 +133,13 @@ namespace OniMcp.Tools
                     }
                 }
             };
+        }
+
+        internal static CallToolResult ControlBuildingFromVirtualFile(JObject args)
+        {
+            var forwarded = args == null ? new JObject() : (JObject)args.DeepClone();
+            forwarded["_virtualFileEdit"] = true;
+            return ControlBuilding().Handler(forwarded);
         }
 
         private static string NormalizeDomain(JObject args)

@@ -101,7 +101,7 @@ namespace OniMcp.Tools
         {
             var d = CommonDescriptions();
             d["domain"] = "Building subsystem: planning, config, production, storage, filter, tile_selection, receptacle, side_surface, space_building, space_story, special, story_facility, or rocket.";
-            d["action"] = "Building action. Planning examples: search_defs/materials/preview/placement_candidates/build_area. Use build_area for linear utility paths; auto_connect is legacy-compatible.";
+            d["action"] = "Building action. Planning examples: search_defs/materials/preview/placement_candidates. Exact construction is virtual-file only: edit /active/map/viewport.md with world_editor. Public build_area coordinate or anchor calls are forbidden.";
             d["surface"] = "Side-screen surface subtype for side_surface actions.";
             d["rocketDomain"] = "Rocket subsystem used when domain=rocket.";
             d["mode"] = "Optional mode used by selected sub-actions.";

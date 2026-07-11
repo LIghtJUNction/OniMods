@@ -82,6 +82,8 @@ namespace OniMcp.Tools
         private static bool TryGetCameraBounds(out int xMin, out int xMax, out int yMin, out int yMax)
         {
             xMin = xMax = yMin = yMax = 0;
+            if (TryGetSynchronizedViewportBounds(out xMin, out yMin, out xMax, out yMax))
+                return true;
             if (Camera.main == null)
                 return false;
 

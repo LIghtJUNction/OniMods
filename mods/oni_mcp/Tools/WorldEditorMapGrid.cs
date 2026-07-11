@@ -148,6 +148,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             var sb = new StringBuilder();
             sb.AppendFormat("# {0}\n", title);
             AppendMapMetadata(sb, xMin, xMax, yMin, yMax, activeMode);
+            AppendVisualSpatialSummary(sb, xMin, xMax, yMin, yMax, activeMode);
 
             var gridLines = new List<string>();
             var details = new List<string>();
@@ -445,14 +446,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
         {
             var prioritizable = go != null ? go.GetComponent<Prioritizable>() : null;
             if (prioritizable == null) return 5;
-            try
-            {
-                var field = prioritizable.GetType().GetField("priority", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                var setting = field != null ? field.GetValue(prioritizable) : null;
-                if (setting == null) return 5;
-                var valueField = setting.GetType().GetField("priority_value", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                if (valueField != null) return Math.Max(1, Math.Min(Convert.ToInt32(valueField.GetValue(setting)), 9));
-            }
+            try { return Math.Max(1, Math.Min(prioritizable.GetMasterPriority().priority_value, 9)); }
             catch { }
             return 5;
         }

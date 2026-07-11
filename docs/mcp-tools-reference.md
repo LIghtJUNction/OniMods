@@ -8,7 +8,7 @@
 - 协议版本: `2025-11-25`
 - Default public tools: 6 aggregate entrypoints: `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
 - 其他聚合入口: 仍保持注册，供虚拟文件内部路由和兼容客户端按精确名称调用，但默认 `tools/list` 不返回
-- `coordinate_control`: 保持隐藏注册的专用兼容入口
+- `coordinate_control` 不属于当前公开运行时；普通聚合工具拒绝 raw coordinates
 - Tool descriptions: default-public tool descriptions and parameter descriptions are in English
 
 非 `initialize` 请求必须携带会话协商后的 `Mcp-Session-Id` 和 `Mcp-Protocol-Version`。
@@ -20,7 +20,7 @@ Authoritative model:
 - Saves are directories. `latest/` is the fixed alias for the current/latest save.
 - `cd latest` enters the save; `cd` or `cd ~` exits back to `/`, representing the main menu/root.
 - Save contents are structured world files such as `map/terrain.oni`, `buildings/plans.oni`, `infrastructure/power.oni`, and `views/power.png`.
-- There are no action patch files. The only world-changing operation is `world_editor command=edit` with one SEARCH/REPLACE block.
+- There are no action patch files. World changes use `world_editor command=edit`; prefer one SEARCH/REPLACE block. Multiple blocks require outer `allowPartial=true` and cannot be transactionally rolled back.
 - Reading the same file again is the observation step after an edit.
 
 Example edit:
@@ -54,10 +54,11 @@ compatibility clients.
 
 - 优先使用 `query`、`target`、`search`、`name`、`id`、`areaId`。
 - Use `search_control` for dedicated search. It returns `searchResult`, `nextActions`, and `searchActionPatch`, so selecting a result is structurally tied to the next action call like a search/replace edit.
-- Except for `coordinate_control`, public tools do not accept `x/y`, `x1/y1/x2/y2`, `dx/dy`, `points`, or `anchors`; coordinates are an auxiliary gateway capability only.
+- Public aggregate tools do not accept raw `x/y`, `x1/y1/x2/y2`, `dx/dy`, `points`, or `anchors`. For exact orders, read `/active/ops/tools.md` and edit `/active/ops/orders.md`; use only currently public typed files/tools and ignore hidden `coordinate_control` and `/active/ops/coordinate.md` compatibility entries.
 - 面向任务的返回应尽量包含 `reachable`、`executable`、失败原因、缺失条件和建议下一步。
 - 区域动作优先先用 `read_control domain=area action=define` 生成 `areaId`，再传给支持区域的工具。
 - 写入、执行和危险动作应支持 `dryRun` 或 `confirm`，并在执行后重新读取状态验证。
+- 危险或大范围精确操作必须保持 pause -> read/plan -> dry-run -> confirm -> verify。
 
 ## 核心工具
 
@@ -68,7 +69,6 @@ compatibility clients.
 | `search_control` | `tools`, `world`, `resources`, `buildings`, `dupes`, `knowledge` | read | Dedicated search with action-ready `nextActions` |
 | `game_control` | `speed`, `state`, `save`, `sandbox`, `ui` | read/execute/dangerous | 暂停、恢复、调速、存档、沙盒、UI 编辑标记 |
 | `navigation_control` | `camera` 或按已知相机 `action` 推断 | execute | 相机移动、世界切换、覆盖层、聚焦和截图 |
-| `coordinate_control` | `targetTool` gateway | execute/dangerous | The only coordinate auxiliary entrypoint; explicitly forwards x/y, rectangles, path points, or anchors to an underlying tool |
 | `building_control` | `planning`, `config`, `storage`, `filter`, `production`, `side_surface`, `rocket` | read/write/execute | 建造规划、材料检查、蓝图、建筑侧屏配置、储存过滤、生产队列、火箭 |
 | `orders_control` | `area`, `priority`, `designation`, `conduit` | execute/dangerous | 挖掘、清扫、拖地、拆除、优先级、区域订单、线路/管线剪断 |
 | `dupes_control` | `info`, `priority`, `command`, `skill`, `hat`, `assignable` | read/write/execute | 复制人状态、命令、优先级、改名、技能、帽子、可分配物 |
@@ -118,32 +118,17 @@ compatibility clients.
 - `LiquidConduit`
 - `SolidConduit`
 
-For semantic building, prefer `plan`, `blueprint`, `areaId`, or search results. When endpoint coordinates, path point arrays, or anchor arrays are required, forward to `building_control` through `coordinate_control`.
+For semantic building, prefer `plan`, `blueprint`, `areaId`, search results, or semantic calls in `/active/ops/build.md`. For exact placement, read `/active/map/viewport.md` (zoom or read `symbols/glyphs.md` when needed), then edit the map markdown by replacing target empty-cell tokens with `建筑名:优先级` and optional `#材料字`. The map route translates these tokens to underlying `building_control build_area` anchors; `/active/ops/build.md` does not accept raw coordinates.
 
 示例:
 
-```json
-{
-  "targetTool": "building_control",
-  "domain": "planning",
-  "action": "build_area",
-  "payload": {
-    "prefabId": "Wire",
-    "material": "Copper"
-  },
-  "x": 10,
-  "y": 20,
-  "x2": 18,
-  "y2": 20,
-  "confirm": true
-}
-```
+Prefer one SEARCH/REPLACE block. Multiple blocks require outer `allowPartial=true` and cannot be transactionally rolled back. Each operation-file replacement must contain exactly one executable command. Preview with outer `world_editor edit` `dryRun=true` and `confirm=false` (or omitted); execute with a new edit using outer `dryRun=false` and `confirm=true`, with non-conflicting command flags, then re-read the map or state.
 
 This directly creates a continuous line, with no separate follow-up connection step required.
 
 ## 订单与剪断
 
-`orders_control` supports semantic targets and area handles. Exact coordinate orders must be forwarded through `coordinate_control`.
+`orders_control` supports semantic targets and area handles. For an exact rectangle, read `/active/ops/tools.md`, ignore hidden coordinate compatibility entries, then edit `/active/ops/orders.md`, for example `挖 x1=10 y1=20 x2=18 y2=20 priority=7 dryRun=true`. Preview with outer `dryRun=true` and no confirmation; execute only with a new edit using outer `dryRun=false`, `confirm=true`, and non-conflicting command flags.
 
 ```json
 {
@@ -206,7 +191,7 @@ mods/oni_mcp/Tools/
 └── Legacy/    # 内部兼容和旧版细粒度实现
 ```
 
-Prefer extending aggregate entrypoints in `Tools/New/` for new public capabilities. Put legacy compatibility logic in `Tools/Legacy/Impl/`, registered through `Tools/Legacy/LegacyToolRegistry.cs`. Shared search, reachability, and material checks belong in `Tools/Shared/`; coordinate entry is centralized in `coordinate_control`.
+Prefer extending aggregate entrypoints in `Tools/New/` for new public capabilities. Put legacy compatibility logic in `Tools/Legacy/Impl/`, registered through `Tools/Legacy/LegacyToolRegistry.cs`. Shared search, reachability, and material checks belong in `Tools/Shared/`; exact spatial operations are routed through typed files under `/active/ops/`.
 
 ## 兼容性说明
 

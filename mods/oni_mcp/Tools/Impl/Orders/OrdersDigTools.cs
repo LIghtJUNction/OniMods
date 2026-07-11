@@ -26,6 +26,7 @@ namespace OniMcp.Tools
                 {
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "只预检并返回 preview，不实际下达挖掘，默认 false；dryRun 不要求 confirm", Required = false },
                     ["detail"] = new McpToolParameter { Type = "boolean", Description = "是否返回逐格坐标样本，默认 false；通常先看 execution 摘要", Required = false },
+                    ["priority"] = new McpToolParameter { Type = "integer", Description = "挖掘任务优先级 1~9，默认 5", Required = false },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "preview.targets 最多返回数量，默认 300，最大 1000", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认；dryRun=false 时必须为 true", Required = false },
                     ["previewToken"] = new McpToolParameter { Type = "string", Description = "dryRun 返回的预览令牌；提供后可省略重复参数", Required = false }
@@ -56,6 +57,10 @@ namespace OniMcp.Tools
                     bool detail = ToolUtil.GetBool(args, "detail", false);
                     int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 300, 1000));
                     int marked = 0;
+                    int existingUpdated = 0;
+                    int priorityApplied = 0;
+                    int priorityFailed = 0;
+                    int requestedPriority = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "priority") ?? 5, 9));
                     int dist = 0;
                     double kgTotal = 0;
                     var targets = new List<Dictionary<string, object>>();
@@ -87,9 +92,27 @@ namespace OniMcp.Tools
                                 IncrementSkip(skipped, "foundation_or_constructed_tile");
                                 continue;
                             }
-                            if (Grid.Objects[cell, (int)ObjectLayer.DigPlacer] != null)
+                            var existingDig = Grid.Objects[cell, (int)ObjectLayer.DigPlacer];
+                            if (existingDig != null)
                             {
-                                IncrementSkip(skipped, "already_queued");
+                                targetCells.Add(cell);
+                                if (detail && targets.Count < limit)
+                                    targets.Add(DigTarget(cell, x, y, dryRun ? "would_update_priority" : "priority_updated"));
+                                marked++;
+                                if (!dryRun)
+                                {
+                                    ApplyPriority(existingDig, args);
+                                    var existingPriority = existingDig.GetComponent<Prioritizable>();
+                                    if (existingPriority != null && existingPriority.GetMasterPriority().priority_value == requestedPriority)
+                                    {
+                                        priorityApplied++;
+                                        existingUpdated++;
+                                    }
+                                    else
+                                    {
+                                        priorityFailed++;
+                                    }
+                                }
                                 continue;
                             }
 
@@ -105,8 +128,17 @@ namespace OniMcp.Tools
                                 continue;
                             }
 
-                            if (DigTool.PlaceDig(cell, dist++) != null)
+                            var digPlacer = DigTool.PlaceDig(cell, dist++);
+                            if (digPlacer != null)
+                            {
                                 marked++;
+                                ApplyPriority(digPlacer, args);
+                                var prioritizable = digPlacer.GetComponent<Prioritizable>();
+                                if (prioritizable != null && prioritizable.GetMasterPriority().priority_value == requestedPriority)
+                                    priorityApplied++;
+                                else
+                                    priorityFailed++;
+                            }
                         }
                     }
 
@@ -115,6 +147,11 @@ namespace OniMcp.Tools
                     {
                         ["dryRun"] = dryRun,
                         ["marked"] = marked,
+                        ["existingUpdated"] = dryRun ? 0 : existingUpdated,
+                        ["requestedPriority"] = requestedPriority,
+                        ["priorityApplied"] = dryRun ? 0 : priorityApplied,
+                        ["priorityFailed"] = dryRun ? 0 : priorityFailed,
+                        ["priorityVerified"] = dryRun ? (object)null : priorityFailed == 0 && priorityApplied == marked,
                         ["wouldMark"] = dryRun ? marked : (object)null,
                         ["worldId"] = worldId,
                         ["rect"] = rect,
@@ -130,7 +167,8 @@ namespace OniMcp.Tools
                     };
                     if (dryRun)
                         responseDict["previewToken"] = PreviewTokenRegistry.Register(args);
-                    return CallToolResult.Text(JsonConvert.SerializeObject(responseDict, McpJsonUtil.Settings));
+                    string response = JsonConvert.SerializeObject(responseDict, McpJsonUtil.Settings);
+                    return !dryRun && priorityFailed > 0 ? CallToolResult.Error(response) : CallToolResult.Text(response);
                 }
             };
         }

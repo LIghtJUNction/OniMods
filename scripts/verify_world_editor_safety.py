@@ -85,6 +85,51 @@ def verify_execution_policy() -> None:
     require(edits, "PreflightSingleEditBlock", "all-block preflight")
     require(edits, "WorldEditorExecutionAllowed(args)", "top-level edit gate")
     require(edits, 'relative == "buildings/plans.oni" ? "build_area" : "auto_connect"', "real build dry-run preflight")
+    require(
+        source("mods/oni_mcp/Tools/BuildingControlTools.cs"),
+        'action == "build_area"',
+        "public build_area hard guard",
+    )
+    require(
+        source("mods/oni_mcp/Tools/BuildingControlTools.cs"),
+        'Direct building_control build_area planning is forbidden',
+        "public build_area rejection guidance",
+    )
+    require(
+        source("mods/oni_mcp/Tools/WorldEditorMapEditTools.cs"),
+        "BuildingControlTools.ControlBuildingFromVirtualFile(buildArgs)",
+        "virtual-file build internal authorization",
+    )
+    dig = source("mods/oni_mcp/Tools/Impl/Orders/OrdersDigTools.cs")
+    require(dig, "ApplyPriority(digPlacer, args)", "dig priority application")
+    require(dig, "priorityVerified", "dig priority verification result")
+    require(dig, "priorityFailed > 0 ? CallToolResult.Error", "dig priority failure is not silent")
+    require(dig, "existingUpdated", "existing dig orders update priority")
+    require(dig, "ApplyPriority(existingDig, args)", "existing dig priority application")
+    reachability = source("mods/oni_mcp/Tools/WorldEditorReachabilitySummary.cs")
+    require(reachability, "SummarizeMapEditReachability", "map edit reachability aggregation")
+    require(reachability, '"no_targets_reachable"', "explicit unreachable status")
+    require(reachability, "build a ladder/floor", "compact unreachable recovery warning")
+    require(reachability, "CompactMapEditResults", "nested map edit result compaction")
+    tools = source("mods/oni_mcp/Tools/WorldEditorTools.cs")
+    forbid(tools, '["editCells"] = new McpToolParameter', "coordinate cell-edit public schema")
+    forbid(tools, '["editLines"] = new McpToolParameter', "coordinate line-edit public schema")
+    require(tools, "Coordinate map edits are forbidden", "top-level coordinate edit rejection")
+    require(edits, "Coordinate map edits are forbidden", "edit-path coordinate rejection")
+    if (ROOT / "mods/oni_mcp/Tools/WorldEditorExplicitCellEdits.cs").exists():
+        FAILURES.append("forbidden legacy coordinate-edit implementation: WorldEditorExplicitCellEdits.cs")
+    map_edits = source("mods/oni_mcp/Tools/WorldEditorMapEditTools.cs")
+    require(map_edits, '?? 512', "full viewport map edit default budget")
+    require(map_edits, 'Math.Min(requested, 2500)', "map edit budget matches maximum zoom viewport")
+    zoom = source("mods/oni_mcp/Tools/WorldEditorZoomViews.cs")
+    require(zoom, "TryGetSynchronizedViewportBounds", "exact synchronized viewport bounds")
+    viewport = source("mods/oni_mcp/Tools/WorldEditorVirtualFileReader.cs")
+    require(viewport, "TryGetSynchronizedViewportBounds", "viewport reuses exact synchronized bounds")
+    view_read = source("mods/oni_mcp/Tools/WorldEditorViewReadTools.cs")
+    require(view_read, "TryGetSynchronizedViewportBounds", "world_editor read reuses exact synchronized bounds")
+    cell = source("mods/oni_mcp/Tools/WorldEditorCellSnapshot.cs")
+    require(cell, "ObjectLayer.DigPlacer", "cell snapshot reads dig designation")
+    require(cell, "FormatDigOrder", "cell snapshot reports dig priority")
     forbid(edits, 'relative == "buildings/plans.oni" ? "parse_plan"', "parse-only build preflight")
     forbid(dupe, 'renameArgs["confirm"] = true', "dupe confirm escalation")
     require(management, "InheritWorldEditorExecutionPolicy", "management policy inheritance")

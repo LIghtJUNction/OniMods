@@ -96,13 +96,13 @@ read_control domain=world action=layout_candidates purpose=bathroom limit=5
   → 不同用途的候选推荐是否差异化
 
 building_control domain=planning action=preview prefabId=Outhouse x=... y=... dryRun=true
-  → OnFloor 支撑检测（missingSupportCells）
+  → 应拒绝 raw coordinates，并提示使用 operation-file 路由
 
-building_control domain=planning action=preview prefabId=Door x=... y=... dryRun=true
-  → 多格建筑阻碍检测（solid_cell + 已有建筑）
+world_editor command=read path=/active/ops/tools.md
+  → 只选择当前公开 typed files/tools，忽略 hidden coordinate_control 和 /active/ops/coordinate.md
 
-building_control domain=planning action=preview prefabId=Tile x=... y=... dryRun=true
-  → Tile 规则与空位检测
+world_editor command=read path=/active/map/viewport.md
+  → 把目标空格 token 改为 `建筑名:优先级[#材料字]`，以外层 dryRun=true/confirm=false 预览
 ```
 
 检查项（候选规划）：
@@ -112,9 +112,10 @@ building_control domain=planning action=preview prefabId=Tile x=... y=... dryRun
 - [ ] `hazardCells` 标注液体/危险元素坐标，避免盲目挖掘
 
 检查项（建造预检复杂度）：
-- [ ] `building_control domain=planning action=preview` 对 OnFloor 建筑返回 `missingSupportCells` 具体坐标
-- [ ] 对被阻挡位置返回多类阻碍：`solid_cell` / `building` / `blueprint`
-- [ ] 多格建筑 footprint 与 anchor 规则一致（lower-left cell）
+- [ ] 普通 `building_control` 对 raw x/y 返回明确拒绝和 operation-file 引导
+- [ ] 地图 token edit dry-run 返回支撑、阻碍和 footprint 预检结果
+- [ ] 默认单 SEARCH/REPLACE block；多 block 仅外层 `allowPartial=true` 允许且无法事务回滚
+- [ ] operation file 每个 replacement 恰好一条可执行命令
 - [ ] `material=auto` 自动选择当前星球可用材料
 
 ### 阶段 5: 批量与区域规划（dryRun / 轻量执行）
@@ -128,7 +129,10 @@ read_control domain=area action=merge areaIds=[blk1,blk2]
   → 区域定义、切块、合并的连贯性
 
 building_control domain=planning action=build_area prefabId=Tile anchors=[[x1,y1],[x2,y2],[x3,y3]] dryRun=true
-  → 批量 anchor 预检，验证整批原子性（全过或全拒）
+  → 验证普通工具拒绝 raw anchors
+
+world_editor command=read path=/active/ops/orders.md
+  → 以 `挖 x1=... y1=... x2=... y2=... priority=7 dryRun=true` 验证精确矩形 dry-run 路由
 
 orders_control domain=area action=dig areaId=... dryRun=true detail=true
 orders_control domain=area action=sweep areaId=... dryRun=true detail=true
@@ -137,7 +141,8 @@ orders_control domain=area action=sweep areaId=... dryRun=true detail=true
 
 检查项：
 - [ ] `read_control domain=area action=define` / `read_control domain=area action=blocks` / `read_control domain=area action=merge` 生成的 areaId 可在后续工具复用
-- [ ] `building_control domain=planning action=build_area` 多 anchor 遇冲突时 `committed=false`，不残留部分蓝图
+- [ ] 普通 `building_control` 对 raw anchors 拒绝，不残留部分蓝图
+- [ ] dry-run 外层 edit 用 `dryRun=true` 且 `confirm=false`/省略；独立执行 edit 用 `dryRun=false` 且 `confirm=true`，内外标志不冲突
 - [ ] `orders_control domain=area action=dig` 返回目标元素、质量、温度、风险列表
 - [ ] `previewToken` 支持复用，避免重复扫描
 
@@ -172,16 +177,16 @@ server_control domain=batch action=call_many responseMode=summary
 如果前 7 阶段全部通过，可选执行一次小规模建造验证：
 
 ```
-building_control domain=planning action=preview prefabId=Ladder x=... y=... dryRun=true
-building_control domain=planning action=build_area prefabId=Ladder material=auto anchors=[[x1,y1],[x2,y2],[x3,y3]] dryRun=true
-building_control domain=planning action=build_area prefabId=Ladder material=auto anchors=[[x1,y1],[x2,y2],[x3,y3]] confirm=true
+world_editor command=read path=/active/map/viewport.md
+# replace target empty tokens with Ladder:5 using outer dryRun=true and confirm=false/omitted
+# after reviewing the preview, make a new edit with outer dryRun=false and confirm=true
 read_control domain=world action=text_map x1=... y1=... x2=... y2=...
   → 验证直线建造后地图是否正确显示 bp 标记
 ```
 
 规则：
 - 只建造影响极小的建筑（如梯子）
-- 优先使用 `building_control domain=planning action=preview` 已验证通过的位置
+- 优先使用地图 token edit dry-run 已验证通过的位置
 - 建造后必须验证地图 `bp` / `bp_a` 标记
 - 如果用户未明确要求，可以跳过此阶段
 
@@ -229,8 +234,8 @@ read_control domain=world action=text_map x1=... y1=... x2=... y2=...
 |------|---------|---------|
 | `server_control domain=diagnostics action=status` 返回 `loaded=false` | 游戏未运行或模组未加载 | 确认游戏已启动，检查模组是否启用 |
 | 工具调用返回 `not found` | 工具名拼写错误或不在核心列表 | 使用 `server_control domain=catalog action=search` 查找正确工具名 |
-| `building_control domain=planning action=preview` 坐标偏移 | anchor 是 lower-left cell，非中心 | 核对 `building_control domain=planning action=search_defs` 的 placement.anchor 说明 |
-| `read_control domain=world action=text_map` 与 `building_control domain=planning action=build_area` 坐标不一致 | 不同工具可能使用不同坐标基准 | 以 `building_control domain=planning action=build_area` 返回的 `actualAnchor` 和 `placementCheck` 为准 |
+| 普通 `building_control preview` 传 raw x/y | 当前公开运行时拒绝 raw coordinates | 将返回拒绝视为预期成功，改测 `/active/map/viewport.md` token dry-run |
+| 普通订单工具拒绝 raw coordinates | 当前公开运行时要求 operation-file 路由 | 读 `/active/ops/tools.md`，忽略 hidden coordinate 入口，使用 `/active/ops/orders.md` |
 | `colony_control domain=snapshot action=get` 告警未更新 | 建筑只是蓝图，未完工 | 蓝图不等于完工建筑；等复制人建造后重新读取 |
 | 中文查询无结果 | 查询词不在本地化数据中 | 尝试英文关键词或 `category` 过滤 |
 | `orders_control domain=area action=dig` 风险提示不全 | 只检测明显风险，不保证全面 | 结合 `read_control domain=world action=text_map` 人工确认液体/高温/真空相邻 |
@@ -246,7 +251,10 @@ game_control domain=speed action=time
 colony_control domain=snapshot action=get profile=brief
 read_control domain=world action=text_map x1=... y1=... x2=... y2=... format=markdown
 read_control domain=world action=layout_candidates purpose=barracks limit=3
-building_control domain=planning action=preview prefabId=Outhouse x=... y=... dryRun=true
+building_control domain=planning action=preview prefabId=Outhouse x=... y=... dryRun=true  # 应拒绝 raw coordinates
+world_editor command=read path=/active/ops/tools.md
+# only current public typed files/tools; ignore hidden coordinate_control and /active/ops/coordinate.md
+world_editor command=read path=/active/map/viewport.md
 ```
 
-6 个调用即可验证连接、查询、地图可读性、规划候选、建筑预检五大核心能力。
+8 个调用即可验证连接、查询、地图可读性、规划候选、raw-coordinate 拒绝和 map-edit 路由。

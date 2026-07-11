@@ -141,8 +141,8 @@ namespace OniMcp.Tools
 
         private static int MapEditWriteBudget(JObject args)
         {
-            int requested = ToolUtil.GetInt(args, "maxWriteCells") ?? ToolUtil.GetInt(args, "maxCells") ?? 32;
-            return Math.Max(1, Math.Min(requested, 64));
+            int requested = ToolUtil.GetInt(args, "maxWriteCells") ?? ToolUtil.GetInt(args, "maxCells") ?? 512;
+            return Math.Max(1, Math.Min(requested, 2500));
         }
 
         private static IEnumerable<Tuple<int, int, int, int>> ContiguousRuns(IEnumerable<MapEditCell> cells)
@@ -211,7 +211,7 @@ namespace OniMcp.Tools
                 if (!string.IsNullOrWhiteSpace(material))
                     buildArgs["material"] = material;
 
-                var result = BuildingControlTools.ControlBuilding().Handler(buildArgs);
+                var result = BuildingControlTools.ControlBuildingFromVirtualFile(buildArgs);
                 bool failed = WorldEditorResultFailed(result, parentArgs);
                 anyError = anyError || failed;
                 if (!failed)

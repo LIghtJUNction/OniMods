@@ -29,6 +29,8 @@ namespace OniMcp.Tools
         private static CallToolResult HandleWorldEditorCommand(JObject args)
         {
             args = args ?? new JObject();
+            if (args["editCells"] != null || args["editLines"] != null)
+                return CallToolResult.Error("Coordinate map edits are forbidden. Read /active/map/viewport.md and submit content as a SEARCH/REPLACE patch.");
             string command = Text(args, "command", "op", "action").ToLowerInvariant();
             if (string.IsNullOrWhiteSpace(command))
                 command = "ls";
@@ -284,8 +286,6 @@ namespace OniMcp.Tools
                 ["command"] = new McpToolParameter { Type = "string", Description = "cd, pwd, ls, read, zoom, grep, symbols, search, edit, blueprint, game, pause, resume, speed, camera, view, screenshot, batch.", Required = false },
                 ["path"] = new McpToolParameter { Type = "string", Description = "Virtual path. Examples: /, latest/, /active/map/viewport.md, /active/infrastructure/power.md.", Required = false },
                 ["content"] = new McpToolParameter { Type = "string", Description = "For edit: SEARCH/REPLACE block against current virtual file.", Required = false },
-                ["editCells"] = new McpToolParameter { Type = "array", Description = "For edit on map markdown: coordinate edits [{x,y,value}] that bypass SEARCH/REPLACE viewport matching. Example value=拆 on power.md deconstructs the exact cell.", Required = false },
-                ["editLines"] = new McpToolParameter { Type = "array", Description = "For edit on map markdown: coordinate line edits. Use [{x,y1,y2,value}] for vertical, [{y,x1,x2,value}] for horizontal, or [{x,y,direction,length,value}] with direction up/down/left/right.", Required = false },
                 ["orientation"] = new McpToolParameter { Type = "string", Description = "Forwarded build orientation for map edits, e.g. Neutral, R90, R180, R270.", Required = false },
                 ["rotation"] = new McpToolParameter { Type = "string", Description = "Alias for build orientation in map edits; accepts 0/90/180/270, right/left, clockwise/counterclockwise.", Required = false },
                 ["query"] = new McpToolParameter { Type = "string", Description = "Search query or natural-language edit target.", Required = false },

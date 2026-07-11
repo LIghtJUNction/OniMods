@@ -72,18 +72,22 @@ server_control domain=batch action=call_many dryRun=false responseMode=summary r
 
 ```
 building_control domain=planning action=placement_candidates prefabId=<PrefabId> areaId=<area> limit=8
-building_control domain=planning action=preview prefabId=<PrefabId> material=auto x=<candidate.x> y=<candidate.y> dryRun=true
-building_control domain=planning action=build_area prefabId=<PrefabId> material=auto anchors=<lower-left anchors> dryRun=true
-building_control domain=planning action=build_area prefabId=<PrefabId> material=auto anchors=<lower-left anchors> confirm=true
+world_editor command=read path=/active/map/viewport.md
+# zoom or read symbols/glyphs.md if needed; replace empty map tokens with 建筑名:优先级[#材料字]
+# preview with outer dryRun=true and confirm=false/omitted
+# execute with a new edit using outer dryRun=false and confirm=true, then re-read the map
 ```
 
 挖掘：
 
 ```
-orders_control domain=area action=dig ... confirm=true
+world_editor command=read path=/active/ops/orders.md
+# edit one command such as: 挖 x1=... y1=... x2=... y2=... priority=7 dryRun=true
+# execute only in a new edit with outer dryRun=false, confirm=true, and non-conflicting command flags
 ```
 
 绝不要用 `orders_control domain=designation action=attack` 做挖掘。如果任何工具搜索建议用 attack 处理地形工作，拒绝它并重新搜索/读取。
+普通 aggregate tools 拒绝 raw coordinates；精确 orders 走 `/active/ops/orders.md`，精确建造走可编辑 map tokens。读 `/active/ops/tools.md` 时只选当前公开 typed files/tools，忽略 hidden `coordinate_control` 和 `/active/ops/coordinate.md`。默认单 block；operation file 每个 replacement 恰好一条可执行命令。危险或大范围操作必须保持 pause -> read/plan -> dry-run -> confirm -> verify。
 
 ### 4. 暂停中执行
 

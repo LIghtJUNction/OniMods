@@ -181,7 +181,7 @@ read_control domain=world action=area_snapshot preset=utilities encoding=plain i
 
 - 从打印舱向左和向右扩张。
 - 两侧排入小型保守挖掘矩形，避开液体和危险空腔。
-- 使用 `building_control domain=planning action=build_area` 的 anchors 放置直线地基、平台、砖块和梯子。
+- 精确地基、平台、砖块和梯子先读 `/active/map/viewport.md`（需要时 zoom 或读 `symbols/glyphs.md`），再把目标空格 token 改为 `建筑名:优先级`，可选加 `#材料字`。
 - 保留打印舱附近区域作为早期实验室。
 - 研究/电力设置必须先有地板/支撑，再放人力发电机、电池、研究站和连接电线。
 
@@ -191,12 +191,13 @@ read_control domain=world action=area_snapshot preset=utilities encoding=plain i
 
 ```
 building_control domain=planning action=placement_candidates prefabId=<PrefabId> areaId=<area> limit=8
-building_control domain=planning action=preview prefabId=<PrefabId> material=auto x=<candidate.x> y=<candidate.y> dryRun=true
-building_control domain=planning action=build_area prefabId=<PrefabId> material=auto anchors=<lower-left anchors> dryRun=true
-building_control domain=planning action=build_area prefabId=<PrefabId> material=auto anchors=<lower-left anchors> confirm=true
+world_editor command=read path=/active/map/viewport.md
+# edit the map markdown: prefer one SEARCH/REPLACE block replacing empty tokens with 建筑名:优先级[#材料字]
+# preview: outer dryRun=true, confirm=false/omitted
+# execute: a new edit with outer dryRun=false, confirm=true; then re-read the map
 ```
 
-电线、管道和轨道 utility 路线可使用 `build_area` 的 points；普通砖块、梯子和建筑只使用 anchors。水平和垂直线路按需要拆成多段，先 dry-run 再 confirm。
+普通聚合工具拒绝 raw coordinates，不要直接传 `points`/`anchors`/`x`/`y`。`/active/ops/build.md` 只用于无 raw coordinates 的语义 plan/auto_connect；精确路线使用可编辑地图 token。多 block 仅在外层 `allowPartial=true` 时允许且不可事务回滚。
 
 挖掘：
 
@@ -236,7 +237,7 @@ plan_harness_validate id=<planId>
 - 用户回答命名风格后才允许 `dupes_control domain=command action=auto_rename apply=true`
 - `colony_control domain=diagnostic action=set_auto_disinfect disabled=true applyNow=true confirm=true`
 - `orders_control domain=area action=dig`
-- `building_control domain=planning action=placement_candidates/preview/build_area`
+- `building_control domain=planning action=placement_candidates` 以及 `/active/map/viewport.md` token edit
 
 建造放置前仍要检查 prefab、材料和支撑。
 

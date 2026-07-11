@@ -168,9 +168,11 @@ namespace OniMcp.Tools
             sb.AppendLine();
             sb.AppendLine("## Objects");
             GameObject building = Grid.Objects[cell, (int)ObjectLayer.Building];
+            GameObject digPlacer = Grid.Objects[cell, (int)ObjectLayer.DigPlacer];
             GameObject minion = Grid.Objects[cell, (int)ObjectLayer.Minion];
             BuildCritterCellMap().TryGetValue(cell, out var critter);
             sb.AppendLine("- 建筑: " + FormatCellGameObject(building));
+            sb.AppendLine("- 挖掘标记: " + FormatDigOrder(digPlacer));
             sb.AppendLine("- 复制人/仿生人: " + FormatCellDupe(minion));
             sb.AppendLine("- 小动物: " + FormatCellGameObject(critter));
 
@@ -179,6 +181,18 @@ namespace OniMcp.Tools
                     OverlayModes.None.ID,
                     ResolveMapSymbol(OverlayModes.None.ID, cell, "", "", CellPrefabId(building), CellProperName(building), building, minion, critter, 0f),
                     x, y, cell, building, minion, critter, CellPrefabId(building), CellProperName(building), null, out _));
+        }
+
+        private static string FormatDigOrder(GameObject digPlacer)
+        {
+            if (digPlacer == null)
+                return "无";
+            var prioritizable = digPlacer.GetComponent<Prioritizable>();
+            if (prioritizable == null)
+                return "有; priority=unknown";
+            var setting = prioritizable.GetMasterPriority();
+            return "有; priority=" + setting.priority_value
+                + "; class=" + setting.priority_class;
         }
 
         private static void AppendCellInfrastructureSnapshot(StringBuilder sb, int cell)

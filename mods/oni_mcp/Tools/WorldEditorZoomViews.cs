@@ -11,6 +11,12 @@ namespace OniMcp.Tools
 {
     public static partial class WorldEditorTools
     {
+        private static bool _hasSynchronizedViewportBounds;
+        private static int _synchronizedViewportXMin;
+        private static int _synchronizedViewportYMin;
+        private static int _synchronizedViewportXMax;
+        private static int _synchronizedViewportYMax;
+
         private static CallToolResult Zoom(JObject args)
         {
             if (!TryReadZoomBounds(args, out int xMin, out int yMin, out int xMax, out int yMax, out string error))
@@ -21,7 +27,9 @@ namespace OniMcp.Tools
                 views = ResolveZoomViews(DefaultZoomViews()).ToList();
 
             string syncNote = SyncZoomCameraAndView(args, xMin, yMin, xMax, yMax, views);
-            string text = ReadZoomMarkdown(xMin, yMin, xMax, yMax, views.Select(view => view.Name), syncNote, ShouldCompactMap(args));
+            bool syncEachView = ToolUtil.GetBool(args, "syncView", true);
+            string text = ReadZoomMarkdown(xMin, yMin, xMax, yMax, views.Select(view => view.Name), syncNote,
+                ShouldCompactMap(args), syncEachView, ToolUtil.GetBool(args, "allowSound", false));
             return CallToolResult.Text(text);
         }
 
@@ -48,7 +56,8 @@ namespace OniMcp.Tools
             return true;
         }
 
-        private static string ReadZoomMarkdown(int xMin, int yMin, int xMax, int yMax, IEnumerable<string> views, string syncNote = null, bool compact = true)
+        private static string ReadZoomMarkdown(int xMin, int yMin, int xMax, int yMax, IEnumerable<string> views,
+            string syncNote = null, bool compact = true, bool syncEachView = false, bool allowSound = false)
         {
             NormalizeZoomBounds(ref xMin, ref yMin, ref xMax, ref yMax);
             var resolved = ResolveZoomViews(views).ToList();
@@ -68,9 +77,16 @@ namespace OniMcp.Tools
 
             foreach (var view in resolved)
             {
+                if (syncEachView)
+                    ApplyZoomOverlayMode(view.Mode, allowSound);
                 sb.AppendLine(GetMapMd("局部放大 - " + view.Name, xMin, xMax, yMin, yMax, view.Mode, compact));
+                if (syncEachView)
+                    sb.AppendLine("- 游戏覆盖层同步: 已切换到 " + view.Name + "；该视图已在游戏中展示。");
                 sb.AppendLine();
             }
+
+            if (syncEachView && resolved.Count > 0)
+                sb.AppendLine("- 最终游戏覆盖层: " + resolved[resolved.Count - 1].Name + "（与最后读取的文本视图一致）");
 
             return sb.ToString();
         }
@@ -110,7 +126,25 @@ namespace OniMcp.Tools
                 ?? ToolUtil.GetFloat(args, "zoom")
                 ?? CalculateZoomForBounds(args, xMin, yMin, xMax, yMax);
             camera.SnapTo(new Vector3(centerX, centerY, -100f), zoom);
+            _hasSynchronizedViewportBounds = true;
+            _synchronizedViewportXMin = xMin;
+            _synchronizedViewportYMin = yMin;
+            _synchronizedViewportXMax = xMax;
+            _synchronizedViewportYMax = yMax;
             return zoom;
+        }
+
+        private static bool TryGetSynchronizedViewportBounds(out int xMin, out int yMin, out int xMax, out int yMax)
+        {
+            xMin = yMin = xMax = yMax = 0;
+            if (!_hasSynchronizedViewportBounds)
+                return false;
+
+            xMin = _synchronizedViewportXMin;
+            yMin = _synchronizedViewportYMin;
+            xMax = _synchronizedViewportXMax;
+            yMax = _synchronizedViewportYMax;
+            return true;
         }
 
         private static float CalculateZoomForBounds(JObject args, int xMin, int yMin, int xMax, int yMax)
