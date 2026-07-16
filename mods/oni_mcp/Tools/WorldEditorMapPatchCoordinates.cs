@@ -116,6 +116,66 @@ namespace OniMcp.Tools
             return true;
         }
 
+        private static bool TryGetPatchExplicitBounds(
+            string search,
+            out bool headersAttempted,
+            out int x1,
+            out int y1,
+            out int x2,
+            out int y2,
+            out string error)
+        {
+            headersAttempted = false;
+            x1 = y1 = x2 = y2 = 0;
+            error = null;
+            bool attemptedHundreds = false;
+            bool attemptedTens = false;
+            bool attemptedOnes = false;
+            bool hasHundreds = false;
+            bool hasTens = false;
+            bool hasOnes = false;
+            foreach (string rawLine in NormalizeSearchText(search).Split('\n'))
+            {
+                string line = rawLine.Trim();
+                attemptedHundreds |= line.StartsWith("百位X", StringComparison.Ordinal);
+                attemptedTens |= line.StartsWith("十位X", StringComparison.Ordinal);
+                attemptedOnes |= line.StartsWith("个位X", StringComparison.Ordinal);
+                hasHundreds |= line.StartsWith("百位X:", StringComparison.Ordinal);
+                hasTens |= line.StartsWith("十位X:", StringComparison.Ordinal);
+                hasOnes |= line.StartsWith("个位X:", StringComparison.Ordinal);
+            }
+            headersAttempted = attemptedHundreds || attemptedTens || attemptedOnes;
+            if (!headersAttempted)
+                return false;
+            if (!hasHundreds || !hasTens || !hasOnes)
+            {
+                error = "Explicit X coordinate headers require 百位X, 十位X, and 个位X together.";
+                return false;
+            }
+
+            int[] hundreds;
+            int[] tens;
+            int[] ones;
+            string parseError;
+            var rows = ParseMapRows(search, out hundreds, out tens, out ones, out parseError, false);
+            if (rows == null || rows.Count == 0)
+            {
+                error = "Explicit X coordinate headers require at least one Y=... map row.";
+                return false;
+            }
+            int[] coordinates;
+            if (!TryBuildAxisCoordinates(hundreds, tens, ones, out coordinates, out parseError) || coordinates.Length == 0)
+            {
+                error = "Invalid explicit X coordinate headers: " + (parseError ?? "empty coordinate range");
+                return false;
+            }
+            x1 = coordinates.Min();
+            x2 = coordinates.Max();
+            y1 = rows.Keys.Min();
+            y2 = rows.Keys.Max();
+            return true;
+        }
+
         private static bool TryBuildAxisCoordinates(int[] hundreds, int[] tens, int[] ones, out int[] coordinates, out string error)
         {
             coordinates = null;

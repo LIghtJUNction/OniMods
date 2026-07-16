@@ -100,7 +100,15 @@ return false;
 
 private static bool IsTechUnlocked(BuildingDef def)
 {
-if (def == null || Db.Get() == null || Db.Get().Techs == null)
+if (def == null)
+return false;
+try
+{
+if (DebugHandler.InstantBuildMode || (Game.Instance != null && Game.Instance.SandboxModeActive))
+return true;
+}
+catch { }
+if (Db.Get() == null || Db.Get().Techs == null)
 return false;
 try
 {

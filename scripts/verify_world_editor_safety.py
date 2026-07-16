@@ -198,6 +198,7 @@ def verify_map_safety() -> None:
     preflight = source("mods/oni_mcp/Tools/WorldEditorMapEditPreflight.cs")
     search = source("mods/oni_mcp/Tools/WorldEditorSearchReplace.cs")
     patch = source("mods/oni_mcp/Tools/WorldEditorMapPatchCoordinates.cs")
+    reads = source("mods/oni_mcp/Tools/WorldEditorReadSearch.cs")
     edits = source("mods/oni_mcp/Tools/WorldEditorEdits.cs")
     require(map_tools, "ExpandMapRowToken", "RLE expansion")
     require(patch, "Stale map snapshot at", "current snapshot comparison")
@@ -207,6 +208,58 @@ def verify_map_safety() -> None:
     require(preflight, "Connection glyph edits are refused", "connection touched-cell fail-closed policy")
     require(search, "TryReadVirtualFileText(JObject request", "request-aware virtual snapshot read")
     require(search, "var readArgs = request == null ? new JObject() : (JObject)request.DeepClone()", "same-request snapshot parameters")
+    require(search, "TryGetPatchExplicitBounds(search", "explicit patch bounds derivation")
+    require(search, "var patched = request == null ? new JObject() : (JObject)request.DeepClone();", "exact patch argument clone")
+    for axis in ("x1", "y1", "x2", "y2"):
+        require(search, f'patched["{axis}"] = {axis};', f"exact patch {axis} bound")
+    require(search, 'patched["syncView"] = false;', "exact patch camera-sync disable")
+    require(search, 'patched["focusCamera"] = false;', "exact patch camera-focus disable")
+    require(search, 'patched["_patchRectRender"] = true;', "exact patch rectangle render")
+    require(search, 'patched["compact"] = false;', "exact patch expanded output")
+    require(search, 'patched["format"] = "edit";', "exact patch editable output")
+    require(
+        search,
+        "return TryReadVirtualFileText(patched, path, out text, out error);",
+        "exact patch read result propagation",
+    )
+    forbid(
+        search,
+        "if (TryReadVirtualFileText(patched, path, out text, out error))",
+        "exact patch camera-viewport fallback",
+    )
+    require(patch, 'attemptedHundreds |= line.StartsWith("百位X"', "malformed hundreds header detection")
+    require(patch, 'attemptedTens |= line.StartsWith("十位X"', "malformed tens header detection")
+    require(patch, 'attemptedOnes |= line.StartsWith("个位X"', "malformed ones header detection")
+    require(patch, "headersAttempted = attemptedHundreds || attemptedTens || attemptedOnes;", "explicit X header attempt detection")
+    require(patch, "Explicit X coordinate headers require 百位X, 十位X, and 个位X together.", "incomplete X header error")
+    require(patch, "Invalid explicit X coordinate headers:", "invalid X header error")
+    require(search, "if (headersAttempted)", "malformed explicit X header fail-closed gate")
+    require(search, 'error = boundsError ?? "Invalid explicit X coordinate headers.";', "malformed explicit X header propagation")
+    require_order(
+        search,
+        "if (headersAttempted)",
+        "return TryReadVirtualFileText(request, path, out text, out error);",
+        "malformed header rejection before legacy viewport fallback",
+    )
+    require_order(reads, "TryReadExactPatchRectangle(args", 'if (relative == "index.md")', "central patch render before path routing")
+    patch_start = reads.find("private static bool TryReadExactPatchRectangle")
+    patch_end = reads.find("private static CallToolResult Search", patch_start)
+    if patch_start < 0 or patch_end < 0:
+        FAILURES.append("missing exact patch rectangle read helper")
+        patch_read = ""
+    else:
+        patch_read = reads[patch_start:patch_end]
+    require(patch_read, "TryReadMapFocusBounds(args", "exact patch bound validation")
+    require(patch_read, 'requestedView = "default";', "viewport default patch view")
+    require(patch_read, "TryResolveZoomView(requestedView", "viewport requested patch view")
+    require(patch_read, 'relative.StartsWith("map/layers/"', "layer patch route")
+    require(patch_read, "OverlayScreen.Instance.mode", "layer active overlay preservation")
+    require(patch_read, "ModeForInfrastructurePath(relative)", "infrastructure patch overlay")
+    require(patch_read, "GetMapMd(", "direct exact patch map render")
+    require(patch_read, "ShouldCompactMap(args)", "exact patch compact policy")
+    forbid(patch_read, "SyncZoomCameraAndView", "exact patch camera sync")
+    forbid(patch_read, "TryGetCameraBounds", "exact patch camera bounds fallback")
+    forbid(patch_read, "ReadFileDirectly", "exact patch path-specific fallback")
     require(map_tools, "FindUniqueTokenSequence", "unique row fallback")
     require(map_tools, "is ambiguous in the current map", "ambiguous row rejection")
     require(map_tools, "item.Value.Length != replacementSymbols.Length", "exact expanded row length")

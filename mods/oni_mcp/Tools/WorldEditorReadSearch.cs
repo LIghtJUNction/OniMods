@@ -4,6 +4,7 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Support;
+using UnityEngine;
 
 namespace OniMcp.Tools
 {
@@ -18,6 +19,8 @@ namespace OniMcp.Tools
             if (path.StartsWith("/active/", StringComparison.Ordinal))
             {
                 string relative = SaveRelativePath(path);
+                if (TryReadExactPatchRectangle(args, path, relative, out CallToolResult patchResult))
+                    return patchResult;
                 if (relative == "index.md")
                     return CallToolResult.Text(ReadActiveIndexMarkdown(args));
                 if (relative == "manifest.oni")
@@ -132,6 +135,60 @@ namespace OniMcp.Tools
             }
 
             return CallToolResult.Error("unknown virtual file: " + path);
+        }
+
+        private static bool TryReadExactPatchRectangle(
+            JObject args,
+            string path,
+            string relative,
+            out CallToolResult result)
+        {
+            result = null;
+            if (!ToolUtil.GetBool(args, "_patchRectRender", false) || !IsEditableMapMarkdown(relative))
+                return false;
+
+            if (!TryReadMapFocusBounds(args, out int pxMin, out int pyMin, out int pxMax, out int pyMax, out string boundsError))
+            {
+                result = CallToolResult.Text("# " + path + "\n\nExact patch rectangle requires x1,y1,x2,y2 bounds.\n");
+                return true;
+            }
+            if (!string.IsNullOrWhiteSpace(boundsError))
+            {
+                result = CallToolResult.Text("# " + path + "\n\nInvalid exact patch rectangle: " + boundsError + "\n");
+                return true;
+            }
+
+            HashedString mode;
+            string viewName;
+            if (IsInfrastructureMapMarkdown(relative))
+            {
+                mode = ModeForInfrastructurePath(relative);
+                viewName = GetOverlayViewName(mode);
+            }
+            else if (relative.StartsWith("map/layers/", StringComparison.Ordinal))
+            {
+                mode = OverlayScreen.Instance != null ? OverlayScreen.Instance.mode : OverlayModes.None.ID;
+                viewName = GetOverlayViewName(mode);
+            }
+            else
+            {
+                string requestedView = FirstZoomText(args, "view", "activeView", "displayView");
+                if (string.IsNullOrWhiteSpace(requestedView))
+                    requestedView = "default";
+                if (!TryResolveZoomView(requestedView, out ZoomView view))
+                {
+                    result = CallToolResult.Text("# " + path + "\n\nInvalid exact patch rectangle view: " + requestedView + "\n");
+                    return true;
+                }
+                mode = view.Mode;
+                viewName = view.Name;
+            }
+
+            string map = GetMapMd("[视图: " + viewName + "] Patch Rect Map (X: "
+                + pxMin + "~" + pxMax + ", Y: " + pyMin + "~" + pyMax + ")",
+                pxMin, pxMax, pyMin, pyMax, mode, ShouldCompactMap(args));
+            result = CallToolResult.Text(map);
+            return true;
         }
 
         private static CallToolResult Search(JObject args, string forcedDomain = null)

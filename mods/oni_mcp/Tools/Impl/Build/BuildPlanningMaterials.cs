@@ -20,13 +20,13 @@ namespace OniMcp.Tools
             var available = AvailableMaterials(def, worldId, includeUnavailable: false).ToList();
             if (auto)
             {
+                var defaults = DefaultBuildElements(def);
+                if (IsFreeBuildContext())
+                    return ValidatedMaterialSelection(defaults, "default_no_inventory_in_debug", requested, null, available);
+
                 var selected = available.FirstOrDefault();
                 if (selected != null)
-                    return MaterialSelection.Success(new List<Tag> { selected.Tag }, "auto", requested, selected, available);
-
-                var defaults = DefaultBuildElements(def);
-                if (defaults.Count > 0 && IsFreeBuildContext())
-                    return MaterialSelection.Success(defaults, "default_no_inventory_in_debug", requested, null, available);
+                    return ValidatedMaterialSelection(new List<Tag> { selected.Tag }, "auto", requested, selected, available);
 
                 return MaterialSelection.Invalid(
                     "No available build material in current world inventory",
@@ -43,7 +43,7 @@ namespace OniMcp.Tools
                     .OrderByDescending(item => item.AvailableKg)
                     .FirstOrDefault();
                 if (categoryMatch != null)
-                    return MaterialSelection.Success(new List<Tag> { categoryMatch.Tag }, "category:" + requestedCategory.Name, requested, categoryMatch, available);
+                    return ValidatedMaterialSelection(new List<Tag> { categoryMatch.Tag }, "category:" + requestedCategory.Name, requested, categoryMatch, available);
             }
 
             var match = AvailableMaterials(def, worldId, includeUnavailable: true)
@@ -70,7 +70,28 @@ namespace OniMcp.Tools
                     candidates);
             }
 
-            return MaterialSelection.Success(new List<Tag> { match.Tag }, "explicit", requested, match, available);
+            return ValidatedMaterialSelection(new List<Tag> { match.Tag }, "explicit", requested, match, available);
+        }
+
+        private static MaterialSelection ValidatedMaterialSelection(
+            List<Tag> elements,
+            string mode,
+            string requested,
+            BuildMaterialInfo selected,
+            List<BuildMaterialInfo> available)
+        {
+            if (elements == null || elements.Count == 0)
+                return MaterialSelection.Invalid("No material selected.", requested, available, new List<BuildMaterialInfo>());
+
+            Tag primaryTag = elements[0];
+            if (!primaryTag.IsValid || ElementLoader.GetElement(elements[0]) == null)
+                return MaterialSelection.Invalid(
+                    $"Material '{primaryTag.Name}' is not a valid build material.",
+                    requested,
+                    available,
+                    (available ?? new List<BuildMaterialInfo>()).Take(20).ToList());
+
+            return MaterialSelection.Success(elements, mode, requested, selected, available);
         }
 
         private static List<BuildMaterialInfo> AvailableMaterials(BuildingDef def, int worldId, bool includeUnavailable)

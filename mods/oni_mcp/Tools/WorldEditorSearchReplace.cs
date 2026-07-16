@@ -75,7 +75,7 @@ namespace OniMcp.Tools
 
             string current;
             string readError;
-            if (!TryReadVirtualFileText(request, path, out current, out readError))
+            if (!TryReadVirtualFileTextForMapEdit(request, path, search, out current, out readError))
             {
                 error = "Cannot validate SEARCH against current virtual file: " + readError;
                 return false;
@@ -145,6 +145,37 @@ namespace OniMcp.Tools
                 error = ex.Message;
                 return false;
             }
+        }
+
+
+        private static bool TryReadVirtualFileTextForMapEdit(JObject request, string path, string search, out string text, out string error)
+        {
+            string relative = string.IsNullOrWhiteSpace(path) ? string.Empty : SaveRelativePath(path);
+            if (IsEditableMapMarkdown(relative))
+            {
+                if (TryGetPatchExplicitBounds(search, out bool headersAttempted,
+                    out int x1, out int y1, out int x2, out int y2, out string boundsError))
+                {
+                    var patched = request == null ? new JObject() : (JObject)request.DeepClone();
+                    patched["x1"] = x1;
+                    patched["y1"] = y1;
+                    patched["x2"] = x2;
+                    patched["y2"] = y2;
+                    patched["syncView"] = false;
+                    patched["focusCamera"] = false;
+                    patched["_patchRectRender"] = true;
+                    patched["compact"] = false;
+                    patched["format"] = "edit";
+                    return TryReadVirtualFileText(patched, path, out text, out error);
+                }
+                if (headersAttempted)
+                {
+                    text = string.Empty;
+                    error = boundsError ?? "Invalid explicit X coordinate headers.";
+                    return false;
+                }
+            }
+            return TryReadVirtualFileText(request, path, out text, out error);
         }
 
 

@@ -11,7 +11,7 @@ namespace OniMcp.Tools
         private static bool TryCompileMapEdit(JObject args, string search, string replacement, out List<MapEditCell> changes, out string error)
         {
             changes = null;
-            if (!TryReadVirtualFileText(args, args["sourcePath"]?.ToString(), out string current, out string readError))
+            if (!TryReadVirtualFileTextForMapEdit(args, args["sourcePath"]?.ToString(), search, out string current, out string readError))
             {
                 error = "Cannot read current map before applying map edit: " + readError;
                 return false;

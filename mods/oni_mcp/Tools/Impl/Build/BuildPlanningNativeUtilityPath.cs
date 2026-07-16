@@ -34,6 +34,15 @@ namespace OniMcp.Tools
                 return result;
             }
 
+            if (IsFreeBuildContext())
+            {
+                result["attempted"] = false;
+                result["placementMode"] = "blueprint_cell_fallback";
+                result["shouldFallback"] = true;
+                result["reason"] = "free-build uses blueprint cell fallback";
+                return result;
+            }
+
             int worldId = ToolUtil.ResolveWorldId(args);
             var materialResult = SelectElements(def, args["material"]?.ToString(), worldId);
             materialResult.RequiredKg = RequiredMaterialKg(def) * path.Count;
