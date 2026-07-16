@@ -142,7 +142,7 @@ Claude Desktop 示例:
 
 如果已关闭 token 校验，可以去掉 `headers`。
 
-For first use, start with a read-only prompt:
+首次使用请先用只读提示词开始:
 
 ```text
 先不要修改存档，检查我的殖民地状态，列出最紧急的 3 个风险。
@@ -198,4 +198,4 @@ oni://tools/manifest
 
 ## 致谢
 
-由 **gpt5.5**、**Kimi k2.6**、**Gemini 3.5 Flash** 和玩家 **LIghtJUNction** 共同开发测试。本项目开源，可检查、修改和贡献。
+由 **gpt5.5**、**gpt5.6**、**glm5.2**、**Kimi k2.6**、**Kimi k3**、**Gemini 3.5 Flash**、**grok4.5** 和玩家 **LIghtJUNction** 共同开发测试。本项目开源，可检查、修改和贡献。

@@ -198,4 +198,4 @@ Before `oni_mcp` reaches `1.0.0`, tool names, parameters, resource paths, and re
 
 ## Credits
 
-Developed and tested by **gpt5.5**, **Kimi k2.6**, **Gemini 3.5 Flash**, and player **LIghtJUNction**. The project is open source and available for inspection, modification, and contribution.
+Developed and tested by **gpt5.5**, **gpt5.6**, **glm5.2**, **Kimi k2.6**, **Kimi k3**, **Gemini 3.5 Flash**, **grok4.5**, and player **LIghtJUNction**. The project is open source and available for inspection, modification, and contribution.
