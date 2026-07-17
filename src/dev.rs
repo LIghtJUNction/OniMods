@@ -202,14 +202,12 @@ fn new_dev_mod_entry(selected: &SelectedMod, static_id: &str) -> Value {
 }
 
 fn is_game_running() -> bool {
+    // Match the game process name only. Never use full-command-line matching
+    // (e.g. `pgrep -f`): Steam uploader paths like
+    // `.../OxygenNotIncludedUploader/OniUploader64` would false-positive.
     #[cfg(target_os = "linux")]
     {
-        Command::new("pgrep")
-            .arg("-f")
-            .arg("OxygenNotIncluded")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        process_name_running(&["OxygenNotIncluded", "OxygenNotIncluded.x86_64"])
     }
 
     #[cfg(target_os = "windows")]
@@ -224,11 +222,18 @@ fn is_game_running() -> bool {
 
     #[cfg(target_os = "macos")]
     {
+        process_name_running(&["OxygenNotIncluded"])
+    }
+}
+
+/// True if any of the exact process names is running (`pgrep -x`).
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn process_name_running(names: &[&str]) -> bool {
+    names.iter().any(|name| {
         Command::new("pgrep")
-            .arg("-x")
-            .arg("OxygenNotIncluded")
+            .args(["-x", name])
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
-    }
+    })
 }
