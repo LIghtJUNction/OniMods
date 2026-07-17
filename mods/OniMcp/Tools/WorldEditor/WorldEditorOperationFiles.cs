@@ -73,7 +73,7 @@ namespace OniMcp.Tools
             {
                 sb.AppendLine("- default: `" + toolName + "`");
                 McpTool tool;
-                if (OniToolRegistry.TryGetTool(toolName, out tool))
+                if (OniToolRegistry.TryGetOperation(toolName, out tool))
                     sb.AppendLine("```json\n" + JsonConvert.SerializeObject(ToolSummary(tool), McpJsonUtil.Settings) + "\n```");
             }
             sb.AppendLine();
@@ -334,7 +334,7 @@ namespace OniMcp.Tools
                 return false;
             }
             McpTool tool;
-            if (!OniToolRegistry.TryGetTool(toolName, out tool))
+            if (!OniToolRegistry.TryGetOperation(toolName, out tool))
             {
                 error = "Tool not found: " + toolName;
                 return false;

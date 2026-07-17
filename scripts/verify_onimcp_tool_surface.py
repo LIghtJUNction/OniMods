@@ -15,6 +15,7 @@ from verify_world_editor_sandbox_policy import verify_world_editor_sandbox_polic
 
 
 EXPECTED_DEFAULT_PUBLIC = {
+    "benchmark",
     "building_control",
     "game_control",
     "navigation_control",
@@ -23,7 +24,9 @@ EXPECTED_DEFAULT_PUBLIC = {
     "world_editor",
 }
 
-EXPECTED_REGISTERED = EXPECTED_DEFAULT_PUBLIC | {
+EXPECTED_REGISTERED = EXPECTED_DEFAULT_PUBLIC
+
+EXPECTED_INTERNAL = {
     "colony_control",
     "coordinate_control",
     "dupes_control",
@@ -32,15 +35,11 @@ EXPECTED_REGISTERED = EXPECTED_DEFAULT_PUBLIC | {
 }
 
 EXPECTED_ALIASES = {
+    "benchmark": (),
     "building_control": ("buildings_control", "building_system_control"),
-    "colony_control": ("colony_status_control", "colony_ops_control"),
-    "coordinate_control": ("coordinate_gateway", "coordinate_tool"),
-    "dupes_control": ("duplicants_control", "dupe_control"),
     "game_control": ("game_system_control",),
     "navigation_control": ("spatial_control", "view_control"),
     "orders_control": ("orders", "orders_unified_control", "orders_action_control", "map_orders_control"),
-    "read_control": ("state_read_control", "query_control"),
-    "search_control": ("find_control", "search_action_control"),
     "server_control": ("mcp_server_control", "server_diagnostics_control", "mcp_client_request_control", "tools_catalog_control", "tools_call_many", "agent_program_execute"),
     "world_editor": ("oni_editor", "map_editor", "save_editor"),
 }
@@ -341,8 +340,8 @@ def main() -> None:
 
     initialize = extract_block(registry, "public static void Initialize()")
     expressions = extract_calls(initialize, "Register")
-    if len(expressions) != 11:
-        fail(f"Initialize must contain exactly 11 Register calls, got {len(expressions)}")
+    if len(expressions) != len(EXPECTED_REGISTERED):
+        fail(f"Initialize must contain exactly {len(EXPECTED_REGISTERED)} Register calls, got {len(expressions)}")
     factories: list[dict[str, object]] = []
     for expression in expressions:
         qualified_calls = re.findall(
@@ -355,8 +354,19 @@ def main() -> None:
                 break
         if factory is None:
             fail(f"cannot resolve registered expression: {expression.strip()}")
-        factory["hidden"] = bool(factory["hidden"]) or "HiddenCompat" in expression
         factories.append(factory)
+
+    internal_expressions = extract_calls(initialize, "RegisterInternal")
+    internal_factories: list[dict[str, object]] = []
+    for expression in internal_expressions:
+        qualified_calls = re.findall(r"\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*\(", expression)
+        factory = resolve_factory(*qualified_calls[-1], sources) if qualified_calls else None
+        if factory is None:
+            fail(f"cannot resolve internal operation: {expression.strip()}")
+        internal_factories.append(factory)
+    internal = {str(factory["canonical"]) for factory in internal_factories}
+    if internal != EXPECTED_INTERNAL:
+        fail(f"internal operation mismatch: expected {sorted(EXPECTED_INTERNAL)}, got {sorted(internal)}")
 
     registered_list = [str(factory["canonical"]) for factory in factories]
     duplicates = sorted(name for name, count in Counter(registered_list).items() if count > 1)
@@ -371,12 +381,6 @@ def main() -> None:
         )
     if not default_public <= registered:
         fail(f"default-public tools are not registered: {sorted(default_public - registered)}")
-
-    hidden = {str(factory["canonical"]) for factory in factories if factory["hidden"]}
-    if hidden != {"coordinate_control"}:
-        fail(f"exactly coordinate_control must be hidden, got {sorted(hidden)}")
-    if len(registered) - len(hidden) != 10:
-        fail("registered/hidden counts must yield exactly 10 visible tools")
 
     alias_owner: dict[str, str] = {}
     actual_aliases = {
@@ -431,9 +435,7 @@ def main() -> None:
             "OperationFileTools mapping mismatch: "
             f"expected {EXPECTED_OPERATION_FILES}, got {operation_files}"
         )
-    missing_operation_tools = {
-        value for value in operation_files.values() if value and value not in registered
-    }
+    missing_operation_tools = {value for value in operation_files.values() if value and value not in registered | internal}
     if missing_operation_tools:
         fail(f"operation files reference unregistered tools: {sorted(missing_operation_tools)}")
 
@@ -442,7 +444,7 @@ def main() -> None:
         resource_controls.update(
             re.findall(r'"([a-z][a-z0-9_]*_control)"', path.read_text(encoding="utf-8"))
         )
-    invalid_resources = resource_controls - registered - ALLOWED_NON_TOOL_CONTROL_REFERENCES
+    invalid_resources = resource_controls - registered - internal - ALLOWED_NON_TOOL_CONTROL_REFERENCES
     if invalid_resources:
         fail(f"resource registry references unknown control tools: {sorted(invalid_resources)}")
 
@@ -471,10 +473,10 @@ def main() -> None:
     duplicate_config = sorted(name for name, count in Counter(config_names).items() if count > 1)
     if duplicate_config:
         fail(f"duplicate .codex ONI tool sections: {duplicate_config}")
-    expected_visible = EXPECTED_REGISTERED - {"coordinate_control"}
+    expected_visible = EXPECTED_REGISTERED
     if set(config_names) != expected_visible:
         fail(
-            ".codex ONI tools must equal the 10 visible canonical tools: "
+            ".codex ONI tools must equal the registered public tools: "
             f"missing={sorted(expected_visible - set(config_names))}, "
             f"unexpected={sorted(set(config_names) - expected_visible)}"
         )
@@ -482,12 +484,13 @@ def main() -> None:
         if re.search(r'^approval_mode\s*=\s*"approve"\s*$', body, re.MULTILINE) is None:
             fail(f".codex ONI tool {name} must set approval_mode=approve")
     print(
-        "OK: default-public=6, registered=11, visible=10, aliases="
+        f"OK: public={len(registered)}, internal={len(internal)}, aliases="
         f"{len(alias_owner)}, operation-files={len(operation_files)}, "
         f"resource-controls={len(resource_controls)}"
     )
     print("Default public: " + ", ".join(sorted(default_public)))
     print("Registered: " + ", ".join(sorted(registered)))
+    print("Internal: " + ", ".join(sorted(internal)))
 
 
 if __name__ == "__main__":

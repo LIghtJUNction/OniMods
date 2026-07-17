@@ -102,7 +102,7 @@ onim dev -m MyMod
 ### ONI MCP Server Design
 
 - Publicly visible surface is intentionally compact and stable for MCP clients.
-- Internal compatibility entrypoints remain registered for legacy routing and older integrations.
+- Former aggregate entrypoints are internal operations used only by the virtual-file workflow; they are not registered as MCP tools.
 - Operations are designed with explicit task framing and player confirmation in the operational flow.
 
 See the full runtime docs in [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md).

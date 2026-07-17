@@ -6,9 +6,9 @@ using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
-    public static class SearchControlTools
+    internal static class SearchControlTools
     {
-        public static McpTool ControlSearch()
+        internal static McpTool ControlSearch()
         {
             return new McpTool
             {

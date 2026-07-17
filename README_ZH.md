@@ -61,7 +61,7 @@
 - `orders_control`：挖掘、清扫、拖地、拆除等任务标记。
 - `server_control`：MCP 服务状态、会话清单、截图任务和后台任务管理。
 
-`colony_control`、`dupes_control`、`read_control`、`search_control` 等其他聚合入口仍保持注册，供虚拟文件内部路由和兼容客户端调用，但默认 `tools/list` 不再返回它们。
+原有的 `colony_control`、`dupes_control`、`read_control`、`search_control` 和 `coordinate_control` 已降级为虚拟文件工作流的内部操作，不再注册为 MCP 工具，也不支持客户端按名称直接调用。
 
 它目前更适合作为“半自动操作助手”。复杂世界规划、长期自治游玩和高质量决策仍然需要人工监督。
 

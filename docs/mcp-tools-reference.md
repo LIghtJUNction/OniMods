@@ -6,8 +6,8 @@
 
 - MCP 地址: `http://localhost:8788/mcp/`
 - 协议版本: `2025-11-25`
-- Default public tools: 6 aggregate entrypoints: `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
-- 其他聚合入口: 仍保持注册，供虚拟文件内部路由和兼容客户端按精确名称调用，但默认 `tools/list` 不返回
+- Default public tools: 7 entrypoints: `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`, `benchmark`
+- 旧聚合入口: 仅作为虚拟文件工作流的内部操作，不再注册为 MCP 工具
 - `coordinate_control` 不属于当前公开运行时；普通聚合工具拒绝 raw coordinates
 - Tool descriptions: default-public tool descriptions and parameter descriptions are in English
 
@@ -47,8 +47,8 @@ Search, planning, actions, building, orders, navigation, game actions, dupe
 actions, and coordinate fallback are routed through `world_editor`. The default
 public surface also keeps `game_control`, `navigation_control`, `building_control`,
 `orders_control`, and `server_control` available for direct focused calls. Other
-aggregate entrypoints remain registered for internal virtual-file routing and
-compatibility clients.
+former aggregate entrypoints are internal-only virtual-file operations and are
+not callable as MCP tools.
 
 新工具面按搜索/动作优先设计:
 

@@ -14,6 +14,7 @@ namespace OniMcp.Tools
     public static class OniToolRegistry
     {
         private static readonly Dictionary<string, McpTool> _tools = new Dictionary<string, McpTool>();
+        private static readonly Dictionary<string, McpTool> _internalOperations = new Dictionary<string, McpTool>();
         private static readonly Dictionary<string, string> _aliases = new Dictionary<string, string>();
         private static readonly HashSet<string> DefaultPublicToolNames = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -37,18 +38,18 @@ namespace OniMcp.Tools
             if (_initialized) return;
             _initialized = true;
 
-            Register(CoreToolEnglishDescriptions.Apply(ColonyControlEntryTools.ControlColony()));
             Register(CoreToolEnglishDescriptions.Apply(ServerControlEntryTools.ControlServer()));
             Register(CoreToolEnglishDescriptions.Apply(WorldEditorTools.ControlWorldEditor()));
             Register(CoreToolEnglishDescriptions.Apply(NavigationControlTools.ControlNavigation()));
-            Register(CoreToolEnglishDescriptions.Apply(DupesControlEntryTools.ControlDupes()));
-            Register(CoreToolEnglishDescriptions.Apply(ReadTools.ControlRead()));
             Register(CoreToolEnglishDescriptions.Apply(BuildingControlTools.ControlBuilding()));
             Register(CoreToolEnglishDescriptions.Apply(GameControlEntryTools.ControlGame()));
             Register(CoreToolEnglishDescriptions.Apply(OrdersControlEntryTools.ControlOrders()));
-            Register(CoreToolEnglishDescriptions.Apply(SearchControlTools.ControlSearch()));
             Register(BenchmarkTools.Benchmark());
-            Register(HiddenCompat(CoreToolEnglishDescriptions.Apply(CoordinateControlTools.ControlCoordinate())));
+            RegisterInternal(ColonyTools.ControlColony());
+            RegisterInternal(DuplicantTools.ControlDupes());
+            RegisterInternal(ReadTools.ControlRead());
+            RegisterInternal(SearchControlTools.ControlSearch());
+            RegisterInternal(CoordinateControlTools.ControlCoordinate());
             BuildToolInfoCache();
         }
 
@@ -63,11 +64,15 @@ namespace OniMcp.Tools
             }
         }
 
-        private static McpTool HiddenCompat(McpTool tool)
+        private static void RegisterInternal(McpTool operation)
         {
-            if (tool != null)
-                tool.Hidden = true;
-            return tool;
+            ToolMetadata.ApplyDefaults(operation);
+            _internalOperations[operation.Name] = operation;
+        }
+
+        internal static bool TryGetOperation(string name, out McpTool operation)
+        {
+            return TryGetTool(name, out operation) || _internalOperations.TryGetValue(name, out operation);
         }
 
         public static List<McpTool> GetTools()
@@ -185,7 +190,29 @@ namespace OniMcp.Tools
 
         internal static CallToolResult CallToolFromWorldEditor(string name, JObject arguments, bool allowValidatedCoordinates)
         {
-            return CallToolCore(name, arguments, allowValidatedCoordinates);
+            if (_tools.ContainsKey(name) || _aliases.ContainsKey(name))
+                return CallToolCore(name, arguments, allowValidatedCoordinates);
+            if (!_internalOperations.TryGetValue(name, out var operation))
+                return CallToolResult.Error($"Operation not found: {name}");
+            return CallOperationCore(operation, arguments, allowValidatedCoordinates);
+        }
+
+        private static CallToolResult CallOperationCore(McpTool operation, JObject arguments, bool allowValidatedCoordinates)
+        {
+            var notifications = ToolCallMiddleware.DrainNotifications();
+            try
+            {
+                if (!ToolCallMiddleware.TryGetTaskDescription(arguments, out var taskDescription))
+                    return ToolCallMiddleware.MissingTaskDescription(operation.Name, notifications);
+                ToolCallMiddleware.PresentTaskDescription(taskDescription);
+                if (!allowValidatedCoordinates && operation.Name != "coordinate_control" && ContainsCoordinateArguments(arguments))
+                    return ToolCallMiddleware.Inject(CallToolResult.Error("Raw coordinate arguments require a validated world-editor semantic command."), notifications);
+                return ToolCallMiddleware.Inject(operation.Handler(arguments ?? new JObject()), notifications);
+            }
+            catch (Exception ex)
+            {
+                return ToolCallMiddleware.Inject(CallToolResult.Error($"Internal operation error: {ex.Message}"), notifications);
+            }
         }
 
         internal static bool HasCoordinateArguments(JToken token)
