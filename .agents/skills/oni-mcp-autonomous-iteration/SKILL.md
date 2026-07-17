@@ -61,7 +61,7 @@ Prefer the bundled smoke script after MCP endpoint is online:
 python .agents/skills/oni-mcp-autonomous-iteration/scripts/runtime_smoke.py
 ```
 
-It verifies JSON-RPC initialize, `tools/list` schema, launch status, snapshot, planning parse, and world sequence search without requiring the tester agent to implement MCP session setup. It is a live smoke batch, not a pure read-only test; current calls are status/snapshot/parse/search checks and should not place orders.
+It verifies JSON-RPC initialize, the exact six-tool default public surface (or the authenticated full surface), launch status, planning parse, and `world_editor` active-world lifecycle behavior. With a loaded colony it runs snapshot and world-sequence reads directly on the full surface or through public `server_control` batching on the default surface. At the main menu it requires a structured `game_not_loaded` active-file response and only preflights the hidden read calls. It never places orders.
 
 For long-run survival validation, use:
 

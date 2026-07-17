@@ -251,6 +251,15 @@ def verify_map_safety() -> None:
         "malformed header rejection before legacy viewport fallback",
     )
     require_order(reads, "TryReadExactPatchRectangle(args", 'if (relative == "index.md")', "central patch render before path routing")
+    require(reads, "if (!HasLoadedActiveWorld())", "active virtual-file game-loaded guard")
+    require(reads, '["reasonCode"] = "game_not_loaded"', "structured main-menu reason code")
+    require(reads, '["state"] = "main_menu_or_loading"', "structured main-menu state")
+    require_order(
+        reads,
+        "if (!HasLoadedActiveWorld())",
+        "TryReadExactPatchRectangle(args",
+        "active game-loaded guard before virtual-file rendering",
+    )
     patch_start = reads.find("private static bool TryReadExactPatchRectangle")
     patch_end = reads.find("private static CallToolResult Search", patch_start)
     if patch_start < 0 or patch_end < 0:

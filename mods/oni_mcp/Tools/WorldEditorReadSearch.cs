@@ -18,6 +18,9 @@ namespace OniMcp.Tools
 
             if (path.StartsWith("/active/", StringComparison.Ordinal))
             {
+                if (!HasLoadedActiveWorld())
+                    return ActiveGameNotLoaded(path);
+
                 string relative = SaveRelativePath(path);
                 if (TryReadExactPatchRectangle(args, path, relative, out CallToolResult patchResult))
                     return patchResult;
@@ -139,6 +142,34 @@ namespace OniMcp.Tools
             }
 
             return CallToolResult.Error("unknown virtual file: " + path);
+        }
+
+        private static bool HasLoadedActiveWorld()
+        {
+            try
+            {
+                if (Game.Instance == null || ClusterManager.Instance == null)
+                    return false;
+                int worldId = ClusterManager.Instance.activeWorldId;
+                return worldId >= 0 && ClusterManager.Instance.GetWorld(worldId) != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static CallToolResult ActiveGameNotLoaded(string path)
+        {
+            return CallToolResult.Error(JsonResultText(new JObject
+            {
+                ["ok"] = false,
+                ["reasonCode"] = "game_not_loaded",
+                ["state"] = "main_menu_or_loading",
+                ["path"] = path,
+                ["message"] = "No active colony is loaded; /active/ virtual files are unavailable.",
+                ["next"] = "Use game_control domain=launch action=status, then load a save and retry this read."
+            }));
         }
 
         private static bool TryReadExactPatchRectangle(

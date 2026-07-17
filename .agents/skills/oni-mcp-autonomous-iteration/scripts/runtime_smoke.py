@@ -7,6 +7,20 @@ import urllib.request
 
 URL = "http://localhost:8788/mcp/"
 PROTOCOL = "2025-11-25"
+DEFAULT_PUBLIC_TOOLS = {
+    "building_control",
+    "navigation_control",
+    "game_control",
+    "orders_control",
+    "server_control",
+    "world_editor",
+}
+FULL_PUBLIC_TOOLS = DEFAULT_PUBLIC_TOOLS | {
+    "colony_control",
+    "dupes_control",
+    "read_control",
+    "search_control",
+}
 
 
 class McpClient:
@@ -117,17 +131,73 @@ def is_error_payload(payload):
     return any(marker in text for marker in error_markers)
 
 
-def call_json_with_retry(client, name, args, attempts=3, delay=1.0):
+def call_result_with_retry(client, name, args, attempts=3, delay=1.0):
     last = None
     for attempt in range(attempts):
-        payload = result_json(client.call_tool(name, args))
+        result = client.call_tool(name, args)
+        payload = result_json(result)
         text = payload.get("text") if isinstance(payload, dict) else None
         if not text or "Sequence contains no elements" not in text:
-            return payload
-        last = payload
+            return result, payload
+        last = (result, payload)
         if attempt + 1 < attempts:
             time.sleep(delay)
     return last
+
+
+def assert_tool_success(result, payload, label):
+    assert_true(not result.get("isError", False), f"{label} failed: {payload}")
+    assert_true(not is_error_payload(payload), f"{label} failed: {payload}")
+
+
+def hidden_state_calls():
+    return [
+        {
+            "name": "colony_control",
+            "arguments": {"domain": "snapshot", "action": "get", "profile": "minimal"},
+        },
+        {
+            "name": "read_control",
+            "arguments": {
+                "domain": "world",
+                "action": "search",
+                "pattern": "粉砂岩-泥土-氧气",
+                "direction": "both",
+                "matchMode": "smart",
+                "worldId": 0,
+                "limit": 3,
+            },
+        },
+    ]
+
+
+def batch_state_checks(client, dry_run):
+    return call_result_with_retry(
+        client,
+        "server_control",
+        {
+            "domain": "batch",
+            "action": "call_many",
+            "calls": hidden_state_calls(),
+            "defaults": {"task": "runtime smoke: read-only hidden aggregate check"},
+            "dryRun": dry_run,
+            "requireAllValid": True,
+            "stopOnError": True,
+            "responseMode": "full",
+        },
+    )
+
+
+def child_payload(batch_payload, name):
+    for child in batch_payload.get("results", []):
+        if child.get("canonicalName") != name:
+            continue
+        text = child.get("text", "")
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return {"text": text}
+    raise AssertionError(f"batch result missing child: {name}")
 
 
 def main():
@@ -147,9 +217,19 @@ def main():
     client.notify("notifications/initialized")
 
     tools = client.request("tools/list").get("tools", [])
-    tool_names = {tool.get("name") for tool in tools}
-    for required in {"server_control", "game_control", "colony_control", "building_control", "read_control"}:
-        assert_true(required in tool_names, f"missing tool: {required}")
+    tool_names = {tool.get("name") for tool in tools if tool.get("name")}
+    if tool_names == DEFAULT_PUBLIC_TOOLS:
+        surface = "default_public"
+    elif tool_names == FULL_PUBLIC_TOOLS:
+        surface = "authenticated_full"
+    else:
+        assert_true(
+            False,
+            "unexpected tools/list surface: "
+            f"missing_default={sorted(DEFAULT_PUBLIC_TOOLS - tool_names)}, "
+            f"unexpected={sorted(tool_names - FULL_PUBLIC_TOOLS)}, "
+            f"actual={sorted(tool_names)}",
+        )
 
     checks = [
         (
@@ -157,7 +237,6 @@ def main():
             {"domain": "diagnostics", "action": "status", "detail": "brief"},
         ),
         ("game_control", {"domain": "launch", "action": "status", "limit": 5}),
-        ("colony_control", {"domain": "snapshot", "action": "get", "profile": "minimal"}),
         (
             "building_control",
             {"domain": "planning", "action": "parse_plan", "plan": "粉砂岩砖@氧气", "worldId": 0},
@@ -171,31 +250,83 @@ def main():
                 "worldId": 0,
             },
         ),
-        (
-            "read_control",
-            {
-                "domain": "world",
-                "action": "search",
-                "pattern": "粉砂岩-泥土-氧气",
-                "direction": "both",
-                "matchMode": "smart",
-                "worldId": 0,
-                "limit": 3,
-            },
-        ),
     ]
 
     results = []
     for name, args in checks:
-        payload = call_json_with_retry(client, name, args)
-        assert_true(not is_error_payload(payload), f"{name} failed: {payload}")
+        result, payload = call_result_with_retry(client, name, args)
+        assert_tool_success(result, payload, name)
         results.append({"tool": name, "args": args, "payload": payload})
 
-    snapshot = next(item["payload"] for item in results if item["tool"] == "colony_control")
-    assert_true(snapshot.get("ok", True), "snapshot reported failure")
-    assert_true("Sequence contains no elements" not in snapshot.get("text", ""), "snapshot transient persisted")
+    launch = next(
+        item["payload"]
+        for item in results
+        if item["tool"] == "game_control" and item["args"].get("action") == "status"
+    )
+    game_loaded = bool(launch.get("loaded") or launch.get("gameInitialized"))
 
-    print(json.dumps({"ok": True, "toolCount": len(tools), "checks": results}, ensure_ascii=False))
+    active_result, active_payload = call_result_with_retry(
+        client,
+        "world_editor",
+        {
+            "command": "read",
+            "path": "/active/index.md",
+            "compact": True,
+            "syncView": False,
+            "focusCamera": False,
+        },
+    )
+    active_text = result_text(active_result)
+    assert_true("Object reference not set" not in active_text, "world_editor leaked a null-reference error")
+    if game_loaded:
+        assert_tool_success(active_result, active_payload, "world_editor active index")
+        assert_true("# Active World" in active_payload.get("text", ""), "active index markdown missing")
+    else:
+        assert_true(active_result.get("isError", False), "main-menu active read must be an MCP error")
+        assert_true(active_payload.get("reasonCode") == "game_not_loaded", f"unexpected active read: {active_payload}")
+        assert_true(bool(active_payload.get("next")), "game_not_loaded response must be actionable")
+    results.append({"tool": "world_editor", "payload": active_payload})
+
+    if not game_loaded:
+        state_result, state_payload = batch_state_checks(client, dry_run=True)
+        assert_tool_success(state_result, state_payload, "server_control state preflight")
+        assert_true(state_payload.get("valid") is True, f"state preflight invalid: {state_payload}")
+        assert_true(state_payload.get("executed") == 0, "main-menu state preflight executed child calls")
+        state_mode = "preflight_game_not_loaded"
+        snapshot = None
+    elif surface == "authenticated_full":
+        state_results = []
+        for call in hidden_state_calls():
+            state_result, state_payload = call_result_with_retry(
+                client, call["name"], call["arguments"]
+            )
+            assert_tool_success(state_result, state_payload, call["name"])
+            state_results.append({"tool": call["name"], "payload": state_payload})
+        results.extend(state_results)
+        snapshot = next(item["payload"] for item in state_results if item["tool"] == "colony_control")
+        state_mode = "direct_full_surface"
+    else:
+        state_result, state_payload = batch_state_checks(client, dry_run=False)
+        assert_tool_success(state_result, state_payload, "server_control state batch")
+        assert_true(state_payload.get("valid") is True, f"state batch invalid: {state_payload}")
+        assert_true(state_payload.get("failed") == 0, f"state batch failed: {state_payload}")
+        assert_true(state_payload.get("executed") == 2, f"state batch did not execute both reads: {state_payload}")
+        results.append({"tool": "server_control", "payload": state_payload})
+        snapshot = child_payload(state_payload, "colony_control")
+        state_mode = "server_batch_default_surface"
+
+    if snapshot is not None:
+        assert_true(snapshot.get("ok", True), "snapshot reported failure")
+        assert_true("Sequence contains no elements" not in snapshot.get("text", ""), "snapshot transient persisted")
+
+    print(json.dumps({
+        "ok": True,
+        "surface": surface,
+        "toolCount": len(tools),
+        "gameLoaded": game_loaded,
+        "stateChecks": state_mode,
+        "checks": results,
+    }, ensure_ascii=False))
 
 
 if __name__ == "__main__":
