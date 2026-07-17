@@ -9,7 +9,7 @@
   <a href="https://github.com/LIghtJUNction/OniMods/issues"><img alt="Issues" src="https://img.shields.io/github/issues/LIghtJUNction/OniMods?style=for-the-badge&logo=github" /></a>
   <a href="https://github.com/LIghtJUNction/OniMods/commits/main"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/LIghtJUNction/OniMods?style=for-the-badge" /></a>
   <a href="https://github.com/LIghtJUNction/OniMods/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" /></a>
-  <a href="mods/oni_mcp/README_EN.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-Server%20Docs-4f46e5?style=for-the-badge" /></a>
+  <a href="mods/OniMcp/README_EN.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-Server%20Docs-4f46e5?style=for-the-badge" /></a>
 </p>
 
 <p align="center">
@@ -19,16 +19,16 @@
 </p>
 
 <p align="center">
-  <a href="mods/oni_mcp/README_EN.md"><img alt="ONI MCP Server — AI colony control for Oxygen Not Included" src="mods/oni_mcp/preview.png" width="47%" /></a>
+  <a href="mods/OniMcp/README_EN.md"><img alt="ONI MCP Server — AI colony control for Oxygen Not Included" src="mods/OniMcp/preview.png" width="47%" /></a>
   <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — performance optimization mod for Oxygen Not Included" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
 A large-scale modular repository for Oxygen Not Included mod development:
 
 - `onim`: Rust-based ONI mod development CLI (init/build/install/publish workflow)
-- `oni_mcp`: MCP server mod exposing colony state and safe operations to MCP-compatible clients
+- `OniMcp`: MCP server mod exposing colony state and safe operations to MCP-compatible clients
 
-> **Compatibility warning**: before `1.0.0`, the `oni_mcp` API can still introduce breaking changes. If you build derivatives, plugins, scripts, or third-party clients, pin exact versions and use runtime manifests (e.g. `oni://tools/manifest`) as the compatibility source of truth.
+> **Compatibility warning**: before `1.0.0`, the `OniMcp` API can still introduce breaking changes. If you build derivatives, plugins, scripts, or third-party clients, pin exact versions and use runtime manifests (e.g. `oni://tools/manifest`) as the compatibility source of truth.
 
 ## Table of Contents
 
@@ -59,7 +59,7 @@ The repository is organized as a **two-part platform**:
 | Module | Path | Scope |
 |---|---|---|
 | `onim` | [src/](src/) | Rust CLI for mod lifecycle management |
-| `oni_mcp` | [mods/oni_mcp/](mods/oni_mcp/) | ONI MCP server mod and tool surface |
+| `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP server mod and tool surface |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | Lightweight performance mod targeting measured simulation hot paths |
 | `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | Boilerplate template for new mod creation |
 | Chinese Project Docs | [README_ZH.md](README_ZH.md) | Chinese overview and usage docs |
@@ -76,9 +76,9 @@ onim dev -m MyMod
 
 ## Quick Links
 
-- English ONI MCP docs: [mods/oni_mcp/README_EN.md](mods/oni_mcp/README_EN.md)
-- Chinese ONI MCP docs: [mods/oni_mcp/README.md](mods/oni_mcp/README.md)
-- ONI MCP server changelog: [mods/oni_mcp/CHANGELOG.md](mods/oni_mcp/CHANGELOG.md)
+- English ONI MCP docs: [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md)
+- Chinese ONI MCP docs: [mods/OniMcp/README.md](mods/OniMcp/README.md)
+- ONI MCP server changelog: [mods/OniMcp/CHANGELOG.md](mods/OniMcp/CHANGELOG.md)
 - Template changelog: [mods/OniModTemplate/CHANGELOG.md](mods/OniModTemplate/CHANGELOG.md)
 - CycleTrim changelog: [mods/CycleTrim/CHANGELOG.md](mods/CycleTrim/CHANGELOG.md)
 
@@ -90,7 +90,7 @@ onim dev -m MyMod
 
 ## ONI MCP Server
 
-`oni_mcp` is designed as a **safe, MCP-native operations layer** for Oxygen Not Included:
+`OniMcp` is designed as a **safe, MCP-native operations layer** for Oxygen Not Included:
 
 - **`world_editor`**: world-like text file editing workflow; apply SEARCH/REPLACE style edits to virtual save artifacts
 - **`game_control`**: play speed, pause/resume, save/load orchestration
@@ -105,7 +105,7 @@ onim dev -m MyMod
 - Internal compatibility entrypoints remain registered for legacy routing and older integrations.
 - Operations are designed with explicit task framing and player confirmation in the operational flow.
 
-See the full runtime docs in [mods/oni_mcp/README_EN.md](mods/oni_mcp/README_EN.md).
+See the full runtime docs in [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md).
 
 ## onim
 
@@ -129,7 +129,7 @@ See the full runtime docs in [mods/oni_mcp/README_EN.md](mods/oni_mcp/README_EN.
 ├── src/                          # onim source
 ├── mods/                         # mod workspace
 │   ├── OniModTemplate/           # reusable mod template (ModInfo + Patches/)
-│   ├── oni_mcp/                  # ONI MCP server
+│   ├── OniMcp/                  # ONI MCP server
 │   │   ├── ModInfo.cs            # entry only
 │   │   ├── Patches/ UI/ Config/ Core/ Server/ Support/
 │   │   └── Tools/{Core,Entry,WorldEditor,Shared,Impl}/
@@ -204,7 +204,7 @@ cp Directory.Build.props.example Directory.Build.props
 
 ## Compatibility
 
-- `oni_mcp` is pre-1.0, so API surface can be unstable.
+- `OniMcp` is pre-1.0, so API surface can be unstable.
 - For derivatives and integrations, pin exact versions and use runtime manifests as compatibility source.
 - Use `oni://tools/manifest` for runtime verification.
 
@@ -224,7 +224,7 @@ cp Directory.Build.props.example Directory.Build.props
 
 ## Release Notes
 
-- `oni_mcp` releases are tracked in [mods/oni_mcp/CHANGELOG.md](mods/oni_mcp/CHANGELOG.md).
+- `OniMcp` releases are tracked in [mods/OniMcp/CHANGELOG.md](mods/OniMcp/CHANGELOG.md).
 - `CycleTrim` history is tracked in [mods/CycleTrim/CHANGELOG.md](mods/CycleTrim/CHANGELOG.md).
 - Template changelog is tracked in [mods/OniModTemplate/CHANGELOG.md](mods/OniModTemplate/CHANGELOG.md).
 

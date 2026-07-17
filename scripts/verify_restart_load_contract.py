@@ -7,7 +7,7 @@ import traceback
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CORE = ROOT / "mods/oni_mcp/Tools/Impl/Core"
+CORE = ROOT / "mods/OniMcp/Tools/Impl/Core"
 
 
 def body(source: str, marker: str) -> str:
@@ -59,13 +59,13 @@ def main() -> int:
     launch = (CORE / "GameLaunchTools.cs").read_text(encoding="utf-8")
     restart = (CORE / "GameRestartTools.cs").read_text(encoding="utf-8")
     store = (CORE / "GameRestartIntentStore.cs").read_text(encoding="utf-8")
-    paths = (ROOT / "mods/oni_mcp/Support/OniMcpPaths.cs").read_text(encoding="utf-8")
-    mod_info = (ROOT / "mods/oni_mcp/ModInfo.cs").read_text(encoding="utf-8")
-    server = (ROOT / "mods/oni_mcp/Server/McpHttpServer.cs").read_text(encoding="utf-8")
+    paths = (ROOT / "mods/OniMcp/Support/OniMcpPaths.cs").read_text(encoding="utf-8")
+    mod_info = (ROOT / "mods/OniMcp/ModInfo.cs").read_text(encoding="utf-8")
+    server = (ROOT / "mods/OniMcp/Server/McpHttpServer.cs").read_text(encoding="utf-8")
     game_control = (CORE / "GameControlTools.cs").read_text(encoding="utf-8")
-    batch = (ROOT / "mods/oni_mcp/Tools/Impl/Server/ToolBatchExecutionHelpers.cs").read_text(encoding="utf-8")
-    relay = (ROOT / "mods/oni_mcp/assets/restart_oni_steam_relay.sh").read_text(encoding="utf-8")
-    project = (ROOT / "mods/oni_mcp/OniMcp.csproj").read_text(encoding="utf-8")
+    batch = (ROOT / "mods/OniMcp/Tools/Impl/Server/ToolBatchExecutionHelpers.cs").read_text(encoding="utf-8")
+    relay = (ROOT / "mods/OniMcp/assets/restart_oni_steam_relay.sh").read_text(encoding="utf-8")
+    project = (ROOT / "mods/OniMcp/OniMcp.csproj").read_text(encoding="utf-8")
 
     for action in ("restart_load", "restart_status"):
         assert f'"{action}"' in launch and action in game_control

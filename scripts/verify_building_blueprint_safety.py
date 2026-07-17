@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from oni_mcp_verify_parsing import fail, matching_delimiter
+from onimcp_verify_parsing import fail, matching_delimiter
 
 
 def extract_block(text: str, marker: str) -> str:
@@ -31,7 +31,7 @@ def require_order(text: str, markers: tuple[str, ...], label: str) -> None:
 def verify_building_blueprint_safety(
     root: Path, sources: dict[Path, str] | None = None
 ) -> None:
-    build_root = root / "mods" / "oni_mcp" / "Tools" / "Impl" / "Build"
+    build_root = root / "mods" / "OniMcp" / "Tools" / "Impl" / "Build"
     paths = {
         "native": build_root / "BuildPlanningNativeUtilityPath.cs",
         "placement": build_root / "BuildPlanningActionPlacement.cs",

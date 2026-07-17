@@ -9,8 +9,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[4]
-ALIASES = ROOT / "mods/oni_mcp/Tools/Impl/Build/BuildPlanTextAliases.cs"
-PARSER = ROOT / "mods/oni_mcp/Tools/Impl/Build/BuildPlanTextParser.cs"
+ALIASES = ROOT / "mods/OniMcp/Tools/Impl/Build/BuildPlanTextAliases.cs"
+PARSER = ROOT / "mods/OniMcp/Tools/Impl/Build/BuildPlanTextParser.cs"
 
 
 def fail(message: str) -> None:

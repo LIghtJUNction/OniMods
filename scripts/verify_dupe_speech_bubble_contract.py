@@ -10,11 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> int:
-    overlay = (ROOT / "mods/oni_mcp/UI/ToolCallSpeechOverlay.cs").read_text(encoding="utf-8")
-    game = (ROOT / "mods/oni_mcp/Tools/Impl/Core/GameControlTools.cs").read_text(encoding="utf-8")
-    ui = (ROOT / "mods/oni_mcp/Tools/Impl/Ui/UiControlTools.cs").read_text(encoding="utf-8")
-    hint = (ROOT / "mods/oni_mcp/Tools/Impl/Ui/UiHintTools.cs").read_text(encoding="utf-8")
-    english = (ROOT / "mods/oni_mcp/Tools/Entry/CoreToolEnglishDescriptions.cs").read_text(encoding="utf-8")
+    overlay = (ROOT / "mods/OniMcp/UI/ToolCallSpeechOverlay.cs").read_text(encoding="utf-8")
+    game = (ROOT / "mods/OniMcp/Tools/Impl/Core/GameControlTools.cs").read_text(encoding="utf-8")
+    ui = (ROOT / "mods/OniMcp/Tools/Impl/Ui/UiControlTools.cs").read_text(encoding="utf-8")
+    hint = (ROOT / "mods/OniMcp/Tools/Impl/Ui/UiHintTools.cs").read_text(encoding="utf-8")
+    english = (ROOT / "mods/OniMcp/Tools/Entry/CoreToolEnglishDescriptions.cs").read_text(encoding="utf-8")
 
     assert "ShowNearPlayerMouse" in overlay
     assert "ShowBubble(message.Trim(), seconds, null)" in overlay

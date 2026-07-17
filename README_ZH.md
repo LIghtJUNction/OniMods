@@ -3,7 +3,7 @@
 [English](README.md)
 
 <p align="center">
-  <a href="mods/oni_mcp/README.md"><img alt="ONI MCP Server — 缺氧 AI 殖民地控制服务" src="mods/oni_mcp/preview.png" width="47%" /></a>
+  <a href="mods/OniMcp/README.md"><img alt="ONI MCP Server — 缺氧 AI 殖民地控制服务" src="mods/OniMcp/preview.png" width="47%" /></a>
   <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 缺氧性能优化 Mod" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
@@ -11,7 +11,7 @@
   <p>
     <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust-2024-f46623?logo=rust&logoColor=white" /></a>
     <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-green.svg" /></a>
-    <a href="mods/oni_mcp/README.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-docs-2f80ed" /></a>
+    <a href="mods/OniMcp/README.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-docs-2f80ed" /></a>
     <a href="docs/mcp-tools-reference.md"><img alt="Tools reference" src="https://img.shields.io/badge/Tools-reference-8b5cf6" /></a>
   </p>
 </div>
@@ -25,32 +25,32 @@
 缺氧（Oxygen Not Included）Mod 工程仓库，包含：
 
 - `onim`：本仓库内置的缺氧 Mod 开发 CLI，用于初始化、构建、安装、卸载和发布 Mod。
-- `oni_mcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地的 Mod。
+- `OniMcp`：让 AI 助手通过 MCP 读取并操作缺氧殖民地的 Mod。
 
 - `onim` 负责初始化、构建、安装、卸载和发布。
-- `oni_mcp` 负责把殖民地数据和受控操作暴露给 MCP 客户端。
+- `OniMcp` 负责把殖民地数据和受控操作暴露给 MCP 客户端。
 - 适合 Mod 开发、AI 辅助游玩和工具集成。
 
-> **兼容性警告**：`oni_mcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
+> **兼容性警告**：`OniMcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
 
 ## 快速入口
 
 | 项目 | 路径 | 说明 |
 |------|------|------|
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
-| `oni_mcp` | [mods/oni_mcp/](mods/oni_mcp/) | ONI MCP Server Mod |
+| `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP Server Mod |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 针对实测模拟热点的轻量级性能优化 Mod |
-| `oni_mcp` 中文文档 | [mods/oni_mcp/README.md](mods/oni_mcp/README.md) | 安装、连接和功能说明 |
-| `oni_mcp` English docs | [mods/oni_mcp/README_EN.md](mods/oni_mcp/README_EN.md) | English installation and usage guide |
+| `OniMcp` 中文文档 | [mods/OniMcp/README.md](mods/OniMcp/README.md) | 安装、连接和功能说明 |
+| `OniMcp` English docs | [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md) | English installation and usage guide |
 
 ## ONI MCP Server
 
-[ONI MCP Server 文档](mods/oni_mcp/README.md)
+[ONI MCP Server 文档](mods/OniMcp/README.md)
 
 <details>
 <summary>展开 Mod 介绍</summary>
 
-`oni_mcp` 是为缺氧量身定制的 MCP 服务器 Mod。安装后，支持 MCP 的 AI 客户端可以通过本地 HTTP 接口读取殖民地状态、分析局势，并在授权后执行游戏操作。
+`OniMcp` 是为缺氧量身定制的 MCP 服务器 Mod。安装后，支持 MCP 的 AI 客户端可以通过本地 HTTP 接口读取殖民地状态、分析局势，并在授权后执行游戏操作。
 
 目前公开工具面是一组会出现在 `tools/list` 中的聚合入口：
 
@@ -152,7 +152,7 @@ cp Directory.Build.props.example Directory.Build.props
 ├── src/                   # onim 源码
 ├── mods/                  # Mod 项目目录
 │   ├── OniModTemplate/    # Mod 模板（ModInfo + Patches/）
-│   ├── oni_mcp/           # ONI MCP Server
+│   ├── OniMcp/           # ONI MCP Server
 │   │   ├── ModInfo.cs     # 仅入口
 │   │   ├── Patches/ UI/ Config/ Core/ Server/ Support/
 │   │   └── Tools/{Core,Entry,WorldEditor,Shared,Impl}/

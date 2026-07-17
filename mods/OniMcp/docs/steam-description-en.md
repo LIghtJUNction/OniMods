@@ -30,8 +30,8 @@
 [/list]
 
 [h2]Documentation[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md]Read English docs[/url]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md]查看中文文档[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md]Read English docs[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md]查看中文文档[/url]
 
 [h2]Benchmark skill[/h2]
 [list]

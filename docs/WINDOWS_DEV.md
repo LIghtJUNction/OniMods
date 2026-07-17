@@ -16,7 +16,7 @@
 ## Verify
 
 ```bat
-onim dev -m oni_mcp
+onim dev -m OniMcp
 :: restart Oxygen Not Included
 :: enable Dev mod; disable Steam Workshop copy if same staticID
 ```

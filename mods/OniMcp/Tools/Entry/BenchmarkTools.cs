@@ -119,7 +119,7 @@ namespace OniMcp.Tools
                     {
                         ["status"] = failed == 0 ? "passed" : "partial",
                         ["ok"] = failed == 0,
-                        ["suite"] = "oni_mcp_benchmark",
+                        ["suite"] = "OniMcp_benchmark",
                         ["suiteStartedAt"] = suiteStarted.ToString("O"),
                         ["suiteEndedAt"] = DateTimeOffset.UtcNow.ToString("O"),
                         ["durationMs"] = totalElapsedMs,

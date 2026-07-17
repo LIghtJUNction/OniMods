@@ -1,6 +1,6 @@
 # ONI MCP 工具参考
 
-本文档描述 `oni_mcp` 当前推荐的工具面。运行时清单永远以 `server_control domain=catalog action=manifest` 和 `oni://tools/manifest` 为准。
+本文档描述 `OniMcp` 当前推荐的工具面。运行时清单永远以 `server_control domain=catalog action=manifest` 和 `oni://tools/manifest` 为准。
 
 ## 快速开始
 
@@ -184,7 +184,7 @@ This directly creates a continuous line, with no separate follow-up connection s
 ## 代码目录
 
 ```text
-mods/oni_mcp/
+mods/OniMcp/
 ├── ModInfo.cs           # KMod 入口
 ├── Config/              # 选项
 ├── Core/                # MCP 协议类型

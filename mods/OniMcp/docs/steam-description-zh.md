@@ -30,8 +30,8 @@
 [/list]
 
 [h2]文档[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md]查看中文说明[/url]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md]View English documentation[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md]查看中文说明[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md]View English documentation[/url]
 
 [h2]基准测试技能[/h2]
 [list]

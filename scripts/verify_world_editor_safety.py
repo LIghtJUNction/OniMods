@@ -4,7 +4,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TOOLS = ROOT / "mods" / "oni_mcp" / "Tools"
+TOOLS = ROOT / "mods" / "OniMcp" / "Tools"
 FAILURES: list[str] = []
 
 
@@ -34,9 +34,9 @@ def require_order(text: str, first: str, second: str, label: str) -> None:
 
 
 def verify_blueprint_paths() -> None:
-    safety = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorBlueprintPathSafety.cs")
-    conversion = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorBlueprintConversion.cs")
-    files = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorBlueprintFiles.cs")
+    safety = source("mods/OniMcp/Tools/WorldEditor/WorldEditorBlueprintPathSafety.cs")
+    conversion = source("mods/OniMcp/Tools/WorldEditor/WorldEditorBlueprintConversion.cs")
+    files = source("mods/OniMcp/Tools/WorldEditor/WorldEditorBlueprintFiles.cs")
     for needle in (
         "Path.IsPathRooted(value)",
         "Path.GetFullPath(Path.Combine(root, value))",
@@ -62,11 +62,11 @@ def verify_blueprint_paths() -> None:
 
 
 def verify_execution_policy() -> None:
-    policy = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorExecutionPolicy.cs")
-    edits = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorEdits.cs")
-    dupe = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorDupeFiles.cs")
-    management = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorManagementFiles.cs")
-    blueprint = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorBlueprintFiles.cs")
+    policy = source("mods/OniMcp/Tools/WorldEditor/WorldEditorExecutionPolicy.cs")
+    edits = source("mods/OniMcp/Tools/WorldEditor/WorldEditorEdits.cs")
+    dupe = source("mods/OniMcp/Tools/WorldEditor/WorldEditorDupeFiles.cs")
+    management = source("mods/OniMcp/Tools/WorldEditor/WorldEditorManagementFiles.cs")
+    blueprint = source("mods/OniMcp/Tools/WorldEditor/WorldEditorBlueprintFiles.cs")
     require(policy, '!ToolUtil.GetBool(args, "dryRun", false)', "dry-run execution gate")
     require(policy, 'ToolUtil.GetBool(args, "confirm", false)', "confirm execution gate")
     require(policy, 'parent?["taskDescription"]', "taskDescription inheritance")
@@ -86,48 +86,48 @@ def verify_execution_policy() -> None:
     require(edits, "WorldEditorExecutionAllowed(args)", "top-level edit gate")
     require(edits, 'relative == "buildings/plans.oni" ? "build_area" : "auto_connect"', "real build dry-run preflight")
     require(
-        source("mods/oni_mcp/Tools/Entry/BuildingControlTools.cs"),
+        source("mods/OniMcp/Tools/Entry/BuildingControlTools.cs"),
         'action == "build_area"',
         "public build_area hard guard",
     )
     require(
-        source("mods/oni_mcp/Tools/Entry/BuildingControlTools.cs"),
+        source("mods/OniMcp/Tools/Entry/BuildingControlTools.cs"),
         'Direct building_control build_area planning is forbidden',
         "public build_area rejection guidance",
     )
     require(
-        source("mods/oni_mcp/Tools/WorldEditor/WorldEditorMapEditTools.cs"),
+        source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditTools.cs"),
         "BuildingControlTools.ControlBuildingFromVirtualFile(buildArgs)",
         "virtual-file build internal authorization",
     )
-    dig = source("mods/oni_mcp/Tools/Impl/Orders/OrdersDigTools.cs")
+    dig = source("mods/OniMcp/Tools/Impl/Orders/OrdersDigTools.cs")
     require(dig, "ApplyPriority(digPlacer, args)", "dig priority application")
     require(dig, "priorityVerified", "dig priority verification result")
     require(dig, "priorityFailed > 0 ? CallToolResult.Error", "dig priority failure is not silent")
     require(dig, "existingUpdated", "existing dig orders update priority")
     require(dig, "ApplyPriority(existingDig, args)", "existing dig priority application")
-    reachability = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorReachabilitySummary.cs")
+    reachability = source("mods/OniMcp/Tools/WorldEditor/WorldEditorReachabilitySummary.cs")
     require(reachability, "SummarizeMapEditReachability", "map edit reachability aggregation")
     require(reachability, '"no_targets_reachable"', "explicit unreachable status")
     require(reachability, "build a ladder/floor", "compact unreachable recovery warning")
     require(reachability, "CompactMapEditResults", "nested map edit result compaction")
-    tools = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorTools.cs")
+    tools = source("mods/OniMcp/Tools/WorldEditor/WorldEditorTools.cs")
     forbid(tools, '["editCells"] = new McpToolParameter', "coordinate cell-edit public schema")
     forbid(tools, '["editLines"] = new McpToolParameter', "coordinate line-edit public schema")
     require(tools, "Coordinate map edits are forbidden", "top-level coordinate edit rejection")
     require(edits, "Coordinate map edits are forbidden", "edit-path coordinate rejection")
-    if (ROOT / "mods/oni_mcp/Tools/WorldEditor/WorldEditorExplicitCellEdits.cs").exists():
+    if (ROOT / "mods/OniMcp/Tools/WorldEditor/WorldEditorExplicitCellEdits.cs").exists():
         FAILURES.append("forbidden legacy coordinate-edit implementation: WorldEditorExplicitCellEdits.cs")
-    map_edits = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorMapEditTools.cs")
+    map_edits = source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditTools.cs")
     require(map_edits, '?? 512', "full viewport map edit default budget")
     require(map_edits, 'Math.Min(requested, 2500)', "map edit budget matches maximum zoom viewport")
-    zoom = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorZoomViews.cs")
+    zoom = source("mods/OniMcp/Tools/WorldEditor/WorldEditorZoomViews.cs")
     require(zoom, "TryGetSynchronizedViewportBounds", "exact synchronized viewport bounds")
-    viewport = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorVirtualFileReader.cs")
+    viewport = source("mods/OniMcp/Tools/WorldEditor/WorldEditorVirtualFileReader.cs")
     require(viewport, "TryGetSynchronizedViewportBounds", "viewport reuses exact synchronized bounds")
-    view_read = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorViewReadTools.cs")
+    view_read = source("mods/OniMcp/Tools/WorldEditor/WorldEditorViewReadTools.cs")
     require(view_read, "TryGetSynchronizedViewportBounds", "world_editor read reuses exact synchronized bounds")
-    cell = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorCellSnapshot.cs")
+    cell = source("mods/OniMcp/Tools/WorldEditor/WorldEditorCellSnapshot.cs")
     require(cell, "ObjectLayer.DigPlacer", "cell snapshot reads dig designation")
     require(cell, "FormatDigOrder", "cell snapshot reports dig priority")
     forbid(edits, 'relative == "buildings/plans.oni" ? "parse_plan"', "parse-only build preflight")
@@ -137,8 +137,8 @@ def verify_execution_policy() -> None:
 
 
 def verify_batch_safety() -> None:
-    batch = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorBatchSafety.cs")
-    tools = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorTools.cs")
+    batch = source("mods/OniMcp/Tools/WorldEditor/WorldEditorBatchSafety.cs")
+    tools = source("mods/OniMcp/Tools/WorldEditor/WorldEditorTools.cs")
     require(batch, "PreflightBatchStep", "batch preflight helper")
     require(batch, "StepMayMutate", "batch mutation classifier")
     require(batch, "nested world_editor batch is not supported", "nested batch rejection")
@@ -172,8 +172,8 @@ def verify_batch_safety() -> None:
 
 
 def verify_operations() -> None:
-    ops = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorOperationFiles.cs")
-    registry = source("mods/oni_mcp/Tools/Core/OniToolRegistry.cs")
+    ops = source("mods/OniMcp/Tools/WorldEditor/WorldEditorOperationFiles.cs")
+    registry = source("mods/OniMcp/Tools/Core/OniToolRegistry.cs")
     require(ops, "ApplyOperationMarkdownEdit(JObject parentArgs", "ops parent args")
     require(ops, "PreflightOperationMarkdownEdit", "ops full preflight")
     require(ops, "CallToolFromWorldEditor", "internal world-editor dispatcher")
@@ -194,22 +194,22 @@ def verify_operations() -> None:
 
 
 def verify_map_safety() -> None:
-    map_tools = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorMapEditTools.cs")
-    preflight = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorMapEditPreflight.cs")
-    search = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorSearchReplace.cs")
-    patch = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorMapPatchCoordinates.cs")
-    reads = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorReadSearch.cs")
-    edits = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorEdits.cs")
+    map_tools = source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditTools.cs")
+    preflight = source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditPreflight.cs")
+    search = source("mods/OniMcp/Tools/WorldEditor/WorldEditorSearchReplace.cs")
+    patch = source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapPatchCoordinates.cs")
+    reads = source("mods/OniMcp/Tools/WorldEditor/WorldEditorReadSearch.cs")
+    edits = source("mods/OniMcp/Tools/WorldEditor/WorldEditorEdits.cs")
     require(map_tools, "ExpandMapRowToken", "RLE expansion")
     require(patch, "Stale map snapshot at", "current snapshot comparison")
     require(patch, "row.Value.Length != searchX.Length", "strict row width")
     require(patch, "MapTokensEquivalent(actual, replacementSymbols[i]", "true-difference filtering ignores @(x,y)")
-    token_parsing = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorMapEditTokenParsing.cs")
+    token_parsing = source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditTokenParsing.cs")
     require(token_parsing, "NormalizeMapCompareToken", "map token coordinate suffix normalization")
     require(token_parsing, "MapTokensEquivalent", "map token equivalence helper")
     require(token_parsing, "SearchTokenMatches", "token match with @(x,y) normalization")
     require(
-        source("mods/oni_mcp/Tools/WorldEditor/WorldEditorMapEditFootprints.cs"),
+        source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditFootprints.cs"),
         "component.Count == 1 && actualWidth == 1 && actualHeight == 1",
         "single-cell lower-left multi-cell anchor shorthand",
     )
@@ -290,9 +290,9 @@ def verify_map_safety() -> None:
 
 
 def verify_virtual_file_symmetry() -> None:
-    listing = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorListing.cs")
-    reads = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorReadSearch.cs")
-    edits = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorEdits.cs")
+    listing = source("mods/OniMcp/Tools/WorldEditor/WorldEditorListing.cs")
+    reads = source("mods/OniMcp/Tools/WorldEditor/WorldEditorReadSearch.cs")
+    edits = source("mods/OniMcp/Tools/WorldEditor/WorldEditorEdits.cs")
     require(listing, 'add("viewport.md"', "listed viewport")
     require(listing, 'add("dupes.md"', "listed management dupes")
     require(reads, 'relative == "screenshots/index.md"', "listed screenshot reader")
@@ -305,14 +305,14 @@ def verify_virtual_file_symmetry() -> None:
 
 
 def verify_single_write_limits() -> None:
-    management = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorManagementFiles.cs")
-    operations = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorOperationFiles.cs")
+    management = source("mods/OniMcp/Tools/WorldEditor/WorldEditorManagementFiles.cs")
+    operations = source("mods/OniMcp/Tools/WorldEditor/WorldEditorOperationFiles.cs")
     require(management, "Management edits support exactly one write command", "single management write limit")
     require(operations, "Operation edits support exactly one executable command", "single operation write limit")
 
 
 def verify_line_limits() -> None:
-    for path in (ROOT / "mods" / "oni_mcp").rglob("*.cs"):
+    for path in (ROOT / "mods" / "OniMcp").rglob("*.cs"):
         count = len(path.read_text(encoding="utf-8").splitlines())
         if count > 500:
             FAILURES.append(f"C# file exceeds 500 lines: {path.relative_to(ROOT)} ({count})")

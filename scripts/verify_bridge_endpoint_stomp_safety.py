@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD = ROOT / "mods/oni_mcp/Tools/Impl/Build"
+BUILD = ROOT / "mods/OniMcp/Tools/Impl/Build"
 
 
 def body(source: str, marker: str) -> str:

@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${repo_root}"
 
-mod_name="oni_mcp"
+mod_name="OniMcp"
 assembly_name="OniMcp"
 tag=""
 title=""
@@ -22,7 +22,7 @@ and creates a GitHub Release containing:
   dist/OniMcp.zip
   dist/OniMcp-src.tar.gz
 
-If --tag is omitted, the script reads <ModVersion> from mods/oni_mcp/OniMcp.csproj
+If --tag is omitted, the script reads <ModVersion> from mods/OniMcp/OniMcp.csproj
 and uses v<ModVersion>.
 USAGE
 }
@@ -160,10 +160,10 @@ EOF
 
 if [[ -z "${tag}" ]]; then
   version="$(
-    sed -n 's:.*<ModVersion>\(.*\)</ModVersion>.*:\1:p' mods/oni_mcp/OniMcp.csproj | head -n 1
+    sed -n 's:.*<ModVersion>\(.*\)</ModVersion>.*:\1:p' mods/OniMcp/OniMcp.csproj | head -n 1
   )"
   if [[ -z "${version}" ]]; then
-    echo "Could not read <ModVersion> from mods/oni_mcp/OniMcp.csproj" >&2
+    echo "Could not read <ModVersion> from mods/OniMcp/OniMcp.csproj" >&2
     exit 1
   fi
   tag="v${version}"

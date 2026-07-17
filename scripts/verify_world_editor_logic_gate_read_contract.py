@@ -17,11 +17,11 @@ def ordered(text: str, *needles: str) -> None:
 
 
 def main() -> None:
-    helper = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorLogicGateRead.cs")
-    grid = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorMapGrid.cs")
-    cell = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorCellSnapshot.cs")
-    details = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorConnectionDetails.cs")
-    anchors = source("mods/oni_mcp/Tools/WorldEditor/WorldEditorOverlayAnchors.cs")
+    helper = source("mods/OniMcp/Tools/WorldEditor/WorldEditorLogicGateRead.cs")
+    grid = source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapGrid.cs")
+    cell = source("mods/OniMcp/Tools/WorldEditor/WorldEditorCellSnapshot.cs")
+    details = source("mods/OniMcp/Tools/WorldEditor/WorldEditorConnectionDetails.cs")
+    anchors = source("mods/OniMcp/Tools/WorldEditor/WorldEditorOverlayAnchors.cs")
 
     ordered(helper, "ObjectLayer.Building", "ObjectLayer.LogicGate")
     for identity in ("inputOne", "inputTwo", "outputOne"):

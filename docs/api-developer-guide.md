@@ -2,13 +2,13 @@
 
 本文档面向开发者和高级用户，说明如何通过 HTTP JSON-RPC 2.0 与 Oxygen Not Included MCP 服务器交互。
 
-**API 稳定性警告:** 在 `oni_mcp` 发布 `1.0.0` 之前，HTTP 行为、工具名称、参数结构、资源路径和返回字段都可能发生不兼容变更。第三方客户端应锁定目标版本，运行时读取 `server_control domain=catalog action=manifest` 或 `oni://tools/manifest`，并为字段缺失、重命名和语义调整预留兼容逻辑。
+**API 稳定性警告:** 在 `OniMcp` 发布 `1.0.0` 之前，HTTP 行为、工具名称、参数结构、资源路径和返回字段都可能发生不兼容变更。第三方客户端应锁定目标版本，运行时读取 `server_control domain=catalog action=manifest` 或 `oni://tools/manifest`，并为字段缺失、重命名和语义调整预留兼容逻辑。
 
 ## 快速开始
 
 ### 1. 启动服务器
 
-1. 将 `oni_mcp` Mod 安装到缺氧游戏的 `mods/` 目录。
+1. 将 `OniMcp` Mod 安装到缺氧游戏的 `mods/` 目录。
 2. 启动游戏并启用 **ONI MCP Server**。
 3. 加载存档。
 4. MCP 服务器默认在 `http://localhost:8788/mcp/` 启动。
@@ -296,7 +296,7 @@ curl -sS -X POST http://localhost:8788/mcp/ \
 ## 开发目录
 
 ```text
-mods/oni_mcp/
+mods/OniMcp/
 ├── ModInfo.cs           # KMod 入口
 ├── Config/              # 选项
 ├── Core/                # MCP 协议类型

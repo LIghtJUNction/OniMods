@@ -6,15 +6,15 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 
 ## 快速索引
 
-- [用途与边界](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#用途与边界)
-- [安装与启动](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#安装与启动)
-- [运行端点与客户端](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#运行端点与客户端)
-- [配置与鉴权](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#配置与鉴权)
-- [主要工具组](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#主要工具组)
-- [常见链接与资源](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#常见链接与资源)
-- [兼容性与稳定性](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#兼容性与稳定性)
-- [更新与验证](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#更新与验证)
-- [参考与鸣谢](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#参考与鸣谢)
+- [用途与边界](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#用途与边界)
+- [安装与启动](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#安装与启动)
+- [运行端点与客户端](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#运行端点与客户端)
+- [配置与鉴权](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#配置与鉴权)
+- [主要工具组](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#主要工具组)
+- [常见链接与资源](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#常见链接与资源)
+- [兼容性与稳定性](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#兼容性与稳定性)
+- [更新与验证](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#更新与验证)
+- [参考与鸣谢](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#参考与鸣谢)
 
 ## 用途与边界
 
@@ -45,7 +45,7 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 ## 配置与鉴权
 
 - 配置文件: `OniMcpConfig.json`
-- 常见字段、默认值与优先路径见: [mods/oni_mcp/ModInfo.cs](ModInfo.cs)
+- 常见字段、默认值与优先路径见: [mods/OniMcp/ModInfo.cs](ModInfo.cs)
 - 默认 `AuthEnabled` 为 `false`；如需局域网访问建议开启认证并设置强随机 token。
 - 修改配置后点击 **Restart MCP server** 或重启游戏生效。
 
@@ -69,7 +69,7 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 - `oni://world/text-map`
 - `oni://buildings/defs`
 - `oni://resources/inventory`
-- [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
+- [scripts/verify_onimcp_tool_surface.py](../../scripts/verify_onimcp_tool_surface.py)
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## 兼容性与稳定性
@@ -80,7 +80,7 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 ## 更新与验证
 
 - 版本历史与兼容说明: [CHANGELOG.md](CHANGELOG.md)
-- 需要快速核对契约时，先跑: [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
+- 需要快速核对契约时，先跑: [scripts/verify_onimcp_tool_surface.py](../../scripts/verify_onimcp_tool_surface.py)
 
 ## 参考与鸣谢
 

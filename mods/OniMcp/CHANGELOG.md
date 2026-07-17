@@ -1,6 +1,6 @@
 # Changelog / 更新日志
 
-Generated from `git log -- mods/oni_mcp`.
+Generated from `git log -- mods/OniMcp`.
 
 
 - [21dc419](https://github.com/LIghtJUNction/OniMods/commit/21dc419c4263437a3b2158221b6d93811ab074cd): 2026-07-17 - feat(oni-mcp): add duplicant speech bubbles

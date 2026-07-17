@@ -34,13 +34,13 @@ def ordered(source: str, *needles: str) -> None:
 
 
 def main() -> int:
-    build = ROOT / "mods/oni_mcp/Tools/Impl/Build"
+    build = ROOT / "mods/OniMcp/Tools/Impl/Build"
     plan_one = (build / "BuildPlanningPlanOne.cs").read_text(encoding="utf-8")
     completion = (build / "BuildPlanningInstantCompletion.cs").read_text(encoding="utf-8")
-    building_control = (ROOT / "mods/oni_mcp/Tools/Entry/BuildingControlTools.cs").read_text(encoding="utf-8")
-    sandbox = (ROOT / "mods/oni_mcp/Tools/WorldEditor/WorldEditorSandboxPolicy.cs").read_text(encoding="utf-8")
-    edits = (ROOT / "mods/oni_mcp/Tools/WorldEditor/WorldEditorEdits.cs").read_text(encoding="utf-8")
-    reads = (ROOT / "mods/oni_mcp/Tools/WorldEditor/WorldEditorReadSearch.cs").read_text(encoding="utf-8")
+    building_control = (ROOT / "mods/OniMcp/Tools/Entry/BuildingControlTools.cs").read_text(encoding="utf-8")
+    sandbox = (ROOT / "mods/OniMcp/Tools/WorldEditor/WorldEditorSandboxPolicy.cs").read_text(encoding="utf-8")
+    edits = (ROOT / "mods/OniMcp/Tools/WorldEditor/WorldEditorEdits.cs").read_text(encoding="utf-8")
+    reads = (ROOT / "mods/OniMcp/Tools/WorldEditor/WorldEditorReadSearch.cs").read_text(encoding="utf-8")
     auto_connect = (build / "BuildPlanningAutoConnect.cs").read_text(encoding="utf-8")
 
     scope = method_body(sandbox, "private static CallToolResult RunWithWorldEditorInstantBuildScope")

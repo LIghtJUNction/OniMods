@@ -27,13 +27,13 @@ def method_body(source: str, marker: str) -> str:
 
 
 def main() -> int:
-    options = (ROOT / "mods/oni_mcp/Config/OniMcpOptions.cs").read_text(encoding="utf-8")
-    transport = (ROOT / "mods/oni_mcp/Server/McpHttpServerPostTransport.cs").read_text(encoding="utf-8")
-    settings = (ROOT / "mods/oni_mcp/Server/McpHttpServerSettingsPage.cs").read_text(encoding="utf-8")
-    server = (ROOT / "mods/oni_mcp/Server/McpHttpServer.cs").read_text(encoding="utf-8")
-    virtual_world = (ROOT / "mods/oni_mcp/Server/McpHttpServerVirtualWorld.cs").read_text(encoding="utf-8")
-    project = (ROOT / "mods/oni_mcp/OniMcp.csproj").read_text(encoding="utf-8")
-    readme = (ROOT / "mods/oni_mcp/README_EN.md").read_text(encoding="utf-8")
+    options = (ROOT / "mods/OniMcp/Config/OniMcpOptions.cs").read_text(encoding="utf-8")
+    transport = (ROOT / "mods/OniMcp/Server/McpHttpServerPostTransport.cs").read_text(encoding="utf-8")
+    settings = (ROOT / "mods/OniMcp/Server/McpHttpServerSettingsPage.cs").read_text(encoding="utf-8")
+    server = (ROOT / "mods/OniMcp/Server/McpHttpServer.cs").read_text(encoding="utf-8")
+    virtual_world = (ROOT / "mods/OniMcp/Server/McpHttpServerVirtualWorld.cs").read_text(encoding="utf-8")
+    project = (ROOT / "mods/OniMcp/OniMcp.csproj").read_text(encoding="utf-8")
+    readme = (ROOT / "mods/OniMcp/README_EN.md").read_text(encoding="utf-8")
 
     assert re.search(r"AuthEnabled\s*\{[^}]+\}\s*=\s*false;", options, re.S)
     assert "CurrentSecurityMigrationVersion = 1" in options

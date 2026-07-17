@@ -7,7 +7,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from oni_mcp_verify_parsing import fail, matching_delimiter
+from onimcp_verify_parsing import fail, matching_delimiter
 from verify_building_blueprint_safety import verify_building_blueprint_safety
 from verify_glyph_lookup_contract import verify_glyph_lookup_contract
 from verify_world_editor_building_files import verify_world_editor_building_files
@@ -77,10 +77,10 @@ ALLOWED_NON_TOOL_CONTROL_REFERENCES = {
 }
 
 REMOVED_POINTER_FILES = (
-    "mods/oni_mcp/Tools/Impl/Build/BuildPlanningPointerActions.cs",
-    "mods/oni_mcp/Tools/Impl/Navigation/AgentPointerModels.cs",
-    "mods/oni_mcp/Tools/Impl/Navigation/AgentPointerRegistry.cs",
-    "mods/oni_mcp/Tools/Impl/Navigation/AgentPointerRegistryMaintenance.cs",
+    "mods/OniMcp/Tools/Impl/Build/BuildPlanningPointerActions.cs",
+    "mods/OniMcp/Tools/Impl/Navigation/AgentPointerModels.cs",
+    "mods/OniMcp/Tools/Impl/Navigation/AgentPointerRegistry.cs",
+    "mods/OniMcp/Tools/Impl/Navigation/AgentPointerRegistryMaintenance.cs",
 )
 
 PUBLIC_CONTRACT_FILES = (
@@ -88,17 +88,17 @@ PUBLIC_CONTRACT_FILES = (
     "README_ZH.md",
     "docs/api-developer-guide.md",
     "docs/mcp-tools-reference.md",
-    "mods/oni_mcp/README.md",
-    "mods/oni_mcp/README_EN.md",
-    "mods/oni_mcp/Tools/Entry/CoreToolEnglishDescriptions.cs",
-    "mods/oni_mcp/Tools/Impl/Audit/ToolCatalogGuideTools.cs",
-    "mods/oni_mcp/Tools/Impl/Audit/ToolCatalogManifestTools.cs",
-    "mods/oni_mcp/Tools/Impl/Audit/ToolCoverageAnalysis.cs",
-    "mods/oni_mcp/Tools/Impl/Audit/UiMenuSurfaceAuditTools.cs",
-    "mods/oni_mcp/Tools/Impl/Build/BuildPlanningErrors.cs",
-    "mods/oni_mcp/Tools/Impl/Build/BuildPlanningPlacementGeometry.cs",
-    "mods/oni_mcp/Tools/Impl/Build/BuildPlanningTools.cs",
-    "mods/oni_mcp/Tools/Impl/Server/AgentProgramTools.cs",
+    "mods/OniMcp/README.md",
+    "mods/OniMcp/README_EN.md",
+    "mods/OniMcp/Tools/Entry/CoreToolEnglishDescriptions.cs",
+    "mods/OniMcp/Tools/Impl/Audit/ToolCatalogGuideTools.cs",
+    "mods/OniMcp/Tools/Impl/Audit/ToolCatalogManifestTools.cs",
+    "mods/OniMcp/Tools/Impl/Audit/ToolCoverageAnalysis.cs",
+    "mods/OniMcp/Tools/Impl/Audit/UiMenuSurfaceAuditTools.cs",
+    "mods/OniMcp/Tools/Impl/Build/BuildPlanningErrors.cs",
+    "mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementGeometry.cs",
+    "mods/OniMcp/Tools/Impl/Build/BuildPlanningTools.cs",
+    "mods/OniMcp/Tools/Impl/Server/AgentProgramTools.cs",
 )
 
 REMOVED_POINTER_PATTERNS = {
@@ -295,7 +295,7 @@ def assert_no_removed_pointer_contracts(root: Path, navigation: str) -> None:
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
-    tools_root = root / "mods" / "oni_mcp" / "Tools"
+    tools_root = root / "mods" / "OniMcp" / "Tools"
     registry_path = tools_root / "Core" / "OniToolRegistry.cs"
     operation_path = tools_root / "WorldEditor" / "WorldEditorOperationFiles.cs"
     navigation_path = tools_root / "Entry" / "NavigationControlTools.cs"

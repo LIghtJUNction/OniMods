@@ -6,15 +6,15 @@ ONI MCP Server is an Oxygen Not Included mod that exposes a local MCP service (`
 
 ## Index
 
-- [What It Is](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#what-it-is)
-- [Install and Start](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#install-and-start)
-- [Endpoint and Clients](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#endpoint-and-clients)
-- [Settings and Security](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#settings-and-security)
-- [Tool Groups](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#tool-groups)
-- [Common Links and Resources](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#common-links-and-resources)
-- [Compatibility and Stability](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#compatibility-and-stability)
-- [Updates and Validation](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#updates-and-validation)
-- [References and Credits](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README_EN.md#references-and-credits)
+- [What It Is](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#what-it-is)
+- [Install and Start](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#install-and-start)
+- [Endpoint and Clients](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#endpoint-and-clients)
+- [Settings and Security](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#settings-and-security)
+- [Tool Groups](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#tool-groups)
+- [Common Links and Resources](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#common-links-and-resources)
+- [Compatibility and Stability](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#compatibility-and-stability)
+- [Updates and Validation](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#updates-and-validation)
+- [References and Credits](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#references-and-credits)
 
 ## What It Is
 
@@ -45,7 +45,7 @@ ONI MCP Server is an Oxygen Not Included mod that exposes a local MCP service (`
 ## Settings and Security
 
 - Config file: `OniMcpConfig.json`
-- Default fields and load precedence are in: [mods/oni_mcp/ModInfo.cs](ModInfo.cs)
+- Default fields and load precedence are in: [mods/OniMcp/ModInfo.cs](ModInfo.cs)
 - Default `AuthEnabled` is `false`; enable auth if exposing beyond local host.
 - Restart MCP server via options button or full game restart after config updates.
 
@@ -69,7 +69,7 @@ ONI MCP Server is an Oxygen Not Included mod that exposes a local MCP service (`
 - `oni://world/text-map`
 - `oni://buildings/defs`
 - `oni://resources/inventory`
-- [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
+- [scripts/verify_onimcp_tool_surface.py](../../scripts/verify_onimcp_tool_surface.py)
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## Compatibility and Stability
@@ -80,7 +80,7 @@ ONI MCP Server is an Oxygen Not Included mod that exposes a local MCP service (`
 ## Updates and Validation
 
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
-- Verification: [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
+- Verification: [scripts/verify_onimcp_tool_surface.py](../../scripts/verify_onimcp_tool_surface.py)
 
 ## References and Credits
 

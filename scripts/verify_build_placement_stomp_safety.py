@@ -6,7 +6,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD = ROOT / "mods/oni_mcp/Tools/Impl/Build"
+BUILD = ROOT / "mods/OniMcp/Tools/Impl/Build"
 
 
 def read(name: str) -> str:
@@ -60,7 +60,7 @@ def main() -> int:
     build_area = read("BuildPlanningActionBuildArea.cs")
     native_path = read("BuildPlanningNativeUtilityPath.cs")
     placement = read("BuildPlanningActionPlacement.cs")
-    overlay = (ROOT / "mods/oni_mcp/Tools/Impl/World/WorldOverlayObjectSerialization.cs").read_text(encoding="utf-8")
+    overlay = (ROOT / "mods/OniMcp/Tools/Impl/World/WorldOverlayObjectSerialization.cs").read_text(encoding="utf-8")
 
     # Logic control buildings must remain physical buildings. The old broad
     # "Logic" classifier let switches and gates bypass footprint collisions.

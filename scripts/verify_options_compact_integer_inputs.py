@@ -23,7 +23,7 @@ def property_prefix(source: str, property_name: str) -> str:
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
-    path = root / "mods" / "oni_mcp" / "Config" / "OniMcpOptions.cs"
+    path = root / "mods" / "OniMcp" / "Config" / "OniMcpOptions.cs"
     source = path.read_text(encoding="utf-8")
     expected = {
         "Port": ("8788", "1024", "65535"),

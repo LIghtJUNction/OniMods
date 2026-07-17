@@ -7,8 +7,8 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "mods/oni_mcp/assets/restart_oni_steam_relay.sh"
-BUILD = ROOT / "mods/oni_mcp/bin/Debug/assets/restart_oni_steam_relay.sh"
+SOURCE = ROOT / "mods/OniMcp/assets/restart_oni_steam_relay.sh"
+BUILD = ROOT / "mods/OniMcp/bin/Debug/assets/restart_oni_steam_relay.sh"
 DIST = ROOT / "dist/OniMcp/assets/restart_oni_steam_relay.sh"
 ARCHIVE = ROOT / "dist/OniMcp.zip"
 MEMBER = "assets/restart_oni_steam_relay.sh"

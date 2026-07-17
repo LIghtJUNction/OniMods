@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from oni_mcp_verify_parsing import fail
+from onimcp_verify_parsing import fail
 
 
 def require(text: str, needle: str, label: str) -> None:
@@ -22,10 +22,10 @@ def section(text: str, start: str, end: str) -> str:
 def verify_glyph_lookup_contract(
     root: Path, sources: dict[Path, str] | None = None
 ) -> None:
-    tools = root / "mods" / "oni_mcp" / "Tools"
+    tools = root / "mods" / "OniMcp" / "Tools"
     lookup_path = tools / "WorldEditor" / "WorldEditorGlyphLookup.cs"
     symbols_path = tools / "WorldEditor" / "WorldEditorSymbols.cs"
-    lifecycle_path = root / "mods" / "oni_mcp" / "Patches" / "AutoDisinfectPolicy.cs"
+    lifecycle_path = root / "mods" / "OniMcp" / "Patches" / "AutoDisinfectPolicy.cs"
     world_editor_path = tools / "WorldEditor" / "WorldEditorTools.cs"
     query_path = tools / "WorldEditor" / "WorldEditorQueryTools.cs"
     search_path = tools / "Entry" / "SearchControlTools.cs"

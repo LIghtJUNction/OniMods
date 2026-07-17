@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from oni_mcp_verify_parsing import fail
+from onimcp_verify_parsing import fail
 
 
 def require(text: str, needle: str, label: str) -> None:
@@ -12,7 +12,7 @@ def require(text: str, needle: str, label: str) -> None:
 
 
 def verify_world_editor_sandbox_policy(root: Path) -> None:
-    tools = root / "mods" / "oni_mcp" / "Tools"
+    tools = root / "mods" / "OniMcp" / "Tools"
     policy_path = tools / "WorldEditor" / "WorldEditorSandboxPolicy.cs"
     if not policy_path.is_file():
         fail("missing world-editor sandbox policy implementation")
