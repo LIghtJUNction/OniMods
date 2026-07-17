@@ -2,15 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <AssemblyName>CycleTrim</AssemblyName>
-    <RootNamespace>CycleTrim</RootNamespace>
+    <AssemblyName>OniModTemplate</AssemblyName>
+    <RootNamespace>OniModTemplate</RootNamespace>
     <LangVersion>7.3</LangVersion>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
-    <ModTitle>CycleTrim</ModTitle>
-    <ModDescription>Reduces redundant smart reservoir signals, streamlines fetch pickup candidates, alternates expensive pickup/chore refresh for busy duplicants only, and throttles stationary-critter navigation probing; idle duplicants and explicit priority updates remain immediate. / 减少智能储液罐/气罐重复信号、优化拾取候选选择，仅对忙碌复制人隔次执行高开销的拾取与差事重选，并对静止小动物的导航探针调用进行节流；空闲复制人与显式优先更新仍保持即时。</ModDescription>
-    <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
-    <ModVersion>0.3.0</ModVersion>
+    <ModTitle>OniModTemplate</ModTitle>
+    <ModDescription>这是一个示例 Mod</ModDescription>
+    <ModStaticID>YourName.OniModTemplate</ModStaticID>
+    <ModVersion>0.1.7</ModVersion>
     <ModApiVersion>2</ModApiVersion>
   </PropertyGroup>
 
@@ -21,10 +21,6 @@
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(OniManagedPath)/Assembly-CSharp.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>$(OniManagedPath)/Assembly-CSharp-firstpass.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">

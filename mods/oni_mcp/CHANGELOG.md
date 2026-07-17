@@ -1,0 +1,140 @@
+# Changelog / 更新日志
+
+Generated from `git log -- mods/oni_mcp`.
+
+
+- [21dc419](https://github.com/LIghtJUNction/OniMods/commit/21dc419c4263437a3b2158221b6d93811ab074cd): 2026-07-17 - feat(oni-mcp): add duplicant speech bubbles
+- [7dd8664](https://github.com/LIghtJUNction/OniMods/commit/7dd866439b378f397c1e9db4577a72aadba200ff): 2026-07-17 - fix(oni-mcp): preserve completed restart jobs
+- [67e9f1b](https://github.com/LIghtJUNction/OniMods/commit/67e9f1b66f08d95de16abdbc33f4f90d4f776cf4): 2026-07-17 - fix(oni-mcp): preserve explicit utility topology
+- [f4bb2f8](https://github.com/LIghtJUNction/OniMods/commit/f4bb2f88eb54b3698dbcd1879448ca1583a6d3bd): 2026-07-17 - fix(oni-mcp): harden main-menu runtime smoke
+- [d6a0dff](https://github.com/LIghtJUNction/OniMods/commit/d6a0dffbc579520a88c3659b15f08060c88a84f4): 2026-07-17 - feat(oni-mcp): add autonomous restart and safe infrastructure editing
+- [5c633bd](https://github.com/LIghtJUNction/OniMods/commit/5c633bdce6735872ed8dc0f3aa88d6ab6b83dd2e): 2026-07-17 - chore: add world-editor safety and build blueprint checks
+- [866cb5f](https://github.com/LIghtJUNction/OniMods/commit/866cb5f4b747cf4b4cb19a04a4a41f529f931c12): 2026-07-17 - chore(docs): sync ONI MCP skill references and contributor credits
+- [ba35b7e](https://github.com/LIghtJUNction/OniMods/commit/ba35b7ebdfa9f3f781d0ab91e5bc7143f8eae241): 2026-07-12 - Merge pull request #16 from LIghtJUNction/codex/propose-fix-for-virtual-map-dos-vulnerability
+- [d7ea71c](https://github.com/LIghtJUNction/OniMods/commit/d7ea71c4c813aae9359f3d9f7901376b256ea95b): 2026-07-11 - fix(oni-mcp): enforce virtual map editing workflow
+- [8b9ccb2](https://github.com/LIghtJUNction/OniMods/commit/8b9ccb283f17abc6f76c312b4fa0a7ac8190f6c8): 2026-07-11 - fix(oni-mcp): bound virtual map layer requests
+- [ce43cf4](https://github.com/LIghtJUNction/OniMods/commit/ce43cf4593d234c9061ff7e6a4efa84277f67609): 2026-07-11 - fix(oni-mcp): harden virtual world editing
+- [8d50350](https://github.com/LIghtJUNction/OniMods/commit/8d50350cfa01914e280301328758262e6cacde51): 2026-07-10 - refactor(oni-mcp): streamline tool surface and source layout
+- [8ebeeac](https://github.com/LIghtJUNction/OniMods/commit/8ebeeac246effe00920d6e093b8bcf5341e11c13): 2026-07-10 - refactor(oni-mcp): split oversized tool modules
+- [67cc8c7](https://github.com/LIghtJUNction/OniMods/commit/67cc8c71289341dc94afce05b6189edbac31930d): 2026-07-10 - refactor(oni-mcp): split farming tool responsibilities
+- [f5665a0](https://github.com/LIghtJUNction/OniMods/commit/f5665a0fd4a33676ad40a2ea1506bb5875159105): 2026-07-10 - fix(oni-mcp): report CreateOrder no-op when planting request missing
+- [7a0dc8a](https://github.com/LIghtJUNction/OniMods/commit/7a0dc8a51948341d76b7bdbd33b54671ed3687b0): 2026-07-10 - fix(oni-mcp): query-only priority names; planter CropSeed deposit match
+- [baeca16](https://github.com/LIghtJUNction/OniMods/commit/baeca16de7f745a0e84041a07a47f13e66e53c0e): 2026-07-10 - fix(oni-mcp): structured diagnostics when set_planting seed invalid
+- [184438c](https://github.com/LIghtJUNction/OniMods/commit/184438c63187ea85b555227adcd1b998c01a6d84): 2026-07-10 - fix(oni-mcp): expose CropSeed compatibility in farming seed_catalog
+- [ecf6fac](https://github.com/LIghtJUNction/OniMods/commit/ecf6facd49f0c4fc741a58064e60ae76158bc0fc): 2026-07-10 - fix(oni-mcp): make query targets unambiguous
+- [3b61080](https://github.com/LIghtJUNction/OniMods/commit/3b610805b387ac2252b73bb72a45f3247a8f2d44): 2026-07-10 - fix(oni-mcp): skip false search cells for Chinese priority query
+- [9e77113](https://github.com/LIghtJUNction/OniMods/commit/9e77113763db3afc933caaaefcb0838d18ae02cd): 2026-07-10 - fix(oni-mcp): resolve Chinese query for priority set and storage detail
+- [92d8958](https://github.com/LIghtJUNction/OniMods/commit/92d89581ddfd656304b6a5b304f867fdbb16c84f): 2026-07-10 - fix(windows): harden mod deployment
+- [9542edf](https://github.com/LIghtJUNction/OniMods/commit/9542edf7fea90e324bf4b2ce819522ba99c04406): 2026-07-10 - fix(windows): deploy Dev mods to Documents path and quote Expand-Archive
+- [9c3289c](https://github.com/LIghtJUNction/OniMods/commit/9c3289cbb10b876060404c21cfcd5613d5527ca0): 2026-07-04 - chore(oni-mcp): bump version to 0.2.1
+- [11a5142](https://github.com/LIghtJUNction/OniMods/commit/11a5142e4e56a6fcc143218b09ef1d2d2057ac61): 2026-07-04 - docs: document 0.2.0 world editor direction
+- [cc97ac4](https://github.com/LIghtJUNction/OniMods/commit/cc97ac47c2d17fbb10839920bd6fba4537685723): 2026-07-04 - fix: hide undiscovered resources from food aggregates
+- [ad5f8cd](https://github.com/LIghtJUNction/OniMods/commit/ad5f8cd3f4c95a1b5b98d4440d10eb74160b7e5f): 2026-07-04 - Improve MCP planning and explicit map edits
+- [e03162c](https://github.com/LIghtJUNction/OniMods/commit/e03162c2b80441cdd14f1a468ea4c9cbd62b5e4a): 2026-07-04 - feat(oni-mcp): guide infrastructure line repair
+- [71af043](https://github.com/LIghtJUNction/OniMods/commit/71af043142197e82a54cb23b6a4768350e7692b8): 2026-07-04 - feat(oni-mcp): preview capture orders
+- [a3c6882](https://github.com/LIghtJUNction/OniMods/commit/a3c68825db83444e6bbed0549bf92d82609af867): 2026-07-04 - feat(oni-mcp): structure look around zoom calls
+- [d41a73b](https://github.com/LIghtJUNction/OniMods/commit/d41a73be9938bccd7d5c5e24ab55b5f727d9fae4): 2026-07-04 - feat(oni-mcp): guide starter verification
+- [883a26b](https://github.com/LIghtJUNction/OniMods/commit/883a26b7e11074e4d41dd4902c98ea703d4970dd): 2026-07-04 - feat(oni-mcp): use public batch starter verification
+- [6094ab4](https://github.com/LIghtJUNction/OniMods/commit/6094ab411bb8a8bd7eecbb536134cc6ae86524aa): 2026-07-04 - feat(oni-mcp): expose natural order aliases
+- [58bddb5](https://github.com/LIghtJUNction/OniMods/commit/58bddb51d02dd9200d6a635a8338f805043ec0d5): 2026-07-04 - feat(oni-mcp): classify localized room template failures
+- [79e8e95](https://github.com/LIghtJUNction/OniMods/commit/79e8e954d9730c6a8747acb06b0f7ac6ca159753): 2026-07-04 - refactor(oni-mcp): split room template diagnostics
+- [ffc9613](https://github.com/LIghtJUNction/OniMods/commit/ffc9613f815924c7886da9d736505b599ddbd20f): 2026-07-04 - feat(oni-mcp): classify room template results
+- [de7d152](https://github.com/LIghtJUNction/OniMods/commit/de7d1528f8bb57e674324abc03618e3825d08114): 2026-07-04 - refactor(oni-mcp): split current state agent workflow
+- [95bd9ac](https://github.com/LIghtJUNction/OniMods/commit/95bd9ace4f618ae2e9b0b5ec1bab7572d750e59a): 2026-07-04 - feat(oni-mcp): structure starter workflow call
+- [140a240](https://github.com/LIghtJUNction/OniMods/commit/140a24095a1c99538e4bde86fc2c3324df4566f1): 2026-07-04 - feat(oni-mcp): expose starter second call
+- [f054142](https://github.com/LIghtJUNction/OniMods/commit/f054142c8e33c537f9e7d0b4b9e5c23022453eab): 2026-07-04 - docs(oni-mcp): expose order action aliases
+- [9127614](https://github.com/LIghtJUNction/OniMods/commit/91276148ed1681d1cb4992ed3d269933294ad1d8): 2026-07-04 - feat(oni-mcp): summarize cell utility connections
+- [97ea6c6](https://github.com/LIghtJUNction/OniMods/commit/97ea6c682ba220ae4c0584481f1a6c18108728a7): 2026-07-04 - docs(oni-mcp): clarify cell infrastructure details
+- [9f389dc](https://github.com/LIghtJUNction/OniMods/commit/9f389dc52517b7745d0684092cd7f394bdf8517e): 2026-07-04 - docs(oni-mcp): explain infrastructure map reading
+- [e6a87ce](https://github.com/LIghtJUNction/OniMods/commit/e6a87cee821d4bc7af9dbb33ace5a2b46e7c3f00): 2026-07-04 - feat(oni-mcp): batch verify starter template cells
+- [8b0b741](https://github.com/LIghtJUNction/OniMods/commit/8b0b741df769ca90669c47309f7c44eeabee2db3): 2026-07-04 - refactor(oni-mcp): split room template next actions
+- [85df22b](https://github.com/LIghtJUNction/OniMods/commit/85df22bcb74feb118b657aea7b43179fd56e9a67): 2026-07-04 - docs(oni-mcp): clarify starter core verification
+- [0bd8350](https://github.com/LIghtJUNction/OniMods/commit/0bd83503f1118dd0870497ac3cbe8787f2495cc5): 2026-07-04 - feat(oni-mcp): expand order action aliases
+- [8148ca6](https://github.com/LIghtJUNction/OniMods/commit/8148ca682eb73d4ebd8a631c44f60a5fcad78fde): 2026-07-04 - fix(oni-mcp): count cell pickupables by actual position
+- [55046a9](https://github.com/LIghtJUNction/OniMods/commit/55046a9ef8af6e45ecb942fc1094ae775c19ee11): 2026-07-04 - docs(oni-mcp): explain infrastructure map ports
+- [416e046](https://github.com/LIghtJUNction/OniMods/commit/416e046d7c60aca14fc0c1d55f4661fb8da0c54e): 2026-07-04 - docs(oni-mcp): clarify management edit commands
+- [26e9434](https://github.com/LIghtJUNction/OniMods/commit/26e9434faf50b10d2915665bdcb67c663b1576c7): 2026-07-04 - docs(oni-mcp): document order aliases
+- [ab863ec](https://github.com/LIghtJUNction/OniMods/commit/ab863ec7fb0ef81f441c93d9ea697245e10bad54): 2026-07-04 - feat(oni-mcp): expand map order aliases
+- [b1078ce](https://github.com/LIghtJUNction/OniMods/commit/b1078ce4e8a67e7c21dc7749ca4596f12a3076ed): 2026-07-04 - docs(oni-mcp): guide current-state reachability
+- [49c9a28](https://github.com/LIghtJUNction/OniMods/commit/49c9a2857e0e0bcadaff9e91927366e1a3107749): 2026-07-04 - feat(oni-mcp): include optional reachability in current state
+- [d9df60d](https://github.com/LIghtJUNction/OniMods/commit/d9df60d1e58ddb7b1682244c2332a060f96d74f4): 2026-07-04 - feat(oni-mcp): suggest reachability reads for cells
+- [67baf15](https://github.com/LIghtJUNction/OniMods/commit/67baf15530de9c6c202cab95ae6e5e1b7733fd3a): 2026-07-04 - feat(oni-mcp): add cell environment hints
+- [ec43a4b](https://github.com/LIghtJUNction/OniMods/commit/ec43a4b78ce6bc33505fe782a93084e693447606): 2026-07-04 - feat(oni-mcp): expose log stability summary
+- [789367f](https://github.com/LIghtJUNction/OniMods/commit/789367f3ab1e2497c4cf9b2983a2938dcbf9537e): 2026-07-04 - feat(oni-mcp): summarize log diagnostics
+- [08364aa](https://github.com/LIghtJUNction/OniMods/commit/08364aa4ec93cdc76dc1a0400331643781d603be): 2026-07-04 - fix(oni-mcp): align starter wash basin verification cell
+- [4d8a81c](https://github.com/LIghtJUNction/OniMods/commit/4d8a81ce4315cc14182b0039c3fe0ce75914894e): 2026-07-04 - feat(oni-mcp): recommend synced local zoom from current state
+- [150324f](https://github.com/LIghtJUNction/OniMods/commit/150324fb4b6dbf75fed36e2e0e61f7a6de81678a): 2026-07-04 - feat(oni-mcp): show endpoint anchors in cell snapshots
+- [b8d86ea](https://github.com/LIghtJUNction/OniMods/commit/b8d86eaf0bf876ddd45a80dd654ed0c07bf0389d): 2026-07-04 - feat(oni-mcp): support capture tokens in map edits
+- [52dc9e7](https://github.com/LIghtJUNction/OniMods/commit/52dc9e7c70db1ccd3e88c04c874ccb81d52d8f41): 2026-07-04 - docs(oni-mcp): align research quick edit example
+- [9158a30](https://github.com/LIghtJUNction/OniMods/commit/9158a309a2489814439331663867ac938a5d3a5d): 2026-07-04 - docs(oni-mcp): fix current-state quick edit examples
+- [c27676f](https://github.com/LIghtJUNction/OniMods/commit/c27676f717749d0db8dba68acc5c5e2485646e65): 2026-07-04 - docs(oni-mcp): clarify viewport screenshot hints
+- [6a84a48](https://github.com/LIghtJUNction/OniMods/commit/6a84a483b531f5e9ec4e07359618750d80e53019): 2026-07-04 - feat(oni-mcp): surface dupe management in current state
+- [4abeeec](https://github.com/LIghtJUNction/OniMods/commit/4abeeec2fa0cf5370d1da7dbcc7230b5ce0fc508): 2026-07-04 - fix(oni-mcp): include cached pickupables in cell details
+- [ac59ab2](https://github.com/LIghtJUNction/OniMods/commit/ac59ab2e6d53a1ddf7dc54294fc1669d9c649f85): 2026-07-04 - feat(oni-mcp): add duplicant management file
+- [e8bb962](https://github.com/LIghtJUNction/OniMods/commit/e8bb962273cf38eac08bad007af08916398ab821): 2026-07-04 - feat(oni-mcp): accept pickup aliases for sweep orders
+- [f41c9f0](https://github.com/LIghtJUNction/OniMods/commit/f41c9f09bc4c92b81b2c32a82ff83b406fe40c01): 2026-07-04 - refactor(oni-mcp): split utility open adjacency helpers
+- [3029c97](https://github.com/LIghtJUNction/OniMods/commit/3029c97d4e019f57e45b2981e869e1eb7cfb6033): 2026-07-04 - feat(oni-mcp): show unlinked utility neighbors in cell snapshot
+- [ecc2783](https://github.com/LIghtJUNction/OniMods/commit/ecc278351c91ab630b8970b0803bab5d5e23700f): 2026-07-04 - feat(oni-mcp): flag adjacent unlinked utilities
+- [1d97c8c](https://github.com/LIghtJUNction/OniMods/commit/1d97c8cd0bdd491ac140cdcea5058197ee6d94e6): 2026-07-04 - refactor(oni-mcp): split current state view guidance
+- [0f2cdf2](https://github.com/LIghtJUNction/OniMods/commit/0f2cdf246e122357be05c5cc3f92376232052cf5): 2026-07-04 - feat(oni-mcp): expose viewport screenshot flow
+- [56e32cc](https://github.com/LIghtJUNction/OniMods/commit/56e32ccf962c99ae9a0567d0b3f5ec77f8c0c36a): 2026-07-04 - feat(oni-mcp): infer chinese order actions
+- [c77d5d0](https://github.com/LIghtJUNction/OniMods/commit/c77d5d0a27af689e3abadb0ba9b1548cff0a2a9f): 2026-07-04 - feat(oni-mcp): expand look-around plan
+- [086274d](https://github.com/LIghtJUNction/OniMods/commit/086274dbc2077d2f502ebf3565537e9db495cf2f): 2026-07-04 - feat(oni-mcp): report room template core cells
+- [94330ac](https://github.com/LIghtJUNction/OniMods/commit/94330acfbc5c1b385fea286d9725b638dc09f8ac): 2026-07-04 - feat(oni-mcp): enrich cell pickup details
+- [4b31c74](https://github.com/LIghtJUNction/OniMods/commit/4b31c74494a74d76c21858253c605b2427d3843b): 2026-07-04 - feat(oni-mcp): list infrastructure bridges
+- [4634dd9](https://github.com/LIghtJUNction/OniMods/commit/4634dd9b5aab337c58473575ae2e1972f187c4d1): 2026-07-04 - feat(oni-mcp): add management file index
+- [fb388d2](https://github.com/LIghtJUNction/OniMods/commit/fb388d20446d8e230fe956d00defb0e0671268ff): 2026-07-04 - feat(oni-mcp): add cell temperature comfort band
+- [fba0fe1](https://github.com/LIghtJUNction/OniMods/commit/fba0fe17a2340fcc6aed3211aaa3511b8452a78b): 2026-07-04 - feat(oni-mcp): accept chinese order actions
+- [d06fe1b](https://github.com/LIghtJUNction/OniMods/commit/d06fe1bc2ede63f29eab8573c491ed9e05d510e2): 2026-07-04 - feat(oni-mcp): mark logic endpoint directions
+- [9530329](https://github.com/LIghtJUNction/OniMods/commit/95303293ec8ce1477b2dd76ea2c8994716caab67): 2026-07-04 - feat(oni-mcp): mark infrastructure endpoint directions
+- [e3c8fbf](https://github.com/LIghtJUNction/OniMods/commit/e3c8fbfa790d95c5a281d6b655543583af9d871c): 2026-07-04 - feat(oni-mcp): expose starter template verify cells
+- [66f23c1](https://github.com/LIghtJUNction/OniMods/commit/66f23c1791b44fc612011e44f84551ed5e7d6d37): 2026-07-04 - docs(oni-mcp): add operation shortcut guide
+- [59960ec](https://github.com/LIghtJUNction/OniMods/commit/59960ecc5bc4fae05899e422921232ab2a085c43): 2026-07-04 - feat(oni-mcp): expand cell pickup details
+- [bc5b076](https://github.com/LIghtJUNction/OniMods/commit/bc5b0763d2b140dd8c105cc24ac19d6ce15c1c40): 2026-07-04 - feat(oni-mcp): sync infrastructure view reads
+- [538e654](https://github.com/LIghtJUNction/OniMods/commit/538e6549702e2794d21962aa0576f0f281c6e72f): 2026-07-04 - feat(oni-mcp): clarify infrastructure bridge details
+- [9bd2f78](https://github.com/LIghtJUNction/OniMods/commit/9bd2f78f86e848d79f5984a74559a2119d7ed18f): 2026-07-04 - feat(oni-mcp): enrich current state entrypoint
+- [2fa0d4a](https://github.com/LIghtJUNction/OniMods/commit/2fa0d4adfd89025e4ae820c1a3cb62eef6109bc3): 2026-07-04 - refactor(oni-mcp): split content protocol types
+- [c811c5a](https://github.com/LIghtJUNction/OniMods/commit/c811c5ac28886c9a2ed142be1099aaf3e9acebbd): 2026-07-04 - refactor(oni-mcp): split resource registry catalog
+- [8aff82a](https://github.com/LIghtJUNction/OniMods/commit/8aff82a264a6740025b1747c079a4b0d341f110d): 2026-07-04 - feat(oni-mcp): streamline world editor surface
+- [3398c3e](https://github.com/LIghtJUNction/OniMods/commit/3398c3efe7a8ac363da47bc891e4c169214f2fac): 2026-07-03 - Remove planning prompt UI
+- [4a3c1a0](https://github.com/LIghtJUNction/OniMods/commit/4a3c1a0ea2e1583a78537617f06695f57f6ddeeb): 2026-07-02 - update
+- [aa7e97c](https://github.com/LIghtJUNction/OniMods/commit/aa7e97cc8372f2e1a0836053d0a6d89d092d2b36): 2026-07-02 - fix: guard server_control recursive program calls
+- [449477a](https://github.com/LIghtJUNction/OniMods/commit/449477af73b6b03b72b26656239ccf30a874f5f9): 2026-07-02 - fix: bound utility auto-connect path expansion
+- [af0f548](https://github.com/LIghtJUNction/OniMods/commit/af0f5480fa69d2cde00b59ca39160bd44ea3e705): 2026-07-02 - Refine ONI MCP planning autonomy
+- [5cbca21](https://github.com/LIghtJUNction/OniMods/commit/5cbca2128429f40300d56b52490345248cb75d4e): 2026-07-02 - Merge main into recursive guard fix
+- [efa230b](https://github.com/LIghtJUNction/OniMods/commit/efa230b73aeb15d3ab3905d67aa8d995d049e6dc): 2026-07-02 - Merge pull request #6 from LIghtJUNction/codex/fix-unauthenticated-mcp-server-vulnerability
+- [691cb2c](https://github.com/LIghtJUNction/OniMods/commit/691cb2c28964ad797f167acc12ef8c35fe9aa76a): 2026-07-02 - Refine MCP CORS handling
+- [e305f44](https://github.com/LIghtJUNction/OniMods/commit/e305f442e14fa7b142e87e3b137c3aad4152991c): 2026-07-02 - Refactor path max cell checks
+- [11a675f](https://github.com/LIghtJUNction/OniMods/commit/11a675f63019600667cbef05361bf6d0a6bd723e): 2026-07-02 - Merge main into path expansion fix
+- [1287f19](https://github.com/LIghtJUNction/OniMods/commit/1287f197fc7c77986857e52dda47a1525e319721): 2026-07-02 - Merge pull request #4 from LIghtJUNction/codex/propose-fix-for-agent-program-tool-vulnerability
+- [b692a93](https://github.com/LIghtJUNction/OniMods/commit/b692a9394fb975e83669325fe465a7bfcc8525e3): 2026-07-02 - Merge pull request #3 from LIghtJUNction/codex/fix-auto-connect-path-dos-vulnerability
+- [5fec124](https://github.com/LIghtJUNction/OniMods/commit/5fec1248fc8c41ec28494c2828be5fee065a48e5): 2026-07-02 - Guard server_control recursive execution
+- [1ac998f](https://github.com/LIghtJUNction/OniMods/commit/1ac998f02e61403ddbe5bc744b78d417b6041563): 2026-07-02 - Secure MCP HTTP control plane
+- [fa6ef03](https://github.com/LIghtJUNction/OniMods/commit/fa6ef033575827c1127c3fc9a31e75591e63c95b): 2026-07-02 - Bound utility path expansion
+- [bf02a27](https://github.com/LIghtJUNction/OniMods/commit/bf02a2755d1e19860d2743cd2a0a5c38351c2198): 2026-07-02 - Limit agent program execution budget
+- [3059424](https://github.com/LIghtJUNction/OniMods/commit/3059424ffd750a01d4cd931fb150a863980aa10c): 2026-07-02 - fix: bound utility auto-connect path expansion
+- [bc9e80e](https://github.com/LIghtJUNction/OniMods/commit/bc9e80ec7648bdd53dea58766eded82a8b0e7ff9): 2026-07-02 - Improve ONI survival planning and live comment skill
+- [b2f8db1](https://github.com/LIghtJUNction/OniMods/commit/b2f8db19c857a8f90e72d33f0120d02352caf52b): 2026-07-02 - feat: expand oni mcp tool planning controls
+- [cd7eb2a](https://github.com/LIghtJUNction/OniMods/commit/cd7eb2af5c6210094663702652c67b203eae70e6): 2026-07-01 - refactor oni mcp tool surface and schedule naming
+- [cc530c5](https://github.com/LIghtJUNction/OniMods/commit/cc530c5ddd92d3b78da7e174a09220e5656eb340): 2026-07-01 - refactor oni mcp tool surface
+- [d4bedd5](https://github.com/LIghtJUNction/OniMods/commit/d4bedd54c185af90f90b91da70c975ca2f49f95e): 2026-06-18 - Release OniMcp 0.1.8
+- [e1b5b08](https://github.com/LIghtJUNction/OniMods/commit/e1b5b08ea6cd79c2803c7031064362d64dd4123e): 2026-06-06 - feat: add coordinate screenshots and utility search
+- [406a8a9](https://github.com/LIghtJUNction/OniMods/commit/406a8a9d9ce93b963f37e50740c9054aeb2713f4): 2026-06-06 - fix: improve stress readings and screenshot access
+- [ad0789f](https://github.com/LIghtJUNction/OniMods/commit/ad0789f357c7a38b8f305c487210d2e63a115ab5): 2026-05-26 - sync
+- [ea1df0f](https://github.com/LIghtJUNction/OniMods/commit/ea1df0fff1c8bdf2dd2e1b962624205852b94304): 2026-05-26 - sync
+- [cf358f7](https://github.com/LIghtJUNction/OniMods/commit/cf358f70baef88fcec8435d37f6c26afa1741f97): 2026-05-25 - Reduce ONI MCP tool catalog token overhead
+- [5fc2ba6](https://github.com/LIghtJUNction/OniMods/commit/5fc2ba63d8da3dcf776547e55b0781c4c2929435): 2026-05-25 - v0.1.5
+- [f5f41f5](https://github.com/LIghtJUNction/OniMods/commit/f5f41f5e0efae35a213bc010a7b2f394208d8faa): 2026-05-25 - v0.1.4
+- [0705731](https://github.com/LIghtJUNction/OniMods/commit/070573151f30a0acb1581f293143023235882e32): 2026-05-25 - bump version to 0.1.4
+- [e2cf55f](https://github.com/LIghtJUNction/OniMods/commit/e2cf55ff09a064c6811c26ecf7b9980f642fe8ba): 2026-05-25 - v0.1.4
+- [f752700](https://github.com/LIghtJUNction/OniMods/commit/f752700a4c15cc10cdde84dfda0f0d3eb423bc74): 2026-05-24 - 更新 README_EN.md
+- [bd669f1](https://github.com/LIghtJUNction/OniMods/commit/bd669f132f5cd27dddf5f9b2e6aa4732d1219a05): 2026-05-24 - 更新 README.md
+- [87c12ed](https://github.com/LIghtJUNction/OniMods/commit/87c12edbf30954eedc046c8ba1fa5ecd44718b1e): 2026-05-24 - v0.1.3
+- [57c3df2](https://github.com/LIghtJUNction/OniMods/commit/57c3df2475baa9809270ef25b5935e82e0c889ca): 2026-05-24 - skills
+- [e2567c0](https://github.com/LIghtJUNction/OniMods/commit/e2567c055c2dfaf3b10ccfe0f4cefa97bfb6d3f6): 2026-05-24 - 修复初始化响应
+- [ee87d78](https://github.com/LIghtJUNction/OniMods/commit/ee87d78fd3afd3223895c29a6089dda087a361b1): 2026-05-24 - docs
+- [db1f958](https://github.com/LIghtJUNction/OniMods/commit/db1f95854a81700bcdbd84953d8f8e802928b27b): 2026-05-24 - docs
+- [1c796ad](https://github.com/LIghtJUNction/OniMods/commit/1c796ad357deac939554746488fe834d0f7f8d8b): 2026-05-24 - revert: remove --desc-file, use manual upload instead
+- [309b855](https://github.com/LIghtJUNction/OniMods/commit/309b85533f69b1ea0ab309d39be295f04dd9b577): 2026-05-24 - docs: add English README (README_EN.md) and update csproj to copy it
+- [10986f3](https://github.com/LIghtJUNction/OniMods/commit/10986f33360668ece8bbf1e03c950614faf0b9d6): 2026-05-24 - docs: add credits (gpt5.5, Kimi k2.6, LIghtJUNction) to README
+- [7f29dd8](https://github.com/LIghtJUNction/OniMods/commit/7f29dd8cf27534c87f8e21f36261418f32ea9d89): 2026-05-24 - reinit: MCP server + tools + docs + skills with LFS tracking

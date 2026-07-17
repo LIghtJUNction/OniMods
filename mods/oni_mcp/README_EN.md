@@ -205,3 +205,22 @@ Before `oni_mcp` reaches `1.0.0`, tool names, parameters, resource paths, and re
 ## Credits
 
 Developed and tested by **gpt5.5**, **gpt5.6**, **glm5.2**, **Kimi k2.6**, **Kimi k3**, **Gemini 3.5 Flash**, **grok4.5**, and player **LIghtJUNction**. The project is open source and available for inspection, modification, and contribution.
+
+## Changelog
+
+Full history: [CHANGELOG.md](CHANGELOG.md)
+
+## References
+
+- Repository: [github.com/LIghtJUNction/OniMods](https://github.com/LIghtJUNction/OniMods)
+- API docs: [docs/mcp-tools-reference.md](../../docs/mcp-tools-reference.md)
+- Developer guide: [docs/api-developer-guide.md](../../docs/api-developer-guide.md)
+- Runtime entry point: [mods/oni_mcp/ModInfo.cs](ModInfo.cs)
+- Surface-contract verification script: [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
+
+## Related Projects / Friend Links
+
+- Model Context Protocol: [modelcontextprotocol](https://github.com/modelcontextprotocol)
+- ONI MCP reference implementation (this repo): [OniMods](https://github.com/LIghtJUNction/OniMods)
+- FastTrack performance patching example for ONI: [FastTrack](https://github.com/peterhaneve/FastTrack)
+- Harmony patching framework: [Harmony](https://github.com/pardeike/Harmony)

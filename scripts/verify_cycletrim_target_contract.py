@@ -50,6 +50,7 @@ def main() -> int:
         return 1
 
     try:
+        # SmartReservoir: keep signal behavior stable when capacity changes.
         source = decompile(assembly, "SmartReservoir")
         sim_body = method_body(source, "public void Sim200ms(float dt)")
         update_body = method_body(source, "private void UpdateLogicCircuit(object data)")
@@ -88,6 +89,7 @@ def main() -> int:
                 print(f"FAIL: {failure}", file=sys.stderr)
             return 1
 
+        # FetchManager / sensor pipeline: candidate selection and sorting should remain compatible.
         fetch_source = decompile(assembly, "FetchManager")
         fetch_failures = []
         inner_signature = "public void UpdatePickups(Navigator worker_navigator, int worker)"
@@ -117,6 +119,7 @@ def main() -> int:
                 print(f"FAIL: {failure}", file=sys.stderr)
             return 1
 
+        # Chore scheduling path for pickup refresh + brain priority behavior.
         chore_failures = []
         sensor_source = decompile(assembly, "PickupableSensor")
         sensor_body = method_body(sensor_source, "public override void Update()")
@@ -145,6 +148,22 @@ def main() -> int:
         )
         if len(prioritize_matches) < 1:
             chore_failures.append("BrainScheduler.PrioritizeBrain(Brain) is missing")
+
+        navigator_source = decompile(assembly, "Navigator")
+        navigator_signature = "public void UpdateProbe(bool forceUpdate = false)"
+        if navigator_source.count(navigator_signature) != 1:
+            chore_failures.append("Navigator.UpdateProbe(bool) signature drifted")
+        if navigator_source.count("public bool IsMoving()") != 1:
+            chore_failures.append("Navigator.IsMoving() signature drifted")
+        for field in ("reportOccupation", "executePathProbeTaskAsync"):
+            if not re.search(rf"\bbool\s+{field}\s*;", navigator_source):
+                chore_failures.append(f"Navigator.{field} field drifted")
+
+        creature_source = decompile(assembly, "CreatureBrain")
+        if not re.search(r"public\s+class\s+CreatureBrain\s*:\s*Brain", creature_source):
+            chore_failures.append("CreatureBrain inheritance contract drifted")
+        if not re.search(r"component\.UpdateProbe\s*\(\s*\)", creature_source):
+            chore_failures.append("CreatureBrain UpdateProbe callback contract drifted")
 
         if chore_failures:
             for failure in chore_failures:

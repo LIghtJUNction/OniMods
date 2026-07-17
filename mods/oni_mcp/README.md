@@ -205,3 +205,22 @@ oni://tools/manifest
 ## 致谢
 
 由 **gpt5.5**、**gpt5.6**、**glm5.2**、**Kimi k2.6**、**Kimi k3**、**Gemini 3.5 Flash**、**grok4.5** 和玩家 **LIghtJUNction** 共同开发测试。本项目开源，可检查、修改和贡献。
+
+## 更新日志 / Changelog
+
+完整提交记录见: [CHANGELOG.md](CHANGELOG.md)
+
+## 引用链接 / References
+
+- 源码仓库: [github.com/LIghtJUNction/OniMods](https://github.com/LIghtJUNction/OniMods)
+- API 文档: [docs/mcp-tools-reference.md](../../docs/mcp-tools-reference.md)
+- 任务映射与参数说明: [docs/api-developer-guide.md](../../docs/api-developer-guide.md)
+- 运行时配置: [mods/oni_mcp/ModInfo.cs](ModInfo.cs)
+- 目标契约验证脚本: [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
+
+## 参考项目 / 友链
+
+- 官方 MCP 生态: [modelcontextprotocol](https://github.com/modelcontextprotocol)
+- 游戏补丁与工具基座: [OniMods (本仓库)](https://github.com/LIghtJUNction/OniMods)
+- 经典 ONI 性能补丁实现: [FastTrack](https://github.com/peterhaneve/FastTrack)
+- 统一补丁框架: [Harmony](https://github.com/pardeike/Harmony)
