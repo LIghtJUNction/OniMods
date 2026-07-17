@@ -17,6 +17,11 @@ namespace CycleTrim.Patches
 
             private static void Postfix(bool ___activated, LogicPorts ___logicPorts)
             {
+                if (___logicPorts == null)
+                {
+                    return;
+                }
+
                 ___logicPorts.SendSignal(SmartReservoir.PORT_ID, ___activated ? 1 : 0);
             }
         }
