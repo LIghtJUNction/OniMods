@@ -46,6 +46,15 @@ def simulate_lifecycle(
     raise AssertionError("simulation ended before readiness or timeout")
 
 
+def simulate_consumer_entry(intent: dict[str, object]) -> tuple[str, str | None]:
+    stage = str(intent["stage"])
+    if stage in {"loaded", "failed"}:
+        return stage, intent.get("error")
+    if bool(intent.get("stale")):
+        return "failed", "restart intent exceeded the 15 minute lifetime"
+    return stage, intent.get("error")
+
+
 def main() -> int:
     launch = (CORE / "GameLaunchTools.cs").read_text(encoding="utf-8")
     restart = (CORE / "GameRestartTools.cs").read_text(encoding="utf-8")
@@ -86,6 +95,7 @@ def main() -> int:
     consume = body(restart, "private IEnumerator ConsumeRestartIntent")
     ordered(
         consume,
+        'intent.Stage == "loaded" || intent.Stage == "failed"',
         "IsRestartIntentStale",
         'intent.Stage != "relay_started"',
         "float deadline = Time.realtimeSinceStartup + RestartLoadReadinessTimeoutSeconds",
@@ -115,6 +125,23 @@ def main() -> int:
     assert simulate_lifecycle(
         [(False, False, False), (False, False, False), (False, False, False)], timeout_tick=2
     ) == ("failed", None)
+    assert simulate_consumer_entry({
+        "stage": "loaded",
+        "loadedUtc": "2026-07-17T07:43:03Z",
+        "stale": True,
+        "error": None,
+    }) == ("loaded", None)
+    assert simulate_consumer_entry({
+        "stage": "failed",
+        "failedUtc": "2026-07-17T07:43:03Z",
+        "stale": True,
+        "error": "original failure",
+    }) == ("failed", "original failure")
+    assert simulate_consumer_entry({
+        "stage": "relay_started",
+        "stale": True,
+        "error": None,
+    }) == ("failed", "restart intent exceeded the 15 minute lifetime")
     assert "restart intent exceeded the 15 minute lifetime" in restart
     assert "GameRestartCoordinator.EnsureCreated" in mod_info
     start = body(launch, "private static CallToolResult Start")

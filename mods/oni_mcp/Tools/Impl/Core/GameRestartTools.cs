@@ -311,6 +311,9 @@ namespace OniMcp.Tools
             var intent = GameLaunchTools.ReadRestartIntent(out string readError);
             if (intent == null)
                 yield break;
+
+            if (intent.Stage == "loaded" || intent.Stage == "failed")
+                yield break;
             if (GameLaunchTools.IsRestartIntentStale(intent))
             {
                 yield return PersistFailureUntilWritten(intent, "restart intent exceeded the 15 minute lifetime");
@@ -318,7 +321,7 @@ namespace OniMcp.Tools
             }
 
             int processId = Process.GetCurrentProcess().Id;
-            if (intent.OriginProcessId == processId || intent.Stage == "loaded" || intent.Stage == "failed")
+            if (intent.OriginProcessId == processId)
                 yield break;
             if (intent.Stage == "loading")
             {
