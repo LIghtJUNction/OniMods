@@ -18,10 +18,12 @@ namespace OniMcp
     /// <summary>
     /// Mod 入口类。游戏加载时自动实例化。
     /// </summary>
+    [HarmonyPatch(typeof(Db), "Initialize")]
     public static class Db_Initialize_Patch
     {
         public static void Postfix()
         {
+            WorldEditorTools.MarkRuntimeDatabaseReady();
             InputSafetyPatchVerifier.EnsureInstalled(null, "Db.Initialize");
             AutoDisinfectPolicy.EnsureInstalled(null, "Db.Initialize");
             AutoDisinfectPolicy.ApplyToExisting();

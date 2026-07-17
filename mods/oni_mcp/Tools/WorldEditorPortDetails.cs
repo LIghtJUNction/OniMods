@@ -69,6 +69,16 @@ namespace OniMcp.Tools
             var ports = go.GetComponent<LogicPorts>();
             if (ports == null)
                 return;
+            if (LogicPortReadSemantics.TryBridgeRoute(go, out int from, out int to))
+            {
+                sb.AppendLine("- 信号输入: " + PortLine(from, "logic", HasLayer(from, LogicLayers))
+                    + " connected=" + LogicPortReadSemantics.ConnectedAtCell(from));
+                sb.AppendLine("- 信号输出: " + PortLine(to, "logic", HasLayer(to, LogicLayers))
+                    + " connected=" + LogicPortReadSemantics.ConnectedAtCell(to));
+                sb.AppendLine("- 桥接路由: from:" + CellRef(from) + " via:"
+                    + CellRef(Grid.PosToCell(go)) + "⌒ to:" + CellRef(to));
+                return;
+            }
 
             AppendLogicPortGroup(sb, "信号输入", ports, ports.inputPortInfo, true);
             AppendLogicPortGroup(sb, "信号输出", ports, ports.outputPortInfo, false);
@@ -79,13 +89,14 @@ namespace OniMcp.Tools
             if (infos == null || infos.Length == 0)
                 return;
 
-            foreach (var port in infos)
+            for (int i = 0; i < infos.Length; i++)
             {
-                int portCell = ports.GetPortCell(port.id);
+                var port = infos[i];
+                int portCell = LogicPortReadSemantics.ActualCell(ports, port);
                 sb.AppendLine("- " + label + ": " + port.id
                     + " " + PortLine(portCell, "logic", HasLayer(portCell, LogicLayers))
-                    + " connected=" + ports.IsPortConnected(port.id)
-                    + " value=" + (input ? ports.GetInputValue(port.id) : ports.GetOutputValue(port.id))
+                    + " connected=" + LogicPortReadSemantics.ConnectedAtCell(portCell)
+                    + " value=" + (input ? LogicPortReadSemantics.InputValue(ports, i) : LogicPortReadSemantics.OutputValue(ports, i))
                     + " required=" + port.requiresConnection);
             }
         }

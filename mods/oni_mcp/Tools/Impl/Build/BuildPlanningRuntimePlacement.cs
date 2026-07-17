@@ -113,6 +113,11 @@ namespace OniMcp.Tools
                 var check = ComparePlacement(placement, actual);
                 if (!GetBool(check, "valid"))
                     continue;
+                int cell = Grid.XYToCell(placement.AnchorX, placement.AnchorY);
+                var rotatable = go.GetComponent<Rotatable>();
+                Orientation orientation = rotatable == null ? Orientation.Neutral : rotatable.GetOrientation();
+                if (!IsCompletedBuildFullyRegistered(def, placement, cell, orientation, go, out _))
+                    continue;
 
                 return new Dictionary<string, object>
                 {
@@ -156,6 +161,8 @@ namespace OniMcp.Tools
 
                 var found = ExistingUtilityAtCell(cellInfo, layers);
                 if (found == null)
+                    return null;
+                if (!EqualsIgnoreCase(found["id"]?.ToString(), def.PrefabID))
                     return null;
                 existing.Add(found);
             }
@@ -308,7 +315,6 @@ namespace OniMcp.Tools
             string id = prefabId.Trim();
             return id.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) >= 0
                 || id.IndexOf("Conduit", StringComparison.OrdinalIgnoreCase) >= 0
-                || id.IndexOf("Logic", StringComparison.OrdinalIgnoreCase) >= 0
                 || id.IndexOf("TravelTube", StringComparison.OrdinalIgnoreCase) >= 0
                 || EqualsIgnoreCase(id, "GasConduit")
                 || EqualsIgnoreCase(id, "LiquidConduit")
@@ -341,7 +347,7 @@ namespace OniMcp.Tools
                 layers.AddRange(new[] { ObjectLayer.LiquidConduit, ObjectLayer.LiquidConduitTile, ObjectLayer.ReplacementLiquidConduit });
             else if (id.IndexOf("SolidConduit", StringComparison.OrdinalIgnoreCase) >= 0 || id.IndexOf("Conveyor", StringComparison.OrdinalIgnoreCase) >= 0)
                 layers.AddRange(new[] { ObjectLayer.SolidConduit, ObjectLayer.SolidConduitTile, ObjectLayer.ReplacementSolidConduit });
-            else if (id.IndexOf("Logic", StringComparison.OrdinalIgnoreCase) >= 0)
+            else if (id.IndexOf("LogicWire", StringComparison.OrdinalIgnoreCase) >= 0)
                 layers.AddRange(new[] { ObjectLayer.LogicWire, ObjectLayer.LogicWireTile, ObjectLayer.ReplacementLogicWire });
             else if (id.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) >= 0)
                 layers.AddRange(new[] { ObjectLayer.Wire, ObjectLayer.WireTile, ObjectLayer.ReplacementWire });

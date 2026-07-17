@@ -7,7 +7,6 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Support;
 using UnityEngine;
-
 namespace OniMcp.Tools
 {
     public static partial class BuildPlanningTools
@@ -55,7 +54,6 @@ namespace OniMcp.Tools
                 }
             };
         }
-
         public static McpTool ParseBuildPlan()
         {
             return new McpTool
@@ -94,7 +92,6 @@ namespace OniMcp.Tools
                 }
             };
         }
-
         public static McpTool ListBuildMaterials()
         {
             return new McpTool
@@ -158,7 +155,6 @@ namespace OniMcp.Tools
                 }
             };
         }
-
         public static McpTool PreviewBuild()
         {
             return new McpTool
@@ -187,7 +183,6 @@ namespace OniMcp.Tools
                 }
             };
         }
-
         public static McpTool AutoConnectUtility()
         {
             return new McpTool
@@ -240,7 +235,7 @@ namespace OniMcp.Tools
 prefabId = resolvedPrefabId;
 args["prefabId"] = prefabId;
 
-string availabilityError = BuildAvailabilityError(def);
+string availabilityError = BuildAvailabilityError(def, args);
 if (availabilityError != null)
 return CallToolResult.Error(availabilityError);
 
@@ -261,14 +256,25 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                         args["autoDigObstructions"] = true;
                     if (args["autoUprootObstructions"] == null)
                         args["autoUprootObstructions"] = true;
-
+                    int worldId = ToolUtil.ResolveWorldId(args);
+                    var pathSafety = ValidateUtilityPathSafety(def, path, worldId);
+                    if (!pathSafety.Valid)
+                        return CallToolResult.Error(JsonConvert.SerializeObject(
+                            UtilityPathConflictResult(def, path, pathSafety, "path_preflight"), McpJsonUtil.Settings));
 if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                     {
                         var nativePath = TryPlaceUtilityPathNative(def, path, args);
-                        if (GetBool(nativePath, "success") || !GetBool(nativePath, "shouldFallback"))
+                        if (EqualsIgnoreCase(nativePath.TryGetValue("reasonCode", out object reasonCode) ? reasonCode?.ToString() : null, "utility_path_conflict"))
+                            return CallToolResult.Error(JsonConvert.SerializeObject(nativePath, McpJsonUtil.Settings));
+                        if (GetBool(nativePath, "success") && GetBool(nativePath, "complete"))
                             return CallToolResult.Text(JsonConvert.SerializeObject(nativePath, McpJsonUtil.Settings));
+                        if (!GetBool(nativePath, "shouldFallback"))
+                            return CallToolResult.Error(JsonConvert.SerializeObject(nativePath, McpJsonUtil.Settings));
                     }
-
+                    var fallbackSafety = ValidateUtilityPathSafety(def, path, worldId);
+                    if (!fallbackSafety.Valid)
+                        return CallToolResult.Error(JsonConvert.SerializeObject(
+                            UtilityPathConflictResult(def, path, fallbackSafety, "cell_fallback_pre_commit"), McpJsonUtil.Settings));
                     var results = new List<Dictionary<string, object>>();
                     var errors = new List<Dictionary<string, object>>();
                     var plannedSupportCells = new HashSet<int>();
@@ -277,7 +283,6 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                     int reused = 0;
                     int valid = 0;
                     int autoMarked = 0;
-
                     foreach (var point in path)
                     {
                         var result = TryPlanOne(def.PrefabID, point.x, point.y, args, plannedSupportCells, autoDigContext);
@@ -300,8 +305,14 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                         }
                         results.Add(result);
                     }
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    bool placementConflict = errors.Any(item =>
+                        EqualsIgnoreCase(item.TryGetValue("reasonCode", out object itemReason) ? itemReason?.ToString() : null, "utility_path_conflict")
+                        || EqualsIgnoreCase(item.TryGetValue("reasonCode", out itemReason) ? itemReason?.ToString() : null, "placement_conflict"));
+                    string networkError = null; bool networkConnected = dryRun || !IsCompletedUtilityPath(def, path) || RefreshAndValidateUtilityPathNetwork(def, path, out networkError);
+                    if (!networkConnected) errors.Add(new Dictionary<string, object> { ["reasonCode"] = "utility_network_incomplete", ["error"] = networkError });
+                    int connectedCells = dryRun ? valid : CountUtilityPathCells(def, path, worldId);
+                    bool complete = dryRun ? errors.Count == 0 && valid == path.Count : connectedCells >= path.Count && networkConnected;
+                    var response = new Dictionary<string, object>
                     {
                         ["prefabId"] = def.PrefabID,
                         ["dryRun"] = dryRun,
@@ -314,16 +325,30 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                 ["valid"] = valid,
                 ["autoMarkedObstructions"] = autoMarked,
                 ["failed"] = errors.Count,
+                ["connectedCells"] = connectedCells,
+                ["complete"] = complete,
+                ["success"] = complete,
                 ["autoDigLimitReached"] = autoDigContext.LimitReached,
                 ["path"] = path.Select(p => new { x = p.x, y = p.y }).ToList(),
                 ["segments"] = BuildPathSegments(path),
                 ["errors"] = errors.Take(50).ToList(),
                 ["results"] = results
-            }, McpJsonUtil.Settings));
+            };
+                    if (placementConflict)
+                    {
+                        response["reasonCode"] = "utility_path_conflict";
+                        response["success"] = false;
+                        return CallToolResult.Error(JsonConvert.SerializeObject(response, McpJsonUtil.Settings));
+                    }
+                    if (!complete)
+                    {
+                        response["reasonCode"] = "utility_path_incomplete";
+                        return CallToolResult.Error(JsonConvert.SerializeObject(response, McpJsonUtil.Settings));
+                    }
+                    return CallToolResult.Text(JsonConvert.SerializeObject(response, McpJsonUtil.Settings));
         }
             };
         }
-
         public static McpTool FindPlacementCandidates()
         {
             return new McpTool

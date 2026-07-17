@@ -95,7 +95,7 @@ namespace OniMcp.Tools
                     return false;
                 }
                 change.FromToken = actual;
-                if (string.Equals(actual, change.ToToken, StringComparison.Ordinal))
+                if (MapTokensEquivalent(actual, change.ToToken))
                     changes.RemoveAt(i);
             }
             if (changes.Count == 0)

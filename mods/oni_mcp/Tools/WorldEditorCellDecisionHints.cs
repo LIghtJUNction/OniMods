@@ -104,8 +104,16 @@ namespace OniMcp.Tools
             LogicPorts logic = go.GetComponent<LogicPorts>();
             if (logic != null)
             {
-                AppendLogicPortHints(logic, logic.inputPortInfo, "logicIn", missing, connected);
-                AppendLogicPortHints(logic, logic.outputPortInfo, "logicOut", missing, connected);
+                if (LogicPortReadSemantics.TryBridgeRoute(go, out int from, out int to))
+                {
+                    AddPortHint("logicIn", from, LogicLayers, missing, connected, LogicPortReadSemantics.ConnectedAtCell(from));
+                    AddPortHint("logicOut", to, LogicLayers, missing, connected, LogicPortReadSemantics.ConnectedAtCell(to));
+                }
+                else
+                {
+                    AppendLogicPortHints(logic, logic.inputPortInfo, "logicIn", missing, connected);
+                    AppendLogicPortHints(logic, logic.outputPortInfo, "logicOut", missing, connected);
+                }
             }
 
             foreach (var consumer in go.GetComponents<SolidConduitConsumer>())
@@ -119,7 +127,10 @@ namespace OniMcp.Tools
             if (infos == null)
                 return;
             foreach (var port in infos)
-                AddPortHint(label, ports.GetPortCell(port.id), LogicLayers, missing, connected, ports.IsPortConnected(port.id));
+            {
+                int cell = LogicPortReadSemantics.ActualCell(ports, port);
+                AddPortHint(label, cell, LogicLayers, missing, connected, LogicPortReadSemantics.ConnectedAtCell(cell));
+            }
         }
 
         private static void AddPortHint(string label, int cell, ObjectLayer[] layers, List<string> missing, List<string> connected, bool? connectedOverride = null)

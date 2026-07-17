@@ -8,6 +8,8 @@ namespace OniMcp.Tools
     {
         private static readonly Dictionary<string, char> ResolvedGlyphById = BuildResolvedGlyphById();
         private static readonly Dictionary<string, char> UniqueCharMap = BuildUniqueCharMap();
+        private static bool RuntimeDatabaseReady;
+        private static bool RuntimeRoomGlyphsLoaded;
         private const string FallbackGlyphPool =
             "甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥乾坤艮兑坎离震巽"
             + "壹贰叁肆伍陆柒捌玖拾佰仟万亿兆京垣垒垛垠垣垦埠埴垌垡垢垲垧垭垯"
@@ -34,6 +36,78 @@ namespace OniMcp.Tools
                     used.Add(glyph);
             }
             return result;
+        }
+
+        internal static void MarkRuntimeDatabaseReady()
+        {
+            RuntimeDatabaseReady = true;
+            RuntimeRoomGlyphsLoaded = false;
+        }
+
+        private static void AddRuntimeRoomGlyphs(Dictionary<string, char> result, HashSet<char> used)
+        {
+            AddRuntimeRoomGlyphs(result, used, RuntimeRoomGlyphEntries());
+        }
+
+        private static void AddRuntimeRoomGlyphs(Dictionary<string, char> result, HashSet<char> used,
+            IEnumerable<SymbolGlyphEntry> entries)
+        {
+            foreach (var entry in entries.OrderBy(item => item.Id, StringComparer.OrdinalIgnoreCase))
+            {
+                if (result.ContainsKey(entry.Id))
+                    continue;
+                char glyph = ChooseGlyph(entry, used);
+                result[entry.Id] = glyph;
+                if (glyph != '?')
+                    used.Add(glyph);
+            }
+        }
+
+        private static void EnsureRuntimeRoomGlyphs()
+        {
+            if (RuntimeRoomGlyphsLoaded)
+                return;
+            var entries = RuntimeRoomGlyphEntries();
+            if (entries.Count == 0)
+                return;
+            var used = new HashSet<char>(ResolvedGlyphById.Values.Where(glyph => glyph != '?'));
+            AddRuntimeRoomGlyphs(ResolvedGlyphById, used, entries);
+            foreach (var entry in entries)
+                if (ResolvedGlyphById.TryGetValue(entry.Id, out char glyph))
+                    UniqueCharMap[entry.Id] = glyph;
+            RuntimeRoomGlyphsLoaded = true;
+        }
+
+        private static IReadOnlyList<SymbolGlyphEntry> RuntimeRoomGlyphEntries()
+        {
+            var entries = new List<SymbolGlyphEntry>();
+            if (!RuntimeDatabaseReady)
+                return entries;
+            try
+            {
+                var roomTypes = Db.Get()?.RoomTypes?.resources;
+                if (roomTypes == null)
+                    return entries;
+                foreach (var roomType in roomTypes)
+                {
+                    if (roomType == null || string.IsNullOrWhiteSpace(roomType.Id))
+                        continue;
+                    string name = string.IsNullOrWhiteSpace(roomType.Name) ? roomType.Id : roomType.Name;
+                    string token = MapTokenPart(name);
+                    entries.Add(new SymbolGlyphEntry
+                    {
+                        Kind = "Room",
+                        Id = roomType.Id,
+                        Name = name,
+                        Glyph = string.IsNullOrEmpty(token) ? '?' : token[0]
+                    });
+                }
+            }
+            catch
+            {
+                // The database may be unavailable during early static initialization.
+            }
+            return entries;
         }
 
         private static string GlyphGroupKey(SymbolGlyphEntry entry)
@@ -116,6 +190,7 @@ namespace OniMcp.Tools
                 return '.';
 
             string cleanId = StripLinkTags(id).Trim();
+            EnsureRuntimeRoomGlyphs();
             char glyph;
             if (ResolvedGlyphById.TryGetValue(cleanId, out glyph))
                 return glyph;

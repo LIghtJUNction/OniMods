@@ -405,10 +405,12 @@ namespace OniMcp.Tools
             if (string.IsNullOrWhiteSpace(root))
                 return false;
 
-            string normalizedRoot = Path.GetFullPath(root);
-            if (!normalizedRoot.EndsWith(Path.DirectorySeparatorChar.ToString()))
-                normalizedRoot += Path.DirectorySeparatorChar;
-            return path.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+            string normalizedPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var comparison = Path.DirectorySeparatorChar == '\\'
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+            return normalizedPath.StartsWith(normalizedRoot, comparison);
         }
 
         private static string SafeCall(Func<string> getter)

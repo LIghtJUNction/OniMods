@@ -342,6 +342,12 @@ namespace OniMcp.Tools
 
             var result = TargetInfo(go);
             result["capabilities"] = capabilities;
+            var enabledButton = go.GetComponent<BuildingEnabledButton>();
+            if (enabledButton != null)
+                result["enabled"] = enabledButton.IsEnabled;
+            var playerToggle = go.GetComponents<Component>().OfType<IPlayerControlledToggle>().FirstOrDefault();
+            if (playerToggle != null)
+                result["toggle"] = playerToggle.ToggledOn();
             if (thresholds.Count > 0)
                 result["thresholds"] = thresholds;
             if (sliders.Count > 0)
@@ -368,6 +374,11 @@ namespace OniMcp.Tools
             if (ports != null)
                 result["logicPorts"] = LogicPortsInfo(ports);
             return result;
+        }
+
+        internal static Dictionary<string, object> SnapshotConfig(GameObject go)
+        {
+            return BuildConfigInfo(go);
         }
 
         private static Dictionary<string, object> TargetInfo(GameObject go)

@@ -34,16 +34,34 @@ namespace OniMcp.Tools
                 return result;
             }
 
+            int worldId = ToolUtil.ResolveWorldId(args);
+            var safety = ValidateUtilityPathSafety(def, path, worldId);
+            result["safetyChecked"] = true;
+            result["existingSamePrefabCells"] = safety.ExistingSamePrefabCells;
+            result["repeatedPathCells"] = safety.HasRepeatedCells;
+            if (!safety.Valid)
+            {
+                result["shouldFallback"] = false;
+                foreach (var item in UtilityPathConflictResult(def, path, safety, "native_preflight"))
+                    result[item.Key] = item.Value;
+                return result;
+            }
+            if (safety.RequiresCellFallback)
+            {
+                result["attempted"] = false;
+                result["reason"] = "existing same-prefab or repeated cells require idempotent cell-by-cell placement";
+                return result;
+            }
+
             if (IsFreeBuildContext())
             {
                 result["attempted"] = false;
                 result["placementMode"] = "blueprint_cell_fallback";
                 result["shouldFallback"] = true;
-                result["reason"] = "free-build uses blueprint cell fallback";
+                result["reason"] = "free-build uses blueprint cell fallback after full-path safety preflight";
                 return result;
             }
 
-            int worldId = ToolUtil.ResolveWorldId(args);
             var materialResult = SelectElements(def, args["material"]?.ToString(), worldId);
             materialResult.RequiredKg = RequiredMaterialKg(def) * path.Count;
             if (!materialResult.Valid)
@@ -75,6 +93,15 @@ namespace OniMcp.Tools
             {
                 InvokeBest(tool, "Activate", new object[] { def, materialResult.Elements, facadeResult.ResponseId });
 
+                var executionSafety = ValidateUtilityPathSafety(def, path, worldId);
+                if (!executionSafety.Valid)
+                {
+                    result["shouldFallback"] = false;
+                    foreach (var item in UtilityPathConflictResult(def, path, executionSafety, "native_pre_commit"))
+                        result[item.Key] = item.Value;
+                    return result;
+                }
+
                 var start = path[0];
                 var end = path[path.Count - 1];
                 Vector3 startPos = BuildPlacementPosition(Grid.XYToCell(start.x, start.y), def);
@@ -101,12 +128,20 @@ namespace OniMcp.Tools
                 result["path"] = path.Select(p => new { x = p.x, y = p.y }).ToList();
                 result["segments"] = BuildPathSegments(path);
 
-                bool allConnected = after >= path.Count;
-                result["success"] = allConnected || after > before;
+                string networkError = null;
+                bool networkConnected = !IsCompletedUtilityPath(def, path)
+                    || RefreshAndValidateUtilityPathNetwork(def, path, out networkError);
+                result["networkConnected"] = networkConnected;
+                result["networkError"] = networkError;
+                bool allConnected = after >= path.Count && networkConnected;
+                result["success"] = allConnected;
                 result["complete"] = allConnected;
-                result["shouldFallback"] = after <= before;
+                result["partial"] = after > before && !allConnected;
+                result["shouldFallback"] = !allConnected;
                 if (!allConnected)
-                    result["reason"] = after > before
+                    result["reason"] = !networkConnected
+                        ? networkError
+                        : after > before
                         ? "native drag placed part of the path; fallback can fill missing cells"
                         : "native drag did not place any path cells";
 
@@ -149,7 +184,7 @@ namespace OniMcp.Tools
 
                     var building = go.GetComponent<Building>();
                     string existingPrefabId = building?.Def?.PrefabID ?? go.GetComponent<KPrefabID>()?.PrefabTag.Name ?? go.name;
-                    if (SameUtilityFamily(def.PrefabID, existingPrefabId))
+                    if (EqualsIgnoreCase(def.PrefabID, existingPrefabId))
                     {
                         found = true;
                         break;

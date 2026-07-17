@@ -42,7 +42,7 @@ namespace OniMcp.Tools
 
         private static void AddUtilityEndpointSummary(Dictionary<string, object> result, int cell, string kind)
         {
-            var go = Grid.Objects[cell, (int)ObjectLayer.Building];
+            var go = LogicPortReadSemantics.BuildingAtCell(cell);
             var building = go != null ? go.GetComponent<Building>() : null;
             if (building == null || building.Def == null)
                 return;
@@ -58,8 +58,16 @@ namespace OniMcp.Tools
             else if (kind == "logic")
             {
                 var ports = go.GetComponent<LogicPorts>();
-                AddLogicEndpoint(endpoints, ports, "input", true, ports?.inputPortInfo);
-                AddLogicEndpoint(endpoints, ports, "output", false, ports?.outputPortInfo);
+                if (LogicPortReadSemantics.TryBridgeRoute(go, out int from, out int to))
+                {
+                    endpoints["input"] = PortCell("⊗", from);
+                    endpoints["output"] = PortCell("⊙", to);
+                }
+                else
+                {
+                    AddLogicEndpoint(endpoints, ports, "input", true, ports?.inputPortInfo);
+                    AddLogicEndpoint(endpoints, ports, "output", false, ports?.outputPortInfo);
+                }
             }
             else if (kind == "rail")
             {
@@ -91,7 +99,7 @@ namespace OniMcp.Tools
             int cell = Grid.InvalidCell;
             foreach (var port in info)
             {
-                cell = ports.GetPortCell(port.id);
+                cell = LogicPortReadSemantics.ActualCell(ports, port);
                 if (Grid.IsValidCell(cell))
                     break;
             }
@@ -125,9 +133,8 @@ namespace OniMcp.Tools
             }
             else if (kind == "logic")
             {
-                var ports = go.GetComponent<LogicPorts>();
-                input = FirstLogicCell(ports, ports?.inputPortInfo);
-                output = FirstLogicCell(ports, ports?.outputPortInfo);
+                if (!LogicPortReadSemantics.TryBridgeRoute(go, out input, out output))
+                    return string.Empty;
             }
             else
             {
@@ -135,7 +142,8 @@ namespace OniMcp.Tools
                 output = building.GetUtilityOutputCell();
             }
             return Grid.IsValidCell(input) && Grid.IsValidCell(output)
-                ? "from:" + CellCoordText(input) + " via:⌒ to:" + CellCoordText(output)
+                ? "from:" + CellCoordText(input) + " via:" + CellCoordText(Grid.PosToCell(go))
+                    + "⌒ to:" + CellCoordText(output)
                 : "⌒";
         }
 
@@ -145,7 +153,7 @@ namespace OniMcp.Tools
                 return Grid.InvalidCell;
             foreach (var port in info)
             {
-                int cell = ports.GetPortCell(port.id);
+                int cell = LogicPortReadSemantics.ActualCell(ports, port);
                 if (Grid.IsValidCell(cell))
                     return cell;
             }

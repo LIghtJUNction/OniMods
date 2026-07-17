@@ -68,7 +68,7 @@ namespace OniMcp.Tools
             sb.AppendLine("- 擦: `擦 @(" + x + "," + y + "):6 dryRun=true`");
             sb.AppendLine("- 扫: `扫 @(" + x + "," + y + "):6 dryRun=true`");
             sb.AppendLine("- 消: `消 @(" + x + "," + y + ") dryRun=true`");
-            GameObject building = Grid.Objects[cell, (int)ObjectLayer.Building];
+            GameObject building = CellBuildingObject(cell);
             if (building != null)
                 sb.AppendLine("- 拆: `拆 建筑@(" + x + "," + y + "):7 dryRun=true`");
             if (BuildCritterCellMap().ContainsKey(cell))
@@ -167,7 +167,7 @@ namespace OniMcp.Tools
         {
             sb.AppendLine();
             sb.AppendLine("## Objects");
-            GameObject building = Grid.Objects[cell, (int)ObjectLayer.Building];
+            GameObject building = CellBuildingObject(cell);
             GameObject digPlacer = Grid.Objects[cell, (int)ObjectLayer.DigPlacer];
             GameObject minion = Grid.Objects[cell, (int)ObjectLayer.Minion];
             BuildCritterCellMap().TryGetValue(cell, out var critter);
@@ -205,7 +205,7 @@ namespace OniMcp.Tools
             sb.AppendLine("- 信号: " + CellConnectionText(OverlayModes.Logic.ID, cell, "logic", LogicLayers));
             sb.AppendLine("- 运输: " + CellConnectionText(OverlayModes.SolidConveyor.ID, cell, "rail", ConveyorLayers));
 
-            GameObject building = Grid.Objects[cell, (int)ObjectLayer.Building];
+            GameObject building = CellBuildingObject(cell);
             string powerInfo = GetPowerInfo(building);
             if (!string.IsNullOrEmpty(powerInfo))
                 sb.AppendLine("- 电力设备: " + powerInfo);

@@ -18,11 +18,16 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "find_control", "search_action_control" },
                 Tags = new List<string> { "search", "find", "targeting", "action-hints", "workflow" },
-                Description = "Dedicated search entrypoint. Searches tools, world objects, resources, buildings, or dupes and returns action-ready hints so search results can be used directly by action tools without coordinates.",
+                Description = "Dedicated read-only search entrypoint. Searches tools, world objects, resources, buildings, dupes, or authoritative map glyph mappings.",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["domain"] = new McpToolParameter { Type = "string", Description = "Search domain: tools, world, resources, buildings, or dupes.", Required = true, EnumValues = new List<string> { "tools", "world", "resources", "buildings", "dupes" } },
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "Search domain: tools, world, resources, buildings, dupes, or glyphs (aliases symbols/codes).", Required = true, EnumValues = new List<string> { "tools", "world", "resources", "buildings", "dupes", "glyphs" } },
                     ["query"] = new McpToolParameter { Type = "string", Description = "Search text. Matches names, ids, tags, elements, buildings, tools, or dupes depending on domain.", Required = false },
+                    ["queries"] = new McpToolParameter { Type = "array", Description = "domain=glyphs: batch glyph codes or names, at most 100 strings.", Required = false },
+                    ["direction"] = new McpToolParameter { Type = "string", Description = "domain=glyphs: auto, code_to_meaning, or meaning_to_code.", Required = false, EnumValues = new List<string> { "auto", "code_to_meaning", "meaning_to_code" } },
+                    ["matchMode"] = new McpToolParameter { Type = "string", Description = "domain=glyphs: auto, exact, or contains.", Required = false, EnumValues = new List<string> { "auto", "exact", "contains" } },
+                    ["view"] = new McpToolParameter { Type = "string", Description = "domain=glyphs: optional overlay context used to filter contextual meanings.", Required = false },
+                    ["perQueryLimit"] = new McpToolParameter { Type = "integer", Description = "domain=glyphs: matches per query, default 20, maximum 100.", Required = false },
                     ["target"] = new McpToolParameter { Type = "string", Description = "Alias for query when the caller is searching for a target to act on.", Required = false },
                     ["search"] = new McpToolParameter { Type = "string", Description = "Alias for query.", Required = false },
                     ["intent"] = new McpToolParameter { Type = "string", Description = "Optional intended follow-up, such as dig, mop, build, inspect, configure, move, prioritize, or explain.", Required = false },
@@ -53,6 +58,8 @@ namespace OniMcp.Tools
                     var forwarded = BuildForwardArgs(args);
                     var searchResult = DispatchSearch(domain, forwarded);
                     if (searchResult.IsError)
+                        return searchResult;
+                    if (domain == "glyphs")
                         return searchResult;
 
                     var parsed = ParseResult(searchResult);
@@ -99,12 +106,14 @@ namespace OniMcp.Tools
                 case "duplicants":
                     args["kinds"] = new JArray("dupes");
                     return WorldSearchTools.SearchWorld().Handler(args);
+                case "glyphs":
+                    return WorldEditorTools.SearchGlyphs(args);
                 case "knowledge":
                 case "database":
                 case "guide":
                     return CallToolResult.Error("search_control domain=knowledge/database/guide is disabled because in-game database queries are crash-prone on this runtime. Use external docs or static repo data instead.");
                 default:
-                    return CallToolResult.Error("domain must be tools, world, resources, buildings, or dupes");
+                    return CallToolResult.Error("domain must be tools, world, resources, buildings, dupes, or glyphs");
             }
         }
 
@@ -299,7 +308,15 @@ namespace OniMcp.Tools
 
         private static string NormalizeDomain(string domain)
         {
-            return (domain ?? string.Empty).Trim().ToLowerInvariant();
+            string normalized = (domain ?? string.Empty).Trim().ToLowerInvariant();
+            switch (normalized)
+            {
+                case "symbols":
+                case "codes":
+                    return "glyphs";
+                default:
+                    return normalized;
+            }
         }
     }
 }

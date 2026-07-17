@@ -111,47 +111,6 @@ namespace OniMcp.Server
         private void HandleVirtualWorldRequest(HttpListenerRequest request, HttpListenerResponse response)
         {
             string path = request.Url == null ? "/" : request.Url.AbsolutePath;
-            if (path == "/settings" || path == "/settings/")
-            {
-                string message = null;
-                bool success = true;
-                if (request.HttpMethod == "POST")
-                {
-                    try
-                    {
-                        using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
-                        {
-                            string body = reader.ReadToEnd();
-                            var form = ParseQueryString(body);
-
-                            var options = new OniMcpOptions
-                            {
-                                Host = form.ContainsKey("host") ? form["host"] : "localhost",
-                                Port = form.ContainsKey("port") ? int.Parse(form["port"]) : 8788,
-                                AuthEnabled = form.ContainsKey("authEnabled") && form["authEnabled"] == "true",
-                                AuthToken = form.ContainsKey("authToken") ? form["authToken"] : "",
-                                GlobalAutoDisinfectDisabled = form.ContainsKey("globalAutoDisinfectDisabled") && form["globalAutoDisinfectDisabled"] == "true",
-                                ScreenshotCleanupEnabled = form.ContainsKey("screenshotCleanupEnabled") && form["screenshotCleanupEnabled"] == "true",
-                                ScreenshotRetentionMinutes = form.ContainsKey("screenshotRetentionMinutes") ? int.Parse(form["screenshotRetentionMinutes"]) : 120,
-                                ScreenshotMaxFiles = form.ContainsKey("screenshotMaxFiles") ? int.Parse(form["screenshotMaxFiles"]) : 40
-                            };
-
-                            OniMcpOptions.Save(options);
-                            message = "Settings saved successfully! Changes will take effect immediately (port changes will restart the server).";
-                            success = true;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        message = "Error saving settings: " + ex.Message;
-                        success = false;
-                    }
-                }
-
-                SendHtml(response, RenderSettingsHtml(message, success), 200);
-                return;
-            }
-
             if (path.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
             {
                 string rawHtml = "";

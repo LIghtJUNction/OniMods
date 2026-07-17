@@ -138,7 +138,7 @@ namespace OniMcp.Tools
 
                 if (item.ObstructedBy != null && item.ObstructedBy.Count > 0)
                 {
-                    bool utilityOverlap = IsUtilityPrefab(item.Id) && item.ObstructedBy.Any(IsBuildingOverlapObstruction);
+                    bool utilityOverlap = IsOverlayUtilityPrefab(item.Id) && item.ObstructedBy.Any(IsBuildingOverlapObstruction);
                     var conflict = new Dictionary<string, object>
                     {
                         ["type"] = utilityOverlap ? "utility_overlap" : "overlap",
@@ -168,14 +168,13 @@ namespace OniMcp.Tools
                 || obstruction.StartsWith("blueprint:", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsUtilityPrefab(string prefabId)
+        private static bool IsOverlayUtilityPrefab(string prefabId)
         {
             if (string.IsNullOrWhiteSpace(prefabId))
                 return false;
             string id = prefabId.Trim();
             return id.IndexOf("Wire", StringComparison.OrdinalIgnoreCase) >= 0
                 || id.IndexOf("Conduit", StringComparison.OrdinalIgnoreCase) >= 0
-                || id.IndexOf("Logic", StringComparison.OrdinalIgnoreCase) >= 0
                 || id.IndexOf("TravelTube", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 

@@ -100,7 +100,7 @@ namespace OniMcp.Tools
                     }
                     if (ReplacementKeepsOriginal(replacementSymbols[i]))
                         continue;
-                    if (string.Equals(actual, replacementSymbols[i], StringComparison.Ordinal))
+                    if (MapTokensEquivalent(actual, replacementSymbols[i]))
                         continue;
                     result.Add(new MapEditCell
                     {

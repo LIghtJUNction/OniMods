@@ -64,6 +64,7 @@ namespace OniMcp.Server
 
         private void Start()
         {
+            GameRestartCoordinator.EnsureIntentConsumerStarted();
             StartServer();
         }
 
@@ -191,6 +192,9 @@ namespace OniMcp.Server
                     response.Close();
                     return;
                 }
+
+                if (TryHandleSettingsRequest(request, response))
+                    return;
 
                 if (!ValidateAuth(request, response))
                     return;

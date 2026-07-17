@@ -203,7 +203,16 @@ def verify_map_safety() -> None:
     require(map_tools, "ExpandMapRowToken", "RLE expansion")
     require(patch, "Stale map snapshot at", "current snapshot comparison")
     require(patch, "row.Value.Length != searchX.Length", "strict row width")
-    require(patch, "string.Equals(actual, replacementSymbols[i]", "true-difference filtering")
+    require(patch, "MapTokensEquivalent(actual, replacementSymbols[i]", "true-difference filtering ignores @(x,y)")
+    token_parsing = source("mods/oni_mcp/Tools/WorldEditorMapEditTokenParsing.cs")
+    require(token_parsing, "NormalizeMapCompareToken", "map token coordinate suffix normalization")
+    require(token_parsing, "MapTokensEquivalent", "map token equivalence helper")
+    require(token_parsing, "SearchTokenMatches", "token match with @(x,y) normalization")
+    require(
+        source("mods/oni_mcp/Tools/WorldEditorMapEditFootprints.cs"),
+        "component.Count == 1 && actualWidth == 1 && actualHeight == 1",
+        "single-cell lower-left multi-cell anchor shorthand",
+    )
     require(preflight, "ValidateExplicitMapChangesAgainstSource", "explicit viewport validation")
     require(preflight, "Connection glyph edits are refused", "connection touched-cell fail-closed policy")
     require(search, "TryReadVirtualFileText(JObject request", "request-aware virtual snapshot read")

@@ -163,6 +163,7 @@ namespace OniMcp.Tools
             public int AnchorX;
             public int AnchorY;
             public int WorldId;
+            public Orientation Orientation;
             public int Width;
             public int Height;
             public Vector3 PlacementPoint;
@@ -177,6 +178,7 @@ namespace OniMcp.Tools
                     ["anchorX"] = AnchorX,
                     ["anchorY"] = AnchorY,
                     ["worldId"] = WorldId,
+                    ["orientation"] = Orientation.ToString(),
                     ["width"] = Width,
                     ["height"] = Height,
                     ["footprintCells"] = Width * Height,

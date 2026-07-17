@@ -7,6 +7,7 @@ namespace OniMcp.Support
     public static class OniMcpPaths
     {
         private const string ConfigFileName = "OniMcpConfig.json";
+        private const string RestartIntentFileName = "OniMcpRestartIntent.json";
         private static string _modPath;
 
         public static void Initialize(string modPath, Assembly assembly)
@@ -51,6 +52,23 @@ namespace OniMcp.Support
                 return string.IsNullOrEmpty(configDir) ? ConfigFileName : Path.Combine(configDir, ConfigFileName);
             }
         }
+
+        public static string RestartIntentPath
+        {
+            get
+            {
+                string directory = Application.persistentDataPath;
+                if (string.IsNullOrEmpty(directory))
+                    directory = ModPath;
+                return string.IsNullOrEmpty(directory)
+                    ? RestartIntentFileName
+                    : Path.Combine(directory, RestartIntentFileName);
+            }
+        }
+
+        public static string RestartRelayPath => string.IsNullOrEmpty(ModPath)
+            ? null
+            : Path.Combine(ModPath, "assets", "restart_oni_steam_relay.sh");
 
         private static string[] ConfigCandidates
         {

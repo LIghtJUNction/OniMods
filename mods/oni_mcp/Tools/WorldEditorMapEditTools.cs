@@ -214,8 +214,12 @@ namespace OniMcp.Tools
                 var result = BuildingControlTools.ControlBuildingFromVirtualFile(buildArgs);
                 bool failed = WorldEditorResultFailed(result, parentArgs);
                 anyError = anyError || failed;
+                // Count changed map cells in this token group, not child "planned" anchors.
+                // Multi-cell footprints map N cells -> 1 lower-left anchor; using anchor count
+                // made remainingCells look incomplete and flagged partial success incorrectly.
+                int groupCells = group.Count();
                 if (!failed)
-                    applied += ResultAppliedCount(result);
+                    applied += groupCells;
                 results.Add(new JObject
                 {
                     ["token"] = group.Key,
@@ -224,6 +228,7 @@ namespace OniMcp.Tools
                     ["priority"] = priority,
                     ["material"] = material,
                     ["anchors"] = anchors,
+                    ["cells"] = groupCells,
                     ["ok"] = !failed,
                     ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
                     ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
@@ -313,7 +318,7 @@ namespace OniMcp.Tools
                     string currentToken = currentSymbols[offset + i];
                     if (ReplacementKeepsOriginal(replacementSymbols[i]))
                         continue;
-                    if (currentToken == replacementSymbols[i])
+                    if (MapTokensEquivalent(currentToken, replacementSymbols[i]))
                         continue;
 
                     int x = hundreds[offset + i] * 100 + tens[offset + i] * 10 + ones[offset + i];
@@ -446,24 +451,6 @@ namespace OniMcp.Tools
             }
 
             return true;
-        }
-
-        private static bool SearchTokenMatches(string actual, string pattern)
-        {
-            pattern = (pattern ?? string.Empty).Trim();
-            if (pattern == "?" || pattern == "*" || pattern == ".*")
-                return true;
-            if (pattern.Length >= 2 && pattern[0] == '/' && pattern[pattern.Length - 1] == '/')
-                return Regex.IsMatch(actual ?? string.Empty, pattern.Substring(1, pattern.Length - 2));
-            if (pattern.StartsWith("~", StringComparison.Ordinal) && pattern.Length > 1)
-                return Regex.IsMatch(actual ?? string.Empty, pattern.Substring(1));
-            return string.Equals(actual, pattern, StringComparison.Ordinal);
-        }
-
-        private static bool ReplacementKeepsOriginal(string token)
-        {
-            token = (token ?? string.Empty).Trim();
-            return token == "?" || token == "*" || token == ".*";
         }
 
         private static int[] ParseDigitRow(string text)

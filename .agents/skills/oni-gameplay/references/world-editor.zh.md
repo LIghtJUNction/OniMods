@@ -6,6 +6,7 @@
 
 - [心智模型](#心智模型)
 - [虚拟路径](#虚拟路径)
+- [强制字码查询](#强制字码查询)
 - [通用补丁协议](#通用补丁协议)
 - [精确地图矩形协议](#精确地图矩形协议)
 - [地图 token 编辑](#地图-token-编辑)
@@ -34,18 +35,43 @@ world_editor command=pwd|cd|ls|read|zoom|grep|symbols|search|edit|blueprint|batc
 | `/active/map/viewport.md` | 框选矩形中的地形、建筑与标记 | 地图 token |
 | `/active/map/index.md` | 可编辑视口地图别名 | 地图 token |
 | `/active/map/layers/layer_<yMin>_<yMax>.md` | 当前活动覆盖层渲染的高度切片 | 地图 token，连接符号除外 |
-| `/active/map/symbols/glyphs.md` | token 图例 | 只读 |
+| `/active/symbols/glyphs.md` | 生成的 token 字码表 | 只读 |
 | `/active/ops/tools.md` | 当前公开 typed operation 文件与工具 | 只读 |
 | `/active/ops/orders.md` | Dig/mop/sweep/disinfect/harvest/cancel/deconstruct/attack/capture | 单条命令 |
 | `/active/ops/build.md` | 语义化无坐标建造计划 | 单条命令 |
 | `/active/ops/{game,colony,read,search,dupes,navigation,server,...}.md` | typed tool 调用 | 单条命令 |
 | `/active/management/{schedule,priorities,dupes,food,skills,research}.md` | 面板快照与编辑命令 | 单条命令 |
 | `/active/dupes/<name>.md` | 单个复制人详情 | 支持 `Name:` 等字段编辑 |
+| `/active/buildings/index.md` | 已完成建筑参数索引 | 只读 |
+| `/active/buildings/instances/<prefab>-<InstanceID>.md` | 稳定的单建筑参数文件 | 单条规范字段行 |
 | `/active/buildings/plans.oni` | 建筑计划文本 | plan 补丁 |
 | `/active/infrastructure/*.oni` | 公共管线连接计划 | plan 补丁 |
 | `/active/infrastructure/*.md` | 基础设施地图视图 | 精确地图预检；连接符号编辑会拒绝 |
 
 仅 `/active/` 可变更。其余存档槽为历史或未加载视图。
+
+普通 world-editor 建造固定使用 `instantBuild=false`，即使全局 Debug 瞬间建造已开启，也只创建正常蓝图并遵守材料规则。单次瞬间建造必须显式传 `instantBuild=true allowSandbox=true confirm=true`。沙盒写入还必须使用 `world_editor command=sandbox allowSandbox=true confirm=true`，并按动作增加 `allowTerrainMutation`、`allowEntitySpawn`、`allowDestroy` 或 `allowForce`。batch 子步骤不能扩大父级权限。
+
+## 强制字码查询
+
+解释地图字码、根据建筑/元素/实体名称生成字码，或读取连接/overlay 字码前，必须先在 commentary 中说明 gameplay skill 要求权威查询，并把当前所有未知字码/名称一次批量提交：
+
+```text
+search_control domain=glyphs queries=["砖","?","┼","氧气"] direction=auto matchMode=auto
+```
+
+禁止根据中文字符、旧 legend 或记忆猜测。`count=0` 必须保持“未知”。上下文相关字码需传 `view=temperature|oxygen|light|decor|disease|radiation|crop|...`。仅可复用同一运行时、同一轮中已经查询过的结果。
+
+正查、反查与批量示例：
+
+```text
+search_control domain=glyphs queries=["砖","零"] direction=code_to_meaning view=temperature
+search_control domain=glyphs queries=["砖","┼"] direction=code_to_meaning view=logic
+search_control domain=glyphs queries=["砖块","研究站","氧气"] direction=meaning_to_code
+search_control domain=glyphs queries=["■","液","不","易","可","难"] direction=auto view=oxygen perQueryLimit=20
+```
+
+兼容入口 `world_editor command=symbols` 支持相同查询字段，但 gameplay 必须优先使用 `search_control domain=glyphs`。
 
 ## 通用补丁协议
 
@@ -130,8 +156,11 @@ Token 形式：
 - 指令：`挖`、`拆`、`擦`、`扫`、`毒`、`杀`、`收`、`消`、`捕`，可附 `:优先级`。
 - 地图层与基础设施 Markdown 上不接受连接符号编辑，因为 `auto_connect` 可能改写到验证快照外部的格子。要改 utility 请用显式 `/active/infrastructure/*.oni` plan 或 `/active/ops/build.md` 的 `auto_connect` 命令。
 - SEARCH 通配 `?` 或 `*` 匹配单 token；`/regex/` 或 `~regex` 匹配单 token 的正则。REPLACE 中的 `?`、`*`、`.*` 保留原始 token。
+- SEARCH 匹配会忽略地图渲染附加的 `@(x,y)` 坐标后缀；`建筑:7#壹` 与 `建筑:7#壹@(114,138)` 视为同一 token。
 
-多格建筑需在同一替换块内包含完整占格。包含支撑格和足够邻域以保证匹配唯一。
+多格建筑可用两种写法：
+1. **左下角锚点简写**（推荐 agent）：只改占格左下角一格为 `建筑名:优先级`。
+2. **完整占格**：同一替换块内填满 WxH 所有格。部分占格（不是单格、也不是完整矩形）会被拒绝。
 
 默认写入预算为 512 个变更格；`maxWriteCells`/`maxCells` 可配置但硬上限 2500。开启 `partial=true` 时，重读并仅对 `remainingCells` 生成新补丁。
 

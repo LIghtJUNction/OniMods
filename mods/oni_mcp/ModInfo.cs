@@ -53,6 +53,7 @@ namespace OniMcp
             // 尽早启动 MCP 服务器和主线程桥接器，使主菜单阶段即可连接
             var bridgeObj = new GameObject("OniMcp_MainThreadBridge");
             bridgeObj.AddComponent<MainThreadBridge>();
+            GameRestartCoordinator.EnsureCreated();
             var serverObj = new GameObject("OniMcp_HttpServer");
             serverObj.AddComponent<McpHttpServer>();
 

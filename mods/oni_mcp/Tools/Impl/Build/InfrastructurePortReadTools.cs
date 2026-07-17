@@ -183,25 +183,40 @@ namespace OniMcp.Tools
             var ports = go.GetComponent<LogicPorts>();
             if (ports == null)
                 yield break;
-            foreach (var port in ports.inputPortInfo)
+            if (LogicPortReadSemantics.TryBridgeRoute(go, out int from, out int to))
             {
-                int cell = ports.GetPortCell(port.id);
+                string route = "from:" + Grid.CellColumn(from) + "," + Grid.CellRow(from)
+                    + " via:" + Grid.CellColumn(Grid.PosToCell(go)) + "," + Grid.CellRow(Grid.PosToCell(go))
+                    + " to:" + Grid.CellColumn(to) + "," + Grid.CellRow(to);
+                yield return Port("logic", "input", "信号输入", from, LogicLayers,
+                    new Dictionary<string, object> { ["semanticRole"] = "bridge_from",
+                        ["connected"] = LogicPortReadSemantics.ConnectedAtCell(from), ["bridgeRoute"] = route });
+                yield return Port("logic", "output", "信号输出", to, LogicLayers,
+                    new Dictionary<string, object> { ["semanticRole"] = "bridge_to",
+                        ["connected"] = LogicPortReadSemantics.ConnectedAtCell(to), ["bridgeRoute"] = route });
+                yield break;
+            }
+            for (int i = 0; i < ports.inputPortInfo.Length; i++)
+            {
+                var port = ports.inputPortInfo[i];
+                int cell = LogicPortReadSemantics.ActualCell(ports, port);
                 yield return Port("logic", "input", "信号输入", cell, LogicLayers, new Dictionary<string, object>
                 {
                     ["id"] = port.id.ToString(),
-                    ["connected"] = ports.IsPortConnected(port.id),
-                    ["value"] = ports.GetInputValue(port.id),
+                    ["connected"] = LogicPortReadSemantics.ConnectedAtCell(cell),
+                    ["value"] = LogicPortReadSemantics.InputValue(ports, i),
                     ["required"] = port.requiresConnection
                 });
             }
-            foreach (var port in ports.outputPortInfo)
+            for (int i = 0; i < ports.outputPortInfo.Length; i++)
             {
-                int cell = ports.GetPortCell(port.id);
+                var port = ports.outputPortInfo[i];
+                int cell = LogicPortReadSemantics.ActualCell(ports, port);
                 yield return Port("logic", "output", "信号输出", cell, LogicLayers, new Dictionary<string, object>
                 {
                     ["id"] = port.id.ToString(),
-                    ["connected"] = ports.IsPortConnected(port.id),
-                    ["value"] = ports.GetOutputValue(port.id),
+                    ["connected"] = LogicPortReadSemantics.ConnectedAtCell(cell),
+                    ["value"] = LogicPortReadSemantics.OutputValue(ports, i),
                     ["required"] = port.requiresConnection
                 });
             }

@@ -67,15 +67,19 @@ namespace OniMcp.Tools
                 if (relative == "infrastructure/rooms.oni")
                     return ReadTools.ControlRead().Handler(Child(args, "infrastructure", "rooms"));
                 if (relative == "infrastructure/liquid_conduits.oni")
-                    return ReadEditableTemplate(path, "Add or change liquid pipe connections by replacing text in this file.");
+                    return ReadEditableTemplate(path, "Use exactly: connect (x1,y1) -> (x2,y2) [-> (x3,y3) ...]. This file builds LiquidConduit.");
                 if (relative == "infrastructure/gas_conduits.oni")
-                    return ReadEditableTemplate(path, "Add or change gas pipe connections by replacing text in this file.");
+                    return ReadEditableTemplate(path, "Use exactly: connect (x1,y1) -> (x2,y2) [-> (x3,y3) ...]. This file builds GasConduit.");
                 if (relative == "infrastructure/logic.oni")
-                    return ReadEditableTemplate(path, "Add or change automation signal wire connections by replacing text in this file.");
+                    return ReadEditableTemplate(path, "Use exactly: connect (x1,y1) -> (x2,y2) [-> (x3,y3) ...]. This file builds LogicWire.");
                 if (relative == "infrastructure/solid_conveyor.oni")
-                    return ReadEditableTemplate(path, "Add or change conveyor rail connections by replacing text in this file.");
+                    return ReadEditableTemplate(path, "Use exactly: connect (x1,y1) -> (x2,y2) [-> (x3,y3) ...]. This file builds SolidConduit.");
                 if (relative == "buildings/index.oni")
                     return ReadTools.ControlRead().Handler(Child(args, "buildings", "list"));
+                if (relative == "buildings/index.md")
+                    return CallToolResult.Text(ReadBuildingIndexMarkdown());
+                if (IsBuildingDetailMarkdown(relative))
+                    return CallToolResult.Text(ReadBuildingDetailMarkdown(relative));
                 if (relative == "buildings/catalog.oni")
                     return Search(args, "buildings");
                 if (relative == "buildings/plans.oni")

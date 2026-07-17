@@ -113,9 +113,16 @@ namespace OniMcp.Tools
                 }
                 else if (relative == "buildings/")
                 {
+                    add("index.md", "file", "Completed building parameter file index.");
+                    add("instances/", "dir", "Stable per-building editable parameter files.");
                     add("index.oni", "file", "Built buildings.");
                     add("catalog.oni", "file", "Buildable catalog search.");
                     add("plans.oni", "file", "Desired building plan. SEARCH/REPLACE creates blueprints.");
+                }
+                else if (relative == "buildings/instances/")
+                {
+                    foreach (var go in LiveCompletedBuildings())
+                        add(GetBuildingDetailFileName(go), "file", "Editable parameters for " + go.GetProperName() + ".");
                 }
                 else if (relative == "orders/")
                     add("orders.oni", "file", "Read-only legacy guide. Use /active/ops/orders.md for executable orders.");

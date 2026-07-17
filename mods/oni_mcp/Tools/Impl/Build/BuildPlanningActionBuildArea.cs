@@ -88,12 +88,21 @@ namespace OniMcp.Tools
                     preflightArgs["confirm"] = true;
 
                     var preflightSupport = new HashSet<int>();
+                    var preflightFootprints = new HashSet<int>();
                     var previews = new List<Dictionary<string, object>>();
                     var validAnchors = new List<CellCoord>();
                     var actionableAnchors = new List<CellCoord>();
                     var autoDigAnchors = new List<CellCoord>();
                     foreach (var anchor in anchors)
                     {
+                        int worldId = ToolUtil.ResolveWorldId(args);
+                        var batchOverlap = PlannedFootprintOverlap(def, anchor.x, anchor.y, worldId, preflightFootprints);
+                        if (batchOverlap != null)
+                        {
+                            previews.Add(ErrorResult(prefabId, anchor.x, anchor.y,
+                                "Requested anchors overlap within this batch", batchOverlap));
+                            continue;
+                        }
                         var preview = TryPlanOne(prefabId, anchor.x, anchor.y, preflightArgs, preflightSupport);
                         bool valid = preview.ContainsKey("valid") && (bool)preview["valid"];
                         if (valid)
@@ -106,14 +115,18 @@ namespace OniMcp.Tools
                             autoDigAnchors.Add(anchor);
                             actionableAnchors.Add(anchor);
                         }
+                        if (valid || IsAutoDiggableFailure(preview))
+                            ReservePlannedFootprint(def, anchor.x, anchor.y, worldId, preflightFootprints);
                         previews.Add(preview);
                     }
 
                     var failedPreviews = previews.Where(item => !(item.ContainsKey("valid") && (bool)item["valid"])).ToList();
                     var hardFailedPreviews = previews.Where(item => !(item.ContainsKey("valid") && (bool)item["valid"]) && !IsAutoDiggableFailure(item)).ToList();
-                    if (dryRun || (hardFailedPreviews.Count > 0 && !allowPartial))
+                    bool plannedFootprintOverlap = failedPreviews.Any(item =>
+                        EqualsIgnoreCase(item.TryGetValue("reasonCode", out object reasonCode) ? reasonCode?.ToString() : null, "planned_footprint_overlap"));
+                    if (dryRun || plannedFootprintOverlap || (hardFailedPreviews.Count > 0 && !allowPartial))
                     {
-                        return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        var preflightResponse = new Dictionary<string, object>
                         {
                             ["prefabId"] = prefabId,
                             ["dryRun"] = dryRun,
@@ -135,7 +148,14 @@ namespace OniMcp.Tools
                         ["tokenHint"] = "Use valid/actionable/anchorResolution/planResolution/errors[0].reasonCode first; read previews only when choosing an alternate anchor.",
                         ["errors"] = failedPreviews.Take(50).ToList(),
                         ["previews"] = previews
-                    }, McpJsonUtil.Settings));
+                    };
+                        if (plannedFootprintOverlap)
+                        {
+                            preflightResponse["reasonCode"] = "planned_footprint_overlap";
+                            preflightResponse["success"] = false;
+                            return CallToolResult.Error(JsonConvert.SerializeObject(preflightResponse, McpJsonUtil.Settings));
+                        }
+                        return CallToolResult.Text(JsonConvert.SerializeObject(preflightResponse, McpJsonUtil.Settings));
                     }
 
                     var actualSupport = new HashSet<int>();
@@ -184,8 +204,12 @@ namespace OniMcp.Tools
                 remainingAnchors.AddRange(anchors.Where(anchor => hardFailedPreviews.Any(item => SameAnchor(item, anchor))));
 
             bool throttled = requestedExecutionAnchors.Count > executionAnchors.Count;
+            string executionConflictReason = results
+                .Select(item => item.TryGetValue("reasonCode", out object reasonCode) ? reasonCode?.ToString() : null)
+                .FirstOrDefault(reasonCode => EqualsIgnoreCase(reasonCode, "placement_conflict")
+                    || EqualsIgnoreCase(reasonCode, "utility_path_conflict"));
 
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    var executionResponse = new Dictionary<string, object>
                     {
                         ["prefabId"] = prefabId,
                         ["dryRun"] = false,
@@ -217,7 +241,14 @@ namespace OniMcp.Tools
                         : "Batch complete.",
                         ["preflightErrors"] = hardFailedPreviews.Take(50).ToList(),
                         ["results"] = results
-                    }, McpJsonUtil.Settings));
+                    };
+                    if (!string.IsNullOrEmpty(executionConflictReason))
+                    {
+                        executionResponse["reasonCode"] = executionConflictReason;
+                        executionResponse["success"] = false;
+                        return CallToolResult.Error(JsonConvert.SerializeObject(executionResponse, McpJsonUtil.Settings));
+                    }
+                    return CallToolResult.Text(JsonConvert.SerializeObject(executionResponse, McpJsonUtil.Settings));
                 }
             };
         }

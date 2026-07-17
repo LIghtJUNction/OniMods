@@ -66,9 +66,18 @@ namespace OniMcp.Tools
             int maxY = component.Max(c => c.Y);
             int actualWidth = maxX - minX + 1;
             int actualHeight = maxY - minY + 1;
+
+            // Agent-friendly shorthand: a single changed cell is the lower-left anchor.
+            // Full WxH rectangles remain the preferred explicit form for multi-cell buildings.
+            if (component.Count == 1 && actualWidth == 1 && actualHeight == 1)
+            {
+                anchors.Add(new JObject { ["x"] = minX, ["y"] = minY });
+                return true;
+            }
+
             if (actualWidth != width || actualHeight != height || component.Count != width * height)
             {
-                error = $"Build token for {prefabId} covers {actualWidth}x{actualHeight}/{component.Count} cells, but prefab footprint is {width}x{height} for orientation {orientation}. Refusing ambiguous multi-cell edit.";
+                error = $"Build token for {prefabId} covers {actualWidth}x{actualHeight}/{component.Count} cells, but prefab footprint is {width}x{height} for orientation {orientation}. Use the full footprint or only the lower-left anchor cell. Refusing ambiguous multi-cell edit.";
                 return false;
             }
 

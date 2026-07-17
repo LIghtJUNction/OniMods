@@ -96,6 +96,13 @@
 
   <ItemGroup>
     <Content Include="$(MSBuildProjectDirectory)/assets/edit_mark_tool.png" Condition="Exists('$(MSBuildProjectDirectory)/assets/edit_mark_tool.png')">
+      <Link>assets/edit_mark_tool.png</Link>
+      <TargetPath>assets/edit_mark_tool.png</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildProjectDirectory)/assets/restart_oni_steam_relay.sh" Condition="Exists('$(MSBuildProjectDirectory)/assets/restart_oni_steam_relay.sh')">
+      <Link>assets/restart_oni_steam_relay.sh</Link>
+      <TargetPath>assets/restart_oni_steam_relay.sh</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -130,6 +137,9 @@
     <!-- 复制 README -->
     <Copy SourceFiles="$(MSBuildProjectDirectory)/README.md" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/README.md')" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)/README_EN.md" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/README_EN.md')" />
+    <MakeDir Directories="$(OutputPath)assets" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/assets/edit_mark_tool.png" DestinationFolder="$(OutputPath)assets" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/assets/edit_mark_tool.png')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/assets/restart_oni_steam_relay.sh" DestinationFolder="$(OutputPath)assets" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/assets/restart_oni_steam_relay.sh')" />
   </Target>
 
   <!-- 构建后打包 Mod 到仓库根目录 dist/ -->
@@ -154,9 +164,11 @@
       <ModOutputFiles Include="$(OutputPath)preview.jpg" Condition="Exists('$(OutputPath)preview.jpg')" />
       <ModOutputFiles Include="$(OutputPath)README.md" Condition="Exists('$(OutputPath)README.md')" />
       <ModOutputFiles Include="$(OutputPath)README_EN.md" Condition="Exists('$(OutputPath)README_EN.md')" />
-      <ModOutputFiles Include="$(OutputPath)assets/edit_mark_tool.png" Condition="Exists('$(OutputPath)assets/edit_mark_tool.png')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+    <MakeDir Directories="$(DistModPath)assets" />
+    <Copy SourceFiles="$(OutputPath)assets/edit_mark_tool.png" DestinationFolder="$(DistModPath)assets" Condition="Exists('$(OutputPath)assets/edit_mark_tool.png')" />
+    <Copy SourceFiles="$(OutputPath)assets/restart_oni_steam_relay.sh" DestinationFolder="$(DistModPath)assets" Condition="Exists('$(OutputPath)assets/restart_oni_steam_relay.sh')" />
 
     <!-- 打包成 zip (mod 发布包) -->
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />

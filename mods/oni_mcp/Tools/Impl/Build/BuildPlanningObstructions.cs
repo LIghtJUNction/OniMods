@@ -12,13 +12,17 @@ namespace OniMcp.Tools
 {
     public static partial class BuildPlanningTools
     {
-        private static List<Dictionary<string, object>> FindFootprintObstructions(PlacementDetails placement)
+        private static List<Dictionary<string, object>> FindFootprintObstructions(
+            PlacementDetails placement, GameObject ignored = null)
         {
             var result = new List<Dictionary<string, object>>();
-            var footprintCells = new HashSet<int>(placement.Footprint.Where(cell => cell.Valid).Select(cell => cell.Cell));
+            var placementDef = ResolveBuildingDefForPlacement(placement);
+            var safetyFootprint = PlacementSafetyFootprint(placementDef, placement).ToList();
+            var footprintCells = new HashSet<int>(safetyFootprint.Where(cell => cell.Valid).Select(cell => cell.Cell));
             bool utility = IsUtilityPrefab(placement.PrefabId);
+            bool endpointBridge = UsesNativeBridgeEndpointRegistration(placementDef);
 
-            foreach (var cellInfo in placement.Footprint)
+            foreach (var cellInfo in safetyFootprint)
             {
                 if (!cellInfo.Valid)
                     continue;
@@ -50,11 +54,18 @@ namespace OniMcp.Tools
                 }
             }
 
+            foreach (var conflict in FindUtilityLayerConflicts(placementDef, placement, ignored))
+                result.Add(conflict);
+            foreach (var conflict in FindBuildingLayerConflicts(placementDef, placement))
+                result.Add(conflict);
+            foreach (var conflict in FindLogicEndpointConflicts(placementDef, placement))
+                result.Add(conflict);
+
             var seen = new HashSet<string>();
             foreach (var obstruction in ExistingBuildingFootprintObstructions(placement.WorldId, footprintCells))
             {
                 string id = obstruction.ContainsKey("id") ? obstruction["id"]?.ToString() : "";
-                if (utility || IsUtilityPrefab(id))
+                if ((utility && !endpointBridge) || IsUtilityPrefab(id))
                     continue;
                 string key = obstruction["kind"] + "|" + id + "|" + obstruction["objectX"] + "|" + obstruction["objectY"] + "|" + obstruction["x"] + "|" + obstruction["y"];
                 if (seen.Add(key))
@@ -62,6 +73,15 @@ namespace OniMcp.Tools
             }
 
             return result;
+        }
+
+        private static BuildingDef ResolveBuildingDefForPlacement(PlacementDetails placement)
+        {
+            if (placement == null || string.IsNullOrWhiteSpace(placement.PrefabId))
+                return null;
+            string resolvedPrefabId;
+            string error;
+            return ResolveBuildingDef(placement.PrefabId, out resolvedPrefabId, out error);
         }
 
         private static Dictionary<string, object> TryAutoDigObstructions(PlacementDetails placement, FootprintValidation footprintResult, JObject args, AutoDigContext context)

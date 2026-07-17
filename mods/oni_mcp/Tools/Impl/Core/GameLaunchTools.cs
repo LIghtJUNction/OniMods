@@ -9,7 +9,7 @@ using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
-    public static class GameLaunchTools
+    public static partial class GameLaunchTools
     {
         public static McpTool ControlGameLaunch()
         {
@@ -22,18 +22,20 @@ namespace OniMcp.Tools
                 Risk = "dangerous",
                 Aliases = new List<string> { "game_start_control", "game_auto_start" },
                 Tags = new List<string> { "game", "launch", "start", "load", "lifecycle", "automation" },
-                Description = "兼容入口：请优先使用 game_control domain=launch action=status/start。自动加载最近或指定存档，方便 MCP 自动开始可控游戏会话。",
+                Description = "兼容入口：请优先使用 game_control domain=launch。支持 status/start/restart_load/restart_status；restart_load 保存当前精确存档后通过 Steam 重启并由新进程加载。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "status 查询当前会话；start 加载存档并进入游戏", Required = true, EnumValues = new List<string> { "status", "start" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "status 查询会话；start 加载存档；restart_load 保存并经 Steam 重启后精确加载；restart_status 查询持久任务", Required = true, EnumValues = new List<string> { "status", "start", "restart_load", "restart_status" } },
                     ["type"] = new McpToolParameter { Type = "string", Description = "存档来源：local、cloud 或 both，默认 both", Required = false, EnumValues = new List<string> { "local", "cloud", "both" } },
                     ["index"] = new McpToolParameter { Type = "integer", Description = "要加载的存档索引，来自 action=status 返回的 saves；省略则使用最近存档", Required = false },
                     ["path"] = new McpToolParameter { Type = "string", Description = "要加载的完整存档路径；优先于 index/latest", Required = false },
                     ["forceLoad"] = new McpToolParameter { Type = "boolean", Description = "已在游戏内时是否仍强制加载目标存档，默认 false", Required = false },
-                    ["resume"] = new McpToolParameter { Type = "boolean", Description = "加载后/已在游戏内时是否尝试解除暂停，默认 true", Required = false },
+                    ["resume"] = new McpToolParameter { Type = "boolean", Description = "start 默认 true；restart_load 默认 false，重启加载后保持暂停", Required = false },
                     ["speed"] = new McpToolParameter { Type = "integer", Description = "resume=true 时设置速度：1=正常、2=快进、3=超快，默认 1", Required = false, EnumValues = new List<string> { "1", "2", "3" } },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "status 返回多少个候选存档，默认 5，最大 50", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=start 必须为 true", Required = false }
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "restart_load/start 仅预览，不执行保存、退出或加载", Required = false },
+                    ["jobId"] = new McpToolParameter { Type = "string", Description = "restart_status 可选任务 ID，用于核对查询结果", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=start/restart_load 实际执行必须为 true", Required = false }
                 },
                 Handler = args =>
                 {
@@ -46,8 +48,12 @@ namespace OniMcp.Tools
                         case "load":
                         case "continue":
                             return Start(args);
+                        case "restart_load":
+                            return RestartLoad(args);
+                        case "restart_status":
+                            return RestartStatus(args);
                         default:
-                            return CallToolResult.Error("action must be status or start");
+                            return CallToolResult.Error("action must be status, start, restart_load, or restart_status");
                     }
                 }
             };
@@ -134,7 +140,9 @@ namespace OniMcp.Tools
                 }, McpJsonUtil.Settings));
             }
 
-            LoadingOverlay.Load(() => LoadScreen.DoLoad(target));
+            if (!CanStartExactSaveLoad(target))
+                return CallToolResult.Error("Exact save or loading UI is not ready; wait for the main menu and retry");
+            StartExactSaveLoad(target);
             speedResult = ApplyResume(args);
             return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
             {
@@ -237,7 +245,7 @@ namespace OniMcp.Tools
             }
         }
 
-        private static bool IsUnderSaveRoot(string path)
+        internal static bool IsUnderSaveRoot(string path)
         {
             string full = Path.GetFullPath(path);
             return IsUnderRoot(full, SafeCall(SaveLoader.GetSavePrefixAndCreateFolder))
@@ -258,16 +266,42 @@ namespace OniMcp.Tools
             }
         }
 
+        internal static bool CanStartExactSaveLoad(string path)
+        {
+            return IsUsableSavePath(path)
+                && ScreenPrefabs.Instance != null
+                && ScreenPrefabs.Instance.loadingOverlay != null
+                && (GameScreenManager.Instance != null
+                    || UnityEngine.GameObject.Find("/SceneInitializerFE/FrontEndManager") != null);
+        }
+
+        internal static void StartExactSaveLoad(string path, Action<Exception> onCallbackError = null)
+        {
+            LoadingOverlay.Load(() =>
+            {
+                try { LoadScreen.DoLoad(path); }
+                catch (Exception ex)
+                {
+                    if (onCallbackError == null)
+                        throw;
+                    onCallbackError(ex);
+                }
+            });
+        }
+
         private static bool IsUnderRoot(string path, string root)
         {
             if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(root))
                 return false;
             string normalizedPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
             string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+            var comparison = Path.DirectorySeparatorChar == '\\'
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+            return normalizedPath.StartsWith(normalizedRoot, comparison);
         }
 
-        private static string SafeCall(Func<string> func)
+        internal static string SafeCall(Func<string> func)
         {
             try { return func(); }
             catch { return null; }

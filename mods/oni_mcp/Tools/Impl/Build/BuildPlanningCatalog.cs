@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Newtonsoft.Json.Linq;
 using OniMcp.Support;
 using UnityEngine;
 
@@ -120,11 +121,11 @@ return false;
 }
 }
 
-private static string BuildAvailabilityError(BuildingDef def)
+private static string BuildAvailabilityError(BuildingDef def, JObject args = null)
 {
 if (def == null)
 return "Building def is missing";
-if (!IsTechUnlocked(def))
+if (!IsTechUnlocked(def) && !CanBypassUtilityResearch(def, args))
 return "Building is locked by research: " + def.PrefabID;
 try
 {
@@ -136,6 +137,16 @@ catch
 return "Building availability check failed: " + def.PrefabID;
 }
 return null;
+}
+
+private static bool CanBypassUtilityResearch(BuildingDef def, JObject args)
+{
+return def != null
+&& IsExactConnectionUtilityPrefab(def.PrefabID)
+&& BuildingControlTools.IsVirtualFileEditContext
+&& args != null
+&& ToolUtil.GetBool(args, "instantBuild", false)
+&& ToolUtil.GetBool(args, "allowSandbox", false);
 }
 
 private static object AutoMaterialValue(BuildingDef def, int worldId)

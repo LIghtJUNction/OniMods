@@ -94,11 +94,18 @@ def verify_building_blueprint_safety(
     require_order(
         plan_one,
         (
+            "bool completedImmediately = IsAuthorizedVirtualFileInstantBuild(args);",
+            "if (completedImmediately)",
+            "TryBuildVirtualFileInstantBuild",
+            "return InstantCompletionFailureResult",
+            "else",
             "def.TryPlace(",
+            'return ErrorResult(prefabId, x, y, "Placement failed"',
             "return new Dictionary<string, object>",
-            '["blueprintPlaced"] = true,',
+            '["blueprintPlaced"] = !completedImmediately,',
+            '["buildingCompleted"] = completedImmediately,',
         ),
-        "successful TryPlanOne placement must report a blueprint after def.TryPlace",
+        "TryPlanOne must distinguish successful blueprints from successful instant completion",
     )
 
     materials = selected[paths["materials"]]

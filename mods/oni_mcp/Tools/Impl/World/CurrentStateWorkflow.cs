@@ -29,7 +29,7 @@ namespace OniMcp.Tools
                     {
                         "`*` or `dirs=.` means this cell has infrastructure but no detected edge; inspect `open` and adjacent cell detail before connecting.",
                         "`open=R:(x,y)` means adjacent infrastructure exists but this cell is not connected that way; repair by rebuilding/patching only that missing edge.",
-                        "`bridgePorts=from:(x,y) via:⌒ to:(x,y)` is a bridge jump, not normal neighbor continuity; do not replace bridge cells with straight line glyphs.",
+                        "`bridgePorts=from:(x,y) via:(x,y)⌒ to:(x,y)` is a bridge-anchor jump, not normal neighbor continuity; do not replace bridge cells with straight line glyphs.",
                         "`⊗` marks input/consumer/entrance; `⊙` marks output/generator/exit. Match ports to nearby line cells before issuing build fixes.",
                         "For small fixes prefer local zoom or `/active/map/cell_X_Y.md`; avoid broad viewport reads after every failed connection."
                     },

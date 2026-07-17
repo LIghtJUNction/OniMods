@@ -181,7 +181,8 @@ namespace OniMcp.Tools
                 continue;
             }
 
-            CallToolResult result = OniToolRegistry.CallToolFromWorldEditor(toolName, arguments, semanticCoordinates);
+            CallToolResult result = RunWithWorldEditorInstantBuildScope(arguments,
+                () => OniToolRegistry.CallToolFromWorldEditor(toolName, arguments, semanticCoordinates));
             bool failed = WorldEditorResultFailed(result, arguments);
             anyError = anyError || failed;
             partial = partial || ResultReportsPartial(result);
@@ -356,6 +357,9 @@ namespace OniMcp.Tools
                 error = "Raw ops calls cannot pass coordinates to ordinary tools; use a supported semantic command or coordinate_control.";
                 return false;
             }
+            if (toolName == "game_control"
+                && string.Equals(arguments["domain"]?.ToString(), "sandbox", StringComparison.OrdinalIgnoreCase))
+                return ValidateWorldEditorSandboxPolicy(arguments, out error);
             if (toolName != "server_control")
                 return true;
             string domain = (arguments["domain"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();

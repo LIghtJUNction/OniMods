@@ -80,6 +80,7 @@ Common fields:
   "Port": 8788,
   "AuthEnabled": false,
   "AuthToken": "auto-generated-random-token",
+  "SecurityMigrationVersion": 1,
   "GlobalAutoDisinfectDisabled": false,
   "ScreenshotCleanupEnabled": true,
   "ScreenshotRetentionMinutes": 120,
@@ -88,6 +89,11 @@ Common fields:
 ```
 
 After changing the file, click **Restart MCP server** in the options panel or restart the game.
+PLib 4.24 adds scroll bars when the options dialog exceeds its maximum height; expand `Status`, `Server`, `Security`, and `Screenshots` to reach every MCP setting.
+
+## Save and Restart Through Steam
+
+On Linux, `game_control domain=launch action=restart_load` synchronously saves the active save, fully exits ONI, and relaunches Steam AppID 457140. Preview with `dryRun=true`; execution requires `confirm=true`. It defaults to `resume=false`, so the new process loads the exact saved path and remains paused. The old process returns only `accepted/jobId/exactSavePath`; after relaunch, query `action=restart_status jobId=<id>` for `loaded` or `failed` instead of assuming one HTTP request survives the process restart.
 
 ## Token Authentication
 
@@ -97,7 +103,7 @@ Token verification is disabled by default:
 "AuthEnabled": false
 ```
 
-On first launch, the mod generates a random `AuthToken` and writes it to `OniMcpConfig.json`. Clients must send either HTTP header:
+On first launch, the mod generates a random `AuthToken` and writes it to `OniMcpConfig.json`, but verification remains off. Clients need either HTTP header only after **Require token** is manually enabled:
 
 ```text
 Authorization: Bearer <AuthToken>
@@ -109,7 +115,7 @@ or:
 X-Oni-Mcp-Token: <AuthToken>
 ```
 
-For local-only use where the port is not exposed, token verification can be disabled:
+Upgrades from legacy configs perform one security migration that explicitly disables authentication; later manual enablement is preserved. For local-only use where the port is not exposed, keep the default disabled state:
 
 ```json
 "AuthEnabled": false

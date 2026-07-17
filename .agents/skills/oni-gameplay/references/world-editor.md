@@ -6,6 +6,7 @@ Read this reference before using `world_editor` for map edits, off-screen framin
 
 - [Mental model](#mental-model)
 - [Virtual paths](#virtual-paths)
+- [Mandatory glyph lookup](#mandatory-glyph-lookup)
 - [Universal patch protocol](#universal-patch-protocol)
 - [Exact map rectangle protocol](#exact-map-rectangle-protocol)
 - [Map token edits](#map-token-edits)
@@ -34,18 +35,43 @@ Convenience forwards also support game speed, camera/view/overlay, and screensho
 | `/active/map/viewport.md` | Terrain, objects, and orders in a framed rectangle | map tokens |
 | `/active/map/index.md` | Alias of the editable viewport map | map tokens |
 | `/active/map/layers/layer_<yMin>_<yMax>.md` | World-height slice rendered with the current active overlay | map tokens, except connection glyphs |
-| `/active/map/symbols/glyphs.md` | Token legend | read only |
+| `/active/symbols/glyphs.md` | Generated token table | read only |
 | `/active/ops/tools.md` | Current public typed operation files and tools | read only |
 | `/active/ops/orders.md` | Dig, mop, sweep, disinfect, harvest, cancel, deconstruct, attack, capture | one command |
 | `/active/ops/build.md` | Semantic coordinate-free build plans | one command |
 | `/active/ops/{game,colony,read,search,dupes,navigation,server,...}.md` | Typed tool calls | one command |
 | `/active/management/{schedule,priorities,dupes,food,skills,research}.md` | Panel snapshots plus edit commands | one command |
 | `/active/dupes/<name>.md` | Per-duplicant detail | supported field edits such as `Name:` |
+| `/active/buildings/index.md` | Completed building parameter index | read only |
+| `/active/buildings/instances/<prefab>-<InstanceID>.md` | Stable per-building parameters | one canonical field line |
 | `/active/buildings/plans.oni` | Building plan text | plan patch |
 | `/active/infrastructure/*.oni` | Utility connection plans | plan patch |
 | `/active/infrastructure/*.md` | Infrastructure map views | exact map preflight; connection glyph edits are refused |
 
 Only `/active/` is mutable. Other save slots are historical or unloaded views.
+
+Normal world-editor construction always uses `instantBuild=false`, creating ordinary blueprints with normal material rules even if global debug instant build is enabled. Scoped instant build requires `instantBuild=true allowSandbox=true confirm=true`. Sandbox writes additionally require `world_editor command=sandbox allowSandbox=true confirm=true` and the matching granular permission (`allowTerrainMutation`, `allowEntitySpawn`, `allowDestroy`, or `allowForce`). Batch children cannot widen the parent policy.
+
+## Mandatory glyph lookup
+
+Before interpreting map codes, converting names to codes, or reading connection/overlay glyphs, state in commentary that the gameplay skill requires authoritative lookup. Query every unknown glyph/name together:
+
+```text
+search_control domain=glyphs queries=["砖","?","┼","氧气"] direction=auto matchMode=auto
+```
+
+Do not infer meanings from Chinese characters, a stale legend, or memory. Preserve `count=0` as unknown. Pass `view=temperature|oxygen|light|decor|disease|radiation|crop|...` for contextual rows. Results may be reused only within the same runtime and turn.
+
+Forward, reverse, and batch examples:
+
+```text
+search_control domain=glyphs queries=["砖","零"] direction=code_to_meaning view=temperature
+search_control domain=glyphs queries=["砖","┼"] direction=code_to_meaning view=logic
+search_control domain=glyphs queries=["砖块","研究站","氧气"] direction=meaning_to_code
+search_control domain=glyphs queries=["■","液","不","易","可","难"] direction=auto view=oxygen perQueryLimit=20
+```
+
+`world_editor command=symbols` remains a compatible read-only alias and accepts the same lookup fields, but `search_control domain=glyphs` is the mandatory gameplay entrypoint.
 
 ## Universal patch protocol
 
@@ -129,6 +155,8 @@ Token forms:
 - Bare building names represent existing objects, not construction orders.
 - Orders: `挖`, `拆`, `擦`, `扫`, `毒`, `杀`, `收`, `消`, `捕`, optionally `:优先级`.
 - Connection-glyph edits on map layers and infrastructure Markdown are refused because `auto_connect` may modify cells outside the validated snapshot. Make utility changes with an explicit `/active/infrastructure/*.oni` plan or an `/active/ops/build.md` `auto_connect` command.
+- SEARCH matching ignores rendered `@(x,y)` coordinate suffixes; `建筑:7#壹` matches `建筑:7#壹@(114,138)`.
+- Multi-cell buildings accept either the full WxH footprint in one REPLACE block, or a single lower-left anchor cell. Partial non-rectangular footprints are refused.
 - SEARCH wildcards `?` or `*` match one token; `/regex/` or `~regex` match one token by regex. REPLACE `?`, `*`, or `.*` keeps the original token.
 
 Multi-cell buildings must include the complete footprint in one replacement block. Include support cells and enough neighboring context to keep the match unique.

@@ -83,6 +83,8 @@ namespace OniMcp.Tools
         {
             sb.AppendLine("## Editable Files");
             sb.AppendLine("- `/active/dupes/index.md`");
+            sb.AppendLine("- `/active/buildings/index.md`");
+            sb.AppendLine("- `/active/buildings/instances/`");
             sb.AppendLine("- `/active/dupes/reachability.md`");
             sb.AppendLine("- `/active/management/index.md`");
             sb.AppendLine("- `/active/management/schedule.md`");
@@ -104,6 +106,7 @@ namespace OniMcp.Tools
             sb.AppendLine();
             sb.AppendLine("## Quick Edits");
             sb.AppendLine("- Rename dupe: read `/active/dupes/index.md`, open listed detail file, replace `Name:`.");
+            sb.AppendLine("- Building parameter: read `/active/buildings/index.md`, open the stable InstanceID file, replace one canonical editable line.");
             sb.AppendLine("- Schedule block: edit `/active/management/schedule.md` with `set_block schedule=\"AI轮班-1\" hour=7 group=Worktime`.");
             sb.AppendLine("- Assign schedule: edit `/active/management/schedule.md` with `assign_dupe name=\"Dig\" schedule=\"AI轮班-1\"`.");
             sb.AppendLine("- Priority: edit `/active/management/priorities.md` with `priority name=\"Dig\" category=\"Dig\" value=7`.");

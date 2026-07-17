@@ -35,7 +35,8 @@ namespace OniMcp.Tools
             };
         }
 
-        private static PlacementDetails BuildPlacementDetails(BuildingDef def, int x, int y, int worldId)
+        private static PlacementDetails BuildPlacementDetails(BuildingDef def, int x, int y, int worldId,
+            Orientation orientation = Orientation.Neutral)
         {
             int cell = Grid.XYToCell(x, y);
             return new PlacementDetails
@@ -44,6 +45,7 @@ namespace OniMcp.Tools
                 AnchorX = x,
                 AnchorY = y,
                 WorldId = worldId,
+                Orientation = orientation,
                 Width = Math.Max(1, def.WidthInCells),
                 Height = Math.Max(1, def.HeightInCells),
                 PlacementPoint = BuildPlacementPosition(cell, def),
@@ -76,14 +78,14 @@ namespace OniMcp.Tools
             }
         }
 
-        private static FootprintValidation ValidateFootprint(PlacementDetails placement)
+        private static FootprintValidation ValidateFootprint(PlacementDetails placement, GameObject ignored = null)
         {
             var invalid = placement.Footprint
                 .Where(cell => !cell.Valid || !cell.Visible || !cell.InWorld)
                 .Select(cell => cell.ToDictionary())
                 .ToList();
 
-            var obstructions = FindFootprintObstructions(placement);
+            var obstructions = FindFootprintObstructions(placement, ignored);
 
             if (invalid.Count == 0 && obstructions.Count == 0)
                 return FootprintValidation.Success();

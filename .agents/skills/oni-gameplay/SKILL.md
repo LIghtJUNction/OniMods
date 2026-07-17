@@ -90,6 +90,27 @@ Escalate only the flagged domain:
 
 Do not call the same read with identical arguments twice in a row. State what is missing and switch to a narrower read or discovery call.
 
+## Mandatory glyph lookup
+
+Before interpreting a map glyph, generating a glyph from a building/element/entity name, or reading connection/overlay glyphs, announce in `commentary` that this skill requires an authoritative glyph lookup. Then call:
+
+```text
+search_control domain=glyphs queries=["<all unknown glyphs or names>"] direction=auto
+```
+
+- Batch every unknown glyph/name from the current map in one call; do not issue one lookup per cell.
+- Do not guess from Chinese characters, an old legend, or memory. Unknown results with `count=0` remain unknown.
+- Use `view=<overlay>` to disambiguate context-sensitive overlay meanings.
+- Reuse results already queried in the same runtime and same turn.
+
+Examples:
+
+```text
+search_control domain=glyphs queries=["砖","?","┼"] direction=code_to_meaning matchMode=auto view=logic
+search_control domain=glyphs queries=["砖块","氧气","研究站"] direction=meaning_to_code matchMode=auto
+search_control domain=glyphs queries=["零","■","晒","美","微","低","枯"] direction=auto perQueryLimit=20
+```
+
 ## Spatial and camera discipline
 
 - Prefer semantic search, virtual-file maps, `area_snapshot`, or `text_map` for exact decisions.
@@ -116,9 +137,13 @@ Use sweep only for debris/pickupables. Use mop for liquid cells and spills.
 
 ## Sandbox and instant-build behavior
 
-Current source treats a building as research-available when either `Game.Instance.SandboxModeActive` or `DebugHandler.InstantBuildMode` is active. Normal gameplay still requires completed research.
+Every `world_editor` call runs with `instantBuild=false` by default, even when global debug instant-build is enabled. This default creates ordinary blueprints and uses normal materials. Never request instant build implicitly.
 
-If an already-running sandbox/instant-build runtime reports `Building is locked by research`, treat the loaded DLL as stale. Do **not** queue research merely to satisfy a sandbox construction test. Report that the runtime needs a later safe reload; never restart the game unless explicitly authorized.
+- Read completed building parameters through `/active/buildings/index.md`, then open the stable `/active/buildings/instances/<prefab>-<InstanceID>.md` file. Edit only its canonical lines.
+- `instantBuild=true` requires `allowSandbox=true confirm=true` and applies only to that call.
+- Sandbox writes use `world_editor command=sandbox allowSandbox=true confirm=true` plus the narrow capability: `allowTerrainMutation`, `allowEntitySpawn`, `allowDestroy`, or `allowForce`.
+- Keep `sandboxMaxCells` small; it defaults to 100 and cannot exceed 1000.
+- Never widen these permissions inside a batch child.
 
 ## Execution gates
 

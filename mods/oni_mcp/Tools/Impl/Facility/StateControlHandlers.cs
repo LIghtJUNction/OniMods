@@ -178,6 +178,11 @@ namespace OniMcp.Tools
             return result;
         }
 
+        internal static Dictionary<string, object> SnapshotState(GameObject go)
+        {
+            return ControlInfo(go);
+        }
+
         private static IUserControlledCapacity GetCapacity(GameObject go)
         {
             return go.GetComponent<IUserControlledCapacity>() ?? go.GetSMI<IUserControlledCapacity>();

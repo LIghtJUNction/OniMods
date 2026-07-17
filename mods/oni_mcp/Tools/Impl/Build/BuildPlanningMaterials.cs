@@ -313,6 +313,8 @@ namespace OniMcp.Tools
 
         private static bool IsFreeBuildContext()
         {
+            if (WorldEditorTools.EnforceNormalMaterialRules)
+                return false;
             return DebugHandler.InstantBuildMode || (Game.Instance != null && Game.Instance.SandboxModeActive);
         }
 

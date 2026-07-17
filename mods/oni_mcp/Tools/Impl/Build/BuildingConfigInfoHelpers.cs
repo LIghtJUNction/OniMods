@@ -132,6 +132,21 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> LogicPortsInfo(LogicPorts ports)
         {
+            if (LogicPortReadSemantics.TryBridgeRoute(ports?.gameObject, out int from, out int to)
+                && (ports.inputPortInfo?.Length ?? 0) > 0)
+            {
+                var native = ports.inputPortInfo[0];
+                return new Dictionary<string, object>
+                {
+                    ["inputs"] = new List<Dictionary<string, object>>
+                        { PortInfo(ports, native, true, 0, from, "bridge_from") },
+                    ["outputs"] = new List<Dictionary<string, object>>
+                        { PortInfo(ports, native, false, 1, to, "bridge_to") },
+                    ["bridgeRoute"] = new Dictionary<string, object>
+                        { ["from"] = PortCoordinate(from), ["via"] = PortCoordinate(Grid.PosToCell(ports.gameObject)),
+                            ["to"] = PortCoordinate(to) }
+                };
+            }
             return new Dictionary<string, object>
             {
                 ["inputs"] = PortInfos(ports, ports.inputPortInfo, true),
@@ -145,24 +160,43 @@ namespace OniMcp.Tools
             if (portInfos == null)
                 return result;
 
-            foreach (var port in portInfos)
-            {
-                int cell = ports.GetPortCell(port.id);
-                result.Add(new Dictionary<string, object>
-                {
-                    ["id"] = port.id.ToString(),
-                    ["kind"] = isInput ? "input" : "output",
-                    ["cell"] = cell,
-                    ["x"] = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
-                    ["y"] = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1,
-                    ["connected"] = ports.IsPortConnected(port.id),
-                    ["value"] = isInput ? ports.GetInputValue(port.id) : ports.GetOutputValue(port.id),
-                    ["spriteType"] = port.spriteType.ToString(),
-                    ["requiresConnection"] = port.requiresConnection
-                });
-            }
+            for (int i = 0; i < portInfos.Length; i++)
+                result.Add(PortInfo(ports, portInfos[i], isInput, i,
+                    LogicPortReadSemantics.ActualCell(ports, portInfos[i]), null));
 
             return result;
+        }
+
+        private static Dictionary<string, object> PortInfo(LogicPorts ports, LogicPorts.Port port,
+            bool isInput, int index, int cell, string semanticRole)
+        {
+            int value = semanticRole == "bridge_to" || isInput
+                ? LogicPortReadSemantics.InputValue(ports, index)
+                : LogicPortReadSemantics.OutputValue(ports, index);
+            return new Dictionary<string, object>
+            {
+                ["id"] = port.id.ToString(),
+                ["kind"] = isInput ? "input" : "output",
+                ["semanticRole"] = semanticRole,
+                ["cell"] = cell,
+                ["x"] = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
+                ["y"] = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1,
+                ["connected"] = LogicPortReadSemantics.ConnectedAtCell(cell),
+                ["value"] = value,
+                ["spriteType"] = semanticRole == "bridge_to" ? "Output" : port.spriteType.ToString(),
+                ["nativeSpriteType"] = port.spriteType.ToString(),
+                ["requiresConnection"] = port.requiresConnection
+            };
+        }
+
+        private static Dictionary<string, object> PortCoordinate(int cell)
+        {
+            return new Dictionary<string, object>
+            {
+                ["cell"] = cell,
+                ["x"] = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
+                ["y"] = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1
+            };
         }
 
         private static Dictionary<string, object> DoorInfo(Door door)

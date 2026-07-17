@@ -80,6 +80,7 @@ OniMcpConfig.json
   "Port": 8788,
   "AuthEnabled": false,
   "AuthToken": "自动生成的随机token",
+  "SecurityMigrationVersion": 1,
   "GlobalAutoDisinfectDisabled": false,
   "ScreenshotCleanupEnabled": true,
   "ScreenshotRetentionMinutes": 120,
@@ -88,6 +89,11 @@ OniMcpConfig.json
 ```
 
 修改配置后，在配置界面点击 **Restart MCP server**，或重启游戏。
+PLib 4.24 配置窗口会在内容超过最大高度时显示滚动条；展开 `Status`、`Server`、`Security`、`Screenshots` 分类即可访问全部 MCP 设置。
+
+## 保存并通过 Steam 重启
+
+Linux 下可用 `game_control domain=launch action=restart_load` 同步保存当前 active save，再完整退出并通过 Steam AppID 457140 重启。先以 `dryRun=true` 预览，实际执行需 `confirm=true`；默认 `resume=false`，新进程精确加载刚保存的路径并保持暂停。旧进程只返回 `accepted/jobId/exactSavePath`，重启后使用 `action=restart_status jobId=<id>` 查询 `loaded` 或 `failed`，不要假定原 HTTP 调用能跨进程完成。
 
 ## Token 认证
 
@@ -97,7 +103,7 @@ Mod 默认不启用 token 校验:
 "AuthEnabled": false
 ```
 
-首次启动时会自动生成随机 `AuthToken` 并写入 `OniMcpConfig.json`。客户端连接时需要发送下面任意一个 HTTP 请求头:
+首次启动时会自动生成随机 `AuthToken` 并写入 `OniMcpConfig.json`，但默认不校验。只有在配置页手动开启 **Require token** 后，客户端才需要发送下面任意一个 HTTP 请求头:
 
 ```text
 Authorization: Bearer <AuthToken>
@@ -109,7 +115,7 @@ Authorization: Bearer <AuthToken>
 X-Oni-Mcp-Token: <AuthToken>
 ```
 
-只在本机使用且确认没有暴露端口时，可以关闭校验:
+升级自旧配置时会执行一次安全迁移，把认证明确设为关闭；之后用户手动开启的设置会持久保留。只在本机使用且确认没有暴露端口时，可保持默认关闭:
 
 ```json
 "AuthEnabled": false

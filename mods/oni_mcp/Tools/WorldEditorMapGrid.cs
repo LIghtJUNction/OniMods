@@ -179,7 +179,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                             elemId = elem.id.ToString();
                             elemName = elem.name;
                         }
-                        building = Grid.Objects[cell, (int)ObjectLayer.Building];
+                        building = CellBuildingObject(cell);
                         if (building != null)
                         {
                             var complete = building.GetComponent<BuildingComplete>();
@@ -214,6 +214,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                 foreach (string detail in details.Distinct())
                     sb.AppendLine(detail);
             }
+            AppendBuildingParameterReferences(sb, xMin, xMax, yMin, yMax);
             AppendMapFileIndex(sb);
             return sb.ToString();
         }
@@ -365,6 +366,9 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             }
             if (building != null && !string.IsNullOrEmpty(buildingId))
             {
+                var logicGate = building.GetComponent<LogicGate>();
+                if (logicGate != null && !IsBuildingAnchorCell(building, cell))
+                    return symbol.ToString();
                 string token = MapTokenPart(!string.IsNullOrEmpty(buildingName) ? StripLinkTags(buildingName) : buildingId);
                 string suffix = string.Empty;
                 if (IsBlueprintToken(building))
@@ -373,7 +377,9 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                     string material = GetMapMaterialSymbol(building);
                     if (!string.IsNullOrEmpty(material)) suffix += "#" + material;
                 }
-                runKey = "building:" + buildingId + suffix;
+                string identity = logicGate == null ? string.Empty
+                    : ":" + (building.GetComponent<KPrefabID>()?.InstanceID ?? building.GetInstanceID());
+                runKey = "building:" + buildingId + identity + suffix;
                 return previousRunKey == runKey ? symbol.ToString() : token + suffix + "@(" + x + "," + y + ")";
             }
             return symbol.ToString();
@@ -430,6 +436,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             sb.AppendLine("- `infrastructure/logic.md` : signal wire connection map");
             sb.AppendLine("- `infrastructure/solid_conveyor.md` : conveyor rail connection map");
             sb.AppendLine("- `symbols/glyphs.md` : generated global one-character mapping");
+            sb.AppendLine("- `buildings/index.md` : completed building parameter files; map output links only compact references");
             sb.AppendLine("- `grep` command : search within virtual file without reading all content");
         }
 

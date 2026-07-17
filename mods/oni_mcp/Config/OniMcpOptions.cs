@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OniMcp.Server;
 using OniMcp.Support;
 using PeterHan.PLib.Options;
@@ -14,18 +16,27 @@ namespace OniMcp.Config
     public class OniMcpOptions : IOptions
     {
         private static OniMcpOptions _current;
+        private const int CurrentSecurityMigrationVersion = 1;
+
+        public int SecurityMigrationVersion { get; set; } = CurrentSecurityMigrationVersion;
 
         [Option("Host", "HTTP listen host. Use localhost for local clients, or 0.0.0.0 to listen on all interfaces.", "Server")]
         public string Host { get; set; } = "localhost";
 
-        [Option("Port", "HTTP port for the MCP endpoint.", "Server")]
-        [Limit(1024, 65535, 1)]
         public int Port { get; set; } = 8788;
 
-        [Option("Require token", "Require clients to send the configured bearer token. Disabled by default for local-only use.", "Authentication")]
+        [Option("Port", "HTTP port for the MCP endpoint.", "Server")]
+        [JsonIgnore]
+        public string PortInput
+        {
+            get => Port.ToString(CultureInfo.InvariantCulture);
+            set => Port = ParseCompactInt(value, Port, 1024, 65535);
+        }
+
+        [Option("Require token", "Disabled by default. Enable manually to require the configured bearer token for every MCP request.", "Security")]
         public bool AuthEnabled { get; set; } = false;
 
-        [Option("Token", "Bearer token required when token authentication is enabled.", "Authentication")]
+        [Option("Token", "Used only when Require token is enabled. A token is generated safely if enabled while empty.", "Security")]
         public string AuthToken { get; set; } = CreateAuthToken();
 
         [Option("Disable auto disinfect globally", "Keep ONI's global auto disinfect setting disabled when the mod applies this policy.", "Gameplay")]
@@ -34,13 +45,25 @@ namespace OniMcp.Config
         [Option("Clean up screenshots", "Automatically remove old temporary screenshots created by MCP tools.", "Screenshots")]
         public bool ScreenshotCleanupEnabled { get; set; } = true;
 
-        [Option("Screenshot retention minutes", "How long temporary screenshots are retained before cleanup.", "Screenshots")]
-        [Limit(1, 10080, 1)]
         public int ScreenshotRetentionMinutes { get; set; } = 120;
 
-        [Option("Screenshot max files", "Maximum number of temporary screenshots to keep.", "Screenshots")]
-        [Limit(1, 1000, 1)]
+        [Option("Screenshot retention minutes", "How long temporary screenshots are retained before cleanup.", "Screenshots")]
+        [JsonIgnore]
+        public string ScreenshotRetentionMinutesInput
+        {
+            get => ScreenshotRetentionMinutes.ToString(CultureInfo.InvariantCulture);
+            set => ScreenshotRetentionMinutes = ParseCompactInt(value, ScreenshotRetentionMinutes, 1, 10080);
+        }
+
         public int ScreenshotMaxFiles { get; set; } = 40;
+
+        [Option("Screenshot max files", "Maximum number of temporary screenshots to keep.", "Screenshots")]
+        [JsonIgnore]
+        public string ScreenshotMaxFilesInput
+        {
+            get => ScreenshotMaxFiles.ToString(CultureInfo.InvariantCulture);
+            set => ScreenshotMaxFiles = ParseCompactInt(value, ScreenshotMaxFiles, 1, 1000);
+        }
 
         public static OniMcpOptions Current
         {
@@ -109,8 +132,8 @@ namespace OniMcp.Config
             yield return new TextBlockOptionsEntry(
                 "OniMcpStatus",
                 new OptionAttribute(
-                    "Endpoint: " + EndpointUrl + "\nConfig: " + ConfigPath,
-                    "Current ONI MCP endpoint and configuration file path.",
+                    "Endpoint: " + EndpointUrl + "\nConfig: " + ConfigPath + "\nAuthentication: " + (AuthEnabled ? "enabled" : "disabled by default"),
+                    "Current endpoint and config path. Expand Status, Server, Security, and Screenshots; PLib scrolls the dialog when needed.",
                     "Status"));
 
             var browseButton = new ButtonOptionsEntry(
@@ -189,7 +212,9 @@ namespace OniMcp.Config
             try
             {
                 string json = File.ReadAllText(path);
-                var loaded = JsonConvert.DeserializeObject<OniMcpOptions>(json);
+                var raw = JObject.Parse(json);
+                var loaded = raw.ToObject<OniMcpOptions>();
+                ApplySecurityMigration(loaded, raw);
                 var options = Sanitize(loaded ?? new OniMcpOptions());
                 TrySave(options);
                 return options;
@@ -227,10 +252,23 @@ namespace OniMcp.Config
             options.AuthToken = (options.AuthToken ?? "").Trim();
             if (options.AuthEnabled && string.IsNullOrEmpty(options.AuthToken))
                 options.AuthToken = CreateAuthToken();
+            if (options.SecurityMigrationVersion < CurrentSecurityMigrationVersion)
+                options.SecurityMigrationVersion = CurrentSecurityMigrationVersion;
 
             options.ScreenshotRetentionMinutes = Clamp(options.ScreenshotRetentionMinutes, 1, 10080);
             options.ScreenshotMaxFiles = Clamp(options.ScreenshotMaxFiles, 1, 1000);
             return options;
+        }
+
+        private static void ApplySecurityMigration(OniMcpOptions options, JObject raw)
+        {
+            if (options == null || raw == null)
+                return;
+            int version = raw["SecurityMigrationVersion"]?.Value<int>() ?? 0;
+            if (version >= CurrentSecurityMigrationVersion)
+                return;
+            options.AuthEnabled = false;
+            options.SecurityMigrationVersion = CurrentSecurityMigrationVersion;
         }
 
         private static string CreateAuthToken()
@@ -257,6 +295,14 @@ namespace OniMcp.Config
             if (value > max)
                 return max;
             return value;
+        }
+
+        private static int ParseCompactInt(string text, int current, int min, int max)
+        {
+            if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
+                || parsed < min || parsed > max)
+                return current;
+            return parsed;
         }
 
         [JsonIgnore]

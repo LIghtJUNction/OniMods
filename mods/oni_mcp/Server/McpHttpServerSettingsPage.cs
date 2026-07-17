@@ -20,7 +20,112 @@ namespace OniMcp.Server
     /// 基于 System.Net.HttpListener（.NET Framework 内置）
     /// </summary>
     public partial class McpHttpServer : MonoBehaviour
-{
+    {
+        private bool TryHandleSettingsRequest(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            string path = request.Url == null ? string.Empty : request.Url.AbsolutePath;
+            if (path != "/settings" && path != "/settings/")
+                return false;
+
+            var remoteAddress = request.RemoteEndPoint == null ? null : request.RemoteEndPoint.Address;
+            if (remoteAddress == null || !IPAddress.IsLoopback(remoteAddress))
+            {
+                SendHtml(response, "<h1>Forbidden</h1><p>The settings page is available only from the local machine.</p>", 403);
+                return true;
+            }
+
+            if (request.HttpMethod == "GET")
+            {
+                SendHtml(response, RenderSettingsHtml(), 200);
+                return true;
+            }
+            if (request.HttpMethod != "POST")
+            {
+                response.StatusCode = 405;
+                response.Close();
+                return true;
+            }
+
+            try
+            {
+                Dictionary<string, string> form;
+                using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                    form = ParseQueryString(reader.ReadToEnd());
+
+                var current = OniMcpOptions.Current;
+                string host = RequiredFormValue(form, "host");
+                if (!IsValidSettingsHost(host))
+                    throw new InvalidOperationException("Host must be localhost or an IP address.");
+                int port = RequiredFormInt(form, "port", 1024, 65535);
+                int retention = RequiredFormInt(form, "screenshotRetentionMinutes", 1, 10080);
+                int maxFiles = RequiredFormInt(form, "screenshotMaxFiles", 1, 1000);
+                string replacement = form.ContainsKey("authTokenReplacement")
+                    ? (form["authTokenReplacement"] ?? string.Empty).Trim()
+                    : string.Empty;
+
+                var options = new OniMcpOptions
+                {
+                    SecurityMigrationVersion = current.SecurityMigrationVersion,
+                    Host = host,
+                    Port = port,
+                    AuthEnabled = form.ContainsKey("authEnabled") && form["authEnabled"] == "true",
+                    AuthToken = string.IsNullOrEmpty(replacement) ? current.AuthToken : replacement,
+                    GlobalAutoDisinfectDisabled = form.ContainsKey("globalAutoDisinfectDisabled") && form["globalAutoDisinfectDisabled"] == "true",
+                    ScreenshotCleanupEnabled = form.ContainsKey("screenshotCleanupEnabled") && form["screenshotCleanupEnabled"] == "true",
+                    ScreenshotRetentionMinutes = retention,
+                    ScreenshotMaxFiles = maxFiles
+                };
+
+                bool portChanged = port != current.Port;
+                OniMcpOptions.Save(options);
+                string message = portChanged
+                    ? "Settings saved. The server is restarting on port " + port + ". Reopen this page at http://localhost:" + port + "/settings/."
+                    : "Settings saved. The MCP listener is restarting now.";
+                SendHtml(response, RenderSettingsHtml(message, true), 200);
+                ScheduleSettingsRestartAfterResponse();
+            }
+            catch (Exception ex)
+            {
+                SendHtml(response, RenderSettingsHtml("Error saving settings: " + ex.Message, false), 400);
+            }
+            return true;
+        }
+
+        private static void ScheduleSettingsRestartAfterResponse()
+        {
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                Thread.Sleep(250);
+                MainThreadBridge.EnqueueDeferred(() =>
+                {
+                    if (Instance != null)
+                        Instance.RestartServer();
+                });
+            });
+        }
+
+        private static string RequiredFormValue(Dictionary<string, string> form, string key)
+        {
+            string value = form.ContainsKey(key) ? (form[key] ?? string.Empty).Trim() : string.Empty;
+            if (string.IsNullOrEmpty(value))
+                throw new InvalidOperationException(key + " is required.");
+            return value;
+        }
+
+        private static int RequiredFormInt(Dictionary<string, string> form, string key, int minimum, int maximum)
+        {
+            string value = RequiredFormValue(form, key);
+            if (!int.TryParse(value, out int parsed) || parsed < minimum || parsed > maximum)
+                throw new InvalidOperationException(key + " must be between " + minimum + " and " + maximum + ".");
+            return parsed;
+        }
+
+        private static bool IsValidSettingsHost(string host)
+        {
+            return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+                || IPAddress.TryParse(host, out _);
+        }
+
         private string RenderSettingsHtml(string message = null, bool success = true)
         {
             var options = OniMcpOptions.Current;
@@ -36,8 +141,8 @@ namespace OniMcp.Server
   h1 { margin-top: 0; color: #fff; font-size: 24px; border-bottom: 2px solid #4a5568; padding-bottom: 12px; }
   .form-group { margin-bottom: 20px; }
   label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #cbd5e0; }
-  input[type=""text""], input[type=""number""] { width: 100%; padding: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; border-radius: 6px; box-sizing: border-box; }
-  input[type=""text""]:focus, input[type=""number""]:focus { outline: none; border-color: #3182ce; }
+  input[type=""text""], input[type=""number""], input[type=""password""] { width: 100%; padding: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; border-radius: 6px; box-sizing: border-box; }
+  input[type=""text""]:focus, input[type=""number""]:focus, input[type=""password""]:focus { outline: none; border-color: #3182ce; }
   .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
   .checkbox-group label { display: inline; margin-bottom: 0; cursor: pointer; }
   input[type=""checkbox""] { width: 16px; height: 16px; cursor: pointer; }
@@ -79,17 +184,18 @@ namespace OniMcp.Server
           <input type=""checkbox"" id=""authEnabled"" name=""authEnabled"" value=""true"" {2} />
           <label for=""authEnabled"">Require Authentication Token</label>
         </div>
+        <div class=""help-text"">Disabled by default. Authentication is enforced only after you enable this setting manually.</div>
       </div>
 
       <div class=""form-group"">
-        <label for=""authToken"">Bearer Auth Token</label>
-        <input type=""text"" id=""authToken"" name=""authToken"" value=""{3}"" />
-        <div class=""help-text"">Token required for requests if authentication is enabled.</div>
+        <label for=""authTokenReplacement"">Replace Bearer Auth Token</label>
+        <input type=""password"" id=""authTokenReplacement"" name=""authTokenReplacement"" value="""" autocomplete=""new-password"" />
+        <div class=""help-text"">The current token is never displayed. Leave blank to keep it, or enter a new token to rotate it.</div>
       </div>
 
       <div class=""form-group"">
         <div class=""checkbox-group"">
-          <input type=""checkbox"" id=""globalAutoDisinfectDisabled"" name=""globalAutoDisinfectDisabled"" value=""true"" {4} />
+          <input type=""checkbox"" id=""globalAutoDisinfectDisabled"" name=""globalAutoDisinfectDisabled"" value=""true"" {3} />
           <label for=""globalAutoDisinfectDisabled"">Disable Auto Disinfect Globally</label>
         </div>
         <div class=""help-text"">Keeps global auto disinfect disabled to prioritize duplicants.</div>
@@ -97,19 +203,19 @@ namespace OniMcp.Server
 
       <div class=""form-group"">
         <div class=""checkbox-group"">
-          <input type=""checkbox"" id=""screenshotCleanupEnabled"" name=""screenshotCleanupEnabled"" value=""true"" {5} />
+          <input type=""checkbox"" id=""screenshotCleanupEnabled"" name=""screenshotCleanupEnabled"" value=""true"" {4} />
           <label for=""screenshotCleanupEnabled"">Clean Up Old Screenshots</label>
         </div>
       </div>
 
       <div class=""form-group"">
         <label for=""screenshotRetentionMinutes"">Screenshot Retention (Minutes)</label>
-        <input type=""number"" id=""screenshotRetentionMinutes"" name=""screenshotRetentionMinutes"" value=""{6}"" min=""1"" required />
+        <input type=""number"" id=""screenshotRetentionMinutes"" name=""screenshotRetentionMinutes"" value=""{5}"" min=""1"" required />
       </div>
 
       <div class=""form-group"">
         <label for=""screenshotMaxFiles"">Max Screenshot Files</label>
-        <input type=""number"" id=""screenshotMaxFiles"" name=""screenshotMaxFiles"" value=""{7}"" min=""1"" required />
+        <input type=""number"" id=""screenshotMaxFiles"" name=""screenshotMaxFiles"" value=""{6}"" min=""1"" required />
       </div>
 
       <button type=""submit"" class=""btn"">Save Settings</button>
@@ -120,7 +226,6 @@ namespace OniMcp.Server
                 WebUtility.HtmlEncode(options.Host),
                 options.Port,
                 options.AuthEnabled ? "checked" : "",
-                WebUtility.HtmlEncode(options.AuthToken ?? ""),
                 options.GlobalAutoDisinfectDisabled ? "checked" : "",
                 options.ScreenshotCleanupEnabled ? "checked" : "",
                 options.ScreenshotRetentionMinutes,
@@ -129,5 +234,5 @@ namespace OniMcp.Server
 
             return sb.ToString();
         }
-}
+    }
 }

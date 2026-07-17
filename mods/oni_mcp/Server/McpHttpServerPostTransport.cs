@@ -155,7 +155,11 @@ namespace OniMcp.Server
 
             string expected = options.AuthToken ?? "";
             if (string.IsNullOrWhiteSpace(expected))
-                return true;
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                    "Token authentication is enabled but no token is configured"), 401);
+                return false;
+            }
 
             string provided = request.Headers["X-Oni-Mcp-Token"];
             string authorization = request.Headers["Authorization"];

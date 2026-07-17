@@ -103,6 +103,9 @@ namespace OniMcp.Tools
 
         private static string ClassifyBuildFailure(string error, Dictionary<string, object> details)
         {
+            if (details != null && details.TryGetValue("reasonCode", out object explicitReasonCode)
+                && !string.IsNullOrWhiteSpace(explicitReasonCode?.ToString()))
+                return explicitReasonCode.ToString();
             string text = (error ?? "") + " " + (details != null ? JsonConvert.SerializeObject(details, Formatting.None) : "");
             if (text.IndexOf("Unsupported", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "unsupported";

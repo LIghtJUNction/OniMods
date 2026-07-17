@@ -69,7 +69,7 @@ namespace OniMcp.Tools
             sb.AppendLine("- format: `(x,y): glyph=符号 dirs=UDLR links=U:(x,y),R:(x,y) open=U:(x,y) to=(neighbor...) extra`");
             sb.AppendLine("- legend: U=up D=down L=left R=right; `⌒`=bridge, `⊗`=input port, `⊙`=output port.");
             sb.AppendLine("- read: `dirs=.` means an endpoint or disconnected segment; compare `links`/`to` to verify actual neighbor cells instead of counting columns.");
-            sb.AppendLine("- bridge: `bridgeRoute=from:(x,y) via:⌒ to:(x,y)` jumps through the building; do not infer direct wire/pipe connection across bridge footprint.");
+            sb.AppendLine("- bridge: `bridgeRoute=from:(x,y) via:(x,y)⌒ to:(x,y)` jumps through the bridge anchor; do not infer direct wire/pipe connection across its footprint.");
             sb.AppendLine("- inspect: open `/active/map/cell_X_Y.md` for exact ports, building role, bridge, dropped items, and quick orders.");
             foreach (string line in connections.Distinct())
                 sb.AppendLine(line);
@@ -80,7 +80,7 @@ namespace OniMcp.Tools
             {
                 sb.AppendLine();
                 sb.AppendLine("## Bridges (" + title + ")");
-                sb.AppendLine("- route: `from` is input side, `to` is output side, `via:⌒` means jump through bridge building.");
+                sb.AppendLine("- route: `from` is input side, `to` is output side, `via:(x,y)⌒` identifies the bridge anchor jump.");
                 foreach (string line in bridges.Distinct())
                     sb.AppendLine(line);
                 if (bridgeTotal > bridges.Count)
@@ -248,14 +248,14 @@ int cell,
             string bridge = BridgeText(cell, mode);
             if (string.IsNullOrEmpty(bridge))
                 return null;
-            var go = Grid.Objects[cell, (int)ObjectLayer.Building];
+            var go = CellBuildingObject(cell);
             var building = go != null ? go.GetComponent<Building>() : null;
             return EndpointPrefix(cell, building) + bridge;
         }
 
         private static string EndpointDetailLine(HashedString mode, int cell)
         {
-            var go = Grid.Objects[cell, (int)ObjectLayer.Building];
+            var go = CellBuildingObject(cell);
             var building = go != null ? go.GetComponent<Building>() : null;
             if (building == null || building.Def == null)
                 return null;
@@ -312,6 +312,12 @@ int cell,
 
         private static string LogicEndpointLine(int cell, GameObject go)
         {
+            var gateLine = LogicGateEndpointLine(cell, go);
+            if (!string.IsNullOrEmpty(gateLine))
+                return gateLine;
+            if (LogicPortReadSemantics.TryBridgeRoute(go, out int from, out int to))
+                return EndpointPrefix(cell, go.GetComponent<Building>())
+                    + PortCellText("logicIn", true, from) + " " + PortCellText("logicOut", false, to);
             var ports = go.GetComponent<LogicPorts>();
             if (ports == null)
                 return null;
@@ -370,7 +376,7 @@ int cell,
 
         private static string BridgeText(int cell, HashedString mode)
         {
-            var go = Grid.Objects[cell, (int)ObjectLayer.Building];
+            var go = CellBuildingObject(cell);
             if (go == null)
                 return string.Empty;
             string id = go.GetComponent<BuildingComplete>()?.name ?? go.name;
@@ -388,13 +394,15 @@ int cell,
         {
             if (mode == OverlayModes.Logic.ID && go != null)
             {
+                if (LogicPortReadSemantics.TryBridgeRoute(go, out int from, out int to))
+                    return BridgePortRoute(from, Grid.PosToCell(go), to);
                 var ports = go.GetComponent<LogicPorts>();
                 if (ports != null)
                 {
                     int logicInput = FirstLogicPortCell(ports, ports.inputPortInfo);
                     int logicOutput = FirstLogicPortCell(ports, ports.outputPortInfo);
 if (Grid.IsValidCell(logicInput) && Grid.IsValidCell(logicOutput))
-return BridgePortRoute(logicInput, logicOutput);
+return BridgePortRoute(logicInput, Grid.PosToCell(go), logicOutput);
                 }
             }
 
@@ -416,12 +424,12 @@ return BridgePortRoute(logicInput, logicOutput);
 
             if (!Grid.IsValidCell(input) || !Grid.IsValidCell(output))
                 return string.Empty;
-return BridgePortRoute(input, output);
+return BridgePortRoute(input, Grid.PosToCell(go), output);
 }
 
-private static string BridgePortRoute(int input, int output)
+private static string BridgePortRoute(int input, int via, int output)
 {
-        return "from:" + CellCoord(input) + " via:⌒ to:" + CellCoord(output);
+        return "from:" + CellCoord(input) + " via:" + CellCoord(via) + "⌒ to:" + CellCoord(output);
 }
 
 private static int FirstLogicPortCell(LogicPorts ports, LogicPorts.Port[] info)
@@ -430,7 +438,7 @@ private static int FirstLogicPortCell(LogicPorts ports, LogicPorts.Port[] info)
                 return Grid.InvalidCell;
             foreach (var port in info)
             {
-                int cell = ports.GetPortCell(port.id);
+                int cell = LogicPortReadSemantics.ActualCell(ports, port);
                 if (Grid.IsValidCell(cell))
                     return cell;
             }

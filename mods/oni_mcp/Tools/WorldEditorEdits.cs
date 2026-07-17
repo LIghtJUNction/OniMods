@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Net;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -90,6 +91,8 @@ namespace OniMcp.Tools
                 return PreflightOperationMarkdownEdit(args, relative, replace);
             if (IsDupeDetailMarkdown(relative))
                 return PreflightDupeDetailEdit(relative, replace);
+            if (IsBuildingDetailMarkdown(relative))
+                return PreflightBuildingDetailEdit(relative, search, replace);
             return CallToolResult.Error("file is read-only for edits: " + path);
         }
 
@@ -116,6 +119,8 @@ namespace OniMcp.Tools
                 return ApplyOperationMarkdownEdit(routed, relative, replace);
             if (IsDupeDetailMarkdown(relative))
                 return ApplyDupeDetailEdit(routed, relative, replace);
+            if (IsBuildingDetailMarkdown(relative))
+                return ApplyBuildingDetailEdit(routed, relative, search, replace);
 
             return CallToolResult.Error("file is read-only for edits: " + path);
         }
@@ -125,11 +130,13 @@ namespace OniMcp.Tools
             args["domain"] = "planning";
             args["plan"] = replacement.Trim();
             bool connectionFile = relative.StartsWith("infrastructure/", StringComparison.Ordinal);
+            if (connectionFile && !TryApplyInfrastructurePlan(args, relative, replacement, out string error))
+                return CallToolResult.Error(error);
             if (connectionFile || LooksLikeConnection(replacement))
                 args["action"] = "auto_connect";
             else
                 args["action"] = ToolUtil.GetBool(args, "confirm", false) ? "build_area" : "parse_plan";
-            return BuildingControlTools.ControlBuilding().Handler(args);
+            return BuildingControlTools.ControlBuildingFromVirtualFile(args);
         }
 
         private static CallToolResult PreflightBuildEdit(JObject args, string relative, string replacement)
@@ -139,8 +146,11 @@ namespace OniMcp.Tools
             preview["plan"] = replacement.Trim();
             preview["dryRun"] = true;
             preview["confirm"] = false;
+            if (relative.StartsWith("infrastructure/", StringComparison.Ordinal)
+                && !TryApplyInfrastructurePlan(preview, relative, replacement, out string error))
+                return CallToolResult.Error(error);
             preview["action"] = relative == "buildings/plans.oni" ? "build_area" : "auto_connect";
-            return PromoteWorldEditorFailure(BuildingControlTools.ControlBuilding().Handler(preview));
+            return PromoteWorldEditorFailure(BuildingControlTools.ControlBuildingFromVirtualFile(preview));
         }
 
         private static bool IsEditableBuildCommandFile(string relative)
@@ -151,6 +161,41 @@ namespace OniMcp.Tools
                 || relative == "infrastructure/gas_conduits.oni"
                 || relative == "infrastructure/logic.oni"
                 || relative == "infrastructure/solid_conveyor.oni";
+        }
+
+        private static bool TryApplyInfrastructurePlan(JObject args, string relative, string replacement, out string error)
+        {
+            error = null;
+            string plan = (replacement ?? string.Empty).Trim();
+            const string fullPattern = @"^connect\s+\(\s*-?\d+\s*,\s*-?\d+\s*\)(?:\s*(?:->|→)\s*\(\s*-?\d+\s*,\s*-?\d+\s*\)){1,}$";
+            if (!Regex.IsMatch(plan, fullPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            {
+                error = "Infrastructure plans must use exactly: connect (x1,y1) -> (x2,y2) [-> (x3,y3) ...]";
+                return false;
+            }
+
+            var points = new JArray();
+            foreach (Match match in Regex.Matches(plan, @"\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)"))
+            {
+                if (!int.TryParse(match.Groups[1].Value, out int x)
+                    || !int.TryParse(match.Groups[2].Value, out int y))
+                {
+                    error = "Infrastructure plan coordinates must be 32-bit integers";
+                    return false;
+                }
+                points.Add(new JArray(x, y));
+            }
+            if (points.Count < 2)
+            {
+                error = "Infrastructure plans require at least two explicit points";
+                return false;
+            }
+
+            args["prefabId"] = PrefabForConnectionMap(relative);
+            args["points"] = points;
+            args["material"] = args["material"] ?? "auto";
+            args["nativePathPlacement"] = true;
+            return true;
         }
 
     }

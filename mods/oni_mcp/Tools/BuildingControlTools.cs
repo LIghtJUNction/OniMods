@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
@@ -6,6 +7,11 @@ namespace OniMcp.Tools
 {
     public static class BuildingControlTools
     {
+        [ThreadStatic]
+        private static int virtualFileEditDepth;
+
+        internal static bool IsVirtualFileEditContext => virtualFileEditDepth > 0;
+
         public static McpTool ControlBuilding()
         {
             return new McpTool
@@ -81,7 +87,7 @@ namespace OniMcp.Tools
                     OniMcp.Support.OniMcpLog.Debug($"[OniMcp] building_control: domain={domain}, action={action}");
                     if ((domain == "planning" || domain == "plan" || domain == "build" || domain == "placement")
                         && action == "build_area"
-                        && !ToolUtil.GetBool(args, "_virtualFileEdit", false))
+                        && !IsVirtualFileEditContext)
                     {
                         return CallToolResult.Error(
                             "Direct building_control build_area planning is forbidden. "
@@ -138,8 +144,15 @@ namespace OniMcp.Tools
         internal static CallToolResult ControlBuildingFromVirtualFile(JObject args)
         {
             var forwarded = args == null ? new JObject() : (JObject)args.DeepClone();
-            forwarded["_virtualFileEdit"] = true;
-            return ControlBuilding().Handler(forwarded);
+            virtualFileEditDepth++;
+            try
+            {
+                return ControlBuilding().Handler(forwarded);
+            }
+            finally
+            {
+                virtualFileEditDepth--;
+            }
         }
 
         private static string NormalizeDomain(JObject args)

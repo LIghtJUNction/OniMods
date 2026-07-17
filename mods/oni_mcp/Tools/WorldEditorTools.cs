@@ -22,7 +22,7 @@ namespace OniMcp.Tools
                 Tags = new List<string> { "world", "editor", "filesystem", "search-replace", "save", "build", "orders", "overlay", "batch" },
                 Description = "Code-file style ONI world editor. Use read/grep/symbols/search/edit for virtual files; use game/camera/view/batch to combine pause, view control, and world reads in one call.",
                 Parameters = Params(),
-                Handler = HandleWorldEditorCommand
+                Handler = HandleWorldEditorScoped
             };
         }
 
@@ -69,6 +69,8 @@ namespace OniMcp.Tools
                 case "play":
                 case "speed":
                     return ForwardGame(args, command);
+                case "sandbox":
+                    return ForwardSandbox(args);
                 case "camera":
                 case "view":
                 case "overlay":
@@ -90,6 +92,8 @@ namespace OniMcp.Tools
         private static CallToolResult ForwardGame(JObject args, string command)
         {
             var forwarded = CopyPayload(args);
+            if (string.Equals(forwarded["domain"]?.ToString(), "sandbox", StringComparison.OrdinalIgnoreCase))
+                return ForwardSandbox(args);
             if (string.IsNullOrWhiteSpace(forwarded["domain"]?.ToString()))
                 forwarded["domain"] = "speed";
             if (string.IsNullOrWhiteSpace(forwarded["action"]?.ToString()))
@@ -223,14 +227,21 @@ namespace OniMcp.Tools
                 case "editor":
                     if (Text(step, "command", "action").ToLowerInvariant() == "batch")
                         return CallToolResult.Error("nested world_editor batch is not supported");
-                    return HandleWorldEditorCommand(step);
+                    return HandleWorldEditorScoped(step);
                 case "game_control":
                 case "game":
-                    return GameControlEntryTools.ControlGame().Handler(step);
+                    return RunWithWorldEditorInstantBuildScope(step, () =>
+                    {
+                        if (string.Equals(step["domain"]?.ToString(), "sandbox", StringComparison.OrdinalIgnoreCase)
+                            && !ValidateWorldEditorSandboxPolicy(step, out string sandboxError))
+                            return CallToolResult.Error(sandboxError);
+                        return GameControlEntryTools.ControlGame().Handler(step);
+                    });
                 case "navigation_control":
                 case "camera":
                 case "view":
-                    return NavigationControlTools.ControlNavigation().Handler(step);
+                    return RunWithWorldEditorInstantBuildScope(step,
+                        () => NavigationControlTools.ControlNavigation().Handler(step));
                 default:
                     return CallToolResult.Error("batch tool must be world_editor, game_control, or navigation_control");
             }
@@ -283,12 +294,16 @@ namespace OniMcp.Tools
         {
             return new Dictionary<string, McpToolParameter>
             {
-                ["command"] = new McpToolParameter { Type = "string", Description = "cd, pwd, ls, read, zoom, grep, symbols, search, edit, blueprint, game, pause, resume, speed, camera, view, screenshot, batch.", Required = false },
+                ["command"] = new McpToolParameter { Type = "string", Description = "cd, pwd, ls, read, zoom, grep, symbols, search, edit, blueprint, game, sandbox, pause, resume, speed, camera, view, screenshot, batch.", Required = false },
                 ["path"] = new McpToolParameter { Type = "string", Description = "Virtual path. Examples: /, latest/, /active/map/viewport.md, /active/infrastructure/power.md.", Required = false },
                 ["content"] = new McpToolParameter { Type = "string", Description = "For edit: SEARCH/REPLACE block against current virtual file.", Required = false },
                 ["orientation"] = new McpToolParameter { Type = "string", Description = "Forwarded build orientation for map edits, e.g. Neutral, R90, R180, R270.", Required = false },
                 ["rotation"] = new McpToolParameter { Type = "string", Description = "Alias for build orientation in map edits; accepts 0/90/180/270, right/left, clockwise/counterclockwise.", Required = false },
                 ["query"] = new McpToolParameter { Type = "string", Description = "Search query or natural-language edit target.", Required = false },
+                ["queries"] = new McpToolParameter { Type = "array", Description = "symbols: batch glyph codes or names, at most 100 strings.", Required = false },
+                ["direction"] = new McpToolParameter { Type = "string", Description = "symbols: auto, code_to_meaning, or meaning_to_code.", Required = false, EnumValues = new List<string> { "auto", "code_to_meaning", "meaning_to_code" } },
+                ["matchMode"] = new McpToolParameter { Type = "string", Description = "symbols: auto/exact/contains; sandbox map_designate: unique/first/all.", Required = false, EnumValues = new List<string> { "auto", "exact", "contains", "unique", "first", "all" } },
+                ["perQueryLimit"] = new McpToolParameter { Type = "integer", Description = "symbols: matches per query, default 20, maximum 100.", Required = false },
                 ["name"] = new McpToolParameter { Type = "string", Description = "Blueprint command file/name for list/read/create/delete/use.", Required = false },
                 ["target"] = new McpToolParameter { Type = "string", Description = "Alias query.", Required = false },
                 ["search"] = new McpToolParameter { Type = "string", Description = "Alias query.", Required = false },
@@ -297,7 +312,7 @@ namespace OniMcp.Tools
                 ["tool"] = new McpToolParameter { Type = "string", Description = "Batch step tool: world_editor, game_control, navigation_control.", Required = false },
                 ["steps"] = new McpToolParameter { Type = "array", Description = "Batch steps. Each step is a world_editor/game_control/navigation_control argument object.", Required = false },
                 ["items"] = new McpToolParameter { Type = "array", Description = "Alias for steps.", Required = false },
-                ["view"] = new McpToolParameter { Type = "string", Description = "camera/view command overlay name, or read/zoom map view, e.g. power, oxygen, temperature.", Required = false },
+                ["view"] = new McpToolParameter { Type = "string", Description = "Overlay context for symbols/read/zoom, e.g. power, oxygen, temperature.", Required = false },
                 ["compact"] = new McpToolParameter { Type = "boolean", Description = "Map read/zoom compression. Default true uses per-5-cell RLE like 粉x3; false expands every cell for editing.", Required = false },
                 ["format"] = new McpToolParameter { Type = "string", Description = "Map output profile. Use format=edit/raw/uncompressed for search-replace friendly expanded cells.", Required = false },
                 ["includeState"] = new McpToolParameter { Type = "boolean", Description = "/active/index.md: append current colony JSON snapshot for first-call world state.", Required = false },
@@ -321,6 +336,28 @@ namespace OniMcp.Tools
                 ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "Preview edit translation without applying where supported.", Required = false },
                 ["stopOnError"] = new McpToolParameter { Type = "boolean", Description = "Batch mode: stop after first failed step.", Required = false },
                 ["allowPartial"] = new McpToolParameter { Type = "boolean", Description = "Explicitly allow multi-block or child partial results when rollback is unavailable; default false.", Required = false },
+                ["allowSandbox"] = new McpToolParameter { Type = "boolean", Description = "Master permission for world_editor sandbox writes and instantBuild; default false.", Required = false },
+                ["instantBuild"] = new McpToolParameter { Type = "boolean", Description = "Scoped instant build for this call only; default false and requires allowSandbox=true confirm=true.", Required = false },
+                ["allowForce"] = new McpToolParameter { Type = "boolean", Description = "Permit forwarded sandbox force=true; default false.", Required = false },
+                ["allowTerrainMutation"] = new McpToolParameter { Type = "boolean", Description = "Permit sandbox area/map_designate writes; default false.", Required = false },
+                ["allowEntitySpawn"] = new McpToolParameter { Type = "boolean", Description = "Permit sandbox entity/story/auto-plumb writes; default false.", Required = false },
+                ["allowDestroy"] = new McpToolParameter { Type = "boolean", Description = "Permit sandbox destroy in addition to terrain mutation; default false.", Required = false },
+                ["sandboxMaxCells"] = new McpToolParameter { Type = "integer", Description = "World-editor sandbox cell cap, default 100 and hard maximum 1000.", Required = false },
+                ["kind"] = new McpToolParameter { Type = "string", Description = "sandbox subtype: read, area, entity, or map_designate.", Required = false },
+                ["force"] = new McpToolParameter { Type = "boolean", Description = "Forwarded sandbox force request; requires allowForce=true.", Required = false },
+                ["element"] = new McpToolParameter { Type = "string", Description = "Forwarded sandbox element ID.", Required = false },
+                ["prefabId"] = new McpToolParameter { Type = "string", Description = "Forwarded sandbox entity prefab ID.", Required = false },
+                ["storyId"] = new McpToolParameter { Type = "string", Description = "Forwarded sandbox story trait ID.", Required = false },
+                ["id"] = new McpToolParameter { Type = "integer", Description = "Forwarded sandbox target InstanceID.", Required = false },
+                ["plumbAction"] = new McpToolParameter { Type = "string", Description = "Forwarded sandbox auto-plumb action.", Required = false },
+                ["designate"] = new McpToolParameter { Type = "string", Description = "Forwarded sandbox map designation text.", Required = false },
+                ["replace"] = new McpToolParameter { Type = "string", Description = "Legacy alias for sandbox designate.", Required = false },
+                ["massKg"] = new McpToolParameter { Type = "number", Description = "Forwarded sandbox element mass.", Required = false },
+                ["temperatureK"] = new McpToolParameter { Type = "number", Description = "Forwarded sandbox temperature in kelvin.", Required = false },
+                ["disease"] = new McpToolParameter { Type = "string", Description = "Forwarded sandbox disease ID.", Required = false },
+                ["diseaseCount"] = new McpToolParameter { Type = "integer", Description = "Forwarded sandbox disease count.", Required = false },
+                ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "Forwarded sandbox map visibility filter.", Required = false },
+                ["matchIndex"] = new McpToolParameter { Type = "integer", Description = "Forwarded sandbox map match index.", Required = false },
                 ["payload"] = new McpToolParameter { Type = "object", Description = "Advanced routing payload merged into generated child tool calls.", Required = false }
             };
         }

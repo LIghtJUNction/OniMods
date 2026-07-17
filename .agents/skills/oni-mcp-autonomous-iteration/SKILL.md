@@ -32,6 +32,8 @@ Use this workflow for end-to-end ONI MCP server improvement, especially when the
    - If dryRun is clean, call `game_control domain=launch action=start confirm=true index=0 resume=false`.
    - Verify with `colony_control domain=snapshot action=get profile=minimal`.
    - Keep the game paused during tests unless the test explicitly requires time passing.
+   - For a full process restart on Linux, call `game_control domain=launch action=restart_load dryRun=true resume=false`, then repeat with `confirm=true`. The accepted response contains `jobId` and the exact saved path; after Steam relaunch, query `game_control domain=launch action=restart_status jobId=<id>` until `stage=loaded` or `stage=failed`.
+   - `restart_load` is intentionally asynchronous across processes. Its relay carries only the old PID and the locally resolved absolute Steam executable, then launches Steam AppID 457140; it never carries the save path or MCP token.
 
 5. Use low-token loop polling for long-run play.
    - Prefer `colony_control domain=snapshot action=get profile=minimal delta=true deltaKey=<loop> watch=stress,food_kcal,red_alert,alerts watchOnly=true`.
@@ -113,10 +115,11 @@ Use the bundled Steam-only launcher helper:
 bash .agents/skills/oni-mcp-autonomous-iteration/scripts/launch_oni_mcp.sh
 ```
 
-It clears stale `unity.lock`, requires the Steam client, launches through the Steam URI, waits for `http://localhost:8788/mcp/`, and prints compact diagnostics on failure. It must not fall back to launching the ONI binary directly. Useful override:
+If a running ONI PID already has a healthy MCP endpoint, it returns immediately without touching `unity.lock` or Steam. Otherwise it clears stale `unity.lock`, requires the Steam client, and launches fixed AppID 457140 through the Steam URI only; the AppID is not configurable. If MCP is offline while old ONI PIDs still exist, it waits for the full old PID set to exit before sending the URI; after the request, success requires a live PID not present before launch plus a healthy `http://localhost:8788/mcp/`. It prints compact diagnostics on failure and never falls back to launching the ONI binary directly. Useful overrides:
 
 ```bash
 ONI_MCP_WAIT_SECONDS=360 bash .agents/skills/oni-mcp-autonomous-iteration/scripts/launch_oni_mcp.sh
+ONI_OLD_PROCESS_EXIT_WAIT_SECONDS=60 bash .agents/skills/oni-mcp-autonomous-iteration/scripts/launch_oni_mcp.sh
 ```
 
 Use Steam launch only:

@@ -173,7 +173,7 @@ namespace OniMcp.Tools
             string action = (arguments?["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
 
             if (string.Equals(name, "game_control", StringComparison.OrdinalIgnoreCase))
-                return (domain == "launch" && action == "status")
+                return (domain == "launch" && (action == "status" || action == "restart_status"))
                     || (domain == "save" && (action == "list" || action == "status"))
                     || (domain == "state" && (action == "status" || action == "time"));
 

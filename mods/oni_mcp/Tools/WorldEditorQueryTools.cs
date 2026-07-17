@@ -82,25 +82,7 @@ namespace OniMcp.Tools
 
         private static CallToolResult SymbolMap(JObject args)
         {
-            string query = Text(args, "query", "target", "search");
-            var rows = BuildSymbolRows();
-            if (!string.IsNullOrWhiteSpace(query))
-            {
-                rows = rows.Where(row =>
-                    row["symbol"].ToString() == query
-                    || row["id"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
-                    || row["name"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
-                    || row["kind"].ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
-            }
-
-            int limit = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "limit") ?? 200, 1000));
-            return JsonResult(new JObject
-            {
-                ["query"] = query,
-                ["count"] = rows.Count,
-                ["source"] = "generated from ONI source strings and SimHashes at build time",
-                ["symbols"] = new JArray(rows.Take(limit))
-            });
+            return SearchGlyphs(args);
         }
 
         private static string ReadSymbolMarkdown(string path, string query = null)
@@ -126,22 +108,6 @@ namespace OniMcp.Tools
             foreach (var row in rows.OrderBy(r => r["kind"].ToString()).ThenBy(r => r["symbol"].ToString()).ThenBy(r => r["id"].ToString()))
                 sb.AppendLine("| `" + row["symbol"] + "` | " + row["kind"] + " | " + row["name"] + " | `" + row["id"] + "` |");
             return sb.ToString();
-        }
-
-        private static List<JObject> BuildSymbolRows()
-        {
-            return GeneratedGlyphEntries
-                .Select(entry => new JObject
-                {
-["symbol"] = GetUniqueChar(entry.Id, entry.Name).ToString(),
-                    ["kind"] = entry.Kind,
-                    ["name"] = entry.Name,
-                    ["id"] = entry.Id
-                })
-                .OrderBy(row => row["symbol"].ToString())
-                .ThenBy(row => row["kind"].ToString())
-                .ThenBy(row => row["id"].ToString())
-                .ToList();
         }
 
         private static string FormatLegendLine(char symbol, string fallback)

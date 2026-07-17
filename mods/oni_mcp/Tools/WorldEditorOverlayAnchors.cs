@@ -44,10 +44,24 @@ namespace OniMcp.Tools
             if (building == null || string.IsNullOrEmpty(buildingId))
                 return false;
 
+            var logicGate = building.GetComponent<LogicGate>();
+            if (logicGate != null && !IsBuildingAnchorCell(building, cell))
+            {
+                string prefix = OverlayAnchorPrefix(mode, building, cell);
+                if (string.IsNullOrEmpty(prefix))
+                    return false;
+                int instanceId = building.GetComponent<KPrefabID>()?.InstanceID ?? building.GetInstanceID();
+                runKey = "overlay:" + mode + ":logicGate:" + instanceId + ":endpoint:" + cell;
+                token = MergeOverlaySymbol(symbol, prefix);
+                return true;
+            }
+
             string displayName = !string.IsNullOrEmpty(buildingName) ? StripLinkTags(buildingName) : buildingId;
             string full = MapTokenPart(displayName);
             string shortToken = GetUniqueChar(buildingId, displayName).ToString();
-            runKey = "overlay:" + mode + ":building:" + buildingId + ":" + full;
+            string identity = logicGate == null ? string.Empty
+                : ":" + (building.GetComponent<KPrefabID>()?.InstanceID ?? building.GetInstanceID());
+            runKey = "overlay:" + mode + ":building:" + buildingId + identity + ":" + full;
             string anchor = OverlayAnchorPrefix(mode, building, cell)
                 + (previousRunKey == runKey ? shortToken : full + "@(" + x + "," + y + ")");
             token = MergeOverlaySymbol(symbol, anchor);
@@ -111,9 +125,13 @@ namespace OniMcp.Tools
 
         private static string LogicPortPrefix(GameObject go, int cell)
         {
+            if (RegisteredLogicGateEndpointFlags(go, cell, out bool gateInput, out bool gateOutput))
+                return PortPrefix(gateInput, gateOutput);
             var ports = go.GetComponent<LogicPorts>();
             if (ports == null)
                 return string.Empty;
+            if (LogicPortReadSemantics.TryBridgeRoute(go, out int from, out int to))
+                return PortPrefix(cell == from, cell == to);
 
             bool input = LogicPortsContainCell(ports, ports.inputPortInfo, cell);
             bool output = LogicPortsContainCell(ports, ports.outputPortInfo, cell);
@@ -125,7 +143,7 @@ namespace OniMcp.Tools
             if (ports == null || info == null)
                 return false;
             foreach (var port in info)
-                if (ports.GetPortCell(port.id) == cell)
+                if (LogicPortReadSemantics.ActualCell(ports, port) == cell)
                     return true;
             return false;
         }
@@ -151,7 +169,8 @@ namespace OniMcp.Tools
                 return false;
             if (minion != null || critter != null)
                 return true;
-            if (building == null || string.IsNullOrEmpty(buildingId) || !IsPowerAnchorBuilding(buildingId))
+            if (building == null || string.IsNullOrEmpty(buildingId)
+                || (!IsPowerAnchorBuilding(buildingId) && building.GetComponent<LogicGate>() == null))
                 return false;
 
             if (IsInfrastructureOverlayMode(mode))
