@@ -14,6 +14,8 @@ This is a minimal Oxygen Not Included mod template for quickly creating a new mo
 
 - It provides a standard layout for `onim init` scaffolding.
 - Place your Harmony patches under `Patches/`.
+- Put reusable logic in `Core/`, runtime overlays in `UI/`, and options in `Config/` as needed.
+- Keep only `ModInfo.cs` plus project/metadata files at the mod root.
 - Suitable for fast start, patch validation, and publish-ready mod development.
 
 ## Quick Start

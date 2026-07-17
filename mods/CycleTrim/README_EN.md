@@ -43,6 +43,19 @@ You can use the `benchmark` skill to let an agent run the full benchmark automat
 
 Full scenario notes are in [dist/CycleTrim/README.md](../../dist/CycleTrim/README.md) for reproducible detail.
 
+## Source layout
+
+```text
+mods/CycleTrim/
+├── ModInfo.cs          # KMod entry
+├── Core/               # non-patch core logic (e.g. BrainRateCap)
+├── Patches/            # Harmony patches
+├── docs/               # Steam descriptions
+└── CycleTrim.csproj
+```
+
+Same monorepo convention as the other mods: keep only the entrypoint and project/metadata files at the mod root; patches live under `Patches/`, shared logic under `Core/`.
+
 ## Detailed docs and notes
 
 - Changelog: [CHANGELOG.md](CHANGELOG.md)

@@ -128,9 +128,15 @@ See the full runtime docs in [mods/oni_mcp/README_EN.md](mods/oni_mcp/README_EN.
 ├── Cargo.toml                    # onim CLI project
 ├── src/                          # onim source
 ├── mods/                         # mod workspace
-│   ├── OniModTemplate/           # reusable mod template
+│   ├── OniModTemplate/           # reusable mod template (ModInfo + Patches/)
 │   ├── oni_mcp/                  # ONI MCP server
-│   └── CycleTrim/                # ONI MCP-adjacent performance mod
+│   │   ├── ModInfo.cs            # entry only
+│   │   ├── Patches/ UI/ Config/ Core/ Server/ Support/
+│   │   └── Tools/{Core,Entry,WorldEditor,Shared,Impl}/
+│   └── CycleTrim/                # performance mod
+│       ├── ModInfo.cs            # entry only
+│       ├── Core/                 # shared non-patch logic
+│       └── Patches/              # Harmony patches
 ├── docs/                         # reference docs
 └── scripts/                      # helper scripts and verification tools
 ```

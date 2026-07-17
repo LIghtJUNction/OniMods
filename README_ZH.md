@@ -151,9 +151,17 @@ cp Directory.Build.props.example Directory.Build.props
 ├── Cargo.toml             # onim CLI
 ├── src/                   # onim 源码
 ├── mods/                  # Mod 项目目录
-│   ├── OniModTemplate/    # Mod 模板
-│   └── oni_mcp/           # ONI MCP Server
-└── oni/src/               # 游戏反编译源码参考
+│   ├── OniModTemplate/    # Mod 模板（ModInfo + Patches/）
+│   ├── oni_mcp/           # ONI MCP Server
+│   │   ├── ModInfo.cs     # 仅入口
+│   │   ├── Patches/ UI/ Config/ Core/ Server/ Support/
+│   │   └── Tools/{Core,Entry,WorldEditor,Shared,Impl}/
+│   └── CycleTrim/         # 性能优化 Mod
+│       ├── ModInfo.cs     # 仅入口
+│       ├── Core/          # 非补丁核心逻辑
+│       └── Patches/       # Harmony 补丁
+├── docs/                  # 参考文档
+└── scripts/               # 辅助与校验脚本
 ```
 
 ## 依赖
