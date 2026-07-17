@@ -18,6 +18,8 @@ namespace OniMcp
         private Image bubbleBackground;
         private Image accent;
         private TextMeshProUGUI text;
+        private Transform bubbleTarget;
+        private bool followTarget;
         private float hideAt;
 
         public static ToolCallSpeechOverlay Instance { get; private set; }
@@ -38,7 +40,16 @@ namespace OniMcp
                 return false;
 
             EnsureInstance();
-            return Instance != null && Instance.ShowBubble(message.Trim(), seconds);
+            return Instance != null && Instance.ShowBubble(message.Trim(), seconds, null);
+        }
+
+        public static bool ShowNearDuplicant(string message, MinionIdentity dupe, float seconds = 5f)
+        {
+            if (string.IsNullOrWhiteSpace(message) || dupe == null)
+                return false;
+
+            EnsureInstance();
+            return Instance != null && Instance.ShowBubble(message.Trim(), seconds, dupe.transform);
         }
 
         public static bool NotifyMissingDescription(string toolName)
@@ -66,22 +77,30 @@ namespace OniMcp
                 return;
             }
 
-            PositionBubbleAtMouse();
+            if (followTarget)
+                PositionBubbleNearTarget();
+            else
+                PositionBubbleAtMouse();
         }
 
-        private bool ShowBubble(string message, float seconds)
+        private bool ShowBubble(string message, float seconds, Transform target)
         {
             if (Camera.main == null || global::SaveGame.Instance == null)
                 return ShowNotification("Oni MCP", message);
 
             EnsureCanvas();
+            bubbleTarget = target;
+            followTarget = target != null;
             text.SetText(TrimLong(message, 220));
             bubbleBackground.color = BubbleFill;
             accent.color = BubbleAccent;
             text.color = BubbleText;
             bubbleRoot.SetActive(true);
-            hideAt = Time.unscaledTime + Mathf.Max(1f, seconds);
-            PositionBubbleAtMouse();
+            hideAt = Time.unscaledTime + Mathf.Max(0.5f, seconds);
+            if (followTarget)
+                PositionBubbleNearTarget();
+            else
+                PositionBubbleAtMouse();
             return true;
         }
 
@@ -151,6 +170,29 @@ namespace OniMcp
             float height = Mathf.Clamp(text.GetPreferredValues(value, width - 26f, 0f).y + 18f, 40f, 108f);
             float x = Mathf.Clamp(mouse.x + 18f, 8f, Screen.width - width - 8f);
             float y = Mathf.Clamp(Screen.height - mouse.y + 18f, 8f, Screen.height - height - 8f);
+            SetTopLeftRect(bubbleRect, x, y, width, height);
+        }
+
+        private void PositionBubbleNearTarget()
+        {
+            if (bubbleTarget == null || Camera.main == null)
+            {
+                bubbleRoot.SetActive(false);
+                return;
+            }
+
+            Vector3 head = bubbleTarget.position + Vector3.up * 1.5f;
+            Vector3 screen = Camera.main.WorldToScreenPoint(head);
+            bool visible = screen.z > 0f && screen.x >= 0f && screen.x <= Screen.width && screen.y >= 0f && screen.y <= Screen.height;
+            bubbleRoot.SetActive(visible);
+            if (!visible)
+                return;
+
+            string value = text == null ? string.Empty : text.text;
+            float width = value.Length > 52 ? 320f : Mathf.Clamp(value.Length * 8f + 42f, 140f, 320f);
+            float height = Mathf.Clamp(text.GetPreferredValues(value, width - 26f, 0f).y + 18f, 40f, 108f);
+            float x = Mathf.Clamp(screen.x + 18f, 8f, Screen.width - width - 8f);
+            float y = Mathf.Clamp(Screen.height - screen.y - height - 10f, 8f, Screen.height - height - 8f);
             SetTopLeftRect(bubbleRect, x, y, width, height);
         }
 

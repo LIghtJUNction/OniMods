@@ -216,9 +216,13 @@ namespace OniMcp.Tools
         {
             var d = CommonDescriptions();
             d["domain"] = "Game subsystem: launch, speed, state, save, dlc, sandbox, or ui.";
-            d["action"] = "Game action for the selected subsystem.";
+            d["action"] = "Game action for the selected subsystem. UI feedback actions include notification, popup, speech_bubble, and marker.";
             d["kind"] = "Sandbox or UI subtype.";
             d["uiDomain"] = "UI subsystem: action, feedback.";
+            d["name"] = "Save name, or duplicant name for ui/feedback speech_bubble.";
+            d["id"] = "Target object id, or duplicant instance id for ui/feedback speech_bubble.";
+            d["text"] = "Displayed text for ui/feedback popup or speech_bubble; required for speech_bubble.";
+            d["duration"] = "Speech-bubble display duration in seconds; defaults to 5 and is clamped to 0.5-30.";
             d["speed"] = "Game speed level.";
             d["redAlert"] = "Red alert enabled state.";
             d["sandboxEnabled"] = "Sandbox mode enabled state.";
