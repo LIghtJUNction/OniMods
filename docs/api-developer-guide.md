@@ -296,19 +296,29 @@ curl -sS -X POST http://localhost:8788/mcp/ \
 ## 开发目录
 
 ```text
-mods/oni_mcp/Tools/
-├── Core/      # 工具和资源注册
-├── New/       # Default-public 10 aggregate tool entrypoints and English descriptions
-├── Shared/    # 搜索、定位、JSON、工具辅助逻辑
-└── Legacy/    # 内部兼容和旧版细粒度实现
+mods/oni_mcp/
+├── ModInfo.cs           # KMod 入口
+├── Config/              # 选项
+├── Core/                # MCP 协议类型
+├── Localization/        # STRINGS
+├── Patches/             # Harmony 补丁与游戏策略
+├── UI/                  # 运行时 Overlay
+├── Server/              # HTTP/MCP 服务
+├── Support/             # 日志、路径、反射
+└── Tools/
+    ├── Core/            # 工具与资源注册
+    ├── Entry/           # 聚合入口（*Control* / Read / 英文描述）
+    ├── WorldEditor/     # 虚拟世界文件系统
+    ├── Shared/          # 共享辅助
+    └── Impl/            # 各域实现
 ```
 
 开发建议:
 
-1. 新公开能力优先扩展 `Tools/New/` 的聚合入口。
-2. 旧版兼容逻辑放在 `Tools/Legacy/Impl/`。
+1. 新公开能力优先扩展 `Tools/Entry/` 的聚合入口。
+2. 域实现放在 `Tools/Impl/<Domain>/`。
 3. Shared search, material, and reachability logic lives in `Tools/Shared/`; exact spatial operations are routed through typed files under `/active/ops/`.
-4. Default-public tool descriptions are maintained in `CoreToolEnglishDescriptions`; keep them in English.
+4. Default-public tool descriptions are maintained in `Tools/Entry/CoreToolEnglishDescriptions.cs`; keep them in English.
 5. 使用 `server_control domain=catalog action=static_audit` 和 `manifest` 验证注册结果。
 
 ## 客户端兼容建议

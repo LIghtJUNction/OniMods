@@ -12,7 +12,7 @@ def require(text: str, needle: str, label: str) -> None:
 
 
 def verify_world_editor_building_files(root: Path) -> None:
-    tools = root / "mods" / "oni_mcp" / "Tools"
+    tools = root / "mods" / "oni_mcp" / "Tools" / "WorldEditor"
     files = {
         name: (tools / name).read_text(encoding="utf-8")
         for name in (

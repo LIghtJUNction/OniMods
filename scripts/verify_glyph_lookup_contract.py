@@ -23,12 +23,12 @@ def verify_glyph_lookup_contract(
     root: Path, sources: dict[Path, str] | None = None
 ) -> None:
     tools = root / "mods" / "oni_mcp" / "Tools"
-    lookup_path = tools / "WorldEditorGlyphLookup.cs"
-    symbols_path = tools / "WorldEditorSymbols.cs"
-    lifecycle_path = root / "mods" / "oni_mcp" / "AutoDisinfectPolicy.cs"
-    world_editor_path = tools / "WorldEditorTools.cs"
-    query_path = tools / "WorldEditorQueryTools.cs"
-    search_path = tools / "SearchControlTools.cs"
+    lookup_path = tools / "WorldEditor" / "WorldEditorGlyphLookup.cs"
+    symbols_path = tools / "WorldEditor" / "WorldEditorSymbols.cs"
+    lifecycle_path = root / "mods" / "oni_mcp" / "Patches" / "AutoDisinfectPolicy.cs"
+    world_editor_path = tools / "WorldEditor" / "WorldEditorTools.cs"
+    query_path = tools / "WorldEditor" / "WorldEditorQueryTools.cs"
+    search_path = tools / "Entry" / "SearchControlTools.cs"
     for path in (lookup_path, symbols_path, lifecycle_path, world_editor_path, query_path, search_path):
         if not path.is_file():
             fail(f"required glyph source file not found: {path.relative_to(root)}")

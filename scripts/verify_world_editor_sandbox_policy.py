@@ -13,12 +13,12 @@ def require(text: str, needle: str, label: str) -> None:
 
 def verify_world_editor_sandbox_policy(root: Path) -> None:
     tools = root / "mods" / "oni_mcp" / "Tools"
-    policy_path = tools / "WorldEditorSandboxPolicy.cs"
+    policy_path = tools / "WorldEditor" / "WorldEditorSandboxPolicy.cs"
     if not policy_path.is_file():
         fail("missing world-editor sandbox policy implementation")
     policy = policy_path.read_text(encoding="utf-8")
-    world = (tools / "WorldEditorTools.cs").read_text(encoding="utf-8")
-    execution = (tools / "WorldEditorExecutionPolicy.cs").read_text(encoding="utf-8")
+    world = (tools / "WorldEditor" / "WorldEditorTools.cs").read_text(encoding="utf-8")
+    execution = (tools / "WorldEditor" / "WorldEditorExecutionPolicy.cs").read_text(encoding="utf-8")
     require(world, "Handler = HandleWorldEditorScoped", "scoped world-editor entry")
     require(world, 'case "sandbox":', "sandbox command route")
     for parameter in (
@@ -50,7 +50,7 @@ def verify_world_editor_sandbox_policy(root: Path) -> None:
     read_return = policy.index("if (read)")
     if force_gate > read_return:
         fail("sandbox force gate must run before the read-only early return")
-    operations = (tools / "WorldEditorOperationFiles.cs").read_text(encoding="utf-8")
+    operations = (tools / "WorldEditor" / "WorldEditorOperationFiles.cs").read_text(encoding="utf-8")
     require(operations, "ValidateWorldEditorSandboxPolicy(arguments, out error)", "operation-file sandbox gate")
     require(operations, "RunWithWorldEditorInstantBuildScope(arguments", "operation child scoped instant build")
     require(world, "ValidateWorldEditorSandboxPolicy(step", "batch child sandbox gate")

@@ -37,10 +37,10 @@ def main() -> int:
     build = ROOT / "mods/oni_mcp/Tools/Impl/Build"
     plan_one = (build / "BuildPlanningPlanOne.cs").read_text(encoding="utf-8")
     completion = (build / "BuildPlanningInstantCompletion.cs").read_text(encoding="utf-8")
-    building_control = (ROOT / "mods/oni_mcp/Tools/BuildingControlTools.cs").read_text(encoding="utf-8")
-    sandbox = (ROOT / "mods/oni_mcp/Tools/WorldEditorSandboxPolicy.cs").read_text(encoding="utf-8")
-    edits = (ROOT / "mods/oni_mcp/Tools/WorldEditorEdits.cs").read_text(encoding="utf-8")
-    reads = (ROOT / "mods/oni_mcp/Tools/WorldEditorReadSearch.cs").read_text(encoding="utf-8")
+    building_control = (ROOT / "mods/oni_mcp/Tools/Entry/BuildingControlTools.cs").read_text(encoding="utf-8")
+    sandbox = (ROOT / "mods/oni_mcp/Tools/WorldEditor/WorldEditorSandboxPolicy.cs").read_text(encoding="utf-8")
+    edits = (ROOT / "mods/oni_mcp/Tools/WorldEditor/WorldEditorEdits.cs").read_text(encoding="utf-8")
+    reads = (ROOT / "mods/oni_mcp/Tools/WorldEditor/WorldEditorReadSearch.cs").read_text(encoding="utf-8")
     auto_connect = (build / "BuildPlanningAutoConnect.cs").read_text(encoding="utf-8")
 
     scope = method_body(sandbox, "private static CallToolResult RunWithWorldEditorInstantBuildScope")

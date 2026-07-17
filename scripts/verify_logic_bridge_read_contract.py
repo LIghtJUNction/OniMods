@@ -31,12 +31,12 @@ def ordered(source: str, *needles: str) -> None:
 
 
 def main() -> None:
-    semantics = (TOOLS / "LogicPortReadSemantics.cs").read_text(encoding="utf-8")
+    semantics = (TOOLS / "Entry" / "LogicPortReadSemantics.cs").read_text(encoding="utf-8")
     config = (TOOLS / "Impl/Build/BuildingConfigInfoHelpers.cs").read_text(encoding="utf-8")
-    connection = (TOOLS / "WorldEditorConnectionDetails.cs").read_text(encoding="utf-8")
-    overlay = (TOOLS / "WorldEditorOverlayAnchors.cs").read_text(encoding="utf-8")
+    connection = (TOOLS / "WorldEditor" / "WorldEditorConnectionDetails.cs").read_text(encoding="utf-8")
+    overlay = (TOOLS / "WorldEditor" / "WorldEditorOverlayAnchors.cs").read_text(encoding="utf-8")
     world = (TOOLS / "Impl/World/WorldCellUtilityConnectionSummary.cs").read_text(encoding="utf-8")
-    ports = (TOOLS / "WorldEditorPortDetails.cs").read_text(encoding="utf-8")
+    ports = (TOOLS / "WorldEditor" / "WorldEditorPortDetails.cs").read_text(encoding="utf-8")
     infrastructure = (TOOLS / "Impl/Build/InfrastructurePortReadTools.cs").read_text(encoding="utf-8")
     completion = (TOOLS / "Impl/Build/BuildPlanningInstantCompletion.cs").read_text(encoding="utf-8")
 

@@ -90,7 +90,7 @@ PUBLIC_CONTRACT_FILES = (
     "docs/mcp-tools-reference.md",
     "mods/oni_mcp/README.md",
     "mods/oni_mcp/README_EN.md",
-    "mods/oni_mcp/Tools/CoreToolEnglishDescriptions.cs",
+    "mods/oni_mcp/Tools/Entry/CoreToolEnglishDescriptions.cs",
     "mods/oni_mcp/Tools/Impl/Audit/ToolCatalogGuideTools.cs",
     "mods/oni_mcp/Tools/Impl/Audit/ToolCatalogManifestTools.cs",
     "mods/oni_mcp/Tools/Impl/Audit/ToolCoverageAnalysis.cs",
@@ -297,8 +297,8 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     tools_root = root / "mods" / "oni_mcp" / "Tools"
     registry_path = tools_root / "Core" / "OniToolRegistry.cs"
-    operation_path = tools_root / "WorldEditorOperationFiles.cs"
-    navigation_path = tools_root / "NavigationControlTools.cs"
+    operation_path = tools_root / "WorldEditor" / "WorldEditorOperationFiles.cs"
+    navigation_path = tools_root / "Entry" / "NavigationControlTools.cs"
     for path in (registry_path, operation_path, navigation_path):
         if not path.is_file():
             fail(f"required source file not found: {path.relative_to(root)}")

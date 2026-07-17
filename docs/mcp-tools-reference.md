@@ -184,14 +184,24 @@ This directly creates a continuous line, with no separate follow-up connection s
 ## 代码目录
 
 ```text
-mods/oni_mcp/Tools/
-├── Core/      # 工具和资源注册
-├── New/       # Default-public 6 aggregate tool entrypoints and English descriptions
-├── Shared/    # 搜索、定位、JSON、工具辅助逻辑
-└── Legacy/    # 内部兼容和旧版细粒度实现
+mods/oni_mcp/
+├── ModInfo.cs           # KMod 入口
+├── Config/              # 选项
+├── Core/                # MCP 协议类型
+├── Localization/        # STRINGS
+├── Patches/             # Harmony 补丁与游戏策略
+├── UI/                  # 运行时 Overlay（坐标网格、对话气泡）
+├── Server/              # HTTP/MCP 服务
+├── Support/             # 日志、路径、反射
+└── Tools/
+    ├── Core/            # 工具与资源注册
+    ├── Entry/           # 聚合入口（*Control* / Read / 英文描述）
+    ├── WorldEditor/     # 虚拟世界文件系统
+    ├── Shared/          # 共享辅助
+    └── Impl/            # 各域实现（Build/Dupes/World/...）
 ```
 
-Prefer extending aggregate entrypoints in `Tools/New/` for new public capabilities. Put legacy compatibility logic in `Tools/Legacy/Impl/`, registered through `Tools/Legacy/LegacyToolRegistry.cs`. Shared search, reachability, and material checks belong in `Tools/Shared/`; exact spatial operations are routed through typed files under `/active/ops/`.
+Prefer extending aggregate entrypoints in `Tools/Entry/` for new public capabilities. Domain implementations live under `Tools/Impl/<Domain>/`. Shared search, reachability, and material checks belong in `Tools/Shared/`; exact spatial operations are routed through typed files under `/active/ops/`.
 
 ## 兼容性说明
 

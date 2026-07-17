@@ -37,8 +37,7 @@ namespace OniMcp.Tools
                     ["tool"] = new McpToolParameter
                     {
                         Type = "string",
-                        Description = "用于 toolLookup 的目标工具名（如 server_control），留空表示随机采样。
-                        默认 world_editor。",
+                        Description = "用于 toolLookup 的目标工具名（如 server_control），留空表示随机采样。默认 world_editor。",
                         Required = false
                     },
                     ["includeDetails"] = new McpToolParameter
@@ -51,7 +50,7 @@ namespace OniMcp.Tools
                 Handler = args =>
                 {
                     string cases = (args["cases"]?.ToString() ?? "all").Trim().ToLowerInvariant();
-                    int iterations = ToolUtil.GetInt(args, "iterations", 200) ?? 200;
+                    int iterations = ToolUtil.GetInt(args, "iterations") ?? 200;
                     string targetTool = args["tool"]?.ToString()?.Trim();
                     bool includeDetails = ToolUtil.GetBool(args, "includeDetails", false);
 
@@ -187,7 +186,7 @@ namespace OniMcp.Tools
                 test["details"] = new Dictionary<string, object>
                 {
                     ["firstTool"] = OniToolRegistry.GetTools().Count > 0 ? OniToolRegistry.GetTools()[0].Name : null,
-                    ["lastTool"] = OniToolRegistry.GetTools().Count > 0 ? OniToolRegistry.GetTools()[^1].Name : null
+                    ["lastTool"] = OniToolRegistry.GetTools().Count > 0 ? OniToolRegistry.GetTools()[OniToolRegistry.GetTools().Count - 1].Name : null
                 };
             }
 
