@@ -1,13 +1,10 @@
 [mcp_servers.oni]
 url = "http://localhost:8788/mcp/"
 
+[mcp_servers.oni.tools.benchmark]
+approval_mode = "approve"
+
 [mcp_servers.oni.tools.building_control]
-approval_mode = "approve"
-
-[mcp_servers.oni.tools.colony_control]
-approval_mode = "approve"
-
-[mcp_servers.oni.tools.dupes_control]
 approval_mode = "approve"
 
 [mcp_servers.oni.tools.game_control]
@@ -17,12 +14,6 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.oni.tools.orders_control]
-approval_mode = "approve"
-
-[mcp_servers.oni.tools.read_control]
-approval_mode = "approve"
-
-[mcp_servers.oni.tools.search_control]
 approval_mode = "approve"
 
 [mcp_servers.oni.tools.server_control]

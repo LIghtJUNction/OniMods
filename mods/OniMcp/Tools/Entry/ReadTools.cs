@@ -4,9 +4,9 @@ using OniMcp.Core;
 
 namespace OniMcp.Tools
 {
-    public static class ReadTools
+    internal static class ReadTools
     {
-        public static McpTool ControlRead()
+        internal static McpTool ControlRead()
         {
             return new McpTool
             {

@@ -6,9 +6,9 @@ using UnityEngine;
 
 namespace OniMcp.Tools
 {
-    public static class CoordinateControlTools
+    internal static class CoordinateControlTools
     {
-        public static McpTool ControlCoordinate()
+        internal static McpTool ControlCoordinate()
         {
             return new McpTool
             {
@@ -50,7 +50,7 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("targetTool is required");
                     if (OniToolRegistry.IsCoordinateTool(targetTool))
                         return CallToolResult.Error("coordinate_control cannot target itself");
-                    if (!OniToolRegistry.TryGetTool(targetTool, out var tool))
+                    if (!OniToolRegistry.TryGetOperation(targetTool, out var tool))
                         return CallToolResult.Error("targetTool not found: " + targetTool);
 
                     JObject forwarded = ReadPayload(args);
