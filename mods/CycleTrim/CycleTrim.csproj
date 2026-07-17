@@ -1,0 +1,83 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>CycleTrim</AssemblyName>
+    <RootNamespace>CycleTrim</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+    <ModTitle>CycleTrim</ModTitle>
+    <ModDescription>Reduces redundant smart reservoir signals, streamlines fetch pickup candidates, and refreshes expensive pickup and chore selection every other update only for busy duplicants, while idle duplicants and explicit priority updates remain immediate. / 减少智能储库重复信号、优化拾取候选选择，并仅对忙碌复制人隔次刷新高开销的拾取与差事重选；空闲和显式优先更新仍保持即时。</ModDescription>
+    <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
+    <ModVersion>0.2.0</ModVersion>
+    <ModApiVersion>2</ModApiVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(OniManagedPath)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(OniManagedPath)/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(OniManagedPath)/Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(OniManagedPath)/UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(OniManagedPath)/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PreviewImage Include="$(MSBuildProjectDirectory)/preview.png" Condition="Exists('$(MSBuildProjectDirectory)/preview.png')" />
+    <PreviewImage Include="$(MSBuildProjectDirectory)/preview.jpg" Condition="Exists('$(MSBuildProjectDirectory)/preview.jpg')" />
+  </ItemGroup>
+
+  <Target Name="GenerateModFiles" AfterTargets="Build">
+    <WriteLinesToFile File="$(OutputPath)mod.yaml" Lines="title: &quot;$(ModTitle)&quot;;description: &quot;$(ModDescription)&quot;;staticID: &quot;$(ModStaticID)&quot;" Overwrite="true" />
+    <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="supportedContent: ALL" Overwrite="true" />
+    <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="minimumSupportedBuild: 525812" Overwrite="false" />
+    <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="APIVersion: $(ModApiVersion)" Overwrite="false" />
+    <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="version: &quot;$(ModVersion)&quot;" Overwrite="false" />
+    <Copy SourceFiles="@(PreviewImage)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(PreviewImage)' != ''" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/README.md" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="PackageMod" AfterTargets="GenerateModFiles">
+    <PropertyGroup>
+      <DistPath>$(MSBuildProjectDirectory)/../../dist/</DistPath>
+      <DistModPath>$(DistPath)$(AssemblyName)/</DistModPath>
+      <ZipFile>$(DistPath)$(AssemblyName).zip</ZipFile>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(DistPath)" />
+    <RemoveDir Directories="$(DistModPath)" />
+    <Delete Files="$(ZipFile)" />
+    <Delete Files="$(DistPath)$(AssemblyName)-src.tar.gz" />
+
+    <ItemGroup>
+      <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
+      <ModOutputFiles Include="$(OutputPath)mod.yaml" />
+      <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
+      <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />
+      <ModOutputFiles Include="$(OutputPath)preview.jpg" Condition="Exists('$(OutputPath)preview.jpg')" />
+      <ModOutputFiles Include="$(OutputPath)README.md" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+    <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." />
+
+    <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
+    <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
+  </Target>
+
+</Project>
