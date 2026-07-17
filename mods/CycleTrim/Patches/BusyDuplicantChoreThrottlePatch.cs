@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using CycleTrim.Core;
 using HarmonyLib;
 
 namespace CycleTrim.Patches
@@ -16,9 +17,22 @@ namespace CycleTrim.Patches
 
         private sealed class State
         {
-            internal bool ForceRefresh;
-            internal bool SkipNextBusyUpdate;
-            internal bool SkipNextChoreSelection;
+            internal readonly VersionedRefreshGate PickupGate =
+                new VersionedRefreshGate(4);
+            internal readonly VersionedRefreshGate ChoreGate =
+                new VersionedRefreshGate(4);
+
+            internal void Invalidate()
+            {
+                PickupGate.Invalidate();
+                ChoreGate.Invalidate();
+            }
+
+            internal void Reset()
+            {
+                PickupGate.Reset();
+                ChoreGate.Reset();
+            }
         }
 
         private static bool IsCompatible()
@@ -33,10 +47,40 @@ namespace CycleTrim.Patches
 
         private static bool TryGetDuplicantConsumer(
             PickupableSensor sensor,
-            out ChoreConsumer consumer)
+            out ChoreConsumer consumer,
+            out Navigator navigator)
         {
             consumer = sensor.GetComponent<ChoreConsumer>();
-            return consumer != null && sensor.GetComponent<MinionIdentity>() != null;
+            navigator = sensor.GetComponent<Navigator>();
+            return consumer != null
+                && navigator != null
+                && sensor.GetComponent<MinionIdentity>() != null;
+        }
+
+        private static RefreshStamp CaptureStamp(
+            ChoreConsumer consumer,
+            Navigator navigator,
+            Chore currentChore)
+        {
+            ScheduleBlock scheduleBlock = null;
+            var consumerState = consumer.consumerState;
+            var schedulable = consumerState == null ? null : consumerState.schedulable;
+            var schedule = schedulable == null ? null : schedulable.GetSchedule();
+            if (schedule != null)
+            {
+                scheduleBlock = schedule.GetCurrentScheduleBlock();
+            }
+
+            var navigationContext = (int)navigator.CurrentNavType & 0xFF;
+            navigationContext |= ((int)navigator.flags & 0xFF) << 8;
+            return new RefreshStamp(
+                InvalidationVersions.FetchVersion,
+                NavigationInvalidationVersions.Get(navigator.NavGrid),
+                InvalidationVersions.ChoreVersion,
+                Grid.PosToCell(navigator),
+                RuntimeHelpers.GetHashCode(currentChore),
+                scheduleBlock == null ? 0 : RuntimeHelpers.GetHashCode(scheduleBlock),
+                navigationContext);
         }
 
         [HarmonyPatch]
@@ -59,38 +103,24 @@ namespace CycleTrim.Patches
 
             private static bool Prefix(PickupableSensor __instance)
             {
-                if (!TryGetDuplicantConsumer(__instance, out var consumer))
+                if (!TryGetDuplicantConsumer(
+                    __instance,
+                    out var consumer,
+                    out var navigator))
                 {
                     return true;
                 }
 
                 var state = States.GetValue(consumer, StateFactory);
-                if (consumer.choreDriver.GetCurrentChore() == null)
+                var currentChore = consumer.choreDriver.GetCurrentChore();
+                if (currentChore == null)
                 {
-                    state.ForceRefresh = false;
-                    state.SkipNextBusyUpdate = false;
-                    state.SkipNextChoreSelection = false;
+                    state.Reset();
                     return true;
                 }
 
-                if (state.ForceRefresh)
-                {
-                    state.ForceRefresh = false;
-                    state.SkipNextBusyUpdate = true;
-                    state.SkipNextChoreSelection = false;
-                    return true;
-                }
-
-                if (!state.SkipNextBusyUpdate)
-                {
-                    state.SkipNextBusyUpdate = true;
-                    state.SkipNextChoreSelection = false;
-                    return true;
-                }
-
-                state.SkipNextBusyUpdate = false;
-                state.SkipNextChoreSelection = true;
-                return false;
+                return state.PickupGate.ShouldRefresh(
+                    CaptureStamp(consumer, navigator, currentChore));
             }
         }
 
@@ -122,9 +152,22 @@ namespace CycleTrim.Patches
                     return true;
                 }
 
-                var skipSelection = state.SkipNextChoreSelection;
-                state.SkipNextChoreSelection = false;
-                if (!skipSelection || __instance.choreDriver.GetCurrentChore() == null)
+                var currentChore = __instance.choreDriver.GetCurrentChore();
+                if (currentChore == null)
+                {
+                    state.Reset();
+                    return true;
+                }
+
+                var navigator = __instance.GetComponent<Navigator>();
+                if (navigator == null)
+                {
+                    state.Reset();
+                    return true;
+                }
+
+                if (state.ChoreGate.ShouldRefresh(
+                    CaptureStamp(__instance, navigator, currentChore)))
                 {
                     return true;
                 }
@@ -163,7 +206,7 @@ namespace CycleTrim.Patches
                 var consumer = brain.GetComponent<ChoreConsumer>();
                 if (consumer != null)
                 {
-                    States.GetValue(consumer, StateFactory).ForceRefresh = true;
+                    States.GetValue(consumer, StateFactory).Invalidate();
                 }
             }
         }

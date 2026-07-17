@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using CycleTrim.Core;
 using HarmonyLib;
 
 namespace CycleTrim.Patches
@@ -17,7 +18,8 @@ namespace CycleTrim.Patches
 
         private sealed class State
         {
-            internal bool SkipNext;
+            internal readonly VersionedRefreshGate Gate =
+                new VersionedRefreshGate(8);
         }
 
         private static State CreateState(Navigator navigator)
@@ -29,6 +31,42 @@ namespace CycleTrim.Patches
         {
             // Keep this patch off when FastTrack already applies equivalent throttling.
             return AccessTools.TypeByName(FastTrackPatchType) == null;
+        }
+
+        private static RefreshStamp CaptureStamp(
+            Navigator navigator,
+            bool forceUpdate,
+            bool reportOccupation,
+            bool executePathProbeTaskAsync)
+        {
+            var cell = Grid.PosToCell(navigator);
+            var context = (int)navigator.CurrentNavType & 0xFF;
+            context |= ((int)navigator.flags & 0xFF) << 8;
+            if (forceUpdate)
+            {
+                context |= 1 << 16;
+            }
+            if (reportOccupation)
+            {
+                context |= 1 << 17;
+            }
+            if (executePathProbeTaskAsync)
+            {
+                context |= 1 << 18;
+            }
+            var canTraverseSubmerged = PathFinder.IsSubmerged(cell)
+                || Db.Get().Attributes.MaxUnderwaterTravelCost.Lookup(navigator) == null;
+            if (canTraverseSubmerged)
+            {
+                context |= 1 << 19;
+            }
+
+            return new RefreshStamp(
+                0,
+                NavigationInvalidationVersions.Get(navigator.NavGrid),
+                0,
+                cell,
+                context);
         }
 
         private static MethodBase TargetMethod()
@@ -45,7 +83,8 @@ namespace CycleTrim.Patches
             Navigator __instance,
             bool forceUpdate,
             bool ___reportOccupation,
-            bool ___executePathProbeTaskAsync)
+            bool ___executePathProbeTaskAsync,
+            PathFinderAbilities ___abilities)
         {
             // Preserve vanilla behavior for:
             // - explicit force updates
@@ -56,27 +95,24 @@ namespace CycleTrim.Patches
                 || __instance.IsMoving()
                 || ___reportOccupation
                 || ___executePathProbeTaskAsync
+                || !(___abilities is CreaturePathFinderAbilities)
                 || __instance.GetComponent<CreatureBrain>() == null)
             {
                 if (States.TryGetValue(__instance, out var preservedState))
                 {
-                    preservedState.SkipNext = false;
+                    preservedState.Gate.Invalidate();
                 }
 
                 return true;
             }
 
             var state = States.GetValue(__instance, StateFactory);
-            if (!state.SkipNext)
-            {
-                // First call in a quiet stationary cycle performs the probe;
-                // the second call is skipped to reduce redundant work.
-                state.SkipNext = true;
-                return true;
-            }
-
-            state.SkipNext = false;
-            return false;
+            return state.Gate.ShouldRefresh(
+                CaptureStamp(
+                    __instance,
+                    forceUpdate,
+                    ___reportOccupation,
+                    ___executePathProbeTaskAsync));
         }
     }
 }

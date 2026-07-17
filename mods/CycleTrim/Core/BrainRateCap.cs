@@ -43,6 +43,14 @@ namespace CycleTrim.Core
             creatureCallsRemaining = MaxCreatureCallsPerFrame;
         }
 
+        public void Reset()
+        {
+            dupeTokens = 0.0;
+            creatureTokens = 0.0;
+            dupeCallsRemaining = 0;
+            creatureCallsRemaining = 0;
+        }
+
         private static double Refill(double tokens, double added, int maxCallsPerFrame)
         {
             if (added >= maxCallsPerFrame)
@@ -68,7 +76,7 @@ namespace CycleTrim.Core
             }
         }
 
-        public void RunPriority(Action updateBrain)
+        public void RunPriority(System.Action updateBrain)
         {
             if (updateBrain == null)
             {

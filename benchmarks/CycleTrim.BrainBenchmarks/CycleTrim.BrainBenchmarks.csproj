@@ -11,5 +11,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../mods/CycleTrim/Core/BrainRateCap.cs" Link="BrainRateCap.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/RefreshStamp.cs" Link="RefreshStamp.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/InvalidationVersions.cs" Link="InvalidationVersions.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/ScopedInvalidationVersions.cs" Link="ScopedInvalidationVersions.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/DirtyInvalidationPolicy.cs" Link="DirtyInvalidationPolicy.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/CreatureBrainSchedulePolicy.cs" Link="CreatureBrainSchedulePolicy.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/PathProbePolicy.cs" Link="PathProbePolicy.cs" />
   </ItemGroup>
 </Project>
