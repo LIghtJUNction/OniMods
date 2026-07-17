@@ -18,7 +18,10 @@
   <a href="https://github.com/dotnet/sdk"><img alt=".NET SDK" src="https://img.shields.io/badge/.NET-8.0-5c2d91?style=for-the-badge&logo=dotnet&logoColor=white" /></a>
 </p>
 
-[![ONI MCP Server preview](mods/oni_mcp/preview.png)](mods/oni_mcp/README_EN.md)
+<p align="center">
+  <a href="mods/oni_mcp/README_EN.md"><img alt="ONI MCP Server — AI colony control for Oxygen Not Included" src="mods/oni_mcp/preview.png" width="47%" /></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — performance optimization mod for Oxygen Not Included" src="mods/CycleTrim/preview.png" width="47%" /></a>
+</p>
 
 A large-scale modular repository for Oxygen Not Included mod development:
 
@@ -57,6 +60,7 @@ The repository is organized as a **two-part platform**:
 |---|---|---|
 | `onim` | [src/](src/) | Rust CLI for mod lifecycle management |
 | `oni_mcp` | [mods/oni_mcp/](mods/oni_mcp/) | ONI MCP server mod and tool surface |
+| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | Lightweight performance mod targeting measured simulation hot paths |
 | `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | Boilerplate template for new mod creation |
 | Chinese Project Docs | [README_ZH.md](README_ZH.md) | Chinese overview and usage docs |
 | MCP Runtime Docs | [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md) | Current tool/resource reference |

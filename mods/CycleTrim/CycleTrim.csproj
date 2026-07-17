@@ -8,7 +8,7 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
     <ModTitle>CycleTrim</ModTitle>
-    <ModDescription>Reduces redundant smart reservoir signals, streamlines fetch pickup candidates, alternates expensive pickup/chore refresh for busy duplicants only, and throttles stationary-critter navigation probing; idle duplicants and explicit priority updates remain immediate. / 减少智能储液罐/气罐重复信号、优化拾取候选选择，仅对忙碌复制人隔次执行高开销的拾取与差事重选，并对静止小动物的导航探针调用进行节流；空闲复制人与显式优先更新仍保持即时。</ModDescription>
+    <ModDescription>Reduces redundant smart reservoir signals, streamlines fetch pickup candidates, alternates expensive pickup/chore refresh for busy duplicants only, and throttles stationary-critter navigation probing, while idle duplicants and explicit priority updates remain immediate. / 减少智能储液罐/气罐重复信号、优化拾取候选选择，仅对忙碌复制人隔次执行高开销的拾取与差事重选，并对静止小动物的导航探针调用进行节流；空闲复制人与显式优先更新仍保持即时。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
     <ModVersion>0.3.0</ModVersion>
     <ModApiVersion>2</ModApiVersion>

@@ -2,7 +2,10 @@
 
 [English](README.md)
 
-[![ONI MCP Server 预览图](mods/oni_mcp/preview.png)](mods/oni_mcp/README.md)
+<p align="center">
+  <a href="mods/oni_mcp/README.md"><img alt="ONI MCP Server — 缺氧 AI 殖民地控制服务" src="mods/oni_mcp/preview.png" width="47%" /></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 缺氧性能优化 Mod" src="mods/CycleTrim/preview.png" width="47%" /></a>
+</p>
 
 <div align="center">
   <p>
@@ -36,6 +39,7 @@
 |------|------|------|
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
 | `oni_mcp` | [mods/oni_mcp/](mods/oni_mcp/) | ONI MCP Server Mod |
+| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 针对实测模拟热点的轻量级性能优化 Mod |
 | `oni_mcp` 中文文档 | [mods/oni_mcp/README.md](mods/oni_mcp/README.md) | 安装、连接和功能说明 |
 | `oni_mcp` English docs | [mods/oni_mcp/README_EN.md](mods/oni_mcp/README_EN.md) | English installation and usage guide |
 

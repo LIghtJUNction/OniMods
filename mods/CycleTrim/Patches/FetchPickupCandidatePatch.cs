@@ -72,37 +72,10 @@ namespace CycleTrim.Patches
                 int worker,
                 Dictionary<int, int> ___cellCosts)
             {
-#if DEBUG
-                // Keep the hot-path candidate container reusable in debug builds, and
-                // optionally measure allocation behavior in the probe logs.
-                var updateStartedAt = Diagnostics.MemoryCacheProbe.Start();
-                Dictionary<PickupKey, FetchManager.Pickup> candidates;
-                var poolHit = false;
-                var allocated = false;
-#pragma warning disable CS0162 // Compile-time probe mode selection intentionally removes a branch.
-                if (Diagnostics.MemoryCacheProbe.CandidatePoolEnabled)
-                {
-                    poolHit = CandidatePool.TryPop(out candidates);
-                    if (!poolHit)
-                    {
-                        candidates = new Dictionary<PickupKey, FetchManager.Pickup>();
-                        allocated = true;
-                    }
-                }
-                else
-                {
-                    candidates = new Dictionary<PickupKey, FetchManager.Pickup>();
-                    allocated = true;
-                }
-#pragma warning restore CS0162
-
-                Diagnostics.MemoryCacheProbe.RecordPoolLookup(poolHit, allocated);
-#else
                 if (!CandidatePool.TryPop(out var candidates))
                 {
                     candidates = new Dictionary<PickupKey, FetchManager.Pickup>();
                 }
-#endif
 
                 try
                 {
@@ -115,37 +88,13 @@ namespace CycleTrim.Patches
                         {
                             continue;
                         }
-#if DEBUG
-                        // Track how many fetchables were eligible before path-cost lookup.
-                        Diagnostics.MemoryCacheProbe.RecordEligible();
-#endif
 
                         var cell = pickupable.cachedCell;
-#if DEBUG
-                        // Prefer memoized path cost first; only compute when cache miss or cache-off mode.
-                        var logicalHit = ___cellCosts.TryGetValue(cell, out var pathCost);
-                        Diagnostics.MemoryCacheProbe.RecordCellLookup(logicalHit);
-                        if (!Diagnostics.MemoryCacheProbe.CellCacheEnabled || !logicalHit)
-                        {
-                            var navigationStartedAt = Diagnostics.MemoryCacheProbe.Start();
-                            try
-                            {
-                                pathCost = pickupable.GetNavigationCost(worker_navigator, cell);
-                            }
-                            finally
-                            {
-                                Diagnostics.MemoryCacheProbe.RecordNavigation(navigationStartedAt);
-                            }
-
-                            ___cellCosts[cell] = pathCost;
-                        }
-#else
                         if (!___cellCosts.TryGetValue(cell, out var pathCost))
                         {
                             pathCost = pickupable.GetNavigationCost(worker_navigator, cell);
                             ___cellCosts[cell] = pathCost;
                         }
-#endif
 
                         if (pathCost == -1)
                         {
@@ -180,18 +129,7 @@ namespace CycleTrim.Patches
                 finally
                 {
                     candidates.Clear();
-#if DEBUG
-#pragma warning disable CS0162 // Compile-time probe mode selection intentionally removes a branch.
-                    if (Diagnostics.MemoryCacheProbe.CandidatePoolEnabled)
-                    {
-                        CandidatePool.Push(candidates);
-                    }
-#pragma warning restore CS0162
-
-                    Diagnostics.MemoryCacheProbe.RecordUpdate(updateStartedAt);
-#else
                     CandidatePool.Push(candidates);
-#endif
                 }
             }
 

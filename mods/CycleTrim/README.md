@@ -63,6 +63,24 @@ python3 scripts/verify_cycletrim_target_contract.py
 python3 scripts/verify_cycletrim_target_contract.py /path/to/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll
 ```
 
+## Memory and cache analysis / 内存与缓存分析
+
+Scenario: immutable A01 cycle 1641 auto-save, 15 duplicants, world 0, 1265x1548 game window, camera center `(45.5, 81.0)`, zoom 8, speed 3x, using identical Debug probes and stable 30-second windows.
+
+场景：不可变的 A01 第 1641 周期自动存档，15 名复制人，world 0，1265x1548 游戏窗口，镜头中心 `(45.5, 81.0)`，缩放 8，3x 速度，使用相同 Debug 探针与稳定的 30 秒窗口。
+
+The per-`UpdatePickups` cell cache had a median logical hit rate of 24.37%, removing 24.37% of navigation calls; cache-off made 1.322x as many calls. Median `UpdatePickups` average time changed from `41.279 us` off to `35.708 us` on (-13.5%). Each update produced 6.29 hits, with an estimated `0.886 us` saved per hit. Median FPS changed from `66.964` to `80.200` (+19.8%).
+
+每次 `UpdatePickups` 内的格子缓存逻辑命中率中位数为 24.37%，减少了 24.37% 的导航调用；关闭缓存后调用量为 1.322 倍。`UpdatePickups` 平均耗时中位数由关闭时的 `41.279 us` 降至开启时的 `35.708 us`（-13.5%）。每次更新平均命中 6.29 次，估算每次命中节省 `0.886 us`。FPS 中位数由 `66.964` 升至 `80.200`（+19.8%）。
+
+The candidate dictionary pool reached a steady 100% hit rate. Pool-off allocated a median 9,576 dictionaries per 30 seconds (`319.2/s`) versus zero with pooling. Median `UpdatePickups` average time changed from `47.578 us` off to `35.708 us` on (-24.9%), the median collection count for each GC generation fell from 2 to 1 per 30 seconds, and median FPS changed from `73.437` to `80.200` (+9.2%).
+
+候选字典池在稳定阶段达到 100% 命中率。关闭池化时，每 30 秒字典分配中位数为 9,576 次（`319.2/s`），开启池化时为零。`UpdatePickups` 平均耗时中位数由关闭时的 `47.578 us` 降至开启时的 `35.708 us`（-24.9%），每 30 秒每一代 GC 的收集次数中位数均由 2 降至 1，FPS 中位数由 `73.437` 升至 `80.200`（+9.2%）。
+
+These are scenario-specific incremental results with loading excluded. Unity Mono's allocated-bytes API returned zero and was excluded; RSS/private memory varied too much for causal claims; hardware LLC counters were not measured because `perf` was unavailable. The cache remains scoped to one `UpdatePickups` call for safe invalidation and is not extended across updates.
+
+这些是排除加载阶段后的特定场景增量结果。Unity Mono 的 allocated-bytes API 返回零，因此未纳入结论；RSS/私有内存波动过大，不用于因果声明；由于 `perf` 不可用，未测量硬件 LLC 计数器。为保证安全失效，缓存仍限定在单次 `UpdatePickups` 调用内，不跨更新扩展。
+
 ## Compatibility and build / 兼容与构建
 
 - Supports base game and DLC content through `supportedContent: ALL`.
