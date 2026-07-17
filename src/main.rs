@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
@@ -52,9 +52,16 @@ enum Commands {
     Build {
         #[arg(short, long)]
         release: bool,
+        /// 构建全部已配置 Mod
+        #[arg(long)]
+        all: bool,
     },
     /// 开发模式：构建并安装到游戏 Dev 目录
-    Dev,
+    Dev {
+        /// 开发模式构建并安装全部已配置 Mod
+        #[arg(long)]
+        all: bool,
+    },
     /// 正式安装到游戏 Local 目录
     Install,
     /// 从游戏目录卸载 Mod
@@ -70,6 +77,9 @@ enum Commands {
         /// 强制使用 OniUploader GUI（不用 SteamCMD）
         #[arg(long)]
         gui: bool,
+        /// 自动使用最新更新日志作为上传说明，不弹更新说明输入
+        #[arg(long)]
+        auto_note: bool,
     },
     /// 列出所有配置的 Mod
     List,
@@ -108,13 +118,33 @@ fn main() -> Result<()> {
     let cfg = config::load(cli.config)?;
 
     match cli.command {
-        Commands::Build { release } => {
-            let selected = cfg.select_mod(cli.r#mod)?;
-            build::run(&cfg, &selected, release)
+        Commands::Build { release, all } => {
+            if all {
+                if cli.r#mod.is_some() {
+                    bail!("--all 与 -m/--mod 不可同时使用");
+                }
+                for selected in cfg.select_all_mods()? {
+                    build::run(&cfg, &selected, release)?;
+                }
+                Ok(())
+            } else {
+                let selected = cfg.select_mod(cli.r#mod)?;
+                build::run(&cfg, &selected, release)
+            }
         }
-        Commands::Dev => {
-            let selected = cfg.select_mod(cli.r#mod)?;
-            dev::run(&cfg, &selected)
+        Commands::Dev { all } => {
+            if all {
+                if cli.r#mod.is_some() {
+                    bail!("--all 与 -m/--mod 不可同时使用");
+                }
+                for selected in cfg.select_all_mods()? {
+                    dev::run(&cfg, &selected)?;
+                }
+                Ok(())
+            } else {
+                let selected = cfg.select_mod(cli.r#mod)?;
+                dev::run(&cfg, &selected)
+            }
         }
         Commands::Install => {
             let selected = cfg.select_mod(cli.r#mod)?;
@@ -125,9 +155,9 @@ fn main() -> Result<()> {
             uninstall::run(&cfg, &selected, scope)
         }
         Commands::Info => info::run(&cfg),
-        Commands::Publish { gui } => {
+        Commands::Publish { gui, auto_note } => {
             let selected = cfg.select_mod(cli.r#mod)?;
-            publish::run(&cfg, &selected, gui)
+            publish::run(&cfg, &selected, gui, auto_note)
         }
         Commands::List => {
             println!("已配置的 Mod：");

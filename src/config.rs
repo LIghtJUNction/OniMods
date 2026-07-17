@@ -128,6 +128,32 @@ fn read_game_path_from_props(repo_root: &Path) -> Result<PathBuf> {
 }
 
 impl Config {
+    pub fn select_all_mods(&self) -> Result<Vec<SelectedMod>> {
+        if self.mods.is_empty() {
+            anyhow::bail!(
+                "没有配置任何 Mod，请在 {} 中添加 [mods.XXX]",
+                DEFAULT_CONFIG_NAME
+            );
+        }
+
+        let mut keys: Vec<_> = self.mods.keys().cloned().collect();
+        keys.sort();
+
+        let mut result = Vec::with_capacity(keys.len());
+        for key in keys {
+            let cfg = self
+                .mods
+                .get(&key)
+                .with_context(|| format!("配置缺失：{}", key))?
+                .clone();
+            result.push(SelectedMod {
+                name: cfg.mod_name(&key),
+                config: cfg,
+            });
+        }
+        Ok(result)
+    }
+
     pub fn select_mod(&self, explicit: Option<String>) -> Result<SelectedMod> {
         if self.mods.is_empty() {
             anyhow::bail!(

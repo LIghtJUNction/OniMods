@@ -1,226 +1,90 @@
 # ONI MCP Server
 
-[![ONI MCP Server 预览图](preview.png)](README.md)
+[![ONI MCP Server 预览图](preview.png)](README_EN.md)
 
-ONI MCP Server 是一个 Oxygen Not Included Mod。它会在游戏内启动本地 MCP Streamable HTTP 服务，让支持 MCP 的 AI 客户端以虚拟文件系统的方式读取殖民地状态、查询游戏数据、分析地图，并在玩家确认后执行明确的游戏操作。
+ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:8788/mcp/`），提供 `oni://` 资源读取与受控写入入口，面向 AI 客户端做安全联动。
 
-浏览器反馈页:
+## 快速索引
 
-```text
-http://localhost:8788/
-```
+- [用途与边界](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#用途与边界)
+- [安装与启动](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#安装与启动)
+- [运行端点与客户端](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#运行端点与客户端)
+- [配置与鉴权](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#配置与鉴权)
+- [主要工具组](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#主要工具组)
+- [常见链接与资源](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#常见链接与资源)
+- [兼容性与稳定性](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#兼容性与稳定性)
+- [更新与验证](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#更新与验证)
+- [参考与鸣谢](https://github.com/LIghtJUNction/OniMods/blob/main/mods/oni_mcp/README.md#参考与鸣谢)
 
-MCP 端点:
+## 用途与边界
 
-```text
-http://localhost:8788/mcp/
-```
+### 能做什么
 
-源代码: https://github.com/LIghtJUNction/OniMods/
+- 读取殖民地状态、告警、资源、地图等数据。
+- 通过聚合工具执行暂停、调速、截图、任务、建筑和设施类小范围操作。
+- 供 MCP 客户端做可追溯、可确认的游戏状态交互。
 
-> **Steam 创意工坊简短描述 (Steam Workshop Short Description):**
-> 一个在《缺氧》游戏内启动本地 Model Context Protocol (MCP) 服务器的 Mod。它允许 AI 助手（如 Claude、Gemini 等）连接到游戏，读取殖民地状态（氧气、食物、复制人、电力），并使用虚拟文件系统模式（通过 SEARCH/REPLACE 块）或经玩家确认的安全命令（暂停、调速、日程、门禁等）辅助规划和管理殖民地。
+### 不适合做什么
 
-## 能做什么
+- 不适合作为完整自动化玩家使用。
+- 大规模挖掘、拆除、重开/加载存档这类高风险操作建议由客户端进行显式确认后执行。
 
-* 检查氧气、食物、电力、温度、复制人、房间和警报。
-* 读取 `oni://...` 资源，获得比截图更可靠的游戏状态。
-* 使用 `world_editor` 提供的虚拟存档目录和文件（通过 SEARCH/REPLACE 块）来分析和修改游戏世界。
-* 执行暂停、调速、截图、日程、门禁、储存过滤、优先级、复制人命名等小任务。
-* 作为 ONI + MCP + Agent 的实验平台。
+## 安装与启动
 
-## 不适合做什么
+1. 订阅本 Mod 并在游戏 **Mods** 菜单启用 **ONI MCP Server**。
+2. 重启游戏后进入主菜单或殖民地，Mod 自动提供 MCP 服务。
+3. `oni://` 资源类工具依赖已加载殖民地；主菜单下仅部分只读接口可用。
 
-* 不保证 AI 能长期自主玩好缺氧。
-* 不建议让 AI 在无确认的情况下执行大范围挖掘、拆除、沙盒、保存或加载。
-* 这是 MCP 游戏控制面，不是完整自治玩家。
+## 运行端点与客户端
 
-## 安装
+- 浏览器反馈页: `http://localhost:8788/`
+- MCP 端点: `http://localhost:8788/mcp/`
+- 示例配置参考: [docs/api-developer-guide.md](../../docs/api-developer-guide.md)
+- 资源列表: [docs/mcp-tools-reference.md](../../docs/mcp-tools-reference.md)
 
-1. 订阅本 Mod。
-2. 在游戏 **Mods** 菜单启用 **ONI MCP Server**。
-3. 重启游戏。
-4. 进入主菜单或加载/创建殖民地后，Mod 会自动启动本地 MCP 服务。
+## 配置与鉴权
 
-依赖存档状态的工具需要进入殖民地后才有有效数据；只读的协议和配置检查可以在主菜单阶段工作。
+- 配置文件: `OniMcpConfig.json`
+- 常见字段、默认值与优先路径见: [mods/oni_mcp/ModInfo.cs](ModInfo.cs)
+- 默认 `AuthEnabled` 为 `false`；如需局域网访问建议开启认证并设置强随机 token。
+- 修改配置后点击 **Restart MCP server** 或重启游戏生效。
 
-## 配置按钮
+## 主要工具组
 
-启用 Mod 后，游戏 **Mods** 菜单里的 **ONI MCP Server** 条目应出现 **Configure / 配置** 按钮。按钮来自 PLib 配置系统，可修改端口、token、截图清理等选项，也可以查看当前配置文件路径。
+- 工具清单入口: `oni://tools/manifest` / `server_control domain=catalog action=manifest`
+- 常用公开工具:
+  - `world_editor`：虚拟文件化世界读写（`cd`、`ls`、`read`、`search`、`edit`）
+  - `game_control`：游戏控制与状态管理
+  - `navigation_control`：视图、覆盖层和截图
+  - `building_control`：建筑与产线相关操作
+  - `orders_control`：挖掘、清扫、拖地、拆除等任务
+  - `server_control`：服务状态、日志与截图任务
 
-如果看不到配置按钮:
+## 常见链接与资源
 
-1. 确认已经启用 Mod 并重启游戏。
-2. 确认当前安装包包含 `PLib.dll` 合并后的 `OniMcp.dll`。
-3. 如果仍缺失，请使用 v0.2.0 或更新版本；该版本显式初始化 PLib Options 的 ModsScreen 补丁。
-4. 直接编辑下方的 `OniMcpConfig.json`。Mod 启动时会自动生成该文件。
+- `oni://tools/manifest`
+- `oni://tools/guide`
+- `oni://colony/status`
+- `oni://dupes/status-check`
+- `oni://world/text-map`
+- `oni://buildings/defs`
+- `oni://resources/inventory`
+- [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
+- [CHANGELOG.md](CHANGELOG.md)
 
-## 配置文件
+## 兼容性与稳定性
 
-配置文件名固定为:
+- 在 `1.0.0` 之前，工具名、参数和响应结构可能发生不兼容改动。
+- 外部客户端请固定版本，并优先以运行时 manifest 为准。
 
-```text
-OniMcpConfig.json
-```
+## 更新与验证
 
-优先位置是缺氧的用户数据目录，不是 Steam 游戏安装目录:
+- 版本历史与兼容说明: [CHANGELOG.md](CHANGELOG.md)
+- 需要快速核对契约时，先跑: [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
 
-* Windows: `Documents\Klei\OxygenNotIncluded\OniMcpConfig.json`
-* Windows 备用: `Documents\Klei\Oxygen Not Included\OniMcpConfig.json`
-* Linux: `~/.config/unity3d/Klei/Oxygen Not Included/OniMcpConfig.json`
-* macOS: `~/Library/Application Support/unity.Klei.Oxygen Not Included/OniMcpConfig.json`
+## 参考与鸣谢
 
-为了兼容旧版本，Mod 也会读取 Mod 安装目录下已有的 `OniMcpConfig.json`。如果两个位置都不存在，新版本会在首次加载时写入用户数据目录。
-
-常用字段:
-
-```json
-{
-  "Host": "localhost",
-  "Port": 8788,
-  "AuthEnabled": false,
-  "AuthToken": "自动生成的随机token",
-  "SecurityMigrationVersion": 1,
-  "GlobalAutoDisinfectDisabled": false,
-  "ScreenshotCleanupEnabled": true,
-  "ScreenshotRetentionMinutes": 120,
-  "ScreenshotMaxFiles": 40
-}
-```
-
-修改配置后，在配置界面点击 **Restart MCP server**，或重启游戏。
-PLib 4.24 配置窗口会在内容超过最大高度时显示滚动条；展开 `Status`、`Server`、`Security`、`Screenshots` 分类即可访问全部 MCP 设置。
-
-## 保存并通过 Steam 重启
-
-Linux 下可用 `game_control domain=launch action=restart_load` 同步保存当前 active save，再完整退出并通过 Steam AppID 457140 重启。先以 `dryRun=true` 预览，实际执行需 `confirm=true`；默认 `resume=false`，新进程精确加载刚保存的路径并保持暂停。旧进程只返回 `accepted/jobId/exactSavePath`，重启后使用 `action=restart_status jobId=<id>` 查询 `loaded` 或 `failed`，不要假定原 HTTP 调用能跨进程完成。
-
-## Token 认证
-
-Mod 默认不启用 token 校验:
-
-```json
-"AuthEnabled": false
-```
-
-首次启动时会自动生成随机 `AuthToken` 并写入 `OniMcpConfig.json`，但默认不校验。只有在配置页手动开启 **Require token** 后，客户端才需要发送下面任意一个 HTTP 请求头:
-
-```text
-Authorization: Bearer <AuthToken>
-```
-
-或:
-
-```text
-X-Oni-Mcp-Token: <AuthToken>
-```
-
-升级自旧配置时会执行一次安全迁移，把认证明确设为关闭；之后用户手动开启的设置会持久保留。只在本机使用且确认没有暴露端口时，可保持默认关闭:
-
-```json
-"AuthEnabled": false
-```
-
-如果把 `Host` 改成 `0.0.0.0` 供局域网访问，建议保持 token 校验开启，并使用强随机 token。
-
-## 连接客户端
-
-任何支持 MCP Streamable HTTP 的客户端都可以连接:
-
-```text
-http://localhost:8788/mcp/
-```
-
-Claude Desktop 示例:
-
-```json
-{
-  "mcpServers": {
-    "oni": {
-      "url": "http://localhost:8788/mcp/",
-      "headers": {
-        "Authorization": "Bearer <AuthToken>"
-      }
-    }
-  }
-}
-```
-
-如果已关闭 token 校验，可以去掉 `headers`。
-
-首次使用请先用只读提示词开始:
-
-```text
-先不要修改存档，检查我的殖民地状态，列出最紧急的 3 个风险。
-```
-
-## 主要工具
-
-公开工具面已精简为一组聚合入口，运行时清单是事实来源:
-
-```text
-server_control domain=catalog action=manifest
-```
-
-或读取:
-
-```text
-oni://tools/manifest
-```
-
-公开的聚合工具:
-
-* `world_editor`: 代码文件风格的世界编辑器。将存档视为虚拟目录，通过 `cd`, `ls`, `read`, `search` 来观察游戏内文件，通过 `edit` 配合 SEARCH/REPLACE 块来下达修改意图（挖掘、建造、调整优先级、连接管道等）。
-* `game_control`: 游戏状态、速度、存档、UI 与游戏级操作。
-* `navigation_control`: 相机、视图、覆盖层和截图操作。
-* `building_control`: 建筑规划、放置、配置、生产与管线连接。
-* `orders_control`: 挖掘、清扫、拖地、拆除等任务标记。
-* `server_control`: MCP 服务状态、会话清单、截图任务、后台任务以及清单/开发指南获取。
-
-`colony_control`、`dupes_control`、`read_control`、`search_control` 等其他聚合入口仍保持注册，供虚拟文件内部路由和兼容客户端调用，但不会出现在默认 `tools/list` 中。
-
-`coordinate_control` 不属于当前公开运行时，普通聚合工具也会拒绝 raw coordinates。精确订单先读 `/active/ops/tools.md`，再编辑 `/active/ops/orders.md`；精确建造则读取并编辑 `/active/map/viewport.md` 中的地图 token。只选择当前公开的 typed files/tools，忽略 hidden `coordinate_control` 和 `/active/ops/coordinate.md` 兼容入口。
-
-## 常见资源
-
-* `oni://colony/status`
-* `oni://colony/diagnostics`
-* `oni://colony/alerts`
-* `oni://colony/summary`
-* `oni://resources/inventory`
-* `oni://resources/food`
-* `oni://dupes`
-* `oni://dupes/status-check`
-* `oni://power/summary`
-* `oni://rooms/list`
-* `oni://world/text-map`
-* `oni://buildings/defs`
-* `oni://tools/manifest`
-* `oni://tools/guide`
-
-## API 稳定性
-
-在 `oni_mcp` 到达 `1.0.0` 之前，工具名、参数、资源路径、响应字段都可能发生不兼容变化。衍生 Mod、插件、脚本、第三方客户端应固定版本，并优先读取运行时 manifest 作为兼容依据。
-
-## 致谢
-
-由 **gpt5.5**、**gpt5.6**、**glm5.2**、**Kimi k2.6**、**Kimi k3**、**Gemini 3.5 Flash**、**grok4.5** 和玩家 **LIghtJUNction** 共同开发测试。本项目开源，可检查、修改和贡献。
-
-## 更新日志 / Changelog
-
-完整提交记录见: [CHANGELOG.md](CHANGELOG.md)
-
-## 引用链接 / References
-
-- 源码仓库: [github.com/LIghtJUNction/OniMods](https://github.com/LIghtJUNction/OniMods)
-- API 文档: [docs/mcp-tools-reference.md](../../docs/mcp-tools-reference.md)
-- 任务映射与参数说明: [docs/api-developer-guide.md](../../docs/api-developer-guide.md)
-- 运行时配置: [mods/oni_mcp/ModInfo.cs](ModInfo.cs)
-- 目标契约验证脚本: [scripts/verify_oni_mcp_tool_surface.py](../../scripts/verify_oni_mcp_tool_surface.py)
-
-## 参考项目 / 友链
-
-- 官方 MCP 生态: [modelcontextprotocol](https://github.com/modelcontextprotocol)
-- 游戏补丁与工具基座: [OniMods (本仓库)](https://github.com/LIghtJUNction/OniMods)
-- 经典 ONI 性能补丁实现: [FastTrack](https://github.com/peterhaneve/FastTrack)
-- 统一补丁框架: [Harmony](https://github.com/pardeike/Harmony)
+- 源码仓库: [LIghtJUNction/OniMods](https://github.com/LIghtJUNction/OniMods)
+- MCP 生态: [modelcontextprotocol](https://github.com/modelcontextprotocol)
+- 相关框架与参考: [FastTrack](https://github.com/peterhaneve/FastTrack)、[Harmony](https://github.com/pardeike/Harmony)
+- 共同开发/测试: gpt5.5、gpt5.6、glm5.2、Kimi k2.6、Kimi k3、Gemini 3.5 Flash、grok4.5、LIghtJUNction

@@ -21,6 +21,7 @@ namespace OniMcp.Tools
             "game_control",
             "navigation_control",
             "orders_control",
+            "benchmark",
             "server_control",
             "world_editor",
         };
@@ -46,6 +47,7 @@ namespace OniMcp.Tools
             Register(CoreToolEnglishDescriptions.Apply(GameControlEntryTools.ControlGame()));
             Register(CoreToolEnglishDescriptions.Apply(OrdersControlEntryTools.ControlOrders()));
             Register(CoreToolEnglishDescriptions.Apply(SearchControlTools.ControlSearch()));
+            Register(BenchmarkTools.Benchmark());
             Register(HiddenCompat(CoreToolEnglishDescriptions.Apply(CoordinateControlTools.ControlCoordinate())));
             BuildToolInfoCache();
         }

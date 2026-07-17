@@ -62,6 +62,9 @@ fn generate_vdf(
     publishedfileid: &str,
 ) -> Result<PathBuf> {
     let vdf_path = dist_mod.join("workshop.vdf");
+    let safe_title = escape_vdf_value(title);
+    let safe_description = escape_vdf_value(description);
+    let safe_changenote = escape_vdf_value(changenote);
     let content = format!(
         r#""workshopitem"
 {{
@@ -74,13 +77,13 @@ fn generate_vdf(
 	"description"	"{}"
 	"changenote"	"{}"
 }}
-"#,
+	"#,
         publishedfileid,
         dist_mod.to_string_lossy().replace('\\', "/"),
         preview.to_string_lossy().replace('\\', "/"),
-        title,
-        description,
-        changenote,
+        safe_title,
+        safe_description,
+        safe_changenote,
     );
     fs::write(&vdf_path, content)
         .with_context(|| format!("写入 vdf 失败：{}", vdf_path.display()))?;
@@ -120,8 +123,115 @@ fn read_mod_info(dist_mod: &PathBuf) -> Option<(String, String, String)> {
     }
     Some((
         title.unwrap_or_else(|| "Untitled Mod".to_string()),
-        desc.unwrap_or_default(),
+        steam_markdown_description(dist_mod)
+            .or_else(|| desc)
+            .unwrap_or_default(),
         version.unwrap_or_else(|| "1.0.0".to_string()),
+    ))
+}
+
+fn read_file(path: &PathBuf) -> Option<String> {
+    fs::read_to_string(path).ok().map(|s| s.trim().to_string())
+}
+
+fn escape_vdf_value(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('\"', "\\\"")
+        .replace('\r', "")
+        .replace('\n', "\\n")
+}
+
+fn steam_markdown_description(dist_mod: &PathBuf) -> Option<String> {
+    let zh = read_file(&dist_mod.join("docs").join("steam-description-zh.md"));
+    let en = read_file(&dist_mod.join("docs").join("steam-description-en.md"));
+    match (zh, en) {
+        (Some(zh_txt), Some(en_txt)) if !zh_txt.is_empty() && !en_txt.is_empty() => {
+            Some(format!("{}\n\n{}", zh_txt, en_txt))
+        }
+        (Some(zh_txt), _) if !zh_txt.is_empty() => Some(zh_txt),
+        (_, Some(en_txt)) if !en_txt.is_empty() => Some(en_txt),
+        _ => None,
+    }
+}
+
+fn extract_changelog_summary(project_dir: &PathBuf, max_items: usize) -> Option<String> {
+    let changelog = project_dir.join("CHANGELOG.md");
+    let content = fs::read_to_string(changelog).ok()?;
+    let mut section_started = false;
+    let mut entries: Vec<String> = Vec::new();
+
+    for raw in content.lines() {
+        let line = raw.trim();
+        if line.starts_with("## ") {
+            if section_started {
+                break;
+            }
+            section_started = true;
+            continue;
+        }
+        if !section_started {
+            continue;
+        }
+        if line.is_empty() {
+            continue;
+        }
+        if line.starts_with("- [") {
+            let cleaned = line.trim_start_matches("- ").trim().to_string();
+            entries.push(cleaned);
+            if entries.len() >= max_items {
+                break;
+            }
+        }
+    }
+
+    if entries.is_empty() {
+        return extract_git_summary(project_dir, max_items);
+    }
+
+    Some(format!(
+        "Auto changelog (latest {} items):\n{}",
+        entries.len(),
+        entries.join("\n")
+    ))
+}
+
+fn extract_git_summary(project_dir: &PathBuf, max_items: usize) -> Option<String> {
+    let max_items = max_items.to_string();
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(project_dir)
+        .args([
+            "log",
+            "--max-count",
+            &max_items,
+            "--pretty=format:- %h %s",
+            "--",
+            ".",
+        ])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let lines = String::from_utf8_lossy(&output.stdout);
+    let entries: Vec<&str> = lines
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty())
+        .take(max_items.parse().ok()?)
+        .collect();
+
+    if entries.is_empty() {
+        return None;
+    }
+
+    Some(format!(
+        "Auto changelog (latest {} items):\n{}",
+        entries.len(),
+        entries.join("\n")
     ))
 }
 
@@ -138,7 +248,7 @@ fn prompt(question: &str, default: Option<&str>) -> Result<String> {
     }
 }
 
-pub fn run(cfg: &Config, selected: &SelectedMod, use_gui: bool) -> Result<()> {
+pub fn run(cfg: &Config, selected: &SelectedMod, use_gui: bool, auto_note: bool) -> Result<()> {
     let repo_root = env::var_os("ONI_CLI_REPO_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|| env::current_dir().unwrap());
@@ -184,11 +294,20 @@ pub fn run(cfg: &Config, selected: &SelectedMod, use_gui: bool) -> Result<()> {
         println!("\n📡 检测到 steamcmd，支持全自动上传！");
         let (title, desc, version) = read_mod_info(&dist_mod)
             .unwrap_or_else(|| (selected.name.clone(), String::new(), "1.0.0".to_string()));
+        let project_dir = selected.config.project_abs(&repo_root);
+        let auto_changenote = extract_changelog_summary(&project_dir, 6);
+        let default_changenote = auto_changenote
+            .clone()
+            .unwrap_or_else(|| format!("Release {}", version));
 
-        let changenote = prompt(
-            &format!("更新说明 [默认: 版本 {}]: ", version),
-            Some(&format!("Release {}", version)),
-        )?;
+        let changenote = if auto_note {
+            default_changenote.clone()
+        } else {
+            prompt(
+                &format!("更新说明 [默认: {}]: ", default_changenote),
+                Some(default_changenote.as_str()),
+            )?
+        };
 
         let publishedfileid = if let Some(ref id) = selected.config.publishedfileid {
             println!("   使用配置中的 Workshop ID: {}", id);

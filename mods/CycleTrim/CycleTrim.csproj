@@ -48,6 +48,8 @@
     <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="minimumSupportedBuild: 525812" Overwrite="false" />
     <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="APIVersion: $(ModApiVersion)" Overwrite="false" />
     <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="version: &quot;$(ModVersion)&quot;" Overwrite="false" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/docs/steam-description-zh.md" DestinationFolder="$(OutputPath)docs" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/docs/steam-description-zh.md')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/docs/steam-description-en.md" DestinationFolder="$(OutputPath)docs" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/docs/steam-description-en.md')" />
     <Copy SourceFiles="@(PreviewImage)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(PreviewImage)' != ''" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)/README.md" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
   </Target>
@@ -71,6 +73,8 @@
       <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />
       <ModOutputFiles Include="$(OutputPath)preview.jpg" Condition="Exists('$(OutputPath)preview.jpg')" />
       <ModOutputFiles Include="$(OutputPath)README.md" />
+      <ModOutputFiles Include="$(OutputPath)docs/steam-description-zh.md" Condition="Exists('$(OutputPath)docs/steam-description-zh.md')" />
+      <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />

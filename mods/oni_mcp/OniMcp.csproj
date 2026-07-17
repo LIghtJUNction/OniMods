@@ -128,6 +128,9 @@
     <WriteLinesToFile File="$(OutputPath)mod_info.yaml" Lines="version: &quot;$(ModVersion)&quot;" Overwrite="false" />
     <Message Text="Generated mod_info.yaml -&gt; $(OutputPath)mod_info.yaml" Importance="high" />
 
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/docs/steam-description-zh.md" DestinationFolder="$(OutputPath)docs" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/docs/steam-description-zh.md')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/docs/steam-description-en.md" DestinationFolder="$(OutputPath)docs" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildProjectDirectory)/docs/steam-description-en.md')" />
+
     <!-- 复制预览图 -->
     <Copy SourceFiles="@(PreviewImage)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(PreviewImage)' != ''">
       <Output TaskParameter="CopiedFiles" PropertyName="CopiedPreviewImage" />
@@ -164,6 +167,8 @@
       <ModOutputFiles Include="$(OutputPath)preview.jpg" Condition="Exists('$(OutputPath)preview.jpg')" />
       <ModOutputFiles Include="$(OutputPath)README.md" Condition="Exists('$(OutputPath)README.md')" />
       <ModOutputFiles Include="$(OutputPath)README_EN.md" Condition="Exists('$(OutputPath)README_EN.md')" />
+      <ModOutputFiles Include="$(OutputPath)docs/steam-description-zh.md" Condition="Exists('$(OutputPath)docs/steam-description-zh.md')" />
+      <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
     <MakeDir Directories="$(DistModPath)assets" />

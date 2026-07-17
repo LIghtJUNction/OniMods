@@ -174,8 +174,10 @@ cp Directory.Build.props.example Directory.Build.props
 |---|---|
 | `onim setup` | initialize config and discover dependencies |
 | `onim init <name>` | scaffold from template |
-| `onim build` | build mod(s) (`--release` for release build) |
-| `onim dev` | build + install to `mods/Dev` |
+| `onim build` | build a mod (`--release` for release build) |
+| `onim build --all` | build all configured mods |
+| `onim dev` | build + install a mod to `mods/Dev` |
+| `onim dev --all` | build + install all configured mods to `mods/Dev` |
 | `onim install` | release build + install to `mods/Local` |
 | `onim uninstall` | uninstall `dev/local/all` scoped mods |
 | `onim info` | show installed Dev/Local/Steam modules |
