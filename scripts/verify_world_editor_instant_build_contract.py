@@ -77,7 +77,8 @@ def main() -> int:
             'details["gridRegistered"] = true',
             'details["logicPortsRegistered"] = true')
     assert complete.count("RecordDirtyInstantBuildMutation") == 3
-    assert "EnsureCompletedUtilityNetworkRegistration(def, completed" in complete
+    assert "EnsureCompletedUtilityNetworkRegistration" in complete
+    assert "def, completed, isolateConnections: true" in complete
     ordered(complete, "if (completed != null)", 'details["dirtyMutation"] = true',
             'details["orphanCompletedObject"] = true', 'details["returnedInvalidObject"] = true')
     assert 'details["verified"] = true' in complete

@@ -63,7 +63,8 @@ namespace OniMcp.Tools
                 details["orphanId"] = completed == null ? -1 : completed.GetComponent<KPrefabID>()?.InstanceID ?? -1;
                 return false;
             }
-            if (!EnsureCompletedUtilityNetworkRegistration(def, completed, out error))
+            if (!EnsureCompletedUtilityNetworkRegistration(
+                    def, completed, isolateConnections: true, out error))
             {
                 details["error"] = error;
                 RecordDirtyInstantBuildMutation(def, placement, orientation, before, details);
