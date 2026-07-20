@@ -39,7 +39,7 @@ def main() -> int:
     assert "CurrentSecurityMigrationVersion = 1" in options
     migration = method_body(options, "private static void ApplySecurityMigration")
     assert 'raw["SecurityMigrationVersion"]' in migration
-    assert "options.AuthEnabled = false" in migration
+    assert "options.AuthEnabled = false" not in migration
     assert "options.SecurityMigrationVersion = CurrentSecurityMigrationVersion" in migration
     assert "ApplySecurityMigration(loaded, raw)" in options
 
