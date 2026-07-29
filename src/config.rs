@@ -40,6 +40,21 @@ pub struct Config {
     pub default_mod: Option<String>,
 }
 
+/// `onim doctor` 所需的非阻断式配置诊断结果。
+#[derive(Debug)]
+pub struct DoctorConfigDiagnostics {
+    pub repo_root: PathBuf,
+    pub config_path: PathBuf,
+    pub config_error: Option<String>,
+    pub mods: Option<HashMap<String, ModConfig>>,
+    pub props_path: PathBuf,
+    pub game_path_error: Option<String>,
+    pub game_path: Option<PathBuf>,
+    pub managed_path: Option<PathBuf>,
+    pub game_mods_dir_error: Option<String>,
+    pub game_mods_dir: Option<PathBuf>,
+}
+
 #[derive(Debug)]
 pub struct SelectedMod {
     pub name: String,
@@ -108,6 +123,10 @@ fn read_game_path_from_props(repo_root: &Path) -> Result<PathBuf> {
     let content = std::fs::read_to_string(&props)
         .with_context(|| format!("读取 {} 失败", props.display()))?;
 
+    parse_game_path_from_props(&content)
+}
+
+fn parse_game_path_from_props(content: &str) -> Result<PathBuf> {
     // 简单解析 <OniGamePath>值</OniGamePath>
     let start = content.find("<OniGamePath>");
     let end = content.find("</OniGamePath>");
@@ -124,6 +143,124 @@ fn read_game_path_from_props(repo_root: &Path) -> Result<PathBuf> {
             "{} 中找不到 <OniGamePath> 标签，请先运行 `onim setup`",
             BUILD_PROPS
         ),
+    }
+}
+
+/// 读取 `onim doctor` 的配置诊断信息，不执行常规命令的路径验证。
+pub fn read_doctor_diagnostics(explicit_path: Option<PathBuf>) -> Result<DoctorConfigDiagnostics> {
+    let (config_path, repo_root) = resolve_doctor_config_location(explicit_path)?;
+    let (mods, config_error) = inspect_config_for_doctor(&config_path);
+    let props_path = repo_root.join(BUILD_PROPS);
+    let (game_path, game_path_error) = inspect_game_path_for_doctor(&props_path);
+    let managed_path = game_path.as_ref().map(|path| managed_path_for_game(path));
+    let (game_mods_dir, game_mods_dir_error) = match game_user_data_dir() {
+        Ok(base) => (Some(base.join("mods")), None),
+        Err(error) => (None, Some(error.to_string())),
+    };
+
+    Ok(DoctorConfigDiagnostics {
+        repo_root,
+        config_path,
+        config_error,
+        mods,
+        props_path,
+        game_path_error,
+        game_path,
+        managed_path,
+        game_mods_dir_error,
+        game_mods_dir,
+    })
+}
+
+fn resolve_doctor_config_location(explicit_path: Option<PathBuf>) -> Result<(PathBuf, PathBuf)> {
+    let current_dir = env::current_dir().context("无法获取当前工作目录")?;
+    let config_path = match explicit_path {
+        Some(path) if path.is_absolute() => path,
+        Some(path) => current_dir.join(path),
+        None => find_config_file()?.unwrap_or_else(|| current_dir.join(DEFAULT_CONFIG_NAME)),
+    };
+    let repo_root = config_path
+        .parent()
+        .map(Path::to_path_buf)
+        .context("无法确定 onim 配置文件所在目录")?;
+    Ok((config_path, repo_root))
+}
+
+fn inspect_config_for_doctor(
+    config_path: &Path,
+) -> (Option<HashMap<String, ModConfig>>, Option<String>) {
+    let content = match std::fs::read_to_string(config_path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return (
+                None,
+                Some(format!("配置文件不存在：{}", config_path.display())),
+            );
+        }
+        Err(error) => {
+            return (
+                None,
+                Some(format!(
+                    "读取配置文件失败：{}（{error}）",
+                    config_path.display()
+                )),
+            );
+        }
+    };
+
+    match parse_config_for_doctor(&content) {
+        Ok(mods) => (Some(mods), None),
+        Err(error) => (
+            None,
+            Some(format!(
+                "解析配置文件失败：{}（{error}）",
+                config_path.display()
+            )),
+        ),
+    }
+}
+
+fn parse_config_for_doctor(content: &str) -> Result<HashMap<String, ModConfig>> {
+    Ok(toml::from_str::<Config>(content)?.mods)
+}
+
+fn inspect_game_path_for_doctor(props_path: &Path) -> (Option<PathBuf>, Option<String>) {
+    let content = match std::fs::read_to_string(props_path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return (None, Some(format!("找不到 {}", props_path.display())));
+        }
+        Err(error) => {
+            return (
+                None,
+                Some(format!("读取 {} 失败：{error}", props_path.display())),
+            );
+        }
+    };
+
+    match parse_game_path_from_props(&content) {
+        Ok(path) => (Some(path), None),
+        Err(error) => (None, Some(error.to_string())),
+    }
+}
+
+fn managed_path_for_game(game_path: &Path) -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        game_path.join("OxygenNotIncluded_Data").join("Managed")
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let mac_managed = game_path
+            .join("OxygenNotIncluded.app")
+            .join("Contents")
+            .join("OxygenNotIncluded_Data")
+            .join("Managed");
+        if mac_managed.exists() {
+            mac_managed
+        } else {
+            game_path.join("OxygenNotIncluded_Data").join("Managed")
+        }
     }
 }
 
@@ -192,28 +329,7 @@ impl Config {
     }
 
     pub fn managed_path(&self) -> PathBuf {
-        #[cfg(target_os = "windows")]
-        {
-            self.game_path
-                .join("OxygenNotIncluded_Data")
-                .join("Managed")
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            let mac_managed = self
-                .game_path
-                .join("OxygenNotIncluded.app")
-                .join("Contents")
-                .join("OxygenNotIncluded_Data")
-                .join("Managed");
-            if mac_managed.exists() {
-                mac_managed
-            } else {
-                self.game_path
-                    .join("OxygenNotIncluded_Data")
-                    .join("Managed")
-            }
-        }
+        managed_path_for_game(&self.game_path)
     }
 
     pub fn game_mods_dir(&self) -> Result<PathBuf> {
@@ -364,5 +480,29 @@ fn game_user_data_dir() -> Result<PathBuf> {
     {
         let home = env::var_os("HOME").context("无法获取 HOME 环境变量")?;
         Ok(PathBuf::from(home).join("Library/Application Support/unity.Klei.Oxygen Not Included"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_config_for_doctor;
+    use std::path::Path;
+
+    #[test]
+    fn doctor_config_parser_should_preserve_resolvable_mods() {
+        let mods = parse_config_for_doctor(
+            r#"
+default_mod = "Example"
+
+[mods.Example]
+path = "mods/Example"
+"#,
+        )
+        .expect("valid doctor config should parse");
+
+        assert_eq!(
+            mods["Example"].project_abs(Path::new("/repo")),
+            Path::new("/repo/mods/Example")
+        );
     }
 }

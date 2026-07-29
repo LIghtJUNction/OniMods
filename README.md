@@ -70,6 +70,7 @@ The repository is organized as a **two-part platform**:
 ```bash
 cargo install --path .
 onim setup
+onim doctor
 onim init MyMod
 onim dev -m MyMod
 ```
@@ -150,18 +151,21 @@ cargo install --path .
 # 2) Discover game path and dependencies
 onim setup
 
-# 3) Create a mod
+# 3) Verify the local development environment
+onim doctor
+
+# 4) Create a mod
 onim init MyMod --author YourName --desc "Your mod description"
 
-# 4) Development cycle
+# 5) Development cycle
 onim dev -m MyMod         # build + install to Dev
 onim info                 # inspect installed mods
 
-# 5) Release cycle
+# 6) Release cycle
 onim install -m MyMod     # Release install to Local
 onim publish -m MyMod     # publish to Steam Workshop
 
-# 6) Cleanup
+# 7) Cleanup
 onim uninstall -m MyMod   # supports scope flags
 ```
 
@@ -179,6 +183,7 @@ cp Directory.Build.props.example Directory.Build.props
 | Command | Purpose |
 |---|---|
 | `onim setup` | initialize config and discover dependencies |
+| `onim doctor` | read-only health check for paths, tools, and configured mod sources |
 | `onim init <name>` | scaffold from template |
 | `onim build` | build a mod (`--release` for release build) |
 | `onim build --all` | build all configured mods |

@@ -87,6 +87,7 @@
 ```bash
 cargo install --path .
 onim setup
+onim doctor
 onim init MyMod
 onim dev -m MyMod
 ```
@@ -100,19 +101,22 @@ cargo install --path .
 # 2. 交互式初始化：检测游戏路径、检查依赖、写入配置
 onim setup
 
-# 3. 创建新 Mod
+# 3. 只读检查本机开发环境
+onim doctor
+
+# 4. 创建新 Mod
 onim init MyMod --author YourName --desc "Mod 描述"
 
-# 4. 开发迭代
+# 5. 开发迭代
 onim dev -m MyMod          # 构建并安装到游戏 Dev 目录
 onim build -m MyMod        # 仅构建
 onim info                  # 查看已安装的 Mod
 
-# 5. 正式发布
+# 6. 正式发布
 onim install -m MyMod      # Release 构建并安装到 Local 目录
 onim publish -m MyMod      # 上传到 Steam 创意工坊
 
-# 6. 清理
+# 7. 清理
 onim uninstall -m MyMod    # 从游戏目录卸载
 ```
 
@@ -132,6 +136,7 @@ cp Directory.Build.props.example Directory.Build.props
 | 命令 | 作用 |
 |------|------|
 | `onim setup` | 初始化项目配置，检测游戏路径和依赖 |
+| `onim doctor` | 只读检查路径、外部工具和已配置 Mod 源码 |
 | `onim init <name>` | 从模板创建新 Mod |
 | `onim build` | 构建 Mod，`--release` 为 Release 构建 |
 | `onim dev` | 构建并安装到游戏 `mods/Dev/` |

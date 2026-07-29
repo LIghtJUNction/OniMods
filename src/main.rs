@@ -6,6 +6,7 @@ mod archive;
 mod build;
 mod config;
 mod dev;
+mod doctor;
 mod info;
 mod init;
 mod install;
@@ -83,6 +84,8 @@ enum Commands {
     },
     /// 列出所有配置的 Mod
     List,
+    /// 检查本机 ONI Mod 开发环境
+    Doctor,
 }
 
 #[derive(Clone, ValueEnum)]
@@ -95,7 +98,7 @@ pub enum UninstallScope {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Setup 和 Init 不需要先加载配置
+    // Setup、Init 和 Doctor 不需要严格加载配置。
     match &cli.command {
         Commands::Setup => return setup::run(),
         Commands::Init {
@@ -112,6 +115,7 @@ fn main() -> Result<()> {
                 cli.config,
             );
         }
+        Commands::Doctor => return doctor::run(cli.config.clone()),
         _ => {}
     }
 
