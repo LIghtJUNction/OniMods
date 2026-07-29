@@ -39,7 +39,8 @@ def main() -> int:
     assert "CurrentSecurityMigrationVersion = 1" in options
     migration = method_body(options, "private static void ApplySecurityMigration")
     assert 'raw["SecurityMigrationVersion"]' in migration
-    assert "options.AuthEnabled = false" in migration
+    assignments = re.findall(r"options\.(\w+)\s*=", migration)
+    assert assignments == ["SecurityMigrationVersion"], assignments
     assert "options.SecurityMigrationVersion = CurrentSecurityMigrationVersion" in migration
     assert "ApplySecurityMigration(loaded, raw)" in options
 

@@ -46,7 +46,8 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 
 - 配置文件: `OniMcpConfig.json`
 - 常见字段、默认值与优先路径见: [mods/OniMcp/ModInfo.cs](ModInfo.cs)
-- 默认 `AuthEnabled` 为 `false`；如需局域网访问建议开启认证并设置强随机 token。
+- 默认 `AuthEnabled` 为 `false`；仅手动开启认证后才会强制 token，如需局域网访问建议开启认证并设置强随机 token。
+- 安全迁移只记录迁移版本，不会改变既有 `AuthEnabled` 选择；已开启认证的旧配置仍要求客户端携带 token。
 - 修改配置后点击 **Restart MCP server** 或重启游戏生效。
 
 ## 主要工具组

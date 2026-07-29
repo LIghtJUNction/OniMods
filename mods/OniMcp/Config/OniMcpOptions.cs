@@ -267,7 +267,7 @@ namespace OniMcp.Config
             int version = raw["SecurityMigrationVersion"]?.Value<int>() ?? 0;
             if (version >= CurrentSecurityMigrationVersion)
                 return;
-            options.AuthEnabled = false;
+            // Preserve the user's opt-in authentication choice during migration.
             options.SecurityMigrationVersion = CurrentSecurityMigrationVersion;
         }
 
