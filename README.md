@@ -30,6 +30,8 @@ A large-scale modular repository for Oxygen Not Included mod development:
 
 > **Compatibility warning**: before `1.0.0`, the `OniMcp` API can still introduce breaking changes. If you build derivatives, plugins, scripts, or third-party clients, pin exact versions and use runtime manifests (e.g. `oni://tools/manifest`) as the compatibility source of truth.
 
+> **Open-Source Incentive Program**: Buy tokens or earn tokens by contributing to open-source projects. Visit [api.lmm.best](https://api.lmm.best). The source code is open, and contributions are welcome.
+
 ## Table of Contents
 
 - [Project Overview](#project-overview)
@@ -82,6 +84,7 @@ onim dev -m MyMod
 - ONI MCP server changelog: [mods/OniMcp/CHANGELOG.md](mods/OniMcp/CHANGELOG.md)
 - Template changelog: [mods/OniModTemplate/CHANGELOG.md](mods/OniModTemplate/CHANGELOG.md)
 - CycleTrim changelog: [mods/CycleTrim/CHANGELOG.md](mods/CycleTrim/CHANGELOG.md)
+- Read the full story: [A Letter to Everyone](docs/open-source-letter-en.md)
 
 ## Open Source References
 
