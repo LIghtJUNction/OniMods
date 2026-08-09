@@ -54,7 +54,7 @@ namespace OniMcp.Tools
 
         private static CallToolResult ReadSkillsManagementMarkdown(JObject args, string path)
         {
-            var state = DupesControlEntryTools.ControlDupes().Handler(new JObject { ["domain"] = "skill", ["action"] = "list" });
+            var state = DuplicantTools.ControlDupes().Handler(new JObject { ["domain"] = "skill", ["action"] = "list" });
             if (WantsManagementJson(args))
                 return StateJsonResult(state);
             var root = ParseManagementState(state);
@@ -81,7 +81,7 @@ namespace OniMcp.Tools
 
         private static CallToolResult ReadPrioritiesManagementMarkdown(JObject args, string path)
         {
-            var state = DupesControlEntryTools.ControlDupes().Handler(new JObject { ["domain"] = "priority", ["action"] = "list" });
+            var state = DuplicantTools.ControlDupes().Handler(new JObject { ["domain"] = "priority", ["action"] = "list" });
             if (WantsManagementJson(args))
                 return StateJsonResult(state);
             var root = ParseManagementState(state);
@@ -122,7 +122,7 @@ namespace OniMcp.Tools
 
         private static CallToolResult ReadDupesManagementMarkdown(JObject args, string path)
         {
-            var state = DupesControlEntryTools.ControlDupes().Handler(new JObject { ["domain"] = "info", ["action"] = "attributes" });
+            var state = DuplicantTools.ControlDupes().Handler(new JObject { ["domain"] = "info", ["action"] = "attributes" });
             if (WantsManagementJson(args))
                 return StateJsonResult(state);
             var sb = ManagementHeader("Duplicant Files", path, "dupes_control domain=command");

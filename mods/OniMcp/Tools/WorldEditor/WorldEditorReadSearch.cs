@@ -29,7 +29,7 @@ namespace OniMcp.Tools
                 if (relative == "manifest.oni")
                     return GameControlEntryTools.ControlGame().Handler(Child(args, "state", "status"));
                 if (relative == "colony/status.oni")
-                    return ColonyControlEntryTools.ControlColony().Handler(Child(args, "snapshot", "get", ("profile", "minimal")));
+                    return ColonyTools.ControlColony().Handler(Child(args, "snapshot", "get", ("profile", "minimal")));
                 if (relative == "map/viewport.html" || relative == "map/viewport.md" || relative == "map/index.html" || relative == "map/index.md")
                     return CallToolResult.Text(ReadMapFileWithArgs(args, path));
                 if (TryParseZoomPath(relative, out int zoomX1, out int zoomY1, out int zoomX2, out int zoomY2))
@@ -100,7 +100,7 @@ namespace OniMcp.Tools
                 if (IsDupeDetailMarkdown(relative))
                     return CallToolResult.Text(ReadDupeDetailMarkdown(relative));
                 if (relative == "dupes/index.oni")
-                    return DupesControlEntryTools.ControlDupes().Handler(Child(args, "info", "status"));
+                    return DuplicantTools.ControlDupes().Handler(Child(args, "info", "status"));
                 if (relative == "diagnostics/logs.md")
                     return CallToolResult.Text(ReadLogDiagnosticsMarkdown(args));
                 if (relative == "screenshots/index.md")

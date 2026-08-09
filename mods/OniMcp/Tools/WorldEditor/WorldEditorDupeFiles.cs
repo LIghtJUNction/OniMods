@@ -195,7 +195,7 @@ namespace OniMcp.Tools
             renameArgs["id"] = dupe.GetComponent<KPrefabID>()?.InstanceID ?? -1;
             renameArgs["newName"] = newName.Trim();
 
-            return DupesControlEntryTools.ControlDupes().Handler(renameArgs);
+            return DuplicantTools.ControlDupes().Handler(renameArgs);
         }
 
         private static CallToolResult PreflightDupeDetailEdit(string relative, string replacement)

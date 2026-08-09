@@ -228,16 +228,16 @@ namespace OniMcp.Tools
         private static CallToolResult ExecutePriorityCommand(string verb, JObject kv)
         {
             if (verb == "priority")
-                return DupesControlEntryTools.ControlDupes().Handler(WithDomain(kv, "priority", "set"));
+                return DuplicantTools.ControlDupes().Handler(WithDomain(kv, "priority", "set"));
             if (verb == "priority_settings")
-                return DupesControlEntryTools.ControlDupes().Handler(WithDomain(kv, "priority", "settings_set"));
+                return DuplicantTools.ControlDupes().Handler(WithDomain(kv, "priority", "settings_set"));
             return CallToolResult.Error("priorities.md supports priority, priority_settings");
         }
 
         private static CallToolResult ExecuteDupeCommand(string verb, JObject kv)
         {
             if (verb == "rename")
-                return DupesControlEntryTools.ControlDupes().Handler(WithDomain(kv, "command", "rename"));
+                return DuplicantTools.ControlDupes().Handler(WithDomain(kv, "command", "rename"));
             return CallToolResult.Error("dupes.md supports rename");
         }
 
@@ -253,7 +253,7 @@ namespace OniMcp.Tools
         private static CallToolResult ExecuteSkillCommand(string verb, JObject kv)
         {
             if (verb == "learn_skill")
-                return DupesControlEntryTools.ControlDupes().Handler(WithDomain(kv, "skill", "learn"));
+                return DuplicantTools.ControlDupes().Handler(WithDomain(kv, "skill", "learn"));
             return CallToolResult.Error("skills.md supports learn_skill");
         }
 

@@ -33,6 +33,8 @@
 
 > **兼容性警告**：`OniMcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
 
+> **开源激励计划**：可购买 token，也可以通过参与开源项目贡献赚取 token。项目地址：[api.lmm.best](https://api.lmm.best)。项目源代码开源，欢迎使用与贡献。
+
 ## 快速入口
 
 | 项目 | 路径 | 说明 |
@@ -42,6 +44,7 @@
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 针对实测模拟热点的轻量级性能优化 Mod |
 | `OniMcp` 中文文档 | [mods/OniMcp/README.md](mods/OniMcp/README.md) | 安装、连接和功能说明 |
 | `OniMcp` English docs | [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md) | English installation and usage guide |
+| 项目缘起与开源激励 | [写给所有对这个项目感兴趣的人](docs/open-source-letter-zh.md) | 了解 OniMods 的项目缘起与开源激励计划 |
 
 ## ONI MCP Server
 

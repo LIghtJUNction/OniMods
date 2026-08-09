@@ -27,6 +27,7 @@ namespace OniMcp.Tools
             "world_editor",
         };
         private static bool _initialized;
+        private static readonly OniToolRegistryCache ToolCache = new OniToolRegistryCache();
         private static List<McpToolInfo> _cachedCoreToolInfos;
         private static List<McpToolInfo> _cachedAllToolInfos;
 
@@ -62,6 +63,10 @@ namespace OniMcp.Tools
                 if (!string.IsNullOrEmpty(alias))
                     _aliases[alias] = tool.Name;
             }
+
+            ToolCache.Clear();
+            _cachedCoreToolInfos = null;
+            _cachedAllToolInfos = null;
         }
 
         private static void RegisterInternal(McpTool operation)
@@ -77,12 +82,12 @@ namespace OniMcp.Tools
 
         public static List<McpTool> GetTools()
         {
-            return _tools.Values.OrderBy(t => t.Group).ThenBy(t => t.Name).ToList();
+            return ToolCache.GetTools(_tools.Values);
         }
 
         public static List<McpTool> GetVisibleTools()
         {
-            return _tools.Values.Where(t => !t.Hidden).OrderBy(t => t.Group).ThenBy(t => t.Name).ToList();
+            return ToolCache.GetVisibleTools(_tools.Values, _tools.Values.Where(t => !t.Hidden));
         }
 
         public static bool TryGetTool(string name, out McpTool tool)
@@ -117,6 +122,7 @@ namespace OniMcp.Tools
 
         private static void BuildToolInfoCache()
         {
+            ToolCache.Ensure(_tools.Values);
             _cachedCoreToolInfos = BuildToolInfos(includeAll: false);
             _cachedAllToolInfos = BuildToolInfos(includeAll: true);
         }
@@ -124,10 +130,9 @@ namespace OniMcp.Tools
         private static List<McpToolInfo> BuildToolInfos(bool includeAll)
         {
             var infos = new List<McpToolInfo>();
-            foreach (var tool in _tools.Values
-                .Where(tool => !tool.Hidden && (includeAll || DefaultPublicToolNames.Contains(tool.Name)))
-                .OrderBy(tool => tool.Group)
-                .ThenBy(tool => tool.Name))
+            ToolCache.Ensure(_tools.Values);
+            foreach (var tool in ToolCache.GetVisibleSnapshot()
+                .Where(tool => !tool.Hidden && (includeAll || DefaultPublicToolNames.Contains(tool.Name))))
             {
                 var properties = new Dictionary<string, SchemaProperty>();
                 var required = new List<string>();
