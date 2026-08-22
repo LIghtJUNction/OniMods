@@ -185,11 +185,15 @@ internal sealed class SteamWorkshopPublisher
         if (details.m_nPublishedFileId.m_PublishedFileId != WorkshopTarget.WorkshopId
             || details.m_nConsumerAppID.m_AppId != WorkshopTarget.AppId
             || details.m_ulSteamIDOwner != WorkshopTarget.ExpectedOwner
-            || !details.m_rgchTitle.Contains(
-                WorkshopTarget.TitleContains, StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrEmpty(details.m_rgchTitle)
+                && !details.m_rgchTitle.Contains(
+                    WorkshopTarget.TitleContains, StringComparison.OrdinalIgnoreCase)))
         {
             throw new InvalidOperationException(
-                $"Workshop target identity check failed for {WorkshopTarget.DisplayName}");
+                $"Workshop target identity check failed for {WorkshopTarget.DisplayName}: "
+                + $"id={details.m_nPublishedFileId.m_PublishedFileId}, "
+                + $"consumerApp={details.m_nConsumerAppID.m_AppId}, "
+                + $"owner={details.m_ulSteamIDOwner}, title={details.m_rgchTitle}");
         }
     }
 
