@@ -11,6 +11,7 @@ using UnityEngine;
 
 namespace OniMcp.Config
 {
+    /// <summary>Persistent server and security settings exposed through PLib.</summary>
     [ConfigFile("OniMcpConfig.json", true)]
     [ModInfo("https://steamcommunity.com/sharedfiles/filedetails/?id=3731864673", "preview.png")]
     public class OniMcpOptions : IOptions

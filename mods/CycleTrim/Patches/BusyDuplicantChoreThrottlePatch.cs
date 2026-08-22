@@ -45,6 +45,13 @@ namespace CycleTrim.Patches
             return new State();
         }
 
+        private static bool IsBusyChore(Chore currentChore)
+        {
+            // ONI uses a non-null IdleChore as its fallback. Do not throttle the
+            // pickup and chore refreshes that let an idle duplicant find work.
+            return currentChore != null && !(currentChore is IdleChore);
+        }
+
         private static bool TryGetDuplicantConsumer(
             PickupableSensor sensor,
             out ChoreConsumer consumer,
@@ -113,7 +120,7 @@ namespace CycleTrim.Patches
 
                 var state = States.GetValue(consumer, StateFactory);
                 var currentChore = consumer.choreDriver.GetCurrentChore();
-                if (currentChore == null)
+                if (!IsBusyChore(currentChore))
                 {
                     state.Reset();
                     return true;
@@ -153,7 +160,7 @@ namespace CycleTrim.Patches
                 }
 
                 var currentChore = __instance.choreDriver.GetCurrentChore();
-                if (currentChore == null)
+                if (!IsBusyChore(currentChore))
                 {
                     state.Reset();
                     return true;

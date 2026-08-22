@@ -2,11 +2,18 @@
 
 [b]A local MCP bridge mod for Oxygen Not Included[/b]
 
+[h2]v0.2.2 maintenance update[/h2]
+[list]
+[*] Remove 680 unused `using` directives and clear code-inspection noise.
+[*] Pass the Release build with warnings treated as errors.
+[*] MCP tools, protocol behavior, and save behavior are unchanged.
+[/list]
+
 [h2]What this mod does[/h2]
 [list]
 [*] Starts a local MCP-compatible service for colony state access and safe operations.
 [*] Exposes `oni://` resources and grouped tool entrypoints (`world_editor`, `game_control`, `building_control`, etc.).
-[*] Designed for auditable and confirmation-oriented automation workflows with AI clients.
+[*] Returns bounded, auditable results and requires confirmation for risky changes.
 [/list]
 
 [h2]Typical use cases[/h2]
@@ -18,8 +25,8 @@
 
 [h2]Safety / Scope[/h2]
 [list]
-[*] Not intended for full autonomous long-run gameplay.
-[*] High-risk actions should require explicit confirmation.
+[*] Long autonomous sessions should use bounded run windows, pause-and-verify loops, and risk confirmation.
+[*] High-risk actions require explicit confirmation.
 [*] Recommended to use network/auth boundaries when exposed beyond local loopback.
 [/list]
 

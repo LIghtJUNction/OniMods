@@ -69,7 +69,7 @@ pub fn run(cfg: &Config) -> Result<()> {
     if !dev_mods.is_empty() {
         println!("🔧 [Dev] 开发测试 Mod ({} 个)：", dev_mods.len());
         for (name, info) in &dev_mods {
-            print_mod_info(&name, info);
+            print_mod_info(name, info);
         }
         println!();
     }
@@ -81,7 +81,7 @@ pub fn run(cfg: &Config) -> Result<()> {
             legacy_dev_mods.len()
         );
         for (name, info) in &legacy_dev_mods {
-            print_mod_info(&name, info);
+            print_mod_info(name, info);
         }
         println!();
     }
@@ -91,7 +91,7 @@ pub fn run(cfg: &Config) -> Result<()> {
     if !local_mods.is_empty() {
         println!("📦 [Local] 本地安装 Mod ({} 个)：", local_mods.len());
         for (name, info) in &local_mods {
-            print_mod_info(&name, info);
+            print_mod_info(name, info);
         }
         println!();
     }

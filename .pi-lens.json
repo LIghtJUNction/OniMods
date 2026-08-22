@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "copy-paste-boilerplate": {
+      "disable": ["jscpd:duplicate"]
+    }
+  }
+}

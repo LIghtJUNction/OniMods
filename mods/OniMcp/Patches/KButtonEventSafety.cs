@@ -1,23 +1,9 @@
 using HarmonyLib;
-using KMod;
-using OniMcp.Config;
-using OniMcp.Server;
-using OniMcp.Support;
-using OniMcp.Tools;
-using PeterHan.PLib.Core;
-using PeterHan.PLib.Database;
-using PeterHan.PLib.Options;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using UnityEngine;
 
 namespace OniMcp
 {
-    /// <summary>
-    /// Mod 入口类。游戏加载时自动实例化。
-    /// </summary>
+    /// <summary>Expands ONI's action bitmap when mods add actions beyond its original size.</summary>
     public static class KButtonEvent_BoolArrayCtor_Patch
     {
         public static void Postfix(KButtonEvent __instance)
@@ -26,7 +12,7 @@ namespace OniMcp
         }
     }
 
-public static class KButtonEvent_ActionCtor_Patch
+    public static class KButtonEvent_ActionCtor_Patch
     {
         public static void Postfix(KButtonEvent __instance)
         {
@@ -90,5 +76,5 @@ public static class KButtonEvent_ActionCtor_Patch
         {
             return TryGetActionArray(buttonEvent, out var isAction) ? isAction.Length : 0;
         }
-        }
+    }
 }

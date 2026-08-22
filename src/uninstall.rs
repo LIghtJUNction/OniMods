@@ -29,12 +29,10 @@ pub fn run(cfg: &Config, selected: &SelectedMod, scope: UninstallScope) -> Resul
     }
 
     match scope {
-        UninstallScope::Local | UninstallScope::All => {
-            if local_dir.exists() {
-                fs::remove_dir_all(&local_dir)
-                    .with_context(|| format!("卸载 Local 目录失败：{}", local_dir.display()))?;
-                uninstalled.push(format!("Local/{} 已删除", selected.name));
-            }
+        UninstallScope::Local | UninstallScope::All if local_dir.exists() => {
+            fs::remove_dir_all(&local_dir)
+                .with_context(|| format!("卸载 Local 目录失败：{}", local_dir.display()))?;
+            uninstalled.push(format!("Local/{} 已删除", selected.name));
         }
         _ => {}
     }

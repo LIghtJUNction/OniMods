@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const CONFIG_FILE: &str = "onim.toml";
@@ -76,7 +76,7 @@ fn auto_detect() -> Option<PathBuf> {
     None
 }
 
-fn validate_game_path(path: &PathBuf) -> Result<Vec<String>> {
+fn validate_game_path(path: &Path) -> Result<Vec<String>> {
     let mut errors = vec![];
     let managed = if cfg!(target_os = "macos") {
         let mac = path.join("OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed");
@@ -153,13 +153,13 @@ pub fn run() -> Result<()> {
     if config_path.exists() {
         let content = fs::read_to_string(&config_path).unwrap_or_default();
         for line in content.lines() {
-            if line.trim_start().starts_with("game_path") {
-                if let Some((_, val)) = line.split_once('=') {
-                    let p = val.trim().trim_matches('"').trim_matches('\'');
-                    let pb = PathBuf::from(p);
-                    if pb.exists() {
-                        game_path = Some(pb);
-                    }
+            if line.trim_start().starts_with("game_path")
+                && let Some((_, val)) = line.split_once('=')
+            {
+                let p = val.trim().trim_matches('"').trim_matches('\'');
+                let pb = PathBuf::from(p);
+                if pb.exists() {
+                    game_path = Some(pb);
                 }
             }
         }
@@ -173,15 +173,15 @@ pub fn run() -> Result<()> {
         }
     }
 
-    if game_path.is_none() {
-        if let Some(detected) = auto_detect() {
-            println!("\n自动检测到游戏路径：{}", detected.display());
-            let answer = prompt("使用此路径？ [Y/n] ", Some("Y"))?;
-            if answer.eq_ignore_ascii_case("n") {
-                game_path = None;
-            } else {
-                game_path = Some(detected);
-            }
+    if game_path.is_none()
+        && let Some(detected) = auto_detect()
+    {
+        println!("\n自动检测到游戏路径：{}", detected.display());
+        let answer = prompt("使用此路径？ [Y/n] ", Some("Y"))?;
+        if answer.eq_ignore_ascii_case("n") {
+            game_path = None;
+        } else {
+            game_path = Some(detected);
         }
     }
 
@@ -194,7 +194,7 @@ pub fn run() -> Result<()> {
         game_path = Some(PathBuf::from(input));
     }
 
-    let game_path = game_path.unwrap();
+    let game_path = game_path.ok_or_else(|| anyhow::anyhow!("未提供游戏路径"))?;
 
     // 2. 验证
     println!("\n🔍 验证游戏文件...");

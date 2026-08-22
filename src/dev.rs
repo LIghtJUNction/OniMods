@@ -11,9 +11,10 @@ use crate::build;
 use crate::config::{Config, SelectedMod};
 
 pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
-    let repo_root = env::var_os("ONI_CLI_REPO_ROOT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| env::current_dir().unwrap());
+    let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
+        Some(path) => PathBuf::from(path),
+        None => env::current_dir().context("读取当前目录失败")?,
+    };
 
     // 1. 构建
     build::run(cfg, selected, false)?;

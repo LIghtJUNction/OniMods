@@ -1,0 +1,12 @@
+{
+  "minLines": 20,
+  "minTokens": 100,
+  "ignore": [
+    "**/bin/**",
+    "**/obj/**",
+    "**/dist/**",
+    "**/translations/**",
+    "**/docs/**",
+    "**/*.po"
+  ]
+}

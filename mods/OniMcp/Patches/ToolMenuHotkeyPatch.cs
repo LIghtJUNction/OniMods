@@ -1,23 +1,12 @@
 using HarmonyLib;
-using KMod;
-using OniMcp.Config;
-using OniMcp.Server;
 using OniMcp.Support;
-using OniMcp.Tools;
-using PeterHan.PLib.Core;
-using PeterHan.PLib.Database;
-using PeterHan.PLib.Options;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
 namespace OniMcp
 {
-    /// <summary>
-    /// Mod 入口类。游戏加载时自动实例化。
-    /// </summary>
+    /// <summary>Handles ToolMenu input without indexing invalid actions added by other mods.</summary>
     public static class ToolMenu_OnKeyDown_Patch
     {
         private static readonly FieldInfo RowsField = AccessTools.Field(typeof(ToolMenu), "rows");

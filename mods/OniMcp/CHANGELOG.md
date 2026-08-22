@@ -2,6 +2,11 @@
 
 Generated from `git log -- mods/OniMcp`.
 
+## 2026-08-23 — 0.2.2
+
+- 移除 OniMcp 源码中的 680 条未使用 `using`，补齐解决方案与 .NET Framework 引用程序集配置；Release 构建在警告即错误模式下通过。
+- Remove 680 unused `using` directives, add solution and .NET Framework reference-assembly support, and pass the Release build with warnings treated as errors.
+- MCP 工具、协议与存档行为不变。 / MCP tools, protocol behavior, and save behavior are unchanged.
 
 - [21dc419](https://github.com/LIghtJUNction/OniMods/commit/21dc419c4263437a3b2158221b6d93811ab074cd): 2026-07-17 - feat(oni-mcp): add duplicant speech bubbles
 - [7dd8664](https://github.com/LIghtJUNction/OniMods/commit/7dd866439b378f397c1e9db4577a72aadba200ff): 2026-07-17 - fix(oni-mcp): preserve completed restart jobs

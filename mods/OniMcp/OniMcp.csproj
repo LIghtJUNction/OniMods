@@ -21,7 +21,7 @@
     <ModTitle>ONI MCP Server</ModTitle>
     <ModDescription>ONI MCP Server - /mcp/ exposes the Model Context Protocol endpoint. The root path shows a virtual save and world file browser for feedback.</ModDescription>
     <ModStaticID>LIghtJUNction.OniMcp</ModStaticID>
-    <ModVersion>0.2.1</ModVersion>
+    <ModVersion>0.2.2</ModVersion>
 
     <!-- mod_info.yaml 元数据 -->
     <ModApiVersion>2</ModApiVersion>
@@ -112,6 +112,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
     <PackageReference Include="PLib" Version="4.24.0" GeneratePathProperty="true" />
   </ItemGroup>
 

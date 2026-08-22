@@ -8,11 +8,15 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
     <ModTitle>CycleTrim</ModTitle>
-    <ModDescription>Reduces redundant smart reservoir signals, streamlines fetch pickup candidates, alternates expensive pickup/chore refresh for busy duplicants only, and throttles stationary-critter navigation probing, while idle duplicants and explicit priority updates remain immediate. / 减少智能储液罐/气罐重复信号、优化拾取候选选择，仅对忙碌复制人隔次执行高开销的拾取与差事重选，并对静止小动物的导航探针调用进行节流；空闲复制人与显式优先更新仍保持即时。</ModDescription>
+    <ModDescription>Reduces redundant smart reservoir signals, streamlines fetch pickup candidates, limits expensive pickup/chore refreshes for active duplicants only, and throttles stationary-critter navigation probing; IdleChore, idle duplicants, and explicit priority updates retain the vanilla immediate path. / 减少智能储液罐/气罐重复信号、优化拾取候选选择，仅限制真正忙碌复制人的高开销拾取与差事刷新，并对静止小动物的导航探针调用进行节流；IdleChore、空闲复制人与显式优先更新均保留原版即时路径。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
-    <ModVersion>0.3.0</ModVersion>
+    <ModVersion>0.3.1</ModVersion>
     <ModApiVersion>2</ModApiVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="0Harmony">

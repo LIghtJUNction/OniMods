@@ -6,9 +6,10 @@ use std::process::Command;
 use crate::config::{Config, SelectedMod};
 
 pub fn run(cfg: &Config, selected: &SelectedMod, release: bool) -> Result<()> {
-    let repo_root = env::var_os("ONI_CLI_REPO_ROOT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| env::current_dir().unwrap());
+    let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
+        Some(path) => PathBuf::from(path),
+        None => env::current_dir().context("读取当前目录失败")?,
+    };
 
     let mod_project = selected.config.project_abs(&repo_root);
     println!("📦 构建 Mod: {} ({})", selected.name, mod_project.display());

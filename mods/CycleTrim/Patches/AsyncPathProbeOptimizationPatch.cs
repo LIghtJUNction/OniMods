@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -160,7 +159,8 @@ namespace CycleTrim.Patches
             private static IEnumerable<CodeInstruction> Transpiler(
                 IEnumerable<CodeInstruction> instructions)
             {
-                var list = new List<CodeInstruction>(instructions);
+                var original = new List<CodeInstruction>(instructions);
+                var list = new List<CodeInstruction>(original);
                 var matches = 0;
                 var replacement = AccessTools.Method(
                     typeof(AsyncPathProbeOptimizationPatch),
@@ -178,9 +178,10 @@ namespace CycleTrim.Patches
                 }
                 if (matches != 1)
                 {
-                    throw new InvalidOperationException(
-                        "CycleTrim expected exactly one TickFrame queue limit constant, found "
-                        + matches + ".");
+                    UnityEngine.Debug.LogWarning(
+                        "[CycleTrim] Skipping AsyncPathProber.Manager.TickFrame optimization: "
+                        + "expected one queue-limit constant, found " + matches + ".");
+                    return original;
                 }
                 return list;
             }

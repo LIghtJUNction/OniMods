@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace OniMcp.Support
 {
     public static class OniMcpLog

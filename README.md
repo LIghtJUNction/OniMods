@@ -59,7 +59,7 @@ The repository is organized as a **two-part platform**:
 ## Supported Modules
 
 | Module | Path | Scope |
-|---|---|---|
+| --- | --- | --- |
 | `onim` | [src/](src/) | Rust CLI for mod lifecycle management |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP server mod and tool surface |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | Lightweight performance mod targeting measured simulation hot paths |
@@ -121,6 +121,8 @@ See the full runtime docs in [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md
 2. Scaffold mod with `onim init`
 3. Iterate quickly via `onim dev -m <mod>`
 4. Build/publish through `onim build` and `onim publish`
+
+CycleTrim and OniMcp use the locked, headless workflow in [docs/steam-publishing.md](docs/steam-publishing.md).
 
 ## Repository Layout
 
@@ -184,7 +186,7 @@ cp Directory.Build.props.example Directory.Build.props
 ## Command Reference
 
 | Command | Purpose |
-|---|---|
+| --- | --- |
 | `onim setup` | initialize config and discover dependencies |
 | `onim doctor` | read-only health check for paths, tools, and configured mod sources |
 | `onim init <name>` | scaffold from template |
@@ -195,7 +197,7 @@ cp Directory.Build.props.example Directory.Build.props
 | `onim install` | release build + install to `mods/Local` |
 | `onim uninstall` | uninstall `dev/local/all` scoped mods |
 | `onim info` | show installed Dev/Local/Steam modules |
-| `onim publish` | publish to Steam Workshop |
+| `onim publish` | publish to Steam Workshop; supports `--non-interactive` and `--dry-run` |
 | `onim list` | list known mods in config |
 
 ## Development & Runtime Notes

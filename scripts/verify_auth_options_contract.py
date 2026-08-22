@@ -68,6 +68,7 @@ def main() -> int:
     }
     for property_name, category in expected_options.items():
         pattern = rf'\[Option\([^\n]+"{category}"\)\][\s\S]{{0,160}}public [^\n]+ {property_name}\b'
+        # pi-lens-ignore: python-unsafe-regex
         assert re.search(pattern, options), f"{property_name} missing from {category}"
     create_options = method_body(options, "public IEnumerable<IOptionsEntry> CreateOptions")
     for entry in ("OniMcpStatus", "OpenBrowser", "RestartMcpServer", "OpenConfigFolder"):

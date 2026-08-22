@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <OniGamePath Condition="'$(OniGamePath)' == ''">$(HOME)/.local/share/Steam/steamapps/common/OxygenNotIncluded</OniGamePath>
+    <OniManagedPath Condition="'$(OniManagedPath)' == ''">$(OniGamePath)/OxygenNotIncluded_Data/Managed</OniManagedPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Steamworks.NET">
+      <HintPath>$(OniManagedPath)/com.rlabrecque.steamworks.net.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <None Include="$(OniGamePath)/OxygenNotIncluded_Data/Plugins/libsteam_api.so"
+          Link="libsteam_api.so"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="steam_appid.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

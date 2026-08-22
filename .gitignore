@@ -44,4 +44,5 @@ __pycache__
 .env
 .tokensave/
 .codegraph/
+.memsearch/
 .agent_backups/

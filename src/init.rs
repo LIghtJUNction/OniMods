@@ -78,7 +78,7 @@ pub fn run(
     let old_csproj = mod_dir.join("OniModTemplate.csproj");
     let new_csproj = mod_dir.join(format!("{}.csproj", namespace));
     if old_csproj.exists() {
-        fs::rename(&old_csproj, &new_csproj).with_context(|| format!("重命名 .csproj 失败"))?;
+        fs::rename(&old_csproj, &new_csproj).with_context(|| "重命名 .csproj 失败".to_string())?;
     }
 
     // 3. 修改 .csproj（先替换完整特定字符串，再替换通用名称）

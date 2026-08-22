@@ -1,0 +1,5 @@
+title = "OniMods gitleaks configuration"
+
+[allowlist]
+description = "Local secrets belong in the git-ignored .env file"
+paths = ['''^\.env$''']

@@ -1,23 +1,14 @@
 using HarmonyLib;
-using KMod;
 using OniMcp.Config;
-using OniMcp.Server;
 using OniMcp.Support;
 using OniMcp.Tools;
-using PeterHan.PLib.Core;
-using PeterHan.PLib.Database;
-using PeterHan.PLib.Options;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using UnityEngine;
 
 namespace OniMcp
 {
-    /// <summary>
-    /// Mod 入口类。游戏加载时自动实例化。
-    /// </summary>
+    /// <summary>Initializes game-specific MCP services after the ONI database is ready.</summary>
     [HarmonyPatch(typeof(Db), "Initialize")]
     public static class Db_Initialize_Patch
     {

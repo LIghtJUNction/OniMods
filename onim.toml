@@ -8,5 +8,8 @@ default_mod = "OniMcp"
 path = "mods/OniMcp"
 # Steam 创意工坊 ID，首次上传后填写，后续发布时自动使用
 publishedfileid = "3731864673"
+workshop_title = "ONI MCP Server (Early Access)"
 [mods.CycleTrim]
 path = "mods/CycleTrim"
+publishedfileid = "3766318556"
+workshop_title = "CycleTrim (Early Development)"

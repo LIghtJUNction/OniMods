@@ -81,6 +81,18 @@ enum Commands {
         /// 自动使用最新更新日志作为上传说明，不弹更新说明输入
         #[arg(long)]
         auto_note: bool,
+        /// 禁止所有提示和 GUI 回退；适合 CI/无人值守发布
+        #[arg(long, visible_alias = "yes", conflicts_with = "gui")]
+        non_interactive: bool,
+        /// 仅构建并生成 Workshop VDF，不调用 SteamCMD
+        #[arg(long, conflicts_with = "gui")]
+        dry_run: bool,
+        /// SteamCMD 可执行文件路径（也可使用 STEAMCMD 环境变量）
+        #[arg(long, value_name = "PATH")]
+        steamcmd: Option<PathBuf>,
+        /// Steam 登录账号（也可使用 STEAM_USERNAME 环境变量）
+        #[arg(long, value_name = "USER")]
+        steam_user: Option<String>,
     },
     /// 列出所有配置的 Mod
     List,
@@ -159,9 +171,27 @@ fn main() -> Result<()> {
             uninstall::run(&cfg, &selected, scope)
         }
         Commands::Info => info::run(&cfg),
-        Commands::Publish { gui, auto_note } => {
+        Commands::Publish {
+            gui,
+            auto_note,
+            non_interactive,
+            dry_run,
+            steamcmd,
+            steam_user,
+        } => {
             let selected = cfg.select_mod(cli.r#mod)?;
-            publish::run(&cfg, &selected, gui, auto_note)
+            publish::run(
+                &cfg,
+                &selected,
+                publish::PublishOptions {
+                    use_gui: gui,
+                    auto_note,
+                    non_interactive,
+                    dry_run,
+                    steamcmd,
+                    steam_user,
+                },
+            )
         }
         Commands::List => {
             println!("已配置的 Mod：");
