@@ -19,36 +19,21 @@ pub struct PublishOptions {
 }
 
 fn uploader_path() -> Option<PathBuf> {
-    let home = env::var_os("HOME")?;
-
     #[cfg(target_os = "linux")]
-    {
-        let p = PathBuf::from(&home)
-            .join(".local/share/Steam/steamapps/common/OxygenNotIncludedUploader/OniUploader64");
-        if p.exists() {
-            return Some(p);
-        }
-    }
-
+    let relative = Path::new("steamapps/common/OxygenNotIncludedUploader/OniUploader64");
     #[cfg(target_os = "macos")]
-    {
-        let p = PathBuf::from(&home)
-            .join("Library/Application Support/Steam/steamapps/common/OxygenNotIncludedUploader/OxygenNotIncludedUploader.app/Contents/MacOS/OxygenNotIncludedUploader");
-        if p.exists() {
-            return Some(p);
-        }
-    }
-
+    let relative = Path::new(
+        "steamapps/common/OxygenNotIncludedUploader/OxygenNotIncludedUploader.app/Contents/MacOS/OxygenNotIncludedUploader",
+    );
     #[cfg(target_os = "windows")]
-    {
-        for p in [
-            "C:\\Program Files (x86)\\Steam\\steamapps\\common\\OxygenNotIncludedUploader\\OxygenNotIncludedUploader.exe",
-            "C:\\Program Files\\Steam\\steamapps\\common\\OxygenNotIncludedUploader\\OxygenNotIncludedUploader.exe",
-        ] {
-            let pb = PathBuf::from(p);
-            if pb.exists() {
-                return Some(pb);
-            }
+    let relative =
+        Path::new("steamapps/common/OxygenNotIncludedUploader/OxygenNotIncludedUploader.exe");
+
+    #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+    for steam_root in crate::steam::library_roots() {
+        let candidate = steam_root.join(relative);
+        if candidate.is_file() {
+            return Some(candidate);
         }
     }
 
@@ -86,6 +71,9 @@ fn generate_vdf(
 ) -> Result<PathBuf> {
     // Keep uploader metadata outside contentfolder so it is not shipped as mod content.
     let vdf_path = dist_mod.with_extension("workshop.vdf");
+    let safe_publishedfileid = escape_vdf_value(publishedfileid);
+    let safe_contentfolder = vdf_path_value(dist_mod, "contentfolder")?;
+    let safe_previewfile = vdf_path_value(preview, "previewfile")?;
     let safe_title = escape_vdf_value(title);
     let safe_description = escape_vdf_value(description);
     let safe_changenote = escape_vdf_value(changenote);
@@ -102,9 +90,9 @@ fn generate_vdf(
 	"changenote"	"{}"
 }}
 	"#,
-        publishedfileid,
-        dist_mod.to_string_lossy().replace('\\', "/"),
-        preview.to_string_lossy().replace('\\', "/"),
+        safe_publishedfileid,
+        safe_contentfolder,
+        safe_previewfile,
         safe_title,
         safe_description,
         safe_changenote,
@@ -116,15 +104,109 @@ fn generate_vdf(
 
 fn yaml_value(yaml: &str, key: &str) -> Option<String> {
     yaml.lines().find_map(|line| {
-        let (candidate, value) = line.trim().split_once(':')?;
-        (candidate.trim() == key).then(|| {
-            value
-                .trim()
-                .trim_matches('"')
-                .trim_matches('\'')
-                .to_string()
-        })
+        let (candidate, value) = split_yaml_mapping(line)?;
+        (candidate.trim() == key).then(|| parse_yaml_scalar(value))
     })
+}
+
+/// Split one simple YAML mapping without mistaking a colon inside a quoted key
+/// for the key/value separator. The generated mod metadata is flat, so a full
+/// YAML dependency would be unnecessary here.
+fn split_yaml_mapping(line: &str) -> Option<(&str, &str)> {
+    let line = line.trim();
+    if line.is_empty() || line.starts_with('#') {
+        return None;
+    }
+
+    let mut quote = None;
+    let mut escaped = false;
+    for (index, character) in line.char_indices() {
+        match quote {
+            Some('"') => {
+                if escaped {
+                    escaped = false;
+                } else if character == '\\' {
+                    escaped = true;
+                } else if character == '"' {
+                    quote = None;
+                }
+            }
+            Some('\'') => {
+                if character == '\'' {
+                    quote = None;
+                }
+            }
+            None => match character {
+                '"' | '\'' => quote = Some(character),
+                ':' => {
+                    return Some((&line[..index], &line[index + character.len_utf8()..]));
+                }
+                _ => {}
+            },
+            _ => unreachable!("yaml quote state only contains YAML quote characters"),
+        }
+    }
+    None
+}
+
+fn parse_yaml_scalar(value: &str) -> String {
+    let value = strip_yaml_comment(value).trim();
+    let bytes = value.as_bytes();
+    if bytes.len() >= 2 && bytes.first() == Some(&b'"') && bytes.last() == Some(&b'"') {
+        return serde_json::from_str(value)
+            .unwrap_or_else(|_| value[1..value.len() - 1].to_string());
+    }
+    if bytes.len() >= 2 && bytes.first() == Some(&b'\'') && bytes.last() == Some(&b'\'') {
+        return value[1..value.len() - 1].replace("''", "'");
+    }
+    value.to_string()
+}
+
+fn strip_yaml_comment(value: &str) -> &str {
+    let first_non_whitespace = value
+        .char_indices()
+        .find_map(|(index, character)| (!character.is_whitespace()).then_some((index, character)));
+    let quote = first_non_whitespace.and_then(|(index, character)| {
+        matches!(character, '"' | '\'').then_some((index, character))
+    });
+
+    let mut chars = value.char_indices().peekable();
+    let mut in_quote = false;
+    let mut escaped = false;
+    let mut preceded_by_whitespace = true;
+    while let Some((index, character)) = chars.next() {
+        if quote.is_some_and(|(quote_index, _)| quote_index == index) {
+            in_quote = true;
+            preceded_by_whitespace = false;
+            continue;
+        }
+
+        if in_quote {
+            match quote.map(|(_, character)| character) {
+                Some('"') => {
+                    if escaped {
+                        escaped = false;
+                    } else if character == '\\' {
+                        escaped = true;
+                    } else if character == '"' {
+                        in_quote = false;
+                    }
+                }
+                Some('\'') if character == '\'' => {
+                    if chars.peek().is_some_and(|(_, next)| *next == '\'') {
+                        chars.next();
+                    } else {
+                        in_quote = false;
+                    }
+                }
+                _ => {}
+            }
+        } else if character == '#' && preceded_by_whitespace {
+            return value[..index].trim_end();
+        }
+        preceded_by_whitespace = character.is_whitespace();
+    }
+    value
 }
 
 fn read_mod_info(dist_mod: &Path) -> Option<(String, String, String)> {
@@ -150,6 +232,13 @@ fn escape_vdf_value(value: &str) -> String {
         .replace('\"', "\\\"")
         .replace('\r', "")
         .replace('\n', "\\n")
+}
+
+fn vdf_path_value(path: &Path, field: &str) -> Result<String> {
+    let value = path
+        .to_str()
+        .with_context(|| format!("{field} 路径不是有效 UTF-8：{}", path.display()))?;
+    Ok(escape_vdf_value(&value.replace('\\', "/")))
 }
 
 fn steam_description_file(dist_mod: &Path, name: &str) -> Option<String> {
@@ -555,6 +644,55 @@ mod tests {
         assert!(summary.contains("- Fix idle chores"));
         assert!(!summary.contains("older"));
         Ok(())
+    }
+
+    #[test]
+    fn yaml_value_preserves_colons_and_quoted_comments() {
+        let yaml = r#"
+            title: "CycleTrim: Experimental"
+            description: 'Keep colon: and # hash'
+            version: 1.2.3 # release version
+        "#;
+
+        assert_eq!(
+            yaml_value(yaml, "title").as_deref(),
+            Some("CycleTrim: Experimental")
+        );
+        assert_eq!(
+            yaml_value(yaml, "description").as_deref(),
+            Some("Keep colon: and # hash")
+        );
+        assert_eq!(yaml_value(yaml, "version").as_deref(), Some("1.2.3"));
+        assert_eq!(
+            yaml_value("title: Bob's Mod # release note", "title").as_deref(),
+            Some("Bob's Mod")
+        );
+        assert_eq!(
+            yaml_value("title: 'Bob''s # Mod' # release note", "title").as_deref(),
+            Some("Bob's # Mod")
+        );
+    }
+
+    #[test]
+    fn vdf_paths_escape_keyvalues_characters() -> TestResult {
+        let path = Path::new("mods/quoted\"name\npreview.png");
+
+        assert_eq!(
+            vdf_path_value(path, "previewfile")?,
+            r#"mods/quoted\"name\npreview.png"#
+        );
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn vdf_paths_reject_non_utf8() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let path = PathBuf::from(OsString::from_vec(vec![b'/', 0xff]));
+
+        assert!(vdf_path_value(&path, "contentfolder").is_err());
     }
 
     #[test]

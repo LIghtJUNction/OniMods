@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -19,8 +20,14 @@ internal static partial class WorkshopMetadataReader
         }
 
         var values = ReadEntries(vdfPath);
-        RequireValue(values, "appid", WorkshopTarget.AppId.ToString());
-        RequireValue(values, "publishedfileid", WorkshopTarget.WorkshopId.ToString());
+        RequireValue(
+            values,
+            "appid",
+            WorkshopTarget.AppId.ToString(CultureInfo.InvariantCulture));
+        RequireValue(
+            values,
+            "publishedfileid",
+            WorkshopTarget.WorkshopId.ToString(CultureInfo.InvariantCulture));
         var contentFolder = RequirePath(values, "contentfolder", directory: true);
         var combinedDescription = RequireText(values, "description");
         var metadata = new WorkshopMetadata(

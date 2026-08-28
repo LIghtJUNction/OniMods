@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using CycleTrim.Core;
 
 namespace CycleTrim.BrainBenchmarks
@@ -34,7 +35,7 @@ namespace CycleTrim.BrainBenchmarks
                 var reduction = 100.0 * avoided / Requests;
                 Console.WriteLine(
                     hitPercent + "% | " + executions + " | " + avoided +
-                    " | " + reduction.ToString("F2") + "%");
+                    " | " + reduction.ToString("F2", CultureInfo.InvariantCulture) + "%");
             }
         }
 

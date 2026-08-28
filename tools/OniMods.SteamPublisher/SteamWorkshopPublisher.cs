@@ -1,11 +1,11 @@
 using Steamworks;
 
-internal sealed class SteamWorkshopPublisher
+internal static class SteamWorkshopPublisher
 {
     private static readonly TimeSpan QueryTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan UploadTimeout = TimeSpan.FromMinutes(20);
 
-    internal void ValidateAccount()
+    internal static void ValidateAccount()
     {
         if (!SteamUser.BLoggedOn())
         {
@@ -19,7 +19,7 @@ internal sealed class SteamWorkshopPublisher
         }
     }
 
-    internal SteamUGCDetails_t QueryTarget()
+    internal static SteamUGCDetails_t QueryTarget()
     {
         var fileId = new PublishedFileId_t(WorkshopTarget.WorkshopId);
         var query = SteamUGC.CreateQueryUGCDetailsRequest([fileId], 1);
@@ -47,7 +47,7 @@ internal sealed class SteamWorkshopPublisher
         }
     }
 
-    internal void SubmitUpdate(
+    internal static void SubmitUpdate(
         WorkshopMetadata metadata, SteamUGCDetails_t current, bool updatePreview)
     {
         var handle = StartUpdate();
@@ -70,7 +70,7 @@ internal sealed class SteamWorkshopPublisher
         SubmitLanguageUpdate("schinese", metadata.ChineseDescription);
     }
 
-    internal void SubmitLocalizedMetadata(WorkshopMetadata metadata)
+    internal static void SubmitLocalizedMetadata(WorkshopMetadata metadata)
     {
         SubmitLanguageUpdate("english", metadata.EnglishDescription);
         SubmitLanguageUpdate("schinese", metadata.ChineseDescription);

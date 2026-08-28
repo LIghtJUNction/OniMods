@@ -12,6 +12,7 @@ mod init;
 mod install;
 mod publish;
 mod setup;
+mod steam;
 mod uninstall;
 
 #[derive(Parser)]

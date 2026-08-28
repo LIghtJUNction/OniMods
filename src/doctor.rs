@@ -1,5 +1,6 @@
 use anyhow::{Result, bail};
 use std::env;
+#[cfg(unix)]
 use std::fs;
 use std::path::{Path, PathBuf};
 

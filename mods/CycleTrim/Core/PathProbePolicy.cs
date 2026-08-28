@@ -64,6 +64,16 @@ namespace CycleTrim.Core
                 return hash * 397 ^ AbilitiesFingerprint;
             }
         }
+
+        public static bool operator ==(PathProbeStamp left, PathProbeStamp right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(PathProbeStamp left, PathProbeStamp right)
+        {
+            return !left.Equals(right);
+        }
     }
 
     public sealed class PathProbeAdmissionState
@@ -160,9 +170,13 @@ namespace CycleTrim.Core
     {
         public static int ComputeQueueQuota(int workerCount, int inFlightCount)
         {
-            if (workerCount < 0 || inFlightCount < 0)
+            if (workerCount < 0)
             {
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(nameof(workerCount));
+            }
+            if (inFlightCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(inFlightCount));
             }
             return Math.Max(1, Math.Min(4, workerCount + 1 - inFlightCount));
         }

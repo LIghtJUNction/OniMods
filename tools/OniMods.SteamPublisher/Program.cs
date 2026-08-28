@@ -1,7 +1,12 @@
+using System.Globalization;
 using Steamworks;
 
 internal static class Program
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "The CLI boundary converts every publisher failure into a non-zero exit code.")]
     public static int Main(string[] args)
     {
         try
@@ -45,8 +50,9 @@ internal static class Program
             Console.WriteLine($"{WorkshopTarget.DisplayName} Workshop VDF is valid");
             return 0;
         }
-        Environment.SetEnvironmentVariable("SteamAppId", WorkshopTarget.AppId.ToString());
-        Environment.SetEnvironmentVariable("SteamGameId", WorkshopTarget.AppId.ToString());
+        var appId = WorkshopTarget.AppId.ToString(CultureInfo.InvariantCulture);
+        Environment.SetEnvironmentVariable("SteamAppId", appId);
+        Environment.SetEnvironmentVariable("SteamGameId", appId);
         Directory.SetCurrentDirectory(AppContext.BaseDirectory);
 
         if (!SteamAPI.IsSteamRunning())
@@ -60,9 +66,8 @@ internal static class Program
 
         try
         {
-            var publisher = new SteamWorkshopPublisher();
-            publisher.ValidateAccount();
-            var before = publisher.QueryTarget();
+            SteamWorkshopPublisher.ValidateAccount();
+            var before = SteamWorkshopPublisher.QueryTarget();
             SteamWorkshopPublisher.PrintTarget(before);
             if (queryOnly)
             {
@@ -72,13 +77,13 @@ internal static class Program
 
             if (metadataOnly)
             {
-                publisher.SubmitLocalizedMetadata(metadata!);
+                SteamWorkshopPublisher.SubmitLocalizedMetadata(metadata!);
             }
             else
             {
-                publisher.SubmitUpdate(metadata!, before, updatePreview);
+                SteamWorkshopPublisher.SubmitUpdate(metadata!, before, updatePreview);
             }
-            var after = publisher.QueryTarget();
+            var after = SteamWorkshopPublisher.QueryTarget();
             SteamWorkshopPublisher.PrintTarget(after);
             if (after.m_rtimeUpdated < before.m_rtimeUpdated)
             {

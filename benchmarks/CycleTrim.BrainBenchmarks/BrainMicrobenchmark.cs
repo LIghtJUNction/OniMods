@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using CycleTrim.Core;
 
@@ -61,9 +62,14 @@ namespace CycleTrim.BrainBenchmarks
                 " measured samples; reported elapsed is median");
             Print("baseline", baseline);
             Print("candidate", candidate);
-            Console.WriteLine("speedup: " + speedup.ToString("F2") + "x");
-            Console.WriteLine("elapsed reduction: " + elapsedReduction.ToString("P2"));
-            Console.WriteLine("call reduction: " + callReduction.ToString("P2"));
+            Console.WriteLine(
+                "speedup: " + speedup.ToString("F2", CultureInfo.InvariantCulture) + "x");
+            Console.WriteLine(
+                "elapsed reduction: " +
+                elapsedReduction.ToString("P2", CultureInfo.InvariantCulture));
+            Console.WriteLine(
+                "call reduction: " +
+                callReduction.ToString("P2", CultureInfo.InvariantCulture));
             PathProbeCacheMatrixBenchmark.Run();
         }
 
@@ -192,8 +198,9 @@ namespace CycleTrim.BrainBenchmarks
         {
             Console.WriteLine(
                 name + ": calls=" + sample.Calls +
-                ", median=" + sample.ElapsedMilliseconds.ToString("F3") + " ms" +
-                ", checksum=0x" + sample.Checksum.ToString("X16"));
+                ", median=" +
+                sample.ElapsedMilliseconds.ToString("F3", CultureInfo.InvariantCulture) + " ms" +
+                ", checksum=0x" + sample.Checksum.ToString("X16", CultureInfo.InvariantCulture));
         }
     }
 }

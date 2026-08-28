@@ -27,6 +27,16 @@ Dry-run 检查：
 
 VDF 写入 `dist/<Mod>.workshop.vdf`，不会进入 Mod 内容目录。
 
+## 自定义 Steam 安装路径
+
+CLI 会读取平台默认 Steam 路径和 `steamapps/libraryfolders.vdf` 中的库目录。若 Steam 安装在未被自动发现的位置，可显式指定根目录：
+
+```bash
+ONIM_STEAM_ROOT=/path/to/Steam onim setup
+```
+
+该变量也适用于 CLI 查找 OniUploader；发布脚本本身仍使用 `STEAMCMD` 或系统中的 SteamCMD 路径。
+
 ## 无界面发布
 
 干净工作区：

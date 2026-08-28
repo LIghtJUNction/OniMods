@@ -34,42 +34,17 @@ fn prompt(question: &str, default: Option<&str>) -> Result<String> {
 }
 
 fn auto_detect() -> Option<PathBuf> {
-    let home = env::var_os("HOME")?;
-
-    #[cfg(target_os = "linux")]
-    {
-        let p = PathBuf::from(&home).join(".local/share/Steam/steamapps/common/OxygenNotIncluded");
-        if p.join("OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll")
-            .exists()
-        {
-            return Some(p);
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        let p = PathBuf::from(&home)
-            .join("Library/Application Support/Steam/steamapps/common/OxygenNotIncluded");
-        let mac_managed = p.join(
+    for steam_root in crate::steam::library_roots() {
+        let game_path = steam_root.join("steamapps/common/OxygenNotIncluded");
+        #[cfg(target_os = "macos")]
+        let assembly = game_path.join(
             "OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll",
         );
-        if mac_managed.exists() {
-            return Some(p);
-        }
-    }
+        #[cfg(not(target_os = "macos"))]
+        let assembly = game_path.join("OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll");
 
-    #[cfg(target_os = "windows")]
-    {
-        for base in [
-            "C:\\Program Files (x86)\\Steam\\steamapps\\common\\OxygenNotIncluded",
-            "C:\\Program Files\\Steam\\steamapps\\common\\OxygenNotIncluded",
-        ] {
-            let p = PathBuf::from(base);
-            if p.join("OxygenNotIncluded_Data\\Managed\\Assembly-CSharp.dll")
-                .exists()
-            {
-                return Some(p);
-            }
+        if assembly.is_file() {
+            return Some(game_path);
         }
     }
 

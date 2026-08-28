@@ -299,10 +299,13 @@ impl Config {
                 DEFAULT_CONFIG_NAME
             );
         }
+        // HashMap iteration order is deliberately unspecified. Use the same
+        // alphabetical fallback as `select_all_mods` so a missing default is
+        // deterministic across runs and platforms.
         let fallback = self
             .mods
             .keys()
-            .next()
+            .min()
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("没有可选择的 Mod"))?;
         let key = match explicit {
@@ -491,11 +494,12 @@ fn game_user_data_dir() -> Result<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_config_for_doctor;
-    use std::path::Path;
+    use super::{Config, ModConfig, parse_config_for_doctor};
+    use std::collections::HashMap;
+    use std::path::{Path, PathBuf};
 
     #[test]
-    fn doctor_config_parser_should_preserve_resolvable_mods() {
+    fn doctor_config_parser_should_preserve_resolvable_mods() -> anyhow::Result<()> {
         let mods = parse_config_for_doctor(
             r#"
 default_mod = "Example"
@@ -503,12 +507,45 @@ default_mod = "Example"
 [mods.Example]
 path = "mods/Example"
 "#,
-        )
-        .expect("valid doctor config should parse");
+        )?;
 
         assert_eq!(
             mods["Example"].project_abs(Path::new("/repo")),
             Path::new("/repo/mods/Example")
         );
+        Ok(())
+    }
+
+    #[test]
+    fn select_mod_without_default_uses_sorted_name() -> anyhow::Result<()> {
+        let mods = HashMap::from([
+            (
+                "Zulu".to_string(),
+                ModConfig {
+                    path: PathBuf::from("mods/Zulu"),
+                    name: None,
+                    publishedfileid: None,
+                    workshop_title: None,
+                },
+            ),
+            (
+                "Alpha".to_string(),
+                ModConfig {
+                    path: PathBuf::from("mods/Alpha"),
+                    name: None,
+                    publishedfileid: None,
+                    workshop_title: None,
+                },
+            ),
+        ]);
+        let config = Config {
+            game_path: PathBuf::new(),
+            mods,
+            default_mod: None,
+        };
+
+        let selected = config.select_mod(None)?;
+        assert_eq!(selected.name, "Alpha");
+        Ok(())
     }
 }

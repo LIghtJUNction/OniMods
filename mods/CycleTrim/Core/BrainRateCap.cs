@@ -76,6 +76,10 @@ namespace CycleTrim.Core
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Performance",
+            "CA1822:Mark members as static",
+            Justification = "The instance API makes the priority bypass explicit at the owning rate cap.")]
         public void RunPriority(System.Action updateBrain)
         {
             if (updateBrain == null)

@@ -5,6 +5,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
+    <!-- Developer-only output is not localized, one-shot test vectors stay inline,
+         and linked Core sources must remain compatible with the net48/C# 7.3 mod. -->
+    <NoWarn>$(NoWarn);CA1303;CA1510;CA1512;CA1515;CA1815;CA1861</NoWarn>
     <NuGetAudit>false</NuGetAudit>
     <RestoreConfigFile>$(MSBuildProjectDirectory)/NuGet.Config</RestoreConfigFile>
     <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>

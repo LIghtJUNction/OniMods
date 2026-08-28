@@ -205,6 +205,24 @@ check_cached_login() {
   }
 }
 
+upload_vdf_with_steamcmd() {
+  local output
+  output="$("$steamcmd_path" \
+    +login "$steam_user" \
+    +workshop_build_item "$VDF_PATH" \
+    +quit 2>&1)" || {
+    tail -40 <<<"$output" >&2
+    echo "SteamCMD upload failed" >&2
+    exit 1
+  }
+  if grep -Eqi 'error!' <<<"$output"; then
+    tail -40 <<<"$output" >&2
+    echo "SteamCMD upload reported an error" >&2
+    exit 1
+  fi
+  echo "SteamCMD upload completed"
+}
+
 detect_steam_user() {
   if [[ -n "${STEAM_USERNAME:-}" ]]; then
     printf '%s\n' "$STEAM_USERNAME"
@@ -330,11 +348,12 @@ if [[ "$DRY_RUN" == true ]]; then
   exit 0
 fi
 
+# Builds and metadata generation can touch tracked files. Re-check immediately
+# before uploading so an unexpected mutation cannot be published silently.
+require_clean_worktree
+
 if [[ "$TRANSPORT" == "client" ]]; then
   run_publisher --vdf "$VDF_PATH"
 else
-  (cd "$ROOT" && cargo run --quiet --release -- \
-    --config "$ROOT/onim.toml" --mod "$MOD_KEY" publish \
-    --non-interactive --auto-note \
-    --steamcmd "$steamcmd_path" --steam-user "$steam_user")
+  upload_vdf_with_steamcmd
 fi

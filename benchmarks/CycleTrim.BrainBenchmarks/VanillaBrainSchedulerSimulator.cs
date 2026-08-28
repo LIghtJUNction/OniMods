@@ -15,9 +15,9 @@ namespace CycleTrim.BrainBenchmarks
         internal long CreatureCalls { get; }
     }
 
-    internal sealed class VanillaBrainSchedulerSimulator
+    internal static class VanillaBrainSchedulerSimulator
     {
-        internal BrainCallCounts Run(int framesPerSecond, int seconds)
+        internal static BrainCallCounts Run(int framesPerSecond, int seconds)
         {
             if (framesPerSecond <= 0)
             {
