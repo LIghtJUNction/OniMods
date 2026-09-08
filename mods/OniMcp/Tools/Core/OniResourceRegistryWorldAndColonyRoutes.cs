@@ -85,7 +85,7 @@ namespace OniMcp.Tools
                                             return ErrorResource(uri, "Tool not found: " + toolName);
                                         if (!string.Equals(tool.Mode, "read", StringComparison.OrdinalIgnoreCase))
                                             return ErrorResource(uri, "Only read tools can be exposed via oni://tools/read/{name}");
-                                        return ReadToolResource(uri, tool.Name, ParseQuery(parsed.Query), "application/json");
+                                        return ReadToolResource(uri, tool.Name, ParseQuery(parsed.Query, allowOperationSelectors: true), "application/json");
                                     }
                                 }
 

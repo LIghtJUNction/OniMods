@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <Compile Include="../../mods/OniMcp/Config/OniMcpOptions.cs" Link="OniMcpOptions.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Stubs.cs" />
+  </ItemGroup>
+</Project>

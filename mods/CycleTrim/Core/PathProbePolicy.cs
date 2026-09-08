@@ -105,6 +105,9 @@ namespace CycleTrim.Core
         {
             if (!supported)
             {
+                // Vanilla may replace the navigator's result with a probe whose
+                // abilities cannot be represented by this cache key.
+                Reset();
                 return true;
             }
             if (hasCompleted
@@ -117,12 +120,17 @@ namespace CycleTrim.Core
 
             queued = stamp;
             hasQueued = true;
+            // A replacement or bounded fallback must complete before another
+            // hit is possible, including when this queued order is discarded.
+            hasCompleted = false;
             consecutiveSkips = 0;
             return true;
         }
 
         public void MarkDequeued()
         {
+            // An untracked order must never inherit an earlier pending result.
+            hasInFlight = false;
             if (!hasQueued)
             {
                 return;
@@ -178,7 +186,7 @@ namespace CycleTrim.Core
             {
                 throw new ArgumentOutOfRangeException(nameof(inFlightCount));
             }
-            return Math.Max(1, Math.Min(4, workerCount + 1 - inFlightCount));
+            return (int)Math.Max(1L, Math.Min(4L, (long)workerCount + 1 - inFlightCount));
         }
     }
 }

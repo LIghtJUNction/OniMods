@@ -21,6 +21,7 @@ namespace CycleTrim.Patches
                 new VersionedRefreshGate(4);
             internal readonly VersionedRefreshGate ChoreGate =
                 new VersionedRefreshGate(4);
+            internal NavGrid NavGrid;
 
             internal void Invalidate()
             {
@@ -65,10 +66,17 @@ namespace CycleTrim.Patches
         }
 
         private static RefreshStamp CaptureStamp(
+            State state,
             ChoreConsumer consumer,
             Navigator navigator,
             Chore currentChore)
         {
+            if (!ReferenceEquals(state.NavGrid, navigator.NavGrid))
+            {
+                state.Reset();
+                state.NavGrid = navigator.NavGrid;
+            }
+
             ScheduleBlock scheduleBlock = null;
             var consumerState = consumer.consumerState;
             var schedulable = consumerState == null ? null : consumerState.schedulable;
@@ -127,7 +135,7 @@ namespace CycleTrim.Patches
                 }
 
                 return state.PickupGate.ShouldRefresh(
-                    CaptureStamp(consumer, navigator, currentChore));
+                    CaptureStamp(state, consumer, navigator, currentChore));
             }
         }
 
@@ -174,7 +182,7 @@ namespace CycleTrim.Patches
                 }
 
                 if (state.ChoreGate.ShouldRefresh(
-                    CaptureStamp(__instance, navigator, currentChore)))
+                    CaptureStamp(state, __instance, navigator, currentChore)))
                 {
                     return true;
                 }

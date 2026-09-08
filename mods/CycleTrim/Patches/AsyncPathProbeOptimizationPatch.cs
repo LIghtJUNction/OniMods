@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -35,7 +36,7 @@ namespace CycleTrim.Patches
         {
             internal readonly ConditionalWeakTable<Navigator, NavigatorState> Navigators =
                 new ConditionalWeakTable<Navigator, NavigatorState>();
-            internal int Tick;
+            internal volatile int Tick;
         }
 
         private sealed class NavigatorState
@@ -43,6 +44,7 @@ namespace CycleTrim.Patches
             internal readonly PathProbeAdmissionState Admission =
                 new PathProbeAdmissionState(MaxConsecutiveSkips);
             internal int LastTick = -1;
+            internal NavGrid NavGrid;
         }
 
         private static bool IsCompatible()
@@ -81,15 +83,31 @@ namespace CycleTrim.Patches
         {
             var managerState = States.GetValue(manager, StateFactory);
             var state = managerState.Navigators.GetOrCreateValue(navigator);
-            if (state.LastTick != managerState.Tick)
+            lock (state.Admission)
             {
-                lock (state.Admission)
+                if (state.LastTick != managerState.Tick)
                 {
                     state.Admission.BeginTick();
                     state.LastTick = managerState.Tick;
                 }
             }
             return state;
+        }
+
+        private static void ResetNavigatorState(
+            AsyncPathProber.Manager manager,
+            Navigator navigator)
+        {
+            ManagerState managerState;
+            NavigatorState state;
+            if (States.TryGetValue(manager, out managerState)
+                && managerState.Navigators.TryGetValue(navigator, out state))
+            {
+                lock (state.Admission)
+                {
+                    state.Admission.Reset();
+                }
+            }
         }
 
         private static PathProbeStamp CreateStamp(
@@ -170,8 +188,13 @@ namespace CycleTrim.Patches
                     if (list[index].opcode == OpCodes.Ldc_I4_4)
                     {
                         matches++;
-                        var labels = list[index].labels;
-                        list[index] = new CodeInstruction(OpCodes.Ldarg_0) { labels = labels };
+                        // Preserve branch labels and exception boundaries on
+                        // the first instruction replacing the original constant.
+                        list[index] = new CodeInstruction(list[index])
+                        {
+                            opcode = OpCodes.Ldarg_0,
+                            operand = null
+                        };
                         list.Insert(index + 1, new CodeInstruction(OpCodes.Call, replacement));
                         index++;
                     }
@@ -208,6 +231,7 @@ namespace CycleTrim.Patches
                 if (rawAbilities == null
                     || rawAbilities.GetType() != typeof(CreaturePathFinderAbilities))
                 {
+                    ResetNavigatorState(__instance, nav);
                     return true;
                 }
 
@@ -217,6 +241,13 @@ namespace CycleTrim.Patches
                 var admitted = false;
                 lock (state.Admission)
                 {
+                    // Navigation generations are scoped per grid; equal
+                    // counters from different grids do not identify equal paths.
+                    if (!ReferenceEquals(state.NavGrid, nav.NavGrid))
+                    {
+                        state.Admission.Reset();
+                        state.NavGrid = nav.NavGrid;
+                    }
                     admitted = state.Admission.TryAdmit(stamp, supported: true);
                 }
                 if (admitted)
@@ -248,6 +279,18 @@ namespace CycleTrim.Patches
                     };
                 }
                 return false;
+            }
+
+            private static Exception Finalizer(
+                Exception __exception,
+                AsyncPathProber.Manager __instance,
+                Navigator nav)
+            {
+                if (__exception != null && !ReferenceEquals(nav, null))
+                {
+                    ResetNavigatorState(__instance, nav);
+                }
+                return __exception;
             }
         }
 
@@ -289,6 +332,16 @@ namespace CycleTrim.Patches
                         state.Admission.MarkApplied();
                     }
                 }
+            }
+
+            private static Exception Finalizer(Exception __exception, Navigator __instance)
+            {
+                var manager = AsyncPathProber.Instance;
+                if (__exception != null && manager != null)
+                {
+                    ResetNavigatorState(manager, __instance);
+                }
+                return __exception;
             }
         }
 

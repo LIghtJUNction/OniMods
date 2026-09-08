@@ -20,6 +20,7 @@ namespace CycleTrim.Patches
         {
             internal readonly VersionedRefreshGate Gate =
                 new VersionedRefreshGate(8);
+            internal NavGrid NavGrid;
         }
 
         private static State CreateState(Navigator navigator)
@@ -95,7 +96,9 @@ namespace CycleTrim.Patches
                 || __instance.IsMoving()
                 || ___reportOccupation
                 || ___executePathProbeTaskAsync
-                || !(___abilities is CreaturePathFinderAbilities)
+                || ___abilities == null
+                || ___abilities.GetType() != typeof(CreaturePathFinderAbilities)
+                || !Grid.IsValidCell(Grid.PosToCell(__instance))
                 || __instance.GetComponent<CreatureBrain>() == null)
             {
                 if (States.TryGetValue(__instance, out var preservedState))
@@ -107,6 +110,11 @@ namespace CycleTrim.Patches
             }
 
             var state = States.GetValue(__instance, StateFactory);
+            if (!ReferenceEquals(state.NavGrid, __instance.NavGrid))
+            {
+                state.Gate.Reset();
+                state.NavGrid = __instance.NavGrid;
+            }
             return state.Gate.ShouldRefresh(
                 CaptureStamp(
                     __instance,

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,7 +7,6 @@ namespace OniMcp.Tools
     internal sealed class OniToolRegistryCache
     {
         private List<McpTool> allTools;
-        private List<McpTool> visibleTools;
 
         internal List<McpTool> GetTools(IEnumerable<McpTool> registeredTools)
         {
@@ -18,39 +18,35 @@ namespace OniMcp.Tools
             IEnumerable<McpTool> registeredTools,
             IEnumerable<McpTool> visibleRegisteredTools)
         {
-            Ensure(registeredTools, visibleRegisteredTools);
-            return new List<McpTool>(visibleTools.Where(tool => !tool.Hidden));
+            Ensure(registeredTools);
+            IEnumerable<McpTool> visible = allTools;
+            if (visibleRegisteredTools != null)
+                visible = Sort(visibleRegisteredTools);
+            return visible.Where(tool => !tool.Hidden).ToList();
         }
 
         internal List<McpTool> GetVisibleSnapshot()
         {
-            return visibleTools;
+            return allTools?.Where(tool => !tool.Hidden).ToList();
         }
 
         internal void Clear()
         {
             allTools = null;
-            visibleTools = null;
         }
 
         internal void Ensure(IEnumerable<McpTool> registeredTools)
         {
-            Ensure(registeredTools, null);
-        }
-
-        private void Ensure(
-            IEnumerable<McpTool> registeredTools,
-            IEnumerable<McpTool> visibleRegisteredTools)
-        {
-            if (allTools != null && visibleTools != null)
+            if (allTools != null)
                 return;
 
-            allTools = registeredTools
-                .OrderBy(tool => tool.Group)
-                .ThenBy(tool => tool.Name)
-                .ToList();
-            visibleTools = (visibleRegisteredTools ?? allTools.Where(tool => !tool.Hidden))
-                .ToList();
+            allTools = Sort(registeredTools).ToList();
+        }
+
+        private static IOrderedEnumerable<McpTool> Sort(IEnumerable<McpTool> tools)
+        {
+            return tools.OrderBy(tool => tool.Group, StringComparer.Ordinal)
+                .ThenBy(tool => tool.Name, StringComparer.Ordinal);
         }
     }
 }

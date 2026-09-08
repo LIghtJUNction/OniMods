@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Core;
@@ -20,9 +21,14 @@ namespace OniMcp.Server
         private void HandlePost(HttpListenerRequest request, HttpListenerResponse response, string sessionId, string protocolVersion)
         {
             string body;
-            using (var reader = new StreamReader(request.InputStream, Encoding.UTF8))
+            try
             {
-                body = reader.ReadToEnd();
+                body = HttpRequestBody.Read(request.InputStream, Encoding.UTF8, request.ContentLength64, HttpRequestBody.MaxMcpBytes);
+            }
+            catch (RequestBodyTooLargeException ex)
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, ex.Message), 413);
+                return;
             }
 
             if (string.IsNullOrEmpty(body))
@@ -36,9 +42,18 @@ namespace OniMcp.Server
             {
                 rawMessage = JObject.Parse(body);
             }
-            catch (Exception ex)
+            catch (JsonException ex)
             {
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), 200);
+                return;
+            }
+
+            var requestId = rawMessage["id"];
+            if (rawMessage["jsonrpc"]?.Type != JTokenType.String || (string)rawMessage["jsonrpc"] != "2.0"
+                || (requestId != null && requestId.Type != JTokenType.Null && requestId.Type != JTokenType.String
+                    && requestId.Type != JTokenType.Integer && requestId.Type != JTokenType.Float))
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), 200);
                 return;
             }
 
@@ -56,12 +71,18 @@ namespace OniMcp.Server
                 return;
             }
 
+            if (rawMessage["method"]?.Type != JTokenType.String)
+            {
+                SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InvalidRequest, "Missing or invalid JSON-RPC method"), 200);
+                return;
+            }
+
             JsonRpcRequest rpcRequest;
             try
             {
                 rpcRequest = rawMessage.ToObject<JsonRpcRequest>();
             }
-            catch (Exception ex)
+            catch (JsonException ex)
             {
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), 200);
                 return;
@@ -74,6 +95,15 @@ namespace OniMcp.Server
             }
 
             bool isInitialize = rpcRequest.Method == "initialize";
+            bool isNotification = rawMessage.Property("id") == null;
+            var initializeVersion = rpcRequest.Params?["protocolVersion"];
+            if (isInitialize && (isNotification || initializeVersion?.Type != JTokenType.String
+                || !IsSupportedProtocolVersion((string)initializeVersion)))
+            {
+                SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                    "initialize requires a request id and a supported protocolVersion"), 200);
+                return;
+            }
             if (!isInitialize)
             {
                 if (!ValidateNonInitRequest(response, sessionId, protocolVersion))
@@ -85,13 +115,21 @@ namespace OniMcp.Server
             }
 
             if (isInitialize)
+            {
                 sessionId = EnsureSession(response, sessionId);
+                if (sessionId == null)
+                    return;
+            }
 
             // 通知（无 id）：返回 202 Accepted
-            if (rpcRequest.IsNotification)
+            if (isNotification)
             {
                 // 在后台处理通知
-                MainThreadBridge.Enqueue(new System.Action(() => ProcessMethod(rpcRequest, sessionId)));
+                MainThreadBridge.Enqueue(new System.Action(() =>
+                {
+                    if (_running && IsSessionActive(sessionId))
+                        ProcessMethod(rpcRequest, sessionId);
+                }));
                 SetResponseSessionId(response, sessionId);
                 SetResponseProtocolVersion(response, sessionId);
                 response.StatusCode = 202;
@@ -199,7 +237,9 @@ namespace OniMcp.Server
                 Exception processEx = null;
                 try
                 {
-                    result = ProcessMethod(rpcRequest, sessionId);
+                    result = _running && IsSessionActive(sessionId)
+                        ? ProcessMethod(rpcRequest, sessionId)
+                        : JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidRequest, "Session not found or terminated");
                 }
                 catch (Exception ex)
                 {

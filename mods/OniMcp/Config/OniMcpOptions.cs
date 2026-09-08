@@ -16,7 +16,8 @@ namespace OniMcp.Config
     [ModInfo("https://steamcommunity.com/sharedfiles/filedetails/?id=3731864673", "preview.png")]
     public class OniMcpOptions : IOptions
     {
-        private static OniMcpOptions _current;
+        private static readonly object SyncRoot = new object();
+        private static volatile OniMcpOptions _current;
         private const int CurrentSecurityMigrationVersion = 1;
 
         public int SecurityMigrationVersion { get; set; } = CurrentSecurityMigrationVersion;
@@ -70,9 +71,15 @@ namespace OniMcp.Config
         {
             get
             {
-                if (_current == null)
-                    _current = Load();
-                return _current;
+                var current = _current;
+                if (current != null)
+                    return current;
+                lock (SyncRoot)
+                {
+                    if (_current == null)
+                        _current = Load();
+                    return _current;
+                }
             }
         }
 
@@ -112,20 +119,46 @@ namespace OniMcp.Config
 
         public static void Reload()
         {
-            _current = Load();
+            lock (SyncRoot)
+                _current = Load();
         }
 
         public static void Save(OniMcpOptions options)
         {
-            options = Sanitize(options);
-            string path = ConfigPath;
-            string dir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
+            lock (SyncRoot)
+            {
+                options = Sanitize(options);
+                string path = ConfigPath;
+                if (string.IsNullOrEmpty(path))
+                    throw new InvalidOperationException("The config path is not available.");
+                string dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
 
-            string json = JsonConvert.SerializeObject(options, Formatting.Indented);
-            File.WriteAllText(path, json);
-            _current = options;
+                string json = JsonConvert.SerializeObject(options, Formatting.Indented);
+                // Keep the original file intact until its replacement has been fully written.
+                string temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                try
+                {
+                    File.WriteAllText(temporaryPath, json);
+                    if (File.Exists(path))
+                        File.Replace(temporaryPath, path, null);
+                    else
+                        File.Move(temporaryPath, path);
+                    _current = options;
+                }
+                finally
+                {
+                    try
+                    {
+                        File.Delete(temporaryPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        OniMcpLog.Warning("[OniMcp] Failed to remove temporary config " + temporaryPath + ": " + ex.Message);
+                    }
+                }
+            }
         }
 
         public IEnumerable<IOptionsEntry> CreateOptions()
@@ -203,13 +236,6 @@ namespace OniMcp.Config
         private static OniMcpOptions Load()
         {
             string path = ConfigPath;
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            {
-                var created = Sanitize(new OniMcpOptions());
-                TrySave(created);
-                return created;
-            }
-
             try
             {
                 string json = File.ReadAllText(path);
@@ -220,12 +246,19 @@ namespace OniMcp.Config
                 TrySave(options);
                 return options;
             }
+            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+            {
+                var created = Sanitize(new OniMcpOptions());
+                TrySave(created);
+                return created;
+            }
             catch (Exception ex)
             {
                 OniMcpLog.Warning("[OniMcp] Failed to read config " + path + ": " + ex.Message);
-                var fallback = Sanitize(new OniMcpOptions());
-                TrySave(fallback);
-                return fallback;
+                // A transient read failure must not overwrite the user's settings or token.
+                if (_current != null)
+                    return _current;
+                throw new InvalidOperationException("Cannot load OniMcp config " + path + ". Fix the file before starting the server.", ex);
             }
         }
 

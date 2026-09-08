@@ -37,14 +37,16 @@ namespace OniMcp.Core
         [JsonProperty("jsonrpc")]
         public string JsonRpc { get; set; } = "2.0";
 
-        [JsonProperty("id")]
+        [JsonProperty("id", NullValueHandling = NullValueHandling.Include)]
         public object Id { get; set; }
 
-        [JsonProperty("result")]
+        [JsonProperty("result", NullValueHandling = NullValueHandling.Include)]
         public object Result { get; set; }
 
-        [JsonProperty("error")]
+        [JsonProperty("error", NullValueHandling = NullValueHandling.Ignore)]
         public JsonRpcError Error { get; set; }
+
+        public bool ShouldSerializeResult() => Error == null;
 
         public static JsonRpcResponse Success(object id, object result)
         {

@@ -188,7 +188,8 @@ namespace OniMcp.Tools
                     ["results"] = results
                 };
 
-                    return CallToolResult.Text(JsonConvert.SerializeObject(payload, McpJsonUtil.Settings));
+                    string text = JsonConvert.SerializeObject(payload, McpJsonUtil.Settings);
+                    return failed == 0 ? CallToolResult.Text(text) : CallToolResult.Error(text);
                 }
             };
         }
@@ -270,7 +271,7 @@ namespace OniMcp.Tools
                 return new List<string>();
 
             return tool.Parameters
-                .Where(kv => kv.Value.Required && arguments[kv.Key] == null)
+                .Where(kv => kv.Value.Required && (arguments[kv.Key] == null || arguments[kv.Key].Type == JTokenType.Null))
                 .Select(kv => kv.Key)
                 .OrderBy(name => name)
                 .ToList();

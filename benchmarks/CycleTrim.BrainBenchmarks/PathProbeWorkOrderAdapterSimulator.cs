@@ -9,12 +9,17 @@ namespace CycleTrim.BrainBenchmarks
 
         internal void Prepare(bool exactCreature, bool sentinelSafe, bool completedHit)
         {
-            if (!sentinelSafe || !exactCreature)
+            if (!sentinelSafe)
             {
                 return;
             }
-            RefreshCalls++;
             StateLookups++;
+            if (!exactCreature)
+            {
+                // Unsupported work invalidates any existing tracked state.
+                return;
+            }
+            RefreshCalls++;
             if (completedHit)
             {
                 RecycleCalls++;

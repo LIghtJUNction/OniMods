@@ -225,6 +225,10 @@ cp Directory.Build.props.example Directory.Build.props
 3. Add/update docs/changelog links when behavior changes
 4. Confirm local workflow (`onim setup`, relevant verify scripts) before merging
 
+Run `python3 scripts/check_mods.py` with Python 3 and .NET SDK 10 for the Mod
+regression suite. See [Mod testing](docs/mod-testing.md) for coverage and the
+additional checks that require an installed game.
+
 ## Dependencies
 
 - [Rust](https://rustup.rs/) to compile `onim`

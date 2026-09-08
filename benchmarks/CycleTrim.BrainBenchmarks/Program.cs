@@ -3,7 +3,7 @@ using CycleTrim.Core;
 
 namespace CycleTrim.BrainBenchmarks
 {
-    internal static class Program
+    internal static partial class Program
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
@@ -103,6 +103,7 @@ namespace CycleTrim.BrainBenchmarks
                 RunTest(
                     nameof(PathProbeWorkOrderAdapterUsesExactRefreshAndCloneCounts),
                     PathProbeWorkOrderAdapterUsesExactRefreshAndCloneCounts);
+                RunPathProbeRegressionTests();
                 return 0;
             }
             catch (Exception exception)
@@ -326,7 +327,7 @@ namespace CycleTrim.BrainBenchmarks
             var adapter = new PathProbeWorkOrderAdapterSimulator();
             adapter.Prepare(exactCreature: false, sentinelSafe: true, completedHit: false);
             AssertEqual(0L, adapter.RefreshCalls, "unsupported zero refresh");
-            AssertEqual(0L, adapter.StateLookups, "unsupported zero state");
+            AssertEqual(1L, adapter.StateLookups, "unsupported checks existing state for invalidation");
 
             adapter.ResetCounts();
             adapter.Prepare(exactCreature: true, sentinelSafe: true, completedHit: false);

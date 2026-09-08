@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
@@ -52,7 +53,7 @@ namespace OniMcp.Server
                     while ((message = session.TryDequeueOutbound()) != null)
                         WriteSseMessage(response, message);
 
-                    session.OutboundSignal.WaitOne(15000);
+                    session.WaitForOutbound(15000);
                     if (_running && IsSessionActive(sessionId))
                         WriteSseComment(response, "keepalive");
                 }
@@ -65,9 +66,8 @@ namespace OniMcp.Server
             {
                 lock (_sessionLock)
                 {
-                    McpSession current;
-                    if (_sessions.TryGetValue(sessionId, out current) && current.SseConnections > 0)
-                        current.SseConnections--;
+                    if (session.SseConnections > 0)
+                        session.SseConnections--;
                 }
                 try { response.Close(); } catch { }
             }
@@ -83,10 +83,21 @@ namespace OniMcp.Server
         {
             lock (_sessionLock)
             {
-                if (_sessions.Remove(sessionId))
+                McpSession session;
+                if (_sessions.TryGetValue(sessionId, out session))
                 {
-                    sessionId = sessionId ?? "";
-                    _terminatedSessions.Add(sessionId);
+                    _sessions.Remove(sessionId);
+                    session.Close();
+                }
+            }
+            lock (_taskLock)
+            {
+                var taskIds = _tasks.Values.Where(task => task.SessionId == sessionId)
+                    .Select(task => task.TaskId).ToArray();
+                foreach (var taskId in taskIds)
+                {
+                    _tasks[taskId].CancelRequested = true;
+                    _tasks.Remove(taskId);
                 }
             }
             response.StatusCode = 204;
@@ -116,7 +127,7 @@ namespace OniMcp.Server
                 }
                 catch (Exception ex)
                 {
-                    rawHtml = $"<h1>Error serving page</h1><p>{ex.Message}</p>";
+                    rawHtml = $"<h1>Error serving page</h1><p>{WebUtility.HtmlEncode(ex.Message)}</p>";
                 }
                 SendHtml(response, rawHtml, 200);
                 return;

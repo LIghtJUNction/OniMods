@@ -14,8 +14,10 @@ namespace OniMcp.Server
     /// </summary>
     public class McpSession
     {
+        internal const int MaxQueuedOutboundMessages = 256;
         private readonly Queue<JObject> _outboundQueue = new Queue<JObject>();
         private readonly object _outboundLock = new object();
+        private bool _closed;
 
         public string Id { get; set; }
         public System.DateTime CreatedAt { get; set; }
@@ -23,7 +25,6 @@ namespace OniMcp.Server
         public Implementation ClientInfo { get; set; }
         public ClientCapabilities Capabilities { get; set; }
         public int SseConnections { get; set; }
-        public AutoResetEvent OutboundSignal { get; } = new AutoResetEvent(false);
 
         public int QueuedOutboundCount
         {
@@ -36,16 +37,38 @@ namespace OniMcp.Server
             }
         }
 
-        public void EnqueueOutbound(JObject message)
+        public bool EnqueueOutbound(JObject message)
         {
             if (message == null)
-                return;
+                return false;
 
             lock (_outboundLock)
             {
+                if (_closed || _outboundQueue.Count >= MaxQueuedOutboundMessages)
+                    return false;
                 _outboundQueue.Enqueue(message);
+                Monitor.PulseAll(_outboundLock);
+                return true;
             }
-            OutboundSignal.Set();
+        }
+
+        public void WaitForOutbound(int timeoutMs)
+        {
+            lock (_outboundLock)
+            {
+                if (!_closed && _outboundQueue.Count == 0)
+                    Monitor.Wait(_outboundLock, timeoutMs);
+            }
+        }
+
+        public void Close()
+        {
+            lock (_outboundLock)
+            {
+                _closed = true;
+                _outboundQueue.Clear();
+                Monitor.PulseAll(_outboundLock);
+            }
         }
 
         public JObject TryDequeueOutbound()
@@ -60,6 +83,7 @@ namespace OniMcp.Server
     public class McpTaskEntry
     {
         public string TaskId { get; set; }
+        public string SessionId { get; set; }
         public string Status { get; set; }
         public string StatusMessage { get; set; }
         public System.DateTime CreatedAt { get; set; }

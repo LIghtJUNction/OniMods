@@ -37,7 +37,6 @@ namespace OniMcp.Tools
         public static void Initialize()
         {
             if (_initialized) return;
-            _initialized = true;
 
             Register(CoreToolEnglishDescriptions.Apply(ServerControlEntryTools.ControlServer()));
             Register(CoreToolEnglishDescriptions.Apply(WorldEditorTools.ControlWorldEditor()));
@@ -52,6 +51,7 @@ namespace OniMcp.Tools
             RegisterInternal(SearchControlTools.ControlSearch());
             RegisterInternal(CoordinateControlTools.ControlCoordinate());
             BuildToolInfoCache();
+            _initialized = true;
         }
 
         private static void Register(McpTool tool)
@@ -77,6 +77,9 @@ namespace OniMcp.Tools
 
         internal static bool TryGetOperation(string name, out McpTool operation)
         {
+            operation = null;
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
             return TryGetTool(name, out operation) || _internalOperations.TryGetValue(name, out operation);
         }
 
@@ -110,12 +113,12 @@ namespace OniMcp.Tools
         {
             var cached = includeAll ? _cachedAllToolInfos : _cachedCoreToolInfos;
             if (cached != null)
-                return cached;
+                return new List<McpToolInfo>(cached);
 
             BuildToolInfoCache();
             cached = includeAll ? _cachedAllToolInfos : _cachedCoreToolInfos;
             if (cached != null)
-                return cached;
+                return new List<McpToolInfo>(cached);
 
             return BuildToolInfos(includeAll);
         }
@@ -195,6 +198,8 @@ namespace OniMcp.Tools
 
         internal static CallToolResult CallToolFromWorldEditor(string name, JObject arguments, bool allowValidatedCoordinates)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                return CallToolResult.Error("Operation name is required.");
             if (_tools.ContainsKey(name) || _aliases.ContainsKey(name))
                 return CallToolCore(name, arguments, allowValidatedCoordinates);
             if (!_internalOperations.TryGetValue(name, out var operation))
@@ -228,6 +233,8 @@ namespace OniMcp.Tools
         private static CallToolResult CallToolCore(string name, JObject arguments, bool allowValidatedCoordinates)
         {
             var middlewareNotifications = ToolCallMiddleware.DrainNotifications();
+            if (string.IsNullOrWhiteSpace(name))
+                return ToolCallMiddleware.Inject(CallToolResult.Error("Tool name is required."), middlewareNotifications);
             bool usedLegacyAlias = false;
             if (!_tools.TryGetValue(name, out var tool))
             {
@@ -433,8 +440,6 @@ namespace OniMcp.Tools
             });
             return result;
         }
-
-
         private static string InferGroup(string name)
         {
             name = (name ?? "").ToLowerInvariant();

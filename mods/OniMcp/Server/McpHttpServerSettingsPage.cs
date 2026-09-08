@@ -42,9 +42,8 @@ namespace OniMcp.Server
 
             try
             {
-                Dictionary<string, string> form;
-                using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
-                    form = ParseQueryString(reader.ReadToEnd());
+                var body = HttpRequestBody.Read(request.InputStream, request.ContentEncoding, request.ContentLength64, HttpRequestBody.MaxSettingsBytes);
+                var form = ParseQueryString(body);
 
                 var current = OniMcpOptions.Current;
                 string host = RequiredFormValue(form, "host");
@@ -78,6 +77,10 @@ namespace OniMcp.Server
                 SendHtml(response, RenderSettingsHtml(message, true), 200);
                 ScheduleSettingsRestartAfterResponse();
             }
+            catch (RequestBodyTooLargeException ex)
+            {
+                SendHtml(response, RenderSettingsHtml(ex.Message, false), 413);
+            }
             catch (Exception ex)
             {
                 SendHtml(response, RenderSettingsHtml("Error saving settings: " + ex.Message, false), 400);
@@ -90,11 +93,18 @@ namespace OniMcp.Server
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 Thread.Sleep(250);
-                MainThreadBridge.EnqueueDeferred(() =>
+                try
                 {
-                    if (Instance != null)
-                        Instance.RestartServer();
-                });
+                    MainThreadBridge.EnqueueDeferred(() =>
+                    {
+                        if (Instance != null)
+                            Instance.RestartServer();
+                    });
+                }
+                catch (InvalidOperationException)
+                {
+                    // The game may destroy the bridge before this delayed callback runs.
+                }
             });
         }
 

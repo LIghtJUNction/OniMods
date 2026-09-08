@@ -174,6 +174,10 @@ cp Directory.Build.props.example Directory.Build.props
 
 ## 依赖
 
+代码回归检查：安装 Python 3 与 .NET SDK 10 后运行
+`python3 scripts/check_mods.py`。该入口不需要安装游戏；完整构建与游戏内验证步骤见
+[Mod 测试说明](docs/mod-testing.md)。
+
 - [Rust](https://rustup.rs/)：编译 `onim`
 - [.NET SDK](https://dotnet.microsoft.com/download)：构建 Mod
 - `unzip`：安装构建产物时解压

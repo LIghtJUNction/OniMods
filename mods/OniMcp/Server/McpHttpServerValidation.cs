@@ -15,9 +15,11 @@ namespace OniMcp.Server
 {
         private bool IsSessionActive(string sessionId)
         {
+            if (string.IsNullOrEmpty(sessionId))
+                return false;
             lock (_sessionLock)
             {
-                return _sessions.ContainsKey(sessionId) && !_terminatedSessions.Contains(sessionId);
+                return _sessions.ContainsKey(sessionId);
             }
         }
 
@@ -32,13 +34,10 @@ namespace OniMcp.Server
             if (string.IsNullOrEmpty(sessionId))
                 return true;
 
-            lock (_sessionLock)
+            if (!IsSessionActive(sessionId))
             {
-                if (_terminatedSessions.Contains(sessionId))
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
-                    return false;
-                }
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
+                return false;
             }
             return true;
         }
@@ -96,13 +95,11 @@ namespace OniMcp.Server
 
         private string EnsureSession(HttpListenerResponse response, string sessionId)
         {
-            if (string.IsNullOrEmpty(sessionId))
-                sessionId = Guid.NewGuid().ToString("N");
-
             lock (_sessionLock)
             {
-                if (!_sessions.ContainsKey(sessionId))
+                if (string.IsNullOrEmpty(sessionId))
                 {
+                    sessionId = Guid.NewGuid().ToString("N");
                     _sessions[sessionId] = new McpSession
                     {
                         Id = sessionId,
@@ -110,8 +107,17 @@ namespace OniMcp.Server
                         ProtocolVersion = CurrentProtocolVersion
                     };
                 }
+                else if (!_sessions.ContainsKey(sessionId))
+                {
+                    sessionId = null;
+                }
             }
 
+            if (sessionId == null)
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
+                return null;
+            }
             response.Headers["Mcp-Session-Id"] = sessionId;
             return sessionId;
         }
@@ -209,21 +215,17 @@ namespace OniMcp.Server
         {
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(query)) return result;
-            var pairs = query.Split('&');
+            var pairs = query.TrimStart('?').Split('&');
             foreach (var pair in pairs)
             {
-                var parts = pair.Split('=');
-                if (parts.Length == 2)
-                {
-                    string key = Uri.UnescapeDataString(parts[0]).Replace("+", " ");
-                    string val = Uri.UnescapeDataString(parts[1]).Replace("+", " ");
-                    result[key] = val;
-                }
-                else if (parts.Length == 1)
-                {
-                    string key = Uri.UnescapeDataString(parts[0]).Replace("+", " ");
-                    result[key] = "";
-                }
+                if (pair.Length == 0)
+                    continue;
+                int separator = pair.IndexOf('=');
+                string key = separator < 0 ? pair : pair.Substring(0, separator);
+                string value = separator < 0 ? "" : pair.Substring(separator + 1);
+                // Form '+' is a space; percent-encoded '+' and '=' are literal token characters.
+                result[Uri.UnescapeDataString(key.Replace("+", " "))] =
+                    Uri.UnescapeDataString(value.Replace("+", " "));
             }
             return result;
         }

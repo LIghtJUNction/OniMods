@@ -159,6 +159,7 @@ namespace OniMcp.Server
                 return new ListTasksResult
                 {
                     Tasks = _tasks.Values
+                        .Where(task => string.Equals(task.SessionId, CurrentSessionId, StringComparison.Ordinal))
                         .OrderByDescending(task => task.CreatedAt)
                         .Select(task => task.ToInfo())
                         .ToList()
@@ -224,7 +225,8 @@ namespace OniMcp.Server
             {
                 CleanupExpiredTasks();
                 McpTaskEntry task;
-                if (!_tasks.TryGetValue(@params.TaskId, out task))
+                if (!_tasks.TryGetValue(@params.TaskId, out task)
+                    || !string.Equals(task.SessionId, CurrentSessionId, StringComparison.Ordinal))
                 {
                     error = JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, $"Task not found: {@params.TaskId}");
                     return null;
@@ -238,6 +240,7 @@ namespace OniMcp.Server
             var task = new McpTaskEntry
             {
                 TaskId = Guid.NewGuid().ToString("N"),
+                SessionId = sessionId,
                 Status = "working",
                 StatusMessage = string.IsNullOrEmpty(callParams.Task.Title) ? $"Calling tool {callParams.Name}" : callParams.Task.Title,
                 CreatedAt = System.DateTime.UtcNow,
@@ -248,10 +251,15 @@ namespace OniMcp.Server
                 TtlMilliseconds = NormalizeTaskTtl(callParams.Task.Ttl)
             };
 
-            lock (_taskLock)
+            lock (_sessionLock)
             {
-                CleanupExpiredTasks();
-                _tasks[task.TaskId] = task;
+                if (!_running || !_sessions.ContainsKey(sessionId))
+                    throw new InvalidOperationException("Session not found or terminated");
+                lock (_taskLock)
+                {
+                    CleanupExpiredTasks();
+                    _tasks[task.TaskId] = task;
+                }
             }
 
             ExecuteToolTask(task.TaskId, callParams.Name, callParams.Arguments, sessionId);
@@ -262,6 +270,8 @@ namespace OniMcp.Server
         {
             MainThreadBridge.EnqueueDeferred(new System.Action(() =>
             {
+                if (!_running || !IsSessionActive(sessionId))
+                    return;
                 McpTaskEntry task;
                 lock (_taskLock)
                 {
