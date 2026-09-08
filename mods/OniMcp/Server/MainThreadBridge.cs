@@ -12,14 +12,17 @@ namespace OniMcp.Server
     /// </summary>
     public class MainThreadBridge : MonoBehaviour
     {
-        public static MainThreadBridge Instance { get; private set; }
+        private static MainThreadBridge _instance;
+        public static MainThreadBridge Instance => Volatile.Read(ref _instance);
 
         private readonly Queue<System.Action> _queueA = new Queue<System.Action>();
         private readonly Queue<System.Action> _queueB = new Queue<System.Action>();
         private readonly object _queueLock = new object();
+        private readonly HashSet<System.Action> _pendingCancellations = new HashSet<System.Action>();
         private Queue<System.Action> _enqueueQueue;
         private Queue<System.Action> _dequeueQueue;
         private int _mainThreadId;
+        private bool _destroyed;
 
         private void Awake()
         {
@@ -28,11 +31,11 @@ namespace OniMcp.Server
                 Destroy(gameObject);
                 return;
             }
-            Instance = this;
             _enqueueQueue = _queueA;
             _dequeueQueue = _queueB;
             _mainThreadId = Thread.CurrentThread.ManagedThreadId;
             DontDestroyOnLoad(gameObject);
+            Volatile.Write(ref _instance, this);
         }
 
         private void Update()
@@ -71,7 +74,7 @@ namespace OniMcp.Server
             return _mainThreadId != 0 && Thread.CurrentThread.ManagedThreadId == _mainThreadId;
         }
 
-        private void EnqueueInstance(System.Action action, bool allowInline)
+        private void EnqueueInstance(System.Action action, bool allowInline, System.Action cancel = null)
         {
             if (allowInline && IsMainThread())
             {
@@ -81,6 +84,22 @@ namespace OniMcp.Server
 
             lock (_queueLock)
             {
+                if (_destroyed)
+                    throw new InvalidOperationException("Unity main thread bridge has been destroyed.");
+                if (cancel != null)
+                {
+                    var pendingAction = action;
+                    action = () =>
+                    {
+                        try { pendingAction(); }
+                        finally
+                        {
+                            lock (_queueLock)
+                                _pendingCancellations.Remove(cancel);
+                        }
+                    };
+                    _pendingCancellations.Add(cancel);
+                }
                 _enqueueQueue.Enqueue(action);
             }
         }
@@ -90,14 +109,9 @@ namespace OniMcp.Server
         /// </summary>
         public static void Enqueue(System.Action action)
         {
-            if (Instance == null)
-            {
-                OniMcpLog.Warning("[OniMcp] MainThreadBridge not initialized, executing inline");
-                action();
-                return;
-            }
-
-            Instance.EnqueueInstance(action, allowInline: true);
+            if (action == null)
+                throw new ArgumentNullException(nameof(action));
+            RequireInstance().EnqueueInstance(action, allowInline: true);
         }
 
         /// <summary>
@@ -105,14 +119,9 @@ namespace OniMcp.Server
         /// </summary>
         public static void EnqueueDeferred(System.Action action)
         {
-            if (Instance == null)
-            {
-                OniMcpLog.Warning("[OniMcp] MainThreadBridge not initialized, executing inline");
-                action();
-                return;
-            }
-
-            Instance.EnqueueInstance(action, allowInline: false);
+            if (action == null)
+                throw new ArgumentNullException(nameof(action));
+            RequireInstance().EnqueueInstance(action, allowInline: false);
         }
 
         public static T Invoke<T>(Func<T> func, int timeoutMs = 10000)
@@ -120,48 +129,41 @@ namespace OniMcp.Server
             if (func == null)
                 throw new ArgumentNullException(nameof(func));
 
-            if (Instance == null)
-            {
-                OniMcpLog.Warning("[OniMcp] MainThreadBridge not initialized, executing inline");
-                return func();
-            }
-
-            if (Instance.IsMainThread())
+            if (timeoutMs < Timeout.Infinite)
+                throw new ArgumentOutOfRangeException(nameof(timeoutMs));
+            var instance = RequireInstance();
+            if (instance.IsMainThread())
                 return func();
 
-            T result = default(T);
-            Exception error = null;
-            using (var done = new ManualResetEventSlim(false))
-            {
-                Instance.EnqueueInstance(() =>
-                {
-                    try
-                    {
-                        result = func();
-                    }
-                    catch (Exception ex)
-                    {
-                        error = ex;
-                    }
-                    finally
-                    {
-                        done.Set();
-                    }
-                }, allowInline: false);
+            var invocation = new MainThreadInvocation<T>(func);
+            instance.EnqueueInstance(invocation.Execute, allowInline: false, cancel: invocation.Cancel);
+            return invocation.Wait(timeoutMs);
+        }
 
-                if (!done.Wait(timeoutMs))
-                    throw new TimeoutException("Timed out waiting for Unity main thread.");
-            }
-
-            if (error != null)
-                throw error;
-            return result;
+        private static MainThreadBridge RequireInstance()
+        {
+            var instance = Instance;
+            // Unity's overloaded null comparison is not safe to use on HTTP worker threads.
+            if (ReferenceEquals(instance, null))
+                throw new InvalidOperationException("Unity main thread bridge is not initialized.");
+            return instance;
         }
 
         private void OnDestroy()
         {
-            if (Instance == this)
-                Instance = null;
+            Interlocked.CompareExchange(ref _instance, null, this);
+            System.Action[] cancellations;
+            lock (_queueLock)
+            {
+                _destroyed = true;
+                cancellations = new System.Action[_pendingCancellations.Count];
+                _pendingCancellations.CopyTo(cancellations);
+                _pendingCancellations.Clear();
+                _queueA.Clear();
+                _queueB.Clear();
+            }
+            foreach (var cancel in cancellations)
+                cancel();
         }
     }
 }

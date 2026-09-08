@@ -28,8 +28,6 @@ namespace OniMcp.Server
 
         private readonly Dictionary<string, McpSession> _sessions = new Dictionary<string, McpSession>();
 
-        private readonly HashSet<string> _terminatedSessions = new HashSet<string>();
-
         private readonly object _sessionLock = new object();
 
         private readonly Dictionary<string, McpTaskEntry> _tasks = new Dictionary<string, McpTaskEntry>();
@@ -85,7 +83,8 @@ namespace OniMcp.Server
                 _listener.Start();
                 _running = true;
 
-                _listenerThread = new Thread(ListenLoop)
+                var listener = _listener;
+                _listenerThread = new Thread(() => ListenLoop(listener))
                 {
                     IsBackground = true,
                     Name = "OniMcpHttpListener"
@@ -96,6 +95,9 @@ namespace OniMcp.Server
             }
             catch (Exception ex)
             {
+                _running = false;
+                try { _listener?.Close(); } catch { }
+                _listener = null;
                 OniMcpLog.Error($"[OniMcp] Failed to start MCP Server: {ex.Message}");
             }
         }
@@ -124,8 +126,9 @@ namespace OniMcp.Server
 
             lock (_sessionLock)
             {
+                foreach (var session in _sessions.Values)
+                    session.Close();
                 _sessions.Clear();
-                _terminatedSessions.Clear();
             }
             lock (_taskLock)
             {
@@ -137,14 +140,20 @@ namespace OniMcp.Server
             OniMcpLog.Debug("[OniMcp] MCP Server stopped.");
         }
 
-        private void ListenLoop()
+        private void ListenLoop(HttpListener listener)
         {
-            while (_running)
+            while (_running && ReferenceEquals(listener, _listener))
             {
                 try
                 {
-                    var context = _listener.GetContext();
-                    ThreadPool.QueueUserWorkItem(_ => ProcessRequest(context));
+                    var context = listener.GetContext();
+                    ThreadPool.QueueUserWorkItem(_ =>
+                    {
+                        if (_running && ReferenceEquals(listener, _listener))
+                            ProcessRequest(context);
+                        else
+                            try { context.Response.Close(); } catch { }
+                    });
                 }
                 catch (HttpListenerException)
                 {

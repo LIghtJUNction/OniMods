@@ -14,9 +14,9 @@ namespace OniMcp.Tools
             if (pattern == "?" || pattern == "*" || pattern == ".*")
                 return true;
             if (pattern.Length >= 2 && pattern[0] == '/' && pattern[pattern.Length - 1] == '/')
-                return Regex.IsMatch(actual ?? string.Empty, pattern.Substring(1, pattern.Length - 2));
+                return Regex.IsMatch(actual ?? string.Empty, pattern.Substring(1, pattern.Length - 2), RegexOptions.None, RegexMatchTimeout);
             if (pattern.StartsWith("~", StringComparison.Ordinal) && pattern.Length > 1)
-                return Regex.IsMatch(actual ?? string.Empty, pattern.Substring(1));
+                return Regex.IsMatch(actual ?? string.Empty, pattern.Substring(1), RegexOptions.None, RegexMatchTimeout);
             // Map rendering appends @(x,y) on the first cell of a building run.
             // Agents often strip that suffix when copying SEARCH tokens; treat both forms equal.
             string normalizedActual = NormalizeMapCompareToken(actual);

@@ -2,6 +2,12 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
+## Unreleased
+
+- Invalidate path-probe results when replacement work is queued, discarded, unsupported, or fails; invalidate cached navigation state when the `NavGrid` object changes.
+- Preserve immediate fallback for unsupported critter abilities and invalid cells, and avoid integer overflow when calculating worker admission limits.
+- Add six executable policy regression groups. Game assembly compatibility and in-game performance still require release validation.
+
 ## 2026-08-23
 
 - CycleTrim 现在识别 ONI 的非空回退差事 `IdleChore`，空闲复制人的拾取和差事刷新直接走原版即时路径。

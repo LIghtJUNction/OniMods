@@ -63,7 +63,8 @@ namespace OniMcp.Tools
 
         public static bool TryGetTaskDescription(JObject arguments, out string description)
         {
-            description = arguments?[TaskDescriptionParameter]?.ToString()?.Trim();
+            var token = arguments?[TaskDescriptionParameter];
+            description = token?.Type == JTokenType.String ? token.Value<string>()?.Trim() : null;
             return !string.IsNullOrWhiteSpace(description);
         }
 

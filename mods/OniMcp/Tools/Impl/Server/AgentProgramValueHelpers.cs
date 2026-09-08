@@ -47,9 +47,8 @@ namespace OniMcp.Tools
                 value = 0;
                 if (token == null || token.Type == JTokenType.Null)
                     return false;
-                if (token.Type == JTokenType.Integer || token.Type == JTokenType.Float)
-                    return double.TryParse(token.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
-                return double.TryParse(token.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+                return double.TryParse(ToScalarString(token), NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+                    && !double.IsNaN(value) && !double.IsInfinity(value);
             }
 
             private static double ToDouble(JToken token)
@@ -63,7 +62,9 @@ namespace OniMcp.Tools
             private static int ToInt(JToken token)
             {
                 double value = ToDouble(token);
-                return (int)Math.Round(value);
+                if (value < int.MinValue || value > int.MaxValue || value != Math.Truncate(value))
+                    throw new AgentProgramException("integer value required, got " + ToScalarString(token));
+                return (int)value;
             }
 
             private static bool ToBool(JToken token)
@@ -176,20 +177,27 @@ namespace OniMcp.Tools
 
             private static JArray ThenBlock(JObject stmt)
             {
-                return stmt["then"] as JArray ?? stmt["do"] as JArray ?? new JArray();
+                return ReadBlock(stmt["then"] ?? stmt["do"], "if then/do") ?? new JArray();
             }
 
             private static JArray ElseBlock(JObject stmt)
             {
-                return stmt["else"] as JArray;
+                return ReadBlock(stmt["else"], "if else");
             }
 
             private static JArray DoBlock(JObject stmt)
             {
-                var block = stmt["do"] as JArray ?? stmt["steps"] as JArray;
+                var block = ReadBlock(stmt["do"] ?? stmt["steps"], "loop do/steps");
                 if (block == null)
                     throw new AgentProgramException("loop requires do/steps array");
                 return block;
+            }
+
+            private static JArray ReadBlock(JToken token, string name)
+            {
+                if (token != null && token.Type != JTokenType.Array)
+                    throw new AgentProgramException(name + " must be an array");
+                return (JArray)token;
             }
         }
     }

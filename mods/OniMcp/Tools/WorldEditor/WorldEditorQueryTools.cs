@@ -10,6 +10,8 @@ namespace OniMcp.Tools
 {
     public static partial class WorldEditorTools
     {
+        private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromMilliseconds(100);
+
         private static CallToolResult Grep(JObject args)
         {
             string path = NormalizePath(Text(args, "path"), _cwd);
@@ -35,14 +37,21 @@ namespace OniMcp.Tools
                 return CallToolResult.Error(regexError);
             var hitLines = new SortedSet<int>();
 
-            for (int i = 0; i < lines.Length; i++)
+            try
             {
-                if (!matcher(lines[i]))
-                    continue;
-                for (int j = Math.Max(0, i - context); j <= Math.Min(lines.Length - 1, i + context); j++)
-                    hitLines.Add(j);
-                if (hitLines.Count >= limit)
-                    break;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (!matcher(lines[i]))
+                        continue;
+                    for (int j = Math.Max(0, i - context); j <= Math.Min(lines.Length - 1, i + context); j++)
+                        hitLines.Add(j);
+                    if (hitLines.Count >= limit)
+                        break;
+                }
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return CallToolResult.Error("regex match timed out; simplify the pattern or use regex=false");
             }
 
             var sb = new StringBuilder();
@@ -69,7 +78,7 @@ namespace OniMcp.Tools
                 var options = RegexOptions.CultureInvariant;
                 if (ignoreCase)
                     options |= RegexOptions.IgnoreCase;
-                var compiled = new Regex(query, options);
+                var compiled = new Regex(query, options, RegexMatchTimeout);
                 return line => compiled.IsMatch(line);
             }
             catch (ArgumentException ex)

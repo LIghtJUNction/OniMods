@@ -23,7 +23,10 @@ namespace OniMcp.Tools
                     toolName = stmt["tool"]?.ToString() ?? stmt["name"]?.ToString() ?? stmt["call"]?.ToString();
                     if (string.IsNullOrWhiteSpace(toolName))
                         throw new AgentProgramException("call requires tool/name");
-                    args = stmt["args"] as JObject ?? stmt["arguments"] as JObject ?? new JObject();
+                    var arguments = stmt["args"] ?? stmt["arguments"];
+                    if (arguments != null && arguments.Type != JTokenType.Object)
+                        throw new AgentProgramException("call args/arguments must be an object");
+                    args = (JObject)arguments ?? new JObject();
                     return true;
                 }
 
@@ -234,6 +237,8 @@ namespace OniMcp.Tools
                     else if (op == "mul") result *= next;
                     else if (op == "div") result /= next;
                     else if (op == "mod") result %= next;
+                    if (double.IsNaN(result) || double.IsInfinity(result))
+                        throw new AgentProgramException(op + " produced a non-finite numeric result");
                 }
                 if (Math.Abs(result - Math.Round(result)) < 0.000001 && result <= int.MaxValue && result >= int.MinValue)
                     return new JValue((int)Math.Round(result));

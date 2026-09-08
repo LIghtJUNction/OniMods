@@ -67,13 +67,17 @@ namespace OniMcp.Server
                     .ToList();
             }
 
+            int queued = 0;
             foreach (var session in sessions)
-                session.EnqueueOutbound(CloneOutboundMessage(request));
+            {
+                if (session.EnqueueOutbound(CloneOutboundMessage(request)))
+                    queued++;
+            }
 
-            if (sessions.Count > 0)
-                OniMcpLog.Debug($"[OniMcp] Queued client request {request["method"]} for {sessions.Count} session(s).");
+            if (queued > 0)
+                OniMcpLog.Debug($"[OniMcp] Queued client request {request["method"]} for {queued} session(s).");
 
-            return sessions.Count;
+            return queued;
         }
 
         public int EnqueueClientNotification(string level, string logger, object data)

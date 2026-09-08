@@ -1,0 +1,40 @@
+name: Mod quality
+
+on:
+  pull_request:
+    paths:
+      - 'mods/**'
+      - 'tests/**'
+      - 'benchmarks/CycleTrim.BrainBenchmarks/**'
+      - 'scripts/**'
+      - '.github/workflows/mod-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'mods/**'
+      - 'tests/**'
+      - 'benchmarks/CycleTrim.BrainBenchmarks/**'
+      - 'scripts/**'
+      - '.github/workflows/mod-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mod-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Check Mod source contracts and behavior
+        run: python3 scripts/check_mods.py

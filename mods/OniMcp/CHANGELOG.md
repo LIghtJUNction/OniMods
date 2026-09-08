@@ -2,6 +2,14 @@
 
 Generated from `git log -- mods/OniMcp`.
 
+## Unreleased
+
+- Fix resource dispatch and JSON-RPC null responses; preserve tool visibility and protect cached metadata from caller mutation.
+- Cancel queued main-thread calls after timeout; clean up sessions and restrict task access to the owning session.
+- Save configuration through an atomic replacement and preserve existing settings when a reload fails. Invalid configuration on first load now stops initialization instead of replacing the file with defaults.
+- Report failed batch operations as errors, validate agent program structure before execution, and bound user-supplied regular expression matching.
+- Add executable regression suites and a shared `scripts/check_mods.py` CI entry point. Full game builds and Unity/Harmony integration remain separate release checks.
+
 ## 2026-08-23 — 0.2.2
 
 - 移除 OniMcp 源码中的 680 条未使用 `using`，补齐解决方案与 .NET Framework 引用程序集配置；Release 构建在警告即错误模式下通过。

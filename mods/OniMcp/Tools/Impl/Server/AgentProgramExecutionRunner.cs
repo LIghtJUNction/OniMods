@@ -113,7 +113,7 @@ namespace OniMcp.Tools
                 return steps;
             }
 
-            private void ValidateBlock(JArray block, string path)
+            private void ValidateBlock(JArray block, string path, int loopDepth = 0)
             {
                 if (block == null)
                     throw new AgentProgramException(path + " must be an array");
@@ -122,26 +122,37 @@ namespace OniMcp.Tools
                     var stmt = block[i] as JObject;
                     if (stmt == null)
                         throw new AgentProgramException(path + "[" + i + "] must be an object");
-                    ValidateStatement(stmt, path + "[" + i + "]");
+                    ValidateStatement(stmt, path + "[" + i + "]", loopDepth);
                 }
             }
 
-            private void ValidateStatement(JObject stmt, string path)
+            private void ValidateStatement(JObject stmt, string path, int loopDepth)
             {
                 string op = Op(stmt);
                 if (op == "comment")
                     return;
-                if (op == "set" || op == "break" || op == "continue" || op == "return")
+                if (op == "break" || op == "continue")
+                {
+                    if (loopDepth == 0)
+                        throw new AgentProgramException(path + " " + op + " outside loop");
+                    return;
+                }
+                if (op == "set")
+                {
+                    ReadAssignments(stmt, path);
+                    return;
+                }
+                if (op == "return")
                     return;
 
                 if (op == "if")
                 {
                     if (ConditionToken(stmt) == null)
                         throw new AgentProgramException(path + " if requires when/condition/if");
-                    ValidateBlock(ThenBlock(stmt), path + ".then");
+                    ValidateBlock(ThenBlock(stmt), path + ".then", loopDepth);
                     var elseBlock = ElseBlock(stmt);
                     if (elseBlock != null)
-                        ValidateBlock(elseBlock, path + ".else");
+                        ValidateBlock(elseBlock, path + ".else", loopDepth);
                     return;
                 }
 
@@ -149,7 +160,7 @@ namespace OniMcp.Tools
                 {
                     if (ConditionToken(stmt) == null)
                         throw new AgentProgramException(path + " while requires when/condition/while");
-                    ValidateBlock(DoBlock(stmt), path + ".do");
+                    ValidateBlock(DoBlock(stmt), path + ".do", loopDepth + 1);
                     return;
                 }
 
@@ -157,7 +168,7 @@ namespace OniMcp.Tools
                 {
                     if (stmt["count"] == null && stmt["repeat"] == null)
                         throw new AgentProgramException(path + " repeat requires count");
-                    ValidateBlock(DoBlock(stmt), path + ".do");
+                    ValidateBlock(DoBlock(stmt), path + ".do", loopDepth + 1);
                     return;
                 }
 
@@ -243,14 +254,7 @@ namespace OniMcp.Tools
 
             private void ExecuteSet(JObject stmt, string path)
             {
-                var assignments = stmt["vars"] as JObject ?? stmt["set"] as JObject;
-                if (assignments == null && stmt["name"] != null)
-                {
-                    assignments = new JObject { [stmt["name"].ToString()] = stmt["value"] ?? JValue.CreateNull() };
-                }
-                if (assignments == null)
-                    throw new AgentProgramException(path + " set requires vars object or name/value");
-
+                var assignments = ReadAssignments(stmt, path);
                 var changed = new Dictionary<string, object>();
                 foreach (var property in assignments.Properties())
                 {
@@ -259,6 +263,19 @@ namespace OniMcp.Tools
                     changed[property.Name] = ToPlain(value);
                 }
                 Trace(path, "set", true, new Dictionary<string, object> { ["vars"] = changed });
+            }
+
+            private static JObject ReadAssignments(JObject stmt, string path)
+            {
+                var assignments = stmt["vars"] as JObject ?? stmt["set"] as JObject;
+                if (assignments == null && stmt["name"] != null)
+                {
+                    assignments = new JObject { [stmt["name"].ToString()] = stmt["value"] ?? JValue.CreateNull() };
+                }
+                if (assignments == null)
+                    throw new AgentProgramException(path + " set requires vars object or name/value");
+
+                return assignments;
             }
 
             private FlowSignal ExecuteIf(JObject stmt, string path)
