@@ -2,7 +2,7 @@
 
 Generated from `git log -- mods/OniMcp`.
 
-## Unreleased
+## 2026-09-12 — 0.2.3
 
 - Fix resource dispatch and JSON-RPC null responses; preserve tool visibility and protect cached metadata from caller mutation.
 - Cancel queued main-thread calls after timeout; clean up sessions and restrict task access to the owning session.

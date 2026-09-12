@@ -2,7 +2,7 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
-## Unreleased
+## 2026-09-12 — 0.3.2
 
 - Invalidate path-probe results when replacement work is queued, discarded, unsupported, or fails; invalidate cached navigation state when the `NavGrid` object changes.
 - Preserve immediate fallback for unsupported critter abilities and invalid cells, and avoid integer overflow when calculating worker admission limits.
