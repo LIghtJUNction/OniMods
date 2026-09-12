@@ -33,7 +33,7 @@
 
 > **兼容性警告**：`OniMcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
 
-> **开源激励计划**：可购买 token，也可以通过参与开源项目贡献赚取 token。项目地址：[api.lmm.best](https://api.lmm.best)。项目源代码开源，欢迎使用与贡献。
+> **开源激励计划**：可购买 token，也可以通过参与开源项目贡献赚取 token。服务地址：[api.lmm.best](https://api.lmm.best)；[项目源码](https://github.com/TokenNotIncluded/api.lmm.best)由 [TokenNotIncluded](https://github.com/TokenNotIncluded) 组织托管，欢迎使用与贡献。
 
 ## 快速入口
 

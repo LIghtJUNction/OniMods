@@ -48,7 +48,7 @@ AI 做出的每一个决定都要消耗 Token。
 
 你可以在这里购买 Token 来使用 AI 服务，同时也帮助我承担 OniMods 持续开发的成本。
 
-其中一部分收入将用于支持开源开发。项目源代码是开放的。
+其中一部分收入将用于支持开源开发。[项目源码](https://github.com/TokenNotIncluded/api.lmm.best)现由 [TokenNotIncluded](https://github.com/TokenNotIncluded) 组织托管。
 
 我也希望回馈那些愿意参与贡献的人。
 

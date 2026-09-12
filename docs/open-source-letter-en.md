@@ -50,7 +50,7 @@ It is an AI API service platform.
 
 You can purchase Tokens here to use AI services, and at the same time help me cover the ongoing development costs of OniMods.
 
-A part of the revenue will be used to support open-source development. The source code is open.
+A part of the revenue will be used to support open-source development. The [source code](https://github.com/TokenNotIncluded/api.lmm.best) is now hosted by the [TokenNotIncluded](https://github.com/TokenNotIncluded) organization.
 
 I also want to give something back to people who contribute.
 
