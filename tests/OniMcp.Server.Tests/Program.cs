@@ -232,11 +232,11 @@ internal static class Program
                     Assert(server.GetSessionSummaries().Count == 0, "Modern resource read allocated legacy session state");
                 });
                 string toolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":103,\"params\":{" + modernMeta + "}}";
-                Check("HTTP modern path does not fake tool support", () =>
+                Check("HTTP modern path maps unsupported methods to HTTP 404", () =>
                 {
                     using (var response = PostModern(client, toolsList, "tools/list"))
                     {
-                        Assert(response.StatusCode == HttpStatusCode.OK, "Modern unsupported method transport failed");
+                        Assert(response.StatusCode == HttpStatusCode.NotFound, "Modern unsupported method did not return HTTP 404");
                         Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.MethodNotFound, "Modern unsupported tool method was not rejected");
                     }
                 });
