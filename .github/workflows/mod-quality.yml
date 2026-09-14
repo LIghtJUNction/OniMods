@@ -38,3 +38,11 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Check Mod source contracts and behavior
         run: python3 scripts/check_mods.py
+      - name: Run CycleTrim synthetic benchmarks
+        run: >-
+          dotnet run
+          --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj
+          --configuration Release
+          -p:ImportDirectoryBuildProps=false
+          -p:TreatWarningsAsErrors=true
+          -- --benchmark
