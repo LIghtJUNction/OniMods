@@ -1,0 +1,77 @@
+name: ONI reference compatibility
+
+on:
+  pull_request:
+    paths:
+      - 'mods/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'ci/oni-reference-assemblies.json'
+      - '.github/workflows/oni-reference-compat.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'mods/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'ci/oni-reference-assemblies.json'
+      - '.github/workflows/oni-reference-compat.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oni-reference-compat-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile-and-surface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Fetch pinned reference assemblies
+        run: >-
+          python3 scripts/fetch_oni_reference_assemblies.py
+          --manifest ci/oni-reference-assemblies.json
+          --output "$GITHUB_WORKSPACE/.oni-managed"
+          --allow-missing-sha256
+      - name: Install pinned ILSpy command line tool
+        run: dotnet tool install --global ilspycmd --version 11.0.0.9375
+      - name: Build CycleTrim against pinned references
+        run: >-
+          dotnet build mods/CycleTrim/CycleTrim.csproj
+          --configuration Release
+          -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
+          -p:ImportDirectoryBuildProps=false
+          -p:TreatWarningsAsErrors=true
+      - name: Build OniMcp against pinned references
+        run: >-
+          dotnet build mods/OniMcp/OniMcp.csproj
+          --configuration Release
+          -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
+          -p:ImportDirectoryBuildProps=false
+          -p:TreatWarningsAsErrors=true
+      - name: Run source and executable regressions
+        run: python3 scripts/check_mods.py
+      - name: Extract Harmony target API surface
+        run: >-
+          python3 scripts/extract_harmony_api_surface.py
+          "$GITHUB_WORKSPACE/.oni-managed/Assembly-CSharp.dll"
+          --output "$GITHUB_WORKSPACE/artifacts/oni-api-surface"
+      - name: Upload API surface only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: oni-harmony-api-surface
+          path: artifacts/oni-api-surface
+          if-no-files-found: error
+          retention-days: 14
+      - name: Confirm game binaries are not packaged as artifacts
+        run: >-
+          test -z "$(find artifacts -type f -name '*.dll' -print -quit)"
