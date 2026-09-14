@@ -174,6 +174,73 @@ internal static class Program
         {
             try
             {
+                const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"regression\",\"version\":\"1.0\"}}";
+                string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":100,\"params\":{" + modernMeta + "}}";
+                Check("HTTP modern discovery is stateless and advertises only implemented capabilities", () =>
+                {
+                    using (var response = PostModern(client, discover, "server/discover"))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Modern discovery failed");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern discovery minted a session id");
+                        Assert(response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28", "Modern response version missing");
+                        var result = (JObject)ReadJson(response)["result"];
+                        Assert((string)result["resultType"] == "complete", "Modern discovery omitted resultType");
+                        Assert((string)result["cacheScope"] == "public" && (int)result["ttlMs"] > 0, "Discovery cache contract missing");
+                        Assert(result["capabilities"]?["resources"] != null, "Modern resources capability missing");
+                        Assert(result["capabilities"]?["tools"] == null, "Unimplemented modern tools capability was advertised");
+                        Assert(result["supportedVersions"].Values<string>().Contains("2026-07-28"), "Modern version not advertised");
+                    }
+                    Assert(server.GetSessionSummaries().Count == 0, "Modern discovery allocated legacy session state");
+                });
+                Check("HTTP modern requests require routing headers", () =>
+                {
+                    using (var response = PostModern(client, discover, null))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest, "Missing Mcp-Method was accepted");
+                        Assert((int)ReadJson(response)["error"]["code"] == -32020, "Missing Mcp-Method used wrong error code");
+                    }
+                });
+                string listResources = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/list\",\"id\":101,\"params\":{" + modernMeta + "}}";
+                Check("HTTP modern resource list is cache-shaped and sessionless", () =>
+                {
+                    using (var response = PostModern(client, listResources, "resources/list"))
+                    {
+                        var result = (JObject)ReadJson(response)["result"];
+                        Assert((string)result["resultType"] == "complete", "Modern resource list omitted resultType");
+                        Assert((string)result["cacheScope"] == "private" && (int)result["ttlMs"] == 0, "Modern resource list cache hints incorrect");
+                        Assert((string)result["resources"][0]["uri"] == "oni://test", "Modern resource list lost resources");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern resource list returned a session id");
+                    }
+                    Assert(server.GetSessionSummaries().Count == 0, "Modern resource list allocated legacy session state");
+                });
+                string readResource = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":102,\"params\":{\"uri\":\"oni://test\"," + modernMeta + "}}";
+                Check("HTTP modern resource read enforces Mcp-Name and succeeds without a session", () =>
+                {
+                    using (var response = PostModern(client, readResource, "resources/read"))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest, "Missing Mcp-Name was accepted");
+                        Assert((int)ReadJson(response)["error"]["code"] == -32020, "Missing Mcp-Name used wrong error code");
+                    }
+                    using (var response = PostModern(client, readResource, "resources/read", "oni://test"))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Modern resource read failed");
+                        var result = (JObject)ReadJson(response)["result"];
+                        Assert((string)result["contents"][0]["text"] == "test", "Modern resource body changed");
+                        Assert((string)result["resultType"] == "complete", "Modern resource read omitted resultType");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern resource read returned a session id");
+                    }
+                    Assert(server.GetSessionSummaries().Count == 0, "Modern resource read allocated legacy session state");
+                });
+                string toolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":103,\"params\":{" + modernMeta + "}}";
+                Check("HTTP modern path does not fake tool support", () =>
+                {
+                    using (var response = PostModern(client, toolsList, "tools/list"))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Modern unsupported method transport failed");
+                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.MethodNotFound, "Modern unsupported tool method was not rejected");
+                    }
+                });
+
                 Check("HTTP initialize rejects malformed requests without allocating sessions", () =>
                 {
                     foreach (var request in new[] {
@@ -251,6 +318,22 @@ internal static class Program
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             if (sessionId != null)
                 request.Headers.Add("Mcp-Session-Id", sessionId);
+            var work = client.SendAsync(request);
+            PumpUntil(work);
+            return work.GetAwaiter().GetResult();
+        }
+    }
+
+    private static HttpResponseMessage PostModern(HttpClient client, string json, string method, string name = null)
+    {
+        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+        {
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+            if (method != null)
+                request.Headers.Add("Mcp-Method", method);
+            if (name != null)
+                request.Headers.Add("Mcp-Name", name);
             var work = client.SendAsync(request);
             PumpUntil(work);
             return work.GetAwaiter().GetResult();

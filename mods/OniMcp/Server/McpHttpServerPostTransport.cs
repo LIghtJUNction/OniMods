@@ -16,7 +16,7 @@ namespace OniMcp.Server
     /// 基于 System.Net.HttpListener（.NET Framework 内置）
     /// </summary>
     public partial class McpHttpServer : MonoBehaviour
-{
+    {
         private void HandlePost(HttpListenerRequest request, HttpListenerResponse response, string sessionId, string protocolVersion)
         {
             string body;
@@ -55,6 +55,11 @@ namespace OniMcp.Server
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), 200);
                 return;
             }
+
+            // MCP 2026-07-28 is a stateless protocol era. Route it before the
+            // initialize/session code so legacy transport semantics remain untouched.
+            if (TryHandleModernPost(request, response, rawMessage, protocolVersion))
+                return;
 
             if (rawMessage["method"] == null && (rawMessage["result"] != null || rawMessage["error"] != null))
             {
@@ -277,5 +282,5 @@ namespace OniMcp.Server
                 catch { }
             }
         }
-}
+    }
 }

@@ -77,6 +77,9 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 
 - 在 `1.0.0` 之前，工具名、参数和响应结构可能发生不兼容改动。
 - 外部客户端请固定版本，并优先以运行时 manifest 为准。
+- `2025-11-25` / `2025-06-18` 客户端继续使用 `initialize` + `Mcp-Session-Id` 的完整工具路径。
+- `2026-07-28` 目前提供第一阶段无会话兼容：`server/discover`、`resources/list`、`resources/templates/list`、`resources/read`。该路径要求每个请求携带现代 `_meta`、`Mcp-Protocol-Version`、`Mcp-Method`，资源读取还要求匹配的 `Mcp-Name`；它不会创建或返回 `Mcp-Session-Id`。
+- 现代路径暂不广告 `tools`、Tasks、MRTR 或订阅能力。工具调用在完成 request-scoped 状态迁移前继续走 2025 会话路径，避免把旧的 session 隐式状态伪装成 2026 stateless 实现。
 
 ## 更新与验证
 

@@ -15,7 +15,7 @@ namespace OniMcp.Server
     /// 基于 System.Net.HttpListener（.NET Framework 内置）
     /// </summary>
     public partial class McpHttpServer : MonoBehaviour
-{
+    {
         public static McpHttpServer Instance { get; private set; }
 
         private static readonly AsyncLocal<string> CurrentSessionContext = new AsyncLocal<string>();
@@ -187,7 +187,7 @@ namespace OniMcp.Server
                 ApplyCorsHeaders(response, corsOrigin);
 
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS");
-                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Accept, Authorization, X-Oni-Mcp-Token");
+                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Mcp-Method, Mcp-Name, Accept, Authorization, X-Oni-Mcp-Token");
                 response.Headers.Add("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
 
                 if (request.HttpMethod == "OPTIONS")
@@ -284,5 +284,5 @@ namespace OniMcp.Server
                 catch { }
             }
         }
-}
+    }
 }
