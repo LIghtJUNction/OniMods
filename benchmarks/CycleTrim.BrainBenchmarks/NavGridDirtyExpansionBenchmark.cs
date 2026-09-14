@@ -8,13 +8,14 @@ using System.Runtime.CompilerServices;
 namespace CycleTrim.BrainBenchmarks
 {
     /// <summary>
-    /// Synthetic model of ONI NavGrid.UpdateGraph dirty-cell expansion.
+    /// Synthetic model of ONI 744825 NavGrid.UpdateGraph dirty-cell expansion.
     ///
-    /// The baseline follows the post-744825 decompiled structure: snapshot the original
-    /// DirtyCells count, expand each source through AddDirtyCell, then clear dirty bits
-    /// after processing. The candidate keeps the exact first-seen output order while
-    /// replacing repeated AddDirtyCell calls with a reusable BitArray membership map.
-    /// This is intentionally only an investigation harness; it is not a runtime patch.
+    /// The candidate preserves vanilla first-seen order while replacing repeated
+    /// AddDirtyCell membership checks with a reusable BitArray. Unlike the initial
+    /// investigation harness, this model also charges the candidate for maintaining
+    /// DirtyBitFlags for every expanded cell and verifies the swap/callback/cleanup
+    /// lifecycle that protects cells dirtied during UpdateGraph(List&lt;int&gt;).
+    /// This remains a synthetic benchmark, not an in-game FPS measurement.
     /// </summary>
     internal static class NavGridDirtyExpansionBenchmark
     {
@@ -36,6 +37,20 @@ namespace CycleTrim.BrainBenchmarks
 
             internal string Name { get; }
             internal int[] Seeds { get; }
+        }
+
+        private sealed class LifecycleSnapshot
+        {
+            internal LifecycleSnapshot(int[] processed, int[] pending, bool[] pendingDirty)
+            {
+                Processed = processed;
+                Pending = pending;
+                PendingDirty = pendingDirty;
+            }
+
+            internal int[] Processed { get; }
+            internal int[] Pending { get; }
+            internal bool[] PendingDirty { get; }
         }
 
         private sealed class Simulator
@@ -66,74 +81,98 @@ namespace CycleTrim.BrainBenchmarks
             internal int RunVanilla(int[] seeds)
             {
                 Seed(seeds);
-                var originalCount = dirtyCells.Count;
-                for (var index = 0; index < originalCount; index++)
-                {
-                    ExpandThroughAddDirtyCell(dirtyCells[index]);
-                }
-
+                ExpandVanilla();
                 var resultCount = dirtyCells.Count;
-                ClearVanillaDirtyState();
+                ClearProcessed(dirtyCells);
+                dirtyCells.Clear();
                 return resultCount;
             }
 
             internal int RunCandidate(int[] seeds)
             {
                 Seed(seeds);
-                var originalCount = dirtyCells.Count;
-
-                // Preserve vanilla first-seen order exactly: original dirty cells remain
-                // at the front, then expansions append only cells not seen before.
-                for (var index = 0; index < originalCount; index++)
-                {
-                    var cell = dirtyCells[index];
-                    candidateBits.Set(cell, true);
-                    candidateCells.Add(cell);
-                }
-
-                for (var index = 0; index < originalCount; index++)
-                {
-                    ExpandThroughBitSet(dirtyCells[index]);
-                }
-
+                ExpandCandidate();
                 var resultCount = candidateCells.Count;
-                ClearCandidateDirtyState();
+                dirtyCells.Clear();
+                ClearProcessed(candidateCells);
+                candidateBits.SetAll(false);
+                candidateCells.Clear();
                 return resultCount;
             }
 
             internal int[] CaptureVanilla(int[] seeds)
             {
                 Seed(seeds);
-                var originalCount = dirtyCells.Count;
-                for (var index = 0; index < originalCount; index++)
-                {
-                    ExpandThroughAddDirtyCell(dirtyCells[index]);
-                }
-
+                ExpandVanilla();
                 var result = dirtyCells.ToArray();
-                ClearVanillaDirtyState();
+                ClearProcessed(dirtyCells);
+                dirtyCells.Clear();
                 return result;
             }
 
             internal int[] CaptureCandidate(int[] seeds)
             {
                 Seed(seeds);
-                var originalCount = dirtyCells.Count;
-                for (var index = 0; index < originalCount; index++)
-                {
-                    var cell = dirtyCells[index];
-                    candidateBits.Set(cell, true);
-                    candidateCells.Add(cell);
-                }
-
-                for (var index = 0; index < originalCount; index++)
-                {
-                    ExpandThroughBitSet(dirtyCells[index]);
-                }
-
+                ExpandCandidate();
                 var result = candidateCells.ToArray();
-                ClearCandidateDirtyState();
+                dirtyCells.Clear();
+                ClearProcessed(candidateCells);
+                candidateBits.SetAll(false);
+                candidateCells.Clear();
                 return result;
+            }
+
+            internal LifecycleSnapshot CaptureVanillaLifecycle(int[] seeds, int[] callbackCells)
+            {
+                Seed(seeds);
+                ExpandVanilla();
+                var processed = dirtyCells.ToArray();
+
+                // Vanilla swaps DirtyCells with an empty buffer before calling
+                // UpdateGraph(List<int>). Clearing this simulator list models the new
+                // writable DirtyCells while processed remains isolated from callbacks.
+                dirtyCells.Clear();
+                AddCallbackCells(callbackCells);
+                ClearProcessed(processed);
+                var snapshot = CaptureLifecycle(processed);
+                Reset();
+                return snapshot;
+            }
+
+            internal LifecycleSnapshot CaptureCandidateLifecycle(int[] seeds, int[] callbackCells)
+            {
+                Seed(seeds);
+                ExpandCandidate();
+                var processed = candidateCells.ToArray();
+
+                // A runtime replacement must expose an empty DirtyCells collection while
+                // UpdateGraph(List<int>) and OnNavGridUpdateComplete run, exactly as the
+                // vanilla list swap does.
+                dirtyCells.Clear();
+                AddCallbackCells(callbackCells);
+                ClearProcessed(candidateCells);
+                var snapshot = CaptureLifecycle(processed);
+                Reset();
+                return snapshot;
+            }
+
+            private LifecycleSnapshot CaptureLifecycle(int[] processed)
+            {
+                var pending = dirtyCells.ToArray();
+                var pendingDirty = new bool[pending.Length];
+                for (var index = 0; index < pending.Length; index++)
+                {
+                    pendingDirty[index] = IsDirty(pending[index]);
+                }
+                return new LifecycleSnapshot(processed, pending, pendingDirty);
+            }
+
+            private void AddCallbackCells(int[] callbackCells)
+            {
+                for (var index = 0; index < callbackCells.Length; index++)
+                {
+                    AddDirtyCell(callbackCells[index]);
+                }
             }
 
             private void Seed(int[] seeds)
@@ -144,23 +183,41 @@ namespace CycleTrim.BrainBenchmarks
                 }
             }
 
+            private void ExpandVanilla()
+            {
+                var originalCount = dirtyCells.Count;
+                for (var index = 0; index < originalCount; index++)
+                {
+                    ExpandThroughAddDirtyCell(dirtyCells[index]);
+                }
+            }
+
+            private void ExpandCandidate()
+            {
+                var originalCount = dirtyCells.Count;
+                for (var index = 0; index < originalCount; index++)
+                {
+                    var cell = dirtyCells[index];
+                    candidateBits.Set(cell, true);
+                    candidateCells.Add(cell);
+                }
+
+                for (var index = 0; index < originalCount; index++)
+                {
+                    ExpandThroughBitSet(dirtyCells[index]);
+                }
+            }
+
             [MethodImpl(MethodImplOptions.NoInlining)]
             private void AddDirtyCell(int cell)
             {
-                if (cell < 0 || cell >= cellCount)
-                {
-                    return;
-                }
-
-                var byteIndex = cell >> 3;
-                var mask = 1 << (cell & 7);
-                if ((dirtyFlags[byteIndex] & mask) != 0)
+                if (cell < 0 || cell >= cellCount || IsDirty(cell))
                 {
                     return;
                 }
 
                 dirtyCells.Add(cell);
-                dirtyFlags[byteIndex] |= (byte)mask;
+                SetDirty(cell);
             }
 
             private void ExpandThroughAddDirtyCell(int source)
@@ -190,6 +247,9 @@ namespace CycleTrim.BrainBenchmarks
 
                         candidateBits.Set(cell, true);
                         candidateCells.Add(cell);
+                        // Expanded cells must remain dirty through UpdateGraph(List<int>) so
+                        // callbacks cannot queue the same cell for the next graph update.
+                        SetDirty(cell);
                     }
                 }
             }
@@ -209,26 +269,33 @@ namespace CycleTrim.BrainBenchmarks
                 maxY = Math.Min(height - 1, y + rangeY);
             }
 
-            private void ClearVanillaDirtyState()
+            private bool IsDirty(int cell)
             {
-                // Mirrors current ONI: clearing a byte for every processed cell can clear
-                // neighboring bits repeatedly, but the entire dirty list is discarded next.
-                for (var index = 0; index < dirtyCells.Count; index++)
-                {
-                    dirtyFlags[dirtyCells[index] >> 3] = 0;
-                }
-
-                dirtyCells.Clear();
+                var byteIndex = cell >> 3;
+                var mask = 1 << (cell & 7);
+                return (dirtyFlags[byteIndex] & mask) != 0;
             }
 
-            private void ClearCandidateDirtyState()
+            private void SetDirty(int cell)
             {
-                // External AddDirtyCell state still has to be reset for the original sources.
-                for (var index = 0; index < dirtyCells.Count; index++)
-                {
-                    dirtyFlags[dirtyCells[index] >> 3] = 0;
-                }
+                var byteIndex = cell >> 3;
+                dirtyFlags[byteIndex] |= (byte)(1 << (cell & 7));
+            }
 
+            private void ClearProcessed(IList<int> processed)
+            {
+                // ONI 744825 clears the entire flag byte for each processed cell rather
+                // than one bit. Preserve that detail because callbacks may have dirtied an
+                // unprocessed neighbor in the same byte while UpdateGraph(List<int>) ran.
+                for (var index = 0; index < processed.Count; index++)
+                {
+                    dirtyFlags[processed[index] >> 3] = 0;
+                }
+            }
+
+            private void Reset()
+            {
+                Array.Clear(dirtyFlags, 0, dirtyFlags.Length);
                 dirtyCells.Clear();
                 candidateBits.SetAll(false);
                 candidateCells.Clear();
@@ -242,12 +309,14 @@ namespace CycleTrim.BrainBenchmarks
             Console.WriteLine("CycleTrim NavGrid dirty-cell expansion synthetic benchmark");
             Console.WriteLine("This is not an in-game FPS measurement.");
             Console.WriteLine(
-                "Model: post-744825 vanilla expansion shape vs order-preserving reusable-bitset candidate; " +
-                "grid=" + Width + "x" + Height + ", range=" + RangeX + "x" + RangeY);
+                "Model: ONI 744825 expansion plus DirtyBitFlags/swap/callback lifecycle vs " +
+                "order-preserving reusable-bitset candidate; grid=" + Width + "x" + Height +
+                ", range=" + RangeX + "x" + RangeY);
             Console.WriteLine(
                 "Method: " + WarmupSamples + " warmups + " + MeasuredSamples +
                 " paired samples, " + IterationsPerSample + " update cycles/sample; medians reported");
 
+            VerifyCallbackLifecycle();
             for (var index = 0; index < scenarios.Length; index++)
             {
                 RunScenario(scenarios[index]);
@@ -311,19 +380,62 @@ namespace CycleTrim.BrainBenchmarks
         {
             var vanilla = simulator.CaptureVanilla(scenario.Seeds);
             var candidate = simulator.CaptureCandidate(scenario.Seeds);
-            if (vanilla.Length != candidate.Length)
-            {
-                throw new InvalidOperationException(
-                    scenario.Name + " expansion count changed: " + vanilla.Length + " vs " + candidate.Length);
-            }
+            AssertSequenceEqual(vanilla, candidate, scenario.Name + " processed order");
+        }
 
-            for (var index = 0; index < vanilla.Length; index++)
+        private static void VerifyCallbackLifecycle()
+        {
+            var simulator = new Simulator(Width, Height, RangeX, RangeY);
+            var seeds = new[] { Cell(8, 8) };
+            var callbackCells = new[]
             {
-                if (vanilla[index] != candidate[index])
+                Cell(8, 8),   // already processed: must stay suppressed during callback
+                Cell(13, 8),  // unprocessed but shares a dirty-flag byte with processed cells
+                Cell(64, 64)  // independent dirty byte: must survive cleanup as dirty
+            };
+            var vanilla = simulator.CaptureVanillaLifecycle(seeds, callbackCells);
+            var candidate = simulator.CaptureCandidateLifecycle(seeds, callbackCells);
+
+            AssertSequenceEqual(vanilla.Processed, candidate.Processed, "callback processed order");
+            AssertSequenceEqual(vanilla.Pending, candidate.Pending, "callback pending cells");
+            if (vanilla.PendingDirty.Length != candidate.PendingDirty.Length)
+            {
+                throw new InvalidOperationException("callback pending dirty-state length changed");
+            }
+            for (var index = 0; index < vanilla.PendingDirty.Length; index++)
+            {
+                if (vanilla.PendingDirty[index] != candidate.PendingDirty[index])
                 {
                     throw new InvalidOperationException(
-                        scenario.Name + " first-seen order changed at index " + index +
-                        ": " + vanilla[index] + " vs " + candidate[index]);
+                        "callback pending dirty state changed at index " + index);
+                }
+            }
+
+            if (candidate.Pending.Length != 2
+                || candidate.Pending[0] != Cell(13, 8)
+                || candidate.Pending[1] != Cell(64, 64)
+                || candidate.PendingDirty[0]
+                || !candidate.PendingDirty[1])
+            {
+                throw new InvalidOperationException(
+                    "callback lifecycle no longer matches ONI 744825 whole-byte cleanup semantics");
+            }
+        }
+
+        private static void AssertSequenceEqual(int[] expected, int[] actual, string label)
+        {
+            if (expected.Length != actual.Length)
+            {
+                throw new InvalidOperationException(
+                    label + " length changed: " + expected.Length + " vs " + actual.Length);
+            }
+            for (var index = 0; index < expected.Length; index++)
+            {
+                if (expected[index] != actual[index])
+                {
+                    throw new InvalidOperationException(
+                        label + " changed at index " + index + ": " +
+                        expected[index] + " vs " + actual[index]);
                 }
             }
         }
@@ -352,7 +464,6 @@ namespace CycleTrim.BrainBenchmarks
                 {
                     throw new InvalidOperationException("expansion count changed during measurement");
                 }
-
                 checksum ^= count;
             }
 
@@ -409,7 +520,6 @@ namespace CycleTrim.BrainBenchmarks
                     result[index++] = Cell(startX + x, startY + y);
                 }
             }
-
             return result;
         }
 
@@ -421,7 +531,6 @@ namespace CycleTrim.BrainBenchmarks
             {
                 result[index] = Cell(startX + index, y);
             }
-
             return result;
         }
 
@@ -432,7 +541,6 @@ namespace CycleTrim.BrainBenchmarks
             {
                 result[index] = cell;
             }
-
             return result;
         }
 
