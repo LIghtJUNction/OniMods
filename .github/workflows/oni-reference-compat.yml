@@ -62,7 +62,7 @@ jobs:
       - name: Extract Harmony target API surface
         run: >-
           python3 scripts/extract_harmony_api_surface.py
-          "$GITHUB_WORKSPACE/.oni-managed/Assembly-CSharp.dll"
+          "$GITHUB_WORKSPACE/.oni-managed"
           --output "$GITHUB_WORKSPACE/artifacts/oni-api-surface"
       - name: Upload API surface only
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
