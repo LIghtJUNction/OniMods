@@ -70,8 +70,19 @@ namespace OniMcp.Tools
     }
     public static class OniResourceRegistry
     {
-        public static List<McpResourceInfo> GetResourceInfos() => new List<McpResourceInfo>();
+        public static List<McpResourceInfo> GetResourceInfos() => new List<McpResourceInfo>
+        {
+            new McpResourceInfo { Uri = "oni://test", Name = "test", MimeType = "text/plain" }
+        };
         public static List<McpResourceTemplateInfo> GetResourceTemplateInfos() => new List<McpResourceTemplateInfo>();
-        public static ReadResourceResult ReadResource(string uri) => null;
+        public static ReadResourceResult ReadResource(string uri) => uri == "oni://test"
+            ? new ReadResourceResult
+            {
+                Contents = new List<TextResourceContent>
+                {
+                    new TextResourceContent { Uri = uri, MimeType = "text/plain", Text = "test" }
+                }
+            }
+            : null;
     }
 }
