@@ -184,25 +184,25 @@ namespace OniMcp.Server
                     return CompleteModernResult(new JObject
                     {
                         ["resources"] = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
-                            .OrderBy(resource => resource.Uri, StringComparer.Ordinal))
+                            .OrderBy(item => item.Uri, StringComparer.Ordinal))
                     });
 
                 case "resources/templates/list":
                     return CompleteModernResult(new JObject
                     {
                         ["resourceTemplates"] = JArray.FromObject(OniResourceRegistry.GetResourceTemplateInfos()
-                            .OrderBy(resource => resource.UriTemplate, StringComparer.Ordinal))
+                            .OrderBy(item => item.UriTemplate, StringComparer.Ordinal))
                     });
 
                 case "resources/read":
                     var @params = request.Params?.ToObject<ReadResourceParams>();
                     if (@params == null || string.IsNullOrEmpty(@params.Uri))
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, "Missing resource uri");
-                    var resource = OniResourceRegistry.ReadResource(@params.Uri);
-                    if (resource == null)
+                    var readResult = OniResourceRegistry.ReadResource(@params.Uri);
+                    if (readResult == null)
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
                             $"Resource not found: {@params.Uri}");
-                    return CompleteModernResult(JObject.FromObject(resource));
+                    return CompleteModernResult(JObject.FromObject(readResult));
 
                 default:
                     return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
