@@ -249,7 +249,7 @@ namespace OniMcp.Server
                     var readResult = OniResourceRegistry.ReadResource(@params.Uri);
                     if (readResult == null)
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
-                            $"Resource not found: {@params.Uri}");
+                            $"Resource not found: {@params.Uri}", new JObject { ["uri"] = @params.Uri });
                     return CompleteModernResult(JObject.FromObject(readResult));
 
                 default:
