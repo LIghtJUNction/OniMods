@@ -36,12 +36,11 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '10.0.x'
-      - name: Fetch pinned reference assemblies
+      - name: Fetch and verify pinned reference assemblies
         run: >-
           python3 scripts/fetch_oni_reference_assemblies.py
           --manifest ci/oni-reference-assemblies.json
           --output "$GITHUB_WORKSPACE/.oni-managed"
-          --allow-missing-sha256
       - name: Install pinned ILSpy command line tool
         run: dotnet tool install --global ilspycmd --version 11.0.0.9375
       - name: Build CycleTrim against pinned references
