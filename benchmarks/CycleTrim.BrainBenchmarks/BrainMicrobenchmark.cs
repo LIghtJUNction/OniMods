@@ -71,6 +71,7 @@ namespace CycleTrim.BrainBenchmarks
                 "call reduction: " +
                 callReduction.ToString("P2", CultureInfo.InvariantCulture));
             PathProbeCacheMatrixBenchmark.Run();
+            NavGridDirtyExpansionBenchmark.Run();
         }
 
         private static void MeasurePaired(out Sample baseline, out Sample candidate)
