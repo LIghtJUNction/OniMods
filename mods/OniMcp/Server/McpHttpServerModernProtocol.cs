@@ -287,7 +287,10 @@ namespace OniMcp.Server
                 }
 
                 if (result is JsonRpcResponse rpcResponse)
-                    SendJson(response, rpcResponse, 200);
+                {
+                    int status = rpcResponse.Error?.Code == McpErrorCode.MethodNotFound ? 404 : 200;
+                    SendJson(response, rpcResponse, status);
+                }
                 else
                     SendJson(response, JsonRpcResponse.Success(requestId, result), 200);
             }
