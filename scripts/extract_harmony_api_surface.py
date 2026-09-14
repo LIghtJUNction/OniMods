@@ -14,6 +14,15 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PATCH_RE = re.compile(r"HarmonyPatch\s*\(\s*typeof\((?P<type>[A-Za-z_][A-Za-z0-9_.]*)\)")
+ASSEMBLY_NAMES = ("Assembly-CSharp.dll", "Assembly-CSharp-firstpass.dll")
+
+
+def digest_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def digest_text(text: str) -> str:
@@ -29,61 +38,78 @@ def target_types() -> list[str]:
     return sorted(found)
 
 
-def decompile_type(ilspycmd: str, assembly: Path, type_name: str) -> tuple[str, str]:
+def type_candidates(type_name: str) -> list[str]:
     candidates = [type_name]
     if "." in type_name:
         parts = type_name.split(".")
         for split in range(len(parts) - 1, 0, -1):
             candidates.append(".".join(parts[:split]) + "+" + "+".join(parts[split:]))
+    return candidates
+
+
+def decompile_type(ilspycmd: str, assemblies: list[Path], type_name: str) -> tuple[Path, str, str]:
     errors = []
-    for candidate in candidates:
-        result = subprocess.run(
-            [ilspycmd, "-t", candidate, str(assembly)],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=60,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return candidate, result.stdout.replace("\r\n", "\n").strip() + "\n"
-        errors.append((candidate, result.stderr.strip()))
-    detail = "; ".join(f"{candidate}: {error}" for candidate, error in errors)
-    raise RuntimeError(f"could not decompile Harmony target {type_name}: {detail}")
+    for assembly in assemblies:
+        for candidate in type_candidates(type_name):
+            result = subprocess.run(
+                [ilspycmd, "-t", candidate, str(assembly)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                text = result.stdout.replace("\r\n", "\n").strip() + "\n"
+                return assembly, candidate, text
+            error = " ".join(result.stderr.split())
+            errors.append(f"{assembly.name}:{candidate}: {error}")
+    raise RuntimeError(
+        f"could not decompile Harmony target {type_name}: " + "; ".join(errors)
+    )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("assembly", help="Path to the pinned Assembly-CSharp.dll reference assembly")
+    parser.add_argument("managed_dir", help="Directory containing pinned ONI game reference assemblies")
     parser.add_argument("--output", default="artifacts/oni-api-surface")
     parser.add_argument("--ilspycmd", default="ilspycmd")
     args = parser.parse_args()
 
-    assembly = Path(args.assembly)
-    if not assembly.is_file():
-        parser.error(f"assembly not found: {assembly}")
+    managed_dir = Path(args.managed_dir)
+    assemblies = [managed_dir / name for name in ASSEMBLY_NAMES]
+    missing = [str(path) for path in assemblies if not path.is_file()]
+    if missing:
+        parser.error("required assembly not found: " + ", ".join(missing))
+
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
 
     entries = []
     for requested in target_types():
-        resolved, text = decompile_type(args.ilspycmd, assembly, requested)
-        safe_name = requested.replace(".", "_") + ".cs"
+        assembly, resolved, text = decompile_type(args.ilspycmd, assemblies, requested)
+        safe_name = assembly.stem + "__" + requested.replace(".", "_") + ".cs"
         destination = output / safe_name
         destination.write_text(text, encoding="utf-8")
         entries.append(
             {
                 "requested_type": requested,
                 "resolved_type": resolved,
+                "assembly": assembly.name,
                 "file": safe_name,
                 "sha256": digest_text(text),
             }
         )
-        print(f"SURFACE {requested} -> {resolved} sha256={entries[-1]['sha256']}")
+        print(
+            f"SURFACE {requested} -> {assembly.name}:{resolved} "
+            f"sha256={entries[-1]['sha256']}"
+        )
 
     index = {
-        "assembly": assembly.name,
-        "assembly_sha256": hashlib.sha256(assembly.read_bytes()).hexdigest(),
+        "assemblies": [
+            {"name": assembly.name, "sha256": digest_file(assembly)}
+            for assembly in assemblies
+        ],
         "target_count": len(entries),
         "targets": entries,
     }
