@@ -8,6 +8,16 @@
     "license_path": "Lib/LICENSE.txt",
     "note": "Reference assemblies only. The source commit post-dates ONI 744825, but the repository does not encode an authoritative ONI build number; compile success must not be reported as proof of runtime compatibility."
   },
+  "method_body_source": {
+    "repository": "Kupie/ONI_Decomp",
+    "commit": "8d4ace10c2b6a84cee394653a91b990a5122e636",
+    "official_oni_build": 744825,
+    "note": "Transient source-only method-body evidence. KleiVersion.cs declares release ChangeList 744825. The mirror has no declared license, so CI verifies provenance and semantics without vendoring or redistributing the decompiled source.",
+    "files": [
+      {"name":"NavGrid.cs","path":"Assembly-CSharp/NavGrid.cs","blob_sha":"8db6d7f2e84fda45504d06844722a693e5338f0c"},
+      {"name":"KleiVersion.cs","path":"Assembly-CSharp/KleiVersion.cs","blob_sha":"2f5b3266033b2868e9b475a55ac208f70eca647a"}
+    ]
+  },
   "files": [
     {"name":"0Harmony.dll","path":"Lib/0Harmony.dll","size":1255936,"sha256":"bbf485c419484fd1637e1a7c5bc282a62c63bf2f90571ff0dedc1de584fbfaf8"},
     {"name":"Assembly-CSharp.dll","path":"Lib/Assembly-CSharp.dll","size":4593664,"sha256":"1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c"},
