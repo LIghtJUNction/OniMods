@@ -26,6 +26,10 @@ namespace CycleTrim.BrainBenchmarks
         private const int WarmupSamples = 3;
         private const int MeasuredSamples = 7;
         private const int IterationsPerSample = 150;
+        private const int AdaptiveWarmupSamples = 2;
+        private const int AdaptiveMeasuredSamples = 5;
+        private const int AdaptiveIterationsPerSample = 75;
+        private static readonly int[] AdaptiveThresholds = { 8, 16, 32, 64 };
 
         private sealed class Scenario
         {
@@ -98,6 +102,35 @@ namespace CycleTrim.BrainBenchmarks
                 candidateBits.SetAll(false);
                 candidateCells.Clear();
                 return resultCount;
+            }
+
+            internal int RunAdaptive(int[] seeds, int candidateThreshold)
+            {
+                Seed(seeds);
+                if (dirtyCells.Count < candidateThreshold)
+                {
+                    ExpandVanilla();
+                    var vanillaCount = dirtyCells.Count;
+                    ClearProcessed(dirtyCells);
+                    dirtyCells.Clear();
+                    return vanillaCount;
+                }
+
+                ExpandCandidate();
+                var candidateCount = candidateCells.Count;
+                dirtyCells.Clear();
+                ClearProcessed(candidateCells);
+                candidateBits.SetAll(false);
+                candidateCells.Clear();
+                return candidateCount;
+            }
+
+            internal int CountUniqueSeeds(int[] seeds)
+            {
+                Seed(seeds);
+                var count = dirtyCells.Count;
+                Reset();
+                return count;
             }
 
             internal int[] CaptureVanilla(int[] seeds)
@@ -321,6 +354,8 @@ namespace CycleTrim.BrainBenchmarks
             {
                 RunScenario(scenarios[index]);
             }
+
+            RunAdaptiveThresholdSweep();
         }
 
         private static void RunScenario(Scenario scenario)
@@ -374,6 +409,80 @@ namespace CycleTrim.BrainBenchmarks
                 ", speedup=" + speedup.ToString("F2", CultureInfo.InvariantCulture) + "x" +
                 ", allocated=" + vanillaAllocated[vanillaAllocated.Length / 2] +
                 "/" + candidateAllocated[candidateAllocated.Length / 2] + " B");
+        }
+
+        private static void RunAdaptiveThresholdSweep()
+        {
+            var scenarios = CreateAdaptiveScenarios();
+            Console.WriteLine();
+            Console.WriteLine("CycleTrim NavGrid adaptive-dispatch threshold sweep");
+            Console.WriteLine(
+                "Rule: use bitset when unique pre-expansion DirtyCells.Count >= threshold; " +
+                "otherwise keep vanilla expansion.");
+            Console.WriteLine(
+                "Method: " + AdaptiveWarmupSamples + " warmups + " + AdaptiveMeasuredSamples +
+                " paired samples, " + AdaptiveIterationsPerSample +
+                " update cycles/sample; adaptive speedup is vs paired vanilla median.");
+
+            for (var scenarioIndex = 0; scenarioIndex < scenarios.Length; scenarioIndex++)
+            {
+                RunAdaptiveScenario(scenarios[scenarioIndex]);
+            }
+        }
+
+        private static void RunAdaptiveScenario(Scenario scenario)
+        {
+            var simulator = new Simulator(Width, Height, RangeX, RangeY);
+            VerifyEquivalent(simulator, scenario);
+            var uniqueSeeds = simulator.CountUniqueSeeds(scenario.Seeds);
+            var expectedCount = simulator.RunVanilla(scenario.Seeds);
+
+            for (var thresholdIndex = 0; thresholdIndex < AdaptiveThresholds.Length; thresholdIndex++)
+            {
+                var threshold = AdaptiveThresholds[thresholdIndex];
+                for (var sample = 0; sample < AdaptiveWarmupSamples; sample++)
+                {
+                    simulator.RunVanilla(scenario.Seeds);
+                    simulator.RunAdaptive(scenario.Seeds, threshold);
+                }
+
+                var vanillaElapsed = new double[AdaptiveMeasuredSamples];
+                var adaptiveElapsed = new double[AdaptiveMeasuredSamples];
+                var vanillaAllocated = new long[AdaptiveMeasuredSamples];
+                var adaptiveAllocated = new long[AdaptiveMeasuredSamples];
+                for (var sample = 0; sample < AdaptiveMeasuredSamples; sample++)
+                {
+                    if ((sample & 1) == 0)
+                    {
+                        MeasureAdaptivePair(simulator, scenario.Seeds, threshold, false, expectedCount,
+                            out vanillaElapsed[sample], out vanillaAllocated[sample]);
+                        MeasureAdaptivePair(simulator, scenario.Seeds, threshold, true, expectedCount,
+                            out adaptiveElapsed[sample], out adaptiveAllocated[sample]);
+                    }
+                    else
+                    {
+                        MeasureAdaptivePair(simulator, scenario.Seeds, threshold, true, expectedCount,
+                            out adaptiveElapsed[sample], out adaptiveAllocated[sample]);
+                        MeasureAdaptivePair(simulator, scenario.Seeds, threshold, false, expectedCount,
+                            out vanillaElapsed[sample], out vanillaAllocated[sample]);
+                    }
+                }
+
+                Array.Sort(vanillaElapsed);
+                Array.Sort(adaptiveElapsed);
+                Array.Sort(vanillaAllocated);
+                Array.Sort(adaptiveAllocated);
+                var vanillaMedian = vanillaElapsed[vanillaElapsed.Length / 2];
+                var adaptiveMedian = adaptiveElapsed[adaptiveElapsed.Length / 2];
+                var speedup = vanillaMedian / adaptiveMedian;
+                Console.WriteLine(
+                    scenario.Name + ": uniqueSeeds=" + uniqueSeeds +
+                    ", threshold=" + threshold +
+                    ", route=" + (uniqueSeeds >= threshold ? "bitset" : "vanilla") +
+                    ", speedup=" + speedup.ToString("F2", CultureInfo.InvariantCulture) + "x" +
+                    ", allocated=" + vanillaAllocated[vanillaAllocated.Length / 2] +
+                    "/" + adaptiveAllocated[adaptiveAllocated.Length / 2] + " B");
+            }
         }
 
         private static void VerifyEquivalent(Simulator simulator, Scenario scenario)
@@ -479,6 +588,46 @@ namespace CycleTrim.BrainBenchmarks
             allocatedBytes = afterAllocated - beforeAllocated;
         }
 
+        private static void MeasureAdaptivePair(
+            Simulator simulator,
+            int[] seeds,
+            int threshold,
+            bool adaptive,
+            int expectedCount,
+            out double elapsedMilliseconds,
+            out long allocatedBytes)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            var beforeAllocated = GC.GetAllocatedBytesForCurrentThread();
+            var started = Stopwatch.GetTimestamp();
+            var checksum = 0;
+            for (var iteration = 0; iteration < AdaptiveIterationsPerSample; iteration++)
+            {
+                var count = adaptive
+                    ? simulator.RunAdaptive(seeds, threshold)
+                    : simulator.RunVanilla(seeds);
+                if (count != expectedCount)
+                {
+                    throw new InvalidOperationException("adaptive expansion count changed during measurement");
+                }
+                checksum ^= count;
+            }
+
+            var stopped = Stopwatch.GetTimestamp();
+            var afterAllocated = GC.GetAllocatedBytesForCurrentThread();
+            if (checksum == int.MinValue)
+            {
+                throw new InvalidOperationException("unreachable adaptive benchmark checksum");
+            }
+
+            elapsedMilliseconds =
+                (stopped - started) * 1000.0 / Stopwatch.Frequency;
+            allocatedBytes = afterAllocated - beforeAllocated;
+        }
+
         private static Scenario[] CreateScenarios()
         {
             return new[]
@@ -509,6 +658,29 @@ namespace CycleTrim.BrainBenchmarks
             };
         }
 
+        private static Scenario[] CreateAdaptiveScenarios()
+        {
+            return new[]
+            {
+                new Scenario("adaptive-sparse-4", BuildSparse(4)),
+                new Scenario("adaptive-sparse-8", BuildSparse(8)),
+                new Scenario("adaptive-sparse-16", BuildSparse(16)),
+                new Scenario("adaptive-sparse-32", BuildSparse(32)),
+                new Scenario("adaptive-sparse-64", BuildSparse(64)),
+                new Scenario("adaptive-line-4", BuildLine(96, 99, 96)),
+                new Scenario("adaptive-line-8", BuildLine(96, 103, 112)),
+                new Scenario("adaptive-line-16", BuildLine(96, 111, 128)),
+                new Scenario("adaptive-line-32", BuildLine(96, 127, 144)),
+                new Scenario("adaptive-line-64", BuildLine(96, 159, 160)),
+                new Scenario("adaptive-cluster-4", BuildCluster(120, 184, 2, 2)),
+                new Scenario("adaptive-cluster-8", BuildCluster(120, 184, 4, 2)),
+                new Scenario("adaptive-cluster-16", BuildCluster(120, 184, 4, 4)),
+                new Scenario("adaptive-cluster-32", BuildCluster(120, 184, 8, 4)),
+                new Scenario("adaptive-cluster-64", BuildCluster(120, 184, 8, 8)),
+                new Scenario("adaptive-duplicates", BuildDuplicates(Cell(128, 192), 256))
+            };
+        }
+
         private static int[] BuildCluster(int startX, int startY, int width, int height)
         {
             var result = new int[width * height];
@@ -530,6 +702,20 @@ namespace CycleTrim.BrainBenchmarks
             for (var index = 0; index < length; index++)
             {
                 result[index] = Cell(startX + index, y);
+            }
+            return result;
+        }
+
+        private static int[] BuildSparse(int count)
+        {
+            const int columns = 8;
+            const int spacing = 24;
+            var result = new int[count];
+            for (var index = 0; index < count; index++)
+            {
+                var x = 20 + (index % columns) * spacing;
+                var y = 20 + (index / columns) * spacing;
+                result[index] = Cell(x, y);
             }
             return result;
         }
