@@ -214,7 +214,8 @@ internal static class Program
                     Assert(server.GetSessionSummaries().Count == 0, "Modern resource list allocated legacy session state");
                 });
                 string readResource = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":102,\"params\":{\"uri\":\"oni://test\"," + modernMeta + "}}";
-                Check("HTTP modern resource read enforces Mcp-Name and succeeds without a session", () =>
+                string unicodeReadResource = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":104,\"params\":{\"uri\":\"oni://测试\"," + modernMeta + "}}";
+                Check("HTTP modern resource read decodes Mcp-Name Base64 sentinel values", () =>
                 {
                     using (var response = PostModern(client, readResource, "resources/read"))
                     {
@@ -228,6 +229,22 @@ internal static class Program
                         Assert((string)result["contents"][0]["text"] == "test", "Modern resource body changed");
                         Assert((string)result["resultType"] == "complete", "Modern resource read omitted resultType");
                         Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern resource read returned a session id");
+                    }
+                    string encodedUnicodeName = "=?base64?" + Convert.ToBase64String(Encoding.UTF8.GetBytes("oni://测试")) + "?=";
+                    using (var response = PostModern(client, unicodeReadResource, "resources/read", encodedUnicodeName))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Encoded non-ASCII Mcp-Name was rejected");
+                        Assert((string)ReadJson(response)["result"]["contents"][0]["uri"] == "oni://测试", "Encoded Mcp-Name decoded to the wrong resource");
+                    }
+                    using (var response = PostModern(client, readResource, "resources/read", encodedUnicodeName))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest, "Decoded Mcp-Name mismatch was accepted");
+                        Assert((int)ReadJson(response)["error"]["code"] == -32020, "Decoded Mcp-Name mismatch used wrong error code");
+                    }
+                    using (var response = PostModern(client, readResource, "resources/read", "=?base64?***?="))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest, "Invalid Mcp-Name Base64 was accepted");
+                        Assert((int)ReadJson(response)["error"]["code"] == -32020, "Invalid Mcp-Name Base64 used wrong error code");
                     }
                     Assert(server.GetSessionSummaries().Count == 0, "Modern resource read allocated legacy session state");
                 });

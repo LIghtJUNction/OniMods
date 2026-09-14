@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
@@ -18,6 +19,9 @@ namespace OniMcp.Server
         private const string ModernProtocolVersion = "2026-07-28";
         private const int HeaderMismatchErrorCode = -32020;
         private const int UnsupportedProtocolVersionErrorCode = -32022;
+        private const string Base64HeaderPrefix = "=?base64?";
+        private const string Base64HeaderSuffix = "?=";
+        private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
         private bool TryHandleModernPost(HttpListenerRequest httpRequest, HttpListenerResponse response,
             JObject rawMessage, string protocolVersion)
@@ -135,7 +139,21 @@ namespace OniMcp.Server
             string nameHeader = httpRequest.Headers["Mcp-Name"];
             if (expectedName != null)
             {
-                if (string.IsNullOrEmpty(nameHeader) || !string.Equals(nameHeader, expectedName, StringComparison.Ordinal))
+                if (string.IsNullOrEmpty(nameHeader))
+                {
+                    error = HeaderMismatch(rawMessage["id"],
+                        $"Mcp-Name header must match request principal '{expectedName}'");
+                    return false;
+                }
+
+                string decodedNameHeader;
+                if (!TryDecodeModernHeaderValue(nameHeader, out decodedNameHeader))
+                {
+                    error = HeaderMismatch(rawMessage["id"], "Mcp-Name contains invalid Base64 or UTF-8 encoding");
+                    return false;
+                }
+
+                if (!string.Equals(decodedNameHeader, expectedName, StringComparison.Ordinal))
                 {
                     error = HeaderMismatch(rawMessage["id"],
                         $"Mcp-Name header must match request principal '{expectedName}'");
@@ -150,6 +168,36 @@ namespace OniMcp.Server
             }
 
             return true;
+        }
+
+        private static bool TryDecodeModernHeaderValue(string headerValue, out string decodedValue)
+        {
+            decodedValue = headerValue;
+            if (string.IsNullOrEmpty(headerValue)
+                || !headerValue.StartsWith(Base64HeaderPrefix, StringComparison.Ordinal)
+                || !headerValue.EndsWith(Base64HeaderSuffix, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            int payloadLength = headerValue.Length - Base64HeaderPrefix.Length - Base64HeaderSuffix.Length;
+            if (payloadLength <= 0)
+                return false;
+
+            string payload = headerValue.Substring(Base64HeaderPrefix.Length, payloadLength);
+            try
+            {
+                decodedValue = StrictUtf8.GetString(Convert.FromBase64String(payload));
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+            catch (DecoderFallbackException)
+            {
+                return false;
+            }
         }
 
         private static JsonRpcResponse HeaderMismatch(object id, string message)

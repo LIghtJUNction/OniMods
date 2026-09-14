@@ -72,10 +72,11 @@ namespace OniMcp.Tools
     {
         public static List<McpResourceInfo> GetResourceInfos() => new List<McpResourceInfo>
         {
-            new McpResourceInfo { Uri = "oni://test", Name = "test", MimeType = "text/plain" }
+            new McpResourceInfo { Uri = "oni://test", Name = "test", MimeType = "text/plain" },
+            new McpResourceInfo { Uri = "oni://测试", Name = "unicode-test", MimeType = "text/plain" }
         };
         public static List<McpResourceTemplateInfo> GetResourceTemplateInfos() => new List<McpResourceTemplateInfo>();
-        public static ReadResourceResult ReadResource(string uri) => uri == "oni://test"
+        public static ReadResourceResult ReadResource(string uri) => uri == "oni://test" || uri == "oni://测试"
             ? new ReadResourceResult
             {
                 Contents = new List<TextResourceContent>
