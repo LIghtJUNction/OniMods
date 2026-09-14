@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GAME_CHECKS = {
     "verify_cycletrim_target_contract.py": "requires the installed game's Assembly-CSharp.dll and ilspycmd",
     "verify_cycletrim_release_binary.py": "requires a built CycleTrim Release DLL and ilspycmd",
+    "verify_cycletrim_navgrid_source_contract.py": "requires the pinned online ONI 744825 decompilation source",
     "verify_restart_packaging.py": "requires an OniMcp Debug build and distribution archive",
 }
 
