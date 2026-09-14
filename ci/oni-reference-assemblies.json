@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "official_oni_build": 744825,
+  "official_oni_release_date": "2026-07-28",
+  "reference_source": {
+    "repository": "Sgt-Imalas/Sgt_Imalas-Oni-Mods",
+    "commit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
+    "license_path": "Lib/LICENSE.txt",
+    "note": "Reference assemblies only. The source commit post-dates ONI 744825, but the repository does not encode an authoritative ONI build number; compile success must not be reported as proof of runtime compatibility."
+  },
+  "files": [
+    {"name":"0Harmony.dll","path":"Lib/0Harmony.dll","size":1255936,"sha256":"bbf485c419484fd1637e1a7c5bc282a62c63bf2f90571ff0dedc1de584fbfaf8"},
+    {"name":"Assembly-CSharp.dll","path":"Lib/Assembly-CSharp.dll","size":4593664,"sha256":"1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c"},
+    {"name":"Assembly-CSharp-firstpass.dll","path":"Lib/Assembly-CSharp-firstpass.dll","size":1665536,"sha256":"c2f1596bbc441d9b408457032cff8ddd2fab8b75d3768a9210c552931b23cfc7"},
+    {"name":"Newtonsoft.Json.dll","path":"Lib/Newtonsoft.Json.dll","size":176640,"sha256":"e7fdfb49e6140f83ff1fbf4893cc25ad1c1669e72df470c2d284aaa593fe70cf"},
+    {"name":"Unity.TextMeshPro.dll","path":"Lib/Unity.TextMeshPro.dll","size":128512,"sha256":"ab4f936a841c2580571fc9096a9480347790587fcda8b1a45308b01789564f05"},
+    {"name":"UnityEngine.dll","path":"Lib/UnityEngine.dll","size":184832,"sha256":"89095f7c9f40594c6940584c7f6a4aed843f33163dbba7af8302a23c9e710baa"},
+    {"name":"UnityEngine.CoreModule.dll","path":"Lib/UnityEngine.CoreModule.dll","size":1323520,"sha256":"81c7b8183600ff8d2a36cdadbd73555e75d0b4f99c4d8851bc7be929de786ab1"},
+    {"name":"UnityEngine.UI.dll","path":"Lib/UnityEngine.UI.dll","size":115712,"sha256":"b71fea85d3d4a321ecd88bb787bd1424d4c5a8920b689ec9c938a9ca0560b901"},
+    {"name":"UnityEngine.UIModule.dll","path":"Lib/UnityEngine.UIModule.dll","size":29184,"sha256":"44e9e848f203e02f65cce5b5557a296b7a1bd0227f469ebb7b43a194744a5b56"},
+    {"name":"UnityEngine.TextRenderingModule.dll","path":"Lib/UnityEngine.TextRenderingModule.dll","size":18432,"sha256":"8590e9a5d4dd726924b1fa8a3da4b12167b288b9347f30e36479a1793fb2da94"},
+    {"name":"UnityEngine.InputLegacyModule.dll","path":"Lib/UnityEngine.InputLegacyModule.dll","size":27136,"sha256":"7449a6637ce4af8984aaa57fe26d45848b71c42392392bc85ed16880ff09a0ca"}
+  ],
+  "auxiliary_unity_modules": {
+    "package": "UnityEngine.Modules",
+    "version": "2021.3.33",
+    "url": "https://api.nuget.org/v3-flatcontainer/unityengine.modules/2021.3.33/unityengine.modules.2021.3.33.nupkg",
+    "size": 3386574,
+    "sha256": "d32d34526d89958c63220d3a5ce26c5c44c11bfd411a2e1fbc3200088ef160c4",
+    "extract": [
+      {"name":"UnityEngine.IMGUIModule.dll","size":88576,"sha256":"3fe2afaf000557ec559b485ba664d7de7c3f9190e1747518dc35cdd980b092b4"},
+      {"name":"UnityEngine.ScreenCaptureModule.dll","size":10752,"sha256":"e1749ad46587104019dfe18328954fa9c0c24a2748fcbc1da5ed1fdf593e3e2c"}
+    ],
+    "note": "Compile-only fallback because the current public ONI reference mirror omits these two Unity modules. This old Unity package is not evidence that ONI 744825 uses Unity 2021 APIs; CI must label it auxiliary and never use it for Unity API drift claims."
+  }
+}

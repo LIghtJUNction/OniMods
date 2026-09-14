@@ -64,7 +64,7 @@ namespace OniMcp.Server
             bool isNotification = rawMessage.Property("id") == null;
             if (isNotification)
             {
-                MainThreadBridge.Enqueue(new Action(() =>
+                MainThreadBridge.Enqueue(new System.Action(() =>
                 {
                     if (_running)
                         ProcessModernMethod(rpcRequest);
@@ -254,7 +254,7 @@ namespace OniMcp.Server
 
         private void DispatchModernPostResponse(HttpListenerResponse response, JsonRpcRequest rpcRequest)
         {
-            MainThreadBridge.Enqueue(new Action(() =>
+            MainThreadBridge.Enqueue(new System.Action(() =>
             {
                 object result = null;
                 Exception processEx = null;
