@@ -35,8 +35,9 @@ namespace OniMcp.Tools
                     ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "是否只统计已揭示格子内资源/食物，默认 true；调试可传 false", Required = false },
                     ["dupeLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回复制人明细数量，默认 brief=0 standard=12 full=50", Required = false },
                     ["foodLimit"] = new McpToolParameter { Type = "integer", Description = "最多返回食物类型数量，默认 brief=0 standard=8 full=50", Required = false },
-                    ["delta"] = new McpToolParameter { Type = "boolean", Description = "只返回相对同 session/同 deltaKey 上次调用的变化；首次或 resetDelta=true 返回 baseline", Required = false },
+                    ["delta"] = new McpToolParameter { Type = "boolean", Description = "只返回相对同 legacy session 或显式 deltaHandle/同 deltaKey 上次调用的变化；首次或 resetDelta=true 返回 baseline", Required = false },
                     ["deltaKey"] = new McpToolParameter { Type = "string", Description = "可选 delta 缓存槽；同一 agent 可为不同观察循环保留不同 baseline", Required = false },
+                    ["deltaHandle"] = new McpToolParameter { Type = "string", Description = "无 MCP session 的 stateless 调用用于延续 delta baseline 的不透明句柄；首次 delta 响应会生成，后续原样传回。legacy session 调用忽略此参数", Required = false },
                     ["resetDelta"] = new McpToolParameter { Type = "boolean", Description = "清除本次 delta baseline 并把当前结果作为新 baseline", Required = false },
                     ["watch"] = new McpToolParameter { Type = "array", Description = "关注指标数组或逗号字符串，如 stress,food_kcal,red_alert,alerts,oxygen；提供后返回 watch 块", Required = false },
                     ["watchOnly"] = new McpToolParameter { Type = "boolean", Description = "只返回 watch 指标、告警级别和摘要，适合循环轮询", Required = false },
@@ -118,8 +119,15 @@ namespace OniMcp.Tools
 
                     if (ToolUtil.GetBool(args, "delta", false))
                     {
+                        McpToolStateScope stateScope;
+                        string stateScopeError;
+                        if (!McpToolStateScope.TryResolve(McpHttpServer.CurrentSessionId, args["deltaHandle"]?.ToString(), out stateScope, out stateScopeError))
+                            return CallToolResult.Error(stateScopeError);
+
                         string deltaKey = BuildDeltaKey(args, profile, worldId, watchKeys, watchOnly);
-                        var delta = DeltaCache.Apply(McpHttpServer.CurrentSessionId ?? "global", deltaKey, snapshot, ToolUtil.GetBool(args, "resetDelta", false));
+                        var delta = DeltaCache.Apply(stateScope.CacheScopeId, deltaKey, snapshot, ToolUtil.GetBool(args, "resetDelta", false));
+                        if (stateScope.IsStateless)
+                            delta["deltaHandle"] = stateScope.Handle;
                         return CallToolResult.Text(JsonConvert.SerializeObject(delta, McpJsonUtil.Settings));
                     }
 
