@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OniMcp.Server;
@@ -22,7 +23,7 @@ namespace OniMcp.Config
 
         public int SecurityMigrationVersion { get; set; } = CurrentSecurityMigrationVersion;
 
-        [Option("Host", "HTTP listen host. Use localhost for local clients, or 0.0.0.0 to listen on all interfaces.", "Server")]
+        [Option("Host", "HTTP listen host. Localhost is the safe default; non-loopback hosts require authentication and expose plaintext HTTP unless protected by a trusted tunnel or TLS reverse proxy.", "Server")]
         public string Host { get; set; } = "localhost";
 
         public int Port { get; set; } = 8788;
@@ -35,7 +36,7 @@ namespace OniMcp.Config
             set => Port = ParseCompactInt(value, Port, 1024, 65535);
         }
 
-        [Option("Require token", "Disabled by default. Enable manually to require the configured bearer token for every MCP request.", "Security")]
+        [Option("Require token", "Disabled by default for loopback-only access. Non-loopback hosts require authentication.", "Security")]
         public bool AuthEnabled { get; set; } = false;
 
         [Option("Token", "Used only when Require token is enabled. A token is generated safely if enabled while empty.", "Security")]
@@ -95,11 +96,24 @@ namespace OniMcp.Config
         public string ScreenshotBaseUrl => $"http://{DisplayHost}:{Port}/screenshots/";
 
         [JsonIgnore]
+        internal bool IsLoopbackHost => IsLoopback(Host);
+
+        [JsonIgnore]
+        internal string PlaintextRemoteWarning => IsLoopbackHost
+            ? null
+            : "Remote OniMcp HTTP is plaintext. Bearer tokens are not encrypted; prefer a trusted VPN/tunnel or a TLS-terminating reverse proxy with a loopback upstream.";
+
+        [JsonIgnore]
         public IEnumerable<string> ListenPrefixes
         {
             get
             {
-                if (Host == "localhost")
+                ValidateListenSecurity();
+                string host = NormalizeHost(Host);
+                if (!IsLoopbackHost)
+                    OniMcpLog.Warning("[OniMcp] " + PlaintextRemoteWarning);
+
+                if (host == "localhost")
                 {
                     yield return $"http://localhost:{Port}/";
                     yield return $"http://127.0.0.1:{Port}/";
@@ -128,6 +142,7 @@ namespace OniMcp.Config
             lock (SyncRoot)
             {
                 options = Sanitize(options);
+                options.ValidateListenSecurity();
                 string path = ConfigPath;
                 if (string.IsNullOrEmpty(path))
                     throw new InvalidOperationException("The config path is not available.");
@@ -305,6 +320,16 @@ namespace OniMcp.Config
             options.SecurityMigrationVersion = CurrentSecurityMigrationVersion;
         }
 
+        internal void ValidateListenSecurity()
+        {
+            if (IsLoopbackHost || AuthEnabled)
+                return;
+
+            throw new InvalidOperationException(
+                "Refusing to expose OniMcp on non-loopback host '" + NormalizeHost(Host)
+                + "' without authentication. Enable Require token or use localhost/127.0.0.1/::1.");
+        }
+
         private static string CreateAuthToken()
         {
             return Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
@@ -316,9 +341,31 @@ namespace OniMcp.Config
                 return "localhost";
 
             host = host.Trim();
+            if (host.Length > 2 && host[0] == '[' && host[host.Length - 1] == ']')
+                host = host.Substring(1, host.Length - 2);
+            if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
+                return "localhost";
             if (host == "*" || host == "+")
                 return "0.0.0.0";
 
+            return host;
+        }
+
+        private static bool IsLoopback(string host)
+        {
+            host = NormalizeHost(host);
+            if (host == "localhost")
+                return true;
+
+            return IPAddress.TryParse(host, out IPAddress address) && IPAddress.IsLoopback(address);
+        }
+
+        private static string FormatHostForUrl(string host)
+        {
+            if (string.IsNullOrEmpty(host) || host == "+")
+                return host;
+            if (host.IndexOf(':') >= 0 && !(host[0] == '[' && host[host.Length - 1] == ']'))
+                return "[" + host + "]";
             return host;
         }
 
@@ -344,21 +391,14 @@ namespace OniMcp.Config
         {
             get
             {
-                if (Host == "0.0.0.0")
+                string host = NormalizeHost(Host);
+                if (host == "0.0.0.0")
                     return "+";
-                return Host;
+                return FormatHostForUrl(host);
             }
         }
 
         [JsonIgnore]
-        private string DisplayHost
-        {
-            get
-            {
-                if (Host == "+")
-                    return "0.0.0.0";
-                return Host;
-            }
-        }
+        private string DisplayHost => FormatHostForUrl(NormalizeHost(Host));
     }
 }
