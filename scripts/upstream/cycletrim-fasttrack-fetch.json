@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "repository": "peterhaneve/ONIMods",
+  "commit": "30f4beb7b574c9f95801c3fa7dea8590737dd752",
+  "checkedDate": "2026-09-15",
+  "scope": "FetchablesByPrefabId.UpdatePickups activation only; CycleTrim remains conservative and does not enable any patch under FastTrack in this change.",
+  "files": [
+    {
+      "path": "FastTrack/FastTrackMod.cs",
+      "gitBlobSha1": "75ab0216c4a5b6afa7b15731886eeb75af4a7f18"
+    },
+    {
+      "path": "FastTrack/FastTrackOptions.cs",
+      "gitBlobSha1": "577e273d37e298888c4be519a2880fb508fb9c2a"
+    },
+    {
+      "path": "FastTrack/FastTrackCompat.cs",
+      "gitBlobSha1": "a28dd89d1c6c99cc2e646d65228219af1ea44e3b"
+    },
+    {
+      "path": "FastTrack/GamePatches/FetchManagerFastUpdate.cs",
+      "gitBlobSha1": "8e1ce75c04c1bcbb2714dc856be1cb079545fbbf"
+    }
+  ],
+  "observedContract": {
+    "featureFlag": "FastUpdatePickups",
+    "defaultEnabled": true,
+    "compatibilityExclusionType": "PeterHan.EfficientFetch.EfficientFetchManager",
+    "targetType": "FetchManager.FetchablesByPrefabId",
+    "targetMethod": "UpdatePickups",
+    "prefix": "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate.BeforeUpdatePickups",
+    "cycleTrimCurrentPolicy": "Disable FetchPickupCandidatePatch whenever the FastTrack FetchManagerFastUpdate type exists; this PR only pins evidence for a later runtime-tested feature-level detector."
+  }
+}
