@@ -38,10 +38,12 @@ internal static class Program
                 const string missingUri = "oni://missing-resource";
                 const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"sep-2164-regression\",\"version\":\"1.0\"}}";
                 string body = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":2164,\"params\":{\"uri\":\"" + missingUri + "\"," + modernMeta + "}}";
-                using (var response = PostModern(client, body, missingUri))
+
+                using (var response = PostModern(client, body, missingUri,
+                    "application/json, text/event-stream"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK, "Resource application error changed HTTP status");
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    JObject json = ReadJson(response);
                     Assert(json["result"] == null, "Missing resource returned a successful result");
                     Assert((int)json["error"]["code"] == McpErrorCode.InvalidParams,
                         "Missing resource did not use -32602 Invalid Params");
@@ -50,8 +52,34 @@ internal static class Program
                     Assert(!response.Headers.Contains("Mcp-Session-Id"),
                         "Modern resource error allocated a legacy session header");
                 }
+
+                foreach (string narrowedAccept in new[] { "application/json", "text/event-stream" })
+                {
+                    using (var response = PostModern(client, body, missingUri, narrowedAccept))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                            "Explicitly narrowed modern Accept header was not rejected");
+                        JObject json = ReadJson(response);
+                        Assert((int)json["error"]["code"] == -32000,
+                            "Accept negotiation failure used the wrong JSON-RPC error code");
+                        Assert((string)json["error"]["message"] ==
+                            "Not Acceptable: Client must accept both application/json and text/event-stream",
+                            "Accept negotiation failure message drifted from the official SDK behavior");
+                        Assert(json["id"].Type == JTokenType.Null,
+                            "Transport-level Accept rejection unexpectedly echoed a request id");
+                    }
+                }
+
+                using (var response = PostModern(client, body, missingUri, null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Omitted Accept header broke the existing modern compatibility path");
+                    Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                        "Omitted Accept header changed application error semantics");
+                }
+
                 Assert(server.GetSessionSummaries().Count == 0,
-                    "Modern resource error allocated legacy session state");
+                    "Modern resource or Accept negotiation allocated legacy session state");
             }
         }
         finally
@@ -59,10 +87,10 @@ internal static class Program
             server.StopServer();
             Invoke(_bridge, "OnDestroy");
         }
-        Console.WriteLine("PASS SEP-2164 modern resource-not-found wire regression");
+        Console.WriteLine("PASS modern Accept negotiation + SEP-2164 wire regressions");
     }
 
-    private static HttpResponseMessage PostModern(HttpClient client, string json, string name)
+    private static HttpResponseMessage PostModern(HttpClient client, string json, string name, string accept)
     {
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
@@ -70,10 +98,17 @@ internal static class Program
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", "resources/read");
             request.Headers.Add("Mcp-Name", name);
+            if (!string.IsNullOrEmpty(accept))
+                request.Headers.TryAddWithoutValidation("Accept", accept);
             Task<HttpResponseMessage> work = client.SendAsync(request);
             PumpUntil(work);
             return work.GetAwaiter().GetResult();
         }
+    }
+
+    private static JObject ReadJson(HttpResponseMessage response)
+    {
+        return JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
     }
 
     private static void PumpUntil(Task work)
