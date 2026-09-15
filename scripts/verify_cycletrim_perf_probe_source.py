@@ -22,12 +22,14 @@ def main() -> int:
     failures = []
 
     require(patch, '"CYCLETRIM_PERF_PROBE"', "opt-in environment switch missing", failures)
-    if patch.count("if (!IsRequested())") != 5:
-        failures.append("all five Harmony probe targets must fail closed when the probe is disabled")
+    if patch.count("if (!IsRequested())") != 6:
+        failures.append("all six Harmony probe targets must fail closed when the probe is disabled")
     require(patch, "Stopwatch.GetTimestamp()", "wall-clock Stopwatch timing missing", failures)
     require(patch, "RecordWorker(asyncWorkCounter", "worker path is not separated from main-thread timing", failures)
     require(patch, "RecordMain(brainSchedulerCounter", "brain scheduler timing is not recorded on the main-thread path", failures)
+    require(patch, "RecordMain(roomProberCounter", "room prober timing is not recorded on the main-thread path", failures)
     require(patch, '"BrainScheduler.RenderEveryTick"', "brain scheduler target is missing from reports", failures)
+    require(patch, '"RoomProber.Sim1000ms"', "room prober target is missing from reports", failures)
     require(patch, '"worker"', "worker thread context is missing from reports", failures)
     require(patch, "GC.CollectionCount(2)", "Gen2 observational telemetry missing", failures)
     require(patch, "GC.GetTotalMemory(false)", "heap snapshot telemetry missing", failures)
@@ -60,6 +62,7 @@ def main() -> int:
         ('target.get("resolved") is not True', "analyzer does not fail unresolved targets"),
         ("fastTrackPatched", "analyzer does not surface FastTrack ownership"),
         ('"BrainScheduler.RenderEveryTick"', "analyzer does not require brain scheduler evidence"),
+        ('"RoomProber.Sim1000ms"', "analyzer does not require room prober evidence"),
         ('"--series"', "analyzer cannot validate an in-run report series"),
         ("intervalCalls does not match cumulative delta", "analyzer does not close interval call arithmetic"),
         ("intervalTotalTicks does not match cumulative delta", "analyzer does not close interval timing arithmetic"),

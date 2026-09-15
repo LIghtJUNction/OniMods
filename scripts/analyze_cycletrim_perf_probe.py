@@ -14,6 +14,7 @@ DEFAULT_REQUIRED = (
     "FetchManager.FetchablesByPrefabId.UpdatePickups",
     "ChoreConsumer.FindNextChore",
     "BrainScheduler.RenderEveryTick",
+    "RoomProber.Sim1000ms",
 )
 
 
