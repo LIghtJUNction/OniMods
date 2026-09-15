@@ -127,15 +127,54 @@ namespace OniMcp.Tools
             new McpResourceInfo { Uri = "oni://test", Name = "test", MimeType = "text/plain" },
             new McpResourceInfo { Uri = "oni://测试", Name = "unicode-test", MimeType = "text/plain" }
         };
-        public static List<McpResourceTemplateInfo> GetResourceTemplateInfos() => new List<McpResourceTemplateInfo>();
-        public static ReadResourceResult ReadResource(string uri) => uri == "oni://test" || uri == "oni://测试"
-            ? new ReadResourceResult
+
+        public static List<McpResourceTemplateInfo> GetResourceTemplateInfos() => new List<McpResourceTemplateInfo>
+        {
+            new McpResourceTemplateInfo
             {
-                Contents = new List<TextResourceContent>
+                UriTemplate = "oni://template/{id}/data",
+                Name = "template-test",
+                MimeType = "application/json"
+            }
+        };
+
+        public static ReadResourceResult ReadResource(string uri)
+        {
+            if (uri == "oni://test" || uri == "oni://测试")
+            {
+                return new ReadResourceResult
                 {
-                    new TextResourceContent { Uri = uri, MimeType = "text/plain", Text = "test" }
+                    Contents = new List<TextResourceContent>
+                    {
+                        new TextResourceContent { Uri = uri, MimeType = "text/plain", Text = "test" }
+                    }
+                };
+            }
+
+            const string templatePrefix = "oni://template/";
+            const string templateSuffix = "/data";
+            if (uri != null && uri.StartsWith(templatePrefix) && uri.EndsWith(templateSuffix))
+            {
+                string id = uri.Substring(templatePrefix.Length,
+                    uri.Length - templatePrefix.Length - templateSuffix.Length);
+                if (id.Length > 0)
+                {
+                    return new ReadResourceResult
+                    {
+                        Contents = new List<TextResourceContent>
+                        {
+                            new TextResourceContent
+                            {
+                                Uri = uri,
+                                MimeType = "application/json",
+                                Text = "{\"id\":\"" + id + "\",\"templateTest\":true}"
+                            }
+                        }
+                    };
                 }
             }
-            : null;
+
+            return null;
+        }
     }
 }

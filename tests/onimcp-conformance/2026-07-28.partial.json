@@ -70,6 +70,22 @@
       ]
     },
     {
+      "scenario": "resources-templates-read",
+      "claim": "partial",
+      "test": "tests/OniMcp.ResourceReadConformance.Tests/Program.cs",
+      "markers": [
+        "Modern template resource read omitted resultType",
+        "Modern template resource read cache hints incorrect",
+        "Modern template resource read returned no contents",
+        "Modern template resource read content uri changed",
+        "Modern template resource read content mimeType changed",
+        "Modern template resource read content missing text",
+        "Modern template resource read lost parameter substitution",
+        "Modern template resource read returned a session id",
+        "Modern template resource read allocated legacy session state"
+      ]
+    },
+    {
       "scenario": "sep-2164-resource-not-found",
       "claim": "partial",
       "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
@@ -82,6 +98,7 @@
   "notClaimed": [
     "This manifest does not claim full MCP 2026-07-28 conformance.",
     "The resources-read-text entry validates OniMcp's 2026 raw HTTP text-resource shape using the existing oni://test fixture; it does not claim the official runner's test://static-text fixture is registered in production.",
+    "The resources-templates-read entry validates the production modern resources/read transport against a deterministic oni://template/{id}/data test-boundary registry; it does not claim the official runner's test://template/{id}/data fixture or a live game-backed template handler.",
     "Scenarios outside coverage remain unsupported, unverified, or intentionally unavailable on OniMcp's modern path.",
     "Legacy 2025-11-25 and 2025-06-18 compatibility remains covered by OniMods' dedicated dual-era regressions rather than this map."
   ]

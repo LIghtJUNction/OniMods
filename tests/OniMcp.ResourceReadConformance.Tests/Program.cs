@@ -72,7 +72,53 @@ internal static class Program
                     "Modern text resource read allocated legacy session state");
             }
 
-            Console.WriteLine("PASS: MCP 2026-07-28 text resource read wire evidence.");
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+            {
+                const string uri = "oni://template/123/data";
+                request.Content = new StringContent(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":2,\"params\":{\"uri\":\"oni://template/123/data\",\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"resource-template-conformance\",\"version\":\"1.0\"}}}}",
+                    Encoding.UTF8,
+                    "application/json");
+                request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                request.Headers.Add("Mcp-Method", "resources/read");
+                request.Headers.Add("Mcp-Name", uri);
+
+                var work = client.SendAsync(request);
+                PumpUntil(work);
+                using (var response = work.GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK, "Modern template resource read failed");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern template resource read returned a session id");
+                    Assert(response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
+                        "Modern template resource read omitted the protocol response header");
+
+                    var result = (JObject)JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"];
+                    Assert((string)result["resultType"] == "complete", "Modern template resource read omitted resultType");
+                    Assert((string)result["cacheScope"] == "private" && (int)result["ttlMs"] == 0,
+                        "Modern template resource read cache hints incorrect");
+
+                    var contents = result["contents"] as JArray;
+                    Assert(contents != null && contents.Count > 0, "Modern template resource read returned no contents");
+                    var content = contents[0] as JObject;
+                    Assert(content != null, "Modern template resource read content is not an object");
+                    Assert((string)content["uri"] == uri, "Modern template resource read content uri changed");
+                    Assert((string)content["mimeType"] == "application/json",
+                        "Modern template resource read content mimeType changed");
+                    string text = (string)content["text"];
+                    Assert(!string.IsNullOrWhiteSpace(text), "Modern template resource read content missing text");
+                    Assert(text.Contains("123"), "Modern template resource read lost parameter substitution");
+                }
+
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Modern template resource read allocated legacy session state");
+            }
+
+            Console.WriteLine("PASS: MCP 2026-07-28 text and template resource read wire evidence.");
         }
         finally
         {
