@@ -56,6 +56,12 @@ jobs:
           -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
           -p:ImportDirectoryBuildProps=false
           -p:TreatWarningsAsErrors=true
+      - name: Verify CycleTrim Harmony target contracts against pinned Assembly-CSharp
+        run: >-
+          python3 scripts/verify_cycletrim_target_contract.py
+          "$GITHUB_WORKSPACE/.oni-managed/Assembly-CSharp.dll"
+      - name: Verify compiled CycleTrim release safety guards
+        run: python3 scripts/verify_cycletrim_release_binary.py
       - name: Build OniMcp against pinned references
         run: >-
           dotnet build mods/OniMcp/OniMcp.csproj
