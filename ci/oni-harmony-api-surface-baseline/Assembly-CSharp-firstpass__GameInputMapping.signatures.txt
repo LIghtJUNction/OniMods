@@ -1,0 +1,14 @@
+type public class GameInputMapping
+member public GameInputMapping ( )
+member public static BindingEntry FindEntry ( Action mAction )
+member public static BindingEntry [ ] FindEntriesByKeyCode ( KKeyCode keycode )
+member public static BindingEntry [ ] GetBindingEntries ( )
+member public static BindingEntry [ ] KeyBindings
+member public static HashSet < KeyCode > GetKeyCodes ( )
+member public static HashSet < string > GetAxis ( )
+member public static bool CompareActionKeyCodes ( Action a , Action b )
+member public static void LoadBindings ( )
+member public static void SaveBindings ( )
+member public static void SetDefaultKeyBindings ( BindingEntry [ ] default_keybindings )
+property private static string BindingsFilename { get ; }
+property public static BindingEntry [ ] DefaultBindings { get ; private set ; }
