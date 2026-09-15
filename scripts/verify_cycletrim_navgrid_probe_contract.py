@@ -56,7 +56,7 @@ def main() -> int:
         "TARGET_MARKER",
         "FASTTRACK_MARKER",
         "CAPTURE_PREFIX",
-        'result["bucketCallTotal"]',
+        '"bucketCallTotal": bucket_calls',
     )
     for fragment in required_analyzer_fragments:
         if fragment not in analyzer:
