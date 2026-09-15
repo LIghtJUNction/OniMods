@@ -5,20 +5,23 @@
 ## 快速开始
 
 - MCP 地址: `http://localhost:8788/mcp/`
-- 协议版本: `2025-11-25`
-- Default public tools: 7 entrypoints: `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`, `benchmark`
+- 协议兼容: `2026-07-28` 无会话兼容路径 + `2025-11-25` / `2025-06-18` legacy initialize/session 路径
+- Legacy/default public tools: 6 entrypoints: `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
+- Modern `2026-07-28` `tools/list`: 当前只广告只读 `benchmark`
 - 旧聚合入口: 仅作为虚拟文件工作流的内部操作，不再注册为 MCP 工具
 - `coordinate_control` 不属于当前公开运行时；普通聚合工具拒绝 raw coordinates
 - Tool descriptions: default-public tool descriptions and parameter descriptions are in English
 
-非 `initialize` 请求必须携带会话协商后的 `Mcp-Session-Id` 和 `Mcp-Protocol-Version`。
+现代 `2026-07-28` 请求不使用 `initialize`，也不要求或返回 `Mcp-Session-Id`。每个请求携带 `_meta`、`MCP-Protocol-Version` 和 `Mcp-Method`；`resources/read` / `tools/call` 等有具体资源或工具名的请求还需匹配的 `Mcp-Name`。推荐先调用 `server/discover` 并以实际 capability 为准。
+
+Legacy `2025-11-25` / `2025-06-18` 客户端继续先调用 `initialize`，随后请求携带协商得到的 `Mcp-Session-Id` 和 `Mcp-Protocol-Version`。
 
 ## 定位与执行原则
 
 Authoritative model:
 
 - Saves are directories. `latest/` is the fixed alias for the current/latest save.
-- `cd latest` enters the save; `cd` or `cd ~` exits back to `/`, representing the main menu/root.
+- `cd latest` enters a save; `cd` or `cd ~` exits back to `/`, representing the main menu/root.
 - Save contents are structured world files such as `map/terrain.oni`, `buildings/plans.oni`, `infrastructure/power.oni`, and `views/power.png`.
 - There are no action patch files. World changes use `world_editor command=edit`; prefer one SEARCH/REPLACE block. Multiple blocks require outer `allowPartial=true` and cannot be transactionally rolled back.
 - Reading the same file again is the observation step after an edit.
@@ -122,7 +125,7 @@ For semantic building, prefer `plan`, `blueprint`, `areaId`, search results, or 
 
 示例:
 
-Prefer one SEARCH/REPLACE block. Multiple blocks require outer `allowPartial=true` and cannot be transactionally rolled back. Each operation-file replacement must contain exactly one executable command. Preview with outer `world_editor edit` `dryRun=true` and `confirm=false` (or omitted); execute with a new edit using outer `dryRun=false` and `confirm=true`, with non-conflicting command flags, then re-read the map or state.
+Prefer one SEARCH/REPLACE block. Multiple blocks require outer `allowPartial=true` and cannot be transactionally rolled back. Each operation-file replacement must contain exactly one executable command. Preview with outer `world_editor edit` `dryRun=true` and `confirm=false` (or omitted); execute with a new edit using outer `dryRun=false`, `confirm=true`, and non-conflicting command flags, then re-read the map or state.
 
 This directly creates a continuous line, with no separate follow-up connection step required.
 
@@ -205,10 +208,12 @@ Prefer extending aggregate entrypoints in `Tools/Entry/` for new public capabili
 
 ## 兼容性说明
 
-旧版工具仍可用于兼容历史客户端，但不再推荐新集成直接依赖。新客户端应:
+新客户端建议按双协议处理：
 
-1. Call `tools/list` to get the 6 default-public entrypoints.
-2. 调用 `server_control domain=catalog action=search` 或读取 `oni://tools/guide` 查找目标流程。
-3. 优先传语义定位参数。
-4. 对危险动作传 `confirm: true`。
-5. 执行后读取资源或区域快照验证状态。
+1. 优先以 `2026-07-28` 调用 `server/discover`，使用返回的 capability；现代请求不发送 `Mcp-Session-Id`。
+2. 若目标服务端只支持旧协议，再走 `initialize` + `Mcp-Session-Id` 的 `2025-11-25` / `2025-06-18` 路径。
+3. 不要硬编码旧版细粒度工具列表；按当前协议调用 `tools/list` 或读取运行时 manifest。
+4. 调用 `server_control domain=catalog action=search` 或读取 `oni://tools/guide` 查找目标流程。
+5. 优先传语义定位参数。
+6. 对危险动作传 `confirm: true`。
+7. 执行后读取资源或区域快照验证状态。
