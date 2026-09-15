@@ -137,6 +137,7 @@ namespace OniMcp.Tools
                 ["床"] = "Bed",
                 ["厕所"] = "Outhouse",
                 ["洗手盆"] = "WashBasin",
+                ["洗手池"] = "WashSink",
                 ["储存箱"] = "StorageLocker",
                 ["存储箱"] = "StorageLocker",
                 ["藻类制氧机"] = "MineralDeoxidizer",
