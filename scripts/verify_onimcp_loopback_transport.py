@@ -35,20 +35,78 @@ class FixtureHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length)
+        request = json.loads(body.decode())
         self.server.requests.append(
             {
                 "path": self.path,
                 "headers": dict(self.headers.items()),
-                "body": json.loads(body.decode()),
+                "body": request,
             }
         )
-        payload = json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"ok": True}}).encode()
+
+        protocol = self.headers.get("Mcp-Protocol-Version")
+        if protocol == runtime_smoke.MODERN_PROTOCOL:
+            result = self._modern_result(request)
+        else:
+            result = {"ok": True}
+
+        payload = json.dumps(
+            {"jsonrpc": "2.0", "id": request.get("id", 1), "result": result}
+        ).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Mcp-Session-Id", "fixture-session")
+        if protocol == runtime_smoke.MODERN_PROTOCOL:
+            self.send_header("Mcp-Protocol-Version", runtime_smoke.MODERN_PROTOCOL)
+        else:
+            self.send_header("Mcp-Session-Id", "fixture-session")
         self.end_headers()
         self.wfile.write(payload)
+
+    @staticmethod
+    def _modern_result(request):
+        method = request.get("method")
+        if method == "server/discover":
+            return {
+                "resultType": "complete",
+                "supportedVersions": [
+                    runtime_smoke.MODERN_PROTOCOL,
+                    runtime_smoke.PROTOCOL,
+                    "2025-06-18",
+                ],
+                "capabilities": {"resources": {}, "tools": {}},
+                "ttlMs": 3600000,
+                "cacheScope": "public",
+            }
+        if method == "tools/list":
+            return {
+                "resultType": "complete",
+                "tools": [
+                    {
+                        "name": "benchmark",
+                        "description": "read-only benchmark fixture",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {"task": {"type": "string"}},
+                            "required": ["task"],
+                        },
+                    }
+                ],
+                "ttlMs": 300000,
+                "cacheScope": "public",
+            }
+        if method == "tools/call":
+            return {
+                "resultType": "complete",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps({"ok": True, "status": "passed"}),
+                    }
+                ],
+                "isError": False,
+            }
+        return {"ok": True}
 
 
 class ProxyHandler(BaseHTTPRequestHandler):
@@ -98,6 +156,13 @@ def require(condition, message):
         raise AssertionError(message)
 
 
+def header_value(headers, name):
+    for key, value in headers.items():
+        if key.lower() == name.lower():
+            return value
+    return None
+
+
 def main():
     require(loopback_http.is_loopback_url("http://localhost:8788/mcp/"), "localhost not recognized")
     require(loopback_http.is_loopback_url("http://127.0.0.1:8788/mcp/"), "IPv4 loopback not recognized")
@@ -119,8 +184,15 @@ def main():
 
             client = runtime_smoke.McpClient(fixture_url)
             result = client.post({"jsonrpc": "2.0", "id": 1, "method": "fixture"})
-            require(result.get("result", {}).get("ok") is True, "runtime_smoke POST failed")
+            require(result.get("result", {}).get("ok") is True, "runtime_smoke legacy POST failed")
             require(client.session_id == "fixture-session", "runtime_smoke session header regressed")
+
+            modern = runtime_smoke.run_modern_smoke(fixture_url)
+            require(
+                modern.get("protocol") == runtime_smoke.MODERN_PROTOCOL,
+                "runtime_smoke modern protocol summary regressed",
+            )
+            require(modern.get("tools") == ["benchmark"], "runtime_smoke modern tool surface regressed")
 
             old_url = survival_watch.URL
             survival_watch.URL = fixture_url
@@ -131,10 +203,49 @@ def main():
             require(result.get("result", {}).get("ok") is True, "survival_watch POST failed")
             require(not proxy.requests, "loopback POST leaked through ambient proxy")
 
-            request_headers = [item["headers"] for item in fixture.requests]
+            legacy_requests = []
+            modern_requests = []
+            for item in fixture.requests:
+                protocol = header_value(item["headers"], "Mcp-Protocol-Version")
+                if protocol == runtime_smoke.MODERN_PROTOCOL:
+                    modern_requests.append(item)
+                else:
+                    legacy_requests.append(item)
+
+            require(legacy_requests, "fixture did not observe a legacy runtime request")
+            require(modern_requests, "fixture did not observe a modern runtime request")
             require(
-                all(item.get("Mcp-Protocol-Version") == runtime_smoke.PROTOCOL for item in request_headers),
-                "MCP protocol header changed while fixing transport",
+                all(
+                    header_value(item["headers"], "Mcp-Protocol-Version") == runtime_smoke.PROTOCOL
+                    for item in legacy_requests
+                ),
+                "legacy MCP protocol header changed while fixing transport",
+            )
+            require(
+                all(header_value(item["headers"], "Mcp-Session-Id") is None for item in modern_requests),
+                "modern runtime smoke sent legacy Mcp-Session-Id",
+            )
+            require(
+                all(
+                    header_value(item["headers"], "Mcp-Method") == item["body"].get("method")
+                    for item in modern_requests
+                ),
+                "modern runtime smoke Mcp-Method did not mirror the JSON-RPC method",
+            )
+            modern_tool_calls = [
+                item for item in modern_requests if item["body"].get("method") == "tools/call"
+            ]
+            require(len(modern_tool_calls) == 1, "modern runtime smoke did not call benchmark exactly once")
+            require(
+                header_value(modern_tool_calls[0]["headers"], "Mcp-Name") == "benchmark",
+                "modern runtime smoke did not mirror benchmark in Mcp-Name",
+            )
+            require(
+                modern_tool_calls[0]["body"].get("params", {}).get("_meta", {}).get(
+                    "io.modelcontextprotocol/protocolVersion"
+                )
+                == runtime_smoke.MODERN_PROTOCOL,
+                "modern runtime smoke omitted per-request protocol metadata",
             )
 
             try:
@@ -164,7 +275,7 @@ def main():
     else:
         raise AssertionError("closed loopback fixture unexpectedly accepted a request")
 
-    print("PASS OniMcp loopback transport bypasses proxies without disabling remote proxy policy")
+    print("PASS OniMcp runtime helpers cover legacy/modern MCP over direct loopback without disabling remote proxy policy")
     return 0
 
 
