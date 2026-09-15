@@ -38,6 +38,40 @@ internal static class Program
                 Timeout = TimeSpan.FromSeconds(5)
             })
             {
+                const string missingMetaDiscover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":2101,\"params\":{}}";
+                using (var response = Post(client, missingMetaDiscover, null, "2026-07-28", "server/discover"))
+                {
+                    AssertInvalidRequiredMeta(response, 2101,
+                        "Modern request without _meta did not use Invalid Params");
+                }
+
+                const string missingVersionDiscover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":2102,\"params\":{\"_meta\":{\"io.modelcontextprotocol/clientCapabilities\":{}}}}";
+                using (var response = Post(client, missingVersionDiscover, null, "2026-07-28", "server/discover"))
+                {
+                    AssertInvalidRequiredMeta(response, 2102,
+                        "Modern request without _meta protocolVersion did not use Invalid Params");
+                }
+
+                const string missingCapabilitiesDiscover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":2103,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}";
+                using (var response = Post(client, missingCapabilitiesDiscover, null, "2026-07-28", "server/discover"))
+                {
+                    AssertInvalidRequiredMeta(response, 2103,
+                        "Modern request without clientCapabilities did not use Invalid Params");
+                }
+
+                const string minimalMetaDiscover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":2104,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}}}";
+                using (var response = Post(client, minimalMetaDiscover, null, "2026-07-28", "server/discover"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern server/discover incorrectly required optional clientInfo");
+                    Assert(JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"] != null,
+                        "Modern server/discover without clientInfo returned no result");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Minimal modern metadata allocated a legacy session header");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Modern metadata validation allocated legacy session state");
+
                 const string missingUri = "oni://missing-resource";
                 const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"sep-2164-regression\",\"version\":\"1.0\"}}";
                 string body = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":2164,\"params\":{\"uri\":\"" + missingUri + "\"," + modernMeta + "}}";
@@ -222,7 +256,18 @@ internal static class Program
             OniToolRegistry.ModernToolsEnabled = false;
             Invoke(_bridge, "OnDestroy");
         }
-        Console.WriteLine("PASS modern resources, read-only tools, protocol-version, and mixed-era routing wire regressions");
+        Console.WriteLine("PASS modern resources, read-only tools, protocol-version, required metadata, and mixed-era routing wire regressions");
+    }
+
+    private static void AssertInvalidRequiredMeta(HttpResponseMessage response, int requestId, string context)
+    {
+        Assert(response.StatusCode == HttpStatusCode.BadRequest, context + ": wrong HTTP status");
+        JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+        Assert((int)json["id"] == requestId, context + ": response id changed");
+        Assert((int)json["error"]["code"] == McpErrorCode.InvalidParams,
+            context + ": wrong JSON-RPC error code");
+        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+            context + ": allocated a legacy session header");
     }
 
     private static void AssertUnsupportedVersion(HttpResponseMessage response, string requested, string context)
