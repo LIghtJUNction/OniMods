@@ -16,6 +16,7 @@ internal static class Program
     {
         Run("registry initialization can retry after a factory failure", InitializationRetry);
         Run("JSON-RPC preserves null id and success result", JsonRpcNulls);
+        Run("tool state scopes separate sessions from stateless handles", ToolStateScopes);
         Run("task descriptions require nonempty JSON strings", TaskDescriptions);
         Run("invalid tool names return errors", InvalidNames);
         Run("tool calls still enforce coordinate and task constraints", ToolConstraints);
@@ -25,7 +26,7 @@ internal static class Program
         Run("dynamic resource routes preserve their read action", DynamicResources);
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
-        Console.WriteLine(failures == 0 ? "All 11 core regression groups passed." : failures + " regression groups failed.");
+        Console.WriteLine(failures == 0 ? "All 12 core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 
@@ -74,6 +75,42 @@ internal static class Program
         Require(success.Property("result") != null && success["result"].Type == JTokenType.Null, "Success omitted result:null.");
         Require(success.Property("error") == null, "Success unexpectedly contains error.");
         Require((int)Serialize(JsonRpcResponse.Success(4, false))["id"] == 4, "Numeric id changed.");
+    }
+
+    private static void ToolStateScopes()
+    {
+        McpToolStateScope sessionScope;
+        string error;
+        Require(McpToolStateScope.TryResolve(" session-a ", "not-a-handle", out sessionScope, out error),
+            "Legacy session scope rejected a caller-provided handle.");
+        Require(sessionScope.CacheScopeId == "session:session-a", "Legacy session scope changed.");
+        Require(!sessionScope.IsStateless && sessionScope.Handle == null,
+            "Legacy session unexpectedly exposed a stateless handle.");
+
+        McpToolStateScope first;
+        Require(McpToolStateScope.TryResolve(null, null, out first, out error),
+            "Stateless scope did not mint a handle: " + error);
+        Require(first.IsStateless && first.Handle != null && first.Handle.Length == 32,
+            "Stateless scope returned an invalid handle.");
+        Require(first.CacheScopeId == "delta:" + first.Handle,
+            "Stateless cache scope did not use the explicit handle.");
+
+        McpToolStateScope resumed;
+        Require(McpToolStateScope.TryResolve(null, first.Handle.ToUpperInvariant(), out resumed, out error),
+            "Returned stateless handle could not be resumed.");
+        Require(resumed.Handle == first.Handle && resumed.CacheScopeId == first.CacheScopeId,
+            "Stateless handle did not resolve deterministically.");
+
+        McpToolStateScope second;
+        Require(McpToolStateScope.TryResolve(null, null, out second, out error),
+            "Second stateless scope did not mint a handle.");
+        Require(second.CacheScopeId != first.CacheScopeId,
+            "Independent stateless callers shared a state scope.");
+
+        McpToolStateScope invalid;
+        Require(!McpToolStateScope.TryResolve(null, "global", out invalid, out error)
+            && invalid == null && !string.IsNullOrEmpty(error),
+            "Unsafe shared stateless handle was accepted.");
     }
 
     private static JObject Serialize(object value) => JObject.Parse(JsonConvert.SerializeObject(value, McpJsonUtil.Settings));

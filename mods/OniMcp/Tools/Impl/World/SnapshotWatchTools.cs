@@ -47,9 +47,11 @@ namespace OniMcp.Tools
             private readonly Dictionary<string, JToken> snapshots = new Dictionary<string, JToken>(StringComparer.Ordinal);
             private readonly JsonSerializer serializer = JsonSerializer.Create(McpJsonUtil.Settings);
 
-            public Dictionary<string, object> Apply(string sessionId, string deltaKey, Dictionary<string, object> current, bool reset)
+            public Dictionary<string, object> Apply(string scopeId, string deltaKey, Dictionary<string, object> current, bool reset)
             {
-                string key = (string.IsNullOrWhiteSpace(sessionId) ? "global" : sessionId.Trim()) + ":" + deltaKey;
+                if (string.IsNullOrWhiteSpace(scopeId))
+                    throw new ArgumentException("Snapshot delta scope is required.", "scopeId");
+                string key = scopeId.Trim() + ":" + deltaKey;
                 var token = JToken.FromObject(current, serializer);
                 object cycle = CurrentCycle(current);
                 lock (sync)
