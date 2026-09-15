@@ -91,3 +91,22 @@ jobs:
       - name: Confirm game binaries are not packaged as artifacts
         run: >-
           test -z "$(find artifacts -type f -name '*.dll' -print -quit)"
+      - name: Compile CycleTrim against .NET Standard 2.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          compat_root="$RUNNER_TEMP/cycletrim-netstandard21"
+          dotnet restore mods/CycleTrim/CycleTrim.csproj \
+            -p:TargetFramework=netstandard2.1 \
+            -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -p:ImportDirectoryBuildProps=false \
+            -p:BaseIntermediateOutputPath="$compat_root/obj/"
+          dotnet msbuild mods/CycleTrim/CycleTrim.csproj \
+            -target:Compile \
+            -property:Configuration=Release \
+            -property:TargetFramework=netstandard2.1 \
+            -property:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -property:ImportDirectoryBuildProps=false \
+            -property:BaseIntermediateOutputPath="$compat_root/obj/" \
+            -property:OutputPath="$compat_root/bin/" \
+            -property:TreatWarningsAsErrors=true
