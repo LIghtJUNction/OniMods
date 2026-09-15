@@ -18,8 +18,8 @@ namespace CycleTrim.Patches
             "PeterHan.FastTrack.PathPatches.NavGrid_UpdateGraph_Patch";
         private const string ReportName = "CycleTrim.NavGridWorkloadProbe";
 
-        private static readonly NavGridWorkloadProbe Probe = new NavGridWorkloadProbe();
-        private static readonly Action<object> ReportCallback = ReportDeferred;
+        private static NavGridWorkloadProbe Probe;
+        private static Action<object> ReportCallback;
         private static MethodBase targetMethod;
         private static bool fastTrackChecked;
         private static bool disabledByFastTrack;
@@ -42,6 +42,8 @@ namespace CycleTrim.Patches
                 return false;
             }
 
+            Probe = new NavGridWorkloadProbe();
+            ReportCallback = ReportDeferred;
             UnityEngine.Debug.Log(
                 "[CycleTrim][NavGridProbe] requested; NavGrid.UpdateGraph() resolved. " +
                 "Valid evidence requires a later 'target reached' message with calls > 0.");
