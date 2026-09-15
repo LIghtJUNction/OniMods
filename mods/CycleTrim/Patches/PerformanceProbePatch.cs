@@ -40,6 +40,13 @@ namespace CycleTrim.Patches
         private static int lastGc1;
         private static int lastGc2;
         private static long lastHeapBytes;
+        private static long lastReportTimestamp;
+        private static long reportSequence;
+        private static PerformanceProbeSnapshot lastAsyncTickSnapshot;
+        private static PerformanceProbeSnapshot lastAsyncWorkSnapshot;
+        private static PerformanceProbeSnapshot lastFetchSnapshot;
+        private static PerformanceProbeSnapshot lastChoreSnapshot;
+        private static PerformanceProbeSnapshot lastBrainSchedulerSnapshot;
 
         private static bool IsRequested()
         {
@@ -66,6 +73,7 @@ namespace CycleTrim.Patches
             lastGc1 = GC.CollectionCount(1);
             lastGc2 = GC.CollectionCount(2);
             lastHeapBytes = GC.GetTotalMemory(false);
+            lastReportTimestamp = Stopwatch.GetTimestamp();
             initialized = true;
         }
 
@@ -146,13 +154,28 @@ namespace CycleTrim.Patches
             }
 
             reportRequested = false;
+            var reportedAt = Stopwatch.GetTimestamp();
+            var intervalDurationTicks = reportedAt - lastReportTimestamp;
+            if (intervalDurationTicks < 0)
+            {
+                intervalDurationTicks = 0;
+            }
+
             var gc0 = GC.CollectionCount(0);
             var gc1 = GC.CollectionCount(1);
             var gc2 = GC.CollectionCount(2);
             var heapBytes = GC.GetTotalMemory(false);
-            var summary = new StringBuilder(1024);
+            var asyncTickSnapshot = asyncTickCounter.Snapshot();
+            var asyncWorkSnapshot = asyncWorkCounter.Snapshot();
+            var fetchSnapshot = fetchCounter.Snapshot();
+            var choreSnapshot = choreCounter.Snapshot();
+            var brainSchedulerSnapshot = brainSchedulerCounter.Snapshot();
+            var sequence = ++reportSequence;
+            var summary = new StringBuilder(1280);
             summary.Append('{');
             summary.Append("\"stopwatchFrequency\":").Append(Stopwatch.Frequency);
+            summary.Append(",\"reportSequence\":").Append(sequence);
+            summary.Append(",\"intervalDurationTicks\":").Append(intervalDurationTicks);
             summary.Append(",\"gc\":{");
             summary.Append("\"gen0Delta\":").Append(gc0 - lastGc0);
             summary.Append(",\"gen1Delta\":").Append(gc1 - lastGc1);
@@ -165,41 +188,52 @@ namespace CycleTrim.Patches
                 "AsyncPathProber.Manager.TickFrame",
                 "main",
                 asyncTickTarget,
-                asyncTickCounter.Snapshot());
+                asyncTickSnapshot,
+                lastAsyncTickSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
                 "AsyncPathProber.WorkOrder.Execute",
                 "worker",
                 asyncWorkTarget,
-                asyncWorkCounter.Snapshot());
+                asyncWorkSnapshot,
+                lastAsyncWorkSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
                 "FetchManager.FetchablesByPrefabId.UpdatePickups",
                 "main",
                 fetchTarget,
-                fetchCounter.Snapshot());
+                fetchSnapshot,
+                lastFetchSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
                 "ChoreConsumer.FindNextChore",
                 "main",
                 choreTarget,
-                choreCounter.Snapshot());
+                choreSnapshot,
+                lastChoreSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
                 "BrainScheduler.RenderEveryTick",
                 "main",
                 brainSchedulerTarget,
-                brainSchedulerCounter.Snapshot());
+                brainSchedulerSnapshot,
+                lastBrainSchedulerSnapshot);
             summary.Append("]}");
 
             lastGc0 = gc0;
             lastGc1 = gc1;
             lastGc2 = gc2;
             lastHeapBytes = heapBytes;
+            lastReportTimestamp = reportedAt;
+            lastAsyncTickSnapshot = asyncTickSnapshot;
+            lastAsyncWorkSnapshot = asyncWorkSnapshot;
+            lastFetchSnapshot = fetchSnapshot;
+            lastChoreSnapshot = choreSnapshot;
+            lastBrainSchedulerSnapshot = brainSchedulerSnapshot;
             UnityEngine.Debug.Log("[CycleTrim][PerfProbe] " + summary);
         }
 
@@ -208,8 +242,10 @@ namespace CycleTrim.Patches
             string name,
             string thread,
             MethodBase target,
-            PerformanceProbeSnapshot snapshot)
+            PerformanceProbeSnapshot snapshot,
+            PerformanceProbeSnapshot previousSnapshot)
         {
+            var interval = snapshot.DeltaSince(previousSnapshot);
             summary.Append('{');
             summary.Append("\"name\":\"").Append(name).Append("\"");
             summary.Append(",\"thread\":\"").Append(thread).Append("\"");
@@ -221,6 +257,10 @@ namespace CycleTrim.Patches
             summary.Append(",\"meanTicks\":").Append(
                 snapshot.MeanTicks.ToString("F3", CultureInfo.InvariantCulture));
             summary.Append(",\"maxTicks\":").Append(snapshot.MaxTicks);
+            summary.Append(",\"intervalCalls\":").Append(interval.Calls);
+            summary.Append(",\"intervalTotalTicks\":").Append(interval.TotalTicks);
+            summary.Append(",\"intervalMeanTicks\":").Append(
+                interval.MeanTicks.ToString("F3", CultureInfo.InvariantCulture));
             summary.Append('}');
         }
 
