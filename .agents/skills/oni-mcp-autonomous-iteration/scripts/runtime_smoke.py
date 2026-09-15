@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import base64
 import json
 import sys
 import time
@@ -9,6 +10,8 @@ from loopback_http import open_url
 
 URL = "http://localhost:8788/mcp/"
 PROTOCOL = "2025-11-25"
+MODERN_PROTOCOL = "2026-07-28"
+MODERN_SAFE_TOOLS = {"benchmark"}
 DEFAULT_PUBLIC_TOOLS = {
     "building_control",
     "navigation_control",
@@ -81,6 +84,121 @@ class McpClient:
             {"name": name, "arguments": arguments},
             timeout=timeout,
         )
+
+
+class ModernMcpClient:
+    def __init__(self, url):
+        self.url = url
+        self.next_id = 2000
+
+    def request(self, method, params=None, timeout=20):
+        params = dict(params or {})
+        params["_meta"] = {
+            "io.modelcontextprotocol/protocolVersion": MODERN_PROTOCOL,
+            "io.modelcontextprotocol/clientCapabilities": {},
+            "io.modelcontextprotocol/clientInfo": {
+                "name": "oni-runtime-smoke",
+                "version": "1",
+            },
+        }
+        payload = {
+            "jsonrpc": "2.0",
+            "id": self.next_id,
+            "method": method,
+            "params": params,
+        }
+        self.next_id += 1
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Mcp-Protocol-Version": MODERN_PROTOCOL,
+            "Mcp-Method": method,
+        }
+        principal = modern_principal_name(method, params)
+        if principal is not None:
+            headers["Mcp-Name"] = modern_header_value(principal)
+
+        req = urllib.request.Request(
+            self.url,
+            data=json.dumps(payload).encode(),
+            headers=headers,
+        )
+        with open_url(req, timeout=timeout) as response:
+            assert_true(
+                response.headers.get("Mcp-Session-Id") is None,
+                f"modern {method} unexpectedly received Mcp-Session-Id",
+            )
+            assert_true(
+                response.headers.get("Mcp-Protocol-Version") == MODERN_PROTOCOL,
+                f"modern {method} response omitted protocol version",
+            )
+            body = response.read().decode()
+
+        result = parse_jsonrpc_body(body)
+        if not result:
+            raise RuntimeError(f"modern {method} returned empty response")
+        if "error" in result:
+            raise RuntimeError(f"modern {method} rpc error: {result['error']}")
+        return result["result"]
+
+    def call_tool(self, name, arguments, timeout=30):
+        arguments = dict(arguments)
+        arguments.setdefault("task", f"runtime smoke: modern {name}")
+        return self.request(
+            "tools/call",
+            {"name": name, "arguments": arguments},
+            timeout=timeout,
+        )
+
+
+def modern_principal_name(method, params):
+    if method in ("tools/call", "prompts/get"):
+        return params.get("name")
+    if method == "resources/read":
+        return params.get("uri")
+    return None
+
+
+def modern_header_value(value):
+    safe_plain = (
+        bool(value)
+        and not value[0].isspace()
+        and not value[-1].isspace()
+        and all(0x20 <= ord(ch) <= 0x7E for ch in value)
+        and not (value.startswith("=?base64?") and value.endswith("?="))
+    )
+    if safe_plain:
+        return value
+    encoded = base64.b64encode(value.encode("utf-8")).decode("ascii")
+    return f"=?base64?{encoded}?="
+
+
+def run_modern_smoke(url):
+    client = ModernMcpClient(url)
+    discover = client.request("server/discover")
+    supported = set(discover.get("supportedVersions", []))
+    assert_true(MODERN_PROTOCOL in supported and PROTOCOL in supported,
+                f"modern discovery versions incomplete: {sorted(supported)}")
+    capabilities = discover.get("capabilities") or {}
+    assert_true("resources" in capabilities, "modern discovery omitted resources capability")
+    assert_true("tools" in capabilities, "modern discovery omitted tools capability")
+
+    tools_result = client.request("tools/list")
+    tools = tools_result.get("tools", [])
+    tool_names = [tool.get("name") for tool in tools if tool.get("name")]
+    assert_true(tool_names == sorted(tool_names), f"modern tools/list order is unstable: {tool_names}")
+    assert_true(set(tool_names) == MODERN_SAFE_TOOLS,
+                f"unexpected modern tool surface: {tool_names}")
+
+    result = client.call_tool("benchmark", {"iterations": 1, "cases": "toolList"})
+    payload = result_json(result)
+    assert_tool_success(result, payload, "modern benchmark")
+    return {
+        "protocol": MODERN_PROTOCOL,
+        "toolCount": len(tools),
+        "tools": tool_names,
+        "benchmark": payload,
+    }
 
 
 def parse_jsonrpc_body(body):
@@ -204,6 +322,7 @@ def child_payload(batch_payload, name):
 
 def main():
     open_url(URL, timeout=3).read()
+    modern = run_modern_smoke(URL)
 
     client = McpClient(URL)
     init = client.request(
@@ -323,6 +442,7 @@ def main():
 
     print(json.dumps({
         "ok": True,
+        "modern": modern,
         "surface": surface,
         "toolCount": len(tools),
         "gameLoaded": game_loaded,
