@@ -34,6 +34,10 @@ def main() -> int:
     require(patch, "Harmony.GetPatchInfo(target)", "Harmony ownership inspection missing", failures)
     require(patch, "FastTrackNamespacePrefix", "FastTrack attribution missing", failures)
     require(patch, "GameScheduler.Instance", "deferred reporting path missing", failures)
+    require(patch, '"intervalDurationTicks"', "report interval duration is missing", failures)
+    require(patch, '"intervalCalls"', "per-report call deltas are missing", failures)
+    require(patch, '"intervalTotalTicks"', "per-report timing deltas are missing", failures)
+    require(patch, "DeltaSince(previousSnapshot)", "reporting does not derive interval metrics from cumulative snapshots", failures)
     if "GC.Collect(" in patch:
         failures.append("performance probe must never trigger GC")
     if patch.count("UnityEngine.Debug.Log") != 3:
@@ -43,6 +47,7 @@ def main() -> int:
         ("Interlocked.Increment(ref callCount)", "counter call count is not atomic"),
         ("Interlocked.Add(ref totalTicks", "counter total is not atomic"),
         ("Interlocked.CompareExchange(", "counter maximum is not atomic"),
+        ("DeltaSince(PerformanceProbeSnapshot previous)", "counter snapshots cannot derive reporting intervals"),
     ):
         require(core, needle, message, failures)
     if "new " in core.split("internal void Record(long elapsedTicks)", 1)[1].split(
@@ -55,6 +60,9 @@ def main() -> int:
         ('target.get("resolved") is not True', "analyzer does not fail unresolved targets"),
         ("fastTrackPatched", "analyzer does not surface FastTrack ownership"),
         ('"BrainScheduler.RenderEveryTick"', "analyzer does not require brain scheduler evidence"),
+        ('"--series"', "analyzer cannot validate an in-run report series"),
+        ("intervalCalls does not match cumulative delta", "analyzer does not close interval call arithmetic"),
+        ("intervalTotalTicks does not match cumulative delta", "analyzer does not close interval timing arithmetic"),
     ):
         require(analyzer, needle, message, failures)
 
