@@ -63,10 +63,13 @@ def main() -> int:
     analyzer = load_analyzer()
     required = analyzer.DEFAULT_REQUIRED
 
-    first = make_report(analyzer, 1, 5, 50, 5, 50)
-    second = make_report(analyzer, 2, 8, 95, 3, 45)
+    first = make_report(analyzer, 1, 0, 0, 0, 0)
+    second = make_report(analyzer, 2, 3, 45, 3, 45)
     failures = analyzer.validate_series([first, second], required)
-    require(not failures, "valid interval series rejected: " + "; ".join(failures))
+    require(
+        not failures,
+        "valid interval series with early zero-call targets rejected: " + "; ".join(failures),
+    )
 
     legacy = copy.deepcopy(second)
     legacy.pop("reportSequence")
