@@ -56,6 +56,8 @@ jobs:
           -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
           -p:ImportDirectoryBuildProps=false
           -p:TreatWarningsAsErrors=true
+      - name: Verify compiled CycleTrim release safety guards
+        run: python3 scripts/verify_cycletrim_release_binary.py
       - name: Build OniMcp against pinned references
         run: >-
           dotnet build mods/OniMcp/OniMcp.csproj
