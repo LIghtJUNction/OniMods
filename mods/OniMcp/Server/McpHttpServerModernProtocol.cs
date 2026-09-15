@@ -185,6 +185,12 @@ namespace OniMcp.Server
                 return false;
             }
 
+            if (string.Equals(method, "tools/call", StringComparison.Ordinal)
+                && !ValidateModernToolParameterHeaders(httpRequest, rawMessage, out error))
+            {
+                return false;
+            }
+
             return true;
         }
 
@@ -199,7 +205,7 @@ namespace OniMcp.Server
             }
 
             int payloadLength = headerValue.Length - Base64HeaderPrefix.Length - Base64HeaderSuffix.Length;
-            if (payloadLength <= 0)
+            if (payloadLength < 0)
                 return false;
 
             string payload = headerValue.Substring(Base64HeaderPrefix.Length, payloadLength);
@@ -312,23 +318,24 @@ namespace OniMcp.Server
 
         private static bool IsModernReadOnlyToolAvailable()
         {
-            return OniToolRegistry.GetToolInfos()
-                .Any(item => string.Equals(item.Name, ModernReadOnlyToolName, StringComparison.Ordinal));
+            McpToolInfo toolInfo;
+            List<ModernToolHeaderBinding> bindings;
+            return TryGetModernReadOnlyToolInfo(out toolInfo, out bindings);
         }
 
         private static JArray BuildModernToolInfos()
         {
             var result = new JArray();
-            foreach (var toolInfo in OniToolRegistry.GetToolInfos()
-                .Where(item => string.Equals(item.Name, ModernReadOnlyToolName, StringComparison.Ordinal))
-                .OrderBy(item => item.Name, StringComparer.Ordinal))
-            {
-                var modernToolInfo = JObject.FromObject(toolInfo);
-                // `execution.taskSupport` belonged to the 2025 core task model. Tasks moved
-                // out of core in 2026, so do not advertise that legacy field here.
-                modernToolInfo.Remove("execution");
-                result.Add(modernToolInfo);
-            }
+            McpToolInfo toolInfo;
+            List<ModernToolHeaderBinding> bindings;
+            if (!TryGetModernReadOnlyToolInfo(out toolInfo, out bindings))
+                return result;
+
+            var modernToolInfo = JObject.FromObject(toolInfo);
+            // `execution.taskSupport` belonged to the 2025 core task model. Tasks moved
+            // out of core in 2026, so do not advertise that legacy field here.
+            modernToolInfo.Remove("execution");
+            result.Add(modernToolInfo);
             return result;
         }
 
