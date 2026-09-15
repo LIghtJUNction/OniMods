@@ -18,6 +18,7 @@ namespace CycleTrim.BrainBenchmarks
     {
         private const int Width = 256;
         private const int Height = 384;
+        private const int GlobalPrimeBatches = 20;
         private const int WarmupSamples = 3;
         private const int MeasuredSamples = 9;
         private const int IterationsPerSample = 300;
@@ -53,7 +54,6 @@ namespace CycleTrim.BrainBenchmarks
 
             internal int X { get; }
             internal int Y { get; }
-            internal int Area => (2 * X + 1) * (2 * Y + 1);
         }
 
         private sealed class Simulator
@@ -253,9 +253,11 @@ namespace CycleTrim.BrainBenchmarks
             Console.WriteLine("CycleTrim NavGrid adaptive crossover synthetic benchmark");
             Console.WriteLine("This is not an in-game FPS measurement.");
             Console.WriteLine(
-                "Method: direct vanilla-vs-bitset comparison, " + WarmupSamples +
-                " iteration-sized warmup batches + " + MeasuredSamples + " paired samples, " +
-                IterationsPerSample + " update cycles/batch; medians reported.");
+                "Method: global JIT prime + direct vanilla-vs-bitset comparison, " +
+                WarmupSamples + " iteration-sized warmup batches + " + MeasuredSamples +
+                " paired samples, " + IterationsPerSample + " update cycles/batch; medians reported.");
+
+            PrimeJit();
 
             foreach (Layout layout in Enum.GetValues(typeof(Layout)))
             {
@@ -281,6 +283,18 @@ namespace CycleTrim.BrainBenchmarks
                             label: "score");
                     }
                 }
+            }
+        }
+
+        private static void PrimeJit()
+        {
+            var seeds = BuildSparse(12);
+            var simulator = new Simulator(Width, Height, rangeX: 4, rangeY: 4);
+            var expectedCount = simulator.RunVanilla(seeds);
+            for (var batch = 0; batch < GlobalPrimeBatches; batch++)
+            {
+                Warmup(simulator, seeds, candidate: false, expectedCount);
+                Warmup(simulator, seeds, candidate: true, expectedCount);
             }
         }
 
