@@ -12,6 +12,7 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
+using OniMcp.Tools;
 
 internal static class Program
 {
@@ -26,6 +27,7 @@ internal static class Program
         int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
         portProbe.Stop();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        OniToolRegistry.ModernToolsEnabled = true;
         var server = new McpHttpServer();
         server.StartServer();
         try
@@ -69,6 +71,69 @@ internal static class Program
                 }
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Unsupported stateless versions allocated legacy session state");
+
+                string modernToolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":2301,\"params\":{" + modernMeta + "}}";
+                using (var response = Post(client, modernToolsList, null, "2026-07-28", "tools/list"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK, "Modern tools/list failed");
+                    JObject result = (JObject)JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"];
+                    Assert((string)result["resultType"] == "complete", "Modern tools/list omitted resultType");
+                    Assert((string)result["cacheScope"] == "public" && (int)result["ttlMs"] > 0,
+                        "Modern tools/list did not expose cacheable deterministic metadata");
+                    var tools = (JArray)result["tools"];
+                    Assert(tools.Count == 1 && (string)tools[0]["name"] == "benchmark",
+                        "Modern tools/list exposed tools outside the read-only allowlist");
+                    Assert(tools[0]["execution"] == null,
+                        "Modern tools/list leaked the legacy 2025 taskSupport field");
+                    Assert(((JArray)tools[0]["inputSchema"]["required"]).Values<string>().Contains("task"),
+                        "Modern benchmark schema lost its required visible task description");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Modern tools/list allocated a legacy session header");
+                }
+
+                int callsBeforeModern = OniToolRegistry.Calls;
+                string benchmarkCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2302,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"modern benchmark regression\",\"iterations\":1}," + modernMeta + "}}";
+                using (var response = Post(client, benchmarkCall, null, "2026-07-28", "tools/call", "benchmark"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK, "Modern read-only tools/call failed");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((string)json["result"]["resultType"] == "complete",
+                        "Modern tools/call omitted resultType");
+                    Assert((string)json["result"]["content"][0]["text"] == "ok",
+                        "Modern tools/call changed the tool result");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Modern tools/call allocated a legacy session header");
+                }
+                Assert(OniToolRegistry.Calls == callsBeforeModern + 1
+                    && OniToolRegistry.LastName == "benchmark"
+                    && (string)OniToolRegistry.LastArguments["task"] == "modern benchmark regression",
+                    "Modern tools/call did not dispatch the advertised read-only tool exactly once");
+
+                using (var response = Post(client, benchmarkCall, null, "2026-07-28", "tools/call"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern tools/call accepted a missing Mcp-Name header");
+                    Assert((int)JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["error"]["code"] == -32020,
+                        "Missing tool Mcp-Name used the wrong error code");
+                }
+                Assert(OniToolRegistry.Calls == callsBeforeModern + 1,
+                    "Header validation executed a tool before rejecting the request");
+
+                string writeToolCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2303,\"params\":{\"name\":\"world_editor\",\"arguments\":{\"task\":\"must not execute\"}," + modernMeta + "}}";
+                using (var response = Post(client, writeToolCall, null, "2026-07-28", "tools/call", "world_editor"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Unavailable modern tool should use a JSON-RPC application error");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["error"]["code"] == McpErrorCode.InvalidParams,
+                        "Unavailable modern tool did not use -32602 Invalid Params");
+                    Assert((string)json["error"]["data"]["name"] == "world_editor",
+                        "Unavailable modern tool error omitted the rejected name");
+                }
+                Assert(OniToolRegistry.Calls == callsBeforeModern + 1,
+                    "Modern read-only gate executed a write-capable tool");
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Modern tool discovery/call allocated legacy session state");
 
                 const string initialize = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":1,\"params\":{\"protocolVersion\":\"2025-11-25\"}}";
                 string sessionId;
@@ -128,11 +193,11 @@ internal static class Program
 
                 using (var response = Post(client, legacyToolsList, sessionId, "2026-07-28", "tools/list"))
                 {
-                    Assert(response.StatusCode == HttpStatusCode.NotFound,
+                    Assert(response.StatusCode == HttpStatusCode.OK,
                         "Explicit modern transport was downgraded by a legacy session id");
                     JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int)json["error"]["code"] == McpErrorCode.MethodNotFound,
-                        "Explicit modern transport did not stay on the modern path");
+                    Assert((string)json["result"]["tools"][0]["name"] == "benchmark",
+                        "Explicit modern transport did not stay on the modern read-only tool path");
                     Assert(!response.Headers.Contains("Mcp-Session-Id"),
                         "Modern response reused a legacy session header");
                 }
@@ -154,9 +219,10 @@ internal static class Program
         finally
         {
             server.StopServer();
+            OniToolRegistry.ModernToolsEnabled = false;
             Invoke(_bridge, "OnDestroy");
         }
-        Console.WriteLine("PASS modern resource, protocol-version, and mixed-era routing wire regressions");
+        Console.WriteLine("PASS modern resources, read-only tools, protocol-version, and mixed-era routing wire regressions");
     }
 
     private static void AssertUnsupportedVersion(HttpResponseMessage response, string requested, string context)
