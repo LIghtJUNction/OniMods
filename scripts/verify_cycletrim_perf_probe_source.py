@@ -34,9 +34,9 @@ def main() -> int:
     require(patch, "Harmony.GetPatchInfo(target)", "Harmony ownership inspection missing", failures)
     require(patch, "FastTrackNamespacePrefix", "FastTrack attribution missing", failures)
     require(patch, "GameScheduler.Instance", "deferred reporting path missing", failures)
-    require(patch, '"intervalDurationTicks"', "report interval duration is missing", failures)
-    require(patch, '"intervalCalls"', "per-report call deltas are missing", failures)
-    require(patch, '"intervalTotalTicks"', "per-report timing deltas are missing", failures)
+    require(patch, "intervalDurationTicks", "report interval duration is missing", failures)
+    require(patch, "intervalCalls", "per-report call deltas are missing", failures)
+    require(patch, "intervalTotalTicks", "per-report timing deltas are missing", failures)
     require(patch, "DeltaSince(previousSnapshot)", "reporting does not derive interval metrics from cumulative snapshots", failures)
     if "GC.Collect(" in patch:
         failures.append("performance probe must never trigger GC")
