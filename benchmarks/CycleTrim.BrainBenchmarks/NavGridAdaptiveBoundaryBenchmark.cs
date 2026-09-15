@@ -11,25 +11,49 @@ namespace CycleTrim.BrainBenchmarks
     /// Focused crossover benchmark for the NavGrid reusable-bitset candidate.
     ///
     /// The broader NavGridDirtyExpansionBenchmark owns lifecycle/callback correctness.
-    /// This benchmark deliberately measures only the raw vanilla-vs-bitset crossover
-    /// around small pre-expansion dirty-cell counts so an adaptive threshold is not
-    /// chosen from same-path timing noise.
+    /// This benchmark measures only the raw vanilla-vs-bitset crossover around small
+    /// pre-expansion dirty-cell counts and cheap pre-expansion work estimates.
     /// </summary>
     internal static class NavGridAdaptiveBoundaryBenchmark
     {
         private const int Width = 256;
         private const int Height = 384;
+        private const int GlobalPrimeBatches = 20;
         private const int WarmupSamples = 3;
         private const int MeasuredSamples = 9;
         private const int IterationsPerSample = 300;
         private static readonly int[] BoundaryCounts = { 4, 5, 6, 7, 8, 9, 10, 11, 12 };
-        private static readonly int[] RangeSizes = { 1, 2, 4, 8 };
+        private static readonly int[] ScoreCounts = { 4, 8, 12 };
+        private static readonly RangeShape[] RangeShapes =
+        {
+            new RangeShape(1, 1),
+            new RangeShape(1, 2),
+            new RangeShape(2, 1),
+            new RangeShape(1, 4),
+            new RangeShape(4, 1),
+            new RangeShape(2, 2),
+            new RangeShape(2, 4),
+            new RangeShape(4, 2),
+            new RangeShape(4, 4)
+        };
 
         private enum Layout
         {
             Sparse,
             Line,
             Cluster
+        }
+
+        private sealed class RangeShape
+        {
+            internal RangeShape(int x, int y)
+            {
+                X = x;
+                Y = y;
+            }
+
+            internal int X { get; }
+            internal int Y { get; }
         }
 
         private sealed class Simulator
@@ -229,39 +253,67 @@ namespace CycleTrim.BrainBenchmarks
             Console.WriteLine("CycleTrim NavGrid adaptive crossover synthetic benchmark");
             Console.WriteLine("This is not an in-game FPS measurement.");
             Console.WriteLine(
-                "Method: direct vanilla-vs-bitset comparison, " + WarmupSamples +
-                " warmups + " + MeasuredSamples + " paired samples, " +
-                IterationsPerSample + " update cycles/sample; medians reported.");
+                "Method: global JIT prime + direct vanilla-vs-bitset comparison, " +
+                WarmupSamples + " iteration-sized warmup batches + " + MeasuredSamples +
+                " paired samples, " + IterationsPerSample + " update cycles/batch; medians reported.");
+
+            PrimeJit();
 
             foreach (Layout layout in Enum.GetValues(typeof(Layout)))
             {
                 for (var index = 0; index < BoundaryCounts.Length; index++)
                 {
-                    RunCase(layout, BoundaryCounts[index], range: 4, label: "boundary");
+                    RunCase(layout, BoundaryCounts[index], rangeX: 4, rangeY: 4, label: "boundary");
                 }
             }
 
-            Console.WriteLine("Range sensitivity at exactly 8 unique dirty cells:");
-            foreach (Layout layout in Enum.GetValues(typeof(Layout)))
+            Console.WriteLine("Pre-expansion count x asymmetric-range score matrix:");
+            for (var countIndex = 0; countIndex < ScoreCounts.Length; countIndex++)
             {
-                for (var index = 0; index < RangeSizes.Length; index++)
+                foreach (Layout layout in Enum.GetValues(typeof(Layout)))
                 {
-                    RunCase(layout, seedCount: 8, range: RangeSizes[index], label: "range");
+                    for (var rangeIndex = 0; rangeIndex < RangeShapes.Length; rangeIndex++)
+                    {
+                        var range = RangeShapes[rangeIndex];
+                        RunCase(
+                            layout,
+                            ScoreCounts[countIndex],
+                            range.X,
+                            range.Y,
+                            label: "score");
+                    }
                 }
             }
         }
 
-        private static void RunCase(Layout layout, int seedCount, int range, string label)
+        private static void PrimeJit()
+        {
+            var seeds = BuildSparse(12);
+            var simulator = new Simulator(Width, Height, rangeX: 4, rangeY: 4);
+            var expectedCount = simulator.RunVanilla(seeds);
+            for (var batch = 0; batch < GlobalPrimeBatches; batch++)
+            {
+                Warmup(simulator, seeds, candidate: false, expectedCount);
+                Warmup(simulator, seeds, candidate: true, expectedCount);
+            }
+        }
+
+        private static void RunCase(
+            Layout layout,
+            int seedCount,
+            int rangeX,
+            int rangeY,
+            string label)
         {
             var seeds = BuildSeeds(layout, seedCount);
-            var simulator = new Simulator(Width, Height, range, range);
-            VerifyEquivalent(simulator, seeds, layout, seedCount, range);
+            var simulator = new Simulator(Width, Height, rangeX, rangeY);
+            VerifyEquivalent(simulator, seeds, layout, seedCount, rangeX, rangeY);
             var expectedCount = simulator.RunVanilla(seeds);
 
             for (var sample = 0; sample < WarmupSamples; sample++)
             {
-                simulator.RunVanilla(seeds);
-                simulator.RunCandidate(seeds);
+                Warmup(simulator, seeds, candidate: false, expectedCount);
+                Warmup(simulator, seeds, candidate: true, expectedCount);
             }
 
             var vanillaElapsed = new double[MeasuredSamples];
@@ -292,16 +344,43 @@ namespace CycleTrim.BrainBenchmarks
             Array.Sort(candidateAllocated);
             var vanillaMedian = vanillaElapsed[vanillaElapsed.Length / 2];
             var candidateMedian = candidateElapsed[candidateElapsed.Length / 2];
+            var expansionArea = (2 * rangeX + 1) * (2 * rangeY + 1);
+            var workScore = seedCount * expansionArea;
             Console.WriteLine(
                 label + ": layout=" + layout.ToString().ToLowerInvariant() +
                 ", seeds=" + seedCount +
-                ", range=" + range +
+                ", range=" + rangeX + "x" + rangeY +
+                ", area=" + expansionArea +
+                ", score=" + workScore +
                 ", expanded=" + expectedCount +
                 ", vanilla=" + vanillaMedian.ToString("F3", CultureInfo.InvariantCulture) + " ms" +
                 ", bitset=" + candidateMedian.ToString("F3", CultureInfo.InvariantCulture) + " ms" +
                 ", speedup=" + (vanillaMedian / candidateMedian).ToString("F2", CultureInfo.InvariantCulture) + "x" +
                 ", allocated=" + vanillaAllocated[vanillaAllocated.Length / 2] +
                 "/" + candidateAllocated[candidateAllocated.Length / 2] + " B");
+        }
+
+        private static void Warmup(
+            Simulator simulator,
+            int[] seeds,
+            bool candidate,
+            int expectedCount)
+        {
+            var checksum = 0;
+            for (var iteration = 0; iteration < IterationsPerSample; iteration++)
+            {
+                var count = candidate ? simulator.RunCandidate(seeds) : simulator.RunVanilla(seeds);
+                if (count != expectedCount)
+                {
+                    throw new InvalidOperationException("NavGrid crossover count changed during warmup");
+                }
+                checksum ^= count;
+            }
+
+            if (checksum == int.MinValue)
+            {
+                throw new InvalidOperationException("unreachable NavGrid crossover warmup checksum");
+            }
         }
 
         private static void Measure(
@@ -345,7 +424,8 @@ namespace CycleTrim.BrainBenchmarks
             int[] seeds,
             Layout layout,
             int seedCount,
-            int range)
+            int rangeX,
+            int rangeY)
         {
             var vanilla = simulator.CaptureVanilla(seeds);
             var candidate = simulator.CaptureCandidate(seeds);
@@ -360,7 +440,8 @@ namespace CycleTrim.BrainBenchmarks
                 {
                     throw new InvalidOperationException(
                         "NavGrid crossover order mismatch for " + layout +
-                        " seeds=" + seedCount + " range=" + range + " at index " + index);
+                        " seeds=" + seedCount + " range=" + rangeX + "x" + rangeY +
+                        " at index " + index);
                 }
             }
         }
