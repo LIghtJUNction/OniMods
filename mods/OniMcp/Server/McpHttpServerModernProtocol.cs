@@ -262,12 +262,16 @@ namespace OniMcp.Server
                     return BuildModernDiscoveryResult();
 
                 case "tools/list":
-                    return CompleteModernListResult(new JObject
-                    {
-                        ["tools"] = BuildModernToolInfos()
-                    });
+                {
+                    var toolInfos = BuildModernToolInfos();
+                    if (toolInfos.Count == 0)
+                        return ModernToolMethodUnavailable(request);
+                    return CompleteModernListResult(new JObject { ["tools"] = toolInfos });
+                }
 
                 case "tools/call":
+                    if (!IsModernReadOnlyToolAvailable())
+                        return ModernToolMethodUnavailable(request);
                     return CallModernReadOnlyTool(request);
 
                 case "resources/list":
@@ -298,6 +302,18 @@ namespace OniMcp.Server
                     return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
                         $"Method is not available on the {ModernProtocolVersion} compatibility path: {request.Method}");
             }
+        }
+
+        private static JsonRpcResponse ModernToolMethodUnavailable(JsonRpcRequest request)
+        {
+            return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
+                $"Method is not available until a safe modern tool is registered: {request.Method}");
+        }
+
+        private static bool IsModernReadOnlyToolAvailable()
+        {
+            return OniToolRegistry.GetToolInfos()
+                .Any(item => string.Equals(item.Name, ModernReadOnlyToolName, StringComparison.Ordinal));
         }
 
         private static JArray BuildModernToolInfos()
@@ -341,23 +357,30 @@ namespace OniMcp.Server
 
         private static JObject BuildModernDiscoveryResult()
         {
+            var capabilities = new JObject
+            {
+                ["resources"] = new JObject
+                {
+                    ["subscribe"] = false,
+                    ["listChanged"] = false
+                }
+            };
+            if (IsModernReadOnlyToolAvailable())
+            {
+                capabilities["tools"] = new JObject
+                {
+                    ["listChanged"] = false
+                };
+            }
+
             return new JObject
             {
                 ["resultType"] = "complete",
                 ["supportedVersions"] = BuildSupportedProtocolVersions(),
-                ["capabilities"] = new JObject
-                {
-                    ["tools"] = new JObject
-                    {
-                        ["listChanged"] = false
-                    },
-                    ["resources"] = new JObject
-                    {
-                        ["subscribe"] = false,
-                        ["listChanged"] = false
-                    }
-                },
-                ["instructions"] = "This compatibility path exposes stateless ONI resources plus the read-only benchmark tool. Stateful and game-mutating tool calls remain on the 2025 initialize/session path until their request-scoped state and modern header contracts are migrated.",
+                ["capabilities"] = capabilities,
+                ["instructions"] = IsModernReadOnlyToolAvailable()
+                    ? "This compatibility path exposes stateless ONI resources plus the read-only benchmark tool. Stateful and game-mutating tool calls remain on the 2025 initialize/session path until their request-scoped state and modern header contracts are migrated."
+                    : "This compatibility path exposes stateless ONI resource discovery and reads. Tool calls remain on the 2025 initialize/session path until a safe modern tool is registered.",
                 ["ttlMs"] = 3600000,
                 ["cacheScope"] = "public",
                 ["_meta"] = BuildModernServerMeta()
