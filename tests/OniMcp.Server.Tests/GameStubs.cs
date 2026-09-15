@@ -63,30 +63,39 @@ namespace OniMcp.Tools
         public static int Calls;
         public static string LastName;
         public static JObject LastArguments;
-        public static List<McpToolInfo> GetToolInfos() => new List<McpToolInfo>
+        public static bool ModernToolsEnabled;
+
+        public static List<McpToolInfo> GetToolInfos()
         {
-            new McpToolInfo
+            if (!ModernToolsEnabled)
+                return new List<McpToolInfo>();
+
+            return new List<McpToolInfo>
             {
-                Name = "world_editor",
-                Description = "write-capable stub",
-                Execution = new ToolExecution { TaskSupport = "optional" },
-                InputSchema = new InputSchema { Properties = new Dictionary<string, SchemaProperty>() }
-            },
-            new McpToolInfo
-            {
-                Name = "benchmark",
-                Description = "read-only benchmark stub",
-                Execution = new ToolExecution { TaskSupport = "optional" },
-                InputSchema = new InputSchema
+                new McpToolInfo
                 {
-                    Properties = new Dictionary<string, SchemaProperty>
+                    Name = "world_editor",
+                    Description = "write-capable stub",
+                    Execution = new ToolExecution { TaskSupport = "optional" },
+                    InputSchema = new InputSchema { Properties = new Dictionary<string, SchemaProperty>() }
+                },
+                new McpToolInfo
+                {
+                    Name = "benchmark",
+                    Description = "read-only benchmark stub",
+                    Execution = new ToolExecution { TaskSupport = "optional" },
+                    InputSchema = new InputSchema
                     {
-                        ["task"] = new SchemaProperty { Type = "string", Description = "Visible task description" }
-                    },
-                    Required = new List<string> { "task" }
+                        Properties = new Dictionary<string, SchemaProperty>
+                        {
+                            ["task"] = new SchemaProperty { Type = "string", Description = "Visible task description" }
+                        },
+                        Required = new List<string> { "task" }
+                    }
                 }
-            }
-        };
+            };
+        }
+
         public static CallToolResult CallTool(string name, JObject arguments)
         {
             Calls++;
