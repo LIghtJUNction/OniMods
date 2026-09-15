@@ -1,0 +1,28 @@
+type public class Manager
+member private Comparison < Navigator > navigatorOrderer
+member private ConcurrentDictionary < ulong , ObjectPool < PathGrid >> gridPool
+member private Dictionary < Navigator , int > navigators
+member private ExceptionDispatchInfo agentException
+member private List < Navigator > navigatorOrdering
+member private List < WorkOrder > workQueue
+member private List < WorkResult > finishedWork
+member private ObjectPool < List < int >> indexListPool
+member private Thread [ ] agents
+member private WorkOrder makeWorkOrder ( Navigator nav )
+member private bool halting
+member private const int kFailedNavigationPenalty = 10
+member private const int kNavigatorInFlightValue = - 1
+member private const int kNovelProberPenalty = 10000
+member private static int NavFailures
+member private ushort activeSerialNo
+member public Manager ( )
+member public bool Halting ( )
+member public bool NextTask ( out WorkOrder order , out WorkResult result )
+member public void ApplyNavigationFailedPenalty ( Navigator nav )
+member public void Register ( Navigator nav )
+member public void SetException ( ExceptionDispatchInfo ex )
+member public void Shutdown ( )
+member public void Start ( int agentCount )
+member public void TickFrame ( )
+member public void Unregister ( Navigator nav )
+member public void WorkCompleted ( WorkResult result )
