@@ -53,6 +53,10 @@ jobs:
           --manifest ci/oni-reference-assemblies.json
       - name: Install pinned ILSpy command line tool
         run: dotnet tool install --global ilspycmd --version 11.0.0.9375
+      - name: Verify CycleTrim target contract against pinned ONI assembly
+        run: >-
+          python3 scripts/verify_cycletrim_target_contract.py
+          "$GITHUB_WORKSPACE/.oni-managed/Assembly-CSharp.dll"
       - name: Build CycleTrim against pinned references
         run: >-
           dotnet build mods/CycleTrim/CycleTrim.csproj
