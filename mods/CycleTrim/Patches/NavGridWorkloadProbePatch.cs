@@ -14,9 +14,11 @@ namespace CycleTrim.Patches
     internal static class NavGridWorkloadProbePatch
     {
         private const string EnvironmentVariable = "CYCLETRIM_NAVGRID_PROBE";
+        private const string CaptureEnvironmentVariable = "CYCLETRIM_NAVGRID_PROBE_CAPTURE";
         private const string FastTrackPatchType =
             "PeterHan.FastTrack.PathPatches.NavGrid_UpdateGraph_Patch";
         private const string ReportName = "CycleTrim.NavGridWorkloadProbe";
+        private const int HistogramBucketCapacity = 9 * 7 * 7 * 6;
 
         private static readonly NavGridWorkloadProbe Probe = new NavGridWorkloadProbe();
         private static readonly Action<object> ReportCallback = ReportDeferred;
@@ -92,7 +94,17 @@ namespace CycleTrim.Patches
 
         private static bool IsRequested()
         {
-            var value = Environment.GetEnvironmentVariable(EnvironmentVariable);
+            return IsEnabled(EnvironmentVariable);
+        }
+
+        private static bool IsCaptureRequested()
+        {
+            return IsEnabled(CaptureEnvironmentVariable);
+        }
+
+        private static bool IsEnabled(string environmentVariable)
+        {
+            var value = Environment.GetEnvironmentVariable(environmentVariable);
             return string.Equals(value, "1", StringComparison.Ordinal)
                 || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
@@ -172,6 +184,12 @@ namespace CycleTrim.Patches
             reportRequested = false;
             UnityEngine.Debug.Log(
                 "[CycleTrim][NavGridProbe] " + Probe.FormatSummary(maxBuckets: 12));
+            if (IsCaptureRequested())
+            {
+                UnityEngine.Debug.Log(
+                    "[CycleTrim][NavGridProbeCapture] " +
+                    Probe.FormatSummary(maxBuckets: HistogramBucketCapacity));
+            }
         }
     }
 }
