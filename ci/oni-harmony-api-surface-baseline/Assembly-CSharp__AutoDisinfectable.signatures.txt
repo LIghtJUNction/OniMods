@@ -1,0 +1,19 @@
+type public class AutoDisinfectable : Workable
+member private Chore chore
+member private PrimaryElement primaryElement
+member private bool enableAutoDisinfect
+member private const float MAX_WORK_TIME = 10f
+member private float diseasePerSecond
+member private static readonly EventSystem . IntraObjectHandler < AutoDisinfectable > OnRefreshUserMenuDelegate
+member private void DisableAutoDisinfect ( )
+member private void EnableAutoDisinfect ( )
+member private void OnRefreshUserMenu ( object data )
+member protected override bool OnWorkTick ( WorkerBase worker , float dt )
+member protected override void OnCompleteWork ( WorkerBase worker )
+member protected override void OnPrefabInit ( )
+member protected override void OnSpawn ( )
+member protected override void OnStartWork ( WorkerBase worker )
+member public AutoDisinfectable ( )
+member public void CancelChore ( )
+member public void RefreshChore ( )
+member static AutoDisinfectable ( )

@@ -1,0 +1,72 @@
+member public static string MigrateFMOD ( FMODAsset asset )
+member public static string NamesOfBoostersWithSkillPerk ( string perkID )
+member public static string NamesOfBuildingsRequiringSkillPerk ( string perkID )
+member public static string NamesOfSkillsWithSkillPerk ( string perkID )
+member public static string RandomValueFromSeparatedString ( string source , string separator = "\n" )
+member public static string ReplaceHotkeyString ( string template , Action action )
+member public static string ReplaceHotkeyString ( string template , Action action1 , Action action2 )
+member public static string SafeStringFormat ( string source , params object [ ] args )
+member public static void AddTimeSliceText ( StringBuilder builder , TimeSlice timeSlice )
+member public static void AppendBoldString ( StringBuilder builder , string source )
+member public static void AppendFloatToString ( StringBuilder builder , float f , string format = null )
+member public static void AppendFloatWithDecimalPoint ( StringBuilder builder , float f )
+member public static void AppendFormattedByTag ( StringBuilder builder , Tag tag , float amount , TimeSlice timeSlice = TimeSlice . None )
+member public static void AppendFormattedCalories ( StringBuilder builder , float calories , TimeSlice timeSlice = TimeSlice . None , bool forceKcal = true )
+member public static void AppendFormattedCalories ( StringBuilder builder , float calories , bool showSuffix , TimeSlice timeSlice = TimeSlice . None , bool forceKcal = true )
+member public static void AppendFormattedCaloriesForItem ( StringBuilder builder , Tag tag , float amount , TimeSlice timeSlice = TimeSlice . None , bool forceKcal = true )
+member public static void AppendFormattedCycles ( StringBuilder builder , float seconds , bool forceCycles = false )
+member public static void AppendFormattedDistance ( StringBuilder builder , float meters )
+member public static void AppendFormattedEngineEfficiency ( StringBuilder builder , float amount )
+member public static void AppendFormattedHeatEnergy ( StringBuilder builder , float dtu , HeatEnergyFormatterUnit unit = HeatEnergyFormatterUnit . Automatic )
+member public static void AppendFormattedHeatEnergyRate ( StringBuilder builder , float dtu_s , HeatEnergyFormatterUnit unit = HeatEnergyFormatterUnit . Automatic )
+member public static void AppendFormattedHighEnergyParticles ( StringBuilder builder , float units , TimeSlice timeSlice = TimeSlice . None , bool displayUnits = true )
+member public static void AppendFormattedLux ( StringBuilder builder , int lux )
+member public static void AppendFormattedMass ( StringBuilder builder , float mass , TimeSlice timeSlice = TimeSlice . None , MetricMassFormat massFormat = MetricMassFormat . UseThreshold , bool includeSuffix = true , string floatFormat = "{0:0.#}" )
+member public static void AppendFormattedPercent ( StringBuilder builder , float percent , TimeSlice timeSlice = TimeSlice . None )
+member public static void AppendFormattedPlantGrowth ( StringBuilder builder , float percent , TimeSlice timeSlice = TimeSlice . None )
+member public static void AppendFormattedRads ( StringBuilder builder , float rads , TimeSlice timeSlice = TimeSlice . None )
+member public static void AppendFormattedRocketRange ( StringBuilder builder , int rangeInTiles , bool displaySuffix = true )
+member public static void AppendFormattedRocketRangePerCycle ( StringBuilder builder , float range , bool displaySuffix = true )
+member public static void AppendFormattedRoundedJoules ( StringBuilder builder , float joules )
+member public static void AppendFormattedSimple ( StringBuilder builder , float num , TimeSlice timeSlice = TimeSlice . None , string formatString = null )
+member public static void AppendFormattedTemperature ( StringBuilder builder , float temp , TimeSlice timeSlice = TimeSlice . None , TemperatureInterpretation interpretation = TemperatureInterpretation . Absolute , bool displayUnits = true , bool roundInDestinationFormat = false )
+member public static void AppendFormattedTime ( StringBuilder builder , float seconds )
+member public static void AppendFormattedUnits ( StringBuilder builder , float units , TimeSlice timeSlice = TimeSlice . None , bool displaySuffix = true , string floatFormatOverride = "" )
+member public static void AppendFormattedWattage ( StringBuilder builder , float watts , WattageFormatterUnit unit = WattageFormatterUnit . Automatic , bool displayUnits = true )
+member public static void AppendHardnessString ( StringBuilder builder , Element element , bool addColor = true )
+member public static void AppendStandardFloat ( StringBuilder builder , float f )
+member public static void AppendStandardPercentageFloat ( StringBuilder builder , float f , bool allowHundredths = false )
+member public static void BuildPartitionedEffects ( List < Descriptor > result , List < Descriptor > nonConverterEffects , List < ( ElementConverter converter , List < Descriptor > descriptors ) > converterDescCache )
+member public static void BuildPartitionedRequirements ( List < Descriptor > result , List < Descriptor > nonConverterReqs , List < ( ElementConverter converter , List < Descriptor > descriptors ) > converterDescCache , bool hasConverterReqs )
+member public static void ClearCell ( int cell , bool deleteMinions = true )
+member public static void CreateExplosion ( Vector3 explosion_pos )
+member public static void DeltaThermalEnergy ( PrimaryElement pe , float kilowatts , float targetTemperature )
+member public static void DestroyCell ( int cell , CellElementEvent eventSource , bool deleteMinions = true )
+member public static void FocusCamera ( Transform target , bool select = true , bool show_back_button = true )
+member public static void FocusCamera ( Vector3 position , float speed = 2f , bool playSound = true , bool show_back_button = true )
+member public static void FocusCamera ( int cell , bool show_back_button = true )
+member public static void FocusCameraOnWorld ( int worldID , Vector3 pos , float forceOrthgraphicSize = 10f , System . Action callback = null , bool show_back_button = true )
+member public static void ForceConduction ( PrimaryElement a , PrimaryElement b , float dt )
+member public static void GetNonSolidCells ( int cell , int radius , List < int > cells )
+member public static void IndentListOfDescriptors ( List < Descriptor > list , int indentCount = 1 )
+member public static void IsEmissionBlocked ( int cell , out bool all_not_gaseous , out bool all_over_pressure )
+member public static void PartitionBuildingDescriptors ( GameObject buildingComplete , bool simpleInfoScreen , out List < Descriptor > allDescs , List < ( ElementConverter converter , List < Descriptor > descriptors ) > converterDescCache , List < Descriptor > nonConverterReqs , List < Descriptor > nonConverterEffects , out bool hasConverterReqs )
+member public static void SubscribeToTags < T > ( T target , EventSystem . IntraObjectHandler < T > handler , bool triggerImmediately ) where T : KMonoBehaviour
+member public static void TintLiquidSymbolOnBuilding ( string symbolName , KBatchedAnimController controller , Element element )
+member public static void UnsubscribeToTags < T > ( T target , EventSystem . IntraObjectHandler < T > handler ) where T : KMonoBehaviour
+member static GameUtil ( )
+nested public enum HeatEnergyFormatterUnit
+nested public enum IdentityDescriptorTense
+nested public enum MassUnit
+nested public enum MeasureUnit
+nested public enum MetricMassFormat
+nested public enum TemperatureInterpretation
+nested public enum TemperatureUnit
+nested public enum TimeSlice
+nested public enum UnitClass
+nested public enum WattageFormatterUnit
+nested public static class BreathableValues
+nested public static class GermResistanceValues
+nested public static class Hardness
+nested public static class ThermalConductivityValues
+nested public static class WireLoadValues

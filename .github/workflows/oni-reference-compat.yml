@@ -7,6 +7,7 @@ on:
       - 'tests/**'
       - 'scripts/**'
       - 'ci/oni-reference-assemblies.json'
+      - 'ci/oni-harmony-api-surface-baseline/**'
       - '.github/workflows/oni-reference-compat.yml'
   push:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - 'tests/**'
       - 'scripts/**'
       - 'ci/oni-reference-assemblies.json'
+      - 'ci/oni-harmony-api-surface-baseline/**'
       - '.github/workflows/oni-reference-compat.yml'
   workflow_dispatch:
 
@@ -68,6 +70,11 @@ jobs:
           python3 scripts/extract_harmony_api_surface.py
           "$GITHUB_WORKSPACE/.oni-managed"
           --output "$GITHUB_WORKSPACE/artifacts/oni-api-surface"
+      - name: Verify Harmony target API baseline
+        run: >-
+          python3 scripts/check_harmony_api_surface_baseline.py
+          --current "$GITHUB_WORKSPACE/artifacts/oni-api-surface/index.json"
+          --baseline "$GITHUB_WORKSPACE/ci/oni-harmony-api-surface-baseline"
       - name: Upload API surface only
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

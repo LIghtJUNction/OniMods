@@ -1,0 +1,95 @@
+type public class Navigator : StateMachineComponent < Navigator . StatesInstance > , ISaveLoadableDetails
+member private Action < int , object > OnBuildingTileChangedAction
+member private KPrefabID targetLocator
+member private LoggerFSS log
+member private NavTactic tactic
+member private PathFinderAbilities abilities
+member private bool TryBuildPathFromCache ( int cachedCell , int reservedCell , ref PathFinder . Path path )
+member private bool ValidatePath ( ref PathFinder . Path path , out bool atNextNode )
+member private int AnchorCell
+member private int reservedCell
+member private static readonly EventSystem . IntraObjectHandler < Navigator > OnDefeatedDelegate
+member private static readonly EventSystem . IntraObjectHandler < Navigator > OnQueueDestroyDelegate
+member private static readonly EventSystem . IntraObjectHandler < Navigator > OnRefreshUserMenuDelegate
+member private static readonly EventSystem . IntraObjectHandler < Navigator > OnSelectObjectDelegate
+member private static readonly EventSystem . IntraObjectHandler < Navigator > OnStoreDelegate
+member private void ClearReservedCell ( )
+member private void OnBuildingTileChanged ( int cell , object building )
+member private void OnDefeated ( object data )
+member private void OnDrawPaths ( )
+member private void OnFollowCam ( )
+member private void OnRefreshUserMenu ( object data )
+member private void OnSelectObject ( object data )
+member private void SetReservedCell ( int cell )
+member private void SimEveryTick ( float dt )
+member private void SubscribeUnstuckFunctions ( )
+member private void UnsubscribeUnstuckFunctions ( )
+member protected override void OnCleanUp ( )
+member protected override void OnPrefabInit ( )
+member protected override void OnSpawn ( )
+member protected void OnQueueDestroy ( )
+member public Dictionary < NavType , int > distanceTravelledByNavType
+member public Facing facing
+member public Grid . SceneLayer sceneLayer
+member public KBatchedAnimController animController
+member public List < int > occupiedCells
+member public NavGrid . Transition GetNextTransition ( )
+member public NavType CurrentNavType
+member public Navigator ( )
+member public PathFinder . Path path
+member public PathFinder . PotentialPath . Flags flags
+member public PathFinderAbilities GetCurrentAbilities ( )
+member public PathGrid TakeResult ( ref AsyncPathProber . WorkResult result )
+member public TransitionDriver transitionDriver
+member public bool CanReach ( IApproachable approachable )
+member public bool CanReach ( int cell )
+member public bool CanReach ( int cell , CellOffset [ ] offsets )
+member public bool DebugDrawPath
+member public bool GoTo ( KMonoBehaviour target , CellOffset [ ] offsets , NavTactic tactic )
+member public bool GoTo ( int cell , CellOffset [ ] offsets , NavTactic tactic )
+member public bool GoTo ( int cell , CellOffset [ ] offsets = null )
+member public bool IsMoving ( )
+member public bool IsSwimming ( )
+member public bool IsValidNavType ( NavType nav_type )
+member public bool Stop ( bool arrived_at_destination = false , bool play_idle = true )
+member public bool executePathProbeTaskAsync
+member public bool reportOccupation
+member public bool updateProber
+member public float defaultSpeed
+member public int GetAnchorCell ( )
+member public int GetNavigationCost ( IApproachable approachable )
+member public int GetNavigationCost ( int cell )
+member public int GetNavigationCost ( int cell , CellOffset [ ] offsets )
+member public int GetNavigationCost ( int cell , IReadOnlyList < CellOffset > offsets )
+member public int GetNavigationCostIgnoreProberOffset ( int cell , CellOffset [ ] offsets )
+member public int GetReservedCell ( )
+member public int cachedCell
+member public int maxProbeRadiusX
+member public int maxProbeRadiusY
+member public static void BeginDetailedSample ( string region_name )
+member public static void EndDetailedSample ( string region_name )
+member public string NavGridName
+member public void AdvancePath ( bool trigger_advance = true )
+member public void BeginTransition ( NavGrid . Transition transition )
+member public void ClearFlags ( PathFinder . PotentialPath . Flags new_flags )
+member public void Deserialize ( IReader reader )
+member public void DrawPath ( )
+member public void OnStore ( object data )
+member public void Pause ( string reason )
+member public void RunQuery ( PathFinderQuery query )
+member public void Serialize ( BinaryWriter writer )
+member public void SetAbilities ( PathFinderAbilities abilities )
+member public void SetCurrentNavType ( NavType nav_type )
+member public void SetFlags ( PathFinder . PotentialPath . Flags new_flags )
+member public void Unpause ( string reason )
+member public void UpdateProbe ( bool forceUpdate = false )
+member public void UpdateTarget ( int cell )
+member static Navigator ( )
+nested public class ActiveTransition
+nested public class Scanner < T > where T : KMonoBehaviour
+nested public class States : GameStateMachine < States , StatesInstance , Navigator >
+nested public class StatesInstance : GameStateMachine < States , StatesInstance , Navigator , object > . GameInstance
+property public CellOffset [ ] targetOffsets { get ; private set ; }
+property public KMonoBehaviour target { get ; set ; }
+property public NavGrid NavGrid { get ; private set ; }
+property public PathGrid PathGrid { get ; set ; }
