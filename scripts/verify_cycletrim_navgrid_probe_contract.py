@@ -24,6 +24,8 @@ def main() -> int:
         "List<int> ___DirtyCells",
         "__instance.updateRangeX",
         "__instance.updateRangeY",
+        "Probe = new NavGridWorkloadProbe();",
+        "ReportCallback = ReportDeferred;",
         "GameScheduler.Instance",
         "ScheduleNextFrame(ReportName, ReportCallback)",
         "Probe.FormatSummary(maxBuckets: 12)",
@@ -43,6 +45,27 @@ def main() -> int:
         failures.append("probe opt-in Prepare guard is missing")
     if "GetEnvironmentVariable(EnvironmentVariable)" not in patch:
         failures.append("probe no longer has an explicit opt-in environment guard")
+
+    eager_probe = re.search(
+        r"private\s+static\s+(?:readonly\s+)?NavGridWorkloadProbe\s+\w+\s*=\s*new\s+NavGridWorkloadProbe",
+        patch,
+    )
+    eager_callback = re.search(
+        r"private\s+static\s+(?:readonly\s+)?Action<object>\s+\w+\s*=\s*ReportDeferred",
+        patch,
+    )
+    if eager_probe or eager_callback:
+        failures.append("default-off probe must not allocate collector/report state in static field initializers")
+    try:
+        opt_in_guard = patch.index("if (!IsRequested())")
+        target_guard = patch.index("if (targetMethod == null)", opt_in_guard)
+        probe_allocation = patch.index("Probe = new NavGridWorkloadProbe();", target_guard)
+        callback_allocation = patch.index("ReportCallback = ReportDeferred;", probe_allocation)
+        if not (opt_in_guard < target_guard < probe_allocation < callback_allocation):
+            failures.append("probe state must be allocated only after opt-in and target resolution")
+    except ValueError:
+        failures.append("probe lazy-allocation ordering could not be verified")
+
     if "UnityEngine" in core or "Harmony" in core or "NavGrid" not in core:
         failures.append("aggregate collector must remain independent of Unity/Harmony runtime APIs")
     record_body = core.split("internal void Record", 1)[1].split(
