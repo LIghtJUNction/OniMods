@@ -59,6 +59,15 @@ def require(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def require_value_error(callback, expected: str) -> None:
+    try:
+        callback()
+    except ValueError as error:
+        require(expected in str(error), f"unexpected ValueError: {error}")
+        return
+    raise RuntimeError("expected ValueError was not raised")
+
+
 def main() -> int:
     analyzer = load_analyzer()
     required = analyzer.DEFAULT_REQUIRED
@@ -101,6 +110,43 @@ def main() -> int:
     require(
         failures == ["series validation requires at least two probe reports"],
         "series validator must fail closed on a single report",
+    )
+
+    selected = analyzer.select_series_after_sequence([first, second], 1)
+    require(
+        selected == [first, second],
+        "freshness selector did not retain the baseline plus fresh report",
+    )
+    failures = analyzer.validate_series(selected, required)
+    require(not failures, "freshness-selected series should remain valid")
+
+    third = make_report(analyzer, 3, 5, 85, 2, 40)
+    selected = analyzer.select_series_after_sequence([first, second, third], 2)
+    require(
+        selected == [second, third],
+        "freshness selector did not anchor at the requested reportSequence",
+    )
+    failures = analyzer.validate_series(selected, required)
+    require(not failures, "anchored freshness series should validate")
+
+    require_value_error(
+        lambda: analyzer.select_series_after_sequence([first], 1),
+        "no fresh probe report after reportSequence 1",
+    )
+    require_value_error(
+        lambda: analyzer.select_series_after_sequence([second], 1),
+        "baseline reportSequence 1 was not found",
+    )
+    require_value_error(
+        lambda: analyzer.select_series_after_sequence([first, second], 0),
+        "after_sequence must be a positive reportSequence",
+    )
+
+    restarted_first = copy.deepcopy(first)
+    selected = analyzer.select_series_after_sequence([first, second, restarted_first], 1)
+    require_value_error(
+        lambda: analyzer.select_series_after_sequence([first, second, restarted_first], 1),
+        "no fresh probe report after reportSequence 1",
     )
 
     print("PASS CycleTrim performance probe analyzer regressions")
