@@ -54,6 +54,22 @@ internal static class Program
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern resource error allocated legacy session state");
 
+                const string unsupportedVersion = "2027-01-01";
+                string unsupportedMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"" + unsupportedVersion + "\"}";
+                string unsupportedDiscover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":2201,\"params\":{" + unsupportedMeta + "}}";
+                using (var response = Post(client, unsupportedDiscover, null, unsupportedVersion, "server/discover"))
+                {
+                    AssertUnsupportedVersion(response, unsupportedVersion,
+                        "Explicit unsupported header did not win before unknown metadata validation");
+                }
+                using (var response = Post(client, unsupportedDiscover, null, null, "server/discover"))
+                {
+                    AssertUnsupportedVersion(response, unsupportedVersion,
+                        "Unsupported metadata version fell through to legacy session validation");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Unsupported stateless versions allocated legacy session state");
+
                 const string initialize = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":1,\"params\":{\"protocolVersion\":\"2025-11-25\"}}";
                 string sessionId;
                 using (var response = Post(client, initialize, null, "2025-11-25"))
@@ -87,6 +103,29 @@ internal static class Program
                         "Established legacy session changed protocol era");
                 }
 
+                using (var response = Post(client, legacyToolsList, sessionId, unsupportedVersion, "tools/list"))
+                {
+                    AssertUnsupportedVersion(response, unsupportedVersion,
+                        "Unsupported explicit header was silently served through a legacy session");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Unsupported protocol response reused a legacy session header");
+                }
+
+                string unsupportedToolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":2202,\"params\":{" + unsupportedMeta + "}}";
+                using (var response = Post(client, unsupportedToolsList, sessionId))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Established legacy session was diverted by unsupported body metadata");
+                    Assert(JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"] != null,
+                        "Established legacy session did not preserve #40 routing precedence");
+                }
+
+                using (var response = Post(client, unsupportedToolsList, null, "2026-07-28", "tools/list"))
+                {
+                    AssertUnsupportedVersion(response, unsupportedVersion,
+                        "Modern header plus unsupported metadata did not return a version error");
+                }
+
                 using (var response = Post(client, legacyToolsList, sessionId, "2026-07-28", "tools/list"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.NotFound,
@@ -117,7 +156,19 @@ internal static class Program
             server.StopServer();
             Invoke(_bridge, "OnDestroy");
         }
-        Console.WriteLine("PASS modern resource and mixed-era routing wire regressions");
+        Console.WriteLine("PASS modern resource, protocol-version, and mixed-era routing wire regressions");
+    }
+
+    private static void AssertUnsupportedVersion(HttpResponseMessage response, string requested, string context)
+    {
+        Assert(response.StatusCode == HttpStatusCode.BadRequest, context + ": wrong HTTP status");
+        JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+        Assert((int)json["error"]["code"] == -32022, context + ": wrong JSON-RPC error code");
+        Assert((string)json["error"]["data"]["requested"] == requested,
+            context + ": requested version was not echoed");
+        var supported = ((JArray)json["error"]["data"]["supported"]).Values<string>().ToArray();
+        Assert(supported.Contains("2026-07-28") && supported.Contains("2025-11-25")
+            && supported.Contains("2025-06-18"), context + ": supported versions were incomplete");
     }
 
     private static HttpResponseMessage Post(HttpClient client, string json, string sessionId = null,

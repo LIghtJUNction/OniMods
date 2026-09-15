@@ -35,9 +35,23 @@ namespace OniMcp.Server
             if (IsSupportedProtocolVersion(protocolVersion))
                 return false;
 
+            if (!string.IsNullOrEmpty(protocolVersion) && !explicitModern)
+            {
+                SendJson(response, UnsupportedProtocolVersion(rawMessage["id"], protocolVersion), 400);
+                return true;
+            }
+
             string sessionId = httpRequest.Headers["Mcp-Session-Id"];
             if (!explicitModern && IsSessionActive(sessionId))
                 return false;
+
+            if (!string.IsNullOrEmpty(metaVersion)
+                && !string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal)
+                && !IsSupportedProtocolVersion(metaVersion))
+            {
+                SendJson(response, UnsupportedProtocolVersion(rawMessage["id"], metaVersion), 400);
+                return true;
+            }
 
             bool modernSignal = explicitModern
                 || string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal);
@@ -111,12 +125,7 @@ namespace OniMcp.Server
 
             if (!string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal))
             {
-                error = JsonRpcResponse.MakeError(rawMessage["id"], UnsupportedProtocolVersionErrorCode,
-                    $"Unsupported protocol version: {metaVersion}", new JObject
-                    {
-                        ["requested"] = metaVersion,
-                        ["supported"] = new JArray(ModernProtocolVersion, CurrentProtocolVersion, LegacyProtocolVersion)
-                    });
+                error = UnsupportedProtocolVersion(rawMessage["id"], metaVersion);
                 return false;
             }
 
@@ -213,6 +222,21 @@ namespace OniMcp.Server
             return JsonRpcResponse.MakeError(id, HeaderMismatchErrorCode, message);
         }
 
+        private static JsonRpcResponse UnsupportedProtocolVersion(object id, string requestedVersion)
+        {
+            return JsonRpcResponse.MakeError(id, UnsupportedProtocolVersionErrorCode,
+                $"Unsupported protocol version: {requestedVersion}", new JObject
+                {
+                    ["requested"] = requestedVersion,
+                    ["supported"] = BuildSupportedProtocolVersions()
+                });
+        }
+
+        private static JArray BuildSupportedProtocolVersions()
+        {
+            return new JArray(ModernProtocolVersion, CurrentProtocolVersion, LegacyProtocolVersion);
+        }
+
         private static string ModernPrincipalName(string method, JObject @params)
         {
             if (@params == null)
@@ -271,7 +295,7 @@ namespace OniMcp.Server
             return new JObject
             {
                 ["resultType"] = "complete",
-                ["supportedVersions"] = new JArray(ModernProtocolVersion, CurrentProtocolVersion, LegacyProtocolVersion),
+                ["supportedVersions"] = BuildSupportedProtocolVersions(),
                 ["capabilities"] = new JObject
                 {
                     ["resources"] = new JObject
