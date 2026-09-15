@@ -120,8 +120,8 @@ namespace OniMcp.Server
 
             if (string.IsNullOrEmpty(metaVersion))
             {
-                error = HeaderMismatch(rawMessage["id"],
-                    "Missing params._meta.io.modelcontextprotocol/protocolVersion");
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "Modern requests require params._meta.io.modelcontextprotocol/protocolVersion");
                 return false;
             }
 
