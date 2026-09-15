@@ -31,7 +31,15 @@ namespace OniMcp.Server
                 ? (string)meta["io.modelcontextprotocol/protocolVersion"]
                 : null;
 
-            bool modernSignal = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
+            bool explicitModern = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal);
+            if (IsSupportedProtocolVersion(protocolVersion))
+                return false;
+
+            string sessionId = httpRequest.Headers["Mcp-Session-Id"];
+            if (!explicitModern && IsSessionActive(sessionId))
+                return false;
+
+            bool modernSignal = explicitModern
                 || string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal);
             if (!modernSignal)
                 return false;
