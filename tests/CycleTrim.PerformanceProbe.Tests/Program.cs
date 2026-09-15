@@ -11,6 +11,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             try
             {
                 RecordsCountTotalMeanAndMax();
+                ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();
                 AggregatesConcurrentWriters();
                 Console.WriteLine("PASS CycleTrim performance probe counter regressions");
@@ -35,6 +36,25 @@ namespace CycleTrim.PerformanceProbe.Tests
             AssertEqual(60, snapshot.TotalTicks, "total ticks");
             AssertEqual(30, snapshot.MaxTicks, "max ticks");
             AssertNear(20d, snapshot.MeanTicks, "mean ticks");
+        }
+
+        private static void ComputesIntervalDeltaWithoutResettingTheCounter()
+        {
+            var counter = new PerformanceProbeCounter();
+            counter.Record(10);
+            counter.Record(30);
+            var previous = counter.Snapshot();
+
+            counter.Record(20);
+            counter.Record(40);
+            var current = counter.Snapshot();
+            var interval = current.DeltaSince(previous);
+
+            AssertEqual(2, interval.Calls, "interval call count");
+            AssertEqual(60, interval.TotalTicks, "interval total ticks");
+            AssertNear(30d, interval.MeanTicks, "interval mean ticks");
+            AssertEqual(4, current.Calls, "cumulative count remains intact");
+            AssertEqual(100, current.TotalTicks, "cumulative total remains intact");
         }
 
         private static void ClampsNegativeElapsedTicks()
