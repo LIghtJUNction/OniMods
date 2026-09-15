@@ -16,6 +16,9 @@ internal static class Program
     private static void Main()
     {
         Run("missing config keeps authentication opt-in", MissingConfig);
+        Run("loopback hosts stay available without authentication", LoopbackHosts);
+        Run("unauthenticated remote hosts fail closed", RemoteHostsRequireAuthentication);
+        Run("authenticated remote HTTP is allowed with a plaintext warning", AuthenticatedRemoteHost);
         Run("invalid initial config remains untouched and prevents startup", InvalidInitialConfig);
         Run("unreadable initial config prevents startup", UnreadableInitialConfig);
         Run("failed reload retains active authentication and original file", FailedReload);
@@ -23,7 +26,7 @@ internal static class Program
         Run("concurrent first access publishes a single configuration", ConcurrentInitialization);
         Run("concurrent saves expose complete JSON to readers", AtomicSaves);
         Run("failed save retains current configuration and cleans temporary files", FailedSave);
-        Console.WriteLine("PASS: 8 OniMcp config regression tests");
+        Console.WriteLine("PASS: 11 OniMcp config regression tests");
     }
 
     private static void Run(string name, Action test)
@@ -52,6 +55,51 @@ internal static class Program
         Check(!string.IsNullOrEmpty(options.AuthToken), "New installs need a persistent token ready for opt-in.");
         Check(JObject.Parse(File.ReadAllText(OniMcpPaths.ConfigPath))["AuthToken"].Value<string>() == options.AuthToken,
             "The default token must be saved exactly once.");
+    }
+
+    private static void LoopbackHosts()
+    {
+        foreach (string host in new[] { "localhost", "127.0.0.1", "::1", "[::1]" })
+        {
+            var options = new OniMcpOptions { Host = host, AuthEnabled = false };
+            OniMcpOptions.Save(options);
+            options.ValidateListenSecurity();
+            string[] prefixes = options.ListenPrefixes.ToArray();
+            Check(prefixes.Length > 0, "Loopback host produced no listener prefixes: " + host);
+            Check(prefixes.All(prefix => !prefix.Contains("http://+:")), "Loopback host widened to a wildcard listener: " + host);
+        }
+
+        var ipv6 = new OniMcpOptions { Host = "::1", AuthEnabled = false };
+        Check(ipv6.ListenPrefixes.All(prefix => prefix.Contains("http://[::1]:")), "IPv6 loopback prefixes must use bracketed URI syntax.");
+        Check(ipv6.EndpointUrl.StartsWith("http://[::1]:", StringComparison.Ordinal), "IPv6 loopback endpoint URL is malformed.");
+    }
+
+    private static void RemoteHostsRequireAuthentication()
+    {
+        foreach (string host in new[] { "0.0.0.0", "192.0.2.10", "2001:db8::10", "mcp.example.test" })
+        {
+            var options = new OniMcpOptions { Host = host, AuthEnabled = false };
+            ExpectFailure(options.ValidateListenSecurity);
+            ExpectFailure(() => OniMcpOptions.Save(options));
+            Check(!File.Exists(OniMcpPaths.ConfigPath), "Unsafe remote settings were persisted for " + host);
+        }
+    }
+
+    private static void AuthenticatedRemoteHost()
+    {
+        var options = new OniMcpOptions
+        {
+            Host = "0.0.0.0",
+            AuthEnabled = true,
+            AuthToken = "remote-secret"
+        };
+        OniMcpOptions.Save(options);
+        options.ValidateListenSecurity();
+        Check(!string.IsNullOrEmpty(options.PlaintextRemoteWarning), "Remote HTTP must expose a plaintext/TLS warning.");
+        Check(options.ListenPrefixes.Any(prefix => prefix == "http://+:8788/"), "Authenticated wildcard bind did not produce the expected listener prefix.");
+
+        var local = new OniMcpOptions { Host = "localhost", AuthEnabled = false };
+        Check(string.IsNullOrEmpty(local.PlaintextRemoteWarning), "Loopback-only HTTP must not be labeled as remote exposure.");
     }
 
     private static void InvalidInitialConfig()
