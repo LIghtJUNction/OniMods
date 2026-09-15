@@ -50,9 +50,40 @@ Claude Desktop / Cursor 的示例配置:
 }
 ```
 
-### 3. 协议握手
+### 3. 协议协商
 
-第一个请求必须是 `initialize`:
+OniMcp 同时保留两个协议时代。新客户端优先尝试 MCP `2026-07-28` 的无会话路径；旧客户端继续使用 `2025-11-25` / `2025-06-18` 的 `initialize` + `Mcp-Session-Id` 路径。
+
+#### MCP 2026-07-28：无会话发现
+
+现代请求不执行 `initialize`，也不创建、要求或返回 `Mcp-Session-Id`。每个请求自行携带协议元数据，并通过 HTTP headers 声明方法；需要资源名或工具名时还要发送匹配的 `Mcp-Name`。
+
+推荐先调用 `server/discover`：
+
+```bash
+curl -sS -X POST http://localhost:8788/mcp/ \
+  -H 'Content-Type: application/json' \
+  -H 'MCP-Protocol-Version: 2026-07-28' \
+  -H 'Mcp-Method: server/discover' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "server/discover",
+    "params": {
+      "_meta": {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": { "name": "cli", "version": "1.0" }
+      }
+    }
+  }'
+```
+
+当前现代路径刻意保持较小：支持 `server/discover`、`resources/list`、`resources/templates/list`、`resources/read`，以及只读 `benchmark` 的 `tools/list` / `tools/call`。它不会广告 2025 core Tasks、MRTR、订阅或会修改游戏状态的工具。调用方应以 `server/discover` 返回的 capability 和 `tools/list` 为准，不要假设旧版完整工具面在现代路径可用。
+
+#### MCP 2025：legacy initialize/session
+
+需要完整现有游戏控制工具面的旧客户端继续使用初始化握手：
 
 ```bash
 curl -sS -X POST http://localhost:8788/mcp/ \
@@ -70,7 +101,7 @@ curl -sS -X POST http://localhost:8788/mcp/ \
   }'
 ```
 
-服务端响应头会包含 `Mcp-Session-Id`。后续请求必须携带:
+服务端响应头会包含 `Mcp-Session-Id`。之后的 legacy 请求必须携带：
 
 ```text
 Mcp-Session-Id: <session id>
@@ -127,7 +158,7 @@ Legacy fine-grained implementations are internal compatibility only. New integra
 
 ## 调用示例
 
-### 列出工具
+### 列出工具（legacy 2025 会话路径）
 
 ```bash
 curl -sS -X POST http://localhost:8788/mcp/ \
@@ -141,6 +172,8 @@ curl -sS -X POST http://localhost:8788/mcp/ \
     "params": {}
   }'
 ```
+
+现代 `2026-07-28` 客户端不要发送 `Mcp-Session-Id`；应按上面的无会话规则携带 `_meta`、`MCP-Protocol-Version` 和 `Mcp-Method`。当前现代 `tools/list` 只广告只读 `benchmark`。
 
 ### 搜索工具
 
@@ -323,6 +356,7 @@ mods/OniMcp/
 
 ## 客户端兼容建议
 
+- 新客户端优先尝试 `2026-07-28` `server/discover`，按发现结果使用当前现代 capability；需要完整旧工具面时继续使用受支持的 2025 initialize/session 路径。
 - 不要硬编码旧版细粒度工具列表。
 - Do not pass coordinates to ordinary tools. Exact orders use `/active/ops/orders.md`; exact construction edits map tokens in `/active/map/viewport.md`. Ignore hidden coordinate compatibility entries.
 - 先读取 manifest，再按 `domain/action` 组织调用。
