@@ -12,6 +12,7 @@ DEFAULT_REQUIRED = (
     "AsyncPathProber.WorkOrder.Execute",
     "FetchManager.FetchablesByPrefabId.UpdatePickups",
     "ChoreConsumer.FindNextChore",
+    "BrainScheduler.RenderEveryTick",
 )
 
 

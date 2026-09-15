@@ -24,10 +24,12 @@ namespace CycleTrim.Patches
         private static PerformanceProbeCounter asyncWorkCounter;
         private static PerformanceProbeCounter fetchCounter;
         private static PerformanceProbeCounter choreCounter;
+        private static PerformanceProbeCounter brainSchedulerCounter;
         private static MethodBase asyncTickTarget;
         private static MethodBase asyncWorkTarget;
         private static MethodBase fetchTarget;
         private static MethodBase choreTarget;
+        private static MethodBase brainSchedulerTarget;
         private static Action<object> reportCallback;
         private static bool initialized;
         private static bool reportRequested;
@@ -58,6 +60,7 @@ namespace CycleTrim.Patches
             asyncWorkCounter = new PerformanceProbeCounter();
             fetchCounter = new PerformanceProbeCounter();
             choreCounter = new PerformanceProbeCounter();
+            brainSchedulerCounter = new PerformanceProbeCounter();
             reportCallback = ReportDeferred;
             lastGc0 = GC.CollectionCount(0);
             lastGc1 = GC.CollectionCount(1);
@@ -184,6 +187,13 @@ namespace CycleTrim.Patches
                 "main",
                 choreTarget,
                 choreCounter.Snapshot());
+            summary.Append(',');
+            AppendTarget(
+                summary,
+                "BrainScheduler.RenderEveryTick",
+                "main",
+                brainSchedulerTarget,
+                brainSchedulerCounter.Snapshot());
             summary.Append("]}");
 
             lastGc0 = gc0;
@@ -384,6 +394,40 @@ namespace CycleTrim.Patches
             private static Exception Finalizer(Exception __exception, long __state)
             {
                 RecordMain(choreCounter, __state);
+                return __exception;
+            }
+        }
+
+        [HarmonyPatch]
+        private static class BrainSchedulerProbe
+        {
+            private static bool Prepare()
+            {
+                if (!IsRequested())
+                {
+                    return false;
+                }
+                brainSchedulerTarget = ResolveTarget(
+                    typeof(BrainScheduler),
+                    "RenderEveryTick",
+                    new[] { typeof(float) });
+                return brainSchedulerTarget != null;
+            }
+
+            private static MethodBase TargetMethod()
+            {
+                return brainSchedulerTarget;
+            }
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(out long __state)
+            {
+                __state = BeginTiming();
+            }
+
+            private static Exception Finalizer(Exception __exception, long __state)
+            {
+                RecordMain(brainSchedulerCounter, __state);
                 return __exception;
             }
         }
