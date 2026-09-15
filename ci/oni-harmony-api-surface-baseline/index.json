@@ -1,0 +1,69 @@
+{
+  "assemblies": [
+    {
+      "name": "Assembly-CSharp.dll",
+      "sha256": "1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c"
+    },
+    {
+      "name": "Assembly-CSharp-firstpass.dll",
+      "sha256": "c2f1596bbc441d9b408457032cff8ddd2fab8b75d3768a9210c552931b23cfc7"
+    }
+  ],
+  "reference_source": {
+    "commit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
+    "official_oni_build": 744825,
+    "repository": "Sgt-Imalas/Sgt_Imalas-Oni-Mods"
+  },
+  "schema": 1,
+  "targets": [
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "AsyncPathProber.Manager",
+      "resolved_type": "AsyncPathProber.Manager",
+      "signature_file": "Assembly-CSharp__AsyncPathProber_Manager.signatures.txt",
+      "signature_sha256": "5627fb6dd74060aee1453c7b693749501b938dcdb3332f4d378f44678831d7cb"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "AutoDisinfectable",
+      "resolved_type": "AutoDisinfectable",
+      "signature_file": "Assembly-CSharp__AutoDisinfectable.signatures.txt",
+      "signature_sha256": "fa7bc0222904d5f968b083b0ee27790c54136c979693ceb90022923576a0a601"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "AutoDisinfectableManager",
+      "resolved_type": "AutoDisinfectableManager",
+      "signature_file": "Assembly-CSharp__AutoDisinfectableManager.signatures.txt",
+      "signature_sha256": "c32054c9239109a3eb1ee911317c3b41902f0ffb925045e096693f1577295cf1"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "Db",
+      "resolved_type": "Db",
+      "signature_file": "Assembly-CSharp__Db.signatures.txt",
+      "signature_sha256": "035b042c25237dd26307edab85c63b5f1c6c0a9331618c912e04be04891502ac"
+    },
+    {
+      "assembly": "Assembly-CSharp-firstpass.dll",
+      "requested_type": "GameInputMapping",
+      "resolved_type": "GameInputMapping",
+      "signature_file": "Assembly-CSharp-firstpass__GameInputMapping.signatures.txt",
+      "signature_sha256": "cd025c3a4ec60ac6dcdef5a7a33747a440fa1212ea5d911c512dc29c64661337"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "GameUtil",
+      "resolved_type": "GameUtil",
+      "signature_file": "Assembly-CSharp__GameUtil.signatures.txt",
+      "signature_sha256": "98dfe9f935c194036e61d9f78a845e0e74c1e9fd5ff4e4387233417a1df4675e"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "Navigator",
+      "resolved_type": "Navigator",
+      "signature_file": "Assembly-CSharp__Navigator.signatures.txt",
+      "signature_sha256": "33af98fad5ccfc0b00c1dcdf3a87e9b5d0f3483523b0e004dc5152764291a5bf"
+    }
+  ]
+}
