@@ -1,0 +1,9 @@
+type public class AutoDisinfectableManager : KMonoBehaviour , ISim1000ms
+member private List < AutoDisinfectable > autoDisinfectables
+member protected override void OnPrefabInit ( )
+member public AutoDisinfectableManager ( )
+member public static AutoDisinfectableManager Instance
+member public static void DestroyInstance ( )
+member public void AddAutoDisinfectable ( AutoDisinfectable auto_disinfectable )
+member public void RemoveAutoDisinfectable ( AutoDisinfectable auto_disinfectable )
+member public void Sim1000ms ( float dt )
