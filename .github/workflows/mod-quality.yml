@@ -46,3 +46,5 @@ jobs:
           -p:ImportDirectoryBuildProps=false
           -p:TreatWarningsAsErrors=true
           -- --benchmark
+      - name: Repeat CycleTrim NavGrid gate across processes
+        run: python3 scripts/run_cycletrim_navgrid_stability.py --runs 5
