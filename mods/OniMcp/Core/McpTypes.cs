@@ -255,6 +255,12 @@ namespace OniMcp.Core
 
         [JsonProperty("enum")]
         public List<object> Enum { get; set; }
+
+        [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+        public Dictionary<string, SchemaProperty> Properties { get; set; }
+
+        [JsonProperty("x-mcp-header", NullValueHandling = NullValueHandling.Ignore)]
+        public string McpHeader { get; set; }
     }
 
     /// <summary>
