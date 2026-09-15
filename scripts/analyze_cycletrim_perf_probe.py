@@ -59,7 +59,12 @@ def _has_interval_schema(report: dict) -> bool:
     return "reportSequence" in report or "intervalDurationTicks" in report
 
 
-def validate(report: dict, required: tuple[str, ...], require_intervals: bool = False) -> list[str]:
+def validate(
+    report: dict,
+    required: tuple[str, ...],
+    require_intervals: bool = False,
+    require_calls: bool = True,
+) -> list[str]:
     failures = []
     if not isinstance(report.get("stopwatchFrequency"), int) or report["stopwatchFrequency"] <= 0:
         failures.append("stopwatchFrequency must be a positive integer")
@@ -94,7 +99,9 @@ def validate(report: dict, required: tuple[str, ...], require_intervals: bool = 
         if target.get("resolved") is not True:
             failures.append(f"required target did not resolve: {name}")
         calls = target.get("calls")
-        if not isinstance(calls, int) or calls <= 0:
+        if not isinstance(calls, int) or calls < 0:
+            failures.append(f"required target has invalid calls: {name}")
+        elif require_calls and calls <= 0:
             failures.append(f"required target has no calls: {name}")
         for metric in ("totalTicks", "maxTicks"):
             if not isinstance(target.get(metric), int) or target[metric] < 0:
@@ -130,8 +137,14 @@ def validate_series(report_items: list[dict], required: tuple[str, ...]) -> list
     if len(report_items) < 2:
         return ["series validation requires at least two probe reports"]
 
+    last_index = len(report_items) - 1
     for index, report in enumerate(report_items):
-        for failure in validate(report, required, require_intervals=True):
+        for failure in validate(
+            report,
+            required,
+            require_intervals=True,
+            require_calls=index == last_index,
+        ):
             failures.append(f"report[{index}]: {failure}")
 
     for index in range(1, len(report_items)):
@@ -200,7 +213,7 @@ def main() -> int:
         "--require",
         action="append",
         dest="required",
-        help="target name that must resolve and have calls > 0; repeatable",
+        help="target name that must resolve and have calls > 0 in the final report; repeatable",
     )
     parser.add_argument(
         "--series",
