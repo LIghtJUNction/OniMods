@@ -25,11 +25,13 @@ namespace CycleTrim.Patches
         private static PerformanceProbeCounter fetchCounter;
         private static PerformanceProbeCounter choreCounter;
         private static PerformanceProbeCounter brainSchedulerCounter;
+        private static PerformanceProbeCounter roomProberCounter;
         private static MethodBase asyncTickTarget;
         private static MethodBase asyncWorkTarget;
         private static MethodBase fetchTarget;
         private static MethodBase choreTarget;
         private static MethodBase brainSchedulerTarget;
+        private static MethodBase roomProberTarget;
         private static Action<object> reportCallback;
         private static bool initialized;
         private static bool reportRequested;
@@ -47,6 +49,7 @@ namespace CycleTrim.Patches
         private static PerformanceProbeSnapshot lastFetchSnapshot;
         private static PerformanceProbeSnapshot lastChoreSnapshot;
         private static PerformanceProbeSnapshot lastBrainSchedulerSnapshot;
+        private static PerformanceProbeSnapshot lastRoomProberSnapshot;
 
         private static bool IsRequested()
         {
@@ -68,6 +71,7 @@ namespace CycleTrim.Patches
             fetchCounter = new PerformanceProbeCounter();
             choreCounter = new PerformanceProbeCounter();
             brainSchedulerCounter = new PerformanceProbeCounter();
+            roomProberCounter = new PerformanceProbeCounter();
             reportCallback = ReportDeferred;
             lastGc0 = GC.CollectionCount(0);
             lastGc1 = GC.CollectionCount(1);
@@ -170,6 +174,7 @@ namespace CycleTrim.Patches
             var fetchSnapshot = fetchCounter.Snapshot();
             var choreSnapshot = choreCounter.Snapshot();
             var brainSchedulerSnapshot = brainSchedulerCounter.Snapshot();
+            var roomProberSnapshot = roomProberCounter.Snapshot();
             var sequence = ++reportSequence;
             var summary = new StringBuilder(1280);
             summary.Append('{');
@@ -222,6 +227,14 @@ namespace CycleTrim.Patches
                 brainSchedulerTarget,
                 brainSchedulerSnapshot,
                 lastBrainSchedulerSnapshot);
+            summary.Append(',');
+            AppendTarget(
+                summary,
+                "RoomProber.Sim1000ms",
+                "main",
+                roomProberTarget,
+                roomProberSnapshot,
+                lastRoomProberSnapshot);
             summary.Append("]}");
 
             lastGc0 = gc0;
@@ -234,6 +247,7 @@ namespace CycleTrim.Patches
             lastFetchSnapshot = fetchSnapshot;
             lastChoreSnapshot = choreSnapshot;
             lastBrainSchedulerSnapshot = brainSchedulerSnapshot;
+            lastRoomProberSnapshot = roomProberSnapshot;
             UnityEngine.Debug.Log("[CycleTrim][PerfProbe] " + summary);
         }
 
@@ -468,6 +482,40 @@ namespace CycleTrim.Patches
             private static Exception Finalizer(Exception __exception, long __state)
             {
                 RecordMain(brainSchedulerCounter, __state);
+                return __exception;
+            }
+        }
+
+        [HarmonyPatch]
+        private static class RoomProberProbe
+        {
+            private static bool Prepare()
+            {
+                if (!IsRequested())
+                {
+                    return false;
+                }
+                roomProberTarget = ResolveTarget(
+                    typeof(RoomProber),
+                    "Sim1000ms",
+                    new[] { typeof(float) });
+                return roomProberTarget != null;
+            }
+
+            private static MethodBase TargetMethod()
+            {
+                return roomProberTarget;
+            }
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(out long __state)
+            {
+                __state = BeginTiming();
+            }
+
+            private static Exception Finalizer(Exception __exception, long __state)
+            {
+                RecordMain(roomProberCounter, __state);
                 return __exception;
             }
         }
