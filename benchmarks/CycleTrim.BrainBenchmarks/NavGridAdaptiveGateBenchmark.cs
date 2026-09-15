@@ -16,7 +16,7 @@ namespace CycleTrim.BrainBenchmarks
     {
         private const int Width = 256;
         private const int Height = 384;
-        private const int MinDirtyCells = 16;
+        private const int MinDirtyCells = 20;
         private const int MinShortRange = 2;
         private const int MinLongRange = 4;
         private const int GlobalPrimeBatches = 12;
@@ -54,21 +54,33 @@ namespace CycleTrim.BrainBenchmarks
 
         private static readonly GateCase[] Cases =
         {
-            new GateCase(Layout.Sparse, 15, 2, 4, expectCandidate: false),
-            new GateCase(Layout.Sparse, 16, 1, 6, expectCandidate: false),
-            new GateCase(Layout.Sparse, 16, 2, 3, expectCandidate: false),
-            new GateCase(Layout.Sparse, 16, 2, 4, expectCandidate: true),
-            new GateCase(Layout.Sparse, 16, 4, 2, expectCandidate: true),
-            new GateCase(Layout.Sparse, 16, 2, 6, expectCandidate: true),
-            new GateCase(Layout.Sparse, 16, 6, 2, expectCandidate: true),
-            new GateCase(Layout.Line, 16, 2, 4, expectCandidate: true),
-            new GateCase(Layout.Cluster, 16, 2, 4, expectCandidate: true),
-            new GateCase(Layout.Edge, 16, 2, 4, expectCandidate: true),
-            new GateCase(Layout.Edge, 16, 2, 6, expectCandidate: true),
-            new GateCase(Layout.Mixed, 16, 2, 4, expectCandidate: true),
-            new GateCase(Layout.Mixed, 16, 4, 2, expectCandidate: true),
-            new GateCase(Layout.DuplicateHeavy, 30, 2, 4, expectCandidate: false),
-            new GateCase(Layout.DuplicateHeavy, 32, 2, 4, expectCandidate: true)
+            new GateCase(Layout.Sparse, 19, 2, 4, expectCandidate: false),
+            new GateCase(Layout.Sparse, 20, 1, 6, expectCandidate: false),
+            new GateCase(Layout.Sparse, 20, 2, 3, expectCandidate: false),
+            new GateCase(Layout.Sparse, 20, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Sparse, 20, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Sparse, 24, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Sparse, 24, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Sparse, 32, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Sparse, 32, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Line, 20, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Cluster, 20, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Edge, 20, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Edge, 20, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Edge, 24, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Edge, 24, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Edge, 32, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Edge, 32, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Mixed, 20, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Mixed, 20, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Mixed, 24, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Mixed, 24, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Mixed, 32, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Mixed, 32, 4, 2, expectCandidate: true),
+            new GateCase(Layout.DuplicateHeavy, 38, 2, 4, expectCandidate: false),
+            new GateCase(Layout.DuplicateHeavy, 40, 2, 4, expectCandidate: true),
+            new GateCase(Layout.DuplicateHeavy, 48, 2, 4, expectCandidate: true),
+            new GateCase(Layout.DuplicateHeavy, 64, 2, 4, expectCandidate: true)
         };
 
         private sealed class Simulator
@@ -303,7 +315,7 @@ namespace CycleTrim.BrainBenchmarks
 
         private static void PrimeJit()
         {
-            var seeds = BuildSparse(16);
+            var seeds = BuildSparse(20);
             var simulator = new Simulator(Width, Height, rangeX: 2, rangeY: 4);
             var expectedCount = simulator.RunVanilla(seeds);
             for (var batch = 0; batch < GlobalPrimeBatches; batch++)
