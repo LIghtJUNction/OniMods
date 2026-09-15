@@ -17,6 +17,7 @@ namespace OniMcp.Server
     public partial class McpHttpServer : MonoBehaviour
     {
         private const string ModernProtocolVersion = "2026-07-28";
+        private const int TransportNegotiationErrorCode = -32000;
         private const int HeaderMismatchErrorCode = -32020;
         private const int UnsupportedProtocolVersionErrorCode = -32022;
         private const string Base64HeaderPrefix = "=?base64?";
@@ -35,6 +36,13 @@ namespace OniMcp.Server
                 || string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal);
             if (!modernSignal)
                 return false;
+
+            JsonRpcResponse acceptError;
+            if (!ValidateModernAccept(httpRequest, out acceptError))
+            {
+                SendJson(response, acceptError, 406);
+                return true;
+            }
 
             var methodToken = rawMessage["method"];
             if (methodToken?.Type != JTokenType.String)
@@ -81,6 +89,42 @@ namespace OniMcp.Server
 
             DispatchModernPostResponse(response, rpcRequest);
             return true;
+        }
+
+        private static bool ValidateModernAccept(HttpListenerRequest httpRequest, out JsonRpcResponse error)
+        {
+            error = null;
+            string accept = httpRequest.Headers["Accept"];
+            if (string.IsNullOrWhiteSpace(accept))
+            {
+                // 2026 clients MUST send both media types, but the core spec does not
+                // require servers to reject an omitted Accept header. Keep omission
+                // compatible with existing clients while rejecting explicit narrowing.
+                return true;
+            }
+
+            bool acceptsJson = AcceptListsMediaType(accept, "application/json");
+            bool acceptsSse = AcceptListsMediaType(accept, "text/event-stream");
+            if (acceptsJson && acceptsSse)
+                return true;
+
+            error = JsonRpcResponse.MakeError(null, TransportNegotiationErrorCode,
+                "Not Acceptable: Client must accept both application/json and text/event-stream");
+            return false;
+        }
+
+        private static bool AcceptListsMediaType(string accept, string expectedMediaType)
+        {
+            foreach (string item in accept.Split(','))
+            {
+                string mediaType = item;
+                int parameterSeparator = mediaType.IndexOf(';');
+                if (parameterSeparator >= 0)
+                    mediaType = mediaType.Substring(0, parameterSeparator);
+                if (string.Equals(mediaType.Trim(), expectedMediaType, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         private static bool ValidateModernRequest(HttpListenerRequest httpRequest, JObject rawMessage, string method,
