@@ -278,11 +278,19 @@ curl -sS -X POST http://localhost:8788/mcp/ \
 
 ```json
 {
-  "domain": "conduit",
-  "action": "cut_conduits",
-  "areaId": "starter-wire",
-  "type": "auto",
-  "confirm": true
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "tools/call",
+  "params": {
+    "name": "orders_control",
+    "arguments": {
+      "domain": "conduit",
+      "action": "cut_conduits",
+      "areaId": "starter-wire",
+      "type": "auto",
+      "confirm": true
+    }
+  }
 }
 ```
 
