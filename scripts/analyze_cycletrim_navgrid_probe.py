@@ -177,7 +177,36 @@ def parse_capture_summary(summary: str) -> dict:
     return result
 
 
-def analyze_log(text: str) -> dict:
+def select_capture(capture_lines: list[str], after_calls: int | None) -> dict:
+    if after_calls is None:
+        return parse_capture_summary(capture_lines[-1])
+    if after_calls <= 0:
+        raise CaptureError("--after-calls must be a positive capture call count")
+
+    captures = [parse_capture_summary(line) for line in capture_lines]
+    baseline_indices = [
+        index for index, capture in enumerate(captures)
+        if capture["calls"] == after_calls
+    ]
+    if not baseline_indices:
+        raise CaptureError(
+            f"baseline calls={after_calls} was not found in the current NavGrid probe run"
+        )
+
+    baseline_index = baseline_indices[-1]
+    fresh_captures = [
+        capture for capture in captures[baseline_index + 1:]
+        if capture["calls"] > after_calls
+    ]
+    if not fresh_captures:
+        raise CaptureError(
+            f"no fresh NavGrid capture was emitted after baseline calls={after_calls}; "
+            "the deferred GameScheduler report may not have flushed yet"
+        )
+    return fresh_captures[-1]
+
+
+def analyze_log(text: str, after_calls: int | None = None) -> dict:
     resolved_at = text.rfind(RESOLVED_MARKER)
     if resolved_at < 0:
         raise CaptureError("missing NavGrid.UpdateGraph() resolved marker")
@@ -199,7 +228,7 @@ def analyze_log(text: str) -> dict:
             "CYCLETRIM_NAVGRID_PROBE_CAPTURE=1 in addition to CYCLETRIM_NAVGRID_PROBE=1"
         )
 
-    result = parse_capture_summary(capture_lines[-1])
+    result = select_capture(capture_lines, after_calls)
     result["captureLines"] = len(capture_lines)
     return result
 
@@ -214,10 +243,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("log", help="ONI Player.log path, or - for stdin")
     parser.add_argument("--pretty", action="store_true", help="pretty-print JSON output")
+    parser.add_argument(
+        "--after-calls",
+        type=int,
+        help=(
+            "require a fresh complete capture after an existing baseline calls value "
+            "from the same probe run"
+        ),
+    )
     args = parser.parse_args()
 
     try:
-        result = analyze_log(read_text(args.log))
+        result = analyze_log(read_text(args.log), after_calls=args.after_calls)
     except (OSError, CaptureError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
