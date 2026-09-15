@@ -55,7 +55,11 @@
       "assembly": "Assembly-CSharp.dll",
       "requested_type": "GameUtil",
       "resolved_type": "GameUtil",
-      "signature_file": "Assembly-CSharp__GameUtil.signatures.txt",
+      "signature_files": [
+        "GameUtil.part00.txt",
+        "GameUtil.part01.txt",
+        "GameUtil.part02.txt"
+      ],
       "signature_sha256": "98dfe9f935c194036e61d9f78a845e0e74c1e9fd5ff4e4387233417a1df4675e"
     },
     {
