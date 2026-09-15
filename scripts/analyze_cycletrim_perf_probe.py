@@ -206,6 +206,28 @@ def validate_series(report_items: list[dict], required: tuple[str, ...]) -> list
     return failures
 
 
+def select_series_after_sequence(report_items: list[dict], after_sequence: int) -> list[dict]:
+    """Select a capture anchored at a known report sequence and require a fresh report."""
+    if after_sequence <= 0:
+        raise ValueError("after_sequence must be a positive reportSequence")
+
+    baseline_index = None
+    for index in range(len(report_items) - 1, -1, -1):
+        if report_items[index].get("reportSequence") == after_sequence:
+            baseline_index = index
+            break
+    if baseline_index is None:
+        raise ValueError(f"baseline reportSequence {after_sequence} was not found in the log")
+
+    selected = report_items[baseline_index:]
+    if len(selected) < 2:
+        raise ValueError(
+            f"no fresh probe report after reportSequence {after_sequence}; "
+            "the deferred GameScheduler report may not have flushed"
+        )
+    return selected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("log", type=Path, help="Player.log or another ONI log containing probe output")
@@ -220,13 +242,25 @@ def main() -> int:
         action="store_true",
         help="validate all reports plus interval/cumulative arithmetic for an in-run capture",
     )
+    parser.add_argument(
+        "--after-sequence",
+        type=int,
+        help=(
+            "with --series, anchor validation at this known reportSequence and require "
+            "at least one newer report so a paused/deferred capture cannot reuse stale output"
+        ),
+    )
     args = parser.parse_args()
 
     if not args.log.is_file():
         parser.error(f"log not found: {args.log}")
+    if args.after_sequence is not None and not args.series:
+        parser.error("--after-sequence requires --series")
 
     try:
         report_items = reports(args.log.read_text(encoding="utf-8", errors="replace"))
+        if args.after_sequence is not None:
+            report_items = select_series_after_sequence(report_items, args.after_sequence)
     except ValueError as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
