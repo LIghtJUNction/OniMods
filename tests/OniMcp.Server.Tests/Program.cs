@@ -208,7 +208,14 @@ internal static class Program
                         var result = (JObject)ReadJson(response)["result"];
                         Assert((string)result["resultType"] == "complete", "Modern resource list omitted resultType");
                         Assert((string)result["cacheScope"] == "private" && (int)result["ttlMs"] == 0, "Modern resource list cache hints incorrect");
-                        Assert((string)result["resources"][0]["uri"] == "oni://test", "Modern resource list lost resources");
+                        var resources = result["resources"] as JArray;
+                        Assert(resources != null && resources.Count > 0, "Modern resource list lost resources");
+                        foreach (JObject resource in resources)
+                        {
+                            Assert(!string.IsNullOrWhiteSpace((string)resource["uri"]), "Modern resource list returned a resource without uri");
+                            Assert(!string.IsNullOrWhiteSpace((string)resource["name"]), "Modern resource list returned a resource without name");
+                        }
+                        Assert((string)resources[0]["uri"] == "oni://test", "Modern resource list lost resources");
                         Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern resource list returned a session id");
                     }
                     Assert(server.GetSessionSummaries().Count == 0, "Modern resource list allocated legacy session state");
