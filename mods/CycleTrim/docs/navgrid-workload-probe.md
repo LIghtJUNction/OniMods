@@ -1,6 +1,6 @@
 # NavGrid workload probe
 
-This is a developer-only measurement path for issue #25. It is disabled unless the ONI process starts with `CYCLETRIM_NAVGRID_PROBE=1` (also accepts `true` or `yes`). Normal CycleTrim users pay no per-call probe cost because Harmony skips the patch at load time when the variable is absent.
+This is a developer-only measurement path for issue #25. It is disabled unless the ONI process starts with `CYCLETRIM_NAVGRID_PROBE=1` (also accepts `true` or `yes`). Normal CycleTrim users pay no per-call probe cost, and the fixed histogram/report delegate are not allocated unless the opt-in is present and the real parameterless `NavGrid.UpdateGraph()` target resolves successfully.
 
 The probe observes the real parameterless `NavGrid.UpdateGraph()` before expansion and aggregates only data that a future cheap dispatcher could know: unique dirty-cell count as stored by ONI, `updateRangeX`, `updateRangeY`, and seed bounding-box density. It does not replace `UpdateGraph`, alter `DirtyCells`, or select an optimization path.
 
