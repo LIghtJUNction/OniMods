@@ -46,10 +46,9 @@
         "Modern resource list omitted resultType",
         "Modern resource list cache hints incorrect",
         "Modern resource list lost resources",
+        "Modern resource list returned a resource without uri",
+        "Modern resource list returned a resource without name",
         "Modern resource list returned a session id"
-      ],
-      "limitations": [
-        "The current local wire regression asserts a returned resource URI plus cache/session behavior; it does not yet assert every returned resource name, so this remains partial evidence."
       ]
     },
     {
