@@ -13,6 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj"
+TARGET_FLOORS = (20, 24, 32)
 LINE_RE = re.compile(
     r"^gate-attack: layout=(?P<layout>[a-z]+), rawSeeds=(?P<raw>\d+), "
     r"uniqueSeeds=(?P<unique>\d+), range=(?P<range_x>\d+)x(?P<range_y>\d+), "
@@ -109,11 +110,11 @@ def run_once(run_index: int) -> dict[CaseKey, Sample]:
 
 
 def is_stability_target(key: CaseKey) -> bool:
-    if key.route != "bitset" or key.unique_seeds != 16:
+    if key.route != "bitset" or key.unique_seeds not in TARGET_FLOORS:
         return False
-    if (key.range_x, key.range_y) in {(2, 4), (4, 2)}:
-        return True
-    return key.layout in {"edge", "mixed", "duplicateheavy"}
+    if key.layout not in {"sparse", "edge", "mixed", "duplicateheavy"}:
+        return False
+    return (key.range_x, key.range_y) in {(2, 4), (4, 2)}
 
 
 def main() -> int:
@@ -132,19 +133,30 @@ def main() -> int:
     targets = sorted(
         (key for key in expected_keys if is_stability_target(key)),
         key=lambda key: (
+            key.unique_seeds,
             key.layout,
             key.raw_seeds,
-            key.unique_seeds,
             key.range_x,
             key.range_y,
         ),
     )
     if not targets:
-        print("FAIL: no 16-cell candidate stability targets found", file=sys.stderr)
+        print("FAIL: no higher-floor candidate stability targets found", file=sys.stderr)
+        return 1
+
+    floors_present = {key.unique_seeds for key in targets}
+    missing_floors = set(TARGET_FLOORS) - floors_present
+    if missing_floors:
+        print(
+            "FAIL: missing NavGrid stability floors: "
+            + ", ".join(str(value) for value in sorted(missing_floors)),
+            file=sys.stderr,
+        )
         return 1
 
     overall_min = float("inf")
     overall_key: CaseKey | None = None
+    floor_minima: dict[int, tuple[float, CaseKey]] = {}
     for key in targets:
         samples = [cases[key] for cases in process_results]
         expanded = samples[0].expanded
@@ -162,12 +174,29 @@ def main() -> int:
         if minimum < overall_min:
             overall_min = minimum
             overall_key = key
+        previous_floor = floor_minima.get(key.unique_seeds)
+        if previous_floor is None or minimum < previous_floor[0]:
+            floor_minima[key.unique_seeds] = (minimum, key)
         print(
             "process-stability: "
             f"layout={key.layout}, rawSeeds={key.raw_seeds}, uniqueSeeds={key.unique_seeds}, "
             f"range={key.range_x}x{key.range_y}, expanded={expanded}, runs={args.runs}, "
             f"min={minimum:.3f}x, median={median:.3f}x, max={maximum:.3f}x"
         )
+
+    for floor in TARGET_FLOORS:
+        minimum, key = floor_minima[floor]
+        print(
+            "process-stability-floor-min: "
+            f"floor={floor}, layout={key.layout}, rawSeeds={key.raw_seeds}, "
+            f"range={key.range_x}x{key.range_y}, min={minimum:.3f}x"
+        )
+        if minimum <= 1.0:
+            print(
+                "process-stability-note: "
+                f"{floor}-cell floor has an independent process without a CPU win; "
+                "do not promote that floor to runtime from this evidence."
+            )
 
     assert overall_key is not None
     print(
@@ -176,11 +205,6 @@ def main() -> int:
         f"uniqueSeeds={overall_key.unique_seeds}, "
         f"range={overall_key.range_x}x{overall_key.range_y}, min={overall_min:.3f}x"
     )
-    if overall_min <= 1.0:
-        print(
-            "process-stability-note: at least one independent process did not show a CPU win; "
-            "do not promote the 16-cell gate to runtime from this evidence."
-        )
     return 0
 
 
