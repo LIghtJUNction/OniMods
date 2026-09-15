@@ -187,7 +187,7 @@ namespace OniMcp.Server
                 ApplyCorsHeaders(response, corsOrigin);
 
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS");
-                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Mcp-Method, Mcp-Name, Accept, Authorization, X-Oni-Mcp-Token");
+                response.Headers.Add("Access-Control-Allow-Headers", BuildModernCorsAllowedHeaders());
                 response.Headers.Add("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
 
                 if (request.HttpMethod == "OPTIONS")

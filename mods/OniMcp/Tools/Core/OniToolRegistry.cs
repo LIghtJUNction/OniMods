@@ -28,8 +28,7 @@ namespace OniMcp.Tools
         };
         private static bool _initialized;
         private static readonly OniToolRegistryCache ToolCache = new OniToolRegistryCache();
-        private static List<McpToolInfo> _cachedCoreToolInfos;
-        private static List<McpToolInfo> _cachedAllToolInfos;
+        private static List<McpToolInfo> _cachedCoreToolInfos, _cachedAllToolInfos;
 
         /// <summary>
         /// 初始化所有工具
@@ -154,7 +153,8 @@ namespace OniMcp.Tools
                         {
                             Type = param.Value.Type,
                             Description = param.Value.Description,
-                            Enum = param.Value.SchemaEnumValues
+                            Enum = param.Value.SchemaEnumValues,
+                            McpHeader = param.Value.McpHeader
                         };
                         if (param.Value.Required)
                             required.Add(param.Key);
@@ -354,6 +354,7 @@ namespace OniMcp.Tools
         public string Description { get; set; }
         public bool Required { get; set; }
         public List<string> EnumValues { get; set; }
+        public string McpHeader { get; set; }
 
         public List<object> SchemaEnumValues
         {

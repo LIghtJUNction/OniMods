@@ -64,11 +64,30 @@ namespace OniMcp.Tools
         public static string LastName;
         public static JObject LastArguments;
         public static bool ModernToolsEnabled;
+        public static bool InvalidModernHeaderSchema;
 
         public static List<McpToolInfo> GetToolInfos()
         {
             if (!ModernToolsEnabled)
                 return new List<McpToolInfo>();
+
+            var benchmarkProperties = new Dictionary<string, SchemaProperty>
+            {
+                ["task"] = new SchemaProperty { Type = "string", Description = "Visible task description" },
+                ["region"] = new SchemaProperty { Type = "string", McpHeader = "Region" },
+                ["enabled"] = new SchemaProperty { Type = "boolean", McpHeader = "Enabled" },
+                ["limit"] = new SchemaProperty { Type = "integer", McpHeader = "Limit" },
+                ["options"] = new SchemaProperty
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, SchemaProperty>
+                    {
+                        ["scope"] = new SchemaProperty { Type = "string", McpHeader = "Scope" }
+                    }
+                }
+            };
+            if (InvalidModernHeaderSchema)
+                benchmarkProperties["ratio"] = new SchemaProperty { Type = "number", McpHeader = "Ratio" };
 
             return new List<McpToolInfo>
             {
@@ -86,10 +105,7 @@ namespace OniMcp.Tools
                     Execution = new ToolExecution { TaskSupport = "optional" },
                     InputSchema = new InputSchema
                     {
-                        Properties = new Dictionary<string, SchemaProperty>
-                        {
-                            ["task"] = new SchemaProperty { Type = "string", Description = "Visible task description" }
-                        },
+                        Properties = benchmarkProperties,
                         Required = new List<string> { "task" }
                     }
                 }
