@@ -6,6 +6,8 @@ import time
 import urllib.error
 import urllib.request
 
+from loopback_http import open_url
+
 URL = "http://localhost:8788/mcp/"
 PROTOCOL = "2025-11-25"
 
@@ -19,7 +21,7 @@ def post(payload, session_id=None, parse=True, timeout=20):
     if session_id:
         headers["Mcp-Session-Id"] = session_id
     req = urllib.request.Request(URL, data=json.dumps(payload).encode(), headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as response:
+    with open_url(req, timeout=timeout) as response:
         body = response.read()
         return response, json.loads(body) if parse and body else None
 
