@@ -96,6 +96,10 @@ jobs:
         run: |
           set -euo pipefail
           compat_root="$RUNNER_TEMP/cycletrim-netstandard21"
+          # BaseIntermediateOutputPath changes the SDK's default glob exclusions.
+          # Remove the earlier net48 obj tree so generated AssemblyInfo files cannot
+          # be picked up as normal source by this isolated compatibility compile.
+          rm -rf mods/CycleTrim/obj
           dotnet restore mods/CycleTrim/CycleTrim.csproj \
             -p:TargetFramework=netstandard2.1 \
             -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
