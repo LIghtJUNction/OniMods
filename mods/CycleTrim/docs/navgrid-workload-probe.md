@@ -16,6 +16,14 @@ python scripts/analyze_cycletrim_navgrid_probe.py /path/to/Player.log --pretty >
 
 The analyzer uses the latest probe startup in the log, requires the `NavGrid.UpdateGraph() resolved` and `target reached; aggregate sampling started` markers, rejects captures where FastTrack disabled baseline sampling, and verifies that the complete bucket counts sum exactly to the reported call count. A top-12-only or otherwise truncated report therefore fails instead of silently producing misleading workload fractions.
 
+Because reports are deferred through `GameScheduler`, the latest structurally valid capture line can still be stale if the simulation was paused or the process exited before the scheduled report flushed. For a controlled workload window, first analyze the log and record the latest `calls` value, run the workload long enough to cross another sparse report point and allow the scheduler to flush, then require a newer report from the same probe run:
+
+```bash
+python scripts/analyze_cycletrim_navgrid_probe.py /path/to/Player.log --after-calls 256 --pretty
+```
+
+`--after-calls` must match an existing complete capture in the current probe run and only accepts a later capture whose cumulative call count is larger. A restarted/reloaded probe, a missing baseline, or a paused window that never emitted a fresh deferred report fails closed instead of reusing old workload evidence.
+
 The JSON also reports `candidateGate` bounds for the current synthetic `NavGridAdaptiveGateBenchmark` rule (`dirty >= 20`, short range `>= 2`, long range `>= 4`). The runtime histogram deliberately keeps coarse buckets such as `dirty=16-23`, so a capture cannot always say exactly how many calls would satisfy that candidate rule. `eligibleCallsLowerBound` counts only buckets that are guaranteed to satisfy it, `eligibleCallsUpperBound` includes threshold-crossing buckets that might satisfy it, and `ambiguousCalls` is the difference. These are workload-coverage bounds, not a production routing decision or performance claim. The contract check keeps the analyzer thresholds synchronized with the benchmark constants.
 
 A valid capture must contain both the startup message saying `NavGrid.UpdateGraph() resolved` and a later `target reached; aggregate sampling started` message with a summary whose `calls` value is non-zero. If FastTrack's active `PeterHan.FastTrack.PathPatches.NavGrid_UpdateGraph_Patch` is detected, CycleTrim reports that sampling is disabled instead of mixing FastTrack-replaced traffic into the baseline.
