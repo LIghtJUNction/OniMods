@@ -28,8 +28,7 @@ namespace OniMcp.Tools
         };
         private static bool _initialized;
         private static readonly OniToolRegistryCache ToolCache = new OniToolRegistryCache();
-        private static List<McpToolInfo> _cachedCoreToolInfos;
-        private static List<McpToolInfo> _cachedAllToolInfos;
+        private static List<McpToolInfo> _cachedCoreToolInfos, _cachedAllToolInfos;
 
         /// <summary>
         /// 初始化所有工具
