@@ -53,6 +53,21 @@ jobs:
           --manifest ci/oni-reference-assemblies.json
       - name: Install pinned ILSpy command line tool
         run: dotnet tool install --global ilspycmd --version 11.0.0.9375
+      - name: Verify CycleTrim reflected Harmony API against pinned references
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/check_cycletrim_reference_api.py \
+            "$GITHUB_WORKSPACE/.oni-managed/Assembly-CSharp.dll" \
+            2>&1 | tee "$RUNNER_TEMP/cycletrim-reference-api.log"
+      - name: Upload CycleTrim reference-API diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cycletrim-reference-api-diagnostics
+          path: ${{ runner.temp }}/cycletrim-reference-api.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Build CycleTrim against pinned references
         run: >-
           dotnet build mods/CycleTrim/CycleTrim.csproj
