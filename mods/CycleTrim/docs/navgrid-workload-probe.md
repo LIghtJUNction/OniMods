@@ -4,8 +4,18 @@ This is a developer-only measurement path for issue #25. It is disabled unless t
 
 The probe observes the real parameterless `NavGrid.UpdateGraph()` before expansion and aggregates only data that a future cheap dispatcher could know: unique dirty-cell count as stored by ONI, `updateRangeX`, `updateRangeY`, and seed bounding-box density. It does not replace `UpdateGraph`, alter `DirtyCells`, or select an optimization path.
 
-Reports are cumulative histograms. Formatting/logging is deferred through `GameScheduler.ScheduleNextFrame`; the `UpdateGraph` prefix only scans the existing dirty list and updates fixed-size counters. Reports are requested after call 1, 64, 256, 1024, and then every 4x growth. Each report shows the most common dirty-count/range/density buckets rather than logging individual calls.
+Reports are cumulative histograms. Formatting/logging is deferred through `GameScheduler.ScheduleNextFrame`; the `UpdateGraph` prefix only scans the existing dirty list and updates fixed-size counters. Reports are requested after call 1, 64, 256, 1024, and then every 4x growth. The normal report shows only the 12 most common dirty-count/range/density buckets so ordinary developer logs stay readable.
+
+For quantitative captures, also start ONI with `CYCLETRIM_NAVGRID_PROBE_CAPTURE=1`. At each sparse report point CycleTrim then emits an additional `[CycleTrim][NavGridProbeCapture]` line containing every non-zero histogram bucket, not just the top 12. This can make the developer log line substantially larger, so the complete mode is opt-in and should only be enabled while gathering issue #25 evidence.
+
+Analyze the resulting ONI log with:
+
+```bash
+python scripts/analyze_cycletrim_navgrid_probe.py /path/to/Player.log --pretty > navgrid-capture.json
+```
+
+The analyzer uses the latest probe startup in the log, requires the `NavGrid.UpdateGraph() resolved` and `target reached; aggregate sampling started` markers, rejects captures where FastTrack disabled baseline sampling, and verifies that the complete bucket counts sum exactly to the reported call count. A top-12-only or otherwise truncated report therefore fails instead of silently producing misleading workload fractions.
 
 A valid capture must contain both the startup message saying `NavGrid.UpdateGraph() resolved` and a later `target reached; aggregate sampling started` message with a summary whose `calls` value is non-zero. If FastTrack's active `PeterHan.FastTrack.PathPatches.NavGrid_UpdateGraph_Patch` is detected, CycleTrim reports that sampling is disabled instead of mixing FastTrack-replaced traffic into the baseline.
 
-For useful #25 evidence, capture several workload classes separately: an idle colony, a construction/deconstruction burst, doors or automation changing path topology, and critter-heavy activity. Record the ONI build and enabled mod set with each capture. The probe is for workload distribution and reachability only; its own instrumentation overhead must not be reported as an FPS or CPU speedup.
+For useful #25 evidence, capture several workload classes separately: an idle colony, a construction/deconstruction burst, doors or automation changing path topology, and critter-heavy activity. Record the ONI build and enabled mod set with each capture. Use complete capture mode for any workload whose bucket fractions will be fed back into `NavGridAdaptiveGateBenchmark`; the normal top-12 summary is only for quick human inspection. The probe is for workload distribution and reachability only; its own instrumentation overhead must not be reported as an FPS or CPU speedup.
