@@ -1,0 +1,62 @@
+type public class Db : EntityModifierSet
+member private static Db _Instance
+member private void CollectResources ( Resource resource , List < Resource > resource_table )
+member public Accessories Accessories
+member public AccessorySlots AccessorySlots
+member public ArtableStatuses ArtableStatuses
+member public ArtifactDropRates ArtifactDropRates
+member public AssignableSlots AssignableSlots
+member public BuildingStatusItems BuildingStatusItems
+member public ChoreTypes ChoreTypes
+member public ColonyAchievements ColonyAchievements
+member public CreatureStatusItems CreatureStatusItems
+member public CritterEmotions CritterEmotions
+member public Db ( )
+member public Deaths Deaths
+member public Diseases Diseases
+member public Dreams Dreams
+member public Emotes Emotes
+member public Expressions Expressions
+member public Faces Faces
+member public GameplayEvents GameplayEvents
+member public GameplaySeasons GameplaySeasons
+member public MiscStatusItems MiscStatusItems
+member public OrbitalTypeCategories OrbitalTypeCategories
+member public PermitResources Permits
+member public Personalities Personalities
+member public PlantMutations PlantMutations
+member public Quests Quests
+member public ResourceType GetResource < ResourceType > ( ResourceGuid guid ) where ResourceType : Resource
+member public RobotStatusItems RobotStatusItems
+member public RoomTypeCategories RoomTypeCategories
+member public RoomTypes RoomTypes
+member public ScheduleBlockTypes ScheduleBlockTypes
+member public ScheduleGroups ScheduleGroups
+member public Shirts Shirts
+member public Sicknesses Sicknesses
+member public SkillGroups SkillGroups
+member public SkillPerks SkillPerks
+member public Skills Skills
+member public SpaceDestinationTypes SpaceDestinationTypes
+member public Spices Spices
+member public StateMachineCategories StateMachineCategories
+member public StatusItemCategories StatusItemCategories
+member public Stories Stories
+member public TechItems TechItems
+member public TechTreeTitles TechTreeTitles
+member public Techs Techs
+member public TextAsset researchTreeFileExpansion1
+member public TextAsset researchTreeFileVanilla
+member public Thoughts Thoughts
+member public Urges Urges
+member public override void Initialize ( )
+member public static ArtableStages GetArtableStages ( )
+member public static BuildingFacades GetBuildingFacades ( )
+member public static Db Get ( )
+member public static EquippableFacades GetEquippableFacades ( )
+member public static MonumentParts GetMonumentParts ( )
+member public static StickerBombs GetStickerBombs ( )
+member public static string GetPath ( string dlcId , string folder )
+member public void PostProcess ( )
+member public void ResetProblematicDbs ( )
+nested public class SlotInfo : Resource
