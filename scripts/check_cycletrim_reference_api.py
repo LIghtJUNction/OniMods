@@ -27,18 +27,28 @@ def decompile(assembly: Path, type_name: str) -> str:
     if result.returncode != 0 or not result.stdout.strip():
         detail = " ".join(result.stderr.split())
         raise RuntimeError(f"could not decompile {type_name}: {detail}")
-    return result.stdout.replace("\r\n", "\n")
+    source = result.stdout.replace("\r\n", "\n")
+    # Reference assemblies expose stripped method bodies as `extern`; remove the
+    # marker so one metadata pattern works for both full game DLLs and refasmer DLLs.
+    return re.sub(r"\bextern\s+", "", source)
 
 
 def method_pattern(prefix: str, name: str, parameters: str) -> str:
     return (
-        rf"\b{prefix}\s+(?:extern\s+)?{re.escape(name)}\s*\(\s*"
+        rf"\b{prefix}\s+{re.escape(name)}\s*\(\s*"
         + parameters
         + r"\s*\)\s*;"
     )
 
 
-def check(source: str, pattern: str, label: str, failures: list[str], *, minimum: int = 1) -> None:
+def check(
+    source: str,
+    pattern: str,
+    label: str,
+    failures: list[str],
+    *,
+    minimum: int = 1,
+) -> None:
     matches = len(re.findall(pattern, source, flags=re.M | re.S))
     if matches < minimum:
         failures.append(f"{label}: expected at least {minimum}, found {matches}")
@@ -78,125 +88,339 @@ def main() -> int:
     failures: list[str] = []
 
     smart = sources["SmartReservoir"]
-    check(smart, method_pattern(r"protected\s+override\s+void", "OnSpawn", ""),
-          "SmartReservoir.OnSpawn()", failures)
-    check(smart, method_pattern(r"private\s+void", "UpdateLogicCircuit", r"object\s+\w+"),
-          "SmartReservoir.UpdateLogicCircuit(object)", failures)
+    check(
+        smart,
+        method_pattern(r"protected\s+override\s+void", "OnSpawn", ""),
+        "SmartReservoir.OnSpawn()",
+        failures,
+    )
+    check(
+        smart,
+        method_pattern(r"private\s+void", "UpdateLogicCircuit", r"object\s+\w+"),
+        "SmartReservoir.UpdateLogicCircuit(object)",
+        failures,
+    )
     for field_type, field_name in (
         ("bool", "activated"),
         ("LogicPorts", "logicPorts"),
         ("int", "activateValue"),
         ("int", "deactivateValue"),
     ):
-        check(smart, rf"\bprivate\s+{field_type}\s+{field_name}\s*;",
-              f"SmartReservoir.{field_name}", failures)
+        check(
+            smart,
+            rf"\bprivate\s+{field_type}\s+{field_name}\s*;",
+            f"SmartReservoir.{field_name}",
+            failures,
+        )
 
     fetch = sources["FetchManager"]
-    check(fetch, method_pattern(r"public\s+void", "UpdatePickups",
-                                r"Navigator\s+\w+\s*,\s*int\s+\w+"),
-          "FetchablesByPrefabId.UpdatePickups(Navigator,int)", failures)
+    check(
+        fetch,
+        method_pattern(
+            r"public\s+void",
+            "UpdatePickups",
+            r"Navigator\s+\w+\s*,\s*int\s+\w+",
+        ),
+        "FetchablesByPrefabId.UpdatePickups(Navigator,int)",
+        failures,
+    )
     for pattern, label in (
-        (r"\bpublic\s+KCompactedVector<Fetchable>\s+fetchables\s*;", "FetchablesByPrefabId.fetchables"),
-        (r"\bpublic\s+List<Pickup>\s+finalPickups\s*;", "FetchablesByPrefabId.finalPickups"),
-        (r"\bprivate\s+Dictionary<int,\s*int>\s+cellCosts\s*;", "FetchablesByPrefabId.cellCosts"),
-        (method_pattern(r"public\s+HandleVector<int>\.Handle", "Add", r"Pickupable\s+\w+"), "FetchManager.Add(Pickupable)"),
-        (method_pattern(r"public\s+void", "Remove", r"Tag\s+\w+\s*,\s*HandleVector<int>\.Handle\s+\w+"), "FetchManager.Remove(Tag,Handle)"),
-        (method_pattern(r"public\s+void", "UpdateStorage", r"Tag\s+\w+\s*,\s*HandleVector<int>\.Handle\s+\w+\s*,\s*Storage\s+\w+"), "FetchManager.UpdateStorage"),
-        (method_pattern(r"public\s+void", "UpdateTags", r"Tag\s+\w+\s*,\s*HandleVector<int>\.Handle\s+\w+"), "FetchManager.UpdateTags"),
-        (method_pattern(r"public\s+void", "Sim1000ms", r"float\s+\w+"), "FetchManager.Sim1000ms(float)"),
+        (
+            r"\bpublic\s+KCompactedVector<Fetchable>\s+fetchables\s*;",
+            "FetchablesByPrefabId.fetchables",
+        ),
+        (
+            r"\bpublic\s+List<Pickup>\s+finalPickups\s*;",
+            "FetchablesByPrefabId.finalPickups",
+        ),
+        (
+            r"\bprivate\s+Dictionary<int,\s*int>\s+cellCosts\s*;",
+            "FetchablesByPrefabId.cellCosts",
+        ),
+        (
+            method_pattern(
+                r"public\s+HandleVector<int>\.Handle",
+                "Add",
+                r"Pickupable\s+\w+",
+            ),
+            "FetchManager.Add(Pickupable)",
+        ),
+        (
+            method_pattern(
+                r"public\s+void",
+                "Remove",
+                r"Tag\s+\w+\s*,\s*HandleVector<int>\.Handle\s+\w+",
+            ),
+            "FetchManager.Remove(Tag,Handle)",
+        ),
+        (
+            method_pattern(
+                r"public\s+void",
+                "UpdateStorage",
+                r"Tag\s+\w+\s*,\s*HandleVector<int>\.Handle\s+\w+\s*,\s*Storage\s+\w+",
+            ),
+            "FetchManager.UpdateStorage",
+        ),
+        (
+            method_pattern(
+                r"public\s+void",
+                "UpdateTags",
+                r"Tag\s+\w+\s*,\s*HandleVector<int>\.Handle\s+\w+",
+            ),
+            "FetchManager.UpdateTags",
+        ),
+        (
+            method_pattern(r"public\s+void", "Sim1000ms", r"float\s+\w+"),
+            "FetchManager.Sim1000ms(float)",
+        ),
     ):
         check(fetch, pattern, label, failures)
 
     sensor = sources["PickupableSensor"]
-    check(sensor, method_pattern(r"public\s+override\s+void", "Update", ""),
-          "PickupableSensor.Update()", failures)
+    check(
+        sensor,
+        method_pattern(r"public\s+override\s+void", "Update", ""),
+        "PickupableSensor.Update()",
+        failures,
+    )
 
     consumer = sources["ChoreConsumer"]
-    check(consumer, method_pattern(r"public\s+bool", "FindNextChore",
-                                   r"ref\s+Chore\.Precondition\.Context\s+\w+"),
-          "ChoreConsumer.FindNextChore(ref Context)", failures)
-    check(consumer, r"\bpublic\s+ChoreDriver\s+choreDriver\s*;",
-          "ChoreConsumer.choreDriver", failures)
-    check(consumer, method_pattern(r"public\s+void", "SetPersonalPriority",
-                                   r"ChoreGroup\s+\w+\s*,\s*int\s+\w+"),
-          "ChoreConsumer.SetPersonalPriority", failures)
+    check(
+        consumer,
+        method_pattern(
+            r"public\s+bool",
+            "FindNextChore",
+            r"ref\s+Chore\.Precondition\.Context\s+\w+",
+        ),
+        "ChoreConsumer.FindNextChore(ref Context)",
+        failures,
+    )
+    check(
+        consumer,
+        r"\bpublic\s+ChoreDriver\s+choreDriver\s*;",
+        "ChoreConsumer.choreDriver",
+        failures,
+    )
+    check(
+        consumer,
+        method_pattern(
+            r"public\s+void",
+            "SetPersonalPriority",
+            r"ChoreGroup\s+\w+\s*,\s*int\s+\w+",
+        ),
+        "ChoreConsumer.SetPersonalPriority",
+        failures,
+    )
 
     scheduler = sources["BrainScheduler"]
-    check(scheduler, method_pattern(r"public\s+void", "PrioritizeBrain", r"Brain\s+\w+"),
-          "BrainScheduler.PrioritizeBrain(Brain)", failures)
-    check(scheduler, method_pattern(r"protected\s+override\s+void", "OnPrefabInit", ""),
-          "BrainScheduler.OnPrefabInit()", failures)
-    check(scheduler, r"\bprivate\s+class\s+CreatureBrainGroup\s*:\s*BrainGroup\b",
-          "BrainScheduler.CreatureBrainGroup", failures)
-    check(scheduler, method_pattern(r"protected\s+abstract\s+int", "InitialProbeCount", ""),
-          "BrainGroup.InitialProbeCount()", failures)
-    check(scheduler, method_pattern(r"public\s+void", "RenderEveryTick", r"float\s+\w+"),
-          "BrainGroup.RenderEveryTick(float)", failures, minimum=2)
-    check(scheduler, method_pattern(r"public\s+override\s+void", "PostRenderEveryTick", r"float\s+\w+"),
-          "CreatureBrainGroup.PostRenderEveryTick(float)", failures)
+    check(
+        scheduler,
+        method_pattern(r"public\s+void", "PrioritizeBrain", r"Brain\s+\w+"),
+        "BrainScheduler.PrioritizeBrain(Brain)",
+        failures,
+    )
+    check(
+        scheduler,
+        method_pattern(r"protected\s+override\s+void", "OnPrefabInit", ""),
+        "BrainScheduler.OnPrefabInit()",
+        failures,
+    )
+    check(
+        scheduler,
+        r"\bprivate\s+class\s+CreatureBrainGroup\s*:\s*BrainGroup\b",
+        "BrainScheduler.CreatureBrainGroup",
+        failures,
+    )
+    check(
+        scheduler,
+        method_pattern(r"protected\s+abstract\s+int", "InitialProbeCount", ""),
+        "BrainGroup.InitialProbeCount()",
+        failures,
+    )
+    check(
+        scheduler,
+        method_pattern(r"public\s+void", "RenderEveryTick", r"float\s+\w+"),
+        "BrainGroup.RenderEveryTick(float)",
+        failures,
+        minimum=2,
+    )
+    check(
+        scheduler,
+        method_pattern(
+            r"public\s+override\s+void",
+            "PostRenderEveryTick",
+            r"float\s+\w+",
+        ),
+        "CreatureBrainGroup.PostRenderEveryTick(float)",
+        failures,
+    )
     for pattern, label in (
         (r"\bprotected\s+List<Brain>\s+brains\b", "BrainGroup.brains"),
-        (r"\bprotected\s+Queue<Brain>\s+priorityBrains\b", "BrainGroup.priorityBrains"),
-        (r"\bprotected\s+int\s+nextUpdateBrain\s*;", "BrainGroup.nextUpdateBrain"),
-        (r"\bpublic\s+int\s+debugMaxPriorityBrainCountSeen\s*;", "BrainGroup.debugMaxPriorityBrainCountSeen"),
+        (
+            r"\bprotected\s+Queue<Brain>\s+priorityBrains\b",
+            "BrainGroup.priorityBrains",
+        ),
+        (
+            r"\bprotected\s+int\s+nextUpdateBrain\s*;",
+            "BrainGroup.nextUpdateBrain",
+        ),
+        (
+            r"\bpublic\s+int\s+debugMaxPriorityBrainCountSeen\s*;",
+            "BrainGroup.debugMaxPriorityBrainCountSeen",
+        ),
     ):
         check(scheduler, pattern, label, failures)
 
     navigator = sources["Navigator"]
-    check(navigator, method_pattern(r"public\s+void", "UpdateProbe",
-                                    r"bool\s+\w+\s*=\s*false"),
-          "Navigator.UpdateProbe(bool)", failures)
+    check(
+        navigator,
+        method_pattern(
+            r"public\s+void",
+            "UpdateProbe",
+            r"bool\s+\w+\s*=\s*false",
+        ),
+        "Navigator.UpdateProbe(bool)",
+        failures,
+    )
     for pattern, label in (
-        (r"\bpublic\s+NavGrid\s+NavGrid\s*\{\s*get;\s*private\s+set;\s*\}", "Navigator.NavGrid"),
-        (r"\bpublic\s+NavType\s+CurrentNavType\s*;", "Navigator.CurrentNavType"),
-        (r"\bpublic\s+PathFinder\.PotentialPath\.Flags\s+flags\s*;", "Navigator.flags"),
+        (
+            r"\bpublic\s+NavGrid\s+NavGrid\s*\{\s*get;\s*private\s+set;\s*\}",
+            "Navigator.NavGrid",
+        ),
+        (
+            r"\bpublic\s+NavType\s+CurrentNavType\s*;",
+            "Navigator.CurrentNavType",
+        ),
+        (
+            r"\bpublic\s+PathFinder\.PotentialPath\.Flags\s+flags\s*;",
+            "Navigator.flags",
+        ),
         (r"\bbool\s+reportOccupation\s*;", "Navigator.reportOccupation"),
-        (r"\bbool\s+executePathProbeTaskAsync\s*;", "Navigator.executePathProbeTaskAsync"),
+        (
+            r"\bbool\s+executePathProbeTaskAsync\s*;",
+            "Navigator.executePathProbeTaskAsync",
+        ),
     ):
         check(navigator, pattern, label, failures)
 
     async_path = sources["AsyncPathProber"]
     for pattern, label in (
-        (method_pattern(r"private\s+WorkOrder", "makeWorkOrder", r"Navigator\s+\w+"), "AsyncPathProber.Manager.makeWorkOrder(Navigator)"),
-        (method_pattern(r"public\s+void", "TickFrame", ""), "AsyncPathProber.Manager.TickFrame()"),
-        (method_pattern(r"private\s+bool", "NextTask", r"out\s+WorkOrder\s+\w+"), "AsyncPathProber.Manager.NextTask(out WorkOrder)"),
-        (method_pattern(r"public\s+void", "Unregister", r"Navigator\s+\w+"), "AsyncPathProber.Manager.Unregister(Navigator)"),
-        (method_pattern(r"public\s+void", "Shutdown", ""), "AsyncPathProber.Manager.Shutdown()"),
+        (
+            method_pattern(
+                r"private\s+WorkOrder",
+                "makeWorkOrder",
+                r"Navigator\s+\w+",
+            ),
+            "AsyncPathProber.Manager.makeWorkOrder(Navigator)",
+        ),
+        (
+            method_pattern(r"public\s+void", "TickFrame", ""),
+            "AsyncPathProber.Manager.TickFrame()",
+        ),
+        (
+            method_pattern(
+                r"private\s+bool",
+                "NextTask",
+                r"out\s+WorkOrder\s+\w+",
+            ),
+            "AsyncPathProber.Manager.NextTask(out WorkOrder)",
+        ),
+        (
+            method_pattern(r"public\s+void", "Unregister", r"Navigator\s+\w+"),
+            "AsyncPathProber.Manager.Unregister(Navigator)",
+        ),
+        (
+            method_pattern(r"public\s+void", "Shutdown", ""),
+            "AsyncPathProber.Manager.Shutdown()",
+        ),
         (r"\bprivate\s+Thread\[\]\s+agents\s*;", "AsyncPathProber.Manager.agents"),
-        (r"\bprivate\s+Dictionary<Navigator,\s*int>\s+navigators\b", "AsyncPathProber.Manager.navigators"),
-        (r"\bprivate\s+ushort\s+activeSerialNo\s*;", "AsyncPathProber.Manager.activeSerialNo"),
+        (
+            r"\bprivate\s+Dictionary<Navigator,\s*int>\s+navigators\b",
+            "AsyncPathProber.Manager.navigators",
+        ),
+        (
+            r"\bprivate\s+ushort\s+activeSerialNo\s*;",
+            "AsyncPathProber.Manager.activeSerialNo",
+        ),
     ):
         check(async_path, pattern, label, failures)
 
     pickupable = sources["Pickupable"]
     for pattern, label in (
-        (method_pattern(r"public\s+int", "Reserve", r"string\s+\w+\s*,\s*int\s+\w+\s*,\s*float\s+\w+"), "Pickupable.Reserve"),
-        (method_pattern(r"public\s+void", "Unreserve", r"string\s+\w+\s*,\s*int\s+\w+"), "Pickupable.Unreserve"),
-        (method_pattern(r"public\s+void", "ClearReservations", ""), "Pickupable.ClearReservations"),
+        (
+            method_pattern(
+                r"public\s+int",
+                "Reserve",
+                r"string\s+\w+\s*,\s*int\s+\w+\s*,\s*float\s+\w+",
+            ),
+            "Pickupable.Reserve",
+        ),
+        (
+            method_pattern(
+                r"public\s+void",
+                "Unreserve",
+                r"string\s+\w+\s*,\s*int\s+\w+",
+            ),
+            "Pickupable.Unreserve",
+        ),
+        (
+            method_pattern(r"public\s+void", "ClearReservations", ""),
+            "Pickupable.ClearReservations",
+        ),
     ):
         check(pickupable, pattern, label, failures)
 
     automatable = sources["Automatable"]
-    check(automatable, method_pattern(r"public\s+void", "SetAutomationOnly", r"bool\s+\w+"),
-          "Automatable.SetAutomationOnly(bool)", failures)
+    check(
+        automatable,
+        method_pattern(
+            r"public\s+void",
+            "SetAutomationOnly",
+            r"bool\s+\w+",
+        ),
+        "Automatable.SetAutomationOnly(bool)",
+        failures,
+    )
 
-    for owner, prefix in (("ChoreProvider", r"public\s+virtual\s+void"),
-                          ("GlobalChoreProvider", r"public\s+override\s+void")):
+    for owner, prefix in (
+        ("ChoreProvider", r"public\s+virtual\s+void"),
+        ("GlobalChoreProvider", r"public\s+override\s+void"),
+    ):
         source = sources[owner]
         for name in ("AddChore", "RemoveChore"):
-            check(source, method_pattern(prefix, name, r"Chore\s+\w+"),
-                  f"{owner}.{name}(Chore)", failures)
+            check(
+                source,
+                method_pattern(prefix, name, r"Chore\s+\w+"),
+                f"{owner}.{name}(Chore)",
+                failures,
+            )
 
     prioritizable = sources["Prioritizable"]
-    check(prioritizable, method_pattern(r"public\s+void", "SetMasterPriority",
-                                        r"PrioritySetting\s+\w+"),
-          "Prioritizable.SetMasterPriority(PrioritySetting)", failures)
+    check(
+        prioritizable,
+        method_pattern(
+            r"public\s+void",
+            "SetMasterPriority",
+            r"PrioritySetting\s+\w+",
+        ),
+        "Prioritizable.SetMasterPriority(PrioritySetting)",
+        failures,
+    )
 
     nav_grid = sources["NavGrid"]
     for pattern, label in (
-        (method_pattern(r"public\s+void", "AddDirtyCell", r"int\s+\w+"), "NavGrid.AddDirtyCell(int)"),
-        (method_pattern(r"public\s+void", "UpdateGraph", ""), "NavGrid.UpdateGraph()"),
-        (method_pattern(r"public\s+void", "UpdateGraph", r"List<int>\s+\w+"), "NavGrid.UpdateGraph(List<int>)"),
+        (
+            method_pattern(r"public\s+void", "AddDirtyCell", r"int\s+\w+"),
+            "NavGrid.AddDirtyCell(int)",
+        ),
+        (
+            method_pattern(r"public\s+void", "UpdateGraph", ""),
+            "NavGrid.UpdateGraph()",
+        ),
+        (
+            method_pattern(r"public\s+void", "UpdateGraph", r"List<int>\s+\w+"),
+            "NavGrid.UpdateGraph(List<int>)",
+        ),
         (r"\bprivate\s+byte\[\]\s+DirtyBitFlags\s*;", "NavGrid.DirtyBitFlags"),
         (r"\bprivate\s+List<int>\s+DirtyCells\s*;", "NavGrid.DirtyCells"),
     ):
@@ -208,7 +432,10 @@ def main() -> int:
             print(f"- {failure}", file=sys.stderr)
         return 1
 
-    print("PASS CycleTrim pinned reference API contract (dynamic/reflected Harmony dependencies)")
+    print(
+        "PASS CycleTrim pinned reference API contract "
+        "(dynamic/reflected Harmony dependencies)"
+    )
     return 0
 
 
