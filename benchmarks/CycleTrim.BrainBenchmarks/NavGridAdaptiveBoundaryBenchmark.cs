@@ -23,7 +23,7 @@ namespace CycleTrim.BrainBenchmarks
         private const int MeasuredSamples = 9;
         private const int IterationsPerSample = 300;
         private static readonly int[] BoundaryCounts = { 4, 5, 6, 7, 8, 9, 10, 11, 12 };
-        private static readonly int[] ScoreCounts = { 8, 10, 12, 14, 16 };
+        private static readonly int[] ScoreCounts = { 8, 10, 12, 14, 15, 16 };
         private static readonly RangeShape[] RangeShapes =
         {
             new RangeShape(1, 4),

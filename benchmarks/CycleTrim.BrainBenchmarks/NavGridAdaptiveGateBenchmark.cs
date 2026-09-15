@@ -16,7 +16,7 @@ namespace CycleTrim.BrainBenchmarks
     {
         private const int Width = 256;
         private const int Height = 384;
-        private const int MinDirtyCells = 12;
+        private const int MinDirtyCells = 16;
         private const int MinShortRange = 2;
         private const int MinLongRange = 4;
         private const int GlobalPrimeBatches = 12;
@@ -54,18 +54,21 @@ namespace CycleTrim.BrainBenchmarks
 
         private static readonly GateCase[] Cases =
         {
-            new GateCase(Layout.Sparse, 11, 2, 4, expectCandidate: false),
-            new GateCase(Layout.Sparse, 12, 1, 6, expectCandidate: false),
-            new GateCase(Layout.Sparse, 12, 2, 3, expectCandidate: false),
-            new GateCase(Layout.Sparse, 12, 2, 4, expectCandidate: true),
-            new GateCase(Layout.Sparse, 12, 4, 2, expectCandidate: true),
-            new GateCase(Layout.Line, 12, 2, 4, expectCandidate: true),
-            new GateCase(Layout.Cluster, 12, 2, 4, expectCandidate: true),
-            new GateCase(Layout.Edge, 12, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Sparse, 15, 2, 4, expectCandidate: false),
+            new GateCase(Layout.Sparse, 16, 1, 6, expectCandidate: false),
+            new GateCase(Layout.Sparse, 16, 2, 3, expectCandidate: false),
+            new GateCase(Layout.Sparse, 16, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Sparse, 16, 4, 2, expectCandidate: true),
+            new GateCase(Layout.Sparse, 16, 2, 6, expectCandidate: true),
+            new GateCase(Layout.Sparse, 16, 6, 2, expectCandidate: true),
+            new GateCase(Layout.Line, 16, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Cluster, 16, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Edge, 16, 2, 4, expectCandidate: true),
             new GateCase(Layout.Edge, 16, 2, 6, expectCandidate: true),
-            new GateCase(Layout.Mixed, 12, 2, 4, expectCandidate: true),
+            new GateCase(Layout.Mixed, 16, 2, 4, expectCandidate: true),
             new GateCase(Layout.Mixed, 16, 4, 2, expectCandidate: true),
-            new GateCase(Layout.DuplicateHeavy, 24, 2, 4, expectCandidate: true)
+            new GateCase(Layout.DuplicateHeavy, 30, 2, 4, expectCandidate: false),
+            new GateCase(Layout.DuplicateHeavy, 32, 2, 4, expectCandidate: true)
         };
 
         private sealed class Simulator
@@ -300,7 +303,7 @@ namespace CycleTrim.BrainBenchmarks
 
         private static void PrimeJit()
         {
-            var seeds = BuildSparse(12);
+            var seeds = BuildSparse(16);
             var simulator = new Simulator(Width, Height, rangeX: 2, rangeY: 4);
             var expectedCount = simulator.RunVanilla(seeds);
             for (var batch = 0; batch < GlobalPrimeBatches; batch++)
