@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "repository": "peterhaneve/ONIMods",
+  "commit": "30f4beb7b574c9f95801c3fa7dea8590737dd752",
+  "checkedDate": "2026-09-16",
+  "scope": "Stationary-critter compatibility evidence only; CycleTrim remains conservative and does not enable Navigator.UpdateProbe under FastTrack in this change.",
+  "files": [
+    {
+      "path": "FastTrack/FastTrackMod.cs",
+      "gitBlobSha1": "75ab0216c4a5b6afa7b15731886eeb75af4a7f18"
+    },
+    {
+      "path": "FastTrack/FastTrackOptions.cs",
+      "gitBlobSha1": "577e273d37e298888c4be519a2880fb508fb9c2a"
+    },
+    {
+      "path": "FastTrack/PathPatches/IdleMove.cs",
+      "gitBlobSha1": "81d19c1e207cad97d4ded0b06a35ff6b06bd51d6"
+    },
+    {
+      "path": "FastTrack/PathPatches/AsyncPathPatches.cs",
+      "gitBlobSha1": "98e1c077441af39a93a82da1e8f3cbf87f12cd28"
+    },
+    {
+      "path": "FastTrack/PathPatches/AsyncBrainGroupUpdater.cs",
+      "gitBlobSha1": "2772b37d68242a86f0cb67ca66774951ee290480"
+    }
+  ],
+  "observedContract": {
+    "cycleTrimTarget": "Navigator.UpdateProbe(bool)",
+    "cycleTrimCurrentGuardMarker": "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate",
+    "fastTrackCritterFeatureFlag": "ReduceCritterIdleMove",
+    "fastTrackCritterFeatureDefaultEnabled": false,
+    "fastTrackCritterTargets": [
+      "IdleStates.MoveToNewCell",
+      "BuzzStates.MoveToNewCell"
+    ],
+    "fastTrackCritterPrefixPriority": "Priority.Low",
+    "fastTrackSchedulerFeatureFlag": "PickupOpts",
+    "fastTrackSchedulerFeatureDefaultEnabled": true,
+    "fastTrackSchedulerTarget": "BrainScheduler.RenderEveryTick",
+    "indirectRisk": "Default FastTrack replaces BrainScheduler.RenderEveryTick and routes non-Dupe brains through brain.UpdateBrain(), so absence of direct Navigator.UpdateProbe overlap is not sufficient runtime compatibility evidence.",
+    "cycleTrimCurrentPolicy": "Keep StationaryCritterNavigationThrottlePatch disabled whenever the FastTrack marker type exists until real ONI compatibility/performance evidence covers relevant options and load orders."
+  }
+}
