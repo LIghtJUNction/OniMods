@@ -5,6 +5,8 @@ import time
 import urllib.error
 import urllib.request
 
+from loopback_http import open_url
+
 URL = "http://localhost:8788/mcp/"
 PROTOCOL = "2025-11-25"
 DEFAULT_PUBLIC_TOOLS = {
@@ -43,7 +45,7 @@ class McpClient:
             data=json.dumps(payload).encode(),
             headers=headers,
         )
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        with open_url(req, timeout=timeout) as response:
             session_id = response.headers.get("Mcp-Session-Id")
             if session_id:
                 self.session_id = session_id
@@ -201,7 +203,7 @@ def child_payload(batch_payload, name):
 
 
 def main():
-    urllib.request.urlopen(URL, timeout=3).read()
+    open_url(URL, timeout=3).read()
 
     client = McpClient(URL)
     init = client.request(
