@@ -61,10 +61,46 @@ namespace OniMcp.Tools
     public static class OniToolRegistry
     {
         public static int Calls;
-        public static List<McpToolInfo> GetToolInfos() => new List<McpToolInfo>();
+        public static string LastName;
+        public static JObject LastArguments;
+        public static bool ModernToolsEnabled;
+
+        public static List<McpToolInfo> GetToolInfos()
+        {
+            if (!ModernToolsEnabled)
+                return new List<McpToolInfo>();
+
+            return new List<McpToolInfo>
+            {
+                new McpToolInfo
+                {
+                    Name = "world_editor",
+                    Description = "write-capable stub",
+                    Execution = new ToolExecution { TaskSupport = "optional" },
+                    InputSchema = new InputSchema { Properties = new Dictionary<string, SchemaProperty>() }
+                },
+                new McpToolInfo
+                {
+                    Name = "benchmark",
+                    Description = "read-only benchmark stub",
+                    Execution = new ToolExecution { TaskSupport = "optional" },
+                    InputSchema = new InputSchema
+                    {
+                        Properties = new Dictionary<string, SchemaProperty>
+                        {
+                            ["task"] = new SchemaProperty { Type = "string", Description = "Visible task description" }
+                        },
+                        Required = new List<string> { "task" }
+                    }
+                }
+            };
+        }
+
         public static CallToolResult CallTool(string name, JObject arguments)
         {
             Calls++;
+            LastName = name;
+            LastArguments = arguments;
             return CallToolResult.Text("ok");
         }
     }

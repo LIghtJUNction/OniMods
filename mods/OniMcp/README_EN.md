@@ -77,6 +77,9 @@ ONI MCP Server is an Oxygen Not Included mod that exposes a local MCP service (`
 
 - Before `1.0.0`, tool names, parameters, and response fields can change.
 - Third-party clients should pin versions and use runtime manifest as the compatibility source.
+- `2025-11-25` / `2025-06-18` clients keep the full `initialize` + `Mcp-Session-Id` tool path.
+- `2026-07-28` has a stateless compatibility path for `server/discover`, `resources/list`, `resources/templates/list`, `resources/read`, plus a deliberately narrow tool slice: `tools/list` advertises only the read-only `benchmark` tool and `tools/call` accepts only that tool. Modern requests require `_meta`, `Mcp-Protocol-Version`, and `Mcp-Method`; resource reads and tool calls also require a matching `Mcp-Name`. The modern path never creates or returns `Mcp-Session-Id`.
+- The modern path does not expose the legacy core Tasks fields and does not yet advertise Tasks, MRTR, subscriptions, or game-mutating tools. Those tools stay on the 2025 session path until request-scoped state and their 2026 header/schema contracts are migrated.
 
 ## Updates and Validation
 
