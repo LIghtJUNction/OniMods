@@ -1,0 +1,56 @@
+{
+  "revision": "2026-07-28",
+  "scope": "partial-local-evidence",
+  "upstream": {
+    "repository": "modelcontextprotocol/conformance",
+    "commit": "7169291ec0b68eb370fddcd9947313ab0d5e4156",
+    "requirementsPath": "requirements/2026-07-28.yaml",
+    "gitBlobSha": "b0c4f8560429e8f4b6c89833cc0b35405bc004ff"
+  },
+  "coverage": [
+    {
+      "scenario": "server-stateless",
+      "claim": "partial",
+      "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
+      "markers": [
+        "Modern request without _meta did not use Invalid Params",
+        "Modern server/discover incorrectly required optional clientInfo",
+        "Unsupported stateless versions allocated legacy session state",
+        "Modern resource error allocated legacy session state",
+        "Modern tool discovery/call allocated legacy session state"
+      ]
+    },
+    {
+      "scenario": "tools-list",
+      "claim": "partial",
+      "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
+      "markers": [
+        "Modern tools/list exposed tools outside the read-only allowlist",
+        "Modern tools/list did not expose cacheable deterministic metadata"
+      ]
+    },
+    {
+      "scenario": "tools-call-simple-text",
+      "claim": "partial",
+      "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
+      "markers": [
+        "Modern read-only tools/call failed",
+        "Modern tools/call changed the tool result"
+      ]
+    },
+    {
+      "scenario": "sep-2164-resource-not-found",
+      "claim": "partial",
+      "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
+      "markers": [
+        "Missing resource did not use -32602 Invalid Params",
+        "Missing resource error omitted error.data.uri"
+      ]
+    }
+  ],
+  "notClaimed": [
+    "This manifest does not claim full MCP 2026-07-28 conformance.",
+    "Scenarios outside coverage remain unsupported, unverified, or intentionally unavailable on OniMcp's modern path.",
+    "Legacy 2025-11-25 and 2025-06-18 compatibility remains covered by OniMods' dedicated dual-era regressions rather than this map."
+  ]
+}

@@ -40,6 +40,8 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Check Mod source contracts and behavior
         run: python3 scripts/check_mods.py
+      - name: Verify pinned MCP 2026 conformance map
+        run: python3 scripts/verify_onimcp_conformance_map.py --verify-upstream
       - name: Run CycleTrim synthetic benchmarks
         run: >-
           dotnet run
