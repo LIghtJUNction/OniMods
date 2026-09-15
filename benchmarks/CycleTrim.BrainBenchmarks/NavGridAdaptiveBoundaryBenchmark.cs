@@ -23,18 +23,17 @@ namespace CycleTrim.BrainBenchmarks
         private const int MeasuredSamples = 9;
         private const int IterationsPerSample = 300;
         private static readonly int[] BoundaryCounts = { 4, 5, 6, 7, 8, 9, 10, 11, 12 };
-        private static readonly int[] ScoreCounts = { 4, 8, 12 };
+        private static readonly int[] ScoreCounts = { 8, 10, 12, 14, 16 };
         private static readonly RangeShape[] RangeShapes =
         {
-            new RangeShape(1, 1),
-            new RangeShape(1, 2),
-            new RangeShape(2, 1),
             new RangeShape(1, 4),
             new RangeShape(4, 1),
-            new RangeShape(2, 2),
+            new RangeShape(1, 6),
+            new RangeShape(6, 1),
             new RangeShape(2, 4),
             new RangeShape(4, 2),
-            new RangeShape(4, 4)
+            new RangeShape(2, 6),
+            new RangeShape(6, 2)
         };
 
         private enum Layout
@@ -267,7 +266,7 @@ namespace CycleTrim.BrainBenchmarks
                 }
             }
 
-            Console.WriteLine("Pre-expansion count x asymmetric-range score matrix:");
+            Console.WriteLine("Conservative high-work count x asymmetric-range matrix:");
             for (var countIndex = 0; countIndex < ScoreCounts.Length; countIndex++)
             {
                 foreach (Layout layout in Enum.GetValues(typeof(Layout)))
@@ -280,7 +279,7 @@ namespace CycleTrim.BrainBenchmarks
                             ScoreCounts[countIndex],
                             range.X,
                             range.Y,
-                            label: "score");
+                            label: "gate");
                     }
                 }
             }
