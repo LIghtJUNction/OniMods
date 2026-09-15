@@ -60,12 +60,18 @@ jobs:
           python3 scripts/verify_cycletrim_target_contract.py \
             "$GITHUB_WORKSPACE/.oni-managed/Assembly-CSharp.dll" \
             2>&1 | tee "$RUNNER_TEMP/cycletrim-target-contract.log"
+      - name: Capture CycleTrim target-contract decompile on failure
+        if: failure()
+        run: >-
+          ilspycmd -t SmartReservoir
+          "$GITHUB_WORKSPACE/.oni-managed/Assembly-CSharp.dll"
+          > "$RUNNER_TEMP/cycletrim-target-contract-SmartReservoir.cs"
       - name: Upload CycleTrim target-contract diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: cycletrim-target-contract-diagnostics
-          path: ${{ runner.temp }}/cycletrim-target-contract.log
+          path: ${{ runner.temp }}/cycletrim-target-contract-*
           if-no-files-found: error
           retention-days: 7
       - name: Build CycleTrim against pinned references
