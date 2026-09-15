@@ -63,7 +63,9 @@ def main() -> int:
             "UpdatePickups dedup key drifted from (masterPriority, tagBitsHash)",
         ),
         (
-            r"num3\+\+\s*;\s*this\.finalPickups\s*\[\s*num3\s*\]\s*=\s*pickup2\s*;",
+            r"num3\+\+\s*;\s*pickup\s*=\s*pickup2\s*;\s*"
+            r"num\s*=\s*tagBitsHash\s*;\s*if\s*\(\s*i\s*>\s*num3\s*\)\s*"
+            r"\{\s*this\.finalPickups\s*\[\s*num3\s*\]\s*=\s*pickup2\s*;\s*\}",
             "UpdatePickups in-place survivor compaction drifted",
         ),
         (
