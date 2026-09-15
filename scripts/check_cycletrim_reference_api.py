@@ -117,6 +117,10 @@ def main() -> int:
         ):
             expect("BrainScheduler", pattern, label)
 
+        # Developer performance-probe target used to rank vanilla room rebuild work.
+        expect("RoomProber", method(r"public\s+void", "Sim1000ms", r"float\s+\w+"),
+               "RoomProber.Sim1000ms(float)")
+
         # Navigator and async path targets. The existing canonical surface baseline
         # separately locks full property accessor shape; this check only needs the
         # readable NavGrid member because CycleTrim consumes it as a value.
