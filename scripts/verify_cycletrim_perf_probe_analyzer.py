@@ -143,7 +143,6 @@ def main() -> int:
     )
 
     restarted_first = copy.deepcopy(first)
-    selected = analyzer.select_series_after_sequence([first, second, restarted_first], 1)
     require_value_error(
         lambda: analyzer.select_series_after_sequence([first, second, restarted_first], 1),
         "no fresh probe report after reportSequence 1",
