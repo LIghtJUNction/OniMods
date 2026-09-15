@@ -5,13 +5,22 @@ from pathlib import Path
 import re
 import sys
 
-from analyze_cycletrim_navgrid_probe import CaptureError, analyze_log
+from analyze_cycletrim_navgrid_probe import (
+    CANDIDATE_MIN_DIRTY_CELLS,
+    CANDIDATE_MIN_LONG_RANGE,
+    CANDIDATE_MIN_SHORT_RANGE,
+    CaptureError,
+    analyze_log,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / "mods/CycleTrim/Patches/NavGridWorkloadProbePatch.cs"
 CORE = ROOT / "mods/CycleTrim/Core/NavGridWorkloadProbe.cs"
 ANALYZER = ROOT / "scripts/analyze_cycletrim_navgrid_probe.py"
+GATE_BENCHMARK = (
+    ROOT / "benchmarks/CycleTrim.BrainBenchmarks/NavGridAdaptiveGateBenchmark.cs"
+)
 
 
 def expect_capture_failure(text: str, expected: str, failures: list[str]) -> None:
@@ -26,10 +35,18 @@ def expect_capture_failure(text: str, expected: str, failures: list[str]) -> Non
     failures.append(f"capture analyzer accepted invalid fixture: expected {expected!r}")
 
 
+def read_benchmark_constant(source: str, name: str) -> int:
+    match = re.search(rf"private\s+const\s+int\s+{name}\s*=\s*(\d+)\s*;", source)
+    if match is None:
+        raise ValueError(f"missing NavGrid gate benchmark constant: {name}")
+    return int(match.group(1))
+
+
 def main() -> int:
     patch = PATCH.read_text(encoding="utf-8")
     core = CORE.read_text(encoding="utf-8")
     analyzer = ANALYZER.read_text(encoding="utf-8")
+    gate_benchmark = GATE_BENCHMARK.read_text(encoding="utf-8")
     failures = []
 
     required_patch_fragments = (
@@ -57,10 +74,33 @@ def main() -> int:
         "FASTTRACK_MARKER",
         "CAPTURE_PREFIX",
         '"bucketCallTotal": bucket_calls',
+        '"candidateGate": summarize_candidate_gate(buckets, calls)',
+        '"eligibleCallsLowerBound": lower_bound',
+        '"eligibleCallsUpperBound": upper_bound',
+        '"ambiguousCalls": ambiguous',
     )
     for fragment in required_analyzer_fragments:
         if fragment not in analyzer:
             failures.append(f"capture analyzer contract missing: {fragment}")
+
+    try:
+        benchmark_gate = (
+            read_benchmark_constant(gate_benchmark, "MinDirtyCells"),
+            read_benchmark_constant(gate_benchmark, "MinShortRange"),
+            read_benchmark_constant(gate_benchmark, "MinLongRange"),
+        )
+        analyzer_gate = (
+            CANDIDATE_MIN_DIRTY_CELLS,
+            CANDIDATE_MIN_SHORT_RANGE,
+            CANDIDATE_MIN_LONG_RANGE,
+        )
+        if analyzer_gate != benchmark_gate:
+            failures.append(
+                "capture analyzer candidate gate drifted from NavGridAdaptiveGateBenchmark: "
+                f"analyzer={analyzer_gate}, benchmark={benchmark_gate}"
+            )
+    except ValueError as error:
+        failures.append(str(error))
 
     if not re.search(
         r"private\s+static\s+void\s+Prefix\s*\(",
@@ -99,8 +139,31 @@ def main() -> int:
             failures.append("capture analyzer did not preserve complete bucket totals")
         if len(parsed["buckets"]) != 2:
             failures.append("capture analyzer did not preserve all nonzero buckets")
+        gate = parsed["candidateGate"]
+        if gate["eligibleCallsLowerBound"] != 0 or gate["eligibleCallsUpperBound"] != 0:
+            failures.append("sub-threshold capture must have zero candidate-gate coverage")
     except CaptureError as error:
         failures.append(f"capture analyzer rejected valid fixture: {error}")
+
+    ambiguous_capture = valid_capture.replace(
+        "calls=3, empty=0, avgDirty=8.00, avgSeedBBox=20.00, "
+        "nonzeroBuckets=2, top=[dirty=8-15,rx=2,ry=4,density=<=1/4:2; "
+        "dirty=8-15,rx=4,ry=2,density=>1/2:1]",
+        "calls=4, empty=0, avgDirty=21.00, avgSeedBBox=20.00, "
+        "nonzeroBuckets=2, top=[dirty=16-23,rx=2,ry=4,density=<=1/4:3; "
+        "dirty=24-31,rx=2,ry=4,density=>1/2:1]",
+    )
+    try:
+        parsed = analyze_log(ambiguous_capture)
+        gate = parsed["candidateGate"]
+        if gate["eligibleCallsLowerBound"] != 1:
+            failures.append("candidate-gate lower bound must count only guaranteed buckets")
+        if gate["eligibleCallsUpperBound"] != 4:
+            failures.append("candidate-gate upper bound must include threshold-crossing buckets")
+        if gate["ambiguousCalls"] != 3:
+            failures.append("candidate-gate ambiguity must expose coarse 16-23 bucket calls")
+    except CaptureError as error:
+        failures.append(f"capture analyzer rejected ambiguous valid fixture: {error}")
 
     truncated_capture = valid_capture.replace(
         "; dirty=8-15,rx=4,ry=2,density=>1/2:1", ""
@@ -121,7 +184,7 @@ def main() -> int:
 
     print(
         "PASS CycleTrim NavGrid workload probe remains opt-in, observational, "
-        "and complete-capture evidence is validated"
+        "and complete-capture evidence is validated with candidate-gate bounds"
     )
     return 0
 
