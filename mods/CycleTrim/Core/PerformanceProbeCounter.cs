@@ -64,5 +64,29 @@ namespace CycleTrim.Core
         {
             get { return Calls == 0 ? 0d : (double)TotalTicks / Calls; }
         }
+
+        internal PerformanceProbeInterval DeltaSince(PerformanceProbeSnapshot previous)
+        {
+            return new PerformanceProbeInterval(
+                Calls - previous.Calls,
+                TotalTicks - previous.TotalTicks);
+        }
+    }
+
+    internal readonly struct PerformanceProbeInterval
+    {
+        internal PerformanceProbeInterval(long calls, long totalTicks)
+        {
+            Calls = calls < 0 ? 0 : calls;
+            TotalTicks = totalTicks < 0 ? 0 : totalTicks;
+        }
+
+        internal long Calls { get; }
+        internal long TotalTicks { get; }
+
+        internal double MeanTicks
+        {
+            get { return Calls == 0 ? 0d : (double)TotalTicks / Calls; }
+        }
     }
 }
