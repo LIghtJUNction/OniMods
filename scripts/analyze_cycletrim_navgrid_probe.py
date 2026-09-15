@@ -20,9 +20,99 @@ BUCKET_RE = re.compile(
     r"density=(?P<density>[^:]+):(?P<count>[0-9]+)"
 )
 
+# Keep these in sync with NavGridAdaptiveGateBenchmark. The probe histogram is
+# intentionally coarser than this candidate gate, so the analyzer reports a
+# lower/upper bound instead of pretending every captured bucket maps exactly.
+CANDIDATE_MIN_DIRTY_CELLS = 20
+CANDIDATE_MIN_SHORT_RANGE = 2
+CANDIDATE_MIN_LONG_RANGE = 4
+
 
 class CaptureError(ValueError):
     pass
+
+
+def parse_bucket_interval(label: str) -> tuple[int, int | None]:
+    if label.endswith("+"):
+        try:
+            return int(label[:-1]), None
+        except ValueError as error:
+            raise CaptureError(f"invalid open-ended bucket label: {label!r}") from error
+
+    if "-" in label:
+        lower_text, separator, upper_text = label.partition("-")
+        if not separator:
+            raise CaptureError(f"invalid bucket label: {label!r}")
+        try:
+            lower = int(lower_text)
+            upper = int(upper_text)
+        except ValueError as error:
+            raise CaptureError(f"invalid bucket label: {label!r}") from error
+        if lower > upper:
+            raise CaptureError(f"invalid descending bucket label: {label!r}")
+        return lower, upper
+
+    try:
+        value = int(label)
+    except ValueError as error:
+        raise CaptureError(f"invalid bucket label: {label!r}") from error
+    return value, value
+
+
+def candidate_gate_matches(dirty: int, range_x: int, range_y: int) -> bool:
+    short_range = min(range_x, range_y)
+    long_range = max(range_x, range_y)
+    return (
+        dirty >= CANDIDATE_MIN_DIRTY_CELLS
+        and short_range >= CANDIDATE_MIN_SHORT_RANGE
+        and long_range >= CANDIDATE_MIN_LONG_RANGE
+    )
+
+
+def upper_endpoint(interval: tuple[int, int | None]) -> int:
+    lower, upper = interval
+    return upper if upper is not None else max(
+        lower,
+        CANDIDATE_MIN_DIRTY_CELLS,
+        CANDIDATE_MIN_LONG_RANGE,
+    )
+
+
+def summarize_candidate_gate(buckets: list[dict], calls: int) -> dict:
+    lower_bound = 0
+    upper_bound = 0
+    for bucket in buckets:
+        dirty_interval = parse_bucket_interval(bucket["dirty"])
+        range_x_interval = parse_bucket_interval(bucket["rx"])
+        range_y_interval = parse_bucket_interval(bucket["ry"])
+        count = bucket["count"]
+
+        guaranteed = candidate_gate_matches(
+            dirty_interval[0],
+            range_x_interval[0],
+            range_y_interval[0],
+        )
+        possible = candidate_gate_matches(
+            upper_endpoint(dirty_interval),
+            upper_endpoint(range_x_interval),
+            upper_endpoint(range_y_interval),
+        )
+        if guaranteed:
+            lower_bound += count
+        if possible:
+            upper_bound += count
+
+    ambiguous = upper_bound - lower_bound
+    return {
+        "minDirtyCells": CANDIDATE_MIN_DIRTY_CELLS,
+        "minShortRange": CANDIDATE_MIN_SHORT_RANGE,
+        "minLongRange": CANDIDATE_MIN_LONG_RANGE,
+        "eligibleCallsLowerBound": lower_bound,
+        "eligibleCallsUpperBound": upper_bound,
+        "ambiguousCalls": ambiguous,
+        "eligibleFractionLowerBound": lower_bound / calls,
+        "eligibleFractionUpperBound": upper_bound / calls,
+    }
 
 
 def parse_capture_summary(summary: str) -> dict:
@@ -76,6 +166,7 @@ def parse_capture_summary(summary: str) -> dict:
         "nonzeroBuckets": nonzero_buckets,
         "bucketCallTotal": bucket_calls,
         "buckets": buckets,
+        "candidateGate": summarize_candidate_gate(buckets, calls),
     }
     for field in ("avgDirty", "avgSeedBBox"):
         if field in fields:
