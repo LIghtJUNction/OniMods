@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
+using CycleTrim.Core;
 using HarmonyLib;
 
 namespace CycleTrim.Patches
@@ -10,9 +10,6 @@ namespace CycleTrim.Patches
     {
         private const string FastTrackPatchType =
             "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate";
-        private static readonly ConcurrentStack<Dictionary<PickupKey, FetchManager.Pickup>>
-            CandidatePool =
-                new ConcurrentStack<Dictionary<PickupKey, FetchManager.Pickup>>();
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
             CompareIncludingPriority;
 
@@ -72,10 +69,8 @@ namespace CycleTrim.Patches
                 int worker,
                 Dictionary<int, int> ___cellCosts)
             {
-                if (!CandidatePool.TryPop(out var candidates))
-                {
-                    candidates = new Dictionary<PickupKey, FetchManager.Pickup>();
-                }
+                var candidates = ThreadLocalObjectPool<
+                    Dictionary<PickupKey, FetchManager.Pickup>>.Rent();
 
                 try
                 {
@@ -129,7 +124,8 @@ namespace CycleTrim.Patches
                 finally
                 {
                     candidates.Clear();
-                    CandidatePool.Push(candidates);
+                    ThreadLocalObjectPool<
+                        Dictionary<PickupKey, FetchManager.Pickup>>.Return(candidates);
                 }
             }
 
