@@ -60,7 +60,8 @@ namespace OniMcp.Server
                 || (requestId != null && requestId.Type != JTokenType.Null && requestId.Type != JTokenType.String
                     && requestId.Type != JTokenType.Integer && requestId.Type != JTokenType.Float))
             {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), 200);
+                int statusCode = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal) ? 400 : 200;
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), statusCode);
                 return;
             }
 
