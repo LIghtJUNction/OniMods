@@ -51,6 +51,10 @@ internal static class Program
         {
             try
             {
+                AssertBatchEnvelopeRejected(client, "2026-07-28");
+                AssertBatchEnvelopeRejected(client, "2025-11-25");
+                AssertMalformedJsonStillParseError(client);
+
                 const string metaWithoutClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
                 string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3002,\"params\":{" + metaWithoutClientInfo + "}}";
                 using (var response = PostModern(client, discover, "server/discover"))
@@ -110,6 +114,32 @@ internal static class Program
         }
     }
 
+    private static void AssertBatchEnvelopeRejected(HttpClient client, string protocolVersion)
+    {
+        const string batch = "[{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}},{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"ping\",\"params\":{}}]";
+        using (var response = PostRaw(client, batch, protocolVersion))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "JSON-RPC batch was not rejected with HTTP 400 for " + protocolVersion);
+            JObject json = ReadJson(response);
+            Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                "JSON-RPC batch was misclassified instead of InvalidRequest for " + protocolVersion);
+            Assert(json["id"]?.Type == JTokenType.Null,
+                "Batch rejection unexpectedly attached a request id for " + protocolVersion);
+        }
+    }
+
+    private static void AssertMalformedJsonStillParseError(HttpClient client)
+    {
+        using (var response = PostRaw(client, "[{\"jsonrpc\":\"2.0\"", "2026-07-28"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK,
+                "Malformed JSON changed its existing transport status");
+            Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
+                "Malformed JSON no longer returns ParseError");
+        }
+    }
+
     private static void AssertParamsShapeRejected(HttpClient client, string body, string message)
     {
         using (var response = PostModern(client, body, "server/discover"))
@@ -148,6 +178,18 @@ internal static class Program
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", method);
+            var work = client.SendAsync(request);
+            PumpUntil(work);
+            return work.GetAwaiter().GetResult();
+        }
+    }
+
+    private static HttpResponseMessage PostRaw(HttpClient client, string json, string protocolVersion)
+    {
+        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+        {
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.Add("Mcp-Protocol-Version", protocolVersion);
             var work = client.SendAsync(request);
             PumpUntil(work);
             return work.GetAwaiter().GetResult();
