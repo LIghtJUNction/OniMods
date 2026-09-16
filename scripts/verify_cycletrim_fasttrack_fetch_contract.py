@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify CycleTrim's pinned FastTrack fetch compatibility assumptions."""
+"""Verify CycleTrim's pinned FastTrack fetch/pickup compatibility assumptions."""
 
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "scripts/upstream/cycletrim-fasttrack-fetch.json"
-CYCLETRIM_PATCH = ROOT / "mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs"
+CYCLETRIM_FETCH_PATCH = ROOT / "mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs"
+CYCLETRIM_BUSY_PATCH = ROOT / "mods/CycleTrim/Patches/BusyDuplicantChoreThrottlePatch.cs"
 RAW_ROOT = "https://raw.githubusercontent.com"
 
 
@@ -82,24 +83,58 @@ def verify_local(manifest: dict, failures: list[str]) -> None:
             if not isinstance(blob, str) or re.fullmatch(r"[0-9a-f]{40}", blob) is None:
                 fail(f"invalid Git blob SHA for {path!r}", failures)
 
-    patch = CYCLETRIM_PATCH.read_text(encoding="utf-8")
+    fetch_patch = CYCLETRIM_FETCH_PATCH.read_text(encoding="utf-8")
     require_text(
-        patch,
+        fetch_patch,
         '"PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate"',
-        "CycleTrim FastTrack type marker changed",
+        "CycleTrim Fetch FastTrack type marker changed",
         failures,
     )
     require_regex(
-        patch,
+        fetch_patch,
         r"return\s+AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null\s*;",
-        "CycleTrim no longer uses the conservative type-presence guard",
+        "CycleTrim Fetch no longer uses the conservative type-presence guard",
         failures,
     )
     require_regex(
-        patch,
+        fetch_patch,
         r'typeof\(FetchManager\.FetchablesByPrefabId\).*?"UpdatePickups".*?'
         r'new\[\]\s*\{\s*typeof\(Navigator\),\s*typeof\(int\)\s*\}',
         "CycleTrim Fetch target signature changed",
+        failures,
+    )
+
+    busy_patch = CYCLETRIM_BUSY_PATCH.read_text(encoding="utf-8")
+    require_text(
+        busy_patch,
+        '"PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate"',
+        "CycleTrim busy-duplicant FastTrack type marker changed",
+        failures,
+    )
+    require_regex(
+        busy_patch,
+        r"return\s+AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null\s*;",
+        "CycleTrim busy-duplicant patch no longer uses the conservative type-presence guard",
+        failures,
+    )
+    require_regex(
+        busy_patch,
+        r"AccessTools\.Method\(\s*typeof\(PickupableSensor\),\s*\"Update\",\s*Type\.EmptyTypes\s*\)",
+        "CycleTrim busy-duplicant pickup target is no longer PickupableSensor.Update()",
+        failures,
+    )
+    require_regex(
+        busy_patch,
+        r"AccessTools\.Method\(\s*typeof\(ChoreConsumer\),\s*\"FindNextChore\",\s*"
+        r"new\[\]\s*\{\s*typeof\(Chore\.Precondition\.Context\)\.MakeByRefType\(\)\s*\}\s*\)",
+        "CycleTrim busy-duplicant chore target is no longer ChoreConsumer.FindNextChore(ref Context)",
+        failures,
+    )
+    require_regex(
+        busy_patch,
+        r"AccessTools\.Method\(\s*typeof\(BrainScheduler\),\s*\"PrioritizeBrain\",\s*"
+        r"new\[\]\s*\{\s*typeof\(Brain\)\s*\}\s*\)",
+        "CycleTrim busy-duplicant priority target is no longer BrainScheduler.PrioritizeBrain(Brain)",
         failures,
     )
 
@@ -131,6 +166,7 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
         "FastTrack/FastTrackOptions.cs",
         "FastTrack/FastTrackCompat.cs",
         "FastTrack/GamePatches/FetchManagerFastUpdate.cs",
+        "FastTrack/SensorPatches/SensorPatches.cs",
     }
     missing = required_paths - sources.keys()
     if missing:
@@ -141,6 +177,7 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
     options = sources["FastTrack/FastTrackOptions.cs"]
     compat = sources["FastTrack/FastTrackCompat.cs"]
     fetch_patch = sources["FastTrack/GamePatches/FetchManagerFastUpdate.cs"]
+    sensors = sources["FastTrack/SensorPatches/SensorPatches.cs"]
 
     require_regex(
         mod,
@@ -192,13 +229,46 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
         failures,
     )
 
+    require_regex(
+        options,
+        r"public\s+bool\s+PickupOpts\s*\{\s*get;\s*set;\s*\}",
+        "FastTrack PickupOpts option declaration changed",
+        failures,
+    )
+    require_regex(
+        options,
+        r"\bPickupOpts\s*=\s*true\s*;",
+        "FastTrack PickupOpts default is no longer true",
+        failures,
+    )
+    require_regex(
+        sensors,
+        r"\[HarmonyPatch\(typeof\(PickupableSensor\),\s*nameof\(PickupableSensor\.Update\)\)\]\s*"
+        r"public\s+static\s+class\s+PickupableSensor_Update_Patch",
+        "FastTrack PickupableSensor.Update target changed",
+        failures,
+    )
+    require_regex(
+        sensors,
+        r"internal\s+static\s+bool\s+Prepare\(\)\s*=>\s*FastTrackOptions\.Instance\.PickupOpts\s*;",
+        "FastTrack PickupableSensor replacement is no longer gated by PickupOpts",
+        failures,
+    )
+    require_regex(
+        sensors,
+        r"\[HarmonyPriority\(Priority\.Low\)\]\s*internal\s+static\s+bool\s+Prefix\(\)\s*"
+        r"\{\s*return\s+false\s*;\s*\}",
+        "FastTrack PickupableSensor prefix no longer replaces the original method at low priority",
+        failures,
+    )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--verify-upstream",
         action="store_true",
-        help="download the immutable pinned FastTrack sources and verify activation/target assumptions",
+        help="download immutable pinned FastTrack sources and verify fetch/pickup activation assumptions",
     )
     args = parser.parse_args()
 
@@ -220,7 +290,7 @@ def main() -> int:
 
     mode = "local + pinned upstream" if args.verify_upstream else "local"
     print(
-        "OK: CycleTrim FastTrack fetch compatibility contract "
+        "OK: CycleTrim FastTrack fetch/pickup compatibility contract "
         f"({mode}, {manifest['repository']}@{manifest['commit']})"
     )
     return 0
