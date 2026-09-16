@@ -122,10 +122,13 @@ namespace OniMcp.Tools
     }
     public static class OniResourceRegistry
     {
+        public static int ResourceReads;
+
         public static List<McpResourceInfo> GetResourceInfos() => new List<McpResourceInfo>
         {
             new McpResourceInfo { Uri = "oni://test", Name = "test", MimeType = "text/plain" },
-            new McpResourceInfo { Uri = "oni://测试", Name = "unicode-test", MimeType = "text/plain" }
+            new McpResourceInfo { Uri = "oni://测试", Name = "unicode-test", MimeType = "text/plain" },
+            new McpResourceInfo { Uri = "oni://world/coordinate-screenshot", Name = "navigation_control", MimeType = "application/json" }
         };
 
         public static List<McpResourceTemplateInfo> GetResourceTemplateInfos() => new List<McpResourceTemplateInfo>
@@ -135,11 +138,34 @@ namespace OniMcp.Tools
                 UriTemplate = "oni://template/{id}/data",
                 Name = "template-test",
                 MimeType = "application/json"
+            },
+            new McpResourceTemplateInfo
+            {
+                UriTemplate = "oni://world/coordinate-screenshot{?filename}",
+                Name = "navigation_control",
+                MimeType = "application/json"
             }
         };
 
         public static ReadResourceResult ReadResource(string uri)
         {
+            if (uri == "oni://world/coordinate-screenshot")
+            {
+                ResourceReads++;
+                return new ReadResourceResult
+                {
+                    Contents = new List<TextResourceContent>
+                    {
+                        new TextResourceContent
+                        {
+                            Uri = uri,
+                            MimeType = "application/json",
+                            Text = "{\"queued\":true,\"sideEffect\":true}"
+                        }
+                    }
+                };
+            }
+
             if (uri == "oni://test" || uri == "oni://测试")
             {
                 return new ReadResourceResult
