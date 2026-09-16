@@ -191,14 +191,15 @@ namespace OniMcp.Tools
                 Handler = args =>
                 {
                     bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
-                    string policyError = SandboxFloodFillExecution.Validate(
-                        dryRun,
-                        Game.Instance != null,
-                        ToolUtil.GetBool(args, "confirm", false),
-                        Game.Instance?.SandboxModeActive ?? false,
-                        ToolUtil.GetBool(args, "force", false));
-                    if (policyError != null)
-                        return CallToolResult.Error(policyError);
+                    if (dryRun)
+                    {
+                        if (Game.Instance == null)
+                            return CallToolResult.Error("Game not initialized");
+                    }
+                    else if (!ValidateSandbox(args, out string error))
+                    {
+                        return CallToolResult.Error(error);
+                    }
 
                     int? x = ToolUtil.GetInt(args, "x");
                     int? y = ToolUtil.GetInt(args, "y");
@@ -227,24 +228,10 @@ namespace OniMcp.Tools
                     float mass = targetElement.IsVacuum ? 0f : Math.Max(0f, ToolUtil.GetFloat(args, "massKg") ?? 1f);
                     float temp = ToolUtil.GetFloat(args, "temperatureK") ?? targetElement.defaultValues.temperature;
 
-                    int changed = SandboxFloodFillExecution.Apply(cells, dryRun, cell =>
-                        SimMessages.ReplaceElement(cell, targetElement.id, CellEventLogger.Instance.SandBoxTool, mass, temp, diseaseIdx, diseaseCount));
-                    var result = new Dictionary<string, object>
-                    {
-                        ["dryRun"] = dryRun,
-                        ["affected"] = cells.Count,
-                        ["changed"] = changed,
-                        ["fromElement"] = sourceElement.ToString(),
-                        ["element"] = targetElement.id.ToString(),
-                        ["massKg"] = mass,
-                        ["temperatureK"] = temp,
-                        ["worldId"] = worldId,
-                        ["start"] = new { x = x.Value, y = y.Value, cell = startCell }
-                    };
                     if (dryRun)
                     {
                         var previewCells = new List<Dictionary<string, int>>(cells.Count);
-                        foreach (int cell in cells)
+                        SandboxFloodFillExecution.VisitPreviewCells(cells, cell =>
                         {
                             Grid.CellToXY(cell, out int cellX, out int cellY);
                             previewCells.Add(new Dictionary<string, int>
@@ -253,11 +240,35 @@ namespace OniMcp.Tools
                                 ["y"] = cellY,
                                 ["cell"] = cell
                             });
-                        }
-                        result["cells"] = previewCells;
+                        });
+                        return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        {
+                            ["dryRun"] = true,
+                            ["affected"] = cells.Count,
+                            ["changed"] = 0,
+                            ["cells"] = previewCells,
+                            ["fromElement"] = sourceElement.ToString(),
+                            ["element"] = targetElement.id.ToString(),
+                            ["massKg"] = mass,
+                            ["temperatureK"] = temp,
+                            ["worldId"] = worldId,
+                            ["start"] = new { x = x.Value, y = y.Value, cell = startCell }
+                        }, McpJsonUtil.Settings));
                     }
 
-                    return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
+                    foreach (int cell in cells)
+                        SimMessages.ReplaceElement(cell, targetElement.id, CellEventLogger.Instance.SandBoxTool, mass, temp, diseaseIdx, diseaseCount);
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["changed"] = cells.Count,
+                        ["fromElement"] = sourceElement.ToString(),
+                        ["element"] = targetElement.id.ToString(),
+                        ["massKg"] = mass,
+                        ["temperatureK"] = temp,
+                        ["worldId"] = worldId,
+                        ["start"] = new { x = x.Value, y = y.Value, cell = startCell }
+                    }, McpJsonUtil.Settings));
                 }
             };
         }
