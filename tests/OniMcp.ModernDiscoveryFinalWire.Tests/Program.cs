@@ -58,6 +58,7 @@ internal static class Program
                     "Boolean modern request id did not use HTTP 400");
                 AssertInvalidRequestIdRejected(client, "{}",
                     "Object modern request id did not use HTTP 400");
+                AssertLegacyInvalidRequestIdStatusPreserved(client, "true");
 
                 const string metaWithoutClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
                 string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3002,\"params\":{" + metaWithoutClientInfo + "}}";
@@ -157,6 +158,21 @@ internal static class Program
                 "Invalid modern request id used the wrong JSON-RPC error code");
             Assert(json["id"]?.Type == JTokenType.Null,
                 "Invalid modern request id was echoed in the error response");
+        }
+    }
+
+    private static void AssertLegacyInvalidRequestIdStatusPreserved(HttpClient client, string rawId)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":" + rawId + ",\"params\":{}}";
+        using (var response = PostRaw(client, body, "2025-11-25"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK,
+                "Legacy invalid request-id transport status changed");
+            JObject json = ReadJson(response);
+            Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                "Legacy invalid request id changed JSON-RPC classification");
+            Assert(json["id"]?.Type == JTokenType.Null,
+                "Legacy invalid request id unexpectedly appeared in the error response");
         }
     }
 
