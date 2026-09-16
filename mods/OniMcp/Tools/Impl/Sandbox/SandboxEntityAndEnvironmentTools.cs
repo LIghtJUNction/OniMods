@@ -172,7 +172,7 @@ namespace OniMcp.Tools
                 Hidden = true,
                 Aliases = new List<string> { "sandbox_bucket_fill", "debug_flood_fill_element" },
                 Tags = new List<string> { "sandbox", "flood", "bucket", "element" },
-                Description = "兼容入口：沙盒桶填充。新调用请使用 game_control domain=sandbox kind=area action=flood_fill。",
+                Description = "兼容入口：沙盒桶填充。新调用请使用 game_control domain=sandbox kind=area action=flood_fill。dryRun=true 时仅返回将受影响的连通格，不写入游戏。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["x"] = new McpToolParameter { Type = "integer", Description = "起点格子 X", Required = true },
@@ -184,13 +184,21 @@ namespace OniMcp.Tools
                     ["disease"] = new McpToolParameter { Type = "string", Description = "病菌 ID，默认无", Required = false },
                     ["diseaseCount"] = new McpToolParameter { Type = "integer", Description = "每格病菌数量，默认 0", Required = false },
                     ["maxCells"] = new McpToolParameter { Type = "integer", Description = "安全上限，默认/最大 1000；超过则拒绝不修改", Required = false },
-                    ["force"] = new McpToolParameter { Type = "boolean", Description = "允许非沙盒模式执行，默认 false", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认，必须为 true", Required = true }
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "仅预览受影响连通格，不调用 ReplaceElement；默认 false", Required = false },
+                    ["force"] = new McpToolParameter { Type = "boolean", Description = "允许非沙盒模式执行，默认 false；dryRun 时忽略", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "实际写入时必须为 true；dryRun 时可省略", Required = false }
                 },
                 Handler = args =>
                 {
-                    if (!ValidateSandbox(args, out string error))
-                        return CallToolResult.Error(error);
+                    bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
+                    string policyError = SandboxFloodFillExecution.Validate(
+                        dryRun,
+                        Game.Instance != null,
+                        ToolUtil.GetBool(args, "confirm", false),
+                        Game.Instance?.SandboxModeActive ?? false,
+                        ToolUtil.GetBool(args, "force", false));
+                    if (policyError != null)
+                        return CallToolResult.Error(policyError);
 
                     int? x = ToolUtil.GetInt(args, "x");
                     int? y = ToolUtil.GetInt(args, "y");
@@ -219,19 +227,37 @@ namespace OniMcp.Tools
                     float mass = targetElement.IsVacuum ? 0f : Math.Max(0f, ToolUtil.GetFloat(args, "massKg") ?? 1f);
                     float temp = ToolUtil.GetFloat(args, "temperatureK") ?? targetElement.defaultValues.temperature;
 
-                    foreach (int cell in cells)
-                        SimMessages.ReplaceElement(cell, targetElement.id, CellEventLogger.Instance.SandBoxTool, mass, temp, diseaseIdx, diseaseCount);
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    int changed = SandboxFloodFillExecution.Apply(cells, dryRun, cell =>
+                        SimMessages.ReplaceElement(cell, targetElement.id, CellEventLogger.Instance.SandBoxTool, mass, temp, diseaseIdx, diseaseCount));
+                    var result = new Dictionary<string, object>
                     {
-                        ["changed"] = cells.Count,
+                        ["dryRun"] = dryRun,
+                        ["affected"] = cells.Count,
+                        ["changed"] = changed,
                         ["fromElement"] = sourceElement.ToString(),
                         ["element"] = targetElement.id.ToString(),
                         ["massKg"] = mass,
                         ["temperatureK"] = temp,
                         ["worldId"] = worldId,
                         ["start"] = new { x = x.Value, y = y.Value, cell = startCell }
-                    }, McpJsonUtil.Settings));
+                    };
+                    if (dryRun)
+                    {
+                        var previewCells = new List<Dictionary<string, int>>(cells.Count);
+                        foreach (int cell in cells)
+                        {
+                            Grid.CellToXY(cell, out int cellX, out int cellY);
+                            previewCells.Add(new Dictionary<string, int>
+                            {
+                                ["x"] = cellX,
+                                ["y"] = cellY,
+                                ["cell"] = cell
+                            });
+                        }
+                        result["cells"] = previewCells;
+                    }
+
+                    return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
             };
         }
