@@ -64,6 +64,8 @@ def main() -> int:
         ('"BrainScheduler.RenderEveryTick"', "analyzer does not require brain scheduler evidence"),
         ('"RoomProber.Sim1000ms"', "analyzer does not require room prober evidence"),
         ('"--series"', "analyzer cannot validate an in-run report series"),
+        ('"--reject-fasttrack"', "analyzer cannot fail closed on FastTrack-owned baseline captures"),
+        ("fastTrackPatched changed within one capture", "analyzer does not reject mid-capture FastTrack ownership drift"),
         ("intervalCalls does not match cumulative delta", "analyzer does not close interval call arithmetic"),
         ("intervalTotalTicks does not match cumulative delta", "analyzer does not close interval timing arithmetic"),
     ):
