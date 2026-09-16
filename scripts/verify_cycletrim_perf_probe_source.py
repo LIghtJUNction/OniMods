@@ -22,12 +22,14 @@ def main() -> int:
     failures = []
 
     require(patch, '"CYCLETRIM_PERF_PROBE"', "opt-in environment switch missing", failures)
-    if patch.count("if (!IsRequested())") != 6:
-        failures.append("all six Harmony probe targets must fail closed when the probe is disabled")
+    if patch.count("if (!IsRequested())") != 7:
+        failures.append("all seven Harmony probe targets must fail closed when the probe is disabled")
     require(patch, "Stopwatch.GetTimestamp()", "wall-clock Stopwatch timing missing", failures)
     require(patch, "RecordWorker(asyncWorkCounter", "worker path is not separated from main-thread timing", failures)
+    require(patch, "RecordMain(navigatorProbeCounter", "navigator probe timing is not recorded on the main-thread path", failures)
     require(patch, "RecordMain(brainSchedulerCounter", "brain scheduler timing is not recorded on the main-thread path", failures)
     require(patch, "RecordMain(roomProberCounter", "room prober timing is not recorded on the main-thread path", failures)
+    require(patch, '"Navigator.UpdateProbe"', "navigator probe target is missing from reports", failures)
     require(patch, '"BrainScheduler.RenderEveryTick"', "brain scheduler target is missing from reports", failures)
     require(patch, '"RoomProber.Sim1000ms"', "room prober target is missing from reports", failures)
     require(patch, '"worker"', "worker thread context is missing from reports", failures)
@@ -61,6 +63,7 @@ def main() -> int:
         ("calls <= 0", "analyzer does not fail zero-call captures"),
         ('target.get("resolved") is not True', "analyzer does not fail unresolved targets"),
         ("fastTrackPatched", "analyzer does not surface FastTrack ownership"),
+        ('"Navigator.UpdateProbe"', "analyzer does not require navigator probe evidence"),
         ('"BrainScheduler.RenderEveryTick"', "analyzer does not require brain scheduler evidence"),
         ('"RoomProber.Sim1000ms"', "analyzer does not require room prober evidence"),
         ('"--series"', "analyzer cannot validate an in-run report series"),
