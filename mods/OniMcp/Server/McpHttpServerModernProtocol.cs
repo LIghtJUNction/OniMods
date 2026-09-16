@@ -92,10 +92,18 @@ namespace OniMcp.Server
             }
 
             bool isNotification = rawMessage.Property("id") == null;
-            if (isNotification && IsModernRequestMethod(method))
+            if (isNotification)
             {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                    $"Modern request method '{method}' requires a request id"), 200);
+                if (IsModernRequestMethod(method))
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                        $"Modern request method '{method}' requires a request id"), 200);
+                }
+                else
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.MethodNotFound,
+                        $"Notification method is not available on the {ModernProtocolVersion} compatibility path: {method}"), 404);
+                }
                 return true;
             }
 
@@ -108,19 +116,6 @@ namespace OniMcp.Server
             {
                 SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
                     $"Invalid modern MCP request: {ex.Message}"), 200);
-                return true;
-            }
-
-            if (isNotification)
-            {
-                MainThreadBridge.Enqueue(new System.Action(() =>
-                {
-                    if (_running)
-                        ProcessModernMethod(rpcRequest);
-                }));
-                response.StatusCode = 202;
-                response.ContentLength64 = 0;
-                response.Close();
                 return true;
             }
 
@@ -217,7 +212,6 @@ namespace OniMcp.Server
             return string.IsNullOrEmpty(uriTemplate)
                 || !uriTemplate.StartsWith("oni://world/coordinate-screenshot", StringComparison.Ordinal);
         }
-
         private static JsonRpcResponse ModernToolMethodUnavailable(JsonRpcRequest request)
         {
             return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
