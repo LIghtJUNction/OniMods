@@ -34,6 +34,7 @@ def main() -> None:
     safety = (BUILD / "BuildPlanningPlacementSafety.cs").read_text(encoding="utf-8")
     obstructions = (BUILD / "BuildPlanningObstructions.cs").read_text(encoding="utf-8")
     geometry = (BUILD / "BuildPlanningPlacementGeometry.cs").read_text(encoding="utf-8")
+    identity = (BUILD / "BuildPlacementIdentityPolicy.cs").read_text(encoding="utf-8")
     models = (BUILD / "BuildPlanningTools.cs").read_text(encoding="utf-8")
     plan_one = (BUILD / "BuildPlanningPlanOne.cs").read_text(encoding="utf-8")
     completion = (BUILD / "BuildPlanningInstantCompletion.cs").read_text(encoding="utf-8")
@@ -98,6 +99,18 @@ def main() -> None:
     placement_model = body(models, "private sealed class PlacementDetails")
     assert "public Orientation Orientation" in placement_model
     assert plan_one.count("BuildPlacementDetails(def, x, y, worldId, orientation)") == 2
+
+    actual_placement = body(geometry, "private static Dictionary<string, object> ActualPlacementDetails")
+    ordered(actual_placement, "go.GetComponent<Rotatable>()", "rotatable.GetOrientation()", '["orientation"]',
+            '["orientationRelevant"]')
+    comparison = body(geometry, "private static Dictionary<string, object> ComparePlacement")
+    ordered(comparison, "BuildPlacementIdentityPolicy.Evaluate(", '["valid"] = identity.Valid',
+            '["orientationMatches"] = identity.OrientationMatches', '["expectedOrientation"]', '["actualOrientation"]')
+    policy = body(identity, "internal static BuildPlacementIdentityResult Evaluate")
+    assert "actualX == expectedX && actualY == expectedY" in policy
+    assert "actualWorldId < 0 || expectedWorldId < 0 || actualWorldId == expectedWorldId" in policy
+    assert "!orientationRelevant" in policy
+    assert "StringComparison.OrdinalIgnoreCase" in policy
 
     planning = body(plan_one, "private static Dictionary<string, object> TryPlanOne")
     assert planning.count("ValidateFootprint(") >= 2

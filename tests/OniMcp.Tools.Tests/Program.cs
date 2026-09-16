@@ -36,6 +36,7 @@ internal static class Program
         TestProgramValidation();
         TestProgramExecution();
         TestNumbers();
+        TestBuildPlacementIdentity();
         TestRegexBoundaries();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
@@ -123,6 +124,27 @@ internal static class Program
             Check(Run("[{op:'return',value:" + expression + "}]").IsError, "non-finite arithmetic rejected: " + expression);
         foreach (string count in new[] { "0.5", "2147483648", "-0.5" })
             Check(Run("[{op:'repeat',count:" + count + ",do:[]}]").IsError, "invalid repeat count rejected: " + count);
+    }
+
+    private static void TestBuildPlacementIdentity()
+    {
+        var exact = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "R90", 10, 20, 0, "R90", true);
+        Check(exact.Valid && exact.AnchorMatches && exact.WorldMatches && exact.OrientationMatches,
+            "same oriented placement is reusable");
+
+        var rotated = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "R90", 10, 20, 0, "Neutral", true);
+        Check(!rotated.Valid && rotated.AnchorMatches && rotated.WorldMatches && !rotated.OrientationMatches,
+            "same prefab anchor with a different relevant orientation is not reusable");
+
+        var orientationIrrelevant = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "R90", 10, 20, 0, "Neutral", false);
+        Check(orientationIrrelevant.Valid && orientationIrrelevant.OrientationMatches,
+            "orientation-insensitive placement preserves previous anchor/world identity");
+
+        var wrongWorld = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "Neutral", 10, 20, 1, "Neutral", true);
+        Check(!wrongWorld.Valid && !wrongWorld.WorldMatches, "known world mismatch remains invalid");
+
+        var unknownWorld = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "Neutral", 10, 20, -1, "Neutral", true);
+        Check(unknownWorld.Valid && unknownWorld.WorldMatches, "unknown actual world preserves the existing wildcard behavior");
     }
 
     private static void TestRegexBoundaries()
