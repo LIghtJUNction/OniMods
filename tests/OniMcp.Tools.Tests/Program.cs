@@ -37,6 +37,7 @@ internal static class Program
         TestProgramExecution();
         TestNumbers();
         TestRegexBoundaries();
+        TestFloodFillPreviewCells();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -147,6 +148,16 @@ internal static class Program
             catch (RegexMatchTimeoutException) { timedOut = true; }
             Check(timedOut, "map regex propagates its timeout");
         }
+    }
+
+    private static void TestFloodFillPreviewCells()
+    {
+        int[] cells = { 11, 12, 13 };
+        var visited = new System.Collections.Generic.List<int>();
+        SandboxFloodFillExecution.VisitPreviewCells(cells, cell => visited.Add(cell));
+        Check(visited.Count == cells.Length, "flood-fill preview must visit every planned cell exactly once");
+        for (int i = 0; i < cells.Length; i++)
+            Check(visited[i] == cells[i], "flood-fill preview must preserve the production plan order");
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
