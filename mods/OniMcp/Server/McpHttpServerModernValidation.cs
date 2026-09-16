@@ -32,9 +32,10 @@ namespace OniMcp.Server
                 return false;
             }
 
-            if (!string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal))
+            if (!string.Equals(metaVersion, protocolVersion, StringComparison.Ordinal))
             {
-                error = UnsupportedProtocolVersion(rawMessage["id"], metaVersion);
+                error = HeaderMismatch(rawMessage["id"],
+                    $"Mcp-Protocol-Version '{protocolVersion}' must match params._meta.io.modelcontextprotocol/protocolVersion '{metaVersion}'");
                 return false;
             }
 
