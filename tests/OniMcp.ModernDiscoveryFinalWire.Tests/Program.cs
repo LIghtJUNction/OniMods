@@ -76,6 +76,13 @@ internal static class Program
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern discovery allocated legacy session state");
 
+                AssertParamsShapeRejected(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3005,\"params\":[]}",
+                    "Array params caused a modern request to escape normal InvalidParams handling");
+                AssertParamsShapeRejected(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3006,\"params\":\"invalid\"}",
+                    "Scalar params caused a modern request to escape normal InvalidParams handling");
+
                 const string validClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"wire-test\",\"version\":\"1.0\"}}";
                 AssertClientInfoAccepted(client, validClientInfo,
                     "A conforming present clientInfo object was rejected");
@@ -100,6 +107,16 @@ internal static class Program
             {
                 server.StopServer();
             }
+        }
+    }
+
+    private static void AssertParamsShapeRejected(HttpClient client, string body, string message)
+    {
+        using (var response = PostModern(client, body, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest, message);
+            Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                "Malformed modern params used the wrong JSON-RPC error code");
         }
     }
 
