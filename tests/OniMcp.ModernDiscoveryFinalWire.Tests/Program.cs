@@ -54,6 +54,10 @@ internal static class Program
                 AssertBatchEnvelopeRejected(client, "2026-07-28");
                 AssertBatchEnvelopeRejected(client, "2025-11-25");
                 AssertMalformedJsonStillParseError(client);
+                AssertInvalidRequestIdRejected(client, "true",
+                    "Boolean modern request id was accepted");
+                AssertInvalidRequestIdRejected(client, "{}",
+                    "Object modern request id was accepted");
 
                 const string metaWithoutClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
                 string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3002,\"params\":{" + metaWithoutClientInfo + "}}";
@@ -137,6 +141,22 @@ internal static class Program
                 "Malformed JSON changed its existing transport status");
             Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
                 "Malformed JSON no longer returns ParseError");
+        }
+    }
+
+    private static void AssertInvalidRequestIdRejected(HttpClient client, string rawId, string message)
+    {
+        const string meta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":" + rawId
+            + ",\"params\":{" + meta + "}}";
+        using (var response = PostModern(client, body, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest, message);
+            JObject json = ReadJson(response);
+            Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                "Invalid modern request id used the wrong JSON-RPC error code");
+            Assert(json["id"]?.Type == JTokenType.Null,
+                "Invalid modern request id was echoed in the error response");
         }
     }
 
