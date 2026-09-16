@@ -22,12 +22,14 @@ namespace CycleTrim.Patches
 
         private static PerformanceProbeCounter asyncTickCounter;
         private static PerformanceProbeCounter asyncWorkCounter;
+        private static PerformanceProbeCounter navigatorProbeCounter;
         private static PerformanceProbeCounter fetchCounter;
         private static PerformanceProbeCounter choreCounter;
         private static PerformanceProbeCounter brainSchedulerCounter;
         private static PerformanceProbeCounter roomProberCounter;
         private static MethodBase asyncTickTarget;
         private static MethodBase asyncWorkTarget;
+        private static MethodBase navigatorProbeTarget;
         private static MethodBase fetchTarget;
         private static MethodBase choreTarget;
         private static MethodBase brainSchedulerTarget;
@@ -46,6 +48,7 @@ namespace CycleTrim.Patches
         private static long reportSequence;
         private static PerformanceProbeSnapshot lastAsyncTickSnapshot;
         private static PerformanceProbeSnapshot lastAsyncWorkSnapshot;
+        private static PerformanceProbeSnapshot lastNavigatorProbeSnapshot;
         private static PerformanceProbeSnapshot lastFetchSnapshot;
         private static PerformanceProbeSnapshot lastChoreSnapshot;
         private static PerformanceProbeSnapshot lastBrainSchedulerSnapshot;
@@ -68,6 +71,7 @@ namespace CycleTrim.Patches
 
             asyncTickCounter = new PerformanceProbeCounter();
             asyncWorkCounter = new PerformanceProbeCounter();
+            navigatorProbeCounter = new PerformanceProbeCounter();
             fetchCounter = new PerformanceProbeCounter();
             choreCounter = new PerformanceProbeCounter();
             brainSchedulerCounter = new PerformanceProbeCounter();
@@ -171,6 +175,7 @@ namespace CycleTrim.Patches
             var heapBytes = GC.GetTotalMemory(false);
             var asyncTickSnapshot = asyncTickCounter.Snapshot();
             var asyncWorkSnapshot = asyncWorkCounter.Snapshot();
+            var navigatorProbeSnapshot = navigatorProbeCounter.Snapshot();
             var fetchSnapshot = fetchCounter.Snapshot();
             var choreSnapshot = choreCounter.Snapshot();
             var brainSchedulerSnapshot = brainSchedulerCounter.Snapshot();
@@ -203,6 +208,14 @@ namespace CycleTrim.Patches
                 asyncWorkTarget,
                 asyncWorkSnapshot,
                 lastAsyncWorkSnapshot);
+            summary.Append(',');
+            AppendTarget(
+                summary,
+                "Navigator.UpdateProbe",
+                "main",
+                navigatorProbeTarget,
+                navigatorProbeSnapshot,
+                lastNavigatorProbeSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -244,6 +257,7 @@ namespace CycleTrim.Patches
             lastReportTimestamp = reportedAt;
             lastAsyncTickSnapshot = asyncTickSnapshot;
             lastAsyncWorkSnapshot = asyncWorkSnapshot;
+            lastNavigatorProbeSnapshot = navigatorProbeSnapshot;
             lastFetchSnapshot = fetchSnapshot;
             lastChoreSnapshot = choreSnapshot;
             lastBrainSchedulerSnapshot = brainSchedulerSnapshot;
@@ -380,6 +394,40 @@ namespace CycleTrim.Patches
             private static Exception Finalizer(Exception __exception, long __state)
             {
                 RecordWorker(asyncWorkCounter, __state);
+                return __exception;
+            }
+        }
+
+        [HarmonyPatch]
+        private static class NavigatorUpdateProbe
+        {
+            private static bool Prepare()
+            {
+                if (!IsRequested())
+                {
+                    return false;
+                }
+                navigatorProbeTarget = ResolveTarget(
+                    typeof(Navigator),
+                    "UpdateProbe",
+                    new[] { typeof(bool) });
+                return navigatorProbeTarget != null;
+            }
+
+            private static MethodBase TargetMethod()
+            {
+                return navigatorProbeTarget;
+            }
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(out long __state)
+            {
+                __state = BeginTiming();
+            }
+
+            private static Exception Finalizer(Exception __exception, long __state)
+            {
+                RecordMain(navigatorProbeCounter, __state);
                 return __exception;
             }
         }

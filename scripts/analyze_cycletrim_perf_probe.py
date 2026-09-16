@@ -11,6 +11,7 @@ MARKER = "[CycleTrim][PerfProbe] {"
 DEFAULT_REQUIRED = (
     "AsyncPathProber.Manager.TickFrame",
     "AsyncPathProber.WorkOrder.Execute",
+    "Navigator.UpdateProbe",
     "FetchManager.FetchablesByPrefabId.UpdatePickups",
     "ChoreConsumer.FindNextChore",
     "BrainScheduler.RenderEveryTick",
