@@ -91,6 +91,14 @@ namespace OniMcp.Server
                 return true;
             }
 
+            bool isNotification = rawMessage.Property("id") == null;
+            if (isNotification && IsModernRequestMethod(method))
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                    $"Modern request method '{method}' requires a request id"), 200);
+                return true;
+            }
+
             JsonRpcRequest rpcRequest;
             try
             {
@@ -103,7 +111,6 @@ namespace OniMcp.Server
                 return true;
             }
 
-            bool isNotification = rawMessage.Property("id") == null;
             if (isNotification)
             {
                 MainThreadBridge.Enqueue(new System.Action(() =>
@@ -119,6 +126,22 @@ namespace OniMcp.Server
 
             DispatchModernPostResponse(response, rpcRequest);
             return true;
+        }
+
+        private static bool IsModernRequestMethod(string method)
+        {
+            switch (method)
+            {
+                case "server/discover":
+                case "tools/list":
+                case "tools/call":
+                case "resources/list":
+                case "resources/templates/list":
+                case "resources/read":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private object ProcessModernMethod(JsonRpcRequest request)

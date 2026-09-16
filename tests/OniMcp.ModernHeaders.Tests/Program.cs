@@ -47,6 +47,18 @@ internal static class Program
                 AssertRequiredNameHeader(client, 3099, "resources/read", "{" + ModernMeta + "}");
 
                 int calls = OniToolRegistry.Calls;
+                string missingIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"missing request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, missingIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern tools/call without an id did not return a JSON-RPC InvalidRequest response");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["error"]["code"] == -32600,
+                        "Modern tools/call without an id did not use InvalidRequest");
+                }
+                Assert(OniToolRegistry.Calls == calls,
+                    "Modern tools/call without an id executed the tool as a notification");
+
                 AssertCall(client, 3101,
                     "{\"task\":\"region match\",\"region\":\"us-west1\"}",
                     new Dictionary<string, string> { ["Mcp-Param-Region"] = "us-west1" },
@@ -150,7 +162,7 @@ internal static class Program
             Invoke(_bridge, "OnDestroy");
         }
 
-        Console.WriteLine("PASS modern required-name, x-mcp-header schema, CORS, Base64, and Mcp-Param wire regressions");
+        Console.WriteLine("PASS modern request-id, required-name, x-mcp-header schema, CORS, Base64, and Mcp-Param wire regressions");
     }
 
     private static void AssertCorsHeaders(HttpClient client)
