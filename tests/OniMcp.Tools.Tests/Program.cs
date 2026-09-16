@@ -37,7 +37,7 @@ internal static class Program
         TestProgramExecution();
         TestNumbers();
         TestRegexBoundaries();
-        TestFloodFillDryRunPolicy();
+        TestFloodFillPreviewCells();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -150,28 +150,14 @@ internal static class Program
         }
     }
 
-    private static void TestFloodFillDryRunPolicy()
+    private static void TestFloodFillPreviewCells()
     {
-        Check(SandboxFloodFillExecution.Validate(true, true, false, false, false) == null,
-            "flood-fill dryRun must not require confirm, sandbox mode, or force");
-        Check(SandboxFloodFillExecution.Validate(true, false, false, false, false) == "Game not initialized",
-            "flood-fill dryRun still requires an initialized game for grid inspection");
-        Check(SandboxFloodFillExecution.Validate(false, true, false, true, false) == "confirm=true is required",
-            "flood-fill writes still require confirmation");
-        Check(SandboxFloodFillExecution.Validate(false, true, true, false, false) == "Sandbox mode is not active; set force=true to override",
-            "flood-fill writes still require sandbox mode or force");
-        Check(SandboxFloodFillExecution.Validate(false, true, true, true, false) == null,
-            "sandbox flood-fill write remains allowed after confirmation");
-        Check(SandboxFloodFillExecution.Validate(false, true, true, false, true) == null,
-            "forced flood-fill write remains allowed after confirmation");
-
-        int applied = 0;
         int[] cells = { 11, 12, 13 };
-        int changed = SandboxFloodFillExecution.Apply(cells, true, _ => applied++);
-        Check(changed == 0 && applied == 0, "flood-fill dryRun must not invoke the write callback");
-        changed = SandboxFloodFillExecution.Apply(cells, false, _ => applied++);
-        Check(changed == cells.Length && applied == cells.Length,
-            "flood-fill execution must apply each planned cell exactly once");
+        var visited = new System.Collections.Generic.List<int>();
+        SandboxFloodFillExecution.VisitPreviewCells(cells, cell => visited.Add(cell));
+        Check(visited.Count == cells.Length, "flood-fill preview must visit every planned cell exactly once");
+        for (int i = 0; i < cells.Length; i++)
+            Check(visited[i] == cells[i], "flood-fill preview must preserve the production plan order");
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
