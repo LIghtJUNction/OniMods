@@ -37,6 +37,8 @@ namespace CycleTrim.Patches
             internal readonly ConditionalWeakTable<Navigator, NavigatorState> Navigators =
                 new ConditionalWeakTable<Navigator, NavigatorState>();
             internal volatile int Tick;
+            internal int QueueQuotaTick = -1;
+            internal int QueueQuota = 1;
         }
 
         private sealed class NavigatorState
@@ -149,6 +151,13 @@ namespace CycleTrim.Patches
 
         private static int GetQueueQuota(AsyncPathProber.Manager manager)
         {
+            var managerState = States.GetValue(manager, StateFactory);
+            var tick = managerState.Tick;
+            if (managerState.QueueQuotaTick == tick)
+            {
+                return managerState.QueueQuota;
+            }
+
             var agents = Agents(manager);
             var navigators = Navigators(manager);
             var inFlight = 0;
@@ -159,9 +168,17 @@ namespace CycleTrim.Patches
                     inFlight++;
                 }
             }
-            return PathProbeBackpressure.ComputeQueueQuota(
+
+            // TickFrame holds the Manager lock while rebuilding workQueue, so
+            // NextTask cannot change in-flight markers between loop-condition
+            // checks. Cache this O(N) scan once per TickFrame instead of once
+            // for every evaluation of the former `workQueue.Count < 4` limit.
+            var quota = PathProbeBackpressure.ComputeQueueQuota(
                 agents == null ? 0 : agents.Length,
                 inFlight);
+            managerState.QueueQuota = quota;
+            managerState.QueueQuotaTick = tick;
+            return quota;
         }
 
         [HarmonyPatch(typeof(AsyncPathProber.Manager), "TickFrame")]
