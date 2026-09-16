@@ -55,9 +55,9 @@ internal static class Program
                 AssertBatchEnvelopeRejected(client, "2025-11-25");
                 AssertMalformedJsonStillParseError(client);
                 AssertInvalidRequestIdRejected(client, "true",
-                    "Boolean modern request id was accepted");
+                    "Boolean modern request id did not use HTTP 400");
                 AssertInvalidRequestIdRejected(client, "{}",
-                    "Object modern request id was accepted");
+                    "Object modern request id did not use HTTP 400");
 
                 const string metaWithoutClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
                 string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3002,\"params\":{" + metaWithoutClientInfo + "}}";
