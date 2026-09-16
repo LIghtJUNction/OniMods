@@ -195,6 +195,38 @@ internal static class Program
                     "Modern side-effect resource rejection allocated legacy session state");
             }
 
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+            {
+                request.Content = new StringContent(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"notification-regression\",\"version\":\"1.0\"}}}}",
+                    Encoding.UTF8,
+                    "application/json");
+                request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                request.Headers.Add("Mcp-Method", "notifications/initialized");
+
+                var work = client.SendAsync(request);
+                PumpUntil(work);
+                using (var response = work.GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotFound,
+                        "Unsupported modern notification was incorrectly accepted with 202");
+                    var json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["error"]["code"] == -32601,
+                        "Unsupported modern notification did not use Method Not Found");
+                    Assert(json["id"]?.Type == JTokenType.Null,
+                        "Unsupported notification error must not invent a request id");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Unsupported modern notification allocated a legacy session header");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Unsupported modern notification allocated legacy session state");
+            }
+
             Console.WriteLine("PASS: MCP 2026-07-28 resource reads stay stateless and side-effect-free.");
         }
         finally
