@@ -168,6 +168,7 @@ namespace OniMcp.Server
                     return CompleteModernResult(new JObject
                     {
                         ["resources"] = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
+                            .Where(item => IsModernReadOnlyResourceUri(item.Uri))
                             .OrderBy(item => item.Uri, StringComparer.Ordinal))
                     });
 
@@ -175,6 +176,7 @@ namespace OniMcp.Server
                     return CompleteModernResult(new JObject
                     {
                         ["resourceTemplates"] = JArray.FromObject(OniResourceRegistry.GetResourceTemplateInfos()
+                            .Where(item => IsModernReadOnlyResourceTemplate(item.UriTemplate))
                             .OrderBy(item => item.UriTemplate, StringComparer.Ordinal))
                     });
 
@@ -182,6 +184,12 @@ namespace OniMcp.Server
                     var @params = request.Params?.ToObject<ReadResourceParams>();
                     if (@params == null || string.IsNullOrEmpty(@params.Uri))
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, "Missing resource uri");
+                    if (!IsModernReadOnlyResourceUri(@params.Uri))
+                    {
+                        return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
+                            $"Resource is not available on the {ModernProtocolVersion} read-only path: {@params.Uri}",
+                            new JObject { ["uri"] = @params.Uri });
+                    }
                     var readResult = OniResourceRegistry.ReadResource(@params.Uri);
                     if (readResult == null)
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
@@ -192,6 +200,22 @@ namespace OniMcp.Server
                     return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
                         $"Method is not available on the {ModernProtocolVersion} compatibility path: {request.Method}");
             }
+        }
+
+        private static bool IsModernReadOnlyResourceUri(string uri)
+        {
+            if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
+                return true;
+
+            return !string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(parsed.Host, "world", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(parsed.AbsolutePath, "/coordinate-screenshot", StringComparison.Ordinal);
+        }
+
+        private static bool IsModernReadOnlyResourceTemplate(string uriTemplate)
+        {
+            return string.IsNullOrEmpty(uriTemplate)
+                || !uriTemplate.StartsWith("oni://world/coordinate-screenshot", StringComparison.Ordinal);
         }
 
         private static JsonRpcResponse ModernToolMethodUnavailable(JsonRpcRequest request)
