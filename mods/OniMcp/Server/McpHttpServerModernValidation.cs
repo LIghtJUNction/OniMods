@@ -60,17 +60,17 @@ namespace OniMcp.Server
                 return false;
             }
 
+            bool nameHeaderRequired = RequiresModernNameHeader(method);
             string expectedName = ModernPrincipalName(method, rawMessage["params"] as JObject);
             string nameHeader = httpRequest.Headers["Mcp-Name"];
+            if (nameHeaderRequired && string.IsNullOrEmpty(nameHeader))
+            {
+                error = HeaderMismatch(rawMessage["id"], $"Mcp-Name header is required for method '{method}'");
+                return false;
+            }
+
             if (expectedName != null)
             {
-                if (string.IsNullOrEmpty(nameHeader))
-                {
-                    error = HeaderMismatch(rawMessage["id"],
-                        $"Mcp-Name header must match request principal '{expectedName}'");
-                    return false;
-                }
-
                 string decodedNameHeader;
                 if (!TryDecodeModernHeaderValue(nameHeader, out decodedNameHeader))
                 {
@@ -87,8 +87,9 @@ namespace OniMcp.Server
             }
             else if (!string.IsNullOrEmpty(nameHeader))
             {
-                error = HeaderMismatch(rawMessage["id"],
-                    $"Mcp-Name is not valid for method '{method}'");
+                error = HeaderMismatch(rawMessage["id"], nameHeaderRequired
+                    ? $"Mcp-Name header has no matching string request principal for method '{method}'"
+                    : $"Mcp-Name is not valid for method '{method}'");
                 return false;
             }
 
@@ -99,6 +100,13 @@ namespace OniMcp.Server
             }
 
             return true;
+        }
+
+        private static bool RequiresModernNameHeader(string method)
+        {
+            return string.Equals(method, "tools/call", StringComparison.Ordinal)
+                || string.Equals(method, "resources/read", StringComparison.Ordinal)
+                || string.Equals(method, "prompts/get", StringComparison.Ordinal);
         }
 
         private static bool TryDecodeModernHeaderValue(string headerValue, out string decodedValue)
