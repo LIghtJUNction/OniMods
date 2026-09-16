@@ -39,6 +39,7 @@ internal static class Program
         TestRegexBoundaries();
         TestFloodFillPreviewCells();
         TestSandboxDryRunRoutingPolicy();
+        TestBackwallSupportPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -188,6 +189,23 @@ internal static class Program
             Check(error != null && error.Contains("refusing to execute"),
                 "unsupported sandbox dry-run explains that mutation was refused");
         }
+    }
+
+    private static void TestBackwallSupportPolicy()
+    {
+        var missing = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", false);
+        Check(!missing.Valid && missing.ReasonCode == "backwall_required",
+            "OnBackWall placement without native foundation must be rejected with a stable reason");
+        Check(missing.Error != null && missing.Error.Contains("complete backwall foundation"),
+            "backwall rejection must explain the full-footprint requirement");
+
+        var supported = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", true);
+        Check(supported.Valid && supported.ReasonCode == null,
+            "OnBackWall placement with native foundation remains valid");
+
+        var floor = BuildPlanningBackwallSupportPolicy.Evaluate("OnFloor", false);
+        Check(floor.Valid,
+            "non-backwall rules remain outside this narrow policy so OnFloor planned-support semantics are unchanged");
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
