@@ -146,8 +146,24 @@ def main() -> int:
         selected == [first, second],
         "freshness selector did not retain the baseline plus fresh report",
     )
-    failures = analyzer.validate_series(selected, required)
-    require(not failures, "freshness-selected series should remain valid")
+    failures = analyzer.validate_series(selected, required, require_fresh_calls=True)
+    require(not failures, "freshness-selected series should require and accept fresh target calls")
+
+    stagnant = make_report(analyzer, 3, 3, 45, 0, 0)
+    failures = analyzer.validate_series([second, stagnant], required)
+    require(
+        not failures,
+        "structurally valid idle series should remain valid without a workload freshness gate",
+    )
+    failures = analyzer.validate_series(
+        [second, stagnant],
+        required,
+        require_fresh_calls=True,
+    )
+    require(
+        any("has no fresh calls after the selected baseline" in failure for failure in failures),
+        "workload-anchored series accepted cumulative-only calls from before the baseline",
+    )
 
     third = make_report(analyzer, 3, 5, 85, 2, 40)
     selected = analyzer.select_series_after_sequence([first, second, third], 2)
@@ -155,8 +171,20 @@ def main() -> int:
         selected == [second, third],
         "freshness selector did not anchor at the requested reportSequence",
     )
-    failures = analyzer.validate_series(selected, required)
-    require(not failures, "anchored freshness series should validate")
+    failures = analyzer.validate_series(selected, required, require_fresh_calls=True)
+    require(not failures, "anchored freshness series should validate fresh target calls")
+
+    one_target_stale = copy.deepcopy(third)
+    one_target_stale["targets"][0] = make_target(required[0], 3, 45, 0, 0)
+    failures = analyzer.validate_series(
+        [second, one_target_stale],
+        required,
+        require_fresh_calls=True,
+    )
+    require(
+        any(required[0] in failure and "has no fresh calls" in failure for failure in failures),
+        "workload freshness gate did not identify the required target that stayed stale",
+    )
 
     require_value_error(
         lambda: analyzer.select_series_after_sequence([first], 1),

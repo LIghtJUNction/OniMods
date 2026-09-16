@@ -143,6 +143,7 @@ def validate_series(
     report_items: list[dict],
     required: tuple[str, ...],
     reject_fasttrack: bool = False,
+    require_fresh_calls: bool = False,
 ) -> list[str]:
     failures = []
     if len(report_items) < 2:
@@ -225,6 +226,21 @@ def validate_series(
                     f"report[0]: {name} first intervalTotalTicks must equal cumulative totalTicks"
                 )
 
+    if require_fresh_calls:
+        first_targets, _ = _targets_by_name(report_items[0])
+        last_targets, _ = _targets_by_name(report_items[-1])
+        for name in required:
+            before = first_targets.get(name)
+            after = last_targets.get(name)
+            if before is None or after is None:
+                continue
+            before_calls = before.get("calls")
+            after_calls = after.get("calls")
+            if not isinstance(before_calls, int) or not isinstance(after_calls, int):
+                continue
+            if after_calls >= before_calls and after_calls - before_calls == 0:
+                failures.append(f"{name} has no fresh calls after the selected baseline")
+
     return failures
 
 
@@ -257,7 +273,10 @@ def main() -> int:
         "--require",
         action="append",
         dest="required",
-        help="target name that must resolve and have calls > 0 in the final report; repeatable",
+        help=(
+            "target name that must resolve and have calls > 0; with --after-sequence, "
+            "it must also receive fresh calls after the selected baseline; repeatable"
+        ),
     )
     parser.add_argument(
         "--series",
@@ -269,7 +288,7 @@ def main() -> int:
         type=int,
         help=(
             "with --series, anchor validation at this known reportSequence and require "
-            "at least one newer report so a paused/deferred capture cannot reuse stale output"
+            "at least one newer report plus fresh calls for every required target"
         ),
     )
     parser.add_argument(
@@ -301,6 +320,7 @@ def main() -> int:
             report_items,
             required,
             reject_fasttrack=args.reject_fasttrack,
+            require_fresh_calls=args.after_sequence is not None,
         )
         report = report_items[-1]
     else:
