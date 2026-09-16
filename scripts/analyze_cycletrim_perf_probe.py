@@ -65,6 +65,7 @@ def validate(
     required: tuple[str, ...],
     require_intervals: bool = False,
     require_calls: bool = True,
+    reject_fasttrack: bool = False,
 ) -> list[str]:
     failures = []
     if not isinstance(report.get("stopwatchFrequency"), int) or report["stopwatchFrequency"] <= 0:
@@ -99,6 +100,11 @@ def validate(
             continue
         if target.get("resolved") is not True:
             failures.append(f"required target did not resolve: {name}")
+        fasttrack_patched = target.get("fastTrackPatched")
+        if not isinstance(fasttrack_patched, bool):
+            failures.append(f"{name} fastTrackPatched must be a boolean")
+        elif reject_fasttrack and fasttrack_patched:
+            failures.append(f"{name} is patched by FastTrack")
         calls = target.get("calls")
         if not isinstance(calls, int) or calls < 0:
             failures.append(f"required target has invalid calls: {name}")
@@ -133,7 +139,11 @@ def validate(
     return failures
 
 
-def validate_series(report_items: list[dict], required: tuple[str, ...]) -> list[str]:
+def validate_series(
+    report_items: list[dict],
+    required: tuple[str, ...],
+    reject_fasttrack: bool = False,
+) -> list[str]:
     failures = []
     if len(report_items) < 2:
         return ["series validation requires at least two probe reports"]
@@ -145,6 +155,7 @@ def validate_series(report_items: list[dict], required: tuple[str, ...]) -> list
             required,
             require_intervals=True,
             require_calls=index == last_index,
+            reject_fasttrack=reject_fasttrack,
         ):
             failures.append(f"report[{index}]: {failure}")
 
@@ -168,6 +179,16 @@ def validate_series(report_items: list[dict], required: tuple[str, ...]) -> list
             after = current_targets.get(name)
             if before is None or after is None:
                 continue
+            before_fasttrack = before.get("fastTrackPatched")
+            after_fasttrack = after.get("fastTrackPatched")
+            if (
+                isinstance(before_fasttrack, bool)
+                and isinstance(after_fasttrack, bool)
+                and before_fasttrack != after_fasttrack
+            ):
+                failures.append(
+                    f"report[{index}]: {name} fastTrackPatched changed within one capture"
+                )
             if not isinstance(before.get("calls"), int) or not isinstance(after.get("calls"), int):
                 continue
             if not isinstance(before.get("totalTicks"), int) or not isinstance(after.get("totalTicks"), int):
@@ -251,6 +272,14 @@ def main() -> int:
             "at least one newer report so a paused/deferred capture cannot reuse stale output"
         ),
     )
+    parser.add_argument(
+        "--reject-fasttrack",
+        action="store_true",
+        help=(
+            "fail if FastTrack patches any required target; use this for vanilla/CycleTrim "
+            "baseline captures where external replacement would invalidate attribution"
+        ),
+    )
     args = parser.parse_args()
 
     if not args.log.is_file():
@@ -268,11 +297,19 @@ def main() -> int:
 
     required = tuple(args.required) if args.required else DEFAULT_REQUIRED
     if args.series:
-        failures = validate_series(report_items, required)
+        failures = validate_series(
+            report_items,
+            required,
+            reject_fasttrack=args.reject_fasttrack,
+        )
         report = report_items[-1]
     else:
         report = report_items[-1]
-        failures = validate(report, required)
+        failures = validate(
+            report,
+            required,
+            reject_fasttrack=args.reject_fasttrack,
+        )
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)
