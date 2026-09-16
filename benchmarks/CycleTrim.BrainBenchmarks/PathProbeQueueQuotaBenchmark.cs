@@ -9,7 +9,7 @@ namespace CycleTrim.BrainBenchmarks
     internal static class PathProbeQueueQuotaBenchmark
     {
         private const int NavigatorCount = 512;
-        private const int InFlightCount = 3;
+        private const int InFlightCount = 1;
         private const int WorkerCount = 4;
         private const int ConditionChecksPerTick = 5;
         private const int WarmupTicks = 500;
@@ -153,14 +153,14 @@ namespace CycleTrim.BrainBenchmarks
                 }
             }
 
-            navigators[0] = 0;
+            navigators[1] = -1;
             var nextBaseline = ScanQuota(navigators);
             var nextCandidate = cache.Get(2, navigators);
-            if (nextCandidate != nextBaseline)
+            if (nextCandidate != nextBaseline || nextCandidate == baseline)
             {
                 throw new InvalidOperationException("next tick must recompute queue quota");
             }
-            navigators[0] = -1;
+            navigators[1] = 1;
         }
 
         private static Sample RunBaseline(
