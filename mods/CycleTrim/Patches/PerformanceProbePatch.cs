@@ -143,7 +143,9 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            var scheduler = GameScheduler.Instance;
+            // Reports are developer-only formatting/logging and must still flush when the
+            // simulation is paused after a measured workload. Keep this off the game clock.
+            var scheduler = UIScheduler.Instance;
             if (scheduler == null)
             {
                 return;

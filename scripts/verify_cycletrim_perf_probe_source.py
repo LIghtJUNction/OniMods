@@ -37,7 +37,9 @@ def main() -> int:
     require(patch, "GC.GetTotalMemory(false)", "heap snapshot telemetry missing", failures)
     require(patch, "Harmony.GetPatchInfo(target)", "Harmony ownership inspection missing", failures)
     require(patch, "FastTrackNamespacePrefix", "FastTrack attribution missing", failures)
-    require(patch, "GameScheduler.Instance", "deferred reporting path missing", failures)
+    require(patch, "UIScheduler.Instance", "deferred reporting must use the unscaled UI scheduler", failures)
+    if "GameScheduler.Instance" in patch:
+        failures.append("deferred performance reporting must not depend on the paused game clock")
     require(patch, "intervalDurationTicks", "report interval duration is missing", failures)
     require(patch, "intervalCalls", "per-report call deltas are missing", failures)
     require(patch, "intervalTotalTicks", "per-report timing deltas are missing", failures)
