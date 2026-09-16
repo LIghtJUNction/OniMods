@@ -111,9 +111,9 @@ namespace CycleTrim.Patches
             if (!Grid.IsValidCell(cell)
                 || __instance.GetComponent<CreatureBrain>() == null)
             {
-                if (States.TryGetValue(__instance, out var preservedState))
+                if (States.TryGetValue(__instance, out var invalidCellState))
                 {
-                    preservedState.Gate.Invalidate();
+                    invalidCellState.Gate.Invalidate();
                 }
 
                 return true;
