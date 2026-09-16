@@ -57,7 +57,7 @@ namespace OniMcp.Server
 
             var requestId = rawMessage["id"];
             if (rawMessage["jsonrpc"]?.Type != JTokenType.String || (string)rawMessage["jsonrpc"] != "2.0"
-                || (requestId != null && requestId.Type != JTokenType.String
+                || (requestId != null && requestId.Type != JTokenType.Null && requestId.Type != JTokenType.String
                     && requestId.Type != JTokenType.Integer && requestId.Type != JTokenType.Float))
             {
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), 200);
