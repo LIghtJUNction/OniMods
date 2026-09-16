@@ -150,11 +150,11 @@ namespace CycleTrim.BrainBenchmarks
             ThreadLocalObjectPool<PoolProbe>.Return(first);
 
             PoolProbe worker = null;
-            var thread = new Thread(delegate
+            var thread = new Thread(new ThreadStart(delegate
             {
                 worker = ThreadLocalObjectPool<PoolProbe>.Rent();
                 ThreadLocalObjectPool<PoolProbe>.Return(worker);
-            });
+            }));
             thread.Start();
             thread.Join();
             if (worker == null || ReferenceEquals(worker, first) || ReferenceEquals(worker, second))
