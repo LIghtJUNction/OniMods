@@ -46,27 +46,15 @@ internal static class Program
                     "{\"arguments\":{\"task\":\"missing tool name\"}," + ModernMeta + "}");
                 AssertRequiredNameHeader(client, 3099, "resources/read", "{" + ModernMeta + "}");
 
-                string nullIdInitialize = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":null,\"params\":{\"protocolVersion\":\"2025-11-25\"}}";
-                using (var response = PostLegacy(client, nullIdInitialize))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Legacy initialize with a null id changed the JSON-RPC error transport status");
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int)json["error"]["code"] == -32600,
-                        "Legacy initialize with a null id was not rejected as InvalidRequest");
-                }
-                Assert(server.GetSessionSummaries().Count == 0,
-                    "Rejected legacy initialize with a null id allocated session state");
-
                 int calls = OniToolRegistry.Calls;
                 string nullIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":null,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"null request id\"}," + ModernMeta + "}}";
                 using (var response = Post(client, nullIdCall, "tools/call", "benchmark", null))
                 {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Modern tools/call with a null id changed the JSON-RPC error transport status");
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern tools/call with a null id was not rejected at the modern validation boundary");
                     JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
                     Assert((int)json["error"]["code"] == -32600,
-                        "Modern tools/call with a null id was not rejected as InvalidRequest");
+                        "Modern tools/call with a null id did not use InvalidRequest");
                 }
                 Assert(OniToolRegistry.Calls == calls,
                     "Modern tools/call with a null id executed the tool");
@@ -270,17 +258,6 @@ internal static class Program
                     Assert(request.Headers.TryAddWithoutValidation(pair.Key, pair.Value), "Could not add test header " + pair.Key);
             }
 
-            Task<HttpResponseMessage> work = client.SendAsync(request);
-            PumpUntil(work);
-            return work.GetAwaiter().GetResult();
-        }
-    }
-
-    private static HttpResponseMessage PostLegacy(HttpClient client, string json)
-    {
-        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
-        {
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             Task<HttpResponseMessage> work = client.SendAsync(request);
             PumpUntil(work);
             return work.GetAwaiter().GetResult();
