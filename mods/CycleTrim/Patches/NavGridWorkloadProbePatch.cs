@@ -163,7 +163,10 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            var scheduler = GameScheduler.Instance;
+            // Captures are commonly inspected after pausing the simulation. GameScheduler is
+            // GameClock-backed and stops advancing while paused, so use the unscaled UI clock
+            // for deferred formatting/logging without changing the measured NavGrid path.
+            var scheduler = UIScheduler.Instance;
             if (scheduler == null)
             {
                 return;
