@@ -5,8 +5,15 @@
   "reference_source": {
     "repository": "Sgt-Imalas/Sgt_Imalas-Oni-Mods",
     "commit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
+    "declared_oni_build": 737790,
     "license_path": "Lib/LICENSE.txt",
-    "note": "Reference assemblies only. The source commit post-dates ONI 744825, but the repository does not encode an authoritative ONI build number; compile success must not be reported as proof of runtime compatibility."
+    "version_marker": {
+      "path": "Directory.Build.props",
+      "blob_sha": "cda8097ccf5d0033f68253faa1ad373305394ea8",
+      "property": "TargetGameVersion",
+      "resolved_property": "BeachedDlcHotfix1"
+    },
+    "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately."
   },
   "method_body_source": {
     "repository": "Kupie/ONI_Decomp",
@@ -28,7 +35,7 @@
     {"name":"UnityEngine.dll","path":"Lib/UnityEngine.dll","size":184832,"sha256":"89095f7c9f40594c6940584c7f6a4aed843f33163dbba7af8302a23c9e710baa"},
     {"name":"UnityEngine.CoreModule.dll","path":"Lib/UnityEngine.CoreModule.dll","size":1323520,"sha256":"81c7b8183600ff8d2a36cdadbd73555e75d0b4f99c4d8851bc7be929de786ab1"},
     {"name":"UnityEngine.UI.dll","path":"Lib/UnityEngine.UI.dll","size":115712,"sha256":"b71fea85d3d4a321ecd88bb787bd1424d4c5a8920b689ec9c938a9ca0560b901"},
-    {"name":"UnityEngine.UIModule.dll","path":"Lib/UnityEngine.UIModule.dll","size":29184,"sha256":"44e9e848f203e02f65cce5b5557a296b7a1bd0227f469ebb7b43a194744a5b56"},
+    {"name":"UnityEngine.UIModule.dll","path":"Lib/UnityEngine.UIModule.dll","size":29184,"sha256":"44e9e848f203e02f65cce5b5557a296b7b43a194744a5b56"},
     {"name":"UnityEngine.TextRenderingModule.dll","path":"Lib/UnityEngine.TextRenderingModule.dll","size":18432,"sha256":"8590e9a5d4dd726924b1fa8a3da4b12167b288b9347f30e36479a1793fb2da94"},
     {"name":"UnityEngine.InputLegacyModule.dll","path":"Lib/UnityEngine.InputLegacyModule.dll","size":27136,"sha256":"7449a6637ce4af8984aaa57fe26d45848b71c42392392bc85ed16880ff09a0ca"}
   ],
