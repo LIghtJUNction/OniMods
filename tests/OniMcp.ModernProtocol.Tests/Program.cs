@@ -106,6 +106,16 @@ internal static class Program
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Unsupported stateless versions allocated legacy session state");
 
+                const string supportedLegacyMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2025-11-25\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
+                string mismatchedVersionDiscover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":2203,\"params\":{" + supportedLegacyMeta + "}}";
+                using (var response = Post(client, mismatchedVersionDiscover, null, "2026-07-28", "server/discover"))
+                {
+                    AssertHeaderMismatch(response, 2203,
+                        "Modern header plus supported legacy body version did not use HeaderMismatch");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Version-header mismatch allocated legacy session state");
+
                 string modernToolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":2301,\"params\":{" + modernMeta + "}}";
                 using (var response = Post(client, modernToolsList, null, "2026-07-28", "tools/list"))
                 {
@@ -265,6 +275,17 @@ internal static class Program
         JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
         Assert((int)json["id"] == requestId, context + ": response id changed");
         Assert((int)json["error"]["code"] == McpErrorCode.InvalidParams,
+            context + ": wrong JSON-RPC error code");
+        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+            context + ": allocated a legacy session header");
+    }
+
+    private static void AssertHeaderMismatch(HttpResponseMessage response, int requestId, string context)
+    {
+        Assert(response.StatusCode == HttpStatusCode.BadRequest, context + ": wrong HTTP status");
+        JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+        Assert((int)json["id"] == requestId, context + ": response id changed");
+        Assert((int)json["error"]["code"] == -32020,
             context + ": wrong JSON-RPC error code");
         Assert(!response.Headers.Contains("Mcp-Session-Id"),
             context + ": allocated a legacy session header");
