@@ -73,7 +73,7 @@ namespace OniMcp.Tools
                     ["matchMode"] = new McpToolParameter { Type = "string", Description = "domain=sandbox kind=map_designate 匹配处理：unique/first/all，默认 unique", Required = false, EnumValues = new List<string> { "unique", "first", "all" } },
                     ["matchIndex"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox kind=map_designate 多匹配时选择第几个，0 基", Required = false },
                     ["maxCells"] = new McpToolParameter { Type = "integer", Description = "domain=sandbox 区域/搜索安全上限", Required = false },
-                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "domain=launch action=restart_load 或 sandbox 写动作只预览不修改", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "domain=launch action=restart_load 支持预览；domain=sandbox 仅 kind=map_designate 与 kind=area action=flood_fill 支持只预览，其他沙盒写动作传 dryRun=true 会拒绝执行", Required = false },
                     ["visibleOnly"] = new McpToolParameter { Type = "boolean", Description = "domain=sandbox kind=map_designate 搜索时是否把未揭示格视为 unk，默认 false", Required = false },
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "domain=sandbox 允许绕过对应底层工具的沙盒模式或 InstantBuild 要求，默认 false", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "底层写入/危险动作需要 true", Required = false }
@@ -137,6 +137,12 @@ namespace OniMcp.Tools
         {
             string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
             string kind = (args["kind"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+            if (SandboxDryRunRoutingPolicy.TryRejectUnsupported(kind, action,
+                    ToolUtil.GetBool(args, "dryRun", false), out string dryRunError))
+            {
+                return CallToolResult.Error(dryRunError);
+            }
+
             if (string.IsNullOrWhiteSpace(kind) &&
                 (action == "set_sandbox_mode" || action == "sandbox_mode" || action == "sandbox_toggle" || action == "sandbox"))
                 return ControlGameState().Handler(args);
