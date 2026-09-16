@@ -42,6 +42,9 @@ internal static class Program
             {
                 AssertCorsHeaders(client);
                 AssertAdvertisedHeaderSchema(client);
+                AssertRequiredNameHeader(client, 3098, "tools/call",
+                    "{\"arguments\":{\"task\":\"missing tool name\"}," + ModernMeta + "}");
+                AssertRequiredNameHeader(client, 3099, "resources/read", "{" + ModernMeta + "}");
 
                 int calls = OniToolRegistry.Calls;
                 AssertCall(client, 3101,
@@ -147,7 +150,7 @@ internal static class Program
             Invoke(_bridge, "OnDestroy");
         }
 
-        Console.WriteLine("PASS modern x-mcp-header schema, CORS, Base64, and Mcp-Param wire regressions");
+        Console.WriteLine("PASS modern required-name, x-mcp-header schema, CORS, Base64, and Mcp-Param wire regressions");
     }
 
     private static void AssertCorsHeaders(HttpClient client)
@@ -182,6 +185,20 @@ internal static class Program
             Assert((string)schema["limit"]["x-mcp-header"] == "Limit", "Integer x-mcp-header was not advertised");
             Assert((string)schema["options"]["properties"]["scope"]["x-mcp-header"] == "Scope",
                 "Nested properties x-mcp-header was not advertised");
+        }
+    }
+
+    private static void AssertRequiredNameHeader(HttpClient client, int id, string method, string paramsJson)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id
+            + ",\"params\":" + paramsJson + "}";
+        using (var response = Post(client, body, method, null, null))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "Missing required Mcp-Name did not return HTTP 400 for " + method);
+            JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            Assert((int)json["error"]["code"] == -32020,
+                "Missing required Mcp-Name did not return HeaderMismatch for " + method);
         }
     }
 
