@@ -28,11 +28,6 @@ namespace OniMcp.Server
         private bool TryHandleModernPost(HttpListenerRequest httpRequest, HttpListenerResponse response,
             JObject rawMessage, string protocolVersion)
         {
-            var meta = rawMessage["params"]?["_meta"] as JObject;
-            string metaVersion = meta?["io.modelcontextprotocol/protocolVersion"]?.Type == JTokenType.String
-                ? (string)meta["io.modelcontextprotocol/protocolVersion"]
-                : null;
-
             bool explicitModern = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal);
             if (IsSupportedProtocolVersion(protocolVersion))
                 return false;
@@ -46,6 +41,25 @@ namespace OniMcp.Server
             string sessionId = httpRequest.Headers["Mcp-Session-Id"];
             if (!explicitModern && IsSessionActive(sessionId))
                 return false;
+
+            var paramsToken = rawMessage["params"];
+            var paramsObject = paramsToken as JObject;
+            if (paramsToken != null && paramsObject == null)
+            {
+                if (explicitModern)
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                        "Modern request params must be an object"), 400);
+                    return true;
+                }
+
+                return false;
+            }
+
+            var meta = paramsObject?["_meta"] as JObject;
+            string metaVersion = meta?["io.modelcontextprotocol/protocolVersion"]?.Type == JTokenType.String
+                ? (string)meta["io.modelcontextprotocol/protocolVersion"]
+                : null;
 
             if (!string.IsNullOrEmpty(metaVersion)
                 && !string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal)
