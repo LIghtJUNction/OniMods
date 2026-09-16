@@ -47,6 +47,18 @@ internal static class Program
                 AssertRequiredNameHeader(client, 3099, "resources/read", "{" + ModernMeta + "}");
 
                 int calls = OniToolRegistry.Calls;
+                string nullIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":null,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"null request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, nullIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern tools/call with a null id was not rejected at the modern validation boundary");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["error"]["code"] == -32600,
+                        "Modern tools/call with a null id did not use InvalidRequest");
+                }
+                Assert(OniToolRegistry.Calls == calls,
+                    "Modern tools/call with a null id executed the tool");
+
                 string missingIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"missing request id\"}," + ModernMeta + "}}";
                 using (var response = Post(client, missingIdCall, "tools/call", "benchmark", null))
                 {
