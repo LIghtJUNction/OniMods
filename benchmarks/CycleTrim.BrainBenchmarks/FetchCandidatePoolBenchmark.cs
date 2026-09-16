@@ -149,28 +149,46 @@ namespace CycleTrim.BrainBenchmarks
             ThreadLocalObjectPool<PoolProbe>.Return(second);
             ThreadLocalObjectPool<PoolProbe>.Return(first);
 
-            PoolProbe worker = null;
+            var retained = ThreadLocalObjectPool<PoolProbe>.Rent();
+            var overflow = ThreadLocalObjectPool<PoolProbe>.Rent();
+            if (!ReferenceEquals(retained, second))
+            {
+                throw new InvalidOperationException("pool must retain the first returned object");
+            }
+            if (ReferenceEquals(overflow, first) || ReferenceEquals(overflow, second))
+            {
+                throw new InvalidOperationException("pool must retain at most one object per thread");
+            }
+
+            ThreadLocalObjectPool<PoolProbe>.Return(overflow);
+            ThreadLocalObjectPool<PoolProbe>.Return(retained);
+
+            PoolProbe workerFirst = null;
+            PoolProbe workerReused = null;
             var thread = new Thread(new ThreadStart(delegate
             {
-                worker = ThreadLocalObjectPool<PoolProbe>.Rent();
-                ThreadLocalObjectPool<PoolProbe>.Return(worker);
+                workerFirst = ThreadLocalObjectPool<PoolProbe>.Rent();
+                ThreadLocalObjectPool<PoolProbe>.Return(workerFirst);
+                workerReused = ThreadLocalObjectPool<PoolProbe>.Rent();
+                ThreadLocalObjectPool<PoolProbe>.Return(workerReused);
             }));
             thread.Start();
             thread.Join();
-            if (worker == null || ReferenceEquals(worker, first) || ReferenceEquals(worker, second))
+            if (workerFirst == null
+                || !ReferenceEquals(workerFirst, workerReused)
+                || ReferenceEquals(workerFirst, first)
+                || ReferenceEquals(workerFirst, second)
+                || ReferenceEquals(workerFirst, overflow))
             {
                 throw new InvalidOperationException("pool storage must remain isolated per thread");
             }
 
-            var reusedFirst = ThreadLocalObjectPool<PoolProbe>.Rent();
-            var reusedSecond = ThreadLocalObjectPool<PoolProbe>.Rent();
-            if (!(ReferenceEquals(reusedFirst, first) && ReferenceEquals(reusedSecond, second)))
+            var mainReused = ThreadLocalObjectPool<PoolProbe>.Rent();
+            if (!ReferenceEquals(mainReused, overflow))
             {
-                throw new InvalidOperationException("returned objects must be reused in LIFO order");
+                throw new InvalidOperationException("worker activity must not change the main-thread pool");
             }
-
-            ThreadLocalObjectPool<PoolProbe>.Return(reusedSecond);
-            ThreadLocalObjectPool<PoolProbe>.Return(reusedFirst);
+            ThreadLocalObjectPool<PoolProbe>.Return(mainReused);
         }
 
         private static void Print(string name, long elapsedTicks, long allocatedBytes)
