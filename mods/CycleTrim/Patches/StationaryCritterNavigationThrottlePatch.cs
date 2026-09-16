@@ -36,11 +36,11 @@ namespace CycleTrim.Patches
 
         private static RefreshStamp CaptureStamp(
             Navigator navigator,
+            int cell,
             bool forceUpdate,
             bool reportOccupation,
             bool executePathProbeTaskAsync)
         {
-            var cell = Grid.PosToCell(navigator);
             var context = (int)navigator.CurrentNavType & 0xFF;
             context |= ((int)navigator.flags & 0xFF) << 8;
             if (forceUpdate)
@@ -97,8 +97,18 @@ namespace CycleTrim.Patches
                 || ___reportOccupation
                 || ___executePathProbeTaskAsync
                 || ___abilities == null
-                || ___abilities.GetType() != typeof(CreaturePathFinderAbilities)
-                || !Grid.IsValidCell(Grid.PosToCell(__instance))
+                || ___abilities.GetType() != typeof(CreaturePathFinderAbilities))
+            {
+                if (States.TryGetValue(__instance, out var preservedState))
+                {
+                    preservedState.Gate.Invalidate();
+                }
+
+                return true;
+            }
+
+            var cell = Grid.PosToCell(__instance);
+            if (!Grid.IsValidCell(cell)
                 || __instance.GetComponent<CreatureBrain>() == null)
             {
                 if (States.TryGetValue(__instance, out var preservedState))
@@ -118,6 +128,7 @@ namespace CycleTrim.Patches
             return state.Gate.ShouldRefresh(
                 CaptureStamp(
                     __instance,
+                    cell,
                     forceUpdate,
                     ___reportOccupation,
                     ___executePathProbeTaskAsync));
