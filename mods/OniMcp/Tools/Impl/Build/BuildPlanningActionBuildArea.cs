@@ -45,9 +45,53 @@ namespace OniMcp.Tools
                     if (!ToolUtil.GetBool(args, "confirm", false) && !ToolUtil.GetBool(args, "dryRun", false))
                         return CallToolResult.Error("confirm=true is required unless dryRun=true");
 
+                    bool dryRun = IsDryRun(args);
+                    bool hadExplicitPrefabId = args["prefabId"] != null
+                        && !string.IsNullOrWhiteSpace(args["prefabId"]?.ToString());
                     var planResolution = ResolveBuildPlan(args);
-                    if (args["prefabId"] == null && !string.IsNullOrWhiteSpace(planResolution.PrefabId))
+                    if (!hadExplicitPrefabId && !string.IsNullOrWhiteSpace(planResolution.PrefabId))
+                    {
+                        var writeCandidates = planResolution.BuildingCandidates;
+                        var topCandidate = writeCandidates.FirstOrDefault();
+                        if (topCandidate != null
+                            && (string.Equals(topCandidate.MatchKind, "sequence", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(topCandidate.MatchKind, "sequence_first", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            var sequenceBuilding = planResolution.SequenceItems.FirstOrDefault(item =>
+                                item.IsKind("building")
+                                && string.Equals(item.PrefabId, planResolution.PrefabId, StringComparison.OrdinalIgnoreCase));
+                            if (sequenceBuilding != null
+                                && sequenceBuilding.BuildingCandidates != null
+                                && sequenceBuilding.BuildingCandidates.Count > 0)
+                                writeCandidates = sequenceBuilding.BuildingCandidates;
+                        }
+
+                        topCandidate = writeCandidates.FirstOrDefault();
+                        var secondCandidate = writeCandidates.Skip(1).FirstOrDefault();
+                        string writeSafetyReason;
+                        if (!dryRun && !IsAutoWriteBuildingResolutionSafe(
+                            topCandidate?.MatchKind,
+                            topCandidate?.Score ?? 0,
+                            secondCandidate?.Score ?? 0,
+                            out writeSafetyReason))
+                        {
+                            var rejection = new Dictionary<string, object>
+                            {
+                                ["success"] = false,
+                                ["reasonCode"] = "ambiguous_plan_building",
+                                ["writeBlocked"] = true,
+                                ["resolutionReason"] = writeSafetyReason,
+                                ["resolvedPrefabId"] = planResolution.PrefabId,
+                                ["planResolution"] = planResolution.ToDictionary(),
+                                ["candidates"] = writeCandidates.Take(3).Select(item => item.ToDictionary()).ToList(),
+                                ["next"] = "Run dryRun=true to inspect ranked candidates, then retry confirm=true with an explicit prefabId.",
+                                ["tokenHint"] = "Choose a concrete candidates[].prefabId. Exact aliases and explicit prefabId remain one-call safe."
+                            };
+                            return CallToolResult.Error(JsonConvert.SerializeObject(rejection, McpJsonUtil.Settings));
+                        }
+
                         args["prefabId"] = planResolution.PrefabId;
+                    }
                     if (args["material"] == null && !string.IsNullOrWhiteSpace(planResolution.Material))
                         args["material"] = planResolution.Material;
                     if (args["query"] == null && args["target"] == null && args["search"] == null && !string.IsNullOrWhiteSpace(planResolution.AnchorQuery))
@@ -78,7 +122,6 @@ namespace OniMcp.Tools
                     if (anchors.Count > maxAnchors)
                         return CallToolResult.Error($"Refusing to process {anchors.Count} anchors; maxAnchors={maxAnchors}");
 
-                    bool dryRun = IsDryRun(args);
             bool allowPartial = ToolUtil.GetBool(args, "allowPartial", false);
             int maxCommitAnchors = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCommitAnchors") ?? 32, 128));
                     var preflightArgs = (JObject)args.DeepClone();
