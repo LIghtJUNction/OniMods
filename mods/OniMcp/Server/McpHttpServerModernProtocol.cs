@@ -117,7 +117,6 @@ namespace OniMcp.Server
                     $"Mcp-Protocol-Version must be {ModernProtocolVersion} for a modern request");
                 return false;
             }
-
             if (string.IsNullOrEmpty(metaVersion))
             {
                 error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
@@ -139,11 +138,17 @@ namespace OniMcp.Server
             }
 
             var clientInfo = meta["io.modelcontextprotocol/clientInfo"];
-            if (clientInfo != null && clientInfo.Type != JTokenType.Object)
+            if (clientInfo != null)
             {
-                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                    "params._meta.io.modelcontextprotocol/clientInfo must be an object when provided");
-                return false;
+                var clientInfoObject = clientInfo as JObject;
+                if (clientInfoObject == null
+                    || clientInfoObject["name"]?.Type != JTokenType.String
+                    || clientInfoObject["version"]?.Type != JTokenType.String)
+                {
+                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                        "params._meta.io.modelcontextprotocol/clientInfo must contain string name and version when provided");
+                    return false;
+                }
             }
 
             string methodHeader = httpRequest.Headers["Mcp-Method"];
