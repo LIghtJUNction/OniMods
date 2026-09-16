@@ -61,6 +61,7 @@ def main() -> int:
     native_path = read("BuildPlanningNativeUtilityPath.cs")
     placement = read("BuildPlanningActionPlacement.cs")
     geometry = read("BuildPlanningPlacementGeometry.cs")
+    backwall_policy = read("BuildPlanningBackwallSupportPolicy.cs")
     overlay = (ROOT / "mods/OniMcp/Tools/Impl/World/WorldOverlayObjectSerialization.cs").read_text(encoding="utf-8")
 
     # Logic control buildings must remain physical buildings. The old broad
@@ -142,7 +143,7 @@ def main() -> int:
         failures,
     )
     forbid(backwall_body, "Orientation.Neutral", "backwall guard must use requested orientation", failures)
-    require(geometry, '"backwall_required"', "stable backwall reason propagation", failures)
+    require(backwall_policy, '"backwall_required"', "stable backwall reason propagation", failures)
 
     # Control-flow contract: every path receives a full-path guard before a
     # free-build fallback or per-cell loop, and native drag rechecks immediately
