@@ -36,14 +36,22 @@ namespace OniMcp.Server
                 return;
             }
 
-            JObject rawMessage;
+            JToken parsedMessage;
             try
             {
-                rawMessage = JObject.Parse(body);
+                parsedMessage = JToken.Parse(body);
             }
             catch (JsonException ex)
             {
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), 200);
+                return;
+            }
+
+            var rawMessage = parsedMessage as JObject;
+            if (rawMessage == null)
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                    "JSON-RPC request must be a single object"), 400);
                 return;
             }
 
