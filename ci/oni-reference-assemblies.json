@@ -13,6 +13,14 @@
       "property": "TargetGameVersion",
       "resolved_property": "BeachedDlcHotfix1"
     },
+    "upstream_tracking": {
+      "branch": "master",
+      "files": [
+        {"path":"Lib/0Harmony.dll","pinned_blob_sha":"62cc4174fe6eecfa7e3ce556e69e4c79415e2e5f"},
+        {"path":"Lib/Assembly-CSharp.dll","pinned_blob_sha":"edcc29584194c60aab9e65ce9ac89029373222c7"},
+        {"path":"Lib/Assembly-CSharp-firstpass.dll","pinned_blob_sha":"f15b51ffd825ab532268774647d602d17efbf730"}
+      ]
+    },
     "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately."
   },
   "method_body_source": {
