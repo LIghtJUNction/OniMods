@@ -76,20 +76,51 @@ internal static class Program
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern discovery allocated legacy session state");
 
-                const string malformedClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":\"invalid\"}";
-                string malformed = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3003,\"params\":{" + malformedClientInfo + "}}";
-                using (var response = PostModern(client, malformed, "server/discover"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Malformed present clientInfo was accepted");
-                    Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
-                        "Malformed clientInfo used the wrong JSON-RPC error code");
-                }
+                const string validClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"wire-test\",\"version\":\"1.0\"}}";
+                AssertClientInfoAccepted(client, validClientInfo,
+                    "A conforming present clientInfo object was rejected");
+
+                const string scalarClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":\"invalid\"}";
+                AssertClientInfoRejected(client, scalarClientInfo,
+                    "Scalar clientInfo was accepted");
+
+                const string emptyClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{}}";
+                AssertClientInfoRejected(client, emptyClientInfo,
+                    "clientInfo without required name/version was accepted");
+
+                const string missingVersionClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"wire-test\"}}";
+                AssertClientInfoRejected(client, missingVersionClientInfo,
+                    "clientInfo without required version was accepted");
+
+                const string wrongTypeClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":123,\"version\":\"1.0\"}}";
+                AssertClientInfoRejected(client, wrongTypeClientInfo,
+                    "clientInfo with non-string name was accepted");
             }
             finally
             {
                 server.StopServer();
             }
+        }
+    }
+
+    private static void AssertClientInfoAccepted(HttpClient client, string meta, string message)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3003,\"params\":{" + meta + "}}";
+        using (var response = PostModern(client, body, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK, message);
+            Assert(ReadJson(response)["result"] != null, message);
+        }
+    }
+
+    private static void AssertClientInfoRejected(HttpClient client, string meta, string message)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3004,\"params\":{" + meta + "}}";
+        using (var response = PostModern(client, body, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest, message);
+            Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                "Malformed clientInfo used the wrong JSON-RPC error code");
         }
     }
 
