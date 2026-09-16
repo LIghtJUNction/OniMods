@@ -11,7 +11,8 @@
   ],
   "reference_source": {
     "commit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
-    "official_oni_build": 744825,
+    "declared_oni_build": 737790,
+    "official_oni_build_at_capture": 744825,
     "repository": "Sgt-Imalas/Sgt_Imalas-Oni-Mods"
   },
   "schema": 1,
