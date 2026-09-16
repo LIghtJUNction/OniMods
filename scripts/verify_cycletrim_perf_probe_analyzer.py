@@ -90,6 +90,35 @@ def main() -> int:
     failures = analyzer.validate(legacy, required)
     require(not failures, "legacy latest-report validation should remain compatible")
 
+    fasttrack = copy.deepcopy(second)
+    fasttrack["targets"][-1]["fastTrackPatched"] = True
+    failures = analyzer.validate(fasttrack, required)
+    require(
+        not failures,
+        "default validation should keep FastTrack ownership informational",
+    )
+    failures = analyzer.validate(fasttrack, required, reject_fasttrack=True)
+    require(
+        any("is patched by FastTrack" in failure for failure in failures),
+        "vanilla-baseline validation did not reject a FastTrack-owned target",
+    )
+
+    malformed_ownership = copy.deepcopy(second)
+    malformed_ownership["targets"][0]["fastTrackPatched"] = "yes"
+    failures = analyzer.validate(malformed_ownership, required)
+    require(
+        any("fastTrackPatched must be a boolean" in failure for failure in failures),
+        "analyzer accepted malformed FastTrack ownership state",
+    )
+
+    ownership_drift = copy.deepcopy(second)
+    ownership_drift["targets"][0]["fastTrackPatched"] = True
+    failures = analyzer.validate_series([first, ownership_drift], required)
+    require(
+        any("fastTrackPatched changed within one capture" in failure for failure in failures),
+        "series validator did not reject mid-capture FastTrack ownership drift",
+    )
+
     broken_delta = copy.deepcopy(second)
     broken_delta["targets"][0]["intervalCalls"] = 2
     failures = analyzer.validate_series([first, broken_delta], required)
