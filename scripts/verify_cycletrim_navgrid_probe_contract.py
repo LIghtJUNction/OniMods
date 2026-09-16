@@ -58,7 +58,7 @@ def main() -> int:
         "List<int> ___DirtyCells",
         "__instance.updateRangeX",
         "__instance.updateRangeY",
-        "GameScheduler.Instance",
+        "UIScheduler.Instance",
         "ScheduleNextFrame(ReportName, ReportCallback)",
         "Probe.FormatSummary(maxBuckets: 12)",
         "Probe.FormatSummary(maxBuckets: HistogramBucketCapacity)",
@@ -67,6 +67,10 @@ def main() -> int:
     for fragment in required_patch_fragments:
         if fragment not in patch:
             failures.append(f"runtime probe contract missing: {fragment}")
+    if "GameScheduler.Instance" in patch:
+        failures.append(
+            "NavGrid probe reporting must not use the paused GameClock-backed GameScheduler"
+        )
 
     required_analyzer_fragments = (
         "RESOLVED_MARKER",
@@ -184,7 +188,7 @@ def main() -> int:
 
     print(
         "PASS CycleTrim NavGrid workload probe remains opt-in, observational, "
-        "and complete-capture evidence is validated with candidate-gate bounds"
+        "pause-safe, and complete-capture evidence is validated with candidate-gate bounds"
     )
     return 0
 
