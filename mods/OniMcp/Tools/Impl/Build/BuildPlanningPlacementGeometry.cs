@@ -111,6 +111,9 @@ namespace OniMcp.Tools
             }
 
             int worldId = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell) ? Grid.WorldIdx[cell] : -1;
+            var rotatable = go.GetComponent<Rotatable>();
+            bool orientationRelevant = rotatable != null || def?.BuildingComplete?.GetComponent<Rotatable>() != null;
+            Orientation orientation = rotatable == null ? Orientation.Neutral : rotatable.GetOrientation();
 
             return new Dictionary<string, object>
             {
@@ -120,7 +123,9 @@ namespace OniMcp.Tools
                 ["derivedAnchorX"] = originX,
                 ["derivedAnchorY"] = originY,
                 ["worldId"] = worldId,
-                ["note"] = "derivedAnchor is Building.GetBottomLeftCell when available; placement uses the requested anchor cell directly"
+                ["orientation"] = orientation.ToString(),
+                ["orientationRelevant"] = orientationRelevant,
+                ["note"] = "derivedAnchor is Building.GetBottomLeftCell when available; orientation comes from Rotatable when present; placement uses the requested anchor cell directly"
             };
         }
 
@@ -129,21 +134,37 @@ namespace OniMcp.Tools
             int actualX = actual.ContainsKey("derivedAnchorX") ? Convert.ToInt32(actual["derivedAnchorX"]) : -1;
             int actualY = actual.ContainsKey("derivedAnchorY") ? Convert.ToInt32(actual["derivedAnchorY"]) : -1;
             int actualWorld = actual.ContainsKey("worldId") ? Convert.ToInt32(actual["worldId"]) : -1;
-            bool anchorMatches = actualX == expected.AnchorX && actualY == expected.AnchorY;
-            bool worldMatches = actualWorld < 0 || expected.WorldId < 0 || actualWorld == expected.WorldId;
-            bool valid = anchorMatches && worldMatches;
+            string actualOrientation = actual.ContainsKey("orientation")
+                ? actual["orientation"]?.ToString()
+                : Orientation.Neutral.ToString();
+            bool orientationRelevant = actual.ContainsKey("orientationRelevant")
+                && Convert.ToBoolean(actual["orientationRelevant"]);
+            var identity = BuildPlacementIdentityPolicy.Evaluate(
+                expected.AnchorX,
+                expected.AnchorY,
+                expected.WorldId,
+                expected.Orientation.ToString(),
+                actualX,
+                actualY,
+                actualWorld,
+                actualOrientation,
+                orientationRelevant);
             return new Dictionary<string, object>
             {
-                ["valid"] = valid,
-                ["anchorMatches"] = anchorMatches,
-                ["worldMatches"] = worldMatches,
+                ["valid"] = identity.Valid,
+                ["anchorMatches"] = identity.AnchorMatches,
+                ["worldMatches"] = identity.WorldMatches,
+                ["orientationMatches"] = identity.OrientationMatches,
+                ["orientationRelevant"] = orientationRelevant,
                 ["expectedAnchor"] = new { x = expected.AnchorX, y = expected.AnchorY },
                 ["actualDerivedAnchor"] = new { x = actualX, y = actualY },
                 ["expectedWorldId"] = expected.WorldId,
                 ["actualWorldId"] = actualWorld,
-                ["next"] = valid
+                ["expectedOrientation"] = expected.Orientation.ToString(),
+                ["actualOrientation"] = actualOrientation,
+                ["next"] = identity.Valid
                     ? "Verify with world_area_snapshot/world_text_map before placing the next footprint batch."
-                    : "Cancel the misplaced blueprint before retrying from the expected anchor."
+                    : "Inspect the existing object's anchor and orientation before retrying; do not treat it as the requested placement."
             };
         }
 
