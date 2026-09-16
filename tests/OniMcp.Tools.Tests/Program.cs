@@ -38,6 +38,7 @@ internal static class Program
         TestNumbers();
         TestRegexBoundaries();
         TestFloodFillPreviewCells();
+        TestSandboxDryRunRoutingPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -158,6 +159,35 @@ internal static class Program
         Check(visited.Count == cells.Length, "flood-fill preview must visit every planned cell exactly once");
         for (int i = 0; i < cells.Length; i++)
             Check(visited[i] == cells[i], "flood-fill preview must preserve the production plan order");
+    }
+
+    private static void TestSandboxDryRunRoutingPolicy()
+    {
+        string error;
+        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("area", "flood_fill", true, out error),
+            "flood-fill dry-run remains supported");
+        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("map_designate", "replace", true, out error),
+            "map-designate dry-run remains supported");
+        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("read", "sample_cell", true, out error),
+            "read-only sandbox calls may ignore dryRun safely");
+        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("area", "paint", false, out error),
+            "normal writes are not changed by the dry-run policy");
+
+        foreach (var route in new[]
+        {
+            new[] { "area", "paint" },
+            new[] { "area", "temperature" },
+            new[] { "area", "destroy" },
+            new[] { "entity", "spawn_entity" },
+            new[] { "entities", "auto_plumb_building" },
+            new[] { "", "set_sandbox_mode" }
+        })
+        {
+            Check(SandboxDryRunRoutingPolicy.TryRejectUnsupported(route[0], route[1], true, out error),
+                "unsupported sandbox dry-run must fail closed: " + route[0] + "/" + route[1]);
+            Check(error != null && error.Contains("refusing to execute"),
+                "unsupported sandbox dry-run explains that mutation was refused");
+        }
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
