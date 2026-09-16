@@ -7,8 +7,16 @@ on:
       - 'tests/**'
       - 'benchmarks/CycleTrim.BrainBenchmarks/**'
       - 'scripts/**'
-      - '.agents/skills/oni-mcp-autonomous-iteration/scripts/**'
-      - '.github/workflows/mod-quality.yml'
+      - 'ci/**'
+      - 'docs/**'
+      - '*.md'
+      - 'Directory.Build.*'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'NuGet.Config'
+      - 'nuget.config'
+      - '.agents/skills/**'
+      - '.github/workflows/**'
   push:
     branches: [main]
     paths:
@@ -16,8 +24,16 @@ on:
       - 'tests/**'
       - 'benchmarks/CycleTrim.BrainBenchmarks/**'
       - 'scripts/**'
-      - '.agents/skills/oni-mcp-autonomous-iteration/scripts/**'
-      - '.github/workflows/mod-quality.yml'
+      - 'ci/**'
+      - 'docs/**'
+      - '*.md'
+      - 'Directory.Build.*'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'NuGet.Config'
+      - 'nuget.config'
+      - '.agents/skills/**'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 permissions:
@@ -35,6 +51,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Check changed-line whitespace
+        run: python3 scripts/check_git_whitespace.py
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.x'

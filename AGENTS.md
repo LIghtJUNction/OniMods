@@ -34,3 +34,9 @@
 - If livestream/OBS fails, pause gameplay and restore the stream first.
 - If a viewer suggestion is low-risk, evaluate it quickly; if it is risky, explain the blocker briefly.
 - Keep token usage low with compact reads and short polling windows.
+
+## Autonomous Maintenance
+
+Read `docs/autonomous-iteration.md` before scheduled research, implementation or
+CI work. Park runtime-blocked PRs instead of repeatedly rebasing them; report
+reference builds, source contracts, host tests and actual ONI runs separately.
