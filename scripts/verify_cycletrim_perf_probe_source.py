@@ -68,6 +68,14 @@ def main() -> int:
         ("fastTrackPatched changed within one capture", "analyzer does not reject mid-capture FastTrack ownership drift"),
         ("intervalCalls does not match cumulative delta", "analyzer does not close interval call arithmetic"),
         ("intervalTotalTicks does not match cumulative delta", "analyzer does not close interval timing arithmetic"),
+        (
+            "has no fresh calls after the selected baseline",
+            "workload-anchored analyzer can reuse only pre-baseline cumulative calls",
+        ),
+        (
+            "require_fresh_calls=args.after_sequence is not None",
+            "--after-sequence does not enable the fresh-workload call gate",
+        ),
     ):
         require(analyzer, needle, message, failures)
 
