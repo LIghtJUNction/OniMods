@@ -5,8 +5,15 @@
   "reference_source": {
     "repository": "Sgt-Imalas/Sgt_Imalas-Oni-Mods",
     "commit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
+    "declared_oni_build": 737790,
     "license_path": "Lib/LICENSE.txt",
-    "note": "Reference assemblies only. The source commit post-dates ONI 744825, but the repository does not encode an authoritative ONI build number; compile success must not be reported as proof of runtime compatibility."
+    "version_marker": {
+      "path": "Directory.Build.props",
+      "blob_sha": "cda8097ccf5d0033f68253faa1ad373305394ea8",
+      "property": "TargetGameVersion",
+      "resolved_property": "BeachedDlcHotfix1"
+    },
+    "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately."
   },
   "method_body_source": {
     "repository": "Kupie/ONI_Decomp",

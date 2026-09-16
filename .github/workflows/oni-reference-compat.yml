@@ -38,6 +38,11 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '10.0.x'
+      - name: Verify reference provenance and lag status
+        run: >-
+          python3 scripts/verify_oni_reference_provenance.py
+          --manifest ci/oni-reference-assemblies.json
+          --verify-upstream
       - name: Fetch and verify pinned reference assemblies
         run: >-
           python3 scripts/fetch_oni_reference_assemblies.py
