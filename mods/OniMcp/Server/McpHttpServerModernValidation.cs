@@ -12,7 +12,12 @@ namespace OniMcp.Server
             string protocolVersion, JObject meta, string metaVersion, out JsonRpcResponse error)
         {
             error = null;
-            if (rawMessage.Property("id") != null && rawMessage["id"]?.Type == JTokenType.Null)
+            var requestId = rawMessage["id"];
+            if (rawMessage.Property("id") != null
+                && (requestId == null
+                    || (requestId.Type != JTokenType.String
+                        && requestId.Type != JTokenType.Integer
+                        && requestId.Type != JTokenType.Float)))
             {
                 error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
                     "Modern request id must be a string or number");
