@@ -3,7 +3,7 @@
   "repository": "peterhaneve/ONIMods",
   "commit": "30f4beb7b574c9f95801c3fa7dea8590737dd752",
   "checkedDate": "2026-09-16",
-  "scope": "Fetch/pickup activation evidence for FetchPickupCandidatePatch and BusyDuplicantChoreThrottlePatch; CycleTrim remains conservative and does not enable any patch under FastTrack in this change.",
+  "scope": "Fetch/pickup and busy-duplicant scheduler activation evidence for FetchPickupCandidatePatch and BusyDuplicantChoreThrottlePatch; CycleTrim remains conservative and does not enable any patch under FastTrack in this change.",
   "files": [
     {
       "path": "FastTrack/FastTrackMod.cs",
@@ -24,6 +24,14 @@
     {
       "path": "FastTrack/SensorPatches/SensorPatches.cs",
       "gitBlobSha1": "ca8fcfd3cff5662c042e6a15f716c53cda6e9850"
+    },
+    {
+      "path": "FastTrack/PathPatches/AsyncPathPatches.cs",
+      "gitBlobSha1": "98e1c077441af39a93a82da1e8f3cbf87f12cd28"
+    },
+    {
+      "path": "FastTrack/PathPatches/PriorityBrainScheduler.cs",
+      "gitBlobSha1": "337f237cc57c230346bd14038549c3337f4db458"
     }
   ],
   "observedContract": {
@@ -43,6 +51,19 @@
       "prefix": "PeterHan.FastTrack.SensorPatches.PickupableSensor_Update_Patch.Prefix",
       "behavior": "FastTrack returns false from a low-priority prefix, replacing PickupableSensor.Update when PickupOpts is active. CycleTrim also targets PickupableSensor.Update as one part of BusyDuplicantChoreThrottlePatch."
     },
-    "cycleTrimCurrentPolicy": "Keep both CycleTrim patches behind the existing FetchManagerFastUpdate type-presence guard. This contract only pins the direct target/feature evidence needed for later real-game compatibility work."
+    "busyDuplicantScheduler": {
+      "featureFlag": "PickupOpts",
+      "defaultEnabled": true,
+      "chorePriorityDefault": "Higher",
+      "schedulerTargetType": "BrainScheduler",
+      "schedulerTargetMethod": "RenderEveryTick",
+      "schedulerPrefix": "PeterHan.FastTrack.PathPatches.BrainScheduler_RenderEveryTick_Patch.Prefix",
+      "cycleTrimTargets": [
+        "ChoreConsumer.FindNextChore(ref Chore.Precondition.Context)",
+        "BrainScheduler.PrioritizeBrain(Brain)"
+      ],
+      "behavior": "With PickupOpts active, FastTrack replaces BrainScheduler.RenderEveryTick and routes brain groups through PriorityBrainScheduler.UpdateBrainGroup, which consumes priorityBrains according to ChorePriorityMode. Delay mode additionally gates Brain.UpdateChores on PickupOpts + FastReachability + ChorePriorityMode=Delay. This is an indirect scheduler/chore-pipeline interaction with CycleTrim's FindNextChore throttle and PrioritizeBrain invalidation hook, not a same-target patch conflict."
+    },
+    "cycleTrimCurrentPolicy": "Keep both CycleTrim patches behind the existing FetchManagerFastUpdate type-presence guard. The direct PickupableSensor conflict and the indirect busy-duplicant scheduler/chore interaction remain pinned evidence for later real-game compatibility work; this contract does not prove that feature-level activation is runtime-safe."
   }
 }
