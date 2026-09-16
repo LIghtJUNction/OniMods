@@ -32,12 +32,40 @@ internal static class Program
             },
             Handler = args => { calls++; return CallToolResult.Text("ok"); }
         };
+        TestBuildPlanWriteSafety();
         TestBatchFailures();
         TestProgramValidation();
         TestProgramExecution();
         TestNumbers();
         TestRegexBoundaries();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
+    }
+
+    private static void TestBuildPlanWriteSafety()
+    {
+        string reason;
+        Check(BuildPlanningTools.SuffixBuildingAliasScore + BuildPlanningTools.MaximumPlanTermOrderBoost
+                < BuildPlanningTools.MinimumAutoWriteBuildingScore,
+            "suffix-derived alias scores must remain below the confirmed-write floor");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("alias", 950, 949, out reason) && reason == null,
+            "exact aliases remain executable even when text candidates are nearby");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("prefabId", 10000, 9999, out reason) && reason == null,
+            "explicit prefab ids remain executable");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 700, out reason) && reason == null,
+            "clear strong fuzzy matches remain executable");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe(
+                "alias_suffix",
+                BuildPlanningTools.SuffixBuildingAliasScore + BuildPlanningTools.MaximumPlanTermOrderBoost,
+                0,
+                out reason)
+            && reason == "low_confidence",
+            "suffix-derived aliases cannot masquerade as exact aliases at the write boundary");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 699, 0, out reason) && reason == "low_confidence",
+            "low-confidence fuzzy matches fail closed");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 701, out reason) && reason == "near_tie",
+            "near-tied fuzzy matches fail closed");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 700, out reason),
+            "the minimum accepted score gap is inclusive");
     }
 
     private static void TestBatchFailures()
