@@ -167,6 +167,8 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
         "FastTrack/FastTrackCompat.cs",
         "FastTrack/GamePatches/FetchManagerFastUpdate.cs",
         "FastTrack/SensorPatches/SensorPatches.cs",
+        "FastTrack/PathPatches/AsyncPathPatches.cs",
+        "FastTrack/PathPatches/PriorityBrainScheduler.cs",
     }
     missing = required_paths - sources.keys()
     if missing:
@@ -178,6 +180,8 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
     compat = sources["FastTrack/FastTrackCompat.cs"]
     fetch_patch = sources["FastTrack/GamePatches/FetchManagerFastUpdate.cs"]
     sensors = sources["FastTrack/SensorPatches/SensorPatches.cs"]
+    async_path = sources["FastTrack/PathPatches/AsyncPathPatches.cs"]
+    priority_scheduler = sources["FastTrack/PathPatches/PriorityBrainScheduler.cs"]
 
     require_regex(
         mod,
@@ -262,13 +266,92 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
         failures,
     )
 
+    require_regex(
+        options,
+        r"public\s+NextChorePriority\s+ChorePriorityMode\s*\{\s*get;\s*set;\s*\}",
+        "FastTrack ChorePriorityMode option declaration changed",
+        failures,
+    )
+    require_regex(
+        options,
+        r"\bChorePriorityMode\s*=\s*NextChorePriority\.Higher\s*;",
+        "FastTrack ChorePriorityMode default is no longer Higher",
+        failures,
+    )
+    require_regex(
+        async_path,
+        r"\[HarmonyPatch\(typeof\(BrainScheduler\),\s*nameof\(BrainScheduler\.RenderEveryTick\)\)\]\s*"
+        r"internal\s+static\s+class\s+BrainScheduler_RenderEveryTick_Patch",
+        "FastTrack BrainScheduler.RenderEveryTick target changed",
+        failures,
+    )
+    require_regex(
+        async_path,
+        r"class\s+BrainScheduler_RenderEveryTick_Patch.*?"
+        r"internal\s+static\s+bool\s+Prepare\(\)\s*=>\s*FastTrackOptions\.Instance\.PickupOpts\s*;",
+        "FastTrack BrainScheduler replacement is no longer gated by PickupOpts",
+        failures,
+    )
+    require_regex(
+        async_path,
+        r"class\s+BrainScheduler_RenderEveryTick_Patch.*?"
+        r"\[HarmonyPriority\(Priority\.Low\)\].*?"
+        r"PriorityBrainScheduler\.Instance\.UpdateBrainGroup\(inst,\s*brainGroup\)\s*;.*?"
+        r"return\s+false\s*;",
+        "FastTrack BrainScheduler replacement no longer routes groups through PriorityBrainScheduler and skips vanilla RenderEveryTick",
+        failures,
+    )
+    require_regex(
+        async_path,
+        r"\[HarmonyPatch\(typeof\(Brain\),\s*nameof\(Brain\.UpdateChores\)\)\]\s*"
+        r"public\s+static\s+class\s+Brain_UpdateChores_Patch.*?"
+        r"return\s+opts\.PickupOpts\s*&&\s*opts\.FastReachability\s*&&\s*"
+        r"opts\.ChorePriorityMode\s*==\s*FastTrackOptions\.NextChorePriority\.Delay\s*;",
+        "FastTrack delayed chore-acquisition gate changed",
+        failures,
+    )
+    require_regex(
+        async_path,
+        r"class\s+Brain_UpdateChores_Patch.*?"
+        r"consumer\.choreDriver\.HasChore\(\).*?"
+        r"!inst\.updateFirst\.\s*Contains\(__instance\)",
+        "FastTrack Brain.UpdateChores prefix no longer gates chore acquisition through updateFirst",
+        failures,
+    )
+    require_regex(
+        priority_scheduler,
+        r"var\s+pm\s*=\s*opts\.ChorePriorityMode\s*;.*?"
+        r"if\s*\(\s*pm\s*==\s*FastTrackOptions\.NextChorePriority\.Delay\s*&&\s*!opts\.FastReachability\s*\)\s*"
+        r"pm\s*=\s*FastTrackOptions\.NextChorePriority\.Normal\s*;",
+        "FastTrack PriorityBrainScheduler mode/fallback contract changed",
+        failures,
+    )
+    require_regex(
+        priority_scheduler,
+        r"private\s+void\s+PopulatePriorityBrains\(.*?"
+        r"var\s+prioritize\s*=\s*brainGroup\.priorityBrains\s*;.*?"
+        r"case\s+FastTrackOptions\.NextChorePriority\.Higher\s*:.*?"
+        r"prioritize\.Dequeue\(\).*?inst\.QueueBrain\(brain\)\s*;",
+        "FastTrack priority-brain queue handling changed",
+        failures,
+    )
+    require_regex(
+        priority_scheduler,
+        r"internal\s+void\s+UpdateBrainGroup\(.*?"
+        r"brainGroup\.BeginBrainGroupUpdate\(\)\s*;.*?"
+        r"PopulatePriorityBrains\(inst,\s*brainGroup\)\s*;.*?"
+        r"brainGroup\.EndBrainGroupUpdate\(\)\s*;",
+        "FastTrack UpdateBrainGroup no longer owns the brain-group scheduling cycle",
+        failures,
+    )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--verify-upstream",
         action="store_true",
-        help="download immutable pinned FastTrack sources and verify fetch/pickup activation assumptions",
+        help="download immutable pinned FastTrack sources and verify fetch/pickup/scheduler activation assumptions",
     )
     args = parser.parse_args()
 
@@ -290,7 +373,7 @@ def main() -> int:
 
     mode = "local + pinned upstream" if args.verify_upstream else "local"
     print(
-        "OK: CycleTrim FastTrack fetch/pickup compatibility contract "
+        "OK: CycleTrim FastTrack fetch/pickup/scheduler compatibility contract "
         f"({mode}, {manifest['repository']}@{manifest['commit']})"
     )
     return 0
