@@ -227,13 +227,15 @@ namespace CycleTrim.Patches
 
             private static void Prefix(Brain brain)
             {
-                if (brain == null || brain.GetComponent<MinionIdentity>() == null)
+                if (brain == null)
                 {
                     return;
                 }
 
                 var consumer = brain.GetComponent<ChoreConsumer>();
-                if (consumer != null && States.TryGetValue(consumer, out var state))
+                if (consumer != null
+                    && States.TryGetValue(consumer, out var state)
+                    && state.IsDuplicant)
                 {
                     state.Invalidate();
                 }
