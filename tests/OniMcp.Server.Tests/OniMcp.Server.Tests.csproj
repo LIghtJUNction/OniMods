@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="LegacyPingRegression.cs" />
+    <Compile Include="HttpAdmissionRegression.cs" />
     <Compile Include="GameStubs.cs" />
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Core/*.cs" Link="Core/%(Filename)%(Extension)" />

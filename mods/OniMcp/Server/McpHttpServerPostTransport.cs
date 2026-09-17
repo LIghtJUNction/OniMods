@@ -132,13 +132,6 @@ namespace OniMcp.Server
                 return;
             }
 
-            if (isInitialize)
-            {
-                sessionId = EnsureSession(response, sessionId);
-                if (sessionId == null)
-                    return;
-            }
-
             if (isPingRequest)
             {
                 SetResponseSessionId(response, sessionId);
@@ -147,11 +140,25 @@ namespace OniMcp.Server
                 return;
             }
 
+            MainThreadHttpAdmissionLease admission;
+            if (!TryAcquireMainThreadHttpAdmission(response, rpcRequest.Id, sessionId, false, out admission))
+                return;
+
+            if (isInitialize)
+            {
+                sessionId = EnsureSession(response, sessionId);
+                if (sessionId == null)
+                {
+                    admission.Release();
+                    return;
+                }
+            }
+
             // 通知（无 id）：返回 202 Accepted
             if (isNotification)
             {
                 // 在后台处理通知
-                MainThreadBridge.Enqueue(new System.Action(() =>
+                EnqueueAdmittedMainThread(admission, new System.Action(() =>
                 {
                     if (_running && IsSessionActive(sessionId))
                         ProcessMethod(rpcRequest, sessionId);
@@ -164,7 +171,7 @@ namespace OniMcp.Server
                 return;
             }
 
-            DispatchPostResponse(response, rpcRequest, sessionId);
+            DispatchPostResponse(response, rpcRequest, sessionId, admission);
         }
 
         private bool TryValidateCors(HttpListenerRequest request, out string origin)
@@ -255,9 +262,10 @@ namespace OniMcp.Server
             return diff == 0;
         }
 
-        private void DispatchPostResponse(HttpListenerResponse response, JsonRpcRequest rpcRequest, string sessionId)
+        private void DispatchPostResponse(HttpListenerResponse response, JsonRpcRequest rpcRequest, string sessionId,
+            MainThreadHttpAdmissionLease admission)
         {
-            MainThreadBridge.Enqueue(new System.Action(() =>
+            EnqueueAdmittedMainThread(admission, new System.Action(() =>
             {
                 object result = null;
                 Exception processEx = null;
@@ -273,7 +281,7 @@ namespace OniMcp.Server
                 }
 
                 ThreadPool.QueueUserWorkItem(_ => SendPostResponse(response, rpcRequest.Id, result, processEx, sessionId));
-            }));
+            }), () => CloseStaleHttpResponse(response));
         }
 
         private void SendPostResponse(HttpListenerResponse response, object requestId, object result, Exception processEx, string sessionId)

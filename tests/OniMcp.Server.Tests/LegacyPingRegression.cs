@@ -20,6 +20,7 @@ internal static class LegacyPingRegressionEntry
     private static void Main()
     {
         RunLegacyPingLifecycleRegression();
+        HttpAdmissionRegression.Run();
         var main = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (main == null)
             throw new InvalidOperationException("Existing server regression entrypoint was not found");
