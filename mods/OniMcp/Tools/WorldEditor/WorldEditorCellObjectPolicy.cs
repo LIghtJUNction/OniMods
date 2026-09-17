@@ -5,7 +5,7 @@ namespace OniMcp.Tools
         internal static T SelectBuildingCandidate<T>(T building, T logicGate, T gantry)
             where T : class
         {
-            return building ?? logicGate;
+            return building ?? logicGate ?? gantry;
         }
     }
 }
