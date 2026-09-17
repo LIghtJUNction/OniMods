@@ -20,11 +20,64 @@ internal static class RegressionEntry
 
     private static void Main()
     {
+        RunModernReadOnlyIsolationRegression();
         RunMalformedToolArgumentsRegression();
         var main = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (main == null)
             throw new InvalidOperationException("Existing modern protocol test entrypoint was not found");
         main.Invoke(null, null);
+    }
+
+    private static void RunModernReadOnlyIsolationRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        OniToolRegistry.ModernToolsEnabled = true;
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                const string body = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2400,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"measure registry only\",\"iterations\":1},\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"read-only-isolation-regression\",\"version\":\"1.0\"}}}}";
+                int callsBefore = OniToolRegistry.Calls;
+                int middlewareCallsBefore = OniToolRegistry.MiddlewareCalls;
+                using (var response = Post(client, body))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern read-only benchmark changed its successful HTTP status");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((string)json["result"]["content"][0]["text"] == "ok",
+                        "Modern read-only benchmark changed its tool result");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Modern read-only benchmark allocated a legacy session header");
+                }
+                Assert(OniToolRegistry.Calls == callsBefore + 1,
+                    "Modern read-only benchmark did not execute its handler exactly once");
+                Assert(OniToolRegistry.MiddlewareCalls == middlewareCallsBefore,
+                    "Modern read-only benchmark passed through legacy tool-call middleware");
+                Assert(OniToolRegistry.LastName == "benchmark"
+                    && (int)OniToolRegistry.LastArguments["iterations"] == 1,
+                    "Modern read-only benchmark changed the dispatched arguments");
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Modern read-only benchmark allocated legacy session state");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            OniToolRegistry.ModernToolsEnabled = false;
+            Invoke(_bridge, "OnDestroy");
+        }
     }
 
     private static void RunMalformedToolArgumentsRegression()
