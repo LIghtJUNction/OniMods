@@ -15,12 +15,20 @@ import urllib.request
 
 RAW_PREFIX = "https://raw.githubusercontent.com/"
 API_PREFIX = "https://api.github.com/repos/"
+STEAM_NEWS_ENDPOINT = "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/"
+ONI_STEAM_APP_ID = 457140
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+STEAM_NEWS_GID_RE = re.compile(r"^[0-9]+$")
 PROPERTY_RE = re.compile(
     r"<(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)>(?P<value>[^<]*)</(?P=name)>"
 )
 PROPERTY_REF_RE = re.compile(r"^\$\((?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\)$")
+OFFICIAL_BUILD_TITLE_PATTERNS = (
+    re.compile(r"^\[Game (?:Update|Hotfix)\]\s*-\s*(?P<build>[0-9]+)\s*$", re.I),
+    re.compile(r"^HOTFIX\s*-\s*(?P<build>[0-9]+)\s*$", re.I),
+    re.compile(r"^Game Update\s+(?P<build>[0-9]+)(?:\s*-\s*.*)?$", re.I),
+)
 
 
 def download_text(url: str) -> bytes:
@@ -43,6 +51,35 @@ def download_json(url: str) -> dict:
     )
     with urllib.request.urlopen(request, timeout=60) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def download_steam_news(app_id: int, count: int = 100) -> list[dict]:
+    if app_id != ONI_STEAM_APP_ID:
+        raise ValueError(f"refusing unexpected Steam app id: {app_id}")
+    query = urllib.parse.urlencode(
+        {
+            "appid": app_id,
+            "count": count,
+            "maxlength": 1,
+            "format": "json",
+        }
+    )
+    request = urllib.request.Request(
+        f"{STEAM_NEWS_ENDPOINT}?{query}",
+        headers={"User-Agent": "OniMods-reference-ci/1"},
+    )
+    with urllib.request.urlopen(request, timeout=60) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    appnews = payload.get("appnews")
+    if not isinstance(appnews, dict):
+        raise ValueError("Steam news response is missing appnews")
+    if int(appnews.get("appid", -1)) != app_id:
+        raise ValueError("Steam news response app id does not match ONI")
+    items = appnews.get("newsitems")
+    if not isinstance(items, list):
+        raise ValueError("Steam news response is missing newsitems")
+    return items
 
 
 def git_blob_sha(data: bytes) -> str:
@@ -89,6 +126,24 @@ def validate_manifest(manifest: dict) -> tuple[int, int, dict, dict, dict | None
         raise ValueError(f"unsupported manifest schema: {manifest.get('schema')!r}")
 
     official_build = int(manifest["official_oni_build"])
+    official_tracking = manifest["official_tracking"]
+    app_id = int(official_tracking["steam_app_id"])
+    if app_id != ONI_STEAM_APP_ID:
+        raise ValueError(
+            f"official Steam app id must be ONI {ONI_STEAM_APP_ID}, got {app_id}"
+        )
+    release_gid = str(official_tracking["release_news_gid"])
+    if not STEAM_NEWS_GID_RE.fullmatch(release_gid):
+        raise ValueError("official Steam release news gid must be numeric")
+    expected_release_url = (
+        f"https://store.steampowered.com/news/app/{app_id}/view/{release_gid}"
+    )
+    if official_tracking.get("release_url") != expected_release_url:
+        raise ValueError(
+            "official Steam release URL does not match app id/news gid: "
+            f"{official_tracking.get('release_url')!r}"
+        )
+
     reference = manifest["reference_source"]
     method_body = manifest["method_body_source"]
 
@@ -150,6 +205,127 @@ def validate_manifest(manifest: dict) -> tuple[int, int, dict, dict, dict | None
             )
 
     return official_build, declared_build, reference, marker, tracking
+
+
+def parse_official_build_title(title: str) -> int | None:
+    for pattern in OFFICIAL_BUILD_TITLE_PATTERNS:
+        match = pattern.fullmatch(title.strip())
+        if match:
+            return int(match.group("build"))
+    return None
+
+
+def compare_official_steam_state(
+    tracked_build: int,
+    tracked_release_gid: str,
+    news_items: list[dict],
+) -> dict:
+    matches = []
+    for item in news_items:
+        if not isinstance(item, dict):
+            raise ValueError("Steam news item must be an object")
+        title = item.get("title")
+        if not isinstance(title, str):
+            continue
+        build = parse_official_build_title(title)
+        if build is None:
+            continue
+        gid = str(item.get("gid", ""))
+        if not STEAM_NEWS_GID_RE.fullmatch(gid):
+            raise ValueError(f"official Steam build item has invalid gid: {gid!r}")
+        published = item.get("date")
+        if isinstance(published, bool) or not isinstance(published, int) or published <= 0:
+            raise ValueError(f"official Steam build item has invalid date: {published!r}")
+        matches.append(
+            {
+                "observed_build": build,
+                "observed_gid": gid,
+                "published_unix": published,
+                "title": title,
+            }
+        )
+
+    if not matches:
+        raise ValueError("Steam news window contains no recognized ONI build announcement")
+
+    latest = max(matches, key=lambda item: (item["published_unix"], item["observed_gid"]))
+    latest["has_official_drift"] = latest["observed_build"] != tracked_build
+    latest["release_identity_matches"] = (
+        latest["observed_build"] == tracked_build
+        and latest["observed_gid"] == tracked_release_gid
+    )
+    return latest
+
+
+def fetch_official_steam_state(official_tracking: dict, tracked_build: int) -> dict:
+    app_id = int(official_tracking["steam_app_id"])
+    news_items = download_steam_news(app_id)
+    return compare_official_steam_state(
+        tracked_build,
+        str(official_tracking["release_news_gid"]),
+        news_items,
+    )
+
+
+def report_official_steam_state(
+    official_tracking: dict,
+    tracked_build: int,
+    state: dict,
+) -> None:
+    observed_build = state["observed_build"]
+    if observed_build < tracked_build:
+        print(
+            "OFFICIAL_ONI_STATUS status=unknown source=steam "
+            f"appid={official_tracking['steam_app_id']} tracked_build={tracked_build} "
+            f"observed_build={observed_build} gid={state['observed_gid']}"
+        )
+        print(
+            "::warning title=Official ONI drift status inconclusive::"
+            f"Steam's newest recognized build in the fetched news window is {observed_build}, "
+            f"older than manifest build {tracked_build}; do not infer a rollback or freshness."
+        )
+        return
+
+    status = "drift" if state["has_official_drift"] else "ok"
+    if not state["has_official_drift"] and not state["release_identity_matches"]:
+        status = "identity-mismatch"
+    print(
+        f"OFFICIAL_ONI_STATUS status={status} source=steam "
+        f"appid={official_tracking['steam_app_id']} tracked_build={tracked_build} "
+        f"observed_build={observed_build} gid={state['observed_gid']} "
+        f"published_unix={state['published_unix']}"
+    )
+
+    if observed_build > tracked_build:
+        print(
+            "::warning title=Official ONI build advanced::"
+            f"Steam reports ONI build {observed_build} after manifest build {tracked_build}. "
+            "Keep compile-reference provenance separate and review reference/API lag before "
+            "updating any immutable pin."
+        )
+    elif not state["release_identity_matches"]:
+        print(
+            "::warning title=Official ONI release identity changed::"
+            f"Steam still reports build {tracked_build}, but its newest matching release gid "
+            f"is {state['observed_gid']} instead of manifest gid "
+            f"{official_tracking['release_news_gid']}. Review the official-release evidence."
+        )
+
+
+def verify_official_steam(official_tracking: dict, tracked_build: int) -> None:
+    try:
+        state = fetch_official_steam_state(official_tracking, tracked_build)
+    except (OSError, ValueError, KeyError, json.JSONDecodeError, UnicodeDecodeError) as error:
+        print(
+            "OFFICIAL_ONI_STATUS status=unknown source=steam "
+            f"appid={official_tracking.get('steam_app_id')} reason={type(error).__name__}"
+        )
+        print(
+            "::warning title=Official ONI drift status unknown::"
+            f"Could not inspect current Steam ONI news: {error}"
+        )
+        return
+    report_official_steam_state(official_tracking, tracked_build, state)
 
 
 def verify_upstream_marker(reference: dict, marker: dict, declared_build: int) -> None:
@@ -326,11 +502,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default="ci/oni-reference-assemblies.json")
     parser.add_argument("--verify-upstream", action="store_true")
+    parser.add_argument("--verify-official", action="store_true")
     args = parser.parse_args()
 
     manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     official_build, declared_build, reference, marker, tracking = validate_manifest(manifest)
 
+    if args.verify_official:
+        verify_official_steam(manifest["official_tracking"], official_build)
     if args.verify_upstream:
         verify_upstream_marker(reference, marker, declared_build)
         if tracking is not None:

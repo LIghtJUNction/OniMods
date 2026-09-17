@@ -4,7 +4,11 @@
 from fnmatch import fnmatchcase
 from pathlib import Path
 
-from verify_oni_reference_provenance import compare_upstream_state, validate_manifest
+from verify_oni_reference_provenance import (
+    compare_official_steam_state,
+    compare_upstream_state,
+    validate_manifest,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +18,7 @@ PINNED_MARKER = "d" * 40
 ASSEMBLY_CSHARP = "b" * 40
 ASSEMBLY_FIRSTPASS = "c" * 40
 UNITY_ENGINE = "9" * 40
+OFFICIAL_RELEASE_GID = "719037282029407479"
 
 REFERENCE = {
     "commit": PINNED_COMMIT,
@@ -111,6 +116,15 @@ def manifest_with_tracking(tracked_paths: list[str]) -> dict:
     return {
         "schema": 1,
         "official_oni_build": 744825,
+        "official_oni_release_date": "2026-07-28",
+        "official_tracking": {
+            "steam_app_id": 457140,
+            "release_news_gid": OFFICIAL_RELEASE_GID,
+            "release_url": (
+                "https://store.steampowered.com/news/app/457140/view/"
+                + OFFICIAL_RELEASE_GID
+            ),
+        },
         "reference_source": {
             "repository": "example/reference",
             "commit": PINNED_COMMIT,
@@ -144,6 +158,77 @@ def manifest_with_tracking(tracked_paths: list[str]) -> dict:
 
 
 def main() -> int:
+    current_news = [
+        {
+            "gid": "900000000000000000",
+            "title": "Aquatic Planet Pack community spotlight",
+            "date": 1_788_000_000,
+        },
+        {
+            "gid": OFFICIAL_RELEASE_GID,
+            "title": "[Game Update] - 744825",
+            "date": 1_775_000_000,
+        },
+        {
+            "gid": "700000000000000000",
+            "title": "[Game Update] - 740622",
+            "date": 1_765_000_000,
+        },
+    ]
+    official_current = compare_official_steam_state(
+        744825,
+        OFFICIAL_RELEASE_GID,
+        current_news,
+    )
+    require(
+        official_current["observed_build"] == 744825,
+        "current official Steam build was not selected",
+    )
+    require(
+        not official_current["has_official_drift"],
+        "matching official Steam release was reported as drift",
+    )
+    require(
+        official_current["release_identity_matches"],
+        "matching official Steam release identity was not preserved",
+    )
+
+    advanced_news = current_news + [
+        {
+            "gid": "800000000000000001",
+            "title": "[Game Hotfix] - 750123",
+            "date": 1_789_000_000,
+        }
+    ]
+    official_advanced = compare_official_steam_state(
+        744825,
+        OFFICIAL_RELEASE_GID,
+        advanced_news,
+    )
+    require(
+        official_advanced["observed_build"] == 750123,
+        "newer official Steam build was not selected",
+    )
+    require(
+        official_advanced["has_official_drift"],
+        "newer official Steam build was missed",
+    )
+    require(
+        not official_advanced["release_identity_matches"],
+        "new official Steam release reused the tracked release identity",
+    )
+
+    try:
+        compare_official_steam_state(
+            744825,
+            OFFICIAL_RELEASE_GID,
+            [{"gid": "1", "title": "DLC announcement", "date": 1_790_000_000}],
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("official Steam news without a build marker must be unknown")
+
     unchanged = compare_upstream_state(
         REFERENCE,
         MARKER,
@@ -230,7 +315,9 @@ def main() -> int:
     )
     verify_workflow_contract_inputs()
 
-    print("PASS: upstream reference drift classification and CI input coverage")
+    print(
+        "PASS: official/upstream reference drift classification and CI input coverage"
+    )
     return 0
 
 
