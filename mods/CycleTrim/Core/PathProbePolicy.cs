@@ -2,9 +2,9 @@ using System;
 
 namespace CycleTrim.Core
 {
-    public static class PathProbeAbilityFingerprint
+    internal static class PathProbeAbilityFingerprint
     {
-        public static int Create(int prefabInstanceId, bool canTraverseSubmerged)
+        internal static int Create(int prefabInstanceId, bool canTraverseSubmerged)
         {
             unchecked
             {
