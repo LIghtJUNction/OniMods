@@ -328,7 +328,31 @@ namespace OniMcp.Server
                     "2025 task-augmented tool calls are not supported on the stateless 2026 path");
             }
 
-            var toolResult = OniToolRegistry.CallTool(@params.Name, @params.Arguments);
+            var taskDescription = @params.Arguments?["task"];
+            if (taskDescription == null || taskDescription.Type != JTokenType.String
+                || string.IsNullOrWhiteSpace((string)taskDescription))
+            {
+                return CompleteModernToolResult(JObject.FromObject(
+                    CallToolResult.Error("task is required: describe what you are doing before every tool call.")));
+            }
+
+            McpTool tool;
+            if (!OniToolRegistry.TryGetTool(ModernReadOnlyToolName, out tool)
+                || tool == null || tool.Handler == null
+                || !string.Equals(tool.Name, ModernReadOnlyToolName, StringComparison.Ordinal))
+            {
+                return ModernToolMethodUnavailable(request);
+            }
+
+            CallToolResult toolResult;
+            try
+            {
+                toolResult = tool.Handler(@params.Arguments ?? new JObject());
+            }
+            catch (Exception ex)
+            {
+                toolResult = CallToolResult.Error($"Tool execution error: {ex.Message}");
+            }
             return CompleteModernToolResult(JObject.FromObject(toolResult));
         }
 
