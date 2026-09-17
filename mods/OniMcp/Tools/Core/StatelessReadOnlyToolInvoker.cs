@@ -36,7 +36,7 @@ namespace OniMcp.Tools
                         "Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool.");
                 }
 
-                return tool.Handler(arguments ?? new JObject()) ?? CallToolResult.Error("Tool returned no result.");
+                return tool.Handler(arguments ?? new JObject());
             }
             catch (Exception ex)
             {
