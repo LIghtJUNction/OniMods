@@ -50,6 +50,7 @@ jobs:
         run: >-
           python3 scripts/verify_oni_reference_provenance.py
           --manifest ci/oni-reference-assemblies.json
+          --verify-official
           --verify-upstream
       - name: Fetch and verify pinned reference assemblies
         run: >-
