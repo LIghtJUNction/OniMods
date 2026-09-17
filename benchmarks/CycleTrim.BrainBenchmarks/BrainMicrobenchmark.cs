@@ -74,6 +74,7 @@ namespace CycleTrim.BrainBenchmarks
             NavGridDirtyExpansionBenchmark.Run();
             NavGridAdaptiveBoundaryBenchmark.Run();
             NavGridAdaptiveGateBenchmark.Run();
+            SuppressedInvalidationObservationBenchmark.Run();
             FetchCandidatePoolBenchmark.Run();
             PathProbeQueueQuotaBenchmark.Run();
             PathProbeUntrackedDequeueBenchmark.Run();
