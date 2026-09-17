@@ -21,6 +21,7 @@ internal static class LegacyPingRegressionEntry
     {
         RunLegacyPingLifecycleRegression();
         RunHeaderlessModernCancellationRegression();
+        RunModernNotificationAckRegression();
         RunModernLegacyTransportMethodRegression();
         HttpAdmissionRegression.Run();
         var main = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
@@ -163,6 +164,49 @@ internal static class LegacyPingRegressionEntry
 
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Headerless modern cancellation allocated legacy session state");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
+    private static void RunModernNotificationAckRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{\"progressToken\":\"probe\",\"progress\":1,\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}";
+                using (var response = Post(client, notification))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Headerless modern notification returned HTTP " + (int)response.StatusCode);
+                    Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                        "Headerless modern notification returned a response body");
+                    Assert(response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
+                        "Headerless modern notification lost the modern protocol response header");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Headerless modern notification returned a legacy session id");
+                }
+
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Headerless modern notification allocated legacy session state");
             }
         }
         finally
