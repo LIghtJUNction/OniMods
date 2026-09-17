@@ -8,6 +8,10 @@ on:
       - 'scripts/**'
       - 'ci/oni-reference-assemblies.json'
       - 'ci/oni-harmony-api-surface-baseline/**'
+      - 'AGENTS.md'
+      - 'docs/autonomous-iteration.md'
+      - '.agents/skills/autonomous-gh-iteration/**'
+      - 'Directory.Build.props.example'
       - '.github/workflows/oni-reference-compat.yml'
   push:
     branches: [main]
@@ -17,6 +21,10 @@ on:
       - 'scripts/**'
       - 'ci/oni-reference-assemblies.json'
       - 'ci/oni-harmony-api-surface-baseline/**'
+      - 'AGENTS.md'
+      - 'docs/autonomous-iteration.md'
+      - '.agents/skills/autonomous-gh-iteration/**'
+      - 'Directory.Build.props.example'
       - '.github/workflows/oni-reference-compat.yml'
   workflow_dispatch:
 
