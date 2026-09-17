@@ -263,9 +263,10 @@ namespace OniMcp.Server
             if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
                 return true;
 
+            string canonicalPath = parsed.AbsolutePath.TrimEnd('/');
             return !string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(parsed.Host, "world", StringComparison.OrdinalIgnoreCase)
-                || !string.Equals(parsed.AbsolutePath, "/coordinate-screenshot", StringComparison.Ordinal);
+                || !string.Equals(canonicalPath, "/coordinate-screenshot", StringComparison.Ordinal);
         }
 
         private static bool IsModernReadOnlyResourceTemplate(string uriTemplate)
