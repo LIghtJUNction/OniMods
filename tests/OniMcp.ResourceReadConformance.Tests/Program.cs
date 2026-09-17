@@ -189,6 +189,32 @@ internal static class Program
                     }
                 }
 
+                const string unsafeAliasUri = "oni://world/coordinate-screenshot/";
+                using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+                {
+                    request.Content = new StringContent(
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":6,\"params\":{\"uri\":\"" + unsafeAliasUri + "\"," + meta + "}}",
+                        Encoding.UTF8,
+                        "application/json");
+                    request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                    request.Headers.Add("Mcp-Method", "resources/read");
+                    request.Headers.Add("Mcp-Name", unsafeAliasUri);
+                    var work = client.SendAsync(request);
+                    PumpUntil(work);
+                    using (var response = work.GetAwaiter().GetResult())
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK,
+                            "Rejected modern side-effect resource alias changed JSON-RPC application status");
+                        var json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                        Assert((int)json["error"]["code"] == -32602,
+                            "Rejected modern side-effect resource alias did not use Invalid Params");
+                        Assert((string)json["error"]["data"]["uri"] == unsafeAliasUri,
+                            "Rejected modern side-effect resource alias omitted error.data.uri");
+                        Assert(((string)json["error"]["message"]).Contains("not available"),
+                            "Trailing-slash screenshot alias bypassed the modern side-effect guard");
+                    }
+                }
+
                 Assert(OniResourceRegistry.ResourceReads == 0,
                     "Modern resources/read dispatched the side-effectful screenshot resource before rejecting it");
                 Assert(server.GetSessionSummaries().Count == 0,
