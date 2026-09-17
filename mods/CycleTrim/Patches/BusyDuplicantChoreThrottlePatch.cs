@@ -55,11 +55,10 @@ namespace CycleTrim.Patches
 
         private static bool TryGetDuplicantConsumer(
             PickupableSensor sensor,
-            out ChoreConsumer consumer,
-            out Navigator navigator)
+            Navigator navigator,
+            out ChoreConsumer consumer)
         {
             consumer = sensor.GetComponent<ChoreConsumer>();
-            navigator = sensor.GetComponent<Navigator>();
             return consumer != null
                 && navigator != null
                 && sensor.GetComponent<MinionIdentity>() != null;
@@ -116,12 +115,14 @@ namespace CycleTrim.Patches
                         "CycleTrim could not find PickupableSensor.Update().");
             }
 
-            private static bool Prefix(PickupableSensor __instance)
+            private static bool Prefix(
+                PickupableSensor __instance,
+                Navigator ___navigator)
             {
                 if (!TryGetDuplicantConsumer(
                     __instance,
-                    out var consumer,
-                    out var navigator))
+                    ___navigator,
+                    out var consumer))
                 {
                     return true;
                 }
@@ -135,7 +136,7 @@ namespace CycleTrim.Patches
                 }
 
                 return state.PickupGate.ShouldRefresh(
-                    CaptureStamp(state, consumer, navigator, currentChore));
+                    CaptureStamp(state, consumer, ___navigator, currentChore));
             }
         }
 

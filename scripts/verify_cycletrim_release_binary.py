@@ -48,6 +48,10 @@ def main() -> int:
         "pickup and chore paths use the idle guard": (
             busy_code.count("!IsBusyChore(currentChore)") == 2
         ),
+        "pickup sensor reuses its cached navigator": (
+            "Navigator ___navigator" in busy_code
+            and busy_code.count("GetComponent<Navigator>()") == 1
+        ),
     }
 
     for name, passed in checks.items():
