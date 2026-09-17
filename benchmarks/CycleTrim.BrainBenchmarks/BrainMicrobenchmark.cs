@@ -70,6 +70,7 @@ namespace CycleTrim.BrainBenchmarks
             Console.WriteLine(
                 "call reduction: " +
                 callReduction.ToString("P2", CultureInfo.InvariantCulture));
+            CreatureRateCapBenchmark.Run();
             PathProbeCacheMatrixBenchmark.Run();
             NavGridDirtyExpansionBenchmark.Run();
             NavGridAdaptiveBoundaryBenchmark.Run();
@@ -174,8 +175,8 @@ namespace CycleTrim.BrainBenchmarks
             {
                 // Duplicant scheduling remains vanilla in the production patch.
                 checksum = ExecuteBrainWork(checksum, calls++);
-                cap.BeginFrame(elapsedSeconds);
-                while (cap.TryAcquireNormal(BrainGroup.Creature))
+                cap.BeginCreatureFrame(elapsedSeconds);
+                while (cap.TryAcquireCreature())
                 {
                     checksum = ExecuteBrainWork(checksum, calls++);
                 }
