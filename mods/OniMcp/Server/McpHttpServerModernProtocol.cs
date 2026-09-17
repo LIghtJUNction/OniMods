@@ -169,12 +169,9 @@ namespace OniMcp.Server
             }
 
             var requestId = parameters["requestId"];
-            if (requestId == null
-                || (requestId.Type != JTokenType.String
-                    && requestId.Type != JTokenType.Integer
-                    && requestId.Type != JTokenType.Float))
+            if (!IsValidModernRequestId(requestId))
             {
-                errorMessage = "Modern cancellation notification requires a string or numeric requestId";
+                errorMessage = "Modern cancellation notification requires a string or integer requestId";
                 return false;
             }
 

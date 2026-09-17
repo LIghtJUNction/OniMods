@@ -148,6 +148,18 @@ internal static class LegacyPingRegressionEntry
                     Assert(!response.Headers.Contains("Mcp-Session-Id"),
                         "Headerless modern cancellation returned a legacy session id");
                 }
+
+                const string fractionalCancellation = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":14204.5,\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}";
+                using (var response = Post(client, fractionalCancellation))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Fractional modern cancellation request id returned HTTP " + (int)response.StatusCode);
+                    Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidRequest,
+                        "Fractional modern cancellation request id used the wrong JSON-RPC error");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected fractional modern cancellation returned a legacy session id");
+                }
+
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Headerless modern cancellation allocated legacy session state");
             }
