@@ -111,11 +111,37 @@ internal static class Program
                 const string wrongTypeClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":123,\"version\":\"1.0\"}}";
                 AssertClientInfoRejected(client, wrongTypeClientInfo,
                     "clientInfo with non-string name was accepted");
+
+                AssertLegacyServerIdentityMatchesModern(client);
             }
             finally
             {
                 server.StopServer();
             }
+        }
+    }
+
+    private static void AssertLegacyServerIdentityMatchesModern(HttpClient client)
+    {
+        const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
+        string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3010,\"params\":{" + modernMeta + "}}";
+        string modernVersion;
+        using (var response = PostModern(client, discover, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK, "Modern discovery failed before identity comparison");
+            modernVersion = (string)ReadJson(response)["result"]?["_meta"]?["io.modelcontextprotocol/serverInfo"]?["version"];
+            Assert(!string.IsNullOrWhiteSpace(modernVersion), "Modern server identity did not expose a version");
+        }
+
+        const string initialize = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":3011,\"params\":{\"protocolVersion\":\"2025-11-25\"}}";
+        using (var response = PostRaw(client, initialize, "2025-11-25"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK, "Legacy initialize failed before identity comparison");
+            var result = ReadJson(response)["result"] as JObject;
+            Assert(result != null, "Legacy initialize returned no result");
+            Assert((string)result["serverInfo"]?["name"] == "OniMcp", "Legacy initialize returned the wrong server identity");
+            Assert((string)result["serverInfo"]?["version"] == modernVersion,
+                "Legacy and modern protocol eras report different OniMcp versions");
         }
     }
 
