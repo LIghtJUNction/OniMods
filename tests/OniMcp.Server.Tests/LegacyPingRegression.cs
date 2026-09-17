@@ -21,6 +21,7 @@ internal static class LegacyPingRegressionEntry
     {
         RunLegacyPingLifecycleRegression();
         RunHeaderlessModernCancellationRegression();
+        RunModernLegacyTransportMethodRegression();
         HttpAdmissionRegression.Run();
         var main = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (main == null)
@@ -162,6 +163,56 @@ internal static class LegacyPingRegressionEntry
 
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Headerless modern cancellation allocated legacy session state");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
+    private static void RunModernLegacyTransportMethodRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                using (var health = client.GetAsync("").GetAwaiter().GetResult())
+                    Assert(health.StatusCode == HttpStatusCode.OK, "Headerless health GET changed");
+
+                foreach (var method in new[] { HttpMethod.Get, HttpMethod.Delete })
+                using (var request = new HttpRequestMessage(method, ""))
+                {
+                    request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
+                    if (method == HttpMethod.Get)
+                        request.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
+                    using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.MethodNotAllowed,
+                            "Modern " + method.Method + " returned HTTP " + (int)response.StatusCode);
+                        Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                            "Modern " + method.Method + " returned a legacy response body");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                            "Modern " + method.Method + " returned a legacy session id");
+                    }
+                }
+
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Rejected modern GET/DELETE allocated legacy session state");
             }
         }
         finally
