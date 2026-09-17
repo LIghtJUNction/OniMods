@@ -28,6 +28,8 @@ namespace CycleTrim.Patches
                 "navigators");
         private static readonly AccessTools.FieldRef<Navigator, PathFinderAbilities> Abilities =
             AccessTools.FieldRefAccess<Navigator, PathFinderAbilities>("abilities");
+        private static readonly AccessTools.FieldRef<PathFinderAbilities, int> PrefabInstanceId =
+            AccessTools.FieldRefAccess<PathFinderAbilities, int>("prefabInstanceID");
         private static readonly AccessTools.FieldRef<AsyncPathProber.Manager, ushort> ActiveSerialNo =
             AccessTools.FieldRefAccess<AsyncPathProber.Manager, ushort>("activeSerialNo");
         private static bool? sentinelRecycleIsSafe;
@@ -138,12 +140,12 @@ namespace CycleTrim.Patches
 
         private static PathProbeStamp CreateStamp(
             Navigator navigator,
-            CreaturePathFinderAbilities creature)
+            CreaturePathFinderAbilities creature,
+            int prefabInstanceId)
         {
-            var prefab = navigator.GetComponent<KPrefabID>();
-            var fingerprint = unchecked(
-                (prefab == null ? 0 : prefab.InstanceID) * 397
-                ^ (creature.canTraverseSubmered ? 1 : 0));
+            var fingerprint = PathProbeAbilityFingerprint.Create(
+                prefabInstanceId,
+                creature.canTraverseSubmered);
             return new PathProbeStamp(
                 NavigationInvalidationVersions.Get(navigator.NavGrid),
                 navigator.cachedCell,
@@ -155,13 +157,14 @@ namespace CycleTrim.Patches
                 fingerprint);
         }
 
-        private static PathProbeStamp StampFromOrder(AsyncPathProber.WorkOrder order)
+        private static PathProbeStamp StampFromOrder(
+            AsyncPathProber.WorkOrder order,
+            int prefabInstanceId)
         {
             var creature = (CreaturePathFinderAbilities)order.abilities;
-            var prefab = order.navigator.GetComponent<KPrefabID>();
-            var fingerprint = unchecked(
-                (prefab == null ? 0 : prefab.InstanceID) * 397
-                ^ (creature.canTraverseSubmered ? 1 : 0));
+            var fingerprint = PathProbeAbilityFingerprint.Create(
+                prefabInstanceId,
+                creature.canTraverseSubmered);
             return new PathProbeStamp(
                 NavigationInvalidationVersions.Get(order.navGrid),
                 order.originCell,
@@ -277,7 +280,8 @@ namespace CycleTrim.Patches
                 }
 
                 var abilities = (CreaturePathFinderAbilities)nav.GetCurrentAbilities();
-                var stamp = CreateStamp(nav, abilities);
+                var prefabInstanceId = PrefabInstanceId(abilities);
+                var stamp = CreateStamp(nav, abilities, prefabInstanceId);
                 var state = GetNavigatorState(__instance, nav);
                 var admitted = false;
                 lock (state.Admission)
@@ -307,7 +311,8 @@ namespace CycleTrim.Patches
                     };
                     lock (state.Admission)
                     {
-                        state.Admission.ReplaceQueuedStamp(StampFromOrder(__result));
+                        state.Admission.ReplaceQueuedStamp(
+                            StampFromOrder(__result, prefabInstanceId));
                     }
                 }
                 else
