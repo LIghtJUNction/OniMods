@@ -77,6 +77,7 @@ namespace CycleTrim.BrainBenchmarks
             FetchCandidatePoolBenchmark.Run();
             PathProbeQueueQuotaBenchmark.Run();
             PathProbeUntrackedDequeueBenchmark.Run();
+            RefreshGateOrderBenchmark.Run();
         }
 
         private static void MeasurePaired(out Sample baseline, out Sample candidate)
