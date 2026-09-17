@@ -37,6 +37,7 @@ internal static class Program
         TestProgramExecution();
         TestNumbers();
         TestRegexBoundaries();
+        TestWorldEditorCellObjectPolicy();
         TestFloodFillPreviewCells();
         TestSandboxDryRunRoutingPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
@@ -149,6 +150,22 @@ internal static class Program
             catch (RegexMatchTimeoutException) { timedOut = true; }
             Check(timedOut, "map regex propagates its timeout");
         }
+    }
+
+    private static void TestWorldEditorCellObjectPolicy()
+    {
+        object building = new object();
+        object logicGate = new object();
+        object gantry = new object();
+
+        Check(ReferenceEquals(WorldEditorCellObjectPolicy.SelectBuildingCandidate(building, logicGate, gantry), building),
+            "ordinary building must retain lookup precedence");
+        Check(ReferenceEquals(WorldEditorCellObjectPolicy.SelectBuildingCandidate<object>(null, logicGate, gantry), logicGate),
+            "logic gate must retain fallback precedence");
+        Check(ReferenceEquals(WorldEditorCellObjectPolicy.SelectBuildingCandidate<object>(null, null, gantry), gantry),
+            "gantry-layer building must be visible to world-editor reads");
+        Check(WorldEditorCellObjectPolicy.SelectBuildingCandidate<object>(null, null, null) == null,
+            "empty cells must remain empty");
     }
 
     private static void TestFloodFillPreviewCells()
