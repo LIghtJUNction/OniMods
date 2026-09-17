@@ -20,6 +20,7 @@ internal static class LegacyPingRegressionEntry
     private static void Main()
     {
         RunLegacyPingLifecycleRegression();
+        RunHeaderlessModernCancellationRegression();
         HttpAdmissionRegression.Run();
         var main = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (main == null)
@@ -109,6 +110,46 @@ internal static class LegacyPingRegressionEntry
                 }
                 Assert(server.GetSessionSummaries().Count == 1,
                     "Post-initialize ping changed session state");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
+    private static void RunHeaderlessModernCancellationRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                const string cancellation = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":14204,\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}";
+                using (var response = Post(client, cancellation))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Headerless modern cancellation returned HTTP " + (int)response.StatusCode);
+                    Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                        "Headerless modern cancellation returned a response body");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Headerless modern cancellation returned a legacy session id");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Headerless modern cancellation allocated legacy session state");
             }
         }
         finally
