@@ -42,6 +42,32 @@ namespace OniMcp.Server
             if (!explicitModern && IsSessionActive(sessionId))
                 return false;
 
+            var notificationMethod = rawMessage["method"];
+            if (explicitModern
+                && rawMessage.Property("id") == null
+                && notificationMethod?.Type == JTokenType.String
+                && string.Equals((string)notificationMethod, "notifications/cancelled", StringComparison.Ordinal))
+            {
+                var notificationParams = rawMessage["params"];
+                if (notificationParams != null
+                    && notificationParams.Type != JTokenType.Object
+                    && notificationParams.Type != JTokenType.Array)
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                        "Modern notification params must be an object or array"), 400);
+                    return true;
+                }
+
+                // Production 2026-07-28 clients POST cancellation notifications even though
+                // this stateless compatibility path has no request-owned work to cancel.
+                // Acknowledge and drop the notification rather than turning it into a 4xx.
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                response.StatusCode = (int)HttpStatusCode.Accepted;
+                response.ContentLength64 = 0;
+                response.Close();
+                return true;
+            }
+
             var paramsToken = rawMessage["params"];
             var paramsObject = paramsToken as JObject;
             if (paramsToken != null && paramsObject == null)
