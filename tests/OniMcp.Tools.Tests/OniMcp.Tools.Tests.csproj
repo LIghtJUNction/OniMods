@@ -17,5 +17,6 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/ToolBatch*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorQueryTools.cs" Link="Source/WorldEditorQueryTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditTokenParsing.cs" Link="Source/WorldEditorMapEditTokenParsing.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorCellObjectPolicy.cs" Link="Source/WorldEditorCellObjectPolicy.cs" />
   </ItemGroup>
 </Project>
