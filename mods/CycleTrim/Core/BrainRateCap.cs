@@ -43,6 +43,22 @@ namespace CycleTrim.Core
             creatureCallsRemaining = MaxCreatureCallsPerFrame;
         }
 
+        public void BeginCreatureFrame(double elapsedSeconds)
+        {
+            if (elapsedSeconds <= 0.0
+                || double.IsNaN(elapsedSeconds)
+                || double.IsInfinity(elapsedSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
+            }
+
+            creatureTokens = Refill(
+                creatureTokens,
+                CreatureCallsPerSecond * elapsedSeconds,
+                MaxCreatureCallsPerFrame);
+            creatureCallsRemaining = MaxCreatureCallsPerFrame;
+        }
+
         public void Reset()
         {
             dupeTokens = 0.0;
@@ -74,6 +90,11 @@ namespace CycleTrim.Core
                 default:
                     throw new ArgumentOutOfRangeException(nameof(group));
             }
+        }
+
+        public bool TryAcquireCreature()
+        {
+            return TryAcquire(ref creatureTokens, ref creatureCallsRemaining);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
