@@ -2,6 +2,17 @@ using System;
 
 namespace CycleTrim.Core
 {
+    internal static class PathProbeAbilityFingerprint
+    {
+        internal static int Create(int prefabInstanceId, bool canTraverseSubmerged)
+        {
+            unchecked
+            {
+                return (prefabInstanceId * 397) ^ (canTraverseSubmerged ? 1 : 0);
+            }
+        }
+    }
+
     public readonly struct PathProbeStamp : IEquatable<PathProbeStamp>
     {
         public PathProbeStamp(
