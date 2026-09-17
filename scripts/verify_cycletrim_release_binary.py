@@ -33,6 +33,24 @@ def method_slice(code: str, start_marker: str, end_marker: str) -> str:
     return code[start:end]
 
 
+def method_body(code: str, signature: str) -> str:
+    start = code.find(signature)
+    if start < 0:
+        return ""
+    opening = code.find("{", start + len(signature))
+    if opening < 0:
+        return ""
+    depth = 0
+    for index in range(opening, len(code)):
+        if code[index] == "{":
+            depth += 1
+        elif code[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return code[opening + 1 : index]
+    return ""
+
+
 def main() -> int:
     if not ASSEMBLY.is_file():
         print(f"Release assembly not found: {ASSEMBLY}", file=sys.stderr)
@@ -52,6 +70,10 @@ def main() -> int:
         busy_code,
         "private static bool TryGetDuplicantConsumer",
         "private static RefreshStamp CaptureStamp",
+    )
+    prioritize_prefix_code = method_body(
+        busy_code,
+        "private static void Prefix(Brain brain)",
     )
     checks = {
         "async mismatch logs a skip": (
@@ -84,6 +106,12 @@ def main() -> int:
             "GetComponent<MinionIdentity>()" in create_state_code
             and "GetComponent<MinionIdentity>()" not in duplicant_lookup_code
             and "IsDuplicant" in duplicant_lookup_code
+        ),
+        "priority invalidation does not materialize untracked throttle state": (
+            bool(prioritize_prefix_code)
+            and "States.TryGetValue" in prioritize_prefix_code
+            and "States.GetValue" not in prioritize_prefix_code
+            and ".Invalidate();" in prioritize_prefix_code
         ),
         "stationary probes reuse vanilla cached root cell": (
             "cachedCell" in stationary_code
