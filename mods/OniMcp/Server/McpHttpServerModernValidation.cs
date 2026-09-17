@@ -190,11 +190,16 @@ namespace OniMcp.Server
                 $"Unsupported protocol version: {requestedVersion}", new JObject
                 {
                     ["requested"] = requestedVersion,
-                    ["supported"] = BuildSupportedProtocolVersions()
+                    ["supported"] = BuildEndpointProtocolVersions()
                 });
         }
 
         private static JArray BuildSupportedProtocolVersions()
+        {
+            return new JArray(ModernProtocolVersion);
+        }
+
+        private static JArray BuildEndpointProtocolVersions()
         {
             return new JArray(ModernProtocolVersion, CurrentProtocolVersion, LegacyProtocolVersion);
         }
