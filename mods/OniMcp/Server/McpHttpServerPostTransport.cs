@@ -110,6 +110,7 @@ namespace OniMcp.Server
 
             bool isInitialize = rpcRequest.Method == "initialize";
             bool isNotification = rawMessage.Property("id") == null;
+            bool isPingRequest = rpcRequest.Method == "ping" && !isNotification;
             var initializeVersion = rpcRequest.Params?["protocolVersion"];
             if (isInitialize && (isNotification || initializeVersion?.Type != JTokenType.String
                 || !IsSupportedProtocolVersion((string)initializeVersion)))
@@ -120,7 +121,10 @@ namespace OniMcp.Server
             }
             if (!isInitialize)
             {
-                if (!ValidateNonInitRequest(response, sessionId, protocolVersion))
+                bool transportValid = isPingRequest && string.IsNullOrEmpty(sessionId)
+                    ? ValidateInitializeTransport(response, sessionId, protocolVersion)
+                    : ValidateNonInitRequest(response, sessionId, protocolVersion);
+                if (!transportValid)
                     return;
             }
             else if (!ValidateInitializeTransport(response, sessionId, protocolVersion))
@@ -133,6 +137,14 @@ namespace OniMcp.Server
                 sessionId = EnsureSession(response, sessionId);
                 if (sessionId == null)
                     return;
+            }
+
+            if (isPingRequest)
+            {
+                SetResponseSessionId(response, sessionId);
+                SetResponseProtocolVersion(response, sessionId);
+                SendJson(response, JsonRpcResponse.Success(rpcRequest.Id, new JObject()), 200);
+                return;
             }
 
             // 通知（无 id）：返回 202 Accepted
