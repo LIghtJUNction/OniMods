@@ -73,6 +73,24 @@ internal static class RegressionEntry
                     "Modern read-only benchmark changed the dispatched arguments");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern read-only benchmark allocated legacy session state");
+
+                const string coordinateBody = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2402,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"reject raw coordinates\",\"iterations\":1,\"x\":4},\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"read-only-isolation-regression\",\"version\":\"1.0\"}}}}";
+                int callsBeforeCoordinate = OniToolRegistry.Calls;
+                int presentationsBeforeCoordinate = ToolCallMiddleware.Presentations;
+                using (var response = Post(client, coordinateBody))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern benchmark coordinate guard changed the tool-error HTTP status");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((bool)json["result"]["isError"],
+                        "Modern benchmark accepted raw coordinate arguments after middleware isolation");
+                }
+                Assert(OniToolRegistry.Calls == callsBeforeCoordinate,
+                    "Modern benchmark coordinate rejection reached the handler");
+                Assert(OniToolRegistry.MiddlewareCalls == middlewareCallsBefore,
+                    "Modern benchmark coordinate rejection traversed legacy middleware");
+                Assert(ToolCallMiddleware.Presentations == presentationsBeforeCoordinate + 1,
+                    "Modern benchmark coordinate rejection changed task presentation order");
             }
         }
         finally
