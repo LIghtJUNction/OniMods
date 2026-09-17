@@ -124,9 +124,10 @@ def main() -> int:
             and "States.GetValue" not in prioritize_prefix_code
             and ".Invalidate();" in prioritize_prefix_code
         ),
-        "priority invalidation reuses cached duplicant classification": (
+        "priority invalidation reuses Brain cached chore consumer": (
             bool(prioritize_prefix_code)
-            and "GetComponent<ChoreConsumer>()" in prioritize_prefix_code
+            and busy_code.count("BrainChoreConsumer") >= 2
+            and prioritize_prefix_code.count("GetComponent<ChoreConsumer>()") == 1
             and "GetComponent<MinionIdentity>()" not in prioritize_prefix_code
             and "IsDuplicant" in prioritize_prefix_code
             and ".Invalidate();" in prioritize_prefix_code

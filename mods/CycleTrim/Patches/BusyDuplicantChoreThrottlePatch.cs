@@ -14,6 +14,8 @@ namespace CycleTrim.Patches
             new ConditionalWeakTable<ChoreConsumer, State>();
         private static readonly ConditionalWeakTable<ChoreConsumer, State>.CreateValueCallback
             StateFactory = CreateState;
+        private static readonly AccessTools.FieldRef<Brain, ChoreConsumer> BrainChoreConsumer =
+            AccessTools.FieldRefAccess<Brain, ChoreConsumer>("choreConsumer");
 
         private sealed class State
         {
@@ -232,7 +234,8 @@ namespace CycleTrim.Patches
                     return;
                 }
 
-                var consumer = brain.GetComponent<ChoreConsumer>();
+                var consumer = BrainChoreConsumer(brain)
+                    ?? brain.GetComponent<ChoreConsumer>();
                 if (consumer != null
                     && States.TryGetValue(consumer, out var state)
                     && state.IsDuplicant)
