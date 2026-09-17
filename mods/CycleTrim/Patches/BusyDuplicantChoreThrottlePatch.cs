@@ -175,7 +175,8 @@ namespace CycleTrim.Patches
                     return true;
                 }
 
-                var navigator = __instance.GetComponent<Navigator>();
+                var consumerState = __instance.consumerState;
+                var navigator = consumerState == null ? null : consumerState.navigator;
                 if (navigator == null)
                 {
                     state.Reset();
