@@ -304,6 +304,13 @@ namespace OniMcp.Server
 
         private static object CallModernReadOnlyTool(JsonRpcRequest request)
         {
+            var argumentsToken = request.Params?["arguments"];
+            if (argumentsToken != null && argumentsToken.Type != JTokenType.Object)
+            {
+                return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
+                    "Tool arguments must be an object when provided");
+            }
+
             var @params = request.Params?.ToObject<CallToolParams>();
             if (@params == null || string.IsNullOrEmpty(@params.Name))
                 return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, "Missing tool name");
