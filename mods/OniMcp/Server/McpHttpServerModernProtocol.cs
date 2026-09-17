@@ -336,6 +336,13 @@ namespace OniMcp.Server
             }
             ToolCallMiddleware.PresentTaskDescription(taskDescription);
 
+            if (!OniToolRegistry.IsCoordinateTool(ModernReadOnlyToolName)
+                && OniToolRegistry.HasCoordinateArguments(@params.Arguments))
+            {
+                return CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
+                    "Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool.")));
+            }
+
             McpTool tool;
             if (!OniToolRegistry.TryGetTool(ModernReadOnlyToolName, out tool)
                 || tool == null || tool.Handler == null
