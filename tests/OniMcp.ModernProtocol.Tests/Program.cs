@@ -152,6 +152,7 @@ internal static class Program
                 }
 
                 int callsBeforeModern = OniToolRegistry.Calls;
+                int isolatedCallsBeforeModern = OniToolRegistry.IsolatedCalls;
                 string benchmarkCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2302,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"modern benchmark regression\",\"iterations\":1}," + modernMeta + "}}";
                 using (var response = Post(client, benchmarkCall, null, "2026-07-28", "tools/call", "benchmark"))
                 {
@@ -164,10 +165,12 @@ internal static class Program
                     Assert(!response.Headers.Contains("Mcp-Session-Id"),
                         "Modern tools/call allocated a legacy session header");
                 }
-                Assert(OniToolRegistry.Calls == callsBeforeModern + 1
+                Assert(OniToolRegistry.Calls == callsBeforeModern,
+                    "Modern tools/call used the legacy middleware dispatch path");
+                Assert(OniToolRegistry.IsolatedCalls == isolatedCallsBeforeModern + 1
                     && OniToolRegistry.LastName == "benchmark"
                     && (string)OniToolRegistry.LastArguments["task"] == "modern benchmark regression",
-                    "Modern tools/call did not dispatch the advertised read-only tool exactly once");
+                    "Modern tools/call did not dispatch the isolated read-only tool exactly once");
 
                 using (var response = Post(client, benchmarkCall, null, "2026-07-28", "tools/call"))
                 {
@@ -176,7 +179,8 @@ internal static class Program
                     Assert((int)JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["error"]["code"] == -32020,
                         "Missing tool Mcp-Name used the wrong error code");
                 }
-                Assert(OniToolRegistry.Calls == callsBeforeModern + 1,
+                Assert(OniToolRegistry.Calls == callsBeforeModern
+                    && OniToolRegistry.IsolatedCalls == isolatedCallsBeforeModern + 1,
                     "Header validation executed a tool before rejecting the request");
 
                 string writeToolCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2303,\"params\":{\"name\":\"world_editor\",\"arguments\":{\"task\":\"must not execute\"}," + modernMeta + "}}";
@@ -190,7 +194,8 @@ internal static class Program
                     Assert((string)json["error"]["data"]["name"] == "world_editor",
                         "Unavailable modern tool error omitted the rejected name");
                 }
-                Assert(OniToolRegistry.Calls == callsBeforeModern + 1,
+                Assert(OniToolRegistry.Calls == callsBeforeModern
+                    && OniToolRegistry.IsolatedCalls == isolatedCallsBeforeModern + 1,
                     "Modern read-only gate executed a write-capable tool");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern tool discovery/call allocated legacy session state");
