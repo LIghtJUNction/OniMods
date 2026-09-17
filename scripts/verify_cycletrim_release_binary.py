@@ -32,6 +32,9 @@ def main() -> int:
 
     async_code = decompile("CycleTrim.Patches.AsyncPathProbeOptimizationPatch")
     busy_code = decompile("CycleTrim.Patches.BusyDuplicantChoreThrottlePatch")
+    stationary_code = decompile(
+        "CycleTrim.Patches.StationaryCritterNavigationThrottlePatch"
+    )
     checks = {
         "async mismatch logs a skip": (
             "Skipping AsyncPathProber.Manager.TickFrame optimization" in async_code
@@ -51,6 +54,10 @@ def main() -> int:
         "busy chore paths avoid navigator component lookups": (
             "Navigator ___navigator" in busy_code
             and "GetComponent<Navigator>()" not in busy_code
+        ),
+        "stationary probes reuse vanilla cached root cell": (
+            "cachedCell" in stationary_code
+            and "Grid.PosToCell" not in stationary_code
         ),
     }
 
