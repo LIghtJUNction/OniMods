@@ -75,6 +75,10 @@ def main() -> int:
         busy_code,
         "private static void Prefix(Brain brain)",
     )
+    stationary_prefix_code = method_body(
+        stationary_code,
+        "private static bool Prefix(",
+    )
     checks = {
         "async mismatch logs a skip": (
             "Skipping AsyncPathProber.Manager.TickFrame optimization" in async_code
@@ -123,6 +127,12 @@ def main() -> int:
         "stationary probes reuse vanilla cached root cell": (
             "cachedCell" in stationary_code
             and "Grid.PosToCell" not in stationary_code
+        ),
+        "stationary critter identity lookup is first-hit only": (
+            bool(stationary_prefix_code)
+            and "if (!States.TryGetValue(__instance, out" in stationary_prefix_code
+            and "GetComponent<CreatureBrain>() == null" in stationary_prefix_code
+            and "States.GetValue(__instance, StateFactory)" in stationary_prefix_code
         ),
     }
 
