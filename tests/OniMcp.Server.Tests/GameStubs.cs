@@ -161,6 +161,47 @@ namespace OniMcp.Tools
             return true;
         }
 
+        public static bool HasCoordinateArguments(JToken token)
+        {
+            if (token == null)
+                return false;
+            if (token.Type == JTokenType.Object)
+            {
+                foreach (var property in ((JObject)token).Properties())
+                {
+                    if (IsCoordinateParameter(property.Name) || HasCoordinateArguments(property.Value))
+                        return true;
+                }
+            }
+            else if (token.Type == JTokenType.Array)
+            {
+                foreach (var item in (JArray)token)
+                {
+                    if (HasCoordinateArguments(item))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool IsCoordinateTool(string name)
+        {
+            return string.Equals(name, "coordinate_control", StringComparison.Ordinal)
+                || string.Equals(name, "world_editor", StringComparison.Ordinal);
+        }
+
+        private static bool IsCoordinateParameter(string name)
+        {
+            switch (name)
+            {
+                case "x": case "y": case "x1": case "y1": case "x2": case "y2":
+                case "dx": case "dy": case "cell": case "cells": case "points": case "anchors":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         public static CallToolResult CallTool(string name, JObject arguments)
         {
             MiddlewareCalls++;
