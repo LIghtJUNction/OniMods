@@ -87,6 +87,8 @@ def main() -> int:
         # Busy duplicant/chore scheduler targets.
         expect("PickupableSensor", method(r"public\s+override\s+void", "Update"),
                "PickupableSensor.Update()")
+        expect("PickupableSensor", r"\bprivate\s+Navigator\s+navigator\s*;",
+               "PickupableSensor.navigator")
         expect("ChoreConsumer", method(r"public\s+bool", "FindNextChore",
                                        r"ref\s+Chore\.Precondition\.Context\s+\w+"),
                "ChoreConsumer.FindNextChore(ref Context)")
