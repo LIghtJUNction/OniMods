@@ -80,9 +80,10 @@ namespace OniMcp.Server
             if (expectedName != null)
             {
                 string decodedNameHeader;
-                if (!TryDecodeModernHeaderValue(nameHeader, out decodedNameHeader))
+                if (!TryDecodeModernNameHeaderValue(nameHeader, out decodedNameHeader))
                 {
-                    error = HeaderMismatch(rawMessage["id"], "Mcp-Name contains invalid Base64 or UTF-8 encoding");
+                    error = HeaderMismatch(rawMessage["id"],
+                        "Mcp-Name must use safe plain ASCII or valid MCP Base64 UTF-8 encoding");
                     return false;
                 }
 
@@ -115,6 +116,20 @@ namespace OniMcp.Server
             return string.Equals(method, "tools/call", StringComparison.Ordinal)
                 || string.Equals(method, "resources/read", StringComparison.Ordinal)
                 || string.Equals(method, "prompts/get", StringComparison.Ordinal);
+        }
+
+        private static bool TryDecodeModernNameHeaderValue(string headerValue, out string decodedValue)
+        {
+            decodedValue = headerValue;
+            if (string.IsNullOrEmpty(headerValue))
+                return false;
+
+            bool encoded = headerValue.StartsWith(Base64HeaderPrefix, StringComparison.Ordinal)
+                && headerValue.EndsWith(Base64HeaderSuffix, StringComparison.Ordinal);
+            if (!encoded && !IsSafePlainModernHeaderValue(headerValue))
+                return false;
+
+            return TryDecodeModernHeaderValue(headerValue, out decodedValue);
         }
 
         private static bool TryDecodeModernHeaderValue(string headerValue, out string decodedValue)
