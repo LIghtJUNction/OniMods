@@ -21,7 +21,13 @@ namespace CycleTrim.Patches
                 new VersionedRefreshGate(4);
             internal readonly VersionedRefreshGate ChoreGate =
                 new VersionedRefreshGate(4);
+            internal readonly bool IsDuplicant;
             internal NavGrid NavGrid;
+
+            internal State(bool isDuplicant)
+            {
+                IsDuplicant = isDuplicant;
+            }
 
             internal void Invalidate()
             {
@@ -43,7 +49,7 @@ namespace CycleTrim.Patches
 
         private static State CreateState(ChoreConsumer consumer)
         {
-            return new State();
+            return new State(consumer.GetComponent<MinionIdentity>() != null);
         }
 
         private static bool IsBusyChore(Chore currentChore)
@@ -56,12 +62,18 @@ namespace CycleTrim.Patches
         private static bool TryGetDuplicantConsumer(
             PickupableSensor sensor,
             Navigator navigator,
-            out ChoreConsumer consumer)
+            out ChoreConsumer consumer,
+            out State state)
         {
             consumer = sensor.GetComponent<ChoreConsumer>();
-            return consumer != null
-                && navigator != null
-                && sensor.GetComponent<MinionIdentity>() != null;
+            if (consumer == null || navigator == null)
+            {
+                state = null;
+                return false;
+            }
+
+            state = States.GetValue(consumer, StateFactory);
+            return state.IsDuplicant;
         }
 
         private static RefreshStamp CaptureStamp(
@@ -122,12 +134,12 @@ namespace CycleTrim.Patches
                 if (!TryGetDuplicantConsumer(
                     __instance,
                     ___navigator,
-                    out var consumer))
+                    out var consumer,
+                    out var state))
                 {
                     return true;
                 }
 
-                var state = States.GetValue(consumer, StateFactory);
                 var currentChore = consumer.choreDriver.GetCurrentChore();
                 if (!IsBusyChore(currentChore))
                 {
