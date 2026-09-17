@@ -138,8 +138,8 @@ internal static class Program
     {
         using (var response = PostRaw(client, "[{\"jsonrpc\":\"2.0\"", "2026-07-28"))
         {
-            Assert(response.StatusCode == HttpStatusCode.OK,
-                "Malformed JSON changed its existing transport status");
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "Malformed modern JSON did not use HTTP 400");
             Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
                 "Malformed JSON no longer returns ParseError");
         }

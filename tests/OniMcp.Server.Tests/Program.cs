@@ -176,6 +176,26 @@ internal static class Program
             {
                 const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"regression\",\"version\":\"1.0\"}}";
                 string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":100,\"params\":{" + modernMeta + "}}";
+                Check("HTTP modern parse errors use bad-request status without changing legacy", () =>
+                {
+                    const string malformed = "{\"jsonrpc\":\"2.0\",\"method\":";
+                    using (var response = PostModern(client, malformed, "server/discover"))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                            "Modern parse error returned HTTP " + (int)response.StatusCode);
+                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
+                            "Modern parse error used wrong JSON-RPC code");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                            "Modern parse error returned a legacy session id");
+                    }
+                    using (var response = Post(client, malformed))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Legacy parse-error HTTP status changed");
+                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
+                            "Legacy parse error used wrong JSON-RPC code");
+                    }
+                    Assert(server.GetSessionSummaries().Count == 0, "Rejected parse error allocated legacy session state");
+                });
                 Check("HTTP modern discovery is stateless and advertises only implemented capabilities", () =>
                 {
                     using (var response = PostModern(client, discover, "server/discover"))
