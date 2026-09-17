@@ -142,6 +142,12 @@ def validate_manifest(manifest: dict) -> tuple[int, int, dict, dict, dict | None
                 )
             if not COMMIT_RE.fullmatch(item.get("pinned_blob_sha", "")):
                 raise ValueError(f"upstream tracked file lacks Git blob identity: {path_value}")
+        missing_paths = sorted(set(manifest_files) - seen_paths)
+        if missing_paths:
+            raise ValueError(
+                "reference upstream tracking does not cover pinned reference assemblies: "
+                + ", ".join(missing_paths)
+            )
 
     return official_build, declared_build, reference, marker, tracking
 
@@ -295,8 +301,8 @@ def report_upstream_state(reference: dict, state: dict) -> None:
         print(
             "::notice title=ONI upstream advanced without tracked reference drift::"
             f"{reference['repository']} {tracking['branch']} advanced to "
-            f"{state['head_sha']}, but the tracked version marker and key reference "
-            "assembly Git blobs still match the pinned baseline."
+            f"{state['head_sha']}, but the tracked version marker and all pinned "
+            "source-repo reference assembly Git blobs still match the pinned baseline."
         )
 
 
