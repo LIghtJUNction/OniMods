@@ -42,6 +42,37 @@ namespace OniMcp.Server
             if (!explicitModern && IsSessionActive(sessionId))
                 return false;
 
+            var methodToken = rawMessage["method"];
+            bool isNotification = rawMessage.Property("id") == null;
+            if (explicitModern && isNotification)
+            {
+                if (methodToken?.Type != JTokenType.String)
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                        "Missing or invalid JSON-RPC method"), 400);
+                    return true;
+                }
+
+                var notificationParams = rawMessage["params"];
+                if (notificationParams != null
+                    && notificationParams.Type != JTokenType.Object
+                    && notificationParams.Type != JTokenType.Array)
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                        "Modern notification params must be an object or array"), 400);
+                    return true;
+                }
+
+                // 2026-07-28 clients can still POST transport-level notifications such as
+                // notifications/cancelled. This stateless compatibility path has no safe
+                // request-owned notification state to mutate, so acknowledge and drop them.
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                response.StatusCode = (int)HttpStatusCode.Accepted;
+                response.ContentLength64 = 0;
+                response.Close();
+                return true;
+            }
+
             var paramsToken = rawMessage["params"];
             var paramsObject = paramsToken as JObject;
             if (paramsToken != null && paramsObject == null)
@@ -74,7 +105,6 @@ namespace OniMcp.Server
             if (!modernSignal)
                 return false;
 
-            var methodToken = rawMessage["method"];
             if (methodToken?.Type != JTokenType.String)
             {
                 SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
@@ -88,22 +118,6 @@ namespace OniMcp.Server
                     out validationError))
             {
                 SendJson(response, validationError, 400);
-                return true;
-            }
-
-            bool isNotification = rawMessage.Property("id") == null;
-            if (isNotification)
-            {
-                if (IsModernRequestMethod(method))
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                        $"Modern request method '{method}' requires a request id"), 400);
-                }
-                else
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.MethodNotFound,
-                        $"Notification method is not available on the {ModernProtocolVersion} compatibility path: {method}"), 404);
-                }
                 return true;
             }
 
