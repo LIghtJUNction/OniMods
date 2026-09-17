@@ -213,6 +213,28 @@ internal static class Program
                     Assert(OniToolRegistry.Calls == calls, "Modern notification was dispatched as a tool call");
                     Assert(server.GetSessionSummaries().Count == 0, "Modern notification allocated legacy session state");
                 });
+                Check("HTTP modern cancellation notifications require a valid request id", () =>
+                {
+                    foreach (var notification in new[]
+                    {
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\"}",
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{}}",
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":null}}",
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":true}}",
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":{}}}"
+                    })
+                    using (var response = PostModern(client, notification, null))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                            "Malformed modern cancellation returned HTTP " + (int)response.StatusCode);
+                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidRequest,
+                            "Malformed modern cancellation used wrong JSON-RPC code");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                            "Malformed modern cancellation returned a legacy session id");
+                    }
+                    Assert(server.GetSessionSummaries().Count == 0,
+                        "Rejected modern cancellation allocated legacy session state");
+                });
                 Check("HTTP modern discovery is stateless and advertises only implemented capabilities", () =>
                 {
                     using (var response = PostModern(client, discover, "server/discover"))

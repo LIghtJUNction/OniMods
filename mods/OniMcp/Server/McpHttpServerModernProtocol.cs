@@ -48,13 +48,11 @@ namespace OniMcp.Server
                 && notificationMethod?.Type == JTokenType.String
                 && string.Equals((string)notificationMethod, "notifications/cancelled", StringComparison.Ordinal))
             {
-                var notificationParams = rawMessage["params"];
-                if (notificationParams != null
-                    && notificationParams.Type != JTokenType.Object
-                    && notificationParams.Type != JTokenType.Array)
+                string cancellationError;
+                if (!ValidateModernCancellationNotification(rawMessage["params"], out cancellationError))
                 {
                     SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                        "Modern notification params must be an object or array"), 400);
+                        cancellationError), 400);
                     return true;
                 }
 
@@ -146,6 +144,43 @@ namespace OniMcp.Server
             }
 
             DispatchModernPostResponse(response, rpcRequest);
+            return true;
+        }
+
+        private static bool ValidateModernCancellationNotification(JToken paramsToken, out string errorMessage)
+        {
+            var parameters = paramsToken as JObject;
+            if (parameters == null)
+            {
+                errorMessage = "Modern cancellation notification requires object params";
+                return false;
+            }
+
+            var requestId = parameters["requestId"];
+            if (requestId == null
+                || (requestId.Type != JTokenType.String
+                    && requestId.Type != JTokenType.Integer
+                    && requestId.Type != JTokenType.Float))
+            {
+                errorMessage = "Modern cancellation notification requires a string or numeric requestId";
+                return false;
+            }
+
+            var reason = parameters["reason"];
+            if (reason != null && reason.Type != JTokenType.String)
+            {
+                errorMessage = "Modern cancellation notification reason must be a string when provided";
+                return false;
+            }
+
+            var meta = parameters["_meta"];
+            if (meta != null && meta.Type != JTokenType.Object)
+            {
+                errorMessage = "Modern cancellation notification _meta must be an object when provided";
+                return false;
+            }
+
+            errorMessage = null;
             return true;
         }
 
