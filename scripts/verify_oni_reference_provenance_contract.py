@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Executable regression for moving-head ONI reference drift classification."""
+"""Executable regressions for ONI reference provenance and CI coverage."""
+
+from fnmatch import fnmatchcase
+from pathlib import Path
 
 from verify_oni_reference_provenance import compare_upstream_state, validate_manifest
 
 
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW = ROOT / ".github/workflows/oni-reference-compat.yml"
 PINNED_COMMIT = "a" * 40
 PINNED_MARKER = "d" * 40
 ASSEMBLY_CSHARP = "b" * 40
@@ -43,11 +48,59 @@ SAME_FILES = {
     "Lib/Assembly-CSharp-firstpass.dll": {"sha": ASSEMBLY_FIRSTPASS},
     "Lib/UnityEngine.dll": {"sha": UNITY_ENGINE},
 }
+REFERENCE_CONTRACT_INPUTS = (
+    "AGENTS.md",
+    "docs/autonomous-iteration.md",
+    ".agents/skills/autonomous-gh-iteration/SKILL.md",
+    "Directory.Build.props.example",
+)
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def workflow_paths(event_name: str) -> list[str]:
+    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
+    event_header = f"  {event_name}:"
+    try:
+        start = lines.index(event_header)
+    except ValueError as error:
+        raise AssertionError(f"missing {event_name} trigger") from error
+
+    paths_start = None
+    for index in range(start + 1, len(lines)):
+        line = lines[index]
+        if line.startswith("  ") and not line.startswith("    ") and line.strip():
+            break
+        if line == "    paths:":
+            paths_start = index + 1
+            break
+    if paths_start is None:
+        raise AssertionError(f"missing {event_name}.paths trigger list")
+
+    paths = []
+    for line in lines[paths_start:]:
+        if not line.startswith("      - "):
+            if line.strip():
+                break
+            continue
+        value = line[len("      - "):].strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]
+        paths.append(value)
+    return paths
+
+
+def verify_workflow_contract_inputs() -> None:
+    for event_name in ("pull_request", "push"):
+        patterns = workflow_paths(event_name)
+        for path in REFERENCE_CONTRACT_INPUTS:
+            require(
+                any(fnmatchcase(path, pattern) for pattern in patterns),
+                f"{event_name} reference CI does not cover contract input {path}",
+            )
 
 
 def manifest_with_tracking(tracked_paths: list[str]) -> dict:
@@ -175,8 +228,9 @@ def main() -> int:
     validate_manifest(
         manifest_with_tracking(["Lib/Assembly-CSharp.dll", "Lib/UnityEngine.dll"])
     )
+    verify_workflow_contract_inputs()
 
-    print("PASS: upstream reference drift classification")
+    print("PASS: upstream reference drift classification and CI input coverage")
     return 0
 
 
