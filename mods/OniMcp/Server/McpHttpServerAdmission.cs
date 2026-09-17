@@ -52,8 +52,8 @@ namespace OniMcp.Server
             return false;
         }
 
-        private void EnqueueAdmittedMainThread(MainThreadHttpAdmissionLease lease, Action action,
-            Action staleAction = null)
+        private void EnqueueAdmittedMainThread(MainThreadHttpAdmissionLease lease, System.Action action,
+            System.Action staleAction = null)
         {
             if (lease == null)
                 throw new ArgumentNullException(nameof(lease));
