@@ -12,6 +12,7 @@ on:
       - 'AGENTS.md'
       - 'docs/autonomous-iteration.md'
       - '.agents/skills/autonomous-gh-iteration/**'
+      - '.agents/skills/oni-mcp-autonomous-iteration/**'
       - 'Directory.Build.props.example'
       - '.github/workflows/oni-reference-compat.yml'
   push:
@@ -26,6 +27,7 @@ on:
       - 'AGENTS.md'
       - 'docs/autonomous-iteration.md'
       - '.agents/skills/autonomous-gh-iteration/**'
+      - '.agents/skills/oni-mcp-autonomous-iteration/**'
       - 'Directory.Build.props.example'
       - '.github/workflows/oni-reference-compat.yml'
   workflow_dispatch:
