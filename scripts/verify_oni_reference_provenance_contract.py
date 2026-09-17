@@ -58,6 +58,7 @@ REFERENCE_CONTRACT_INPUTS = (
     "AGENTS.md",
     "docs/autonomous-iteration.md",
     ".agents/skills/autonomous-gh-iteration/SKILL.md",
+    ".agents/skills/oni-mcp-autonomous-iteration/scripts/runtime_smoke.py",
     "Directory.Build.props.example",
     "benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj",
 )
