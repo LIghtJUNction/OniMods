@@ -61,6 +61,7 @@ namespace OniMcp.Tools
     public static class OniToolRegistry
     {
         public static int Calls;
+        public static int IsolatedCalls;
         public static string LastName;
         public static JObject LastArguments;
         public static bool ModernToolsEnabled;
@@ -120,6 +121,18 @@ namespace OniMcp.Tools
             return CallToolResult.Text("ok");
         }
     }
+
+    internal static class StatelessReadOnlyToolInvoker
+    {
+        internal static CallToolResult Call(string name, JObject arguments)
+        {
+            OniToolRegistry.IsolatedCalls++;
+            OniToolRegistry.LastName = name;
+            OniToolRegistry.LastArguments = arguments;
+            return CallToolResult.Text("ok");
+        }
+    }
+
     public static class OniResourceRegistry
     {
         public static int ResourceReads;
