@@ -196,6 +196,23 @@ internal static class Program
                     }
                     Assert(server.GetSessionSummaries().Count == 0, "Rejected parse error allocated legacy session state");
                 });
+                Check("HTTP modern notifications are acknowledged without dispatch or session state", () =>
+                {
+                    const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":100}}";
+                    int calls = OniToolRegistry.Calls;
+                    using (var response = PostModern(client, notification, null))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.Accepted,
+                            "Modern notification returned HTTP " + (int)response.StatusCode);
+                        Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == "",
+                            "Modern notification returned a response body");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                            "Modern notification returned a legacy session id");
+                    }
+                    Invoke(_bridge, "Update");
+                    Assert(OniToolRegistry.Calls == calls, "Modern notification was dispatched as a tool call");
+                    Assert(server.GetSessionSummaries().Count == 0, "Modern notification allocated legacy session state");
+                });
                 Check("HTTP modern discovery is stateless and advertises only implemented capabilities", () =>
                 {
                     using (var response = PostModern(client, discover, "server/discover"))
