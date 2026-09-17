@@ -20,6 +20,9 @@ ONI_STEAM_APP_ID = 457140
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 STEAM_NEWS_GID_RE = re.compile(r"^[0-9]+$")
+STEAM_NEWS_URL_RE = re.compile(
+    r"^https://store\.steampowered\.com/news/app/(?P<app_id>[0-9]+)/view/(?P<view_id>[0-9]+)$"
+)
 PROPERTY_RE = re.compile(
     r"<(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)>(?P<value>[^<]*)</(?P=name)>"
 )
@@ -135,13 +138,17 @@ def validate_manifest(manifest: dict) -> tuple[int, int, dict, dict, dict | None
     release_gid = str(official_tracking["release_news_gid"])
     if not STEAM_NEWS_GID_RE.fullmatch(release_gid):
         raise ValueError("official Steam release news gid must be numeric")
-    expected_release_url = (
-        f"https://store.steampowered.com/news/app/{app_id}/view/{release_gid}"
-    )
-    if official_tracking.get("release_url") != expected_release_url:
+    release_url = official_tracking.get("release_url")
+    if not isinstance(release_url, str):
+        raise ValueError("official Steam release URL must be a string")
+    release_url_match = STEAM_NEWS_URL_RE.fullmatch(release_url)
+    if release_url_match is None:
+        raise ValueError("official Steam release URL must be an HTTPS Steam News URL")
+    release_url_app_id = int(release_url_match.group("app_id"))
+    if release_url_app_id != app_id:
         raise ValueError(
-            "official Steam release URL does not match app id/news gid: "
-            f"{official_tracking.get('release_url')!r}"
+            "official Steam release URL app id does not match tracked app id: "
+            f"{release_url_app_id} != {app_id}"
         )
 
     reference = manifest["reference_source"]

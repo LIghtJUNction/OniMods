@@ -18,7 +18,8 @@ PINNED_MARKER = "d" * 40
 ASSEMBLY_CSHARP = "b" * 40
 ASSEMBLY_FIRSTPASS = "c" * 40
 UNITY_ENGINE = "9" * 40
-OFFICIAL_RELEASE_GID = "719037282029407479"
+OFFICIAL_RELEASE_GID = "1839041357039119"
+OFFICIAL_RELEASE_URL_ID = "719037282029407479"
 
 REFERENCE = {
     "commit": PINNED_COMMIT,
@@ -123,7 +124,7 @@ def manifest_with_tracking(tracked_paths: list[str]) -> dict:
             "release_news_gid": OFFICIAL_RELEASE_GID,
             "release_url": (
                 "https://store.steampowered.com/news/app/457140/view/"
-                + OFFICIAL_RELEASE_GID
+                + OFFICIAL_RELEASE_URL_ID
             ),
         },
         "reference_source": {
