@@ -1,10 +1,13 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Core;
@@ -13,6 +16,8 @@ using OniMcp.Tools;
 
 internal static class RegressionEntry
 {
+    private static MainThreadBridge _bridge;
+
     private static void Main()
     {
         RunMalformedToolArgumentsRegression();
@@ -24,8 +29,8 @@ internal static class RegressionEntry
 
     private static void RunMalformedToolArgumentsRegression()
     {
-        var bridge = new MainThreadBridge();
-        Invoke(bridge, "Awake");
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
         var portProbe = new TcpListener(IPAddress.Loopback, 0);
         portProbe.Start();
         int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
@@ -65,7 +70,7 @@ internal static class RegressionEntry
         {
             server.StopServer();
             OniToolRegistry.ModernToolsEnabled = false;
-            Invoke(bridge, "OnDestroy");
+            Invoke(_bridge, "OnDestroy");
         }
     }
 
@@ -77,8 +82,21 @@ internal static class RegressionEntry
             request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.TryAddWithoutValidation("Mcp-Method", "tools/call");
             request.Headers.TryAddWithoutValidation("Mcp-Name", "benchmark");
-            return client.SendAsync(request).GetAwaiter().GetResult();
+            Task<HttpResponseMessage> work = client.SendAsync(request);
+            PumpUntil(work);
+            return work.GetAwaiter().GetResult();
         }
+    }
+
+    private static void PumpUntil(Task work)
+    {
+        var elapsed = Stopwatch.StartNew();
+        while (!work.IsCompleted && elapsed.ElapsedMilliseconds < 5000)
+        {
+            Invoke(_bridge, "Update");
+            Thread.Sleep(1);
+        }
+        Assert(work.IsCompleted, "Work did not finish before test deadline");
     }
 
     private static void Invoke(object target, string method)
