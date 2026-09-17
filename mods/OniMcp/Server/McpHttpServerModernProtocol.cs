@@ -443,7 +443,11 @@ namespace OniMcp.Server
 
         private void DispatchModernPostResponse(HttpListenerResponse response, JsonRpcRequest rpcRequest)
         {
-            MainThreadBridge.Enqueue(new System.Action(() =>
+            MainThreadHttpAdmissionLease admission;
+            if (!TryAcquireMainThreadHttpAdmission(response, rpcRequest.Id, null, true, out admission))
+                return;
+
+            EnqueueAdmittedMainThread(admission, new System.Action(() =>
             {
                 object result = null;
                 Exception processEx = null;
@@ -459,7 +463,7 @@ namespace OniMcp.Server
                 }
 
                 ThreadPool.QueueUserWorkItem(_ => SendModernPostResponse(response, rpcRequest.Id, result, processEx));
-            }));
+            }), () => CloseStaleHttpResponse(response));
         }
 
         private void SendModernPostResponse(HttpListenerResponse response, object requestId, object result,
