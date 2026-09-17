@@ -30,7 +30,7 @@ namespace OniMcp.Tools
 
         private static bool CellLikelyNeedsReachability(int cell)
         {
-            if (Grid.Objects[cell, (int)ObjectLayer.Building] != null)
+            if (CellBuildingObject(cell) != null)
                 return true;
             if (BuildCritterCellMap().ContainsKey(cell))
                 return true;
@@ -43,7 +43,7 @@ namespace OniMcp.Tools
 
         private static void AppendCellPortReads(StringBuilder sb, int x, int y, int cell)
         {
-            GameObject building = Grid.Objects[cell, (int)ObjectLayer.Building];
+            GameObject building = CellBuildingObject(cell);
             if (building == null)
                 return;
 
@@ -104,7 +104,7 @@ namespace OniMcp.Tools
         private static void AppendCellOperationHints(StringBuilder sb, int x, int y, int cell)
         {
             string at = "@(" + x + "," + y + ")";
-            GameObject building = Grid.Objects[cell, (int)ObjectLayer.Building];
+            GameObject building = CellBuildingObject(cell);
             if (building != null)
             {
                 sb.AppendLine("- deconstruct preview: `拆 建筑" + at + ":7 dryRun=true`");

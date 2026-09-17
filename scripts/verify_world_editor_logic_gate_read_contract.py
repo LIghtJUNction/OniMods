@@ -18,12 +18,16 @@ def ordered(text: str, *needles: str) -> None:
 
 def main() -> None:
     helper = source("mods/OniMcp/Tools/WorldEditor/WorldEditorLogicGateRead.cs")
+    policy = source("mods/OniMcp/Tools/WorldEditor/WorldEditorCellObjectPolicy.cs")
     grid = source("mods/OniMcp/Tools/WorldEditor/WorldEditorMapGrid.cs")
     cell = source("mods/OniMcp/Tools/WorldEditor/WorldEditorCellSnapshot.cs")
     details = source("mods/OniMcp/Tools/WorldEditor/WorldEditorConnectionDetails.cs")
+    next_reads = source("mods/OniMcp/Tools/WorldEditor/WorldEditorCellNextReads.cs")
     anchors = source("mods/OniMcp/Tools/WorldEditor/WorldEditorOverlayAnchors.cs")
 
-    ordered(helper, "ObjectLayer.Building", "ObjectLayer.LogicGate")
+    ordered(helper, "ObjectLayer.Building", "ObjectLayer.LogicGate", "ObjectLayer.Gantry")
+    assert "WorldEditorCellObjectPolicy.SelectBuildingCandidate" in helper
+    assert "return building ?? logicGate ?? gantry;" in policy
     for identity in ("inputOne", "inputTwo", "outputOne"):
         assert identity in helper
     ordered(helper, "GetField", "GetValue(gate) as ILogicUIElement",
@@ -32,6 +36,8 @@ def main() -> None:
     assert "building = CellBuildingObject(cell);" in grid
     assert cell.count("CellBuildingObject(cell)") >= 3
     assert details.count("CellBuildingObject(cell)") >= 2
+    assert next_reads.count("CellBuildingObject(cell)") >= 3
+    assert "Grid.Objects[cell, (int)ObjectLayer.Building]" not in next_reads
     assert "LogicGateEndpointLine(cell, go)" in details
     assert "RegisteredLogicGateEndpointFlags(go, cell" in anchors
     assert "building.GetComponent<LogicGate>() == null" in anchors
@@ -44,7 +50,7 @@ def main() -> None:
             "return symbol.ToString();", "MapTokenPart")
     assert 'runKey = "building:" + buildingId + identity + suffix' in grid
     assert "KPrefabID>()?.InstanceID" in grid and "KPrefabID>()?.InstanceID" in anchors
-    print("world_editor LogicGate read contract passed")
+    print("world_editor LogicGate/Gantry read contract passed")
 
 
 if __name__ == "__main__":
