@@ -17,7 +17,7 @@ using OniMcp.Server;
 internal static class HttpAdmissionRegression
 {
     private const int ExpectedCapacity = 20;
-    private const int BusyErrorCode = -32050;
+    private const int BusyErrorCode = -31950;
     private static MainThreadBridge _bridge;
 
     public static void Run()
