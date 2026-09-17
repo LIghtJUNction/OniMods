@@ -22,6 +22,7 @@ internal static class RegressionEntry
     {
         RunModernReadOnlyIsolationRegression();
         RunMalformedToolArgumentsRegression();
+        ModernResourceListCacheRegression.Run();
         var main = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (main == null)
             throw new InvalidOperationException("Existing modern protocol test entrypoint was not found");

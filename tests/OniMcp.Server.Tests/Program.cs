@@ -266,7 +266,7 @@ internal static class Program
                     {
                         var result = (JObject)ReadJson(response)["result"];
                         Assert((string)result["resultType"] == "complete", "Modern resource list omitted resultType");
-                        Assert((string)result["cacheScope"] == "private" && (int)result["ttlMs"] == 0, "Modern resource list cache hints incorrect");
+                        Assert((string)result["cacheScope"] == "public" && (int)result["ttlMs"] > 0, "Modern resource list cache hints incorrect");
                         var resources = result["resources"] as JArray;
                         Assert(resources != null && resources.Count > 0, "Modern resource list lost resources");
                         foreach (JObject resource in resources)
