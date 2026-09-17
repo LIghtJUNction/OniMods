@@ -119,10 +119,10 @@ namespace CycleTrim.Patches
 
                 var vanillaBudget = initialProbeCount(__instance);
                 var state = states.GetValue(__instance, StateFactory);
-                state.RateCap.BeginFrame(dt);
+                state.RateCap.BeginCreatureFrame(dt);
                 var normalAllowance = 0;
                 while (normalAllowance < vanillaBudget
-                    && state.RateCap.TryAcquireNormal(Core.BrainGroup.Creature))
+                    && state.RateCap.TryAcquireCreature())
                 {
                     normalAllowance++;
                 }
