@@ -138,10 +138,10 @@ namespace CycleTrim.BrainBenchmarks
                 return Run(vanillaBudget, usedVanilla: true, onUpdate);
             }
 
-            rateCap.BeginFrame(elapsedSeconds);
+            rateCap.BeginCreatureFrame(elapsedSeconds);
             var normalAllowance = 0;
             while (normalAllowance < vanillaBudget
-                && rateCap.TryAcquireNormal(BrainGroup.Creature))
+                && rateCap.TryAcquireCreature())
             {
                 normalAllowance++;
             }
