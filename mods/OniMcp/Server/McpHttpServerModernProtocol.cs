@@ -264,6 +264,13 @@ namespace OniMcp.Server
                 return true;
 
             string canonicalPath = parsed.AbsolutePath.TrimEnd('/');
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "tools", StringComparison.OrdinalIgnoreCase)
+                && canonicalPath.StartsWith("/read/", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             return !string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(parsed.Host, "world", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(canonicalPath, "/coordinate-screenshot", StringComparison.Ordinal);
@@ -272,7 +279,8 @@ namespace OniMcp.Server
         private static bool IsModernReadOnlyResourceTemplate(string uriTemplate)
         {
             return string.IsNullOrEmpty(uriTemplate)
-                || !uriTemplate.StartsWith("oni://world/coordinate-screenshot", StringComparison.Ordinal);
+                || (!uriTemplate.StartsWith("oni://world/coordinate-screenshot", StringComparison.Ordinal)
+                    && !uriTemplate.StartsWith("oni://tools/read/", StringComparison.Ordinal));
         }
         private static JsonRpcResponse ModernToolMethodUnavailable(JsonRpcRequest request)
         {
