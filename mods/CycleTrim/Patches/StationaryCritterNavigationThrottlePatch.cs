@@ -108,8 +108,7 @@ namespace CycleTrim.Patches
             }
 
             var cell = __instance.cachedCell;
-            if (!Grid.IsValidCell(cell)
-                || __instance.GetComponent<CreatureBrain>() == null)
+            if (!Grid.IsValidCell(cell))
             {
                 if (States.TryGetValue(__instance, out var invalidCellState))
                 {
@@ -119,7 +118,16 @@ namespace CycleTrim.Patches
                 return true;
             }
 
-            var state = States.GetValue(__instance, StateFactory);
+            if (!States.TryGetValue(__instance, out var state))
+            {
+                if (__instance.GetComponent<CreatureBrain>() == null)
+                {
+                    return true;
+                }
+
+                state = States.GetValue(__instance, StateFactory);
+            }
+
             if (!ReferenceEquals(state.NavGrid, __instance.NavGrid))
             {
                 state.Gate.Reset();
