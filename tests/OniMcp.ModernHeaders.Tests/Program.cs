@@ -62,8 +62,8 @@ internal static class Program
                 string missingIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"missing request id\"}," + ModernMeta + "}}";
                 using (var response = Post(client, missingIdCall, "tools/call", "benchmark", null))
                 {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Modern tools/call without an id did not return a JSON-RPC InvalidRequest response");
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern tools/call without an id did not return an HTTP error InvalidRequest response");
                     JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
                     Assert((int)json["error"]["code"] == -32600,
                         "Modern tools/call without an id did not use InvalidRequest");
