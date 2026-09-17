@@ -200,7 +200,7 @@ internal static class Program
                 {
                     const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":100}}";
                     int calls = OniToolRegistry.Calls;
-                    using (var response = PostModern(client, notification, null))
+                    using (var response = PostModern(client, notification, "notifications/cancelled"))
                     {
                         Assert(response.StatusCode == HttpStatusCode.Accepted,
                             "Modern notification returned HTTP " + (int)response.StatusCode);
@@ -213,6 +213,20 @@ internal static class Program
                     Assert(OniToolRegistry.Calls == calls, "Modern notification was dispatched as a tool call");
                     Assert(server.GetSessionSummaries().Count == 0, "Modern notification allocated legacy session state");
                 });
+                Check("HTTP modern cancellation notifications require Mcp-Method routing headers", () =>
+                {
+                    const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":100}}";
+                    foreach (var method in new string[] { null, "tools/list" })
+                    using (var response = PostModern(client, notification, method))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                            "Modern cancellation routing mismatch returned HTTP " + (int)response.StatusCode);
+                        Assert((int)ReadJson(response)["error"]["code"] == -32020,
+                            "Modern cancellation routing mismatch used wrong JSON-RPC code");
+                    }
+                    Assert(server.GetSessionSummaries().Count == 0,
+                        "Rejected modern cancellation routing header allocated legacy session state");
+                });
                 Check("HTTP modern cancellation notifications require a valid request id", () =>
                 {
                     foreach (var notification in new[]
@@ -223,7 +237,7 @@ internal static class Program
                         "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":true}}",
                         "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":{}}}"
                     })
-                    using (var response = PostModern(client, notification, null))
+                    using (var response = PostModern(client, notification, "notifications/cancelled"))
                     {
                         Assert(response.StatusCode == HttpStatusCode.BadRequest,
                             "Malformed modern cancellation returned HTTP " + (int)response.StatusCode);
@@ -328,6 +342,7 @@ internal static class Program
                 {
                     foreach (var request in new[] {
                         "{\"method\":\"initialize\",\"id\":1,\"params\":{\"protocolVersion\":\"2025-11-25\"}}",
+                        "{\"jsonrpc\":\"1.0\",\"method\":\"initialize\",\"id\":1,\"params\":{\"protocolVersion\":\"2025-11-25\"}}",
                         "{\"jsonrpc\":\"2.0\",\"method\":42,\"id\":1}",
                         "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":{},\"params\":{\"protocolVersion\":\"2025-11-25\"}}",
                         "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":1,\"params\":{\"protocolVersion\":\"invalid\"}}",
