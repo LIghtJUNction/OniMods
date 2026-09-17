@@ -79,6 +79,13 @@ def main() -> int:
         stationary_code,
         "private static bool Prefix(",
     )
+    stationary_last_try_get = stationary_prefix_code.rfind("States.TryGetValue")
+    stationary_identity_lookup = stationary_prefix_code.find(
+        "GetComponent<CreatureBrain>()"
+    )
+    stationary_state_create = stationary_prefix_code.find(
+        "States.GetValue(__instance, StateFactory)"
+    )
     checks = {
         "async mismatch logs a skip": (
             "Skipping AsyncPathProber.Manager.TickFrame optimization" in async_code
@@ -130,9 +137,11 @@ def main() -> int:
         ),
         "stationary critter identity lookup is first-hit only": (
             bool(stationary_prefix_code)
-            and "if (!States.TryGetValue(__instance, out" in stationary_prefix_code
-            and "GetComponent<CreatureBrain>() == null" in stationary_prefix_code
-            and "States.GetValue(__instance, StateFactory)" in stationary_prefix_code
+            and stationary_prefix_code.count("States.TryGetValue") >= 3
+            and stationary_prefix_code.count("GetComponent<CreatureBrain>()") == 1
+            and stationary_last_try_get >= 0
+            and stationary_identity_lookup > stationary_last_try_get
+            and stationary_state_create > stationary_identity_lookup
         ),
     }
 
