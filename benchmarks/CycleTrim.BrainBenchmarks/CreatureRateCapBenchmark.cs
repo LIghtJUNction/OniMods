@@ -130,7 +130,7 @@ namespace CycleTrim.BrainBenchmarks
         {
             var cap = new BrainRateCap();
             var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-            var stopwatch = Stopwatch.StartNew();
+            var startedAt = Stopwatch.GetTimestamp();
             long calls = 0;
             ulong checksum = 0xCBF29CE484222325UL;
             for (var frame = 0; frame < FramesPerSample; frame++)
@@ -142,12 +142,12 @@ namespace CycleTrim.BrainBenchmarks
                     checksum = Mix(checksum, calls);
                 }
             }
-            stopwatch.Stop();
+            var elapsedTicks = Stopwatch.GetTimestamp() - startedAt;
             return new Sample(
                 calls,
                 checksum,
                 GC.GetAllocatedBytesForCurrentThread() - allocatedBefore,
-                stopwatch.Elapsed.TotalMilliseconds);
+                TicksToMilliseconds(elapsedTicks));
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -155,7 +155,7 @@ namespace CycleTrim.BrainBenchmarks
         {
             var cap = new BrainRateCap();
             var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-            var stopwatch = Stopwatch.StartNew();
+            var startedAt = Stopwatch.GetTimestamp();
             long calls = 0;
             ulong checksum = 0xCBF29CE484222325UL;
             for (var frame = 0; frame < FramesPerSample; frame++)
@@ -167,18 +167,23 @@ namespace CycleTrim.BrainBenchmarks
                     checksum = Mix(checksum, calls);
                 }
             }
-            stopwatch.Stop();
+            var elapsedTicks = Stopwatch.GetTimestamp() - startedAt;
             return new Sample(
                 calls,
                 checksum,
                 GC.GetAllocatedBytesForCurrentThread() - allocatedBefore,
-                stopwatch.Elapsed.TotalMilliseconds);
+                TicksToMilliseconds(elapsedTicks));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ulong Mix(ulong checksum, long calls)
         {
             return (checksum ^ (ulong)calls) * 0x100000001B3UL;
+        }
+
+        private static double TicksToMilliseconds(long ticks)
+        {
+            return ticks * 1000.0 / Stopwatch.Frequency;
         }
 
         private static void VerifyStable(Sample expected, Sample actual, string name)
