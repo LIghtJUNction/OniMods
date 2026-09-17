@@ -111,6 +111,7 @@ namespace OniMcp.Server
         public void StopServer()
         {
             _running = false;
+            ResetMainThreadHttpAdmission();
             try
             {
                 _listener?.Stop();
