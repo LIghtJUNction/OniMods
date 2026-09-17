@@ -42,29 +42,8 @@ namespace OniMcp.Server
             if (!explicitModern && IsSessionActive(sessionId))
                 return false;
 
-            var notificationMethod = rawMessage["method"];
-            if (explicitModern
-                && rawMessage.Property("id") == null
-                && notificationMethod?.Type == JTokenType.String
-                && string.Equals((string)notificationMethod, "notifications/cancelled", StringComparison.Ordinal))
-            {
-                string cancellationError;
-                if (!ValidateModernCancellationNotification(rawMessage["params"], out cancellationError))
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                        cancellationError), 400);
-                    return true;
-                }
-
-                // Production 2026-07-28 clients POST cancellation notifications even though
-                // this stateless compatibility path has no request-owned work to cancel.
-                // Acknowledge and drop the notification rather than turning it into a 4xx.
-                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
-                response.StatusCode = (int)HttpStatusCode.Accepted;
-                response.ContentLength64 = 0;
-                response.Close();
+            if (explicitModern && TryHandleModernCancellationNotification(response, rawMessage))
                 return true;
-            }
 
             var paramsToken = rawMessage["params"];
             var paramsObject = paramsToken as JObject;
@@ -97,6 +76,12 @@ namespace OniMcp.Server
                 || string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal);
             if (!modernSignal)
                 return false;
+
+            // 2026-07-28 does not define routing-header requirements for notification POSTs.
+            // Some current clients still send notifications/cancelled over HTTP, so accept the
+            // body-level modern signal and preserve the existing acknowledge-and-drop behavior.
+            if (!explicitModern && TryHandleModernCancellationNotification(response, rawMessage))
+                return true;
 
             var methodToken = rawMessage["method"];
             if (methodToken?.Type != JTokenType.String)
@@ -144,6 +129,33 @@ namespace OniMcp.Server
             }
 
             DispatchModernPostResponse(response, rpcRequest);
+            return true;
+        }
+
+        private bool TryHandleModernCancellationNotification(HttpListenerResponse response, JObject rawMessage)
+        {
+            var method = rawMessage["method"];
+            if (rawMessage.Property("id") != null
+                || method?.Type != JTokenType.String
+                || !string.Equals((string)method, "notifications/cancelled", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            string cancellationError;
+            if (!ValidateModernCancellationNotification(rawMessage["params"], out cancellationError))
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                    cancellationError), 400);
+                return true;
+            }
+
+            // This stateless compatibility path has no request-owned work to cancel.
+            // Acknowledge and drop the notification rather than turning it into a 4xx.
+            response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+            response.StatusCode = (int)HttpStatusCode.Accepted;
+            response.ContentLength64 = 0;
+            response.Close();
             return true;
         }
 
