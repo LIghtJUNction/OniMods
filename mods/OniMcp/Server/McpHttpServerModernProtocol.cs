@@ -97,7 +97,7 @@ namespace OniMcp.Server
                 if (IsModernRequestMethod(method))
                 {
                     SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                        $"Modern request method '{method}' requires a request id"), 200);
+                        $"Modern request method '{method}' requires a request id"), 400);
                 }
                 else
                 {

@@ -116,6 +116,22 @@ internal static class Program
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Version-header mismatch allocated legacy session state");
 
+                string modernToolsListNotification = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{" + modernMeta + "}}";
+                using (var response = Post(client, modernToolsListNotification, null, "2026-07-28", "tools/list"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern request method sent as a notification did not use an HTTP error status");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(json["id"]?.Type == JTokenType.Null,
+                        "Modern request-shaped notification error did not preserve a null response id");
+                    Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                        "Modern request-shaped notification did not use -32600 Invalid Request");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern request-shaped notification allocated a legacy session header");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Rejected modern request-shaped notification allocated legacy session state");
+
                 string modernToolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":2301,\"params\":{" + modernMeta + "}}";
                 using (var response = Post(client, modernToolsList, null, "2026-07-28", "tools/list"))
                 {
@@ -187,6 +203,15 @@ internal static class Program
                     Assert(JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"] != null,
                         "Legacy initialize returned no result");
                     sessionId = response.Headers.GetValues("Mcp-Session-Id").Single();
+                }
+
+                const string legacyInitializedNotification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{}}";
+                using (var response = Post(client, legacyInitializedNotification, sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Legacy initialized notification no longer returns 202 Accepted");
+                    Assert(response.Headers.GetValues("Mcp-Session-Id").Single() == sessionId,
+                        "Legacy initialized notification lost its session identity");
                 }
 
                 const string futureMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{\"sampling\":{}},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"mixed-era-regression\",\"version\":\"1.0\"}}";
