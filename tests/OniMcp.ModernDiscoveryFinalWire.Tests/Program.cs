@@ -73,6 +73,11 @@ internal static class Program
 
                     var result = (JObject)ReadJson(response)["result"];
                     Assert(result != null, "Modern discovery returned no result");
+                    var supportedVersions = result["supportedVersions"] as JArray;
+                    Assert(supportedVersions != null
+                        && supportedVersions.Count == 1
+                        && (string)supportedVersions[0] == "2026-07-28",
+                        "Modern discovery advertised handshake-era protocol versions");
                     Assert(result["serverInfo"] == null,
                         "DiscoverResult regressed to the pre-final body-level serverInfo shape");
                     var serverInfo = result["_meta"]?["io.modelcontextprotocol/serverInfo"] as JObject;
