@@ -58,6 +58,7 @@ REFERENCE_CONTRACT_INPUTS = (
     "docs/autonomous-iteration.md",
     ".agents/skills/autonomous-gh-iteration/SKILL.md",
     "Directory.Build.props.example",
+    "benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj",
 )
 
 
