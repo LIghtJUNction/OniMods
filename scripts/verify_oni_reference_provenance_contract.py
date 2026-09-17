@@ -12,7 +12,8 @@ from verify_oni_reference_provenance import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github/workflows/oni-reference-compat.yml"
+REFERENCE_WORKFLOW = ROOT / ".github/workflows/oni-reference-compat.yml"
+MOD_QUALITY_WORKFLOW = ROOT / ".github/workflows/mod-quality.yml"
 PINNED_COMMIT = "a" * 40
 PINNED_MARKER = "d" * 40
 ASSEMBLY_CSHARP = "b" * 40
@@ -70,13 +71,13 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def workflow_paths(event_name: str) -> list[str]:
-    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
+def workflow_paths(workflow: Path, event_name: str) -> list[str]:
+    lines = workflow.read_text(encoding="utf-8").splitlines()
     event_header = f"  {event_name}:"
     try:
         start = lines.index(event_header)
     except ValueError as error:
-        raise AssertionError(f"missing {event_name} trigger") from error
+        raise AssertionError(f"missing {event_name} trigger in {workflow.name}") from error
 
     paths_start = None
     for index in range(start + 1, len(lines)):
@@ -87,7 +88,7 @@ def workflow_paths(event_name: str) -> list[str]:
             paths_start = index + 1
             break
     if paths_start is None:
-        raise AssertionError(f"missing {event_name}.paths trigger list")
+        raise AssertionError(f"missing {event_name}.paths trigger list in {workflow.name}")
 
     paths = []
     for line in lines[paths_start:]:
@@ -103,13 +104,18 @@ def workflow_paths(event_name: str) -> list[str]:
 
 
 def verify_workflow_contract_inputs() -> None:
-    for event_name in ("pull_request", "push"):
-        patterns = workflow_paths(event_name)
-        for path in REFERENCE_CONTRACT_INPUTS:
-            require(
-                any(fnmatchcase(path, pattern) for pattern in patterns),
-                f"{event_name} reference CI does not cover contract input {path}",
-            )
+    workflows = (
+        ("reference CI", REFERENCE_WORKFLOW),
+        ("Mod quality", MOD_QUALITY_WORKFLOW),
+    )
+    for workflow_name, workflow in workflows:
+        for event_name in ("pull_request", "push"):
+            patterns = workflow_paths(workflow, event_name)
+            for path in REFERENCE_CONTRACT_INPUTS:
+                require(
+                    any(fnmatchcase(path, pattern) for pattern in patterns),
+                    f"{workflow_name} {event_name} does not cover contract input {path}",
+                )
 
 
 def manifest_with_tracking(tracked_paths: list[str]) -> dict:
