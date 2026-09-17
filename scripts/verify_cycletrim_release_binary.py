@@ -45,13 +45,13 @@ def main() -> int:
     )
     create_state_code = method_slice(
         busy_code,
-        "CreateState(ChoreConsumer consumer)",
-        "IsBusyChore(Chore currentChore)",
+        "private static State CreateState",
+        "private static bool IsBusyChore",
     )
     duplicant_lookup_code = method_slice(
         busy_code,
-        "TryGetDuplicantConsumer(",
-        "CaptureStamp(",
+        "private static bool TryGetDuplicantConsumer",
+        "private static RefreshStamp CaptureStamp",
     )
     checks = {
         "async mismatch logs a skip": (
@@ -76,6 +76,9 @@ def main() -> int:
         "busy chore stamps reuse navigator cached root cell": (
             "navigator.cachedCell" in busy_code
             and "Grid.PosToCell(navigator)" not in busy_code
+        ),
+        "release decompile exposes identity-cache methods": (
+            bool(create_state_code) and bool(duplicant_lookup_code)
         ),
         "pickup hot path caches duplicant identity classification": (
             "GetComponent<MinionIdentity>()" in create_state_code
