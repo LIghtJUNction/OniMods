@@ -221,7 +221,7 @@ namespace OniMcp.Server
                     return CallModernReadOnlyTool(request);
 
                 case "resources/list":
-                    return CompleteModernResult(new JObject
+                    return CompleteModernListResult(new JObject
                     {
                         ["resources"] = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
                             .Where(item => IsModernReadOnlyResourceUri(item.Uri))
@@ -229,7 +229,7 @@ namespace OniMcp.Server
                     });
 
                 case "resources/templates/list":
-                    return CompleteModernResult(new JObject
+                    return CompleteModernListResult(new JObject
                     {
                         ["resourceTemplates"] = JArray.FromObject(OniResourceRegistry.GetResourceTemplateInfos()
                             .Where(item => IsModernReadOnlyResourceTemplate(item.UriTemplate))
