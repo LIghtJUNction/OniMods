@@ -132,6 +132,22 @@ internal static class Program
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Rejected modern request-shaped notification allocated legacy session state");
 
+                const string modernClientResponse = "{\"jsonrpc\":\"2.0\",\"id\":2204,\"result\":{}}";
+                using (var response = Post(client, modernClientResponse, null, "2026-07-28"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern transport accepted a client JSON-RPC response with HTTP 200");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["id"] == 2204,
+                        "Rejected modern client response changed the request id");
+                    Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                        "Rejected modern client response did not use -32600 Invalid Request");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern client response allocated a legacy session header");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Rejected modern client response allocated legacy session state");
+
                 string modernToolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":2301,\"params\":{" + modernMeta + "}}";
                 using (var response = Post(client, modernToolsList, null, "2026-07-28", "tools/list"))
                 {
