@@ -107,7 +107,7 @@ namespace CycleTrim.Patches
                 return true;
             }
 
-            var cell = Grid.PosToCell(__instance);
+            var cell = __instance.cachedCell;
             if (!Grid.IsValidCell(cell)
                 || __instance.GetComponent<CreatureBrain>() == null)
             {
