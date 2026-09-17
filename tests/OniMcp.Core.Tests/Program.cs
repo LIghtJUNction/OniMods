@@ -20,13 +20,14 @@ internal static class Program
         Run("task descriptions require nonempty JSON strings", TaskDescriptions);
         Run("invalid tool names return errors", InvalidNames);
         Run("tool calls still enforce coordinate and task constraints", ToolConstraints);
+        Run("stateless read-only calls preserve legacy middleware notifications", StatelessReadOnlyIsolation);
         Run("tool cache respects visibility after all-tools access", CacheVisibility);
         Run("metadata list callers cannot corrupt cached tool count", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);
         Run("dynamic resource routes preserve their read action", DynamicResources);
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
-        Console.WriteLine(failures == 0 ? "All 12 core regression groups passed." : failures + " regression groups failed.");
+        Console.WriteLine(failures == 0 ? "All 13 core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 
@@ -149,6 +150,31 @@ internal static class Program
             ["target"] = new JObject { ["x"] = 4 }
         }).IsError, "Nested coordinates escaped validation.");
         Require(!OniToolRegistry.CallTool("legacy_game_control", new JObject { ["task"] = "inspect" }).IsError, "Alias dispatch failed.");
+    }
+
+    private static void StatelessReadOnlyIsolation()
+    {
+        ToolCallMiddleware.QueueNotification("legacy pending");
+        int calls = GameStubs.HandlerCalls;
+        int presentations = ToolCallSpeechOverlay.Presentations;
+        var result = StatelessReadOnlyToolInvoker.Call("benchmark", new JObject
+        {
+            ["task"] = "measure read-only benchmark",
+            ["query"] = "safe"
+        });
+        Require(!result.IsError, "Stateless read-only invocation failed.");
+        Require(GameStubs.HandlerCalls == calls + 1, "Stateless read-only invocation did not execute exactly once.");
+        Require(ToolCallSpeechOverlay.Presentations == presentations + 1,
+            "Stateless read-only invocation lost the visible task description.");
+        Require((int)ToolCallMiddleware.Status()["pendingNotifications"] == 1,
+            "Stateless read-only invocation consumed a legacy middleware notification.");
+
+        calls = GameStubs.HandlerCalls;
+        Require(StatelessReadOnlyToolInvoker.Call("benchmark", new JObject()).IsError,
+            "Stateless read-only invocation accepted a missing task description.");
+        Require(GameStubs.HandlerCalls == calls, "Missing stateless task description executed the handler.");
+        Require((int)ToolCallMiddleware.Status()["pendingNotifications"] == 1,
+            "Rejected stateless read-only invocation consumed a legacy middleware notification.");
     }
 
     private static void CacheVisibility()
