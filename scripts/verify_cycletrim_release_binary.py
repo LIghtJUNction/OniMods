@@ -86,6 +86,10 @@ def main() -> int:
     stationary_state_create = stationary_prefix_code.find(
         "States.GetValue(__instance, StateFactory)"
     )
+    priority_cached_consumer = prioritize_prefix_code.find("BrainChoreConsumer")
+    priority_fallback_lookup = prioritize_prefix_code.find(
+        "GetComponent<ChoreConsumer>()"
+    )
     checks = {
         "async mismatch logs a skip": (
             "Skipping AsyncPathProber.Manager.TickFrame optimization" in async_code
@@ -126,10 +130,9 @@ def main() -> int:
         ),
         "priority invalidation reuses Brain cached chore consumer": (
             bool(prioritize_prefix_code)
-            and "BrainChoreConsumer(brain)" in prioritize_prefix_code
-            and "brain.GetComponent<ChoreConsumer>()" in prioritize_prefix_code
-            and prioritize_prefix_code.index("BrainChoreConsumer(brain)")
-                < prioritize_prefix_code.index("brain.GetComponent<ChoreConsumer>()")
+            and priority_cached_consumer >= 0
+            and priority_fallback_lookup > priority_cached_consumer
+            and prioritize_prefix_code.count("GetComponent<ChoreConsumer>()") == 1
             and "GetComponent<MinionIdentity>()" not in prioritize_prefix_code
             and "IsDuplicant" in prioritize_prefix_code
             and ".Invalidate();" in prioritize_prefix_code
