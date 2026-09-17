@@ -78,7 +78,7 @@ namespace OniMcp.Server
             if (methodToken?.Type != JTokenType.String)
             {
                 SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
-                    "Missing or invalid JSON-RPC method"), 200);
+                    "Missing or invalid JSON-RPC method"), 400);
                 return true;
             }
 
