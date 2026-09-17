@@ -1,5 +1,6 @@
 // Only game/configuration boundaries are stubbed. Every Server implementation and
 // protocol type is compiled from production source, including HttpListener transport.
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
@@ -58,9 +59,15 @@ namespace OniMcp.Tools
         public static string LatestScreenshotPath() => null;
         public static string ScreenshotPathForFile(string file) => null;
     }
+    public sealed class McpTool
+    {
+        public string Name { get; set; }
+        public Func<JObject, CallToolResult> Handler { get; set; }
+    }
     public static class OniToolRegistry
     {
         public static int Calls;
+        public static int MiddlewareCalls;
         public static string LastName;
         public static JObject LastArguments;
         public static bool ModernToolsEnabled;
@@ -112,8 +119,29 @@ namespace OniMcp.Tools
             };
         }
 
+        public static bool TryGetTool(string name, out McpTool tool)
+        {
+            tool = null;
+            if (!ModernToolsEnabled || !string.Equals(name, "benchmark", StringComparison.Ordinal))
+                return false;
+
+            tool = new McpTool
+            {
+                Name = "benchmark",
+                Handler = arguments =>
+                {
+                    Calls++;
+                    LastName = "benchmark";
+                    LastArguments = arguments;
+                    return CallToolResult.Text("ok");
+                }
+            };
+            return true;
+        }
+
         public static CallToolResult CallTool(string name, JObject arguments)
         {
+            MiddlewareCalls++;
             Calls++;
             LastName = name;
             LastArguments = arguments;
