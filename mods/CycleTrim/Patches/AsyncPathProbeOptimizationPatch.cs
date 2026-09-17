@@ -79,12 +79,10 @@ namespace CycleTrim.Patches
             return new ManagerState();
         }
 
-        private static NavigatorState GetNavigatorState(
-            AsyncPathProber.Manager manager,
-            Navigator navigator)
+        private static void SynchronizeNavigatorTick(
+            ManagerState managerState,
+            NavigatorState state)
         {
-            var managerState = States.GetValue(manager, StateFactory);
-            var state = managerState.Navigators.GetOrCreateValue(navigator);
             lock (state.Admission)
             {
                 if (state.LastTick != managerState.Tick)
@@ -93,7 +91,33 @@ namespace CycleTrim.Patches
                     state.LastTick = managerState.Tick;
                 }
             }
+        }
+
+        private static NavigatorState GetNavigatorState(
+            AsyncPathProber.Manager manager,
+            Navigator navigator)
+        {
+            var managerState = States.GetValue(manager, StateFactory);
+            var state = managerState.Navigators.GetOrCreateValue(navigator);
+            SynchronizeNavigatorTick(managerState, state);
             return state;
+        }
+
+        private static bool TryGetNavigatorState(
+            AsyncPathProber.Manager manager,
+            Navigator navigator,
+            out NavigatorState state)
+        {
+            state = null;
+            ManagerState managerState;
+            if (!States.TryGetValue(manager, out managerState)
+                || !managerState.Navigators.TryGetValue(navigator, out state))
+            {
+                return false;
+            }
+
+            SynchronizeNavigatorTick(managerState, state);
+            return true;
         }
 
         private static void ResetNavigatorState(
@@ -320,9 +344,12 @@ namespace CycleTrim.Patches
                 bool __result,
                 AsyncPathProber.WorkOrder order)
             {
-                if (__result && order.navigator != null)
+                NavigatorState state;
+                if (__result
+                    && order.navigator != null
+                    && TryGetNavigatorState(__instance, order.navigator, out state))
                 {
-                    var admission = GetNavigatorState(__instance, order.navigator).Admission;
+                    var admission = state.Admission;
                     lock (admission)
                     {
                         admission.MarkDequeued();
