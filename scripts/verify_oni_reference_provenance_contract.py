@@ -57,6 +57,7 @@ SAME_FILES = {
 REFERENCE_CONTRACT_INPUTS = (
     "AGENTS.md",
     "docs/autonomous-iteration.md",
+    ".editorconfig",
     ".agents/skills/autonomous-gh-iteration/SKILL.md",
     ".agents/skills/oni-mcp-autonomous-iteration/scripts/runtime_smoke.py",
     "Directory.Build.props.example",
