@@ -25,6 +25,14 @@ def decompile(type_name: str) -> str:
     return completed.stdout
 
 
+def method_slice(code: str, start_marker: str, end_marker: str) -> str:
+    start = code.find(start_marker)
+    end = code.find(end_marker, start + len(start_marker))
+    if start < 0 or end < 0:
+        return ""
+    return code[start:end]
+
+
 def main() -> int:
     if not ASSEMBLY.is_file():
         print(f"Release assembly not found: {ASSEMBLY}", file=sys.stderr)
@@ -34,6 +42,16 @@ def main() -> int:
     busy_code = decompile("CycleTrim.Patches.BusyDuplicantChoreThrottlePatch")
     stationary_code = decompile(
         "CycleTrim.Patches.StationaryCritterNavigationThrottlePatch"
+    )
+    create_state_code = method_slice(
+        busy_code,
+        "CreateState(ChoreConsumer consumer)",
+        "IsBusyChore(Chore currentChore)",
+    )
+    duplicant_lookup_code = method_slice(
+        busy_code,
+        "TryGetDuplicantConsumer(",
+        "CaptureStamp(",
     )
     checks = {
         "async mismatch logs a skip": (
@@ -58,6 +76,11 @@ def main() -> int:
         "busy chore stamps reuse navigator cached root cell": (
             "navigator.cachedCell" in busy_code
             and "Grid.PosToCell(navigator)" not in busy_code
+        ),
+        "pickup hot path caches duplicant identity classification": (
+            "GetComponent<MinionIdentity>()" in create_state_code
+            and "GetComponent<MinionIdentity>()" not in duplicant_lookup_code
+            and "IsDuplicant" in duplicant_lookup_code
         ),
         "stationary probes reuse vanilla cached root cell": (
             "cachedCell" in stationary_code
