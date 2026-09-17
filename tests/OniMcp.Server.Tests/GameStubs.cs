@@ -64,6 +64,28 @@ namespace OniMcp.Tools
         public string Name { get; set; }
         public Func<JObject, CallToolResult> Handler { get; set; }
     }
+    public static class ToolCallMiddleware
+    {
+        public static int Presentations;
+
+        public static bool TryGetTaskDescription(JObject arguments, out string description)
+        {
+            var token = arguments?["task"];
+            description = token?.Type == JTokenType.String ? token.Value<string>()?.Trim() : null;
+            return !string.IsNullOrWhiteSpace(description);
+        }
+
+        public static void PresentTaskDescription(string description)
+        {
+            Presentations++;
+        }
+
+        public static CallToolResult MissingTaskDescription(string toolName,
+            List<Dictionary<string, object>> notifications)
+        {
+            return CallToolResult.Error("task is required: describe what you are doing before every tool call.");
+        }
+    }
     public static class OniToolRegistry
     {
         public static int Calls;
@@ -142,6 +164,9 @@ namespace OniMcp.Tools
         public static CallToolResult CallTool(string name, JObject arguments)
         {
             MiddlewareCalls++;
+            string taskDescription;
+            if (ToolCallMiddleware.TryGetTaskDescription(arguments, out taskDescription))
+                ToolCallMiddleware.PresentTaskDescription(taskDescription);
             Calls++;
             LastName = name;
             LastArguments = arguments;
