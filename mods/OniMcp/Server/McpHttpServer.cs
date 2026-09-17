@@ -222,6 +222,15 @@ namespace OniMcp.Server
                 string sessionId = request.Headers["Mcp-Session-Id"];
                 string protocolVersion = request.Headers["Mcp-Protocol-Version"];
 
+                if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
+                    && (request.HttpMethod == "GET" || request.HttpMethod == "DELETE"))
+                {
+                    response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                    response.ContentLength64 = 0;
+                    response.Close();
+                    return;
+                }
+
                 if (request.HttpMethod == "HEAD")
                 {
                     SetResponseProtocolVersion(response, sessionId);
