@@ -51,6 +51,7 @@ internal static class RegressionEntry
                 const string body = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2400,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"measure registry only\",\"iterations\":1},\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"read-only-isolation-regression\",\"version\":\"1.0\"}}}}";
                 int callsBefore = OniToolRegistry.Calls;
                 int middlewareCallsBefore = OniToolRegistry.MiddlewareCalls;
+                int presentationsBefore = ToolCallMiddleware.Presentations;
                 using (var response = Post(client, body))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
@@ -65,6 +66,8 @@ internal static class RegressionEntry
                     "Modern read-only benchmark did not execute its handler exactly once");
                 Assert(OniToolRegistry.MiddlewareCalls == middlewareCallsBefore,
                     "Modern read-only benchmark passed through legacy tool-call middleware");
+                Assert(ToolCallMiddleware.Presentations == presentationsBefore + 1,
+                    "Modern read-only benchmark stopped presenting its required task description");
                 Assert(OniToolRegistry.LastName == "benchmark"
                     && (int)OniToolRegistry.LastArguments["iterations"] == 1,
                     "Modern read-only benchmark changed the dispatched arguments");
