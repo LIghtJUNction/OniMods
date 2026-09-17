@@ -233,9 +233,9 @@ namespace CycleTrim.Patches
                 }
 
                 var consumer = brain.GetComponent<ChoreConsumer>();
-                if (consumer != null)
+                if (consumer != null && States.TryGetValue(consumer, out var state))
                 {
-                    States.GetValue(consumer, StateFactory).Invalidate();
+                    state.Invalidate();
                 }
             }
         }
