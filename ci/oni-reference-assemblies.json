@@ -18,7 +18,15 @@
       "files": [
         {"path":"Lib/0Harmony.dll","pinned_blob_sha":"62cc4174fe6eecfa7e3ce556e69e4c79415e2e5f"},
         {"path":"Lib/Assembly-CSharp.dll","pinned_blob_sha":"edcc29584194c60aab9e65ce9ac89029373222c7"},
-        {"path":"Lib/Assembly-CSharp-firstpass.dll","pinned_blob_sha":"f15b51ffd825ab532268774647d602d17efbf730"}
+        {"path":"Lib/Assembly-CSharp-firstpass.dll","pinned_blob_sha":"f15b51ffd825ab532268774647d602d17efbf730"},
+        {"path":"Lib/Newtonsoft.Json.dll","pinned_blob_sha":"e023edf1badcec2c131f7baaeedd924c556a65eb"},
+        {"path":"Lib/Unity.TextMeshPro.dll","pinned_blob_sha":"f55a43d8867f1dec3747d357d5c364edc99cd11e"},
+        {"path":"Lib/UnityEngine.dll","pinned_blob_sha":"149a152de2df4cee616865df16dddad660856aa0"},
+        {"path":"Lib/UnityEngine.CoreModule.dll","pinned_blob_sha":"1ffea27aa23f6e2ca1aed15dc2b6d19ca8ef29f0"},
+        {"path":"Lib/UnityEngine.UI.dll","pinned_blob_sha":"5a5a457a01f5deae69633185e686522f005288d1"},
+        {"path":"Lib/UnityEngine.UIModule.dll","pinned_blob_sha":"1e5722ad4f3446b31bcfcb9757a7e9ee60ad1459"},
+        {"path":"Lib/UnityEngine.TextRenderingModule.dll","pinned_blob_sha":"8b71c5d64f99afb037fa0430861c07fcc31a6b2b"},
+        {"path":"Lib/UnityEngine.InputLegacyModule.dll","pinned_blob_sha":"c0c31e011e938cc78d7e2b4c0f01fa03365c3ddd"}
       ]
     },
     "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately."
