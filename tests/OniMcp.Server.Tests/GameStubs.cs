@@ -1,5 +1,6 @@
 // Only game/configuration boundaries are stubbed. Every Server implementation and
 // protocol type is compiled from production source, including HttpListener transport.
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
@@ -58,9 +59,37 @@ namespace OniMcp.Tools
         public static string LatestScreenshotPath() => null;
         public static string ScreenshotPathForFile(string file) => null;
     }
+    public sealed class McpTool
+    {
+        public string Name { get; set; }
+        public Func<JObject, CallToolResult> Handler { get; set; }
+    }
+    public static class ToolCallMiddleware
+    {
+        public static int Presentations;
+
+        public static bool TryGetTaskDescription(JObject arguments, out string description)
+        {
+            var token = arguments?["task"];
+            description = token?.Type == JTokenType.String ? token.Value<string>()?.Trim() : null;
+            return !string.IsNullOrWhiteSpace(description);
+        }
+
+        public static void PresentTaskDescription(string description)
+        {
+            Presentations++;
+        }
+
+        public static CallToolResult MissingTaskDescription(string toolName,
+            List<Dictionary<string, object>> notifications)
+        {
+            return CallToolResult.Error("task is required: describe what you are doing before every tool call.");
+        }
+    }
     public static class OniToolRegistry
     {
         public static int Calls;
+        public static int MiddlewareCalls;
         public static string LastName;
         public static JObject LastArguments;
         public static bool ModernToolsEnabled;
@@ -112,8 +141,73 @@ namespace OniMcp.Tools
             };
         }
 
+        public static bool TryGetTool(string name, out McpTool tool)
+        {
+            tool = null;
+            if (!ModernToolsEnabled || !string.Equals(name, "benchmark", StringComparison.Ordinal))
+                return false;
+
+            tool = new McpTool
+            {
+                Name = "benchmark",
+                Handler = arguments =>
+                {
+                    Calls++;
+                    LastName = "benchmark";
+                    LastArguments = arguments;
+                    return CallToolResult.Text("ok");
+                }
+            };
+            return true;
+        }
+
+        public static bool HasCoordinateArguments(JToken token)
+        {
+            if (token == null)
+                return false;
+            if (token.Type == JTokenType.Object)
+            {
+                foreach (var property in ((JObject)token).Properties())
+                {
+                    if (IsCoordinateParameter(property.Name) || HasCoordinateArguments(property.Value))
+                        return true;
+                }
+            }
+            else if (token.Type == JTokenType.Array)
+            {
+                foreach (var item in (JArray)token)
+                {
+                    if (HasCoordinateArguments(item))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool IsCoordinateTool(string name)
+        {
+            return string.Equals(name, "coordinate_control", StringComparison.Ordinal)
+                || string.Equals(name, "world_editor", StringComparison.Ordinal);
+        }
+
+        private static bool IsCoordinateParameter(string name)
+        {
+            switch (name)
+            {
+                case "x": case "y": case "x1": case "y1": case "x2": case "y2":
+                case "dx": case "dy": case "cell": case "cells": case "points": case "anchors":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         public static CallToolResult CallTool(string name, JObject arguments)
         {
+            MiddlewareCalls++;
+            string taskDescription;
+            if (ToolCallMiddleware.TryGetTaskDescription(arguments, out taskDescription))
+                ToolCallMiddleware.PresentTaskDescription(taskDescription);
             Calls++;
             LastName = name;
             LastArguments = arguments;

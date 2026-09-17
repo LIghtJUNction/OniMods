@@ -328,7 +328,38 @@ namespace OniMcp.Server
                     "2025 task-augmented tool calls are not supported on the stateless 2026 path");
             }
 
-            var toolResult = OniToolRegistry.CallTool(@params.Name, @params.Arguments);
+            string taskDescription;
+            if (!ToolCallMiddleware.TryGetTaskDescription(@params.Arguments, out taskDescription))
+            {
+                return CompleteModernToolResult(JObject.FromObject(
+                    ToolCallMiddleware.MissingTaskDescription(ModernReadOnlyToolName, null)));
+            }
+            ToolCallMiddleware.PresentTaskDescription(taskDescription);
+
+            if (!OniToolRegistry.IsCoordinateTool(ModernReadOnlyToolName)
+                && OniToolRegistry.HasCoordinateArguments(@params.Arguments))
+            {
+                return CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
+                    "Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool.")));
+            }
+
+            McpTool tool;
+            if (!OniToolRegistry.TryGetTool(ModernReadOnlyToolName, out tool)
+                || tool == null || tool.Handler == null
+                || !string.Equals(tool.Name, ModernReadOnlyToolName, StringComparison.Ordinal))
+            {
+                return ModernToolMethodUnavailable(request);
+            }
+
+            CallToolResult toolResult;
+            try
+            {
+                toolResult = tool.Handler(@params.Arguments ?? new JObject());
+            }
+            catch (Exception ex)
+            {
+                toolResult = CallToolResult.Error($"Tool execution error: {ex.Message}");
+            }
             return CompleteModernToolResult(JObject.FromObject(toolResult));
         }
 
