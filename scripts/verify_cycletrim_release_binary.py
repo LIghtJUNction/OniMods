@@ -113,6 +113,13 @@ def main() -> int:
             and "States.GetValue" not in prioritize_prefix_code
             and ".Invalidate();" in prioritize_prefix_code
         ),
+        "priority invalidation reuses cached duplicant classification": (
+            bool(prioritize_prefix_code)
+            and "GetComponent<ChoreConsumer>()" in prioritize_prefix_code
+            and "GetComponent<MinionIdentity>()" not in prioritize_prefix_code
+            and "IsDuplicant" in prioritize_prefix_code
+            and ".Invalidate();" in prioritize_prefix_code
+        ),
         "stationary probes reuse vanilla cached root cell": (
             "cachedCell" in stationary_code
             and "Grid.PosToCell" not in stationary_code
