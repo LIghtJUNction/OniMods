@@ -91,21 +91,33 @@ internal static class HttpAdmissionRegression
                 WaitForQueuedActions(ExpectedCapacity);
                 server.RestartServer();
 
-                string restartedSession = Initialize(client, 15500);
-                Assert(!string.Equals(restartedSession, sessionId, StringComparison.Ordinal),
-                    "Restart reused the terminated legacy session");
-                DrainPending(stale);
-
-                var afterRestart = QueueLegacyRequests(client, restartedSession, ExpectedCapacity, 15600);
-                WaitForQueuedActions(ExpectedCapacity);
-                using (var response = SendLegacy(client,
-                    "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}", restartedSession))
+                // Restart closes the listener's existing keep-alive sockets. Use a new
+                // transport connection so this test exercises admission generations,
+                // not HttpClient's reuse of a connection owned by the stopped listener.
+                var restartedHandler = new HttpClientHandler { MaxConnectionsPerServer = 64 };
+                using (restartedHandler)
+                using (var restartedClient = new HttpClient(restartedHandler)
                 {
-                    AssertBusy(response, "post-restart notification");
+                    BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                    Timeout = TimeSpan.FromSeconds(5)
+                })
+                {
+                    string restartedSession = Initialize(restartedClient, 15500);
+                    Assert(!string.Equals(restartedSession, sessionId, StringComparison.Ordinal),
+                        "Restart reused the terminated legacy session");
+                    DrainPending(stale);
+
+                    var afterRestart = QueueLegacyRequests(restartedClient, restartedSession, ExpectedCapacity, 15600);
+                    WaitForQueuedActions(ExpectedCapacity);
+                    using (var response = SendLegacy(restartedClient,
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}", restartedSession))
+                    {
+                        AssertBusy(response, "post-restart notification");
+                    }
+                    Assert(QueuedActions() == ExpectedCapacity,
+                        "Stale admission releases changed the post-restart capacity");
+                    PumpPending(afterRestart, requireSuccess: true);
                 }
-                Assert(QueuedActions() == ExpectedCapacity,
-                    "Stale admission releases changed the post-restart capacity");
-                PumpPending(afterRestart, requireSuccess: true);
             }
         }
         finally
