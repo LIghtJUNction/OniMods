@@ -55,6 +55,10 @@ def main() -> int:
             "Navigator ___navigator" in busy_code
             and "GetComponent<Navigator>()" not in busy_code
         ),
+        "busy chore stamps reuse navigator cached root cell": (
+            "navigator.cachedCell" in busy_code
+            and "Grid.PosToCell(navigator)" not in busy_code
+        ),
         "stationary probes reuse vanilla cached root cell": (
             "cachedCell" in stationary_code
             and "Grid.PosToCell" not in stationary_code

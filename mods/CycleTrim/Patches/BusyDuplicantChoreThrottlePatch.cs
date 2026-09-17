@@ -91,7 +91,7 @@ namespace CycleTrim.Patches
                 InvalidationVersions.FetchVersion,
                 NavigationInvalidationVersions.Get(navigator.NavGrid),
                 InvalidationVersions.ChoreVersion,
-                Grid.PosToCell(navigator),
+                navigator.cachedCell,
                 RuntimeHelpers.GetHashCode(currentChore),
                 scheduleBlock == null ? 0 : RuntimeHelpers.GetHashCode(scheduleBlock),
                 navigationContext);
