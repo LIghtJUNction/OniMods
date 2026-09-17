@@ -43,7 +43,8 @@ namespace OniMcp.Server
             }
             catch (JsonException ex)
             {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), 200);
+                int statusCode = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal) ? 400 : 200;
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), statusCode);
                 return;
             }
 
