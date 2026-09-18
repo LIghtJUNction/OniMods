@@ -88,12 +88,18 @@ jobs:
           python3 scripts/check_cycletrim_reference_api.py \
             "$GITHUB_WORKSPACE/.oni-managed/Assembly-CSharp.dll" \
             2>&1 | tee "$RUNNER_TEMP/cycletrim-reference-api.log"
+      - name: Prepare allowlisted CycleTrim reference-API diagnostics on failure
+        if: failure()
+        run: >-
+          python3 scripts/prepare_cycletrim_reference_api_diagnostics.py
+          "$RUNNER_TEMP/cycletrim-reference-api.log"
+          "$RUNNER_TEMP/cycletrim-reference-api-diagnostics.txt"
       - name: Upload CycleTrim reference-API diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cycletrim-reference-api-diagnostics
-          path: ${{ runner.temp }}/cycletrim-reference-api.log
+          path: ${{ runner.temp }}/cycletrim-reference-api-diagnostics.txt
           if-no-files-found: error
           retention-days: 7
       - name: Build CycleTrim against pinned references
