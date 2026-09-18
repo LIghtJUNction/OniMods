@@ -23,8 +23,10 @@ def decompile(assembly: Path, type_name: str) -> str:
         timeout=60,
     )
     if result.returncode != 0 or not result.stdout.strip():
-        detail = " ".join(result.stderr.split())
-        raise RuntimeError(f"could not decompile {type_name}: {detail}")
+        # Third-party tool stderr is deliberately not copied into CI logs/artifacts.
+        raise RuntimeError(
+            f"could not inspect metadata for {type_name} (ilspy exit {result.returncode})"
+        )
     source = result.stdout.replace("\r\n", "\n")
     # refasmer-style references expose stripped methods as `extern`.
     return re.sub(r"\bextern\s+", "", source)
