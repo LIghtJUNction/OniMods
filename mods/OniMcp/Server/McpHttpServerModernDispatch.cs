@@ -36,6 +36,23 @@ namespace OniMcp.Server
                 }
             }
 
+            if (string.Equals(rpcRequest.Method, "resources/read", StringComparison.Ordinal))
+            {
+                var uriToken = rpcRequest.Params?["uri"];
+                if (uriToken?.Type == JTokenType.String)
+                {
+                    string uri = (string)uriToken;
+                    if (!IsModernReadOnlyResourceUri(uri))
+                    {
+                        response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                        SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                            $"Resource is not available on the {ModernProtocolVersion} read-only path: {uri}",
+                            new JObject { ["uri"] = uri }), (int)HttpStatusCode.OK);
+                        return;
+                    }
+                }
+            }
+
             MainThreadHttpAdmissionLease admission;
             if (!TryAcquireMainThreadHttpAdmission(response, rpcRequest.Id, null, true, out admission))
                 return;
