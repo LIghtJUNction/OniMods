@@ -43,6 +43,16 @@ namespace OniMcp.Server
                         return;
                     }
                 }
+
+                var taskToken = rpcRequest.Params?["task"];
+                if (taskToken?.Type == JTokenType.Object)
+                {
+                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                    SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                        "2025 task-augmented tool calls are not supported on the stateless 2026 path"),
+                        (int)HttpStatusCode.OK);
+                    return;
+                }
             }
 
             if (string.Equals(rpcRequest.Method, "resources/read", StringComparison.Ordinal))
