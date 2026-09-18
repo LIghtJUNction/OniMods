@@ -1,6 +1,8 @@
 using System;
+using System.Globalization;
 using System.Net;
 using System.Threading;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Tools;
@@ -66,6 +68,19 @@ namespace OniMcp.Server
                     response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
                     var result = CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
                         "task is required: describe what you are doing before every tool call.")));
+                    SendJson(response, JsonRpcResponse.Success(rpcRequest.Id, result), (int)HttpStatusCode.OK);
+                    return;
+                }
+
+                if ((taskToken == null || taskToken.Type == JTokenType.Null)
+                    && argumentsObject != null
+                    && modernToolAvailable
+                    && hasTaskDescription
+                    && !TryNormalizeModernBenchmarkIterations(argumentsObject))
+                {
+                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                    var result = CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
+                        "iterations must be an integer from 1 to 5000")));
                     SendJson(response, JsonRpcResponse.Success(rpcRequest.Id, result), (int)HttpStatusCode.OK);
                     return;
                 }
@@ -153,6 +168,27 @@ namespace OniMcp.Server
 
                 ThreadPool.QueueUserWorkItem(_ => SendModernPostResponse(response, rpcRequest.Id, result, processEx));
             }), () => CloseStaleHttpResponse(response));
+        }
+
+        private static bool TryNormalizeModernBenchmarkIterations(JObject arguments)
+        {
+            JToken token = arguments?["iterations"];
+            if (token == null)
+                return true;
+
+            if (token.Type != JTokenType.Integer && token.Type != JTokenType.Float)
+                return false;
+
+            decimal value;
+            if (!decimal.TryParse(token.ToString(Formatting.None), NumberStyles.Float,
+                CultureInfo.InvariantCulture, out value)
+                || decimal.Truncate(value) != value
+                || value < 1
+                || value > 5000)
+                return false;
+
+            arguments["iterations"] = (int)value;
+            return true;
         }
 
         private static bool IsModernMetadataOnlyMethod(string method)
