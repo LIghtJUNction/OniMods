@@ -46,6 +46,42 @@ def main() -> int:
     require(patch, "Harmony.GetPatchInfo(target)", "Harmony ownership inspection missing", failures)
     require(patch, "FastTrackNamespacePrefix", "FastTrack attribution missing", failures)
     require(patch, "UIScheduler.Instance", "deferred reporting must use the unscaled UI scheduler", failures)
+    require(
+        patch,
+        "scheduler.ScheduleNextFrame(ReportName, reportCallback, scheduler)",
+        "deferred report does not retain scheduler ownership for stale-callback isolation",
+        failures,
+    )
+    require(
+        patch,
+        "!ReferenceEquals(reportScheduler.Target, scheduler)",
+        "scheduler replacement cannot recover a stranded deferred report",
+        failures,
+    )
+    require(
+        patch,
+        "!ReferenceEquals(reportScheduler.Target, scheduledOn)",
+        "stale scheduler callbacks can mutate a newer report owner",
+        failures,
+    )
+    require(
+        patch,
+        "captureGame = new WeakReference(null)",
+        "probe capture does not track game-session identity without retaining the old game",
+        failures,
+    )
+    require(
+        patch,
+        'summary.Append(",\\\"captureGeneration\\\":").Append(captureGeneration)',
+        "probe report does not expose its game-session generation",
+        failures,
+    )
+    require(
+        patch,
+        "startedNewCapture ? asyncTickSnapshot : lastAsyncTickSnapshot",
+        "first report in a game session is not rebased away from prior-session timing",
+        failures,
+    )
     if "GameScheduler.Instance" in patch:
         failures.append("deferred performance reporting must not depend on the paused game clock")
     require(patch, "intervalDurationTicks", "report interval duration is missing", failures)
@@ -81,6 +117,8 @@ def main() -> int:
         ('"--series"', "analyzer cannot validate an in-run report series"),
         ('"--reject-fasttrack"', "analyzer cannot fail closed on FastTrack-owned baseline captures"),
         ("fastTrackPatched changed within one capture", "analyzer does not reject mid-capture FastTrack ownership drift"),
+        ("captureGeneration changed within one capture", "analyzer does not reject cross-session report series"),
+        ("captureGeneration schema changed within one capture", "analyzer accepts mixed legacy/session-aware series"),
         ("intervalCalls does not match cumulative delta", "analyzer does not close interval call arithmetic"),
         ("intervalTotalTicks does not match cumulative delta", "analyzer does not close interval timing arithmetic"),
         (
