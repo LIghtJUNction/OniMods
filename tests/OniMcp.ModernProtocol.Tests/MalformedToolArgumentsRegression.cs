@@ -90,8 +90,8 @@ internal static class RegressionEntry
                     "Modern benchmark coordinate rejection reached the handler");
                 Assert(OniToolRegistry.MiddlewareCalls == middlewareCallsBefore,
                     "Modern benchmark coordinate rejection traversed legacy middleware");
-                Assert(ToolCallMiddleware.Presentations == presentationsBeforeCoordinate + 1,
-                    "Modern benchmark coordinate rejection changed task presentation order");
+                Assert(ToolCallMiddleware.Presentations == presentationsBeforeCoordinate,
+                    "Modern benchmark coordinate rejection presented task UI before rejecting the request");
             }
         }
         finally
