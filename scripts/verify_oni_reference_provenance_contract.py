@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Executable regressions for ONI reference provenance and CI coverage."""
 
+from contextlib import redirect_stdout
 from fnmatch import fnmatchcase
+from io import StringIO
 from pathlib import Path
 
 from verify_oni_reference_provenance import (
     compare_official_steam_state,
     compare_upstream_state,
+    report_upstream_state,
     validate_manifest,
 )
 
@@ -271,6 +274,13 @@ def main() -> int:
     require(
         binary_drift["changed_files"] == ["Lib/UnityEngine.dll"],
         "changed non-game reference file was not identified exactly",
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        report_upstream_state(REFERENCE, binary_drift)
+    require(
+        "UPSTREAM_REFERENCE_STATUS status=drift " in output.getvalue(),
+        "detected upstream reference drift must not be reported as status=ok",
     )
 
     new_marker_text = """<Project><PropertyGroup>
