@@ -9,6 +9,15 @@ namespace OniMcp.Server
     {
         private void DispatchModernPostResponse(HttpListenerResponse response, JsonRpcRequest rpcRequest)
         {
+            if (!IsModernRequestMethod(rpcRequest.Method))
+            {
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.MethodNotFound,
+                    $"Method is not available on the {ModernProtocolVersion} compatibility path: {rpcRequest.Method}"),
+                    (int)HttpStatusCode.NotFound);
+                return;
+            }
+
             MainThreadHttpAdmissionLease admission;
             if (!TryAcquireMainThreadHttpAdmission(response, rpcRequest.Id, null, true, out admission))
                 return;
