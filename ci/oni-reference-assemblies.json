@@ -12,6 +12,7 @@
     "commit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
     "declared_oni_build": 737790,
     "license_path": "Lib/LICENSE.txt",
+    "license_blob_sha": "9e04873a678423771b5a47de1c04465815710545",
     "version_marker": {
       "path": "Directory.Build.props",
       "blob_sha": "cda8097ccf5d0033f68253faa1ad373305394ea8",
