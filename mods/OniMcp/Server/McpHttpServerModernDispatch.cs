@@ -46,7 +46,7 @@ namespace OniMcp.Server
                 }
 
                 var taskToken = rpcRequest.Params?["task"];
-                if (taskToken?.Type == JTokenType.Object)
+                if (taskToken != null && taskToken.Type != JTokenType.Null)
                 {
                     response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
                     SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
