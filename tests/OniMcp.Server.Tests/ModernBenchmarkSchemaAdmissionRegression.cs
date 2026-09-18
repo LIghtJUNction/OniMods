@@ -48,6 +48,7 @@ internal static class ModernBenchmarkSchemaAdmissionRegressionEntry
                 AssertSchemaInvalidBenchmarkRejected(client, "cases", new JArray("toolList"), 16010);
                 AssertSchemaInvalidBenchmarkRejected(client, "tool", 7, 16011);
                 AssertSchemaInvalidBenchmarkRejected(client, "includeDetails", "true", 16012);
+                AssertSchemaInvalidBenchmarkRejected(client, "cases", "not-a-case", 16013);
             }
 
             Assert(OniMcp.Tools.OniToolRegistry.Calls == 0,
