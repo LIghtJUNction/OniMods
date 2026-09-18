@@ -63,7 +63,19 @@ internal static class HttpAdmissionRegression
 
                 using (var response = SendModern(client, ModernResourcesList(15201), "resources/list"))
                 {
-                    AssertBusy(response, "modern request");
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Metadata-only modern request was blocked by main-thread admission; got " + (int)response.StatusCode);
+                    Assert(response.Headers.Contains("Mcp-Protocol-Version")
+                        && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
+                        "Metadata-only modern response lost the protocol version");
+                }
+                Assert(QueuedActions() == ExpectedCapacity,
+                    "Metadata-only modern request changed the saturated main-thread queue size");
+
+                using (var response = SendModern(client, ModernResourceRead(15203, "oni://test"),
+                    "resources/read", "oni://test"))
+                {
+                    AssertBusy(response, "modern live-backed request");
                     Assert(response.Headers.Contains("Mcp-Protocol-Version")
                         && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
                         "Busy modern response lost the protocol version");
@@ -155,6 +167,14 @@ internal static class HttpAdmissionRegression
             + "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"admission-regression\",\"version\":\"1.0\"}}}}";
     }
 
+    private static string ModernResourceRead(int id, string uri)
+    {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":" + id
+            + ",\"params\":{\"uri\":\"" + uri + "\",\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+            + "\"io.modelcontextprotocol/clientCapabilities\":{},"
+            + "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"admission-regression\",\"version\":\"1.0\"}}}}";
+    }
+
     private static List<PendingRequest> QueueLegacyRequests(HttpClient client, string sessionId, int count, int firstId)
     {
         var result = new List<PendingRequest>();
@@ -192,13 +212,15 @@ internal static class HttpAdmissionRegression
         return request;
     }
 
-    private static HttpResponseMessage SendModern(HttpClient client, string body, string method)
+    private static HttpResponseMessage SendModern(HttpClient client, string body, string method, string name = null)
     {
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(body, Encoding.UTF8, "application/json");
             request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.TryAddWithoutValidation("Mcp-Method", method);
+            if (!string.IsNullOrEmpty(name))
+                request.Headers.TryAddWithoutValidation("Mcp-Name", name);
             return client.SendAsync(request).GetAwaiter().GetResult();
         }
     }
