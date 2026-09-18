@@ -22,6 +22,7 @@ internal static class LegacyPingRegressionEntry
         RunLegacyResourceNotFoundCodeRegression();
         RunLegacyPingLifecycleRegression();
         RunHeaderlessModernCancellationRegression();
+        RunModernNotificationNoResponseRegression();
         RunModernLegacyTransportMethodRegression();
         HttpAdmissionRegression.Run();
         var main = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
@@ -232,6 +233,59 @@ internal static class LegacyPingRegressionEntry
         }
     }
 
+    private static void RunModernNotificationNoResponseRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"notification-regression\",\"version\":\"1.0\"}}";
+                string requestShapedNotification = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{" + modernMeta + "}}";
+                using (var response = Post(client, requestShapedNotification, null, "2026-07-28", "tools/list"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Modern JSON-RPC notification returned HTTP " + (int)response.StatusCode + " instead of 202");
+                    Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                        "Modern JSON-RPC notification returned a response body");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Modern JSON-RPC notification allocated a legacy session id");
+                }
+
+                string unsupportedNotification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{\"progressToken\":\"p\",\"progress\":1," + modernMeta + "}}";
+                using (var response = Post(client, unsupportedNotification, null, "2026-07-28", "notifications/progress"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Unsupported modern notification returned HTTP " + (int)response.StatusCode + " instead of 202");
+                    Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                        "Unsupported modern notification returned a JSON-RPC error body");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Unsupported modern notification allocated a legacy session id");
+                }
+
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Modern notifications allocated legacy session state");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
     private static void RunModernLegacyTransportMethodRegression()
     {
         _bridge = new MainThreadBridge();
@@ -282,7 +336,8 @@ internal static class LegacyPingRegressionEntry
         }
     }
 
-    private static HttpResponseMessage Post(HttpClient client, string body, string sessionId = null, string protocolVersion = null)
+    private static HttpResponseMessage Post(HttpClient client, string body, string sessionId = null, string protocolVersion = null,
+        string method = null)
     {
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
@@ -291,6 +346,8 @@ internal static class LegacyPingRegressionEntry
                 request.Headers.TryAddWithoutValidation("Mcp-Session-Id", sessionId);
             if (!string.IsNullOrEmpty(protocolVersion))
                 request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", protocolVersion);
+            if (!string.IsNullOrEmpty(method))
+                request.Headers.TryAddWithoutValidation("Mcp-Method", method);
             Task<HttpResponseMessage> work = client.SendAsync(request);
             PumpUntil(work);
             return work.GetAwaiter().GetResult();
