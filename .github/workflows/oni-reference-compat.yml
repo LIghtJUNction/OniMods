@@ -14,7 +14,11 @@ on:
       - '.editorconfig'
       - '.agents/skills/autonomous-gh-iteration/**'
       - '.agents/skills/oni-mcp-autonomous-iteration/**'
-      - 'Directory.Build.props.example'
+      - 'Directory.Build.*'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'NuGet.Config'
+      - 'nuget.config'
       - '.github/workflows/oni-reference-compat.yml'
   push:
     branches: [main]
@@ -30,7 +34,11 @@ on:
       - '.editorconfig'
       - '.agents/skills/autonomous-gh-iteration/**'
       - '.agents/skills/oni-mcp-autonomous-iteration/**'
-      - 'Directory.Build.props.example'
+      - 'Directory.Build.*'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'NuGet.Config'
+      - 'nuget.config'
       - '.github/workflows/oni-reference-compat.yml'
   workflow_dispatch:
 

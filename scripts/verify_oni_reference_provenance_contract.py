@@ -66,6 +66,11 @@ REFERENCE_CONTRACT_INPUTS = (
     ".agents/skills/autonomous-gh-iteration/SKILL.md",
     ".agents/skills/oni-mcp-autonomous-iteration/scripts/runtime_smoke.py",
     "Directory.Build.props.example",
+    "Directory.Build.targets",
+    "Directory.Packages.props",
+    "global.json",
+    "NuGet.Config",
+    "nuget.config",
     "benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj",
 )
 
