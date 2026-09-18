@@ -26,6 +26,14 @@ def main() -> int:
         failures.append("all seven Harmony probe targets must fail closed when the probe is disabled")
     require(patch, "Stopwatch.GetTimestamp()", "wall-clock Stopwatch timing missing", failures)
     require(patch, "RecordWorker(asyncWorkCounter", "worker path is not separated from main-thread timing", failures)
+    require(
+        patch,
+        "asyncWorkCounter = new PerformanceProbeCounter(consistentSnapshots: true)",
+        "worker counter snapshots are not coordinated with concurrent records",
+        failures,
+    )
+    if patch.count("consistentSnapshots: true") != 1:
+        failures.append("snapshot coordination must remain isolated to the concurrent worker counter")
     require(patch, "RecordMain(navigatorProbeCounter", "navigator probe timing is not recorded on the main-thread path", failures)
     require(patch, "RecordMain(brainSchedulerCounter", "brain scheduler timing is not recorded on the main-thread path", failures)
     require(patch, "RecordMain(roomProberCounter", "room prober timing is not recorded on the main-thread path", failures)
@@ -50,6 +58,8 @@ def main() -> int:
         failures.append("logging must remain limited to target resolution and deferred reporting")
 
     for needle, message in (
+        ("PerformanceProbeCounter(bool consistentSnapshots = false)", "counter snapshot-coordination mode is missing"),
+        ("lock (snapshotLock)", "coordinated counter does not group record/snapshot state"),
         ("Interlocked.Increment(ref callCount)", "counter call count is not atomic"),
         ("Interlocked.Add(ref totalTicks", "counter total is not atomic"),
         ("Interlocked.CompareExchange(", "counter maximum is not atomic"),
