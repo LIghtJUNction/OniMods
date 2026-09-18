@@ -463,8 +463,9 @@ def fetch_upstream_state(reference: dict, marker: dict, declared_build: int) -> 
 def report_upstream_state(reference: dict, state: dict) -> None:
     tracking = reference["upstream_tracking"]
     changed_files = ",".join(state["changed_files"]) or "none"
+    status = "drift" if state["has_reference_drift"] else "ok"
     print(
-        "UPSTREAM_REFERENCE_STATUS status=ok "
+        f"UPSTREAM_REFERENCE_STATUS status={status} "
         f"branch={tracking['branch']} head={state['head_sha']} "
         f"head_declared_oni_build={state['head_declared_build']} "
         f"marker_changed={str(state['marker_changed']).lower()} "
