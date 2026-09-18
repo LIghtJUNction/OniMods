@@ -61,6 +61,17 @@ namespace OniMcp.Server
                 if (uriToken?.Type == JTokenType.String)
                 {
                     string uri = (string)uriToken;
+                    Uri parsedUri;
+                    if (!Uri.TryCreate(uri, UriKind.Absolute, out parsedUri)
+                        || !string.Equals(parsedUri.Scheme, "oni", StringComparison.Ordinal))
+                    {
+                        response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                        SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                            $"Resource not found: {uri}", new JObject { ["uri"] = uri }),
+                            (int)HttpStatusCode.OK);
+                        return;
+                    }
+
                     if (!IsModernReadOnlyResourceUri(uri))
                     {
                         response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
