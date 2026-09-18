@@ -280,6 +280,13 @@ namespace OniMcp.Server
                 return false;
             }
 
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "mcp", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(canonicalPath, "/sessions", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             return !string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(parsed.Host, "world", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(canonicalPath, "/coordinate-screenshot", StringComparison.Ordinal);
