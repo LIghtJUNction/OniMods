@@ -19,6 +19,7 @@ internal static class LegacyPingRegressionEntry
 
     private static void Main()
     {
+        RunLegacyResourceNotFoundCodeRegression();
         RunLegacyPingLifecycleRegression();
         RunHeaderlessModernCancellationRegression();
         RunModernLegacyTransportMethodRegression();
@@ -27,6 +28,65 @@ internal static class LegacyPingRegressionEntry
         if (main == null)
             throw new InvalidOperationException("Existing server regression entrypoint was not found");
         main.Invoke(null, null);
+    }
+
+    private static void RunLegacyResourceNotFoundCodeRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                const string missingUri = "oni://missing-legacy-resource";
+                const string readMissing = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":14200,\"params\":{\"uri\":\"oni://missing-legacy-resource\"}}";
+                foreach (var version in new[] { "2025-11-25", "2025-06-18" })
+                {
+                    string initialize = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":14199,\"params\":{\"protocolVersion\":\""
+                        + version + "\",\"capabilities\":{},\"clientInfo\":{\"name\":\"legacy-resource-error-regression\",\"version\":\"1.0\"}}}";
+                    string sessionId;
+                    using (var response = Post(client, initialize))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK && ReadJson(response)["result"] != null,
+                            "Legacy resource-error initialization failed for " + version);
+                        sessionId = response.Headers.GetValues("Mcp-Session-Id").Single();
+                    }
+
+                    using (var response = Post(client, readMissing, sessionId, version))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK,
+                            "Legacy missing resource returned HTTP " + (int)response.StatusCode + " for " + version);
+                        JObject json = ReadJson(response);
+                        Assert(json["result"] == null,
+                            "Legacy missing resource returned a success result for " + version);
+                        Assert((int)json["error"]["code"] == -32002,
+                            "Legacy missing resource did not preserve -32002 for " + version);
+                        Assert(((string)json["error"]["message"]).Contains(missingUri),
+                            "Legacy missing resource error omitted the URI for " + version);
+                        Assert(response.Headers.GetValues("Mcp-Session-Id").Single() == sessionId,
+                            "Legacy missing resource lost the session id for " + version);
+                        Assert(response.Headers.GetValues("Mcp-Protocol-Version").Single() == version,
+                            "Legacy missing resource lost the negotiated protocol version for " + version);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
     }
 
     private static void RunLegacyPingLifecycleRegression()
