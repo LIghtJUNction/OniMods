@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Threading;
+using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 
 namespace OniMcp.Server
@@ -16,6 +17,23 @@ namespace OniMcp.Server
                     $"Method is not available on the {ModernProtocolVersion} compatibility path: {rpcRequest.Method}"),
                     (int)HttpStatusCode.NotFound);
                 return;
+            }
+
+            if (string.Equals(rpcRequest.Method, "tools/call", StringComparison.Ordinal))
+            {
+                var toolNameToken = rpcRequest.Params?["name"];
+                if (toolNameToken?.Type == JTokenType.String)
+                {
+                    string toolName = (string)toolNameToken;
+                    if (!string.Equals(toolName, ModernReadOnlyToolName, StringComparison.Ordinal))
+                    {
+                        response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                        SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                            $"Tool is not available on the {ModernProtocolVersion} read-only path: {toolName}",
+                            new JObject { ["name"] = toolName }), (int)HttpStatusCode.OK);
+                        return;
+                    }
+                }
             }
 
             MainThreadHttpAdmissionLease admission;
