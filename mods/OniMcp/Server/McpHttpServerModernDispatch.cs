@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
+using OniMcp.Tools;
 
 namespace OniMcp.Server
 {
@@ -51,6 +52,22 @@ namespace OniMcp.Server
                     SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
                         "2025 task-augmented tool calls are not supported on the stateless 2026 path"),
                         (int)HttpStatusCode.OK);
+                    return;
+                }
+
+                var argumentsObject = argumentsToken as JObject;
+                string taskDescription;
+                if ((taskToken == null || taskToken.Type == JTokenType.Null)
+                    && argumentsObject != null
+                    && IsModernReadOnlyToolAvailable()
+                    && ToolCallMiddleware.TryGetTaskDescription(argumentsObject, out taskDescription)
+                    && !OniToolRegistry.IsCoordinateTool(ModernReadOnlyToolName)
+                    && OniToolRegistry.HasCoordinateArguments(argumentsObject))
+                {
+                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                    var result = CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
+                        "Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool.")));
+                    SendJson(response, JsonRpcResponse.Success(rpcRequest.Id, result), (int)HttpStatusCode.OK);
                     return;
                 }
             }
