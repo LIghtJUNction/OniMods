@@ -9,15 +9,38 @@ namespace CycleTrim.Core
     /// </summary>
     internal sealed class PerformanceProbeCounter
     {
+        private readonly object snapshotLock;
         private long callCount;
         private long totalTicks;
         private long maxTicks;
+
+        internal PerformanceProbeCounter(bool consistentSnapshots = false)
+        {
+            if (consistentSnapshots)
+            {
+                snapshotLock = new object();
+            }
+        }
 
         internal void Record(long elapsedTicks)
         {
             if (elapsedTicks < 0)
             {
                 elapsedTicks = 0;
+            }
+
+            if (snapshotLock != null)
+            {
+                lock (snapshotLock)
+                {
+                    callCount++;
+                    totalTicks += elapsedTicks;
+                    if (elapsedTicks > maxTicks)
+                    {
+                        maxTicks = elapsedTicks;
+                    }
+                }
+                return;
             }
 
             Interlocked.Increment(ref callCount);
@@ -40,6 +63,14 @@ namespace CycleTrim.Core
 
         internal PerformanceProbeSnapshot Snapshot()
         {
+            if (snapshotLock != null)
+            {
+                lock (snapshotLock)
+                {
+                    return new PerformanceProbeSnapshot(callCount, totalTicks, maxTicks);
+                }
+            }
+
             return new PerformanceProbeSnapshot(
                 Interlocked.Read(ref callCount),
                 Interlocked.Read(ref totalTicks),

@@ -70,7 +70,7 @@ namespace CycleTrim.Patches
             }
 
             asyncTickCounter = new PerformanceProbeCounter();
-            asyncWorkCounter = new PerformanceProbeCounter();
+            asyncWorkCounter = new PerformanceProbeCounter(consistentSnapshots: true);
             navigatorProbeCounter = new PerformanceProbeCounter();
             fetchCounter = new PerformanceProbeCounter();
             choreCounter = new PerformanceProbeCounter();
