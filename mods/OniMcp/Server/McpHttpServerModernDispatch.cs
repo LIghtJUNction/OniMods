@@ -22,6 +22,18 @@ namespace OniMcp.Server
                 return;
             }
 
+            if (IsModernPaginatedListMethod(rpcRequest.Method))
+            {
+                var cursorToken = rpcRequest.Params?["cursor"];
+                if (cursorToken != null && cursorToken.Type != JTokenType.String)
+                {
+                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                    SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                        "cursor must be a string when provided"), (int)HttpStatusCode.OK);
+                    return;
+                }
+            }
+
             if (string.Equals(rpcRequest.Method, "tools/call", StringComparison.Ordinal))
             {
                 var argumentsToken = rpcRequest.Params?["arguments"];
@@ -269,6 +281,13 @@ namespace OniMcp.Server
             return name?.Type == JTokenType.String
                 && string.Equals((string)name, "benchmark", StringComparison.Ordinal)
                 && string.Equals(ModernReadOnlyToolName, "benchmark", StringComparison.Ordinal);
+        }
+
+        private static bool IsModernPaginatedListMethod(string method)
+        {
+            return string.Equals(method, "tools/list", StringComparison.Ordinal)
+                || string.Equals(method, "resources/list", StringComparison.Ordinal)
+                || string.Equals(method, "resources/templates/list", StringComparison.Ordinal);
         }
 
         private static bool IsModernMetadataOnlyMethod(string method)
