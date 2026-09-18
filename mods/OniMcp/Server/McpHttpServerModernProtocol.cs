@@ -346,13 +346,11 @@ namespace OniMcp.Server
                     "2025 task-augmented tool calls are not supported on the stateless 2026 path");
             }
 
-            string taskDescription;
-            if (!ToolCallMiddleware.TryGetTaskDescription(@params.Arguments, out taskDescription))
+            if (!ToolCallMiddleware.TryGetTaskDescription(@params.Arguments, out _))
             {
-                return CompleteModernToolResult(JObject.FromObject(
-                    ToolCallMiddleware.MissingTaskDescription(ModernReadOnlyToolName, null)));
+                return CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
+                    "task is required: describe what you are doing before every tool call.")));
             }
-            ToolCallMiddleware.PresentTaskDescription(taskDescription);
 
             if (!OniToolRegistry.IsCoordinateTool(ModernReadOnlyToolName)
                 && OniToolRegistry.HasCoordinateArguments(@params.Arguments))
