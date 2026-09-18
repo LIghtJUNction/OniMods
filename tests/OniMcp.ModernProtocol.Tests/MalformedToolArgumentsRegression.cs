@@ -67,8 +67,8 @@ internal static class RegressionEntry
                     "Modern read-only benchmark did not execute its handler exactly once");
                 Assert(OniToolRegistry.MiddlewareCalls == middlewareCallsBefore,
                     "Modern read-only benchmark passed through legacy tool-call middleware");
-                Assert(ToolCallMiddleware.Presentations == presentationsBefore + 1,
-                    "Modern read-only benchmark stopped presenting its required task description");
+                Assert(ToolCallMiddleware.Presentations == presentationsBefore,
+                    "Modern read-only benchmark mutated task presentation UI");
                 Assert(OniToolRegistry.LastName == "benchmark"
                     && (int)OniToolRegistry.LastArguments["iterations"] == 1,
                     "Modern read-only benchmark changed the dispatched arguments");
