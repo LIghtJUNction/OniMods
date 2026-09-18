@@ -26,6 +26,7 @@ OFFICIAL_RELEASE_GID = "1839041357039119"
 OFFICIAL_RELEASE_URL_ID = "719037282029407479"
 
 REFERENCE = {
+    "repository": "example/reference",
     "commit": PINNED_COMMIT,
     "upstream_tracking": {
         "branch": "master",
