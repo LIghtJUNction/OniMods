@@ -45,18 +45,19 @@ internal static class ModernBenchmarkSchemaAdmissionRegressionEntry
                 Timeout = TimeSpan.FromSeconds(5)
             })
             {
+                AssertValidBenchmarkCompletesWithoutMainThread(client);
                 AssertSchemaInvalidBenchmarkRejected(client, "cases", new JArray("toolList"), 16010);
                 AssertSchemaInvalidBenchmarkRejected(client, "tool", 7, 16011);
                 AssertSchemaInvalidBenchmarkRejected(client, "includeDetails", "true", 16012);
                 AssertSchemaInvalidBenchmarkRejected(client, "cases", "not-a-case", 16013);
             }
 
-            Assert(OniMcp.Tools.OniToolRegistry.Calls == 0,
-                "Schema-invalid benchmark arguments reached the tool handler");
+            Assert(OniMcp.Tools.OniToolRegistry.Calls == 1,
+                "Modern benchmark worker dispatch did not execute the handler exactly once");
             Assert(OniMcp.Tools.ToolCallMiddleware.Presentations == 0,
-                "Schema-invalid benchmark arguments presented task UI");
+                "Modern benchmark worker dispatch presented task UI");
             Assert(server.GetSessionSummaries().Count == 0,
-                "Schema-invalid benchmark arguments allocated legacy session state");
+                "Modern benchmark requests allocated legacy session state");
         }
         finally
         {
@@ -66,9 +67,58 @@ internal static class ModernBenchmarkSchemaAdmissionRegressionEntry
         }
     }
 
+    private static void AssertValidBenchmarkCompletesWithoutMainThread(HttpClient client)
+    {
+        var arguments = new JObject
+        {
+            ["task"] = "run worker-safe modern benchmark",
+            ["iterations"] = 1
+        };
+        using (var request = BuildBenchmarkRequest(arguments, 16000))
+        {
+            Task<HttpResponseMessage> work = client.SendAsync(request);
+            bool completedWithoutMainThread = SpinWait.SpinUntil(() => work.IsCompleted, 1500);
+            if (!completedWithoutMainThread)
+            {
+                Invoke(_bridge, "Update");
+                try
+                {
+                    using (var ignored = work.GetAwaiter().GetResult()) { }
+                }
+                catch { }
+                throw new InvalidOperationException(
+                    "Valid modern benchmark occupied main-thread admission instead of running on the worker path");
+            }
+
+            using (var response = work.GetAwaiter().GetResult())
+            {
+                Assert(response.StatusCode == HttpStatusCode.OK,
+                    "Modern benchmark worker dispatch returned HTTP " + (int)response.StatusCode);
+                JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                Assert((int)json["id"] == 16000,
+                    "Modern benchmark worker dispatch changed the request id");
+                Assert((bool?)json["result"]?["isError"] != true,
+                    "Modern benchmark worker dispatch returned a tool error");
+                Assert((string)json["result"]?["resultType"] == "complete",
+                    "Modern benchmark worker dispatch lost resultType=complete");
+                Assert(response.Headers.Contains("Mcp-Protocol-Version")
+                    && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
+                    "Modern benchmark worker dispatch lost the modern protocol response header");
+                Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                    "Modern benchmark worker dispatch returned a legacy session id");
+            }
+        }
+    }
+
     private static void AssertSchemaInvalidBenchmarkRejected(HttpClient client, string field, JToken value, int id)
     {
-        using (var request = BuildSchemaInvalidBenchmarkRequest(field, value, id))
+        var arguments = new JObject
+        {
+            ["task"] = "validate benchmark argument types"
+        };
+        arguments[field] = value;
+
+        using (var request = BuildBenchmarkRequest(arguments, id))
         {
             Task<HttpResponseMessage> work = client.SendAsync(request);
             bool completedWithoutMainThread = SpinWait.SpinUntil(() => work.IsCompleted, 1500);
@@ -105,14 +155,8 @@ internal static class ModernBenchmarkSchemaAdmissionRegressionEntry
         }
     }
 
-    private static HttpRequestMessage BuildSchemaInvalidBenchmarkRequest(string field, JToken value, int id)
+    private static HttpRequestMessage BuildBenchmarkRequest(JObject arguments, int id)
     {
-        var arguments = new JObject
-        {
-            ["task"] = "validate benchmark argument types"
-        };
-        arguments[field] = value;
-
         var body = new JObject
         {
             ["jsonrpc"] = "2.0",
