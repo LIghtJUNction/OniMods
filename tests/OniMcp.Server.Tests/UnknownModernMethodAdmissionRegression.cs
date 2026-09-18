@@ -20,6 +20,7 @@ internal static class UnknownModernMethodAdmissionRegressionEntry
     private static void Main()
     {
         RunUnknownModernMethodAdmissionRegression();
+        RunModernMetadataMethodAdmissionRegression();
         RunUnavailableModernToolAdmissionRegression();
         RunBlockedModernResourceAdmissionRegression();
         var existing = typeof(LegacyPingRegressionEntry).GetMethod("Main",
@@ -86,6 +87,85 @@ internal static class UnknownModernMethodAdmissionRegressionEntry
         finally
         {
             server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
+    private static void RunModernMetadataMethodAdmissionRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        int port = ReservePort();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        OniMcp.Tools.OniToolRegistry.ModernToolsEnabled = true;
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                string[] methods =
+                {
+                    "server/discover",
+                    "tools/list",
+                    "resources/list",
+                    "resources/templates/list"
+                };
+
+                for (int index = 0; index < methods.Length; index++)
+                {
+                    string method = methods[index];
+                    int requestId = 15990 + index;
+                    using (var request = BuildModernMetadataRequest(method, requestId))
+                    {
+                        Task<HttpResponseMessage> work = client.SendAsync(request);
+                        bool completedWithoutMainThread = SpinWait.SpinUntil(() => work.IsCompleted, 1500);
+                        if (!completedWithoutMainThread)
+                        {
+                            bool queued = QueuedActions() > 0;
+                            Invoke(_bridge, "Update");
+                            try
+                            {
+                                using (var ignored = work.GetAwaiter().GetResult()) { }
+                            }
+                            catch { }
+                            throw new InvalidOperationException(queued
+                                ? "Modern metadata request occupied main-thread admission instead of completing directly: " + method
+                                : "Modern metadata request did not complete without main-thread pumping: " + method);
+                        }
+
+                        using (var response = work.GetAwaiter().GetResult())
+                        {
+                            Assert(response.StatusCode == HttpStatusCode.OK,
+                                "Modern metadata request returned HTTP " + (int)response.StatusCode + ": " + method);
+                            JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                            Assert((int)json["id"] == requestId,
+                                "Modern metadata request changed the request id: " + method);
+                            Assert(json["result"]?.Type == JTokenType.Object,
+                                "Modern metadata request did not return an object result: " + method);
+                            Assert(response.Headers.Contains("Mcp-Protocol-Version")
+                                && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
+                                "Modern metadata request lost the modern protocol response header: " + method);
+                            Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                                "Modern metadata request returned a legacy session id: " + method);
+                        }
+
+                        Assert(QueuedActions() == 0,
+                            "Modern metadata request left work in the main-thread queue: " + method);
+                        Assert(server.GetSessionSummaries().Count == 0,
+                            "Modern metadata request allocated legacy session state: " + method);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            OniMcp.Tools.OniToolRegistry.ModernToolsEnabled = false;
             Invoke(_bridge, "OnDestroy");
         }
     }
@@ -254,6 +334,36 @@ internal static class UnknownModernMethodAdmissionRegressionEntry
         request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
         request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
         request.Headers.TryAddWithoutValidation("Mcp-Method", "experimental/unsupported");
+        return request;
+    }
+
+    private static HttpRequestMessage BuildModernMetadataRequest(string method, int requestId)
+    {
+        var body = new JObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["method"] = method,
+            ["id"] = requestId,
+            ["params"] = new JObject
+            {
+                ["_meta"] = new JObject
+                {
+                    ["io.modelcontextprotocol/protocolVersion"] = "2026-07-28",
+                    ["io.modelcontextprotocol/clientCapabilities"] = new JObject(),
+                    ["io.modelcontextprotocol/clientInfo"] = new JObject
+                    {
+                        ["name"] = "metadata-admission-regression",
+                        ["version"] = "1.0"
+                    }
+                }
+            }
+        };
+        var request = new HttpRequestMessage(HttpMethod.Post, "");
+        request.Content = new StringContent(body.ToString(Newtonsoft.Json.Formatting.None), Encoding.UTF8,
+            "application/json");
+        request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
+        request.Headers.TryAddWithoutValidation("Mcp-Method", method);
         return request;
     }
 
