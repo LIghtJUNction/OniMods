@@ -67,6 +67,8 @@ namespace OniMcp.Server
 
         private const string LegacyProtocolVersion = "2025-06-18";
 
+        private const int LegacyResourceNotFoundErrorCode = -32002;
+
         private static readonly string[] SupportedProtocolVersions = { CurrentProtocolVersion, LegacyProtocolVersion };
 
         private static bool IsSupportedProtocolVersion(string protocolVersion)
@@ -146,7 +148,8 @@ namespace OniMcp.Server
 
             var result = OniResourceRegistry.ReadResource(@params.Uri);
             if (result == null)
-                return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, $"Resource not found: {@params.Uri}");
+                return JsonRpcResponse.MakeError(request.Id, LegacyResourceNotFoundErrorCode,
+                    $"Resource not found: {@params.Uri}");
 
             return result;
         }
