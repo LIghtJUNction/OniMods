@@ -145,7 +145,7 @@ namespace UnityEngine
     internal static class Time
     {
         internal static float timeScale = 1f;
-        internal static float realtimeSinceStartup;
+        internal static float realtimeSinceStartup = 0f;
     }
 
     internal static class Mathf
