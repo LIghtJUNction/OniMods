@@ -21,6 +21,26 @@ SYNTHETIC_PERFORMANCE_PROJECT = (
 )
 
 
+def build_project_command(
+    path: Path,
+    dotnet: str,
+    skip_synthetic_performance: bool,
+) -> list[str]:
+    command = [
+        dotnet,
+        "run",
+        "--project",
+        str(path),
+        "--configuration",
+        "Release",
+        "-p:ImportDirectoryBuildProps=false",
+        "-p:TreatWarningsAsErrors=true",
+    ]
+    if skip_synthetic_performance and path == SYNTHETIC_PERFORMANCE_PROJECT:
+        command.extend(["--", "--skip-synthetic-performance"])
+    return command
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--static-only", action="store_true", help="run only Python source contracts")
@@ -44,20 +64,13 @@ def main() -> int:
         if not projects:
             parser.error("no Mod regression projects found under tests/")
         projects.append(ROOT / "benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj")
-        for path in projects:
-            command = [
-                dotnet,
-                "run",
-                "--project",
-                str(path),
-                "--configuration",
-                "Release",
-                "-p:ImportDirectoryBuildProps=false",
-                "-p:TreatWarningsAsErrors=true",
-            ]
-            if args.skip_synthetic_performance and path == SYNTHETIC_PERFORMANCE_PROJECT:
-                command.extend(["--", "--skip-synthetic-performance"])
-            checks.append((str(path.relative_to(ROOT)), command))
+        checks.extend(
+            (
+                str(path.relative_to(ROOT)),
+                build_project_command(path, dotnet, args.skip_synthetic_performance),
+            )
+            for path in projects
+        )
 
     failures = []
     environment = dict(os.environ, DOTNET_CLI_TELEMETRY_OPTOUT="1",
