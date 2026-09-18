@@ -161,6 +161,13 @@ def validate_manifest(manifest: dict) -> tuple[int, int, dict, dict, dict | None
     if not COMMIT_RE.fullmatch(commit):
         raise ValueError("reference source must be pinned to a full lowercase commit SHA")
 
+    license_path = reference.get("license_path")
+    if not isinstance(license_path, str):
+        raise ValueError("reference license path must be a string")
+    validate_repo_path(license_path, "reference license path")
+    if not COMMIT_RE.fullmatch(reference.get("license_blob_sha", "")):
+        raise ValueError("reference license must include a full Git blob SHA")
+
     declared_build = int(reference["declared_oni_build"])
     marker = reference["version_marker"]
     validate_repo_path(marker.get("path", ""), "reference version marker path")
@@ -333,6 +340,24 @@ def verify_official_steam(official_tracking: dict, tracked_build: int) -> None:
         )
         return
     report_official_steam_state(official_tracking, tracked_build, state)
+
+
+def verify_reference_license(reference: dict) -> None:
+    path_value = reference["license_path"]
+    data = download_text(
+        f"{RAW_PREFIX}{reference['repository']}/{reference['commit']}/{path_value}"
+    )
+    actual_blob = git_blob_sha(data)
+    expected_blob = reference["license_blob_sha"]
+    if actual_blob != expected_blob:
+        raise ValueError(
+            f"reference license blob changed: {actual_blob} != {expected_blob}"
+        )
+    print(
+        "PROVENANCE reference-license "
+        f"repo={reference['repository']} commit={reference['commit']} "
+        f"path={path_value} blob={actual_blob}"
+    )
 
 
 def verify_upstream_marker(reference: dict, marker: dict, declared_build: int) -> None:
@@ -519,6 +544,7 @@ def main() -> int:
     if args.verify_official:
         verify_official_steam(manifest["official_tracking"], official_build)
     if args.verify_upstream:
+        verify_reference_license(reference)
         verify_upstream_marker(reference, marker, declared_build)
         if tracking is not None:
             verify_upstream_head(reference, marker, declared_build)
