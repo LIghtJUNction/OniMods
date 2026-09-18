@@ -13,6 +13,9 @@ namespace OniMcp.Tools
     /// </summary>
     public static partial class GameControlTools
     {
+        private static Game _mcpPauseGame;
+        private static SpeedControlScreen _mcpPauseScreen;
+
         public static McpTool GetGameTime()
         {
             return new McpTool
@@ -171,12 +174,12 @@ namespace OniMcp.Tools
             switch (speed)
             {
                 case 0:
-                    speedControl.Pause();
+                    AcquireMcpPause(speedControl);
                     break;
                 case 1:
                 case 2:
                 case 3:
-                    UnpauseAll(speedControl);
+                    ReleaseMcpPause(speedControl);
                     speedControl.SetSpeed(internalSpeed);
                     break;
             }
@@ -197,7 +200,7 @@ namespace OniMcp.Tools
             if (Game.Instance == null)
                 return CallToolResult.Error("Game not initialized");
 
-            SpeedControlScreen.Instance?.Pause();
+            AcquireMcpPause(SpeedControlScreen.Instance);
             return CallToolResult.Text("Game paused");
         }
 
@@ -210,7 +213,7 @@ namespace OniMcp.Tools
             if (speedControl == null)
                 return CallToolResult.Error("SpeedControlScreen not available");
 
-            UnpauseAll(speedControl);
+            ReleaseMcpPause(speedControl);
             var result = new Dictionary<string, object>
             {
                 ["isPaused"] = speedControl.IsPaused,
@@ -219,6 +222,35 @@ namespace OniMcp.Tools
                 ["timeScale"] = Time.timeScale
             };
             return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
+        }
+
+        private static void AcquireMcpPause(SpeedControlScreen speedControl)
+        {
+            var game = Game.Instance;
+            if (game == null || speedControl == null)
+                return;
+
+            if (ReferenceEquals(_mcpPauseGame, game) && ReferenceEquals(_mcpPauseScreen, speedControl))
+                return;
+
+            _mcpPauseGame = null;
+            _mcpPauseScreen = null;
+            speedControl.Pause();
+            _mcpPauseGame = game;
+            _mcpPauseScreen = speedControl;
+        }
+
+        private static void ReleaseMcpPause(SpeedControlScreen speedControl)
+        {
+            var game = Game.Instance;
+            bool ownsPause = game != null
+                && ReferenceEquals(_mcpPauseGame, game)
+                && ReferenceEquals(_mcpPauseScreen, speedControl);
+
+            _mcpPauseGame = null;
+            _mcpPauseScreen = null;
+            if (ownsPause && speedControl != null && speedControl.IsPaused)
+                speedControl.Unpause();
         }
 
     }
