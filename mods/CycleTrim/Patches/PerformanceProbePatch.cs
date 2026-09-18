@@ -40,6 +40,7 @@ namespace CycleTrim.Patches
         private static bool initialized;
         private static bool reportRequested;
         private static bool reportScheduled;
+        private static bool captureBoundaryPending;
         private static long reportObservationCount;
         private static long nextReportAt = 1;
         private static int lastGc0;
@@ -113,9 +114,33 @@ namespace CycleTrim.Patches
             return Stopwatch.GetTimestamp();
         }
 
+        private static void ObserveGameBoundary()
+        {
+            var game = Game.Instance;
+            if (game == null || ReferenceEquals(captureGame.Target, game))
+            {
+                return;
+            }
+
+            // Do not reset cumulative counters while an AsyncPathProber worker can still be
+            // completing an old work order. Instead, mark the next deferred report as the
+            // zero-delta baseline for this game instance.
+            captureGame.Target = game;
+            captureGeneration++;
+            captureBoundaryPending = true;
+            reportObservationCount = 0;
+            nextReportAt = 1;
+            reportRequested = false;
+            reportScheduled = false;
+            reportScheduler.Target = null;
+        }
+
         private static void RecordMain(PerformanceProbeCounter counter, long startedAt)
         {
+            // Record the measured target before any lifecycle bookkeeping so the boundary
+            // check itself is never charged to the target's timing.
             counter.Record(Stopwatch.GetTimestamp() - startedAt);
+            ObserveGameBoundary();
             var observations = Interlocked.Increment(ref reportObservationCount);
             if (observations >= nextReportAt)
             {
@@ -174,19 +199,6 @@ namespace CycleTrim.Patches
             reportScheduled = true;
         }
 
-        private static bool AdvanceCaptureGeneration()
-        {
-            var game = Game.Instance;
-            if (game == null || ReferenceEquals(captureGame.Target, game))
-            {
-                return false;
-            }
-
-            captureGame.Target = game;
-            captureGeneration++;
-            return true;
-        }
-
         private static void ReportDeferred(object scheduledOn)
         {
             // A callback that survived longer than its originating UIScheduler must never
@@ -205,7 +217,8 @@ namespace CycleTrim.Patches
 
             reportRequested = false;
             var reportedAt = Stopwatch.GetTimestamp();
-            var startedNewCapture = AdvanceCaptureGeneration();
+            var startedNewCapture = captureBoundaryPending;
+            captureBoundaryPending = false;
             var intervalDurationTicks = startedNewCapture
                 ? 0
                 : reportedAt - lastReportTimestamp;
