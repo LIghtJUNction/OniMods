@@ -21,6 +21,15 @@ namespace OniMcp.Server
 
             if (string.Equals(rpcRequest.Method, "tools/call", StringComparison.Ordinal))
             {
+                var argumentsToken = rpcRequest.Params?["arguments"];
+                if (argumentsToken != null && argumentsToken.Type != JTokenType.Object)
+                {
+                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                    SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                        "Tool arguments must be an object when provided"), (int)HttpStatusCode.OK);
+                    return;
+                }
+
                 var toolNameToken = rpcRequest.Params?["name"];
                 if (toolNameToken?.Type == JTokenType.String)
                 {
