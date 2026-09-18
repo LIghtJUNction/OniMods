@@ -20,6 +20,7 @@ internal static class RegressionEntry
 
     private static void Main()
     {
+        RunUnsupportedModernVersionEraRegression();
         RunModernReadOnlyIsolationRegression();
         RunMalformedToolArgumentsRegression();
         ModernResourceListCacheRegression.Run();
@@ -27,6 +28,61 @@ internal static class RegressionEntry
         if (main == null)
             throw new InvalidOperationException("Existing modern protocol test entrypoint was not found");
         main.Invoke(null, null);
+    }
+
+    private static void RunUnsupportedModernVersionEraRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        OniToolRegistry.ModernToolsEnabled = true;
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+            {
+                const string unsupportedVersion = "2027-01-01";
+                const string body = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":2399,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2027-01-01\"}}}";
+                request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+                request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", unsupportedVersion);
+                request.Headers.TryAddWithoutValidation("Mcp-Method", "server/discover");
+                Task<HttpResponseMessage> work = client.SendAsync(request);
+                PumpUntil(work);
+                using (var response = work.GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Unsupported modern version changed its HTTP status");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["error"]["code"] == -32022,
+                        "Unsupported modern version changed its JSON-RPC code");
+                    Assert((string)json["error"]["data"]["requested"] == unsupportedVersion,
+                        "Unsupported modern version did not echo the requested revision");
+                    var supported = ((JArray)json["error"]["data"]["supported"]).Values<string>().ToArray();
+                    Assert(supported.SequenceEqual(new[] { "2026-07-28" }),
+                        "Modern unsupported-version retry list leaked legacy initialize-era revisions");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Unsupported modern version allocated a legacy session header");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Unsupported modern version allocated legacy session state");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            OniToolRegistry.ModernToolsEnabled = false;
+            Invoke(_bridge, "OnDestroy");
+        }
     }
 
     private static void RunModernReadOnlyIsolationRegression()
