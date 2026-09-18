@@ -8,6 +8,8 @@ namespace CycleTrim.PerformanceProbe.Tests
 {
     internal static class Program
     {
+        private const double MaxAcceptedMedianOverheadRatio = 2.0d;
+
         private static int Main()
         {
             try
@@ -147,29 +149,54 @@ namespace CycleTrim.PerformanceProbe.Tests
             const int warmupIterations = 100000;
             const int iterations = 1000000;
             const int samples = 7;
+            const int workers = 4;
 
-            MeasureRecords(false, warmupIterations);
-            MeasureRecords(true, warmupIterations);
-
-            var ratios = new double[samples];
-            for (var sample = 0; sample < samples; sample++)
+            for (var warmup = 0; warmup < 3; warmup++)
             {
-                long baseline;
-                long candidate;
-                if ((sample & 1) == 0)
+                if ((warmup & 1) == 0)
                 {
-                    baseline = MeasureRecords(false, iterations);
-                    candidate = MeasureRecords(true, iterations);
+                    MeasureRecords(false, warmupIterations);
+                    MeasureRecords(true, warmupIterations);
+                    MeasureConcurrentRecords(false, workers, warmupIterations / workers);
+                    MeasureConcurrentRecords(true, workers, warmupIterations / workers);
                 }
                 else
                 {
-                    candidate = MeasureRecords(true, iterations);
-                    baseline = MeasureRecords(false, iterations);
+                    MeasureRecords(true, warmupIterations);
+                    MeasureRecords(false, warmupIterations);
+                    MeasureConcurrentRecords(true, workers, warmupIterations / workers);
+                    MeasureConcurrentRecords(false, workers, warmupIterations / workers);
                 }
-                ratios[sample] = (double)candidate / baseline;
             }
 
-            Array.Sort(ratios);
+            var serialRatios = new double[samples];
+            var concurrentRatios = new double[samples];
+            for (var sample = 0; sample < samples; sample++)
+            {
+                long serialBaseline;
+                long serialCandidate;
+                long concurrentBaseline;
+                long concurrentCandidate;
+                if ((sample & 1) == 0)
+                {
+                    serialBaseline = MeasureRecords(false, iterations);
+                    serialCandidate = MeasureRecords(true, iterations);
+                    concurrentBaseline = MeasureConcurrentRecords(false, workers, iterations / workers);
+                    concurrentCandidate = MeasureConcurrentRecords(true, workers, iterations / workers);
+                }
+                else
+                {
+                    serialCandidate = MeasureRecords(true, iterations);
+                    serialBaseline = MeasureRecords(false, iterations);
+                    concurrentCandidate = MeasureConcurrentRecords(true, workers, iterations / workers);
+                    concurrentBaseline = MeasureConcurrentRecords(false, workers, iterations / workers);
+                }
+                serialRatios[sample] = (double)serialCandidate / serialBaseline;
+                concurrentRatios[sample] = (double)concurrentCandidate / concurrentBaseline;
+            }
+
+            Array.Sort(serialRatios);
+            Array.Sort(concurrentRatios);
             var allocationCounter = new PerformanceProbeCounter(consistentSnapshots: true);
             for (var index = 0; index < 1000; index++)
             {
@@ -184,11 +211,23 @@ namespace CycleTrim.PerformanceProbe.Tests
             AssertEqual(0, allocatedAfter - allocatedBefore, "coordinated record allocations");
 
             Console.WriteLine(
-                "INFO coordinated snapshot Record overhead ratio min/median/max: "
-                + ratios[0].ToString("F3") + "x / "
-                + ratios[samples / 2].ToString("F3") + "x / "
-                + ratios[samples - 1].ToString("F3") + "x; allocations=0 B over "
-                + iterations + " records");
+                "INFO coordinated snapshot serial Record overhead ratio min/median/max: "
+                + serialRatios[0].ToString("F3") + "x / "
+                + serialRatios[samples / 2].ToString("F3") + "x / "
+                + serialRatios[samples - 1].ToString("F3") + "x");
+            Console.WriteLine(
+                "INFO coordinated snapshot 4-writer Record overhead ratio min/median/max: "
+                + concurrentRatios[0].ToString("F3") + "x / "
+                + concurrentRatios[samples / 2].ToString("F3") + "x / "
+                + concurrentRatios[samples - 1].ToString("F3") + "x; allocations=0 B over "
+                + iterations + " serial records");
+
+            if (serialRatios[samples / 2] > MaxAcceptedMedianOverheadRatio
+                || concurrentRatios[samples / 2] > MaxAcceptedMedianOverheadRatio)
+            {
+                throw new InvalidOperationException(
+                    "coordinated snapshot median observer overhead exceeded predeclared 2.0x limit");
+            }
         }
 
         private static long MeasureRecords(bool consistentSnapshots, int iterations)
@@ -203,6 +242,37 @@ namespace CycleTrim.PerformanceProbe.Tests
             var snapshot = counter.Snapshot();
             AssertEqual(iterations, snapshot.Calls, "measured record calls");
             AssertEqual(iterations, snapshot.TotalTicks, "measured record total");
+            return elapsed <= 0 ? 1 : elapsed;
+        }
+
+        private static long MeasureConcurrentRecords(
+            bool consistentSnapshots,
+            int workers,
+            int writesPerWorker)
+        {
+            var counter = new PerformanceProbeCounter(consistentSnapshots);
+            var start = new ManualResetEventSlim(false);
+            var tasks = new Task[workers];
+            for (var worker = 0; worker < workers; worker++)
+            {
+                tasks[worker] = Task.Run(() =>
+                {
+                    start.Wait();
+                    for (var index = 0; index < writesPerWorker; index++)
+                    {
+                        counter.Record(1);
+                    }
+                });
+            }
+
+            var started = Stopwatch.GetTimestamp();
+            start.Set();
+            Task.WaitAll(tasks);
+            var elapsed = Stopwatch.GetTimestamp() - started;
+            var snapshot = counter.Snapshot();
+            var expected = workers * writesPerWorker;
+            AssertEqual(expected, snapshot.Calls, "concurrent measured record calls");
+            AssertEqual(expected, snapshot.TotalTicks, "concurrent measured record total");
             return elapsed <= 0 ? 1 : elapsed;
         }
 
