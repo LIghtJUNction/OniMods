@@ -181,6 +181,11 @@ namespace OniMcp.Server
                 error = "cases must be a string when provided";
                 return false;
             }
+            if (cases?.Type == JTokenType.String && !HasRecognizedModernBenchmarkCase((string)cases))
+            {
+                error = "cases must contain one or more of: all, toolList, toolLookup, jsonSerialize";
+                return false;
+            }
 
             JToken tool = arguments?["tool"];
             if (tool != null && tool.Type != JTokenType.String)
@@ -203,6 +208,27 @@ namespace OniMcp.Server
             }
 
             return true;
+        }
+
+        private static bool HasRecognizedModernBenchmarkCase(string cases)
+        {
+            if (string.IsNullOrWhiteSpace(cases))
+                return true;
+
+            foreach (string item in cases.Split(','))
+            {
+                string normalized = item.Trim().ToLowerInvariant();
+                if (normalized == "all"
+                    || normalized == "toollist"
+                    || normalized == "toollookup"
+                    || normalized == "lookup"
+                    || normalized == "jsonserialize")
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool TryNormalizeModernBenchmarkIterations(JObject arguments)
