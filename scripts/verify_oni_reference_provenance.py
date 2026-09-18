@@ -639,6 +639,7 @@ def compare_method_body_upstream_state(
         "has_method_body_drift": (
             head_build != int(source["official_oni_build"])
             or head_branch != "release"
+            or marker_changed
             or bool(changed_files)
         ),
     }
@@ -697,6 +698,7 @@ def report_method_body_upstream_state(source: dict, state: dict) -> None:
             "::warning title=ONI method-body source drift detected::"
             f"{source['repository']} {tracking['branch']} is {state['head_sha']}; "
             f"build={state['head_oni_build']} branch={state['head_build_branch']}, "
+            f"version-marker changed={state['marker_changed']}, "
             f"tracked contract files changed={changed_files}. Keep this source-only "
             "evidence separate from compile references and review the affected contracts "
             "before changing the immutable pin."
