@@ -129,7 +129,7 @@ namespace OniMcp.Server
                 }
             }
 
-            if (IsModernMetadataOnlyMethod(rpcRequest.Method))
+            if (IsModernWorkerSafeRequest(rpcRequest))
             {
                 object result = null;
                 Exception processEx = null;
@@ -250,6 +250,25 @@ namespace OniMcp.Server
 
             arguments["iterations"] = (int)value;
             return true;
+        }
+
+        private static bool IsModernWorkerSafeRequest(JsonRpcRequest request)
+        {
+            if (request == null)
+                return false;
+
+            if (IsModernMetadataOnlyMethod(request.Method))
+                return true;
+
+            // Worker safety is an explicit audit decision. Do not infer it from
+            // a tool's Mode/Risk metadata or from membership in the modern allowlist.
+            if (!string.Equals(request.Method, "tools/call", StringComparison.Ordinal))
+                return false;
+
+            var name = request.Params?["name"];
+            return name?.Type == JTokenType.String
+                && string.Equals((string)name, "benchmark", StringComparison.Ordinal)
+                && string.Equals(ModernReadOnlyToolName, "benchmark", StringComparison.Ordinal);
         }
 
         private static bool IsModernMetadataOnlyMethod(string method)
