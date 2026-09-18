@@ -53,6 +53,25 @@ namespace OniMcp.Server
                 }
             }
 
+            if (IsModernMetadataOnlyMethod(rpcRequest.Method))
+            {
+                object result = null;
+                Exception processEx = null;
+                try
+                {
+                    result = _running
+                        ? ProcessModernMethod(rpcRequest)
+                        : JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InternalError, "MCP server is stopping");
+                }
+                catch (Exception ex)
+                {
+                    processEx = ex;
+                }
+
+                SendModernPostResponse(response, rpcRequest.Id, result, processEx);
+                return;
+            }
+
             MainThreadHttpAdmissionLease admission;
             if (!TryAcquireMainThreadHttpAdmission(response, rpcRequest.Id, null, true, out admission))
                 return;
@@ -74,6 +93,14 @@ namespace OniMcp.Server
 
                 ThreadPool.QueueUserWorkItem(_ => SendModernPostResponse(response, rpcRequest.Id, result, processEx));
             }), () => CloseStaleHttpResponse(response));
+        }
+
+        private static bool IsModernMetadataOnlyMethod(string method)
+        {
+            return string.Equals(method, "server/discover", StringComparison.Ordinal)
+                || string.Equals(method, "tools/list", StringComparison.Ordinal)
+                || string.Equals(method, "resources/list", StringComparison.Ordinal)
+                || string.Equals(method, "resources/templates/list", StringComparison.Ordinal);
         }
 
         private void SendModernPostResponse(HttpListenerResponse response, object requestId, object result,
