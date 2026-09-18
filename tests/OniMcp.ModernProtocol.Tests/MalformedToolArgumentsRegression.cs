@@ -22,6 +22,7 @@ internal static class RegressionEntry
     {
         RunModernReadOnlyIsolationRegression();
         RunMalformedToolArgumentsRegression();
+        RunInvalidBenchmarkIterationsRegression();
         ModernResourceListCacheRegression.Run();
         var main = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (main == null)
@@ -139,6 +140,63 @@ internal static class RegressionEntry
                     "Malformed tools/call arguments reached the tool registry");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Malformed modern tools/call allocated legacy session state");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            OniToolRegistry.ModernToolsEnabled = false;
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
+    private static void RunInvalidBenchmarkIterationsRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        var portProbe = new TcpListener(IPAddress.Loopback, 0);
+        portProbe.Start();
+        int port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        OniToolRegistry.ModernToolsEnabled = true;
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+            {
+                const string body = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2403,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"reject invalid iterations\",\"iterations\":\"200\"},\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"benchmark-iterations-regression\",\"version\":\"1.0\"}}}}";
+                request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+                request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
+                request.Headers.TryAddWithoutValidation("Mcp-Method", "tools/call");
+                request.Headers.TryAddWithoutValidation("Mcp-Name", "benchmark");
+
+                int callsBefore = OniToolRegistry.Calls;
+                Task<HttpResponseMessage> work = client.SendAsync(request);
+                Assert(work.Wait(250),
+                    "Schema-invalid benchmark iterations occupied main-thread admission instead of failing directly");
+                using (var response = work.GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Invalid benchmark iterations changed the tool-error HTTP status");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((bool)json["result"]["isError"],
+                        "Modern benchmark accepted string iterations despite advertising an integer schema");
+                    Assert(((string)json["result"]["content"][0]["text"]).Contains("iterations"),
+                        "Invalid benchmark iterations did not return actionable tool feedback");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Invalid modern benchmark iterations allocated a legacy session header");
+                }
+                Assert(OniToolRegistry.Calls == callsBefore,
+                    "Invalid modern benchmark iterations reached the tool registry");
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Invalid modern benchmark iterations allocated legacy session state");
             }
         }
         finally
