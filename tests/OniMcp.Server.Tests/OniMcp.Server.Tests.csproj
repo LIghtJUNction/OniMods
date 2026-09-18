@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>MalformedModernToolAdmissionRegressionEntry</StartupObject>
+    <StartupObject>ForeignModernResourceAdmissionRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -12,6 +12,7 @@
     <Compile Include="HttpAdmissionRegression.cs" />
     <Compile Include="UnknownModernMethodAdmissionRegression.cs" />
     <Compile Include="MalformedModernToolAdmissionRegression.cs" />
+    <Compile Include="ForeignModernResourceAdmissionRegression.cs" />
     <Compile Include="GameStubs.cs" />
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Core/*.cs" Link="Core/%(Filename)%(Extension)" />
