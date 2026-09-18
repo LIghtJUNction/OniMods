@@ -7,8 +7,10 @@ from io import StringIO
 from pathlib import Path
 
 from verify_oni_reference_provenance import (
+    compare_method_body_upstream_state,
     compare_official_steam_state,
     compare_upstream_state,
+    report_method_body_upstream_state,
     report_upstream_state,
     validate_manifest,
 )
@@ -19,11 +21,15 @@ REFERENCE_WORKFLOW = ROOT / ".github/workflows/oni-reference-compat.yml"
 MOD_QUALITY_WORKFLOW = ROOT / ".github/workflows/mod-quality.yml"
 PINNED_DOTNET_SDK = "10.0.401"
 PINNED_COMMIT = "a" * 40
+PINNED_METHOD_COMMIT = "2" * 40
 PINNED_MARKER = "d" * 40
 PINNED_LICENSE = "f" * 40
 ASSEMBLY_CSHARP = "b" * 40
 ASSEMBLY_FIRSTPASS = "c" * 40
 UNITY_ENGINE = "9" * 40
+NAVGRID_SOURCE = "3" * 40
+FETCH_SOURCE = "4" * 40
+KLEI_VERSION_SOURCE = "5" * 40
 OFFICIAL_RELEASE_GID = "1839041357039119"
 OFFICIAL_RELEASE_URL_ID = "719037282029407479"
 
@@ -48,6 +54,28 @@ REFERENCE = {
         ],
     },
 }
+METHOD_BODY = {
+    "repository": "example/decomp",
+    "commit": PINNED_METHOD_COMMIT,
+    "official_oni_build": 744825,
+    "upstream_tracking": {"branch": "main"},
+    "files": [
+        {"name": "NavGrid.cs", "path": "Assembly-CSharp/NavGrid.cs", "blob_sha": NAVGRID_SOURCE},
+        {"name": "FetchManager.cs", "path": "Assembly-CSharp/FetchManager.cs", "blob_sha": FETCH_SOURCE},
+        {"name": "KleiVersion.cs", "path": "Assembly-CSharp/KleiVersion.cs", "blob_sha": KLEI_VERSION_SOURCE},
+    ],
+}
+METHOD_BODY_SAME_FILES = {
+    "Assembly-CSharp/NavGrid.cs": {"sha": NAVGRID_SOURCE},
+    "Assembly-CSharp/FetchManager.cs": {"sha": FETCH_SOURCE},
+    "Assembly-CSharp/KleiVersion.cs": {"sha": KLEI_VERSION_SOURCE},
+}
+KLEI_VERSION_TEXT = """public static class KleiVersion
+{
+    public const uint ChangeList = 744825U;
+    public const string BuildBranch = "release";
+}
+"""
 MARKER = {
     "blob_sha": PINNED_MARKER,
     "property": "TargetGameVersion",
@@ -182,9 +210,7 @@ def manifest_with_tracking(tracked_paths: list[str]) -> dict:
                 ],
             },
         },
-        "method_body_source": {
-            "official_oni_build": 744825,
-        },
+        "method_body_source": dict(METHOD_BODY),
         "files": [
             {
                 "name": path.rsplit("/", 1)[-1],
@@ -324,7 +350,7 @@ def main() -> int:
         SAME_FILES,
     )
     require(version_drift["has_reference_drift"], "version-marker drift was missed")
-    require(version_drift["marker_changed"], "marker blob change was not recorded")
+    require(version_drift["marker_changed"], "version-marker blob change was not recorded")
     require(version_drift["head_declared_build"] == 744825, "new build was not resolved")
 
     incomplete_files = {
@@ -345,6 +371,55 @@ def main() -> int:
         pass
     else:
         raise AssertionError("missing tracked upstream file must fail closed")
+
+    method_unchanged = compare_method_body_upstream_state(
+        METHOD_BODY,
+        "6" * 40,
+        KLEI_VERSION_TEXT,
+        METHOD_BODY_SAME_FILES,
+    )
+    require(method_unchanged["head_advanced"], "method-body HEAD advance must be reported")
+    require(
+        not method_unchanged["has_method_body_drift"],
+        "repository-only method-body commits must not be classified as source drift",
+    )
+    require(method_unchanged["head_oni_build"] == 744825, "method-body build changed")
+    require(method_unchanged["head_build_branch"] == "release", "method-body branch changed")
+    require(method_unchanged["changed_files"] == [], "unchanged method-body blobs reported as drift")
+
+    changed_method_files = dict(METHOD_BODY_SAME_FILES)
+    changed_method_files["Assembly-CSharp/NavGrid.cs"] = {"sha": "7" * 40}
+    method_drift = compare_method_body_upstream_state(
+        METHOD_BODY,
+        "6" * 40,
+        KLEI_VERSION_TEXT,
+        changed_method_files,
+    )
+    require(method_drift["has_method_body_drift"], "changed method-body source blob was missed")
+    require(
+        method_drift["changed_files"] == ["Assembly-CSharp/NavGrid.cs"],
+        "changed method-body source file was not identified exactly",
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        report_method_body_upstream_state(METHOD_BODY, method_drift)
+    require(
+        "UPSTREAM_METHOD_BODY_STATUS status=drift " in output.getvalue(),
+        "detected method-body source drift must not be reported as status=ok",
+    )
+
+    newer_method_version = KLEI_VERSION_TEXT.replace("744825U", "750123U")
+    method_version_drift = compare_method_body_upstream_state(
+        METHOD_BODY,
+        "6" * 40,
+        newer_method_version,
+        METHOD_BODY_SAME_FILES,
+    )
+    require(
+        method_version_drift["has_method_body_drift"],
+        "newer method-body source build was missed",
+    )
+    require(method_version_drift["head_oni_build"] == 750123, "new method-body build was not parsed")
 
     complete_manifest = manifest_with_tracking(
         ["Lib/Assembly-CSharp.dll", "Lib/UnityEngine.dll"]
@@ -393,7 +468,7 @@ def main() -> int:
     verify_workflow_sdk_pin()
 
     print(
-        "PASS: official/upstream reference drift classification, provenance metadata, CI input coverage, and SDK pin"
+        "PASS: official/upstream reference and method-body drift classification, provenance metadata, CI input coverage, and SDK pin"
     )
     return 0
 
