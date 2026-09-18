@@ -72,6 +72,11 @@ def validate(
     if not isinstance(report.get("stopwatchFrequency"), int) or report["stopwatchFrequency"] <= 0:
         failures.append("stopwatchFrequency must be a positive integer")
 
+    if "captureGeneration" in report:
+        generation = report.get("captureGeneration")
+        if not isinstance(generation, int) or generation <= 0:
+            failures.append("captureGeneration must be a positive integer")
+
     interval_schema = _has_interval_schema(report)
     if require_intervals or interval_schema:
         sequence = report.get("reportSequence")
@@ -164,6 +169,22 @@ def validate_series(
     for index in range(1, len(report_items)):
         previous = report_items[index - 1]
         current = report_items[index]
+        previous_generation = previous.get("captureGeneration")
+        current_generation = current.get("captureGeneration")
+        if (previous_generation is None) != (current_generation is None):
+            failures.append(
+                f"report[{index}]: captureGeneration schema changed within one capture"
+            )
+        elif (
+            isinstance(previous_generation, int)
+            and isinstance(current_generation, int)
+            and current_generation != previous_generation
+        ):
+            failures.append(
+                f"report[{index}]: captureGeneration changed within one capture "
+                f"({previous_generation} -> {current_generation})"
+            )
+
         previous_sequence = previous.get("reportSequence")
         current_sequence = current.get("reportSequence")
         if isinstance(previous_sequence, int) and isinstance(current_sequence, int):
@@ -262,7 +283,7 @@ def select_series_after_sequence(report_items: list[dict], after_sequence: int) 
     if len(selected) < 2:
         raise ValueError(
             f"no fresh probe report after reportSequence {after_sequence}; "
-            "the deferred GameScheduler report may not have flushed"
+            "the deferred UIScheduler report may not have flushed"
         )
     return selected
 
