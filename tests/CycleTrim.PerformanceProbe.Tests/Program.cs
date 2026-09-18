@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using CycleTrim.Core;
 
@@ -14,6 +16,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();
                 AggregatesConcurrentWriters();
+                SnapshotsDoNotSplitConcurrentSamplesAcrossIntervals();
+                MeasuresConsistentSnapshotOverhead();
                 Console.WriteLine("PASS CycleTrim performance probe counter regressions");
                 return 0;
             }
@@ -90,6 +94,116 @@ namespace CycleTrim.PerformanceProbe.Tests
                 snapshot.TotalTicks,
                 "concurrent total");
             AssertEqual(workers, snapshot.MaxTicks, "concurrent max");
+        }
+
+        private static void SnapshotsDoNotSplitConcurrentSamplesAcrossIntervals()
+        {
+            const int workers = 4;
+            const int writesPerWorker = 100000;
+            var counter = new PerformanceProbeCounter(consistentSnapshots: true);
+            var start = new ManualResetEventSlim(false);
+            var writers = new Task[workers];
+
+            for (var worker = 0; worker < workers; worker++)
+            {
+                writers[worker] = Task.Run(() =>
+                {
+                    start.Wait();
+                    for (var index = 0; index < writesPerWorker; index++)
+                    {
+                        counter.Record(1);
+                    }
+                });
+            }
+
+            var previous = counter.Snapshot();
+            start.Set();
+            while (!Task.WaitAll(writers, 0))
+            {
+                var current = counter.Snapshot();
+                var interval = current.DeltaSince(previous);
+                AssertEqual(current.Calls, current.TotalTicks, "concurrent snapshot calls/ticks");
+                AssertEqual(interval.Calls, interval.TotalTicks, "concurrent interval calls/ticks");
+                if (current.MaxTicks != 0 && current.MaxTicks != 1)
+                {
+                    throw new InvalidOperationException(
+                        "concurrent snapshot max ticks expected 0 or 1, got " + current.MaxTicks);
+                }
+                previous = current;
+                Thread.Yield();
+            }
+
+            Task.WaitAll(writers);
+            var final = counter.Snapshot();
+            var finalInterval = final.DeltaSince(previous);
+            AssertEqual(workers * writesPerWorker, final.Calls, "coordinated concurrent calls");
+            AssertEqual(final.Calls, final.TotalTicks, "coordinated concurrent total");
+            AssertEqual(finalInterval.Calls, finalInterval.TotalTicks, "final interval calls/ticks");
+            AssertEqual(1, final.MaxTicks, "coordinated concurrent max");
+        }
+
+        private static void MeasuresConsistentSnapshotOverhead()
+        {
+            const int warmupIterations = 100000;
+            const int iterations = 1000000;
+            const int samples = 7;
+
+            MeasureRecords(false, warmupIterations);
+            MeasureRecords(true, warmupIterations);
+
+            var ratios = new double[samples];
+            for (var sample = 0; sample < samples; sample++)
+            {
+                long baseline;
+                long candidate;
+                if ((sample & 1) == 0)
+                {
+                    baseline = MeasureRecords(false, iterations);
+                    candidate = MeasureRecords(true, iterations);
+                }
+                else
+                {
+                    candidate = MeasureRecords(true, iterations);
+                    baseline = MeasureRecords(false, iterations);
+                }
+                ratios[sample] = (double)candidate / baseline;
+            }
+
+            Array.Sort(ratios);
+            var allocationCounter = new PerformanceProbeCounter(consistentSnapshots: true);
+            for (var index = 0; index < 1000; index++)
+            {
+                allocationCounter.Record(1);
+            }
+            var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            for (var index = 0; index < iterations; index++)
+            {
+                allocationCounter.Record(1);
+            }
+            var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
+            AssertEqual(0, allocatedAfter - allocatedBefore, "coordinated record allocations");
+
+            Console.WriteLine(
+                "INFO coordinated snapshot Record overhead ratio min/median/max: "
+                + ratios[0].ToString("F3") + "x / "
+                + ratios[samples / 2].ToString("F3") + "x / "
+                + ratios[samples - 1].ToString("F3") + "x; allocations=0 B over "
+                + iterations + " records");
+        }
+
+        private static long MeasureRecords(bool consistentSnapshots, int iterations)
+        {
+            var counter = new PerformanceProbeCounter(consistentSnapshots);
+            var started = Stopwatch.GetTimestamp();
+            for (var index = 0; index < iterations; index++)
+            {
+                counter.Record(1);
+            }
+            var elapsed = Stopwatch.GetTimestamp() - started;
+            var snapshot = counter.Snapshot();
+            AssertEqual(iterations, snapshot.Calls, "measured record calls");
+            AssertEqual(iterations, snapshot.TotalTicks, "measured record total");
+            return elapsed <= 0 ? 1 : elapsed;
         }
 
         private static void AssertEqual(long expected, long actual, string name)
