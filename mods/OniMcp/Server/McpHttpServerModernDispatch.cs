@@ -72,15 +72,16 @@ namespace OniMcp.Server
                     return;
                 }
 
+                string benchmarkArgumentError;
                 if ((taskToken == null || taskToken.Type == JTokenType.Null)
                     && argumentsObject != null
                     && modernToolAvailable
                     && hasTaskDescription
-                    && !TryNormalizeModernBenchmarkIterations(argumentsObject))
+                    && !TryValidateModernBenchmarkArguments(argumentsObject, out benchmarkArgumentError))
                 {
                     response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
                     var result = CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
-                        "iterations must be an integer from 1 to 5000")));
+                        benchmarkArgumentError)));
                     SendJson(response, JsonRpcResponse.Success(rpcRequest.Id, result), (int)HttpStatusCode.OK);
                     return;
                 }
@@ -168,6 +169,40 @@ namespace OniMcp.Server
 
                 ThreadPool.QueueUserWorkItem(_ => SendModernPostResponse(response, rpcRequest.Id, result, processEx));
             }), () => CloseStaleHttpResponse(response));
+        }
+
+        private static bool TryValidateModernBenchmarkArguments(JObject arguments, out string error)
+        {
+            error = null;
+
+            JToken cases = arguments?["cases"];
+            if (cases != null && cases.Type != JTokenType.String)
+            {
+                error = "cases must be a string when provided";
+                return false;
+            }
+
+            JToken tool = arguments?["tool"];
+            if (tool != null && tool.Type != JTokenType.String)
+            {
+                error = "tool must be a string when provided";
+                return false;
+            }
+
+            JToken includeDetails = arguments?["includeDetails"];
+            if (includeDetails != null && includeDetails.Type != JTokenType.Boolean)
+            {
+                error = "includeDetails must be a boolean when provided";
+                return false;
+            }
+
+            if (!TryNormalizeModernBenchmarkIterations(arguments))
+            {
+                error = "iterations must be an integer from 1 to 5000";
+                return false;
+            }
+
+            return true;
         }
 
         private static bool TryNormalizeModernBenchmarkIterations(JObject arguments)
