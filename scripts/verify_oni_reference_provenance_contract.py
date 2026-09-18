@@ -58,7 +58,11 @@ METHOD_BODY = {
     "repository": "example/decomp",
     "commit": PINNED_METHOD_COMMIT,
     "official_oni_build": 744825,
-    "upstream_tracking": {"branch": "main"},
+    "upstream_tracking": {
+        "branch": "main",
+        "version_marker": "KleiVersion.cs",
+        "contract_files": ["NavGrid.cs", "FetchManager.cs"],
+    },
     "files": [
         {"name": "NavGrid.cs", "path": "Assembly-CSharp/NavGrid.cs", "blob_sha": NAVGRID_SOURCE},
         {"name": "FetchManager.cs", "path": "Assembly-CSharp/FetchManager.cs", "blob_sha": FETCH_SOURCE},
