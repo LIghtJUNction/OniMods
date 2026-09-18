@@ -81,6 +81,15 @@ def main() -> int:
         "valid interval series with early zero-call targets rejected: " + "; ".join(failures),
     )
 
+    boundary_first = make_report(analyzer, 1, 3, 45, 0, 0)
+    boundary_second = make_report(analyzer, 2, 5, 85, 2, 40)
+    failures = analyzer.validate_series([boundary_first, boundary_second], required)
+    require(
+        not failures,
+        "generation-aware first report must be usable as a rebased session boundary: "
+        + "; ".join(failures),
+    )
+
     legacy = copy.deepcopy(second)
     legacy.pop("captureGeneration")
     legacy.pop("reportSequence")
