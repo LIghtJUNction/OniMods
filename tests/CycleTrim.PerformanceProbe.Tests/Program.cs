@@ -10,16 +10,33 @@ namespace CycleTrim.PerformanceProbe.Tests
     {
         private const double MaxAcceptedMedianOverheadRatio = 2.0d;
 
-        private static int Main()
+        private static int Main(string[] args)
         {
             try
             {
+                var syntheticOnly = args.Length == 1 && args[0] == "--synthetic-performance-only";
+                var skipSynthetic = args.Length == 1 && args[0] == "--skip-synthetic-performance";
+                if (args.Length > 0 && !syntheticOnly && !skipSynthetic)
+                {
+                    throw new ArgumentException("expected --skip-synthetic-performance or --synthetic-performance-only");
+                }
+
+                if (syntheticOnly)
+                {
+                    MeasuresConsistentSnapshotOverhead();
+                    Console.WriteLine("PASS CycleTrim synthetic performance probe regression");
+                    return 0;
+                }
+
                 RecordsCountTotalMeanAndMax();
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();
                 AggregatesConcurrentWriters();
                 SnapshotsDoNotSplitConcurrentSamplesAcrossIntervals();
-                MeasuresConsistentSnapshotOverhead();
+                if (!skipSynthetic)
+                {
+                    MeasuresConsistentSnapshotOverhead();
+                }
                 Console.WriteLine("PASS CycleTrim performance probe counter regressions");
                 return 0;
             }
