@@ -391,6 +391,30 @@ def main() -> int:
     require(method_unchanged["head_build_branch"] == "release", "method-body branch changed")
     require(method_unchanged["changed_files"] == [], "unchanged method-body blobs reported as drift")
 
+    marker_only_files = dict(METHOD_BODY_SAME_FILES)
+    marker_only_files["Assembly-CSharp/KleiVersion.cs"] = {"sha": "8" * 40}
+    marker_only_drift = compare_method_body_upstream_state(
+        METHOD_BODY,
+        "6" * 40,
+        KLEI_VERSION_TEXT,
+        marker_only_files,
+    )
+    require(
+        marker_only_drift["marker_changed"],
+        "method-body marker blob change was not recorded",
+    )
+    require(
+        marker_only_drift["has_method_body_drift"],
+        "method-body marker-only drift was missed",
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        report_method_body_upstream_state(METHOD_BODY, marker_only_drift)
+    require(
+        "UPSTREAM_METHOD_BODY_STATUS status=drift " in output.getvalue(),
+        "method-body marker-only drift must not be reported as status=ok",
+    )
+
     changed_method_files = dict(METHOD_BODY_SAME_FILES)
     changed_method_files["Assembly-CSharp/NavGrid.cs"] = {"sha": "7" * 40}
     method_drift = compare_method_body_upstream_state(
