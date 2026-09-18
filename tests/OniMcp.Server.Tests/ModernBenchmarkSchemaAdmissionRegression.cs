@@ -44,48 +44,18 @@ internal static class ModernBenchmarkSchemaAdmissionRegressionEntry
                 BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
                 Timeout = TimeSpan.FromSeconds(5)
             })
-            using (var request = BuildSchemaInvalidBenchmarkRequest())
             {
-                Task<HttpResponseMessage> work = client.SendAsync(request);
-                bool completedWithoutMainThread = SpinWait.SpinUntil(() => work.IsCompleted, 1500);
-                if (!completedWithoutMainThread)
-                {
-                    Invoke(_bridge, "Update");
-                    try
-                    {
-                        using (var ignored = work.GetAwaiter().GetResult()) { }
-                    }
-                    catch { }
-                    throw new InvalidOperationException(
-                        "Schema-invalid benchmark includeDetails occupied main-thread admission instead of failing directly");
-                }
-
-                using (var response = work.GetAwaiter().GetResult())
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Schema-invalid benchmark returned HTTP " + (int)response.StatusCode);
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((bool?)json["result"]?["isError"] == true,
-                        "Schema-invalid benchmark did not return an MCP tool error");
-                    string text = (string)json["result"]?["content"]?[0]?["text"];
-                    Assert(!string.IsNullOrEmpty(text) && text.IndexOf("includeDetails", StringComparison.Ordinal) >= 0,
-                        "Schema-invalid benchmark did not explain the invalid includeDetails type");
-                    Assert((int)json["id"] == 16010,
-                        "Schema-invalid benchmark changed the request id");
-                    Assert(response.Headers.Contains("Mcp-Protocol-Version")
-                        && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
-                        "Schema-invalid benchmark lost the modern protocol response header");
-                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Schema-invalid benchmark returned a legacy session id");
-                }
-
-                Assert(OniMcp.Tools.OniToolRegistry.Calls == 0,
-                    "Schema-invalid benchmark reached the tool handler");
-                Assert(OniMcp.Tools.ToolCallMiddleware.Presentations == 0,
-                    "Schema-invalid benchmark presented task UI");
-                Assert(server.GetSessionSummaries().Count == 0,
-                    "Schema-invalid benchmark allocated legacy session state");
+                AssertSchemaInvalidBenchmarkRejected(client, "cases", new JArray("toolList"), 16010);
+                AssertSchemaInvalidBenchmarkRejected(client, "tool", 7, 16011);
+                AssertSchemaInvalidBenchmarkRejected(client, "includeDetails", "true", 16012);
             }
+
+            Assert(OniMcp.Tools.OniToolRegistry.Calls == 0,
+                "Schema-invalid benchmark arguments reached the tool handler");
+            Assert(OniMcp.Tools.ToolCallMiddleware.Presentations == 0,
+                "Schema-invalid benchmark arguments presented task UI");
+            Assert(server.GetSessionSummaries().Count == 0,
+                "Schema-invalid benchmark arguments allocated legacy session state");
         }
         finally
         {
@@ -95,21 +65,62 @@ internal static class ModernBenchmarkSchemaAdmissionRegressionEntry
         }
     }
 
-    private static HttpRequestMessage BuildSchemaInvalidBenchmarkRequest()
+    private static void AssertSchemaInvalidBenchmarkRejected(HttpClient client, string field, JToken value, int id)
     {
+        using (var request = BuildSchemaInvalidBenchmarkRequest(field, value, id))
+        {
+            Task<HttpResponseMessage> work = client.SendAsync(request);
+            bool completedWithoutMainThread = SpinWait.SpinUntil(() => work.IsCompleted, 1500);
+            if (!completedWithoutMainThread)
+            {
+                Invoke(_bridge, "Update");
+                try
+                {
+                    using (var ignored = work.GetAwaiter().GetResult()) { }
+                }
+                catch { }
+                throw new InvalidOperationException(
+                    "Schema-invalid benchmark " + field + " occupied main-thread admission instead of failing directly");
+            }
+
+            using (var response = work.GetAwaiter().GetResult())
+            {
+                Assert(response.StatusCode == HttpStatusCode.OK,
+                    "Schema-invalid benchmark " + field + " returned HTTP " + (int)response.StatusCode);
+                JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                Assert((bool?)json["result"]?["isError"] == true,
+                    "Schema-invalid benchmark " + field + " did not return an MCP tool error");
+                string text = (string)json["result"]?["content"]?[0]?["text"];
+                Assert(!string.IsNullOrEmpty(text) && text.IndexOf(field, StringComparison.Ordinal) >= 0,
+                    "Schema-invalid benchmark did not explain the invalid " + field + " type");
+                Assert((int)json["id"] == id,
+                    "Schema-invalid benchmark " + field + " changed the request id");
+                Assert(response.Headers.Contains("Mcp-Protocol-Version")
+                    && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
+                    "Schema-invalid benchmark " + field + " lost the modern protocol response header");
+                Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                    "Schema-invalid benchmark " + field + " returned a legacy session id");
+            }
+        }
+    }
+
+    private static HttpRequestMessage BuildSchemaInvalidBenchmarkRequest(string field, JToken value, int id)
+    {
+        var arguments = new JObject
+        {
+            ["task"] = "validate benchmark argument types"
+        };
+        arguments[field] = value;
+
         var body = new JObject
         {
             ["jsonrpc"] = "2.0",
             ["method"] = "tools/call",
-            ["id"] = 16010,
+            ["id"] = id,
             ["params"] = new JObject
             {
                 ["name"] = "benchmark",
-                ["arguments"] = new JObject
-                {
-                    ["task"] = "validate benchmark argument types",
-                    ["includeDetails"] = "true"
-                },
+                ["arguments"] = arguments,
                 ["_meta"] = new JObject
                 {
                     ["io.modelcontextprotocol/protocolVersion"] = "2026-07-28",
