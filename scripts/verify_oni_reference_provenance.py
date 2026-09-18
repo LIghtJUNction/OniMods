@@ -27,6 +27,12 @@ PROPERTY_RE = re.compile(
     r"<(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)>(?P<value>[^<]*)</(?P=name)>"
 )
 PROPERTY_REF_RE = re.compile(r"^\$\((?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\)$")
+KLEI_CHANGE_LIST_RE = re.compile(
+    r"\bpublic\s+const\s+uint\s+ChangeList\s*=\s*(?P<build>[0-9]+)U?\s*;"
+)
+KLEI_BUILD_BRANCH_RE = re.compile(
+    r'\bpublic\s+const\s+string\s+BuildBranch\s*=\s*"(?P<branch>[^"]+)"\s*;'
+)
 OFFICIAL_BUILD_TITLE_PATTERNS = (
     re.compile(r"^\[Game (?:Update|Hotfix)\]\s*-\s*(?P<build>[0-9]+)\s*$", re.I),
     re.compile(r"^HOTFIX\s*-\s*(?P<build>[0-9]+)\s*$", re.I),
@@ -118,10 +124,25 @@ def resolve_numeric_property(
     raise ValueError(f"MSBuild property {name!r} is not a numeric/property value: {value!r}")
 
 
+def parse_klei_version_source(text: str) -> tuple[int, str]:
+    change_list = KLEI_CHANGE_LIST_RE.search(text)
+    if change_list is None:
+        raise ValueError("KleiVersion source is missing numeric ChangeList")
+    build_branch = KLEI_BUILD_BRANCH_RE.search(text)
+    if build_branch is None:
+        raise ValueError("KleiVersion source is missing BuildBranch")
+    return int(change_list.group("build")), build_branch.group("branch")
+
+
 def validate_repo_path(path_value: str, label: str) -> None:
     path = Path(path_value)
     if not path_value or path.is_absolute() or ".." in path.parts:
         raise ValueError(f"{label} must be repository-relative")
+
+
+def validate_branch(branch: str, label: str) -> None:
+    if not branch or branch.startswith("/") or ".." in branch.split("/"):
+        raise ValueError(f"{label} is invalid")
 
 
 def validate_manifest(manifest: dict) -> tuple[int, int, dict, dict, dict | None]:
@@ -171,14 +192,59 @@ def validate_manifest(manifest: dict) -> tuple[int, int, dict, dict, dict | None
     declared_build = int(reference["declared_oni_build"])
     marker = reference["version_marker"]
     validate_repo_path(marker.get("path", ""), "reference version marker path")
-    if not re.fullmatch(r"[0-9a-f]{40}", marker.get("blob_sha", "")):
+    if not COMMIT_RE.fullmatch(marker.get("blob_sha", "")):
         raise ValueError("reference version marker must include a full Git blob SHA")
 
+    method_repository = method_body.get("repository", "")
+    method_commit = method_body.get("commit", "")
+    if "/" not in method_repository:
+        raise ValueError(f"invalid method-body repository: {method_repository!r}")
+    if not COMMIT_RE.fullmatch(method_commit):
+        raise ValueError("method-body source must be pinned to a full lowercase commit SHA")
     method_build = int(method_body["official_oni_build"])
     if method_build != official_build:
         raise ValueError(
             "method-body source build does not match manifest official_oni_build: "
             f"{method_build} != {official_build}"
+        )
+
+    method_files = method_body.get("files")
+    if not isinstance(method_files, list) or not method_files:
+        raise ValueError("method-body source must include pinned source files")
+    method_files_by_name = {}
+    seen_method_paths = set()
+    for item in method_files:
+        name = item.get("name", "")
+        path_value = item.get("path", "")
+        if not name or name in method_files_by_name:
+            raise ValueError(f"duplicate/invalid method-body source name: {name!r}")
+        validate_repo_path(path_value, f"method-body source {name} path")
+        if path_value in seen_method_paths:
+            raise ValueError(f"duplicate method-body source path: {path_value}")
+        if not COMMIT_RE.fullmatch(item.get("blob_sha", "")):
+            raise ValueError(f"method-body source lacks Git blob identity: {path_value}")
+        method_files_by_name[name] = item
+        seen_method_paths.add(path_value)
+
+    method_tracking = method_body.get("upstream_tracking")
+    if not isinstance(method_tracking, dict):
+        raise ValueError("method-body source must declare upstream tracking")
+    validate_branch(method_tracking.get("branch", ""), "method-body upstream tracking branch")
+    version_marker_name = method_tracking.get("version_marker", "")
+    if version_marker_name not in method_files_by_name:
+        raise ValueError("method-body upstream version marker must name a pinned source file")
+    contract_names = method_tracking.get("contract_files")
+    if not isinstance(contract_names, list) or not contract_names:
+        raise ValueError("method-body upstream tracking must include contract files")
+    if len(set(contract_names)) != len(contract_names):
+        raise ValueError("method-body upstream contract files must be unique")
+    if version_marker_name in contract_names:
+        raise ValueError("method-body version marker must be separate from contract files")
+    missing_contract_names = sorted(set(contract_names) - set(method_files_by_name))
+    if missing_contract_names:
+        raise ValueError(
+            "method-body upstream contract files are not pinned source files: "
+            + ", ".join(missing_contract_names)
         )
 
     manifest_files = {}
@@ -193,8 +259,7 @@ def validate_manifest(manifest: dict) -> tuple[int, int, dict, dict, dict | None
     tracking = reference.get("upstream_tracking")
     if tracking is not None:
         branch = tracking.get("branch", "")
-        if not branch or branch.startswith("/") or ".." in branch.split("/"):
-            raise ValueError("reference upstream tracking branch is invalid")
+        validate_branch(branch, "reference upstream tracking branch")
         tracked_files = tracking.get("files")
         if not isinstance(tracked_files, list) or not tracked_files:
             raise ValueError("reference upstream tracking must include at least one file")
@@ -531,6 +596,137 @@ def verify_upstream_head(reference: dict, marker: dict, declared_build: int) -> 
     report_upstream_state(reference, state)
 
 
+def compare_method_body_upstream_state(
+    source: dict,
+    head_sha: str,
+    head_version_text: str,
+    head_files: dict[str, dict],
+) -> dict:
+    if not COMMIT_RE.fullmatch(head_sha):
+        raise ValueError(f"invalid method-body upstream HEAD commit: {head_sha!r}")
+
+    tracking = source["upstream_tracking"]
+    files_by_name = {item["name"]: item for item in source["files"]}
+    marker = files_by_name[tracking["version_marker"]]
+    current_marker = head_files.get(marker["path"])
+    if current_marker is None:
+        raise ValueError(f"method-body upstream result missing {marker['path']}")
+    marker_blob = current_marker.get("sha", "")
+    if not COMMIT_RE.fullmatch(marker_blob):
+        raise ValueError(f"invalid method-body marker blob identity for {marker['path']}")
+
+    head_build, head_branch = parse_klei_version_source(head_version_text)
+    changed_files = []
+    for name in tracking["contract_files"]:
+        item = files_by_name[name]
+        current = head_files.get(item["path"])
+        if current is None:
+            raise ValueError(f"method-body upstream result missing {item['path']}")
+        current_blob = current.get("sha", "")
+        if not COMMIT_RE.fullmatch(current_blob):
+            raise ValueError(f"invalid method-body upstream blob identity for {item['path']}")
+        if current_blob != item["blob_sha"]:
+            changed_files.append(item["path"])
+
+    marker_changed = marker_blob != marker["blob_sha"]
+    return {
+        "head_sha": head_sha,
+        "head_advanced": head_sha != source["commit"],
+        "head_oni_build": head_build,
+        "head_build_branch": head_branch,
+        "marker_changed": marker_changed,
+        "changed_files": changed_files,
+        "has_method_body_drift": (
+            head_build != int(source["official_oni_build"])
+            or head_branch != "release"
+            or bool(changed_files)
+        ),
+    }
+
+
+def fetch_method_body_upstream_state(source: dict) -> dict:
+    tracking = source["upstream_tracking"]
+    repository = source["repository"]
+    branch = tracking["branch"]
+    branch_ref = urllib.parse.quote(branch, safe="")
+    commit_data = download_json(f"{API_PREFIX}{repository}/commits/{branch_ref}")
+    head_sha = commit_data.get("sha", "")
+    if not COMMIT_RE.fullmatch(head_sha):
+        raise ValueError("GitHub API did not return a valid method-body upstream HEAD commit")
+
+    files_by_name = {item["name"]: item for item in source["files"]}
+    marker = files_by_name[tracking["version_marker"]]
+    current_files = {}
+    for item in source["files"]:
+        path_value = item["path"]
+        encoded_path = urllib.parse.quote(path_value, safe="/")
+        file_meta = download_json(
+            f"{API_PREFIX}{repository}/contents/{encoded_path}?ref={head_sha}"
+        )
+        current_files[path_value] = {
+            "sha": file_meta.get("sha", ""),
+            "size": file_meta.get("size"),
+        }
+
+    marker_text = download_text(
+        f"{RAW_PREFIX}{repository}/{head_sha}/{marker['path']}"
+    ).decode("utf-8-sig")
+    return compare_method_body_upstream_state(
+        source,
+        head_sha,
+        marker_text,
+        current_files,
+    )
+
+
+def report_method_body_upstream_state(source: dict, state: dict) -> None:
+    tracking = source["upstream_tracking"]
+    changed_files = ",".join(state["changed_files"]) or "none"
+    status = "drift" if state["has_method_body_drift"] else "ok"
+    print(
+        f"UPSTREAM_METHOD_BODY_STATUS status={status} "
+        f"branch={tracking['branch']} head={state['head_sha']} "
+        f"head_oni_build={state['head_oni_build']} "
+        f"head_build_branch={state['head_build_branch']} "
+        f"marker_changed={str(state['marker_changed']).lower()} "
+        f"changed_contract_files={changed_files}"
+    )
+
+    if state["has_method_body_drift"]:
+        print(
+            "::warning title=ONI method-body source drift detected::"
+            f"{source['repository']} {tracking['branch']} is {state['head_sha']}; "
+            f"build={state['head_oni_build']} branch={state['head_build_branch']}, "
+            f"tracked contract files changed={changed_files}. Keep this source-only "
+            "evidence separate from compile references and review the affected contracts "
+            "before changing the immutable pin."
+        )
+    elif state["head_advanced"]:
+        marker_note = "changed" if state["marker_changed"] else "unchanged"
+        print(
+            "::notice title=ONI method-body upstream advanced without contract drift::"
+            f"{source['repository']} {tracking['branch']} advanced to {state['head_sha']}; "
+            f"the version marker is {marker_note}, but it still declares release build "
+            f"{state['head_oni_build']} and tracked method-body contract blobs are unchanged."
+        )
+
+
+def verify_method_body_upstream_head(source: dict) -> None:
+    try:
+        state = fetch_method_body_upstream_state(source)
+    except (OSError, ValueError, KeyError, json.JSONDecodeError, UnicodeDecodeError) as error:
+        print(
+            "UPSTREAM_METHOD_BODY_STATUS status=unknown "
+            f"source={source.get('repository')} reason={type(error).__name__}"
+        )
+        print(
+            "::warning title=ONI method-body upstream drift status unknown::"
+            f"Could not inspect current {source.get('repository')} source state: {error}"
+        )
+        return
+    report_method_body_upstream_state(source, state)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default="ci/oni-reference-assemblies.json")
@@ -548,6 +744,7 @@ def main() -> int:
         verify_upstream_marker(reference, marker, declared_build)
         if tracking is not None:
             verify_upstream_head(reference, marker, declared_build)
+        verify_method_body_upstream_head(manifest["method_body_source"])
 
     print(
         "REFERENCE_STATUS "

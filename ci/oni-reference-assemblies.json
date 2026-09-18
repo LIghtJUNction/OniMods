@@ -41,6 +41,11 @@
     "repository": "Kupie/ONI_Decomp",
     "commit": "8d4ace10c2b6a84cee394653a91b990a5122e636",
     "official_oni_build": 744825,
+    "upstream_tracking": {
+      "branch": "main",
+      "version_marker": "KleiVersion.cs",
+      "contract_files": ["NavGrid.cs", "FetchManager.cs"]
+    },
     "note": "Transient source-only method-body evidence. KleiVersion.cs declares release ChangeList 744825. The mirror has no declared license, so CI verifies provenance and semantics without vendoring or redistributing the decompiled source.",
     "files": [
       {"name":"NavGrid.cs","path":"Assembly-CSharp/NavGrid.cs","blob_sha":"8db6d7f2e84fda45504d06844722a693e5338f0c"},
