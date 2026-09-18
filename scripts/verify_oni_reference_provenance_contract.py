@@ -20,6 +20,7 @@ MOD_QUALITY_WORKFLOW = ROOT / ".github/workflows/mod-quality.yml"
 PINNED_DOTNET_SDK = "10.0.401"
 PINNED_COMMIT = "a" * 40
 PINNED_MARKER = "d" * 40
+PINNED_LICENSE = "f" * 40
 ASSEMBLY_CSHARP = "b" * 40
 ASSEMBLY_FIRSTPASS = "c" * 40
 UNITY_ENGINE = "9" * 40
@@ -166,6 +167,8 @@ def manifest_with_tracking(tracked_paths: list[str]) -> dict:
             "repository": "example/reference",
             "commit": PINNED_COMMIT,
             "declared_oni_build": 737790,
+            "license_path": "Lib/LICENSE.txt",
+            "license_blob_sha": PINNED_LICENSE,
             "version_marker": {
                 "path": "Directory.Build.props",
                 "blob_sha": PINNED_MARKER,
@@ -343,6 +346,37 @@ def main() -> int:
     else:
         raise AssertionError("missing tracked upstream file must fail closed")
 
+    complete_manifest = manifest_with_tracking(
+        ["Lib/Assembly-CSharp.dll", "Lib/UnityEngine.dll"]
+    )
+    missing_license = manifest_with_tracking(
+        ["Lib/Assembly-CSharp.dll", "Lib/UnityEngine.dll"]
+    )
+    missing_license["reference_source"].pop("license_path")
+    try:
+        validate_manifest(missing_license)
+    except ValueError as error:
+        require(
+            "license" in str(error).lower(),
+            "missing license provenance failed for an unrelated reason",
+        )
+    else:
+        raise AssertionError("manifest must require reference license provenance")
+
+    invalid_license_blob = manifest_with_tracking(
+        ["Lib/Assembly-CSharp.dll", "Lib/UnityEngine.dll"]
+    )
+    invalid_license_blob["reference_source"]["license_blob_sha"] = "not-a-blob"
+    try:
+        validate_manifest(invalid_license_blob)
+    except ValueError as error:
+        require(
+            "license" in str(error).lower(),
+            "invalid license blob failed for an unrelated reason",
+        )
+    else:
+        raise AssertionError("manifest must require a fixed reference license blob")
+
     incomplete_manifest = manifest_with_tracking(["Lib/Assembly-CSharp.dll"])
     try:
         validate_manifest(incomplete_manifest)
@@ -354,14 +388,12 @@ def main() -> int:
     else:
         raise AssertionError("manifest must reject untracked pinned reference assemblies")
 
-    validate_manifest(
-        manifest_with_tracking(["Lib/Assembly-CSharp.dll", "Lib/UnityEngine.dll"])
-    )
+    validate_manifest(complete_manifest)
     verify_workflow_contract_inputs()
     verify_workflow_sdk_pin()
 
     print(
-        "PASS: official/upstream reference drift classification, CI input coverage, and SDK pin"
+        "PASS: official/upstream reference drift classification, provenance metadata, CI input coverage, and SDK pin"
     )
     return 0
 
