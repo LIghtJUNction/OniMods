@@ -59,7 +59,7 @@ internal static class Program
 
         calls = 0;
         var stopped = ToolBatchTools.CallMany().Handler(JObject.Parse("{calls:[{name:'fail'},{name:'ok'}],stopOnError:true}"));
-        Check(stopped.IsError && calls == 1, "stopOnError must stop and propagate failure");
+        Check(stopped.IsError && calls == 1 && (bool)Body(stopped)["stopped"], "stopOnError must stop and propagate failure");
 
         calls = 0;
         var invalid = ToolBatchTools.CallMany().Handler(JObject.Parse("{calls:[{name:'ok'},{name:'required',args:{value:null}}]}"));

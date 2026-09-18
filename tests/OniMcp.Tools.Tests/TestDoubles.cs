@@ -53,18 +53,6 @@ namespace OniMcp.Tools
         }
     }
 
-    public static partial class GameControlTools
-    {
-        // GameSaveTools.cs is deliberately not pulled into this focused host fixture.
-        // Mirror its current companion helper so GameSpeedTools.cs executes the real
-        // production resume/set-speed call chain on the known-bad revision.
-        private static void UnpauseAll(SpeedControlScreen speedControl)
-        {
-            for (int i = 0; i < 16 && speedControl.IsPaused; i++)
-                speedControl.Unpause(playSound: i == 0);
-        }
-    }
-
     public static partial class WorldEditorTools
     {
         private const string _cwd = "/active/";
