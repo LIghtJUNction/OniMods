@@ -235,7 +235,7 @@ def validate_series(
                 )
 
     first = report_items[0]
-    if first.get("reportSequence") == 1:
+    if first.get("reportSequence") == 1 and "captureGeneration" not in first:
         first_targets, _ = _targets_by_name(first)
         for name in required:
             target = first_targets.get(name)
