@@ -81,14 +81,55 @@ namespace OniMcp.Tools
                 .ToList();
 
             var obstructions = FindFootprintObstructions(placement, ignored);
+            AddBackwallFoundationFailure(placement, obstructions);
 
             if (invalid.Count == 0 && obstructions.Count == 0)
                 return FootprintValidation.Success();
 
+            var backwallFailure = obstructions.FirstOrDefault(obstruction =>
+                obstruction.ContainsKey("reasonCode")
+                && string.Equals(obstruction["reasonCode"]?.ToString(), "backwall_required", StringComparison.Ordinal));
             string error = invalid.Count > 0
                 ? "Invalid footprint: every occupied cell must be visible, valid, and inside the selected world"
-                : "Obstructed footprint: occupied terrain, building, or blueprint overlaps the requested cells";
+                : backwallFailure != null
+                    ? backwallFailure["reason"]?.ToString()
+                    : "Obstructed footprint: occupied terrain, building, or blueprint overlaps the requested cells";
             return FootprintValidation.Invalid(error, invalid, obstructions);
+        }
+
+        private static void AddBackwallFoundationFailure(PlacementDetails placement, List<Dictionary<string, object>> obstructions)
+        {
+            var def = ResolveBuildingDefForPlacement(placement);
+            if (def == null)
+                return;
+
+            string rule = def.BuildLocationRule.ToString();
+            if (!string.Equals(rule, "OnBackWall", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            int cell = Grid.XYToCell(placement.AnchorX, placement.AnchorY);
+            bool nativeFoundationValid = Grid.IsValidCell(cell)
+                && BuildingDef.CheckFoundation(
+                    cell,
+                    placement.Orientation,
+                    def.BuildLocationRule,
+                    def.WidthInCells,
+                    def.HeightInCells);
+            var decision = BuildPlanningBackwallSupportPolicy.Evaluate(rule, nativeFoundationValid);
+            if (decision.Valid)
+                return;
+
+            obstructions.Insert(0, new Dictionary<string, object>
+            {
+                ["kind"] = "missing_backwall",
+                ["x"] = placement.AnchorX,
+                ["y"] = placement.AnchorY,
+                ["cell"] = cell,
+                ["buildLocationRule"] = rule,
+                ["reasonCode"] = decision.ReasonCode,
+                ["reason"] = decision.Error,
+                ["nativeFoundationCheck"] = true
+            });
         }
 
         private static Dictionary<string, object> ActualPlacementDetails(GameObject go, BuildingDef def, int expectedX, int expectedY)
