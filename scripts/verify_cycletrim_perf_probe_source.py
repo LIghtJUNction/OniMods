@@ -70,6 +70,10 @@ def main() -> int:
         "probe capture does not track game-session identity without retaining the old game",
         failures,
     )
+    require(patch, "ObserveGameBoundary();", "main-thread observations do not detect a new game session", failures)
+    require(patch, "captureBoundaryPending = true", "new game sessions do not mark a rebased report boundary", failures)
+    require(patch, "reportObservationCount = 0", "new game sessions inherit the prior report cadence", failures)
+    require(patch, "nextReportAt = 1", "new game sessions are not guaranteed a fresh first report", failures)
     require(
         patch,
         'summary.Append(",\\\"captureGeneration\\\":").Append(captureGeneration)',
@@ -82,6 +86,11 @@ def main() -> int:
         "first report in a game session is not rebased away from prior-session timing",
         failures,
     )
+    record_main = patch.split("private static void RecordMain", 1)[1].split(
+        "private static void RecordWorker", 1
+    )[0]
+    if record_main.find("counter.Record(") > record_main.find("ObserveGameBoundary();"):
+        failures.append("game-boundary bookkeeping must happen after the measured target is recorded")
     if "GameScheduler.Instance" in patch:
         failures.append("deferred performance reporting must not depend on the paused game clock")
     require(patch, "intervalDurationTicks", "report interval duration is missing", failures)
