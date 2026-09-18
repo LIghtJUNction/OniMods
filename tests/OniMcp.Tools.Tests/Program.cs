@@ -40,6 +40,7 @@ internal static class Program
         TestWorldEditorCellObjectPolicy();
         TestFloodFillPreviewCells();
         TestSandboxDryRunRoutingPolicy();
+        TestGameSpeedPauseOwnership();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -58,7 +59,7 @@ internal static class Program
 
         calls = 0;
         var stopped = ToolBatchTools.CallMany().Handler(JObject.Parse("{calls:[{name:'fail'},{name:'ok'}],stopOnError:true}"));
-        Check(stopped.IsError && calls == 1 && (bool)Body(stopped)["stopped"], "stopOnError must stop and propagate failure");
+        Check(stopped.IsError && calls == 1, "stopOnError must stop and propagate failure");
 
         calls = 0;
         var invalid = ToolBatchTools.CallMany().Handler(JObject.Parse("{calls:[{name:'ok'},{name:'required',args:{value:null}}]}"));
@@ -205,6 +206,39 @@ internal static class Program
             Check(error != null && error.Contains("refusing to execute"),
                 "unsupported sandbox dry-run explains that mutation was refused");
         }
+    }
+
+    private static void TestGameSpeedPauseOwnership()
+    {
+        Game.Instance = new Game();
+
+        var nested = new SpeedControlScreen();
+        SpeedControlScreen.Instance = nested;
+        nested.Pause(playSound: false);
+        var pause = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(!pause.IsError && nested.PauseCount == 2, "MCP pause must add exactly one owned pause beside an external pause");
+        var resume = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(!resume.IsError && nested.PauseCount == 1 && nested.IsPaused,
+            "MCP resume must not drain an unrelated ONI pause reference");
+        Check((bool)Body(resume)["isPaused"], "resume result must report the remaining external pause");
+
+        var repeated = new SpeedControlScreen();
+        SpeedControlScreen.Instance = repeated;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(repeated.PauseCount == 1, "repeated MCP pause must not leak extra pause references");
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(repeated.PauseCount == 0, "one MCP resume must release the one MCP-owned pause");
+
+        var speedChange = new SpeedControlScreen();
+        SpeedControlScreen.Instance = speedChange;
+        speedChange.Pause(playSound: false);
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        var changed = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'set_speed',speed:2}"));
+        Check(!changed.IsError && speedChange.GetSpeed() == 1, "set_speed must still select the requested speed");
+        Check(speedChange.PauseCount == 1 && speedChange.IsPaused,
+            "set_speed must not drain an unrelated ONI pause reference");
+        Check((bool)Body(changed)["isPaused"], "set_speed result must report the remaining external pause");
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });

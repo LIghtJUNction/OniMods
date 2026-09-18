@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 
 // Only game/registry boundaries are substituted. The batch, DSL, response types,
-// and both regex entry points are compiled directly from production source.
+// speed-control entry points, and both regex entry points are compiled directly from production source.
 namespace OniMcp.Tools
 {
     public sealed class McpTool
@@ -14,6 +14,7 @@ namespace OniMcp.Tools
         public string Group { get; set; }
         public string Mode { get; set; }
         public string Risk { get; set; }
+        public bool Hidden { get; set; }
         public string Description { get; set; }
         public List<string> Aliases { get; set; }
         public List<string> Tags { get; set; }
@@ -52,6 +53,18 @@ namespace OniMcp.Tools
         }
     }
 
+    public static partial class GameControlTools
+    {
+        // GameSaveTools.cs is deliberately not pulled into this focused host fixture.
+        // Mirror its current companion helper so GameSpeedTools.cs executes the real
+        // production resume/set-speed call chain on the known-bad revision.
+        private static void UnpauseAll(SpeedControlScreen speedControl)
+        {
+            for (int i = 0; i < 16 && speedControl.IsPaused; i++)
+                speedControl.Unpause(playSound: i == 0);
+        }
+    }
+
     public static partial class WorldEditorTools
     {
         private const string _cwd = "/active/";
@@ -72,6 +85,72 @@ namespace OniMcp.Tools
             public int X { get; set; }
             public int Y { get; set; }
         }
+    }
+}
+
+internal sealed class Game
+{
+    internal static Game Instance { get; set; }
+}
+
+internal static class GameUtil
+{
+    internal static int GetCurrentCycle() => 1;
+}
+
+internal sealed class GameClock
+{
+    internal static GameClock Instance { get; set; } = new GameClock();
+    internal float GetCurrentCycleAsPercentage() => 0.5f;
+}
+
+internal sealed class SpeedControlScreen
+{
+    internal static SpeedControlScreen Instance { get; set; }
+
+    private int pauseCount;
+    private int speed;
+
+    internal int PauseCount => pauseCount;
+    internal bool IsPaused => pauseCount > 0;
+
+    internal void Pause(bool playSound = true, bool skipPauseScreen = false)
+    {
+        pauseCount++;
+        if (pauseCount == 1)
+            UnityEngine.Time.timeScale = 0f;
+    }
+
+    internal void Unpause(bool playSound = true)
+    {
+        if (pauseCount <= 0)
+            return;
+        pauseCount--;
+        if (pauseCount == 0)
+            UnityEngine.Time.timeScale = speed + 1;
+    }
+
+    internal void SetSpeed(int value)
+    {
+        speed = value;
+        if (!IsPaused)
+            UnityEngine.Time.timeScale = speed + 1;
+    }
+
+    internal int GetSpeed() => speed;
+}
+
+namespace UnityEngine
+{
+    internal static class Time
+    {
+        internal static float timeScale = 1f;
+        internal static float realtimeSinceStartup;
+    }
+
+    internal static class Mathf
+    {
+        internal static int RoundToInt(float value) => (int)Math.Round(value, MidpointRounding.AwayFromZero);
     }
 }
 
