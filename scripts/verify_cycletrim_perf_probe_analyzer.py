@@ -38,6 +38,7 @@ def make_target(name: str, calls: int, total: int, interval_calls: int, interval
 def make_report(analyzer, sequence: int, calls: int, total: int, interval_calls: int, interval_total: int) -> dict:
     return {
         "stopwatchFrequency": 10_000_000,
+        "captureGeneration": 1,
         "reportSequence": sequence,
         "intervalDurationTicks": 2_000_000,
         "gc": {
@@ -81,6 +82,7 @@ def main() -> int:
     )
 
     legacy = copy.deepcopy(second)
+    legacy.pop("captureGeneration")
     legacy.pop("reportSequence")
     legacy.pop("intervalDurationTicks")
     for target in legacy["targets"]:
@@ -117,6 +119,14 @@ def main() -> int:
     require(
         any("fastTrackPatched changed within one capture" in failure for failure in failures),
         "series validator did not reject mid-capture FastTrack ownership drift",
+    )
+
+    cross_generation = copy.deepcopy(second)
+    cross_generation["captureGeneration"] = 2
+    failures = analyzer.validate_series([first, cross_generation], required)
+    require(
+        any("captureGeneration changed within one capture" in failure for failure in failures),
+        "series validator accepted reports from different game-session generations",
     )
 
     broken_delta = copy.deepcopy(second)
