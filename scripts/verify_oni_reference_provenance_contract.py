@@ -17,6 +17,7 @@ from verify_oni_reference_provenance import (
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE_WORKFLOW = ROOT / ".github/workflows/oni-reference-compat.yml"
 MOD_QUALITY_WORKFLOW = ROOT / ".github/workflows/mod-quality.yml"
+PINNED_DOTNET_SDK = "10.0.401"
 PINNED_COMMIT = "a" * 40
 PINNED_MARKER = "d" * 40
 ASSEMBLY_CSHARP = "b" * 40
@@ -125,6 +126,23 @@ def verify_workflow_contract_inputs() -> None:
                     any(fnmatchcase(path, pattern) for pattern in patterns),
                     f"{workflow_name} {event_name} does not cover contract input {path}",
                 )
+
+
+def verify_workflow_sdk_pin() -> None:
+    expected = f"dotnet-version: '{PINNED_DOTNET_SDK}'"
+    for workflow_name, workflow in (
+        ("reference CI", REFERENCE_WORKFLOW),
+        ("Mod quality", MOD_QUALITY_WORKFLOW),
+    ):
+        text = workflow.read_text(encoding="utf-8")
+        require(
+            expected in text,
+            f"{workflow_name} must pin the .NET SDK exactly to {PINNED_DOTNET_SDK}",
+        )
+        require(
+            "dotnet-version: '10.0.x'" not in text,
+            f"{workflow_name} must not use a moving 10.0.x SDK selector",
+        )
 
 
 def manifest_with_tracking(tracked_paths: list[str]) -> dict:
@@ -340,9 +358,10 @@ def main() -> int:
         manifest_with_tracking(["Lib/Assembly-CSharp.dll", "Lib/UnityEngine.dll"])
     )
     verify_workflow_contract_inputs()
+    verify_workflow_sdk_pin()
 
     print(
-        "PASS: official/upstream reference drift classification and CI input coverage"
+        "PASS: official/upstream reference drift classification, CI input coverage, and SDK pin"
     )
     return 0
 
