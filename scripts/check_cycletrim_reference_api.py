@@ -154,7 +154,7 @@ def main() -> int:
                     "Execute",
                     r"PathFinder\.PotentialList\s+\w+\s*,\s*"
                     r"PathFinder\.PotentialScratchPad\s+\w+\s*,\s*"
-                    r"ref\s+AsyncPathProber\.WorkResult\s+\w+",
+                    r"ref\s+(?:AsyncPathProber\.)?WorkResult\s+\w+",
                 ),
                 "AsyncPathProber.WorkOrder.Execute(PotentialList,PotentialScratchPad,ref WorkResult)",
             ),
