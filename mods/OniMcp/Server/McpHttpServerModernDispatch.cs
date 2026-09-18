@@ -56,11 +56,24 @@ namespace OniMcp.Server
                 }
 
                 var argumentsObject = argumentsToken as JObject;
+                bool modernToolAvailable = IsModernReadOnlyToolAvailable();
                 string taskDescription;
+                bool hasTaskDescription = ToolCallMiddleware.TryGetTaskDescription(argumentsObject, out taskDescription);
+                if ((taskToken == null || taskToken.Type == JTokenType.Null)
+                    && modernToolAvailable
+                    && !hasTaskDescription)
+                {
+                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                    var result = CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
+                        "task is required: describe what you are doing before every tool call.")));
+                    SendJson(response, JsonRpcResponse.Success(rpcRequest.Id, result), (int)HttpStatusCode.OK);
+                    return;
+                }
+
                 if ((taskToken == null || taskToken.Type == JTokenType.Null)
                     && argumentsObject != null
-                    && IsModernReadOnlyToolAvailable()
-                    && ToolCallMiddleware.TryGetTaskDescription(argumentsObject, out taskDescription)
+                    && modernToolAvailable
+                    && hasTaskDescription
                     && !OniToolRegistry.IsCoordinateTool(ModernReadOnlyToolName)
                     && OniToolRegistry.HasCoordinateArguments(argumentsObject))
                 {
