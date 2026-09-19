@@ -50,8 +50,31 @@ internal static class ModernClientCapabilitiesRegressionEntry
                         "Rejected modern client capability allocated legacy session state");
                 }
 
+                const string unprefixedExtension =
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20002,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{\"extensions\":{\"example\":{}}}}}}";
+                using (var response = PostModern(client, unprefixedExtension))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern request accepted an unprefixed extension identifier with HTTP " + (int)response.StatusCode);
+                    var json = ReadJson(response);
+                    Assert((int)json["error"]["code"] == McpErrorCode.InvalidParams,
+                        "Unprefixed extension identifier did not use InvalidParams");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern extension identifier allocated legacy session state");
+                }
+
+                const string malformedExtensionPrefix =
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20003,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{\"extensions\":{\"9example/test\":{}}}}}}";
+                using (var response = PostModern(client, malformedExtensionPrefix))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern request accepted a malformed extension prefix with HTTP " + (int)response.StatusCode);
+                    Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                        "Malformed extension prefix did not use InvalidParams");
+                }
+
                 const string conformant =
-                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20002,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{\"roots\":{},\"sampling\":{\"tools\":{}},\"elicitation\":{\"form\":{}},\"experimental\":{\"example\":{}},\"extensions\":{\"com.example/test\":{}},\"com.example/custom\":{\"enabled\":true}}}}}";
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20004,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{\"roots\":{},\"sampling\":{\"tools\":{}},\"elicitation\":{\"form\":{}},\"experimental\":{\"example\":{}},\"extensions\":{\"com.example/test\":{},\"io.modelcontextprotocol/tasks\":{}},\"com.example/custom\":{\"enabled\":true}}}}}";
                 using (var response = PostModern(client, conformant))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
