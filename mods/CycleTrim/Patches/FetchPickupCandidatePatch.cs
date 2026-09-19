@@ -52,9 +52,13 @@ namespace CycleTrim.Patches
             // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
             private static bool Prepare()
             {
-                return FetchPatchActivationPolicy.ShouldInstall(
-                    AccessTools.TypeByName(FastTrackPatchType) != null,
-                    AccessTools.TypeByName(EfficientSupplyType) != null);
+                if (!FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
+                        AccessTools.TypeByName(EfficientSupplyType) != null))
+                {
+                    return false;
+                }
+
+                return AccessTools.TypeByName(FastTrackPatchType) == null;
             }
 
             private static MethodBase TargetMethod()
