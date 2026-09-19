@@ -8,7 +8,7 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
     <ModTitle>CycleTrim</ModTitle>
-    <ModDescription>Reduces redundant smart reservoir signals, streamlines fetch pickup candidates, limits expensive pickup/chore refreshes for active duplicants only, and throttles stationary-critter navigation probing; IdleChore, idle duplicants, and explicit priority updates retain the vanilla immediate path. / 减少智能储液罐/气罐重复信号、优化拾取候选选择，仅限制真正忙碌复制人的高开销拾取与差事刷新，并对静止小动物的导航探针调用进行节流；IdleChore、空闲复制人与显式优先更新均保留原版即时路径。</ModDescription>
+    <ModDescription>Streamlines fetch pickup candidates, limits expensive pickup/chore refreshes for active duplicants only, and throttles stationary-critter navigation probing; IdleChore, idle duplicants, and explicit priority updates retain the vanilla immediate path. / 优化拾取候选选择，仅限制真正忙碌复制人的高开销拾取与差事刷新，并对静止小动物的导航探针调用进行节流；IdleChore、空闲复制人与显式优先更新均保留原版即时路径。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
     <ModVersion>0.3.2</ModVersion>
     <ModApiVersion>2</ModApiVersion>
@@ -85,7 +85,6 @@
     <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
-    <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
   </Target>
 
 </Project>

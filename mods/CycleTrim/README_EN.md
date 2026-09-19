@@ -12,7 +12,6 @@ A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected 
 
 ## What it does
 
-- Reduces redundant smart reservoir/gas reservoir signal traffic.
 - Reuses fetch candidate lookup data for cheaper selection.
 - Throttles expensive refresh work for busy duplicants only; idle duplicants remain responsive.
 - Throttles stationary-critter navigation probing.
@@ -26,6 +25,7 @@ A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected 
 
 - Supports base game and DLC content.
 - Behavior-safe by default for long-running colonies.
+- CycleTrim no longer intercepts `SmartReservoir` automation signaling; vanilla repeated notifications are preserved for stock reservoirs and third-party buildings that reuse the component.
 
 ## Benchmark summary
 
