@@ -8,6 +8,7 @@ internal static class ModernNameEncodingRegression
     private static void Main()
     {
         VerifyNameEncodingBoundary();
+        ModernContentTypeRegression.Verify();
         typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static)
             .Invoke(null, null);
     }
