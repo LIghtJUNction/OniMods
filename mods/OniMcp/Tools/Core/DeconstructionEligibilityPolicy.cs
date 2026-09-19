@@ -22,9 +22,26 @@ namespace OniMcp.Tools
             bool instantBuildMode,
             bool isUtilityTarget)
         {
-            // Mirrors the current preview behavior: once target resolution succeeds,
-            // preview reports the operation as queueable without checking execution eligibility.
-            return new DeconstructionEligibility(true, null, null);
+            if (hasDeconstructable)
+            {
+                if (!allowDeconstruction && !instantBuildMode)
+                {
+                    return new DeconstructionEligibility(
+                        false,
+                        "deconstruction_disabled",
+                        "Target does not allow deconstruction");
+                }
+
+                return new DeconstructionEligibility(true, null, null);
+            }
+
+            if (isUtilityTarget)
+                return new DeconstructionEligibility(true, null, null);
+
+            return new DeconstructionEligibility(
+                false,
+                "not_deconstructable",
+                "Target is not deconstructable");
         }
     }
 }
