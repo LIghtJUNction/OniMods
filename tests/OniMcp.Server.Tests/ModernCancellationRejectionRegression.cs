@@ -67,13 +67,15 @@ internal static class ModernCancellationRejectionRegressionEntry
                     methodHeader: "notifications/progress"))
                 using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                 {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Mismatched modern notification method header returned HTTP " + (int)response.StatusCode);
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int?)json["error"]?["code"] == -32020,
-                        "Mismatched modern notification method header used the wrong JSON-RPC error");
-                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Rejected modern notification returned a legacy session id");
+                    AssertHeaderMismatch(response, "Mismatched modern notification method header");
+                }
+
+                using (var request = BuildCancellationRequest(new JValue(18005), includeRequestEnvelope: false,
+                    includeProtocolHeader: true, includeMethodHeader: false,
+                    includeNotificationProtocolClaim: true, notificationProtocolVersion: "2025-11-25"))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    AssertHeaderMismatch(response, "Mismatched modern notification protocol header");
                 }
 
                 using (var request = BuildCancellationRequest(new JValue(18001.5), includeRequestEnvelope: true,
@@ -101,7 +103,7 @@ internal static class ModernCancellationRejectionRegressionEntry
 
     private static HttpRequestMessage BuildCancellationRequest(JToken requestId, bool includeRequestEnvelope,
         bool includeProtocolHeader, bool includeMethodHeader, bool includeNotificationProtocolClaim = false,
-        string methodHeader = "notifications/cancelled")
+        string methodHeader = "notifications/cancelled", string notificationProtocolVersion = "2026-07-28")
     {
         var parameters = new JObject
         {
@@ -125,7 +127,7 @@ internal static class ModernCancellationRejectionRegressionEntry
         {
             parameters["_meta"] = new JObject
             {
-                ["io.modelcontextprotocol/protocolVersion"] = "2026-07-28"
+                ["io.modelcontextprotocol/protocolVersion"] = notificationProtocolVersion
             };
         }
 
@@ -144,6 +146,17 @@ internal static class ModernCancellationRejectionRegressionEntry
         if (includeMethodHeader)
             request.Headers.TryAddWithoutValidation("Mcp-Method", methodHeader);
         return request;
+    }
+
+    private static void AssertHeaderMismatch(HttpResponseMessage response, string label)
+    {
+        Assert(response.StatusCode == HttpStatusCode.BadRequest,
+            label + " returned HTTP " + (int)response.StatusCode);
+        JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+        Assert((int?)json["error"]?["code"] == -32020,
+            label + " used the wrong JSON-RPC error");
+        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+            label + " returned a legacy session id");
     }
 
     private static void AssertAcceptedWithoutSession(HttpResponseMessage response, string label)
