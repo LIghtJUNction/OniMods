@@ -68,6 +68,16 @@ def verify_building_blueprint_safety(
     if 'result["reason"]' not in free_build_branch:
         fail("free-build utility fallback must explain why native placement was skipped")
 
+    require_order(
+        native_method,
+        (
+            "materialResult.RequiredKg = RequiredMaterialKg(def) * path.Count;",
+            "if (!materialResult.Valid)",
+            "SelectUtilityBuildTool",
+        ),
+        "native utility path must reject aggregate material shortfall before activating the build tool",
+    )
+
     auto_connect = extract_block(
         selected[paths["placement"]],
         "public static McpTool AutoConnectUtility()",
@@ -90,6 +100,15 @@ def verify_building_blueprint_safety(
     plan_one = extract_block(
         selected[paths["plan_one"]],
         "private static Dictionary<string, object> TryPlanOne",
+    )
+    require_order(
+        plan_one,
+        (
+            "materialResult.RequiredKg = RequiredMaterialKg(def);",
+            "if (!materialResult.Valid)",
+            "def.TryPlace(",
+        ),
+        "TryPlanOne must reject a known material shortfall before BuildingDef.TryPlace",
     )
     require_order(
         plan_one,
@@ -148,6 +167,15 @@ def verify_building_blueprint_safety(
     )
     if validated_success.count("return MaterialSelection.Invalid(") < 2:
         fail("material success validation must reject empty and invalid primary elements")
+
+    material_selection = extract_block(materials, "private sealed class MaterialSelection")
+    for token in (
+        "BuildMaterialSufficiencyPolicy.IsSatisfied(",
+        'ReasonCode = "insufficient_material";',
+        '["reasonCode"] = ReasonCode,',
+    ):
+        if token not in material_selection:
+            fail(f"material sufficiency wiring missing: {token}")
 
 
 def main() -> None:

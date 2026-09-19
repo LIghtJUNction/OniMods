@@ -10,6 +10,7 @@ internal static class BenchmarkMetadataRegressionEntry
     private static void Main()
     {
         RunBenchmarkMetadataRegression();
+        BuildMaterialSufficiencyRegression.Run();
 
         var existing = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (existing == null)
