@@ -6,6 +6,8 @@ namespace OniMcp.Tools
         {
             if (!hasClearable)
                 return "no_clearable";
+            if (!isClearable)
+                return "not_clearable";
             return null;
         }
     }
