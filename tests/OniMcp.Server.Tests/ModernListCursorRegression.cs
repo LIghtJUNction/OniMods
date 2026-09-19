@@ -38,10 +38,18 @@ internal static class ModernListCursorRegressionEntry
                 Timeout = TimeSpan.FromSeconds(5)
             })
             {
-                AssertMalformedCursorRejected(client, "tools/list", 17001);
-                AssertMalformedCursorRejected(client, "resources/list", 17002);
-                AssertMalformedCursorRejected(client, "resources/templates/list", 17003);
-                AssertStringCursorRemainsAccepted(client, "resources/list", 17004);
+                AssertCursorRejected(client, "tools/list", new JValue(7), 17001,
+                    "accepted a non-string pagination cursor");
+                AssertCursorRejected(client, "resources/list", new JValue(7), 17002,
+                    "accepted a non-string pagination cursor");
+                AssertCursorRejected(client, "resources/templates/list", new JValue(7), 17003,
+                    "accepted a non-string pagination cursor");
+                AssertCursorRejected(client, "tools/list", new JValue("unissued-cursor"), 17004,
+                    "accepted an unissued pagination cursor");
+                AssertCursorRejected(client, "resources/list", new JValue("unissued-cursor"), 17005,
+                    "accepted an unissued pagination cursor");
+                AssertCursorRejected(client, "resources/templates/list", new JValue("unissued-cursor"), 17006,
+                    "accepted an unissued pagination cursor");
             }
 
             Assert(server.GetSessionSummaries().Count == 0,
@@ -54,38 +62,24 @@ internal static class ModernListCursorRegressionEntry
         }
     }
 
-    private static void AssertMalformedCursorRejected(HttpClient client, string method, int id)
+    private static void AssertCursorRejected(HttpClient client, string method, JToken cursor, int id,
+        string failureMessage)
     {
-        using (var request = BuildListRequest(method, new JValue(7), id))
+        using (var request = BuildListRequest(method, cursor, id))
         using (var response = client.SendAsync(request).GetAwaiter().GetResult())
         {
             Assert(response.StatusCode == HttpStatusCode.OK,
-                method + " malformed cursor returned HTTP " + (int)response.StatusCode);
+                method + " invalid cursor returned HTTP " + (int)response.StatusCode);
             JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
             Assert((int?)json["error"]?["code"] == McpErrorCode.InvalidParams,
-                method + " accepted a non-string pagination cursor");
+                method + " " + failureMessage);
             Assert((int?)json["id"] == id,
-                method + " malformed cursor changed the request id");
+                method + " invalid cursor changed the request id");
             Assert(response.Headers.Contains("Mcp-Protocol-Version")
                 && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
-                method + " malformed cursor lost the modern protocol response header");
+                method + " invalid cursor lost the modern protocol response header");
             Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                method + " malformed cursor returned a legacy session id");
-        }
-    }
-
-    private static void AssertStringCursorRemainsAccepted(HttpClient client, string method, int id)
-    {
-        using (var request = BuildListRequest(method, new JValue("opaque-cursor"), id))
-        using (var response = client.SendAsync(request).GetAwaiter().GetResult())
-        {
-            Assert(response.StatusCode == HttpStatusCode.OK,
-                method + " string cursor returned HTTP " + (int)response.StatusCode);
-            JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-            Assert(json["error"] == null,
-                method + " rejected a schema-valid string cursor");
-            Assert((string)json["result"]?["resultType"] == "complete",
-                method + " string cursor lost resultType=complete");
+                method + " invalid cursor returned a legacy session id");
         }
     }
 
