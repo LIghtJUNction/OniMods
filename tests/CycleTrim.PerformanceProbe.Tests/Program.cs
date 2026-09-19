@@ -35,6 +35,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 ClampsNegativeElapsedTicks();
                 AggregatesConcurrentWriters();
                 SnapshotsDoNotSplitConcurrentSamplesAcrossIntervals();
+                GenerationCounterRegression.Run();
                 if (!skipSynthetic)
                 {
                     MeasuresConsistentSnapshotOverhead();
