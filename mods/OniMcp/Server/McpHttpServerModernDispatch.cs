@@ -25,11 +25,12 @@ namespace OniMcp.Server
             if (IsModernPaginatedListMethod(rpcRequest.Method))
             {
                 var cursorToken = rpcRequest.Params?["cursor"];
-                if (cursorToken != null && cursorToken.Type != JTokenType.String)
+                if (cursorToken != null)
                 {
                     response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
                     SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
-                        "cursor must be a string when provided"), (int)HttpStatusCode.OK);
+                        "cursor is invalid because this endpoint returns a complete unpaginated list"),
+                        (int)HttpStatusCode.OK);
                     return;
                 }
             }
