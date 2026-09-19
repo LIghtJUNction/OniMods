@@ -102,36 +102,18 @@ namespace CycleTrim.BrainBenchmarks
 
         private static void VerifyFetchPatchActivationPolicy()
         {
-            if (!FetchPatchActivationPolicy.ShouldInstall(
-                    fastTrackPresent: false,
+            if (!FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
                     efficientSupplyPresent: false))
             {
                 throw new InvalidOperationException(
                     "CycleTrim-only fetch optimization must stay enabled");
             }
 
-            if (FetchPatchActivationPolicy.ShouldInstall(
-                    fastTrackPresent: true,
-                    efficientSupplyPresent: false))
-            {
-                throw new InvalidOperationException(
-                    "FastTrack presence must keep disabling CycleTrim fetch replacement");
-            }
-
-            if (FetchPatchActivationPolicy.ShouldInstall(
-                    fastTrackPresent: false,
+            if (FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
                     efficientSupplyPresent: true))
             {
                 throw new InvalidOperationException(
                     "Efficient Supply presence must disable CycleTrim fetch replacement");
-            }
-
-            if (FetchPatchActivationPolicy.ShouldInstall(
-                    fastTrackPresent: true,
-                    efficientSupplyPresent: true))
-            {
-                throw new InvalidOperationException(
-                    "multiple conflicting fetch replacements must fail closed");
             }
         }
 
