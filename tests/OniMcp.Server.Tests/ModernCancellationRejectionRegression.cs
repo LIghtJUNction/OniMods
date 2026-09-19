@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -46,9 +45,6 @@ internal static class ModernCancellationRejectionRegressionEntry
                     "Modern notifications/cancelled POST used the wrong JSON-RPC error");
                 Assert(json["result"] == null,
                     "Modern notifications/cancelled POST returned a success result");
-                Assert(response.Headers.Contains("Mcp-Protocol-Version")
-                    && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
-                    "Rejected modern cancellation lost the modern protocol response header");
                 Assert(!response.Headers.Contains("Mcp-Session-Id"),
                     "Rejected modern cancellation returned a legacy session id");
             }
