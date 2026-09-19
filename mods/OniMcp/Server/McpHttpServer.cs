@@ -158,7 +158,10 @@ namespace OniMcp.Server
 
                     try
                     {
-                        bool queued = ThreadPool.QueueUserWorkItem(_ =>
+                        // Do not put potentially blocking request-body reads on the CLR thread pool.
+                        // A bounded set of dedicated request workers keeps HttpListener's own async
+                        // machinery responsive enough for the listener thread to reject overloads.
+                        var requestThread = new Thread(() =>
                         {
                             try
                             {
@@ -171,12 +174,12 @@ namespace OniMcp.Server
                             {
                                 admission.Release();
                             }
-                        });
-                        if (!queued)
+                        })
                         {
-                            admission.Release();
-                            CloseStaleHttpResponse(context.Response);
-                        }
+                            IsBackground = true,
+                            Name = "OniMcpHttpRequest"
+                        };
+                        requestThread.Start();
                     }
                     catch
                     {
