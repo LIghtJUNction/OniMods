@@ -146,4 +146,82 @@ namespace CycleTrim.Core
             invalidated = false;
         }
     }
+
+    public sealed class CoupledRefreshGate
+    {
+        private readonly VersionedRefreshGate gate;
+        private RefreshStamp pendingStamp;
+        private bool hasPending;
+        private bool pendingRefresh;
+        private bool pendingInvalidated;
+
+        public CoupledRefreshGate(int maxSkippedRefreshes)
+        {
+            gate = new VersionedRefreshGate(maxSkippedRefreshes);
+        }
+
+        public bool Begin(RefreshStamp currentStamp)
+        {
+            // An unconsumed producer decision means the previous cycle never
+            // reached its paired consumer. Force this cycle to rebuild the
+            // producer-owned state before it can be consumed again.
+            if (hasPending)
+            {
+                gate.Invalidate();
+            }
+
+            pendingRefresh = gate.ShouldRefresh(currentStamp);
+            pendingStamp = currentStamp;
+            pendingInvalidated = false;
+            hasPending = true;
+            return pendingRefresh;
+        }
+
+        public bool Complete(RefreshStamp currentStamp)
+        {
+            if (!hasPending)
+            {
+                // A consumer reached outside the expected producer->consumer
+                // path. Preserve vanilla behavior now and force the next pair
+                // to rebuild rather than suppressing an unowned operation.
+                gate.Invalidate();
+                return true;
+            }
+
+            var refresh = pendingRefresh;
+            var stale = pendingInvalidated || pendingStamp != currentStamp;
+            hasPending = false;
+            pendingRefresh = false;
+            pendingInvalidated = false;
+
+            if (stale)
+            {
+                // If the producer was skipped, the consumer must not become a
+                // one-sided refresh after its inputs changed. If the producer
+                // already ran, preserve that paired consumer run but still
+                // force the next pair to rebuild under the new stamp.
+                gate.Invalidate();
+            }
+
+            return refresh;
+        }
+
+        public void Invalidate()
+        {
+            gate.Invalidate();
+            if (hasPending)
+            {
+                pendingInvalidated = true;
+            }
+        }
+
+        public void Reset()
+        {
+            gate.Reset();
+            pendingStamp = default(RefreshStamp);
+            hasPending = false;
+            pendingRefresh = false;
+            pendingInvalidated = false;
+        }
+    }
 }
