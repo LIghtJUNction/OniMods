@@ -30,6 +30,39 @@ namespace CycleTrim.Core
         public int NormalBrainIndex { get; }
     }
 
+    public struct CreatureBrainRunningBudget
+    {
+        private int remaining;
+
+        public CreatureBrainRunningBudget(int allowance)
+        {
+            if (allowance < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(allowance));
+            }
+
+            remaining = allowance;
+        }
+
+        public bool HasRemaining
+        {
+            get { return remaining > 0; }
+        }
+
+        public int Remaining
+        {
+            get { return remaining; }
+        }
+
+        public void Complete(bool isRunning)
+        {
+            if (isRunning)
+            {
+                remaining--;
+            }
+        }
+    }
+
     public struct CreatureBrainScheduleCursor
     {
         private int scanned;

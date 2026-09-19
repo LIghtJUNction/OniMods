@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using CycleTrim.Core;
 
@@ -33,6 +32,12 @@ namespace CycleTrim.BrainBenchmarks
             AssertEqual(3L, severalPriorities.PriorityCalls, "multi-priority calls");
             AssertEqual(2L, severalPriorities.NormalCalls, "multi-priority normal calls");
             AssertEqual(5L, severalPriorities.TotalCalls, "multi-priority shared running budget");
+
+            var zeroAllowance = RunMixedSchedule(
+                new[] { true },
+                new[] { 0 },
+                allowance: 0);
+            AssertEqual(0L, zeroAllowance.TotalCalls, "zero allowance blocks priority work");
         }
 
         private static void CreatureSchedulerDoesNotChargeStoppedPriorityEntries()
@@ -54,15 +59,17 @@ namespace CycleTrim.BrainBenchmarks
             var priorityBrains = new Queue<int>(priorities);
             var nextNormalBrain = 0;
             var cursor = new CreatureBrainScheduleCursor(allowance);
+            var runningBudget = new CreatureBrainRunningBudget(allowance);
             var normalCalls = 0;
             var priorityCalls = 0;
             CreatureBrainSelection selection;
-            while (cursor.TrySelect(
-                running.Length,
-                allowPriority: true,
-                priorityBrains.Count,
-                ref nextNormalBrain,
-                out selection))
+            while (runningBudget.HasRemaining
+                && cursor.TrySelect(
+                    running.Length,
+                    allowPriority: true,
+                    priorityBrains.Count,
+                    ref nextNormalBrain,
+                    out selection))
             {
                 var brainIndex = selection.Kind == CreatureBrainSelectionKind.Priority
                     ? priorityBrains.Dequeue()
@@ -79,6 +86,7 @@ namespace CycleTrim.BrainBenchmarks
                         normalCalls++;
                     }
                 }
+                runningBudget.Complete(isRunning);
                 cursor.Complete(selection, isRunning);
             }
 
