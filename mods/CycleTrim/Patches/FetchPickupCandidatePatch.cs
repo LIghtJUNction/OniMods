@@ -10,6 +10,8 @@ namespace CycleTrim.Patches
     {
         private const string FastTrackPatchType =
             "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate";
+        private const string EfficientSupplyType =
+            "PeterHan.EfficientFetch.EfficientFetchManager";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
             CompareIncludingPriority;
 
@@ -50,7 +52,9 @@ namespace CycleTrim.Patches
             // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
             private static bool Prepare()
             {
-                return AccessTools.TypeByName(FastTrackPatchType) == null;
+                return FetchPatchActivationPolicy.ShouldInstall(
+                    AccessTools.TypeByName(FastTrackPatchType) != null,
+                    AccessTools.TypeByName(EfficientSupplyType) != null);
             }
 
             private static MethodBase TargetMethod()
