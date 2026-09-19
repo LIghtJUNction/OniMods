@@ -9,6 +9,7 @@
     <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../mods/CycleTrim/Core/FetchPatchCompatibility.cs" Link="FetchPatchCompatibility.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeCounter.cs" Link="PerformanceProbeCounter.cs" />
   </ItemGroup>
 </Project>

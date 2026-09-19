@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "repository": "llunak/oni-deliverytemperaturelimit",
+  "commit": "17ab2850f6b979fff047ce1c8cf7e18802a87645",
+  "checkedDate": "2026-09-19",
+  "scope": "Source-only compatibility contract for CycleTrim's FetchManager.FetchablesByPrefabId.UpdatePickups replacement and Delivery Temperature Limit's temperature-partitioning transpiler. This pin is not proof of current ONI runtime compatibility.",
+  "files": [
+    {
+      "path": "Source/Patch.cs",
+      "gitBlobSha1": "ad5798fe8651648d4218b3d2ddaab5843770a2a8"
+    },
+    {
+      "path": "Source/PatchFastTrack.cs",
+      "gitBlobSha1": "93745fa57a949c5ae7a2591ccdb19343ee611950"
+    },
+    {
+      "path": "Source/Mod.cs",
+      "gitBlobSha1": "4634ca181c69c672556cae8886000a03ab8f0180"
+    }
+  ],
+  "observedContract": {
+    "vanillaTargetPatchType": "DeliveryTemperatureLimit.FetchManager_FetchablesByPrefabId_Patch",
+    "vanillaTargetType": "FetchManager.FetchablesByPrefabId",
+    "vanillaTargetMethod": "UpdatePickups",
+    "vanillaPatchKind": "transpiler",
+    "reason": "Delivery Temperature Limit keeps candidates distinct by tag, priority, and temperature index so a nearer out-of-range pickup cannot hide a farther in-range pickup.",
+    "fastTrackCompatibilityType": "DeliveryTemperatureLimit.FetchManagerFastUpdate_PickupTagDict_Patch",
+    "fastTrackTarget": "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate+PickupTagDict.AddItem",
+    "cycleTrimPolicy": "When the pinned Delivery Temperature Limit UpdatePickups transpiler is actually installed on the target, CycleTrim yields to the original/transpiled method. Otherwise its existing optimized path and separate FastTrack guard remain unchanged."
+  }
+}
