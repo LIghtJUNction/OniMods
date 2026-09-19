@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -92,6 +93,15 @@ namespace OniMcp.Server
             }
 
             bool isNotification = rawMessage.Property("id") == null;
+            if (!isNotification && !AcceptsModernResponseMediaTypes(httpRequest))
+            {
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
+                    "Modern requests require Accept to list both application/json and text/event-stream"),
+                    (int)HttpStatusCode.NotAcceptable);
+                return true;
+            }
+
             if (isNotification)
             {
                 if (IsModernRequestMethod(method))
@@ -136,6 +146,59 @@ namespace OniMcp.Server
 
             DispatchModernPostResponse(response, rpcRequest);
             return true;
+        }
+
+        private static bool AcceptsModernResponseMediaTypes(HttpListenerRequest httpRequest)
+        {
+            string acceptHeader = httpRequest.Headers["Accept"];
+            return AcceptsModernMediaType(acceptHeader, "application/json")
+                && AcceptsModernMediaType(acceptHeader, "text/event-stream");
+        }
+
+        private static bool AcceptsModernMediaType(string acceptHeader, string mediaType)
+        {
+            if (string.IsNullOrWhiteSpace(acceptHeader))
+                return false;
+
+            foreach (string rawEntry in acceptHeader.Split(','))
+            {
+                string[] segments = rawEntry.Split(';');
+                if (segments.Length == 0
+                    || !string.Equals(segments[0].Trim(), mediaType, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                decimal quality = 1m;
+                bool qualitySeen = false;
+                bool valid = true;
+                for (int index = 1; index < segments.Length; index++)
+                {
+                    string parameter = segments[index].Trim();
+                    int equals = parameter.IndexOf('=');
+                    if (equals <= 0
+                        || !string.Equals(parameter.Substring(0, equals).Trim(), "q",
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (qualitySeen
+                        || !decimal.TryParse(parameter.Substring(equals + 1).Trim(), NumberStyles.AllowDecimalPoint,
+                            CultureInfo.InvariantCulture, out quality)
+                        || quality < 0m || quality > 1m)
+                    {
+                        valid = false;
+                        break;
+                    }
+                    qualitySeen = true;
+                }
+
+                if (valid && quality > 0m)
+                    return true;
+            }
+
+            return false;
         }
 
         private static bool ValidateModernCancellationNotification(JToken paramsToken, out string errorMessage)
