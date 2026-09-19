@@ -28,6 +28,8 @@ internal static class RegressionEntry
         const string legacySessionUri = "oni://mcp/sessions";
         const string legacySessionAliasUri = "oni://mcp/sessions/?detail=full";
         const string saveListingUri = "oni://game/saves";
+        const string saveListingAliasUri = "oni://game/saves/?type=local";
+        const string saveListingTemplate = "oni://game/saves{?type,limit}";
         var bridge = new MainThreadBridge();
         Invoke(bridge, "Awake");
         var server = new McpHttpServer();
@@ -148,6 +150,10 @@ internal static class RegressionEntry
                 "Modern resource URI guard still exposes a legacy-session alias");
             Assert(!(bool)uriGuard.Invoke(null, new object[] { saveListingUri }),
                 "Modern resource URI guard still exposes a read that can create the save directory");
+            Assert(!(bool)uriGuard.Invoke(null, new object[] { saveListingAliasUri }),
+                "Modern resource URI guard still exposes a save-listing alias");
+            Assert(!(bool)templateGuard.Invoke(null, new object[] { saveListingTemplate }),
+                "Modern resource template list still advertises the filesystem-mutating save listing");
             Assert(server.GetSessionSummaries().Count == 0,
                 "Modern read rejection allocated legacy session state");
         }
