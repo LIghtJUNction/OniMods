@@ -10,6 +10,7 @@ namespace CycleTrim.PerformanceProbe.Tests
     {
         private const double MaxAcceptedMedianOverheadRatio = 2.0d;
         private const int SyntheticTimingRegressionExitCode = 2;
+        private const string SyntheticTimingRegressionMarker = "ONIMODS_SYNTHETIC_TIMING_REGRESSION:";
 
         private static int Main(string[] args)
         {
@@ -43,7 +44,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             }
             catch (SyntheticTimingRegressionException exception) when (syntheticOnly)
             {
-                Console.Error.WriteLine("ADVISORY " + exception.Message);
+                Console.Error.WriteLine(SyntheticTimingRegressionMarker + " " + exception.Message);
                 return SyntheticTimingRegressionExitCode;
             }
             catch (Exception exception)
