@@ -36,15 +36,6 @@ namespace CycleTrim.Core
         internal long TotalDirtyCells { get; private set; }
         internal long TotalBoundingBoxCells { get; private set; }
 
-        internal void Reset()
-        {
-            Array.Clear(histogram, 0, histogram.Length);
-            CallCount = 0;
-            EmptyCallCount = 0;
-            TotalDirtyCells = 0;
-            TotalBoundingBoxCells = 0;
-        }
-
         internal void Record(
             List<int> dirtyCells,
             int gridWidth,
