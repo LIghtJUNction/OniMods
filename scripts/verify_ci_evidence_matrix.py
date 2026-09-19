@@ -5,7 +5,11 @@ from pathlib import Path
 import sys
 
 from check_mods import SYNTHETIC_PERFORMANCE_PROJECT, build_project_command
-from run_cycletrim_synthetic_performance import build_probe_command, classify_probe_exit_code
+from run_cycletrim_synthetic_performance import (
+    SYNTHETIC_TIMING_REGRESSION_MARKER,
+    build_probe_command,
+    classify_probe_exit_code,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,11 +74,15 @@ def verify_synthetic_reporter_policy() -> None:
         "a successful synthetic probe must remain successful",
     )
     require(
-        classify_probe_exit_code(2) == 0,
-        "a wall-clock threshold breach must be reported without failing correctness CI",
+        classify_probe_exit_code(2, SYNTHETIC_TIMING_REGRESSION_MARKER + " threshold") == 0,
+        "a marked wall-clock threshold breach must be advisory",
     )
     require(
-        classify_probe_exit_code(1) == 1,
+        classify_probe_exit_code(2, "MSBUILD tool failure") == 2,
+        "an unmarked tool exit using the same numeric code must remain a failure",
+    )
+    require(
+        classify_probe_exit_code(1, SYNTHETIC_TIMING_REGRESSION_MARKER + " threshold") == 1,
         "a real probe/assertion failure must remain a CI failure",
     )
     require(
@@ -113,6 +121,10 @@ def main() -> int:
             SKIP_SYNTHETIC_ARGUMENT in performance_program
             and SYNTHETIC_ONLY_ARGUMENT in performance_program,
             "performance probe executable must expose separate host and synthetic modes",
+        )
+        require(
+            SYNTHETIC_TIMING_REGRESSION_MARKER in performance_program,
+            "the managed timing-only verdict must emit the reporter marker",
         )
         verify_project_command_selection()
         verify_synthetic_reporter_policy()
