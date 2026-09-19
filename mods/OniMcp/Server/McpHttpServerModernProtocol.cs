@@ -92,6 +92,15 @@ namespace OniMcp.Server
             }
 
             bool isNotification = rawMessage.Property("id") == null;
+            if (!isNotification && !AcceptsModernResponseMediaTypes(httpRequest))
+            {
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
+                    "Modern requests require Accept to list both application/json and text/event-stream"),
+                    (int)HttpStatusCode.NotAcceptable);
+                return true;
+            }
+
             if (isNotification)
             {
                 if (IsModernRequestMethod(method))
