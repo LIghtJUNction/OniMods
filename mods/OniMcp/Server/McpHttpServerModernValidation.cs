@@ -19,6 +19,13 @@ namespace OniMcp.Server
                 return false;
             }
 
+            // Notifications use NotificationParams / NotificationMetaObject, not RequestParams.
+            // The 2026 HTTP standard-header presence requirements are request-only; a notification
+            // can be routed by either the protocol header or an explicit body protocol claim.
+            if (rawMessage.Property("id") == null)
+                return ValidateModernNotification(httpRequest, rawMessage, method, protocolVersion, meta, metaVersion,
+                    out error);
+
             if (!string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal))
             {
                 error = HeaderMismatch(rawMessage["id"],
@@ -105,6 +112,40 @@ namespace OniMcp.Server
             if (string.Equals(method, "tools/call", StringComparison.Ordinal)
                 && !ValidateModernToolParameterHeaders(httpRequest, rawMessage, out error))
             {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool ValidateModernNotification(HttpListenerRequest httpRequest, JObject rawMessage,
+            string method, string protocolVersion, JObject meta, string metaVersion, out JsonRpcResponse error)
+        {
+            error = null;
+
+            var metaVersionToken = meta?["io.modelcontextprotocol/protocolVersion"];
+            if (metaVersionToken != null && metaVersionToken.Type != JTokenType.String)
+            {
+                error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidParams,
+                    "Notification protocol version claim must be a string when provided");
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(protocolVersion)
+                && !string.IsNullOrEmpty(metaVersion)
+                && !string.Equals(protocolVersion, metaVersion, StringComparison.Ordinal))
+            {
+                error = HeaderMismatch(null,
+                    $"Mcp-Protocol-Version '{protocolVersion}' must match notification protocol version claim '{metaVersion}'");
+                return false;
+            }
+
+            string methodHeader = httpRequest.Headers["Mcp-Method"];
+            if (!string.IsNullOrEmpty(methodHeader)
+                && !string.Equals(methodHeader, method, StringComparison.Ordinal))
+            {
+                error = HeaderMismatch(null,
+                    $"Mcp-Method header must match JSON-RPC notification method '{method}'");
                 return false;
             }
 

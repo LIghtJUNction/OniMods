@@ -36,18 +36,50 @@ internal static class ModernCancellationRejectionRegressionEntry
                 Timeout = TimeSpan.FromSeconds(5)
             })
             {
-                using (var request = BuildCancellationRequest(new JValue(18001)))
+                using (var request = BuildCancellationRequest(new JValue(18001), includeRequestEnvelope: true,
+                    includeProtocolHeader: true, includeMethodHeader: true))
                 using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                 {
-                    Assert(response.StatusCode == HttpStatusCode.Accepted,
-                        "Validated modern cancellation was not acknowledged: " + (int)response.StatusCode);
-                    Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
-                        "Validated modern cancellation returned a response body");
-                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Validated modern cancellation returned a legacy session id");
+                    AssertAcceptedWithoutSession(response, "Fully routed modern cancellation");
                 }
 
-                using (var request = BuildCancellationRequest(new JValue(18001.5)))
+                // MCP 2026 notifications use NotificationParams rather than RequestParams. A modern
+                // protocol header is sufficient to route a claim-less notification, and notification
+                // POSTs are exempt from standard-header presence requirements.
+                using (var request = BuildCancellationRequest(new JValue(18002), includeRequestEnvelope: false,
+                    includeProtocolHeader: true, includeMethodHeader: false))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    AssertAcceptedWithoutSession(response, "Header-routed modern cancellation without request _meta");
+                }
+
+                // The current TypeScript SDK also classifies a notification as modern from an
+                // explicit body protocol claim when routing headers are absent.
+                using (var request = BuildCancellationRequest(new JValue(18003), includeRequestEnvelope: false,
+                    includeProtocolHeader: false, includeMethodHeader: false, includeNotificationProtocolClaim: true))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    AssertAcceptedWithoutSession(response, "Body-routed modern cancellation without standard headers");
+                }
+
+                using (var request = BuildCancellationRequest(new JValue(18004), includeRequestEnvelope: false,
+                    includeProtocolHeader: true, includeMethodHeader: true,
+                    methodHeader: "notifications/progress"))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    AssertHeaderMismatch(response, "Mismatched modern notification method header");
+                }
+
+                using (var request = BuildCancellationRequest(new JValue(18005), includeRequestEnvelope: false,
+                    includeProtocolHeader: true, includeMethodHeader: false,
+                    includeNotificationProtocolClaim: true, notificationProtocolVersion: "2025-11-25"))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    AssertHeaderMismatch(response, "Mismatched modern notification protocol header");
+                }
+
+                using (var request = BuildCancellationRequest(new JValue(18001.5), includeRequestEnvelope: true,
+                    includeProtocolHeader: true, includeMethodHeader: true))
                 using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                 {
                     Assert(response.StatusCode == HttpStatusCode.BadRequest,
@@ -69,35 +101,72 @@ internal static class ModernCancellationRejectionRegressionEntry
         }
     }
 
-    private static HttpRequestMessage BuildCancellationRequest(JToken requestId)
+    private static HttpRequestMessage BuildCancellationRequest(JToken requestId, bool includeRequestEnvelope,
+        bool includeProtocolHeader, bool includeMethodHeader, bool includeNotificationProtocolClaim = false,
+        string methodHeader = "notifications/cancelled", string notificationProtocolVersion = "2026-07-28")
     {
+        var parameters = new JObject
+        {
+            ["requestId"] = requestId,
+            ["reason"] = "client abandoned response stream"
+        };
+        if (includeRequestEnvelope)
+        {
+            parameters["_meta"] = new JObject
+            {
+                ["io.modelcontextprotocol/protocolVersion"] = "2026-07-28",
+                ["io.modelcontextprotocol/clientCapabilities"] = new JObject(),
+                ["io.modelcontextprotocol/clientInfo"] = new JObject
+                {
+                    ["name"] = "modern-cancellation-regression",
+                    ["version"] = "1.0"
+                }
+            };
+        }
+        else if (includeNotificationProtocolClaim)
+        {
+            parameters["_meta"] = new JObject
+            {
+                ["io.modelcontextprotocol/protocolVersion"] = notificationProtocolVersion
+            };
+        }
+
         var body = new JObject
         {
             ["jsonrpc"] = "2.0",
             ["method"] = "notifications/cancelled",
-            ["params"] = new JObject
-            {
-                ["requestId"] = requestId,
-                ["reason"] = "client abandoned response stream",
-                ["_meta"] = new JObject
-                {
-                    ["io.modelcontextprotocol/protocolVersion"] = "2026-07-28",
-                    ["io.modelcontextprotocol/clientCapabilities"] = new JObject(),
-                    ["io.modelcontextprotocol/clientInfo"] = new JObject
-                    {
-                        ["name"] = "modern-cancellation-regression",
-                        ["version"] = "1.0"
-                    }
-                }
-            }
+            ["params"] = parameters
         };
         var request = new HttpRequestMessage(HttpMethod.Post, "");
         request.Content = new StringContent(body.ToString(Newtonsoft.Json.Formatting.None), Encoding.UTF8,
             "application/json");
         request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
-        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
-        request.Headers.TryAddWithoutValidation("Mcp-Method", "notifications/cancelled");
+        if (includeProtocolHeader)
+            request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
+        if (includeMethodHeader)
+            request.Headers.TryAddWithoutValidation("Mcp-Method", methodHeader);
         return request;
+    }
+
+    private static void AssertHeaderMismatch(HttpResponseMessage response, string label)
+    {
+        Assert(response.StatusCode == HttpStatusCode.BadRequest,
+            label + " returned HTTP " + (int)response.StatusCode);
+        JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+        Assert((int?)json["error"]?["code"] == -32020,
+            label + " used the wrong JSON-RPC error");
+        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+            label + " returned a legacy session id");
+    }
+
+    private static void AssertAcceptedWithoutSession(HttpResponseMessage response, string label)
+    {
+        Assert(response.StatusCode == HttpStatusCode.Accepted,
+            label + " was not acknowledged: " + (int)response.StatusCode);
+        Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+            label + " returned a response body");
+        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+            label + " returned a legacy session id");
     }
 
     private static int ReservePort()

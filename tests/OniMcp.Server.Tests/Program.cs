@@ -196,18 +196,18 @@ internal static class Program
                     }
                     Assert(server.GetSessionSummaries().Count == 0, "Rejected parse error allocated legacy session state");
                 });
-                Check("HTTP modern cancellation notifications are rejected without dispatch or session state", () =>
+                Check("HTTP modern cancellation notifications are acknowledged without dispatch or session state", () =>
                 {
                     const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":100}}";
                     int calls = OniToolRegistry.Calls;
                     using (var response = PostModern(client, notification, null))
                     {
-                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                            "Headerless modern cancellation was accepted");
-                        Assert(ReadJson(response)["error"] != null,
-                            "Rejected modern cancellation omitted its JSON-RPC error");
+                        Assert(response.StatusCode == HttpStatusCode.Accepted,
+                            "Header-routed modern cancellation was not acknowledged");
+                        Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                            "Modern cancellation acknowledgement returned a response body");
                         Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                            "Rejected modern cancellation returned a legacy session id");
+                            "Modern cancellation returned a legacy session id");
                     }
                     Invoke(_bridge, "Update");
                     Assert(OniToolRegistry.Calls == calls, "Modern cancellation was dispatched as a tool call");
