@@ -94,10 +94,32 @@ namespace OniMcp.Server
             bool isNotification = rawMessage.Property("id") == null;
             if (isNotification)
             {
-                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
-                response.StatusCode = (int)HttpStatusCode.Accepted;
-                response.ContentLength64 = 0;
-                response.Close();
+                if (IsModernRequestMethod(method))
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                        $"Modern request method '{method}' requires a request id"), 400);
+                    return true;
+                }
+
+                if (string.Equals(method, "notifications/cancelled", StringComparison.Ordinal))
+                {
+                    string cancellationError;
+                    if (!ValidateModernCancellationNotification(rawMessage["params"], out cancellationError))
+                    {
+                        SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                            cancellationError), 400);
+                        return true;
+                    }
+
+                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                    response.StatusCode = (int)HttpStatusCode.Accepted;
+                    response.ContentLength64 = 0;
+                    response.Close();
+                    return true;
+                }
+
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.MethodNotFound,
+                    $"Notification method is not available on the {ModernProtocolVersion} compatibility path: {method}"), 404);
                 return true;
             }
 
@@ -114,6 +136,40 @@ namespace OniMcp.Server
             }
 
             DispatchModernPostResponse(response, rpcRequest);
+            return true;
+        }
+
+        private static bool ValidateModernCancellationNotification(JToken paramsToken, out string errorMessage)
+        {
+            var parameters = paramsToken as JObject;
+            if (parameters == null)
+            {
+                errorMessage = "Modern cancellation notification requires object params";
+                return false;
+            }
+
+            var requestId = parameters["requestId"];
+            if (!IsValidModernRequestId(requestId))
+            {
+                errorMessage = "Modern cancellation notification requires a string or integer requestId";
+                return false;
+            }
+
+            var reason = parameters["reason"];
+            if (reason != null && reason.Type != JTokenType.String)
+            {
+                errorMessage = "Modern cancellation notification reason must be a string when provided";
+                return false;
+            }
+
+            var meta = parameters["_meta"];
+            if (meta != null && meta.Type != JTokenType.Object)
+            {
+                errorMessage = "Modern cancellation notification _meta must be an object when provided";
+                return false;
+            }
+
+            errorMessage = null;
             return true;
         }
 
