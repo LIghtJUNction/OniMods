@@ -34,6 +34,7 @@ namespace CycleTrim.BrainBenchmarks
 
         internal static void Run()
         {
+            VerifyFetchPatchActivationPolicy();
             VerifyNestedRentAndThreadIsolation();
             RunBaseline(WarmupIterations);
             RunCandidate(WarmupIterations);
@@ -97,6 +98,41 @@ namespace CycleTrim.BrainBenchmarks
                 "allocation reduction: " +
                 (1.0 - (double)candidateMedianAllocated / baselineMedianAllocated)
                     .ToString("P2", CultureInfo.InvariantCulture));
+        }
+
+        private static void VerifyFetchPatchActivationPolicy()
+        {
+            if (!FetchPatchActivationPolicy.ShouldInstall(
+                    fastTrackPresent: false,
+                    efficientSupplyPresent: false))
+            {
+                throw new InvalidOperationException(
+                    "CycleTrim-only fetch optimization must stay enabled");
+            }
+
+            if (FetchPatchActivationPolicy.ShouldInstall(
+                    fastTrackPresent: true,
+                    efficientSupplyPresent: false))
+            {
+                throw new InvalidOperationException(
+                    "FastTrack presence must keep disabling CycleTrim fetch replacement");
+            }
+
+            if (FetchPatchActivationPolicy.ShouldInstall(
+                    fastTrackPresent: false,
+                    efficientSupplyPresent: true))
+            {
+                throw new InvalidOperationException(
+                    "Efficient Supply presence must disable CycleTrim fetch replacement");
+            }
+
+            if (FetchPatchActivationPolicy.ShouldInstall(
+                    fastTrackPresent: true,
+                    efficientSupplyPresent: true))
+            {
+                throw new InvalidOperationException(
+                    "multiple conflicting fetch replacements must fail closed");
+            }
         }
 
         private static Sample RunBaseline(int iterations)
