@@ -47,6 +47,10 @@ namespace CycleTrim.Patches
         [HarmonyPatch]
         private static class UpdatePickupsPatch
         {
+            private static MethodBase targetMethod;
+            private static bool compatibilityChecked;
+            private static bool runOriginalForCompatibility;
+
             // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
             private static bool Prepare()
             {
@@ -55,12 +59,14 @@ namespace CycleTrim.Patches
 
             private static MethodBase TargetMethod()
             {
-                return AccessTools.Method(
+                var target = AccessTools.Method(
                         typeof(FetchManager.FetchablesByPrefabId),
                         "UpdatePickups",
                         new[] { typeof(Navigator), typeof(int) })
                     ?? throw new InvalidOperationException(
                         "CycleTrim could not find FetchablesByPrefabId.UpdatePickups(Navigator, int).");
+                targetMethod = target;
+                return target;
             }
 
             private static bool Prefix(
@@ -69,6 +75,11 @@ namespace CycleTrim.Patches
                 int worker,
                 Dictionary<int, int> ___cellCosts)
             {
+                if (ShouldRunOriginalForCompatibility())
+                {
+                    return true;
+                }
+
                 var candidates = ThreadLocalObjectPool<
                     Dictionary<PickupKey, FetchManager.Pickup>>.Rent();
 
@@ -127,6 +138,42 @@ namespace CycleTrim.Patches
                     ThreadLocalObjectPool<
                         Dictionary<PickupKey, FetchManager.Pickup>>.Return(candidates);
                 }
+            }
+
+            private static bool ShouldRunOriginalForCompatibility()
+            {
+                if (!compatibilityChecked)
+                {
+                    // UpdatePickups cannot execute until normal mod loading has completed. Inspect
+                    // the installed Harmony topology here, rather than Prepare(), so mod load order
+                    // cannot hide a transpiler that was installed after CycleTrim's own PatchAll.
+                    runOriginalForCompatibility = HasDeliveryTemperatureLimitTranspiler();
+                    compatibilityChecked = true;
+                }
+
+                return runOriginalForCompatibility;
+            }
+
+            private static bool HasDeliveryTemperatureLimitTranspiler()
+            {
+                var patchInfo = targetMethod == null ? null : Harmony.GetPatchInfo(targetMethod);
+                if (patchInfo == null)
+                {
+                    return false;
+                }
+
+                foreach (var patch in patchInfo.Transpilers)
+                {
+                    var patchMethod = patch.PatchMethod;
+                    var declaringType = patchMethod == null ? null : patchMethod.DeclaringType;
+                    if (FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
+                        declaringType == null ? null : declaringType.FullName))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
 
             private static bool IsBetter(
