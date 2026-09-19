@@ -64,6 +64,17 @@ internal static class BenchmarkMetadataRegressionEntry
                 "benchmark silently ignored an unknown case when another case was valid");
         }
 
+        CallToolResult oversizedIterations = benchmark.Handler(new JObject
+        {
+            ["cases"] = "toolList",
+            ["iterations"] = 2147483648L
+        });
+        if (!oversizedIterations.IsError)
+        {
+            throw new InvalidOperationException(
+                "benchmark silently replaced an out-of-range integer iteration count with its default");
+        }
+
         CallToolResult lookupAlias = benchmark.Handler(new JObject
         {
             ["cases"] = "lookup",
