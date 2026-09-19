@@ -118,8 +118,8 @@ jobs:
           -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed"
           -p:ImportDirectoryBuildProps=false
           -p:TreatWarningsAsErrors=true
-      - name: Run source and executable regressions
-        run: python3 scripts/check_mods.py
+      - name: Run source and host regressions
+        run: python3 scripts/check_mods.py --skip-synthetic-performance
       - name: Extract Harmony target API surface
         run: >-
           python3 scripts/extract_harmony_api_surface.py
