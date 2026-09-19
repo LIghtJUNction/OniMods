@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Lock the CI evidence matrix so synthetic timing cannot masquerade as reference compatibility."""
+"""Lock the CI evidence matrix so synthetic timing cannot masquerade as correctness."""
 
 from pathlib import Path
 import sys
 
 from check_mods import SYNTHETIC_PERFORMANCE_PROJECT, build_project_command
+from run_cycletrim_synthetic_performance import build_probe_command, classify_probe_exit_code
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +13,7 @@ REFERENCE_WORKFLOW = ROOT / ".github/workflows/oni-reference-compat.yml"
 MOD_QUALITY_WORKFLOW = ROOT / ".github/workflows/mod-quality.yml"
 PERFORMANCE_PROGRAM = ROOT / "tests/CycleTrim.PerformanceProbe.Tests/Program.cs"
 HOST_REGRESSION_COMMAND = "python3 scripts/check_mods.py --skip-synthetic-performance"
+SYNTHETIC_REPORT_COMMAND = "python3 scripts/run_cycletrim_synthetic_performance.py"
 SYNTHETIC_ONLY_ARGUMENT = "--synthetic-performance-only"
 SKIP_SYNTHETIC_ARGUMENT = "--skip-synthetic-performance"
 
@@ -53,6 +55,34 @@ def verify_project_command_selection() -> None:
     )
 
 
+def verify_synthetic_reporter_policy() -> None:
+    command = build_probe_command("dotnet")
+    require(
+        command[-2:] == ["--", SYNTHETIC_ONLY_ARGUMENT],
+        "synthetic reporter must execute only the CycleTrim timing probe",
+    )
+    require(
+        str(SYNTHETIC_PERFORMANCE_PROJECT) in command,
+        "synthetic reporter must run the existing performance-probe project",
+    )
+    require(
+        classify_probe_exit_code(0) == 0,
+        "a successful synthetic probe must remain successful",
+    )
+    require(
+        classify_probe_exit_code(2) == 0,
+        "a wall-clock threshold breach must be reported without failing correctness CI",
+    )
+    require(
+        classify_probe_exit_code(1) == 1,
+        "a real probe/assertion failure must remain a CI failure",
+    )
+    require(
+        classify_probe_exit_code(137) == 137,
+        "unexpected probe failures must not be swallowed by the advisory reporter",
+    )
+
+
 def main() -> int:
     try:
         reference = REFERENCE_WORKFLOW.read_text(encoding="utf-8")
@@ -69,11 +99,15 @@ def main() -> int:
         )
         require(
             SYNTHETIC_ONLY_ARGUMENT not in reference,
-            "reference compatibility must not execute the synthetic timing gate",
+            "reference compatibility must not execute the synthetic timing probe",
         )
         require(
-            SYNTHETIC_ONLY_ARGUMENT in quality,
-            "Mod quality must explicitly retain CycleTrim synthetic performance coverage",
+            SYNTHETIC_REPORT_COMMAND in quality,
+            "Mod quality must explicitly report CycleTrim synthetic performance evidence",
+        )
+        require(
+            SYNTHETIC_ONLY_ARGUMENT not in quality,
+            "Mod quality must route wall-clock timing through the evidence reporter",
         )
         require(
             SKIP_SYNTHETIC_ARGUMENT in performance_program
@@ -81,11 +115,12 @@ def main() -> int:
             "performance probe executable must expose separate host and synthetic modes",
         )
         verify_project_command_selection()
+        verify_synthetic_reporter_policy()
     except (AssertionError, OSError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
 
-    print("PASS: CI separates host/reference evidence from synthetic performance timing")
+    print("PASS: CI separates correctness evidence from synthetic wall-clock timing")
     return 0
 
 
