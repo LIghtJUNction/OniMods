@@ -17,6 +17,7 @@ internal static class BenchmarkMetadataRegressionEntry
         PriorityWriteEligibilityRegression.Run();
         RunBenchmarkMetadataRegression();
         RadboltDirectionEligibilityRegression.Run();
+        AttackDesignationPolicyRegression.Run();
 
         var existing = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (existing == null)
