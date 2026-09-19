@@ -261,7 +261,7 @@ def select_capture(capture_lines: list[str], after_calls: int | None) -> dict:
 
     captures = [parse_capture_summary(line) for line in capture_lines]
     baseline_indices = [
-        index for index, capture in enumerate(captures[:-1])
+        index for index, capture in enumerate(captures)
         if capture["calls"] == after_calls
     ]
     if not baseline_indices:
