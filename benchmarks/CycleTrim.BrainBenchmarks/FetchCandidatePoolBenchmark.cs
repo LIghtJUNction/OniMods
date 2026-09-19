@@ -34,6 +34,7 @@ namespace CycleTrim.BrainBenchmarks
 
         internal static void Run()
         {
+            VerifyFetchPatchActivationPolicy();
             VerifyNestedRentAndThreadIsolation();
             RunBaseline(WarmupIterations);
             RunCandidate(WarmupIterations);
@@ -97,6 +98,23 @@ namespace CycleTrim.BrainBenchmarks
                 "allocation reduction: " +
                 (1.0 - (double)candidateMedianAllocated / baselineMedianAllocated)
                     .ToString("P2", CultureInfo.InvariantCulture));
+        }
+
+        private static void VerifyFetchPatchActivationPolicy()
+        {
+            if (!FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
+                    efficientSupplyPresent: false))
+            {
+                throw new InvalidOperationException(
+                    "CycleTrim-only fetch optimization must stay enabled");
+            }
+
+            if (FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
+                    efficientSupplyPresent: true))
+            {
+                throw new InvalidOperationException(
+                    "Efficient Supply presence must disable CycleTrim fetch replacement");
+            }
         }
 
         private static Sample RunBaseline(int iterations)
