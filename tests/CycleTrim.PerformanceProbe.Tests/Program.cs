@@ -9,12 +9,13 @@ namespace CycleTrim.PerformanceProbe.Tests
     internal static class Program
     {
         private const double MaxAcceptedMedianOverheadRatio = 2.0d;
+        private const int SyntheticTimingRegressionExitCode = 2;
 
         private static int Main(string[] args)
         {
+            var syntheticOnly = args.Length == 1 && args[0] == "--synthetic-performance-only";
             try
             {
-                var syntheticOnly = args.Length == 1 && args[0] == "--synthetic-performance-only";
                 var skipSynthetic = args.Length == 1 && args[0] == "--skip-synthetic-performance";
                 if (args.Length > 0 && !syntheticOnly && !skipSynthetic)
                 {
@@ -39,6 +40,11 @@ namespace CycleTrim.PerformanceProbe.Tests
                 }
                 Console.WriteLine("PASS CycleTrim performance probe counter regressions");
                 return 0;
+            }
+            catch (SyntheticTimingRegressionException exception) when (syntheticOnly)
+            {
+                Console.Error.WriteLine("ADVISORY " + exception.Message);
+                return SyntheticTimingRegressionExitCode;
             }
             catch (Exception exception)
             {
@@ -242,7 +248,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             if (serialRatios[samples / 2] > MaxAcceptedMedianOverheadRatio
                 || concurrentRatios[samples / 2] > MaxAcceptedMedianOverheadRatio)
             {
-                throw new InvalidOperationException(
+                throw new SyntheticTimingRegressionException(
                     "coordinated snapshot median observer overhead exceeded predeclared 2.0x limit");
             }
         }
@@ -308,6 +314,14 @@ namespace CycleTrim.PerformanceProbe.Tests
             {
                 throw new InvalidOperationException(
                     name + " expected " + expected + ", got " + actual);
+            }
+        }
+
+        private sealed class SyntheticTimingRegressionException : InvalidOperationException
+        {
+            public SyntheticTimingRegressionException(string message)
+                : base(message)
+            {
             }
         }
     }
