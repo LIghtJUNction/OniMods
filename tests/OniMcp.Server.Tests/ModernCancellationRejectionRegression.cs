@@ -6,13 +6,14 @@ using System.Reflection;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
+using OniMcp.Core;
 using OniMcp.Server;
 
 internal static class ModernCancellationRejectionRegressionEntry
 {
     private static void Main()
     {
-        RunModernNotificationAcknowledgementRegression();
+        RunModernCancellationAcknowledgementRegression();
 
         var existing = typeof(ModernListCursorRegressionEntry).GetMethod("Main",
             BindingFlags.NonPublic | BindingFlags.Static);
@@ -21,7 +22,7 @@ internal static class ModernCancellationRejectionRegressionEntry
         existing.Invoke(null, null);
     }
 
-    private static void RunModernNotificationAcknowledgementRegression()
+    private static void RunModernCancellationAcknowledgementRegression()
     {
         int port = ReservePort();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });
@@ -35,21 +36,32 @@ internal static class ModernCancellationRejectionRegressionEntry
                 Timeout = TimeSpan.FromSeconds(5)
             })
             {
-                foreach (string method in new[] { "notifications/cancelled", "notifications/vendor_ping" })
-                using (var request = BuildNotificationRequest(method))
+                using (var request = BuildCancellationRequest(new JValue(18001)))
                 using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                 {
                     Assert(response.StatusCode == HttpStatusCode.Accepted,
-                        "Validated modern notification was not acknowledged: " + method + " -> " + (int)response.StatusCode);
+                        "Validated modern cancellation was not acknowledged: " + (int)response.StatusCode);
                     Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
-                        "Validated modern notification returned a response body: " + method);
+                        "Validated modern cancellation returned a response body");
                     Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Validated modern notification returned a legacy session id: " + method);
+                        "Validated modern cancellation returned a legacy session id");
+                }
+
+                using (var request = BuildCancellationRequest(new JValue(18001.5)))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Fractional modern cancellation request id returned HTTP " + (int)response.StatusCode);
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int?)json["error"]?["code"] == McpErrorCode.InvalidRequest,
+                        "Fractional modern cancellation used the wrong JSON-RPC error");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern cancellation returned a legacy session id");
                 }
             }
 
             Assert(server.GetSessionSummaries().Count == 0,
-                "Validated modern notification allocated legacy session state");
+                "Modern cancellation allocated legacy session state");
         }
         finally
         {
@@ -57,15 +69,15 @@ internal static class ModernCancellationRejectionRegressionEntry
         }
     }
 
-    private static HttpRequestMessage BuildNotificationRequest(string method)
+    private static HttpRequestMessage BuildCancellationRequest(JToken requestId)
     {
         var body = new JObject
         {
             ["jsonrpc"] = "2.0",
-            ["method"] = method,
+            ["method"] = "notifications/cancelled",
             ["params"] = new JObject
             {
-                ["requestId"] = 18001,
+                ["requestId"] = requestId,
                 ["reason"] = "client abandoned response stream",
                 ["_meta"] = new JObject
                 {
@@ -73,7 +85,7 @@ internal static class ModernCancellationRejectionRegressionEntry
                     ["io.modelcontextprotocol/clientCapabilities"] = new JObject(),
                     ["io.modelcontextprotocol/clientInfo"] = new JObject
                     {
-                        ["name"] = "modern-notification-regression",
+                        ["name"] = "modern-cancellation-regression",
                         ["version"] = "1.0"
                     }
                 }
@@ -84,7 +96,7 @@ internal static class ModernCancellationRejectionRegressionEntry
             "application/json");
         request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
         request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
-        request.Headers.TryAddWithoutValidation("Mcp-Method", method);
+        request.Headers.TryAddWithoutValidation("Mcp-Method", "notifications/cancelled");
         return request;
     }
 
