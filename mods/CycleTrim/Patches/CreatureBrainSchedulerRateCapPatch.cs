@@ -131,13 +131,15 @@ namespace CycleTrim.Patches
                 {
                     __instance.BeginBrainGroupUpdate();
                     var cursor = new CreatureBrainScheduleCursor(normalAllowance);
+                    var runningBudget = new CreatureBrainRunningBudget(normalAllowance);
                     CreatureBrainSelection selection;
-                    while (cursor.TrySelect(
-                        ___brains.Count,
-                        __instance.AllowPriorityBrains(),
-                        ___priorityBrains.Count,
-                        ref ___nextUpdateBrain,
-                        out selection))
+                    while (runningBudget.HasRemaining
+                        && cursor.TrySelect(
+                            ___brains.Count,
+                            __instance.AllowPriorityBrains(),
+                            ___priorityBrains.Count,
+                            ref ___nextUpdateBrain,
+                            out selection))
                     {
                         __instance.debugMaxPriorityBrainCountSeen =
                             CreatureBrainSchedulePolicy.ObservePriorityMaximum(
@@ -161,6 +163,7 @@ namespace CycleTrim.Patches
                         }
 
                         brain.UpdateBrain();
+                        runningBudget.Complete(isRunning: true);
                         cursor.Complete(selection, isRunning: true);
                     }
                 }
