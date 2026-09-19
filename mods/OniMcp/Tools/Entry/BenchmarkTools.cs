@@ -53,7 +53,12 @@ namespace OniMcp.Tools
                     if (args["iterations"] != null && !int.TryParse(args["iterations"].ToString(), out iterations))
                         return CallToolResult.Error("iterations must be an integer from 1 to 5000");
                     string targetTool = args["tool"]?.ToString()?.Trim();
-                    bool includeDetails = ToolUtil.GetBool(args, "includeDetails", false);
+                    bool includeDetails = false;
+                    if (args["includeDetails"] != null
+                        && !bool.TryParse(args["includeDetails"].ToString(), out includeDetails))
+                    {
+                        return CallToolResult.Error("includeDetails must be a boolean when provided");
+                    }
 
                     if (iterations < 1 || iterations > 5000)
                         return CallToolResult.Error("iterations must be an integer from 1 to 5000");
