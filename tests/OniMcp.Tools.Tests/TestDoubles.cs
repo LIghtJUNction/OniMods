@@ -39,7 +39,7 @@ namespace OniMcp.Tools
                 return true;
 
             tool = Tools.Values.FirstOrDefault(candidate => candidate.Aliases != null
-                && candidate.Aliases.Any(alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)));
+                && candidate.Aliases.Any(alias => string.Equals(alias, name, StringComparison.Ordinal)));
             return tool != null;
         }
 
