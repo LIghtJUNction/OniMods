@@ -112,6 +112,7 @@ namespace OniMcp.Server
         {
             _running = false;
             ResetHttpFrontDoorAdmission();
+            ResetLegacySseAdmission();
             ResetMainThreadHttpAdmission();
             try
             {
@@ -166,7 +167,7 @@ namespace OniMcp.Server
                             try
                             {
                                 if (admission.IsCurrentGeneration() && ReferenceEquals(listener, _listener))
-                                    ProcessRequest(context);
+                                    ProcessRequest(context, admission);
                                 else
                                     CloseStaleHttpResponse(context.Response);
                             }
@@ -203,7 +204,7 @@ namespace OniMcp.Server
             }
         }
 
-        private void ProcessRequest(HttpListenerContext context)
+        private void ProcessRequest(HttpListenerContext context, HttpFrontDoorAdmissionLease frontDoorAdmission)
         {
             var request = context.Request;
             var response = context.Response;
@@ -298,7 +299,28 @@ namespace OniMcp.Server
                         {
                             SetResponseSessionId(response, sessionId);
                             SetResponseProtocolVersion(response, sessionId);
-                            HandleGet(request, response, sessionId);
+                            if (!AcceptsEventStream(request))
+                            {
+                                HandleGet(request, response, sessionId);
+                                break;
+                            }
+
+                            LegacySseAdmissionLease sseAdmission;
+                            if (!TryAcquireLegacySseAdmission(response, out sseAdmission))
+                                break;
+
+                            // The front-door lease exists to bound finite/pre-body request work.
+                            // Once a validated legacy GET is admitted to the separate bounded SSE
+                            // pool, release that finite-request slot before entering the stream loop.
+                            frontDoorAdmission.Release();
+                            try
+                            {
+                                HandleGet(request, response, sessionId);
+                            }
+                            finally
+                            {
+                                sseAdmission.Release();
+                            }
                         }
                         break;
                     case "DELETE":
