@@ -111,6 +111,7 @@ namespace OniMcp.Server
         public void StopServer()
         {
             _running = false;
+            ResetHttpFrontDoorAdmission();
             ResetMainThreadHttpAdmission();
             try
             {
@@ -148,13 +149,41 @@ namespace OniMcp.Server
                 try
                 {
                     var context = listener.GetContext();
-                    ThreadPool.QueueUserWorkItem(_ =>
+                    HttpFrontDoorAdmissionLease admission;
+                    if (!TryAcquireHttpFrontDoorAdmission(out admission))
                     {
-                        if (_running && ReferenceEquals(listener, _listener))
-                            ProcessRequest(context);
-                        else
-                            try { context.Response.Close(); } catch { }
-                    });
+                        RejectHttpFrontDoorBusy(context.Response);
+                        continue;
+                    }
+
+                    try
+                    {
+                        bool queued = ThreadPool.QueueUserWorkItem(_ =>
+                        {
+                            try
+                            {
+                                if (admission.IsCurrentGeneration() && ReferenceEquals(listener, _listener))
+                                    ProcessRequest(context);
+                                else
+                                    CloseStaleHttpResponse(context.Response);
+                            }
+                            finally
+                            {
+                                admission.Release();
+                            }
+                        });
+                        if (!queued)
+                        {
+                            admission.Release();
+                            CloseStaleHttpResponse(context.Response);
+                        }
+                    }
+                    catch
+                    {
+                        admission.Release();
+                        CloseStaleHttpResponse(context.Response);
+                        throw;
+                    }
                 }
                 catch (HttpListenerException)
                 {
