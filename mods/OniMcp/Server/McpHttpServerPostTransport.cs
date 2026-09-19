@@ -19,16 +19,6 @@ namespace OniMcp.Server
     {
         private void HandlePost(HttpListenerRequest request, HttpListenerResponse response, string sessionId, string protocolVersion)
         {
-            if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
-                && !IsJsonRequestMediaType(request.ContentType))
-            {
-                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                    "MCP 2026-07-28 POST requests require Content-Type: application/json"),
-                    (int)HttpStatusCode.UnsupportedMediaType);
-                return;
-            }
-
             string body;
             try
             {
@@ -182,18 +172,6 @@ namespace OniMcp.Server
             }
 
             DispatchPostResponse(response, rpcRequest, sessionId, admission);
-        }
-
-        private static bool IsJsonRequestMediaType(string contentType)
-        {
-            if (string.IsNullOrWhiteSpace(contentType))
-                return false;
-
-            int parameterSeparator = contentType.IndexOf(';');
-            string mediaType = parameterSeparator >= 0
-                ? contentType.Substring(0, parameterSeparator)
-                : contentType;
-            return string.Equals(mediaType.Trim(), "application/json", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool TryValidateCors(HttpListenerRequest request, out string origin)
