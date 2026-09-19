@@ -287,6 +287,13 @@ namespace OniMcp.Server
                 return false;
             }
 
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "game", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(canonicalPath, "/saves", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             return !string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(parsed.Host, "world", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(canonicalPath, "/coordinate-screenshot", StringComparison.Ordinal);
@@ -296,7 +303,8 @@ namespace OniMcp.Server
         {
             return string.IsNullOrEmpty(uriTemplate)
                 || (!uriTemplate.StartsWith("oni://world/coordinate-screenshot", StringComparison.Ordinal)
-                    && !uriTemplate.StartsWith("oni://tools/read/", StringComparison.Ordinal));
+                    && !uriTemplate.StartsWith("oni://tools/read/", StringComparison.Ordinal)
+                    && !uriTemplate.StartsWith("oni://game/saves{", StringComparison.Ordinal));
         }
         private static JsonRpcResponse ModernToolMethodUnavailable(JsonRpcRequest request)
         {
