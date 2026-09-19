@@ -52,5 +52,25 @@ internal static class BenchmarkMetadataRegressionEntry
             throw new InvalidOperationException(
                 "benchmark blank-tool lookup no longer defaults to world_editor");
         }
+
+        CallToolResult mixedInvalidCases = benchmark.Handler(new JObject
+        {
+            ["cases"] = "toolList,jsonSeralize",
+            ["iterations"] = 1
+        });
+        if (!mixedInvalidCases.IsError)
+        {
+            throw new InvalidOperationException(
+                "benchmark silently ignored an unknown case when another case was valid");
+        }
+
+        CallToolResult lookupAlias = benchmark.Handler(new JObject
+        {
+            ["cases"] = "lookup",
+            ["iterations"] = 1,
+            ["tool"] = "world_editor"
+        });
+        if (lookupAlias.IsError)
+            throw new InvalidOperationException("benchmark lookup alias was rejected unexpectedly");
     }
 }
