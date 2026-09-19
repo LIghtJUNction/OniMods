@@ -94,16 +94,10 @@ namespace OniMcp.Server
             bool isNotification = rawMessage.Property("id") == null;
             if (isNotification)
             {
-                if (IsModernRequestMethod(method))
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                        $"Modern request method '{method}' requires a request id"), 400);
-                }
-                else
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.MethodNotFound,
-                        $"Notification method is not available on the {ModernProtocolVersion} compatibility path: {method}"), 404);
-                }
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                response.StatusCode = (int)HttpStatusCode.Accepted;
+                response.ContentLength64 = 0;
+                response.Close();
                 return true;
             }
 
