@@ -6,10 +6,14 @@ namespace OniMcp.Tools
     {
         internal static bool IsSatisfied(float selectedAvailableKg, float requiredKg, bool freeBuildContext)
         {
-            // Compatibility seam for the current behavior. The regression added with this
-            // extraction demonstrates that a positive-but-insufficient amount is still
-            // treated as executable until the policy is fixed.
-            return true;
+            if (freeBuildContext || requiredKg <= 0f)
+                return true;
+
+            if (float.IsNaN(requiredKg) || float.IsInfinity(requiredKg)
+                || float.IsNaN(selectedAvailableKg) || float.IsInfinity(selectedAvailableKg))
+                return false;
+
+            return Math.Max(0f, selectedAvailableKg) >= requiredKg;
         }
     }
 }
