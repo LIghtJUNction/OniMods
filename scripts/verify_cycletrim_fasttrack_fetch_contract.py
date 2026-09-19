@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify CycleTrim's pinned FastTrack fetch/pickup compatibility assumptions."""
+"""Verify CycleTrim's pinned Peter Han fetch/pickup compatibility assumptions."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "scripts/upstream/cycletrim-fasttrack-fetch.json"
 CYCLETRIM_FETCH_PATCH = ROOT / "mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs"
+CYCLETRIM_FETCH_POLICY = ROOT / "mods/CycleTrim/Core/FetchPatchActivationPolicy.cs"
 CYCLETRIM_BUSY_PATCH = ROOT / "mods/CycleTrim/Patches/BusyDuplicantChoreThrottlePatch.cs"
 RAW_ROOT = "https://raw.githubusercontent.com"
 
@@ -47,7 +48,7 @@ def fetch_pinned_source(repository: str, commit: str, path: str) -> bytes:
     url = f"{RAW_ROOT}/{repository}/{commit}/{path}"
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "OniMods-CycleTrim-FastTrack-contract/1"},
+        headers={"User-Agent": "OniMods-CycleTrim-PeterHan-fetch-contract/1"},
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         return response.read()
@@ -75,8 +76,10 @@ def verify_local(manifest: dict, failures: list[str]) -> None:
                 continue
             path = item.get("path")
             blob = item.get("gitBlobSha1")
-            if not isinstance(path, str) or not path.startswith("FastTrack/"):
-                fail(f"invalid FastTrack path in manifest: {path!r}", failures)
+            if not isinstance(path, str) or not (
+                path.startswith("FastTrack/") or path.startswith("EfficientFetch/")
+            ):
+                fail(f"invalid Peter Han source path in manifest: {path!r}", failures)
             if path in seen_paths:
                 fail(f"duplicate manifest path: {path}", failures)
             seen_paths.add(path)
@@ -90,10 +93,22 @@ def verify_local(manifest: dict, failures: list[str]) -> None:
         "CycleTrim Fetch FastTrack type marker changed",
         failures,
     )
+    require_text(
+        fetch_patch,
+        '"PeterHan.EfficientFetch.EfficientFetchManager"',
+        "CycleTrim Fetch Efficient Supply type marker changed",
+        failures,
+    )
+    require_text(
+        fetch_patch,
+        "FetchPatchActivationPolicy.AllowsCycleTrimReplacement",
+        "CycleTrim Fetch no longer applies the Efficient Supply activation policy",
+        failures,
+    )
     require_regex(
         fetch_patch,
         r"return\s+AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null\s*;",
-        "CycleTrim Fetch no longer uses the conservative type-presence guard",
+        "CycleTrim Fetch no longer uses the conservative FastTrack type-presence guard",
         failures,
     )
     require_regex(
@@ -101,6 +116,15 @@ def verify_local(manifest: dict, failures: list[str]) -> None:
         r'typeof\(FetchManager\.FetchablesByPrefabId\).*?"UpdatePickups".*?'
         r'new\[\]\s*\{\s*typeof\(Navigator\),\s*typeof\(int\)\s*\}',
         "CycleTrim Fetch target signature changed",
+        failures,
+    )
+
+    fetch_policy = CYCLETRIM_FETCH_POLICY.read_text(encoding="utf-8")
+    require_regex(
+        fetch_policy,
+        r"AllowsCycleTrimReplacement\(bool\s+efficientSupplyPresent\).*?"
+        r"return\s+!efficientSupplyPresent\s*;",
+        "CycleTrim Fetch activation policy no longer yields to Efficient Supply presence",
         failures,
     )
 
@@ -150,7 +174,7 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
         try:
             payload = fetch_pinned_source(repository, commit, path)
         except (OSError, urllib.error.URLError) as error:
-            fail(f"failed to download pinned FastTrack source {path}: {error}", failures)
+            fail(f"failed to download pinned Peter Han source {path}: {error}", failures)
             continue
         actual_blob = git_blob_sha1(payload)
         if actual_blob != expected_blob:
@@ -169,6 +193,9 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
         "FastTrack/SensorPatches/SensorPatches.cs",
         "FastTrack/PathPatches/AsyncPathPatches.cs",
         "FastTrack/PathPatches/PriorityBrainScheduler.cs",
+        "EfficientFetch/EfficientFetchPatches.cs",
+        "EfficientFetch/EfficientFetchManager.cs",
+        "EfficientFetch/EfficientFetchOptions.cs",
     }
     missing = required_paths - sources.keys()
     if missing:
@@ -182,6 +209,9 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
     sensors = sources["FastTrack/SensorPatches/SensorPatches.cs"]
     async_path = sources["FastTrack/PathPatches/AsyncPathPatches.cs"]
     priority_scheduler = sources["FastTrack/PathPatches/PriorityBrainScheduler.cs"]
+    efficient_patches = sources["EfficientFetch/EfficientFetchPatches.cs"]
+    efficient_manager = sources["EfficientFetch/EfficientFetchManager.cs"]
+    efficient_options = sources["EfficientFetch/EfficientFetchOptions.cs"]
 
     require_regex(
         mod,
@@ -230,6 +260,40 @@ def verify_upstream(manifest: dict, failures: list[str]) -> None:
         r"FetchManager\.FetchablesByPrefabId\s+__instance,\s*"
         r"Navigator\s+worker_navigator,\s*int\s+worker\s*\)",
         "FastTrack BeforeUpdatePickups signature changed",
+        failures,
+    )
+
+    require_regex(
+        efficient_patches,
+        r"\[HarmonyPatch\(typeof\(FetchManager\.FetchablesByPrefabId\),\s*"
+        r"nameof\(FetchManager\.\s*FetchablesByPrefabId\.UpdatePickups\)\)\].*?"
+        r"class\s+FetchablesByPrefabId_UpdatePickups_Patch.*?"
+        r"internal\s+static\s+bool\s+Prefix\(FetchManager\.FetchablesByPrefabId\s+__instance,.*?"
+        r"Navigator\s+worker_navigator,.*?int\s+worker\)",
+        "Efficient Supply UpdatePickups Harmony target/prefix changed",
+        failures,
+    )
+    require_regex(
+        efficient_patches,
+        r"options\.MinimumAmountPercent\s*>\s*0.*?"
+        r"inst\.UpdatePickups\(__instance,\s*worker_navigator,\s*worker,.*?___cellCosts\).*?"
+        r"cont\s*=\s*false\s*;",
+        "Efficient Supply UpdatePickups replacement activation changed",
+        failures,
+    )
+    require_regex(
+        efficient_manager,
+        r"UnreservedAmount.*?Threshold.*?"
+        r"if\s*\(aq\s*>=\s*Threshold\s*&&\s*bq\s*<\s*Threshold\).*?return\s+-1\s*;.*?"
+        r"if\s*\(bq\s*>=\s*Threshold\s*&&\s*aq\s*<\s*Threshold\).*?return\s+1\s*;.*?"
+        r"a\.PathCost\.CompareTo\(b\.PathCost\)",
+        "Efficient Supply no longer ranks threshold-satisfying amount before path cost",
+        failures,
+    )
+    require_regex(
+        efficient_options,
+        r"MinimumAmountPercent\s*=\s*25\s*;",
+        "Efficient Supply default minimum amount percent changed",
         failures,
     )
 
@@ -351,7 +415,7 @@ def main() -> int:
     parser.add_argument(
         "--verify-upstream",
         action="store_true",
-        help="download immutable pinned FastTrack sources and verify fetch/pickup/scheduler activation assumptions",
+        help="download immutable pinned Peter Han sources and verify fetch/pickup/scheduler compatibility assumptions",
     )
     args = parser.parse_args()
 
@@ -373,7 +437,7 @@ def main() -> int:
 
     mode = "local + pinned upstream" if args.verify_upstream else "local"
     print(
-        "OK: CycleTrim FastTrack fetch/pickup/scheduler compatibility contract "
+        "OK: CycleTrim Peter Han fetch/pickup/scheduler compatibility contract "
         f"({mode}, {manifest['repository']}@{manifest['commit']})"
     )
     return 0
