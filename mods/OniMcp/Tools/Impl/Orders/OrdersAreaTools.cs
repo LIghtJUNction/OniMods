@@ -235,7 +235,7 @@ namespace OniMcp.Tools
                     ["mode"] = new McpToolParameter { Type = "string", Description = "attack/capture 支持：mark、cancel；capture 额外支持 release", Required = false, EnumValues = new List<string> { "mark", "cancel", "release" } },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "capture 支持：只预览会标记/取消/释放的目标，不实际修改；dryRun 不要求 confirm", Required = false },
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "attack 支持：允许标记友方/协助阵营目标", Required = false },
-                    ["attackAreaConfirm"] = new McToolParameter { Type = "string", Description = "attack 区域 mark 二次确认，必须精确为 attack area", Required = false },
+                    ["attackAreaConfirm"] = new McpToolParameter { Type = "string", Description = "attack 区域 mark 二次确认，必须精确为 attack area", Required = false },
                     ["paused"] = new McpToolParameter { Type = "boolean", Description = "manual_delivery 支持：true 暂停手动补料，false 恢复", Required = false },
                     ["capacityKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 支持：目标储量上限 kg", Required = false },
                     ["refillMassKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 支持：补料阈值 kg", Required = false },
