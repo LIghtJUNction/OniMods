@@ -280,6 +280,20 @@ namespace OniMcp.Server
                 return false;
             }
 
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "mcp", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(canonicalPath, "/sessions", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "game", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(canonicalPath, "/saves", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             return !string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(parsed.Host, "world", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(canonicalPath, "/coordinate-screenshot", StringComparison.Ordinal);
@@ -289,7 +303,8 @@ namespace OniMcp.Server
         {
             return string.IsNullOrEmpty(uriTemplate)
                 || (!uriTemplate.StartsWith("oni://world/coordinate-screenshot", StringComparison.Ordinal)
-                    && !uriTemplate.StartsWith("oni://tools/read/", StringComparison.Ordinal));
+                    && !uriTemplate.StartsWith("oni://tools/read/", StringComparison.Ordinal)
+                    && !uriTemplate.StartsWith("oni://game/saves{", StringComparison.Ordinal));
         }
         private static JsonRpcResponse ModernToolMethodUnavailable(JsonRpcRequest request)
         {
@@ -316,6 +331,16 @@ namespace OniMcp.Server
             // `execution.taskSupport` belonged to the 2025 core task model. Tasks moved
             // out of core in 2026, so do not advertise that legacy field here.
             modernToolInfo.Remove("execution");
+
+            var inputSchema = modernToolInfo["inputSchema"] as JObject;
+            var properties = inputSchema?["properties"] as JObject;
+            var taskProperty = properties?[ToolCallMiddleware.TaskDescriptionParameter] as JObject;
+            if (taskProperty != null)
+            {
+                taskProperty["description"] =
+                    "Required for this benchmark call: briefly describe what you are doing. The stateless 2026 path does not display this text in ONI.";
+            }
+
             result.Add(modernToolInfo);
             return result;
         }
