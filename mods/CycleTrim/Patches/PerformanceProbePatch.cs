@@ -21,7 +21,7 @@ namespace CycleTrim.Patches
         private const string ReportName = "CycleTrim.PerformanceProbe";
 
         private static PerformanceProbeCounter asyncTickCounter;
-        private static PerformanceProbeCounter asyncWorkCounter;
+        private static PerformanceProbeGenerationCounter asyncWorkCounter;
         private static PerformanceProbeCounter navigatorProbeCounter;
         private static PerformanceProbeCounter fetchCounter;
         private static PerformanceProbeCounter choreCounter;
@@ -74,7 +74,7 @@ namespace CycleTrim.Patches
             }
 
             asyncTickCounter = new PerformanceProbeCounter();
-            asyncWorkCounter = new PerformanceProbeCounter(consistentSnapshots: true);
+            asyncWorkCounter = new PerformanceProbeGenerationCounter();
             navigatorProbeCounter = new PerformanceProbeCounter();
             fetchCounter = new PerformanceProbeCounter();
             choreCounter = new PerformanceProbeCounter();
@@ -122,11 +122,12 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            // Do not reset cumulative counters while an AsyncPathProber worker can still be
-            // completing an old work order. Instead, mark the next deferred report as the
-            // zero-delta baseline for this game instance.
+            // A worker captures the current generation-owned counter at Prefix time. Swap
+            // the published counter at the game boundary so an old work order that finishes
+            // later can only update its old counter, never the new game's reporting window.
             captureGame.Target = game;
             captureGeneration++;
+            asyncWorkCounter.AdvanceGeneration();
             captureBoundaryPending = true;
             reportObservationCount = 0;
             nextReportAt = 1;
@@ -164,6 +165,18 @@ namespace CycleTrim.Patches
         private static void RecordWorker(PerformanceProbeCounter counter, long startedAt)
         {
             counter.Record(Stopwatch.GetTimestamp() - startedAt);
+        }
+
+        private readonly struct WorkerTimingState
+        {
+            internal WorkerTimingState(PerformanceProbeCounter counter, long startedAt)
+            {
+                Counter = counter;
+                StartedAt = startedAt;
+            }
+
+            internal PerformanceProbeCounter Counter { get; }
+            internal long StartedAt { get; }
         }
 
         private static void TryScheduleReport()
@@ -232,7 +245,7 @@ namespace CycleTrim.Patches
             var gc2 = GC.CollectionCount(2);
             var heapBytes = GC.GetTotalMemory(false);
             var asyncTickSnapshot = asyncTickCounter.Snapshot();
-            var asyncWorkSnapshot = asyncWorkCounter.Snapshot();
+            var asyncWorkSnapshot = asyncWorkCounter.SnapshotCurrent();
             var navigatorProbeSnapshot = navigatorProbeCounter.Snapshot();
             var fetchSnapshot = fetchCounter.Snapshot();
             var choreSnapshot = choreCounter.Snapshot();
@@ -446,14 +459,18 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out WorkerTimingState __state)
             {
-                __state = BeginTiming();
+                __state = new WorkerTimingState(
+                    asyncWorkCounter.CaptureCurrent(),
+                    BeginTiming());
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(
+                Exception __exception,
+                WorkerTimingState __state)
             {
-                RecordWorker(asyncWorkCounter, __state);
+                RecordWorker(__state.Counter, __state.StartedAt);
                 return __exception;
             }
         }

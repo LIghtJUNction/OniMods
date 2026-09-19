@@ -7,6 +7,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / "mods/CycleTrim/Patches/PerformanceProbePatch.cs"
 CORE = ROOT / "mods/CycleTrim/Core/PerformanceProbeCounter.cs"
+GENERATION_CORE = ROOT / "mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs"
 ANALYZER = ROOT / "scripts/analyze_cycletrim_perf_probe.py"
 
 
@@ -18,6 +19,7 @@ def require(text: str, needle: str, message: str, failures: list[str]) -> None:
 def main() -> int:
     patch = PATCH.read_text(encoding="utf-8")
     core = CORE.read_text(encoding="utf-8")
+    generation_core = GENERATION_CORE.read_text(encoding="utf-8")
     analyzer = ANALYZER.read_text(encoding="utf-8")
     failures = []
 
@@ -25,15 +27,36 @@ def main() -> int:
     if patch.count("if (!IsRequested())") != 7:
         failures.append("all seven Harmony probe targets must fail closed when the probe is disabled")
     require(patch, "Stopwatch.GetTimestamp()", "wall-clock Stopwatch timing missing", failures)
-    require(patch, "RecordWorker(asyncWorkCounter", "worker path is not separated from main-thread timing", failures)
     require(
         patch,
-        "asyncWorkCounter = new PerformanceProbeCounter(consistentSnapshots: true)",
-        "worker counter snapshots are not coordinated with concurrent records",
+        "RecordWorker(__state.Counter, __state.StartedAt)",
+        "worker path is not separated from main-thread timing",
         failures,
     )
-    if patch.count("consistentSnapshots: true") != 1:
-        failures.append("snapshot coordination must remain isolated to the concurrent worker counter")
+    require(
+        patch,
+        "asyncWorkCounter = new PerformanceProbeGenerationCounter()",
+        "worker counter does not own capture generations",
+        failures,
+    )
+    require(
+        patch,
+        "asyncWorkCounter.AdvanceGeneration()",
+        "game boundary does not rotate the worker timing generation",
+        failures,
+    )
+    require(
+        patch,
+        "asyncWorkCounter.CaptureCurrent()",
+        "worker Prefix does not capture generation ownership at work start",
+        failures,
+    )
+    require(
+        patch,
+        "asyncWorkCounter.SnapshotCurrent()",
+        "reporting does not snapshot the current worker generation",
+        failures,
+    )
     require(patch, "RecordMain(navigatorProbeCounter", "navigator probe timing is not recorded on the main-thread path", failures)
     require(patch, "RecordMain(brainSchedulerCounter", "brain scheduler timing is not recorded on the main-thread path", failures)
     require(patch, "RecordMain(roomProberCounter", "room prober timing is not recorded on the main-thread path", failures)
@@ -115,6 +138,23 @@ def main() -> int:
         "internal PerformanceProbeSnapshot Snapshot()", 1
     )[0]:
         failures.append("recording path must not allocate managed objects")
+
+    for needle, message in (
+        ("Volatile.Read(ref current)", "worker generation capture is not an atomic published read"),
+        ("Interlocked.Exchange(ref current, CreateCounter())", "worker generation rotation is not atomic"),
+        (
+            "new PerformanceProbeCounter(consistentSnapshots: true)",
+            "worker generation counters lost coordinated snapshots",
+        ),
+    ):
+        require(generation_core, needle, message, failures)
+    if generation_core.count("consistentSnapshots: true") != 1:
+        failures.append("snapshot coordination must remain isolated to worker generation counter creation")
+    capture_current = generation_core.split(
+        "internal PerformanceProbeCounter CaptureCurrent()", 1
+    )[1].split("internal PerformanceProbeSnapshot SnapshotCurrent()", 1)[0]
+    if "new " in capture_current:
+        failures.append("worker generation capture must not allocate managed objects")
 
     for needle, message in (
         ("calls <= 0", "analyzer does not fail zero-call captures"),
