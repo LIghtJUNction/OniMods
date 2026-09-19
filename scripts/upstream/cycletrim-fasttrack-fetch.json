@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "repository": "peterhaneve/ONIMods",
   "commit": "30f4beb7b574c9f95801c3fa7dea8590737dd752",
-  "checkedDate": "2026-09-16",
-  "scope": "Fetch/pickup and busy-duplicant scheduler activation evidence for FetchPickupCandidatePatch and BusyDuplicantChoreThrottlePatch; CycleTrim remains conservative and does not enable any patch under FastTrack in this change.",
+  "checkedDate": "2026-09-19",
+  "scope": "Fetch/pickup and busy-duplicant scheduler activation evidence for FetchPickupCandidatePatch and BusyDuplicantChoreThrottlePatch. CycleTrim keeps its coarse FastTrack guards and additionally yields FetchPickupCandidatePatch when Efficient Supply is present.",
   "files": [
     {
       "path": "FastTrack/FastTrackMod.cs",
@@ -32,6 +32,18 @@
     {
       "path": "FastTrack/PathPatches/PriorityBrainScheduler.cs",
       "gitBlobSha1": "337f237cc57c230346bd14038549c3337f4db458"
+    },
+    {
+      "path": "EfficientFetch/EfficientFetchPatches.cs",
+      "gitBlobSha1": "86b2ab770044aa645e2d905a3a2bbc3de647fd4d"
+    },
+    {
+      "path": "EfficientFetch/EfficientFetchManager.cs",
+      "gitBlobSha1": "d24e1bef1e874099e10b4ed785b8154e022739a5"
+    },
+    {
+      "path": "EfficientFetch/EfficientFetchOptions.cs",
+      "gitBlobSha1": "07626ae332bc416296b5b8ca5a4c1345f1c26330"
     }
   ],
   "observedContract": {
@@ -42,6 +54,14 @@
       "targetType": "FetchManager.FetchablesByPrefabId",
       "targetMethod": "UpdatePickups",
       "prefix": "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate.BeforeUpdatePickups"
+    },
+    "efficientSupply": {
+      "typeMarker": "PeterHan.EfficientFetch.EfficientFetchManager",
+      "defaultMinimumAmountPercent": 25,
+      "targetType": "FetchManager.FetchablesByPrefabId",
+      "targetMethod": "UpdatePickups",
+      "prefix": "PeterHan.EfficientFetch.EfficientFetchPatches+FetchablesByPrefabId_UpdatePickups_Patch.Prefix",
+      "behavior": "When its threshold is active, Efficient Supply replaces UpdatePickups and prefers a candidate whose UnreservedAmount reaches the requested threshold before comparing path cost. CycleTrim therefore yields this replacement conservatively whenever the Efficient Supply type is present."
     },
     "busyDuplicantPickupSensor": {
       "featureFlag": "PickupOpts",
@@ -64,6 +84,6 @@
       ],
       "behavior": "With PickupOpts active, FastTrack replaces BrainScheduler.RenderEveryTick and routes brain groups through PriorityBrainScheduler.UpdateBrainGroup, which consumes priorityBrains according to ChorePriorityMode. Delay mode additionally gates Brain.UpdateChores on PickupOpts + FastReachability + ChorePriorityMode=Delay. This is an indirect scheduler/chore-pipeline interaction with CycleTrim's FindNextChore throttle and PrioritizeBrain invalidation hook, not a same-target patch conflict."
     },
-    "cycleTrimCurrentPolicy": "Keep both CycleTrim patches behind the existing FetchManagerFastUpdate type-presence guard. The direct PickupableSensor conflict and the indirect busy-duplicant scheduler/chore interaction remain pinned evidence for later real-game compatibility work; this contract does not prove that feature-level activation is runtime-safe."
+    "cycleTrimCurrentPolicy": "Keep busy-duplicant patches behind the existing FetchManagerFastUpdate type-presence guard. Keep FetchPickupCandidatePatch behind both that FastTrack guard and the Efficient Supply type marker. These pinned sources prove the competing replacement shapes, not current ONI runtime behavior."
   }
 }
