@@ -35,9 +35,12 @@ namespace CycleTrim.Patches
         private static MethodBase brainSchedulerTarget;
         private static MethodBase roomProberTarget;
         private static Action<object> reportCallback;
+        private static WeakReference captureGame;
+        private static WeakReference reportScheduler;
         private static bool initialized;
         private static bool reportRequested;
         private static bool reportScheduled;
+        private static bool captureBoundaryPending;
         private static long reportObservationCount;
         private static long nextReportAt = 1;
         private static int lastGc0;
@@ -46,6 +49,7 @@ namespace CycleTrim.Patches
         private static long lastHeapBytes;
         private static long lastReportTimestamp;
         private static long reportSequence;
+        private static long captureGeneration;
         private static PerformanceProbeSnapshot lastAsyncTickSnapshot;
         private static PerformanceProbeSnapshot lastAsyncWorkSnapshot;
         private static PerformanceProbeSnapshot lastNavigatorProbeSnapshot;
@@ -77,6 +81,8 @@ namespace CycleTrim.Patches
             brainSchedulerCounter = new PerformanceProbeCounter();
             roomProberCounter = new PerformanceProbeCounter();
             reportCallback = ReportDeferred;
+            captureGame = new WeakReference(null);
+            reportScheduler = new WeakReference(null);
             lastGc0 = GC.CollectionCount(0);
             lastGc1 = GC.CollectionCount(1);
             lastGc2 = GC.CollectionCount(2);
@@ -108,9 +114,33 @@ namespace CycleTrim.Patches
             return Stopwatch.GetTimestamp();
         }
 
+        private static void ObserveGameBoundary()
+        {
+            var game = Game.Instance;
+            if (game == null || ReferenceEquals(captureGame.Target, game))
+            {
+                return;
+            }
+
+            // Do not reset cumulative counters while an AsyncPathProber worker can still be
+            // completing an old work order. Instead, mark the next deferred report as the
+            // zero-delta baseline for this game instance.
+            captureGame.Target = game;
+            captureGeneration++;
+            captureBoundaryPending = true;
+            reportObservationCount = 0;
+            nextReportAt = 1;
+            reportRequested = false;
+            reportScheduled = false;
+            reportScheduler.Target = null;
+        }
+
         private static void RecordMain(PerformanceProbeCounter counter, long startedAt)
         {
+            // Record the measured target before any lifecycle bookkeeping so the boundary
+            // check itself is never charged to the target's timing.
             counter.Record(Stopwatch.GetTimestamp() - startedAt);
+            ObserveGameBoundary();
             var observations = Interlocked.Increment(ref reportObservationCount);
             if (observations >= nextReportAt)
             {
@@ -138,7 +168,7 @@ namespace CycleTrim.Patches
 
         private static void TryScheduleReport()
         {
-            if (!reportRequested || reportScheduled)
+            if (!reportRequested)
             {
                 return;
             }
@@ -151,13 +181,35 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            scheduler.ScheduleNextFrame(ReportName, reportCallback);
+            // UIScheduler frees pending callbacks during scene teardown. Do not let the
+            // process-static scheduled flag strand reporting after a save/load creates a
+            // new scheduler instance and the old callback can no longer run.
+            if (reportScheduled && !ReferenceEquals(reportScheduler.Target, scheduler))
+            {
+                reportScheduled = false;
+                reportScheduler.Target = null;
+            }
+            if (reportScheduled)
+            {
+                return;
+            }
+
+            scheduler.ScheduleNextFrame(ReportName, reportCallback, scheduler);
+            reportScheduler.Target = scheduler;
             reportScheduled = true;
         }
 
-        private static void ReportDeferred(object ignored)
+        private static void ReportDeferred(object scheduledOn)
         {
+            // A callback that survived longer than its originating UIScheduler must never
+            // clear or publish a report that a newer scheduler now owns.
+            if (!ReferenceEquals(reportScheduler.Target, scheduledOn))
+            {
+                return;
+            }
+
             reportScheduled = false;
+            reportScheduler.Target = null;
             if (!reportRequested)
             {
                 return;
@@ -165,7 +217,11 @@ namespace CycleTrim.Patches
 
             reportRequested = false;
             var reportedAt = Stopwatch.GetTimestamp();
-            var intervalDurationTicks = reportedAt - lastReportTimestamp;
+            var startedNewCapture = captureBoundaryPending;
+            captureBoundaryPending = false;
+            var intervalDurationTicks = startedNewCapture
+                ? 0
+                : reportedAt - lastReportTimestamp;
             if (intervalDurationTicks < 0)
             {
                 intervalDurationTicks = 0;
@@ -186,14 +242,16 @@ namespace CycleTrim.Patches
             var summary = new StringBuilder(1280);
             summary.Append('{');
             summary.Append("\"stopwatchFrequency\":").Append(Stopwatch.Frequency);
+            summary.Append(",\"captureGeneration\":").Append(captureGeneration);
             summary.Append(",\"reportSequence\":").Append(sequence);
             summary.Append(",\"intervalDurationTicks\":").Append(intervalDurationTicks);
             summary.Append(",\"gc\":{");
-            summary.Append("\"gen0Delta\":").Append(gc0 - lastGc0);
-            summary.Append(",\"gen1Delta\":").Append(gc1 - lastGc1);
-            summary.Append(",\"gen2Delta\":").Append(gc2 - lastGc2);
+            summary.Append("\"gen0Delta\":").Append(startedNewCapture ? 0 : gc0 - lastGc0);
+            summary.Append(",\"gen1Delta\":").Append(startedNewCapture ? 0 : gc1 - lastGc1);
+            summary.Append(",\"gen2Delta\":").Append(startedNewCapture ? 0 : gc2 - lastGc2);
             summary.Append(",\"heapBytes\":").Append(heapBytes);
-            summary.Append(",\"heapDeltaBytes\":").Append(heapBytes - lastHeapBytes);
+            summary.Append(",\"heapDeltaBytes\":")
+                .Append(startedNewCapture ? 0 : heapBytes - lastHeapBytes);
             summary.Append("},\"targets\":[");
             AppendTarget(
                 summary,
@@ -201,7 +259,7 @@ namespace CycleTrim.Patches
                 "main",
                 asyncTickTarget,
                 asyncTickSnapshot,
-                lastAsyncTickSnapshot);
+                startedNewCapture ? asyncTickSnapshot : lastAsyncTickSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -209,7 +267,7 @@ namespace CycleTrim.Patches
                 "worker",
                 asyncWorkTarget,
                 asyncWorkSnapshot,
-                lastAsyncWorkSnapshot);
+                startedNewCapture ? asyncWorkSnapshot : lastAsyncWorkSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -217,7 +275,7 @@ namespace CycleTrim.Patches
                 "main",
                 navigatorProbeTarget,
                 navigatorProbeSnapshot,
-                lastNavigatorProbeSnapshot);
+                startedNewCapture ? navigatorProbeSnapshot : lastNavigatorProbeSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -225,7 +283,7 @@ namespace CycleTrim.Patches
                 "main",
                 fetchTarget,
                 fetchSnapshot,
-                lastFetchSnapshot);
+                startedNewCapture ? fetchSnapshot : lastFetchSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -233,7 +291,7 @@ namespace CycleTrim.Patches
                 "main",
                 choreTarget,
                 choreSnapshot,
-                lastChoreSnapshot);
+                startedNewCapture ? choreSnapshot : lastChoreSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -241,7 +299,7 @@ namespace CycleTrim.Patches
                 "main",
                 brainSchedulerTarget,
                 brainSchedulerSnapshot,
-                lastBrainSchedulerSnapshot);
+                startedNewCapture ? brainSchedulerSnapshot : lastBrainSchedulerSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -249,7 +307,7 @@ namespace CycleTrim.Patches
                 "main",
                 roomProberTarget,
                 roomProberSnapshot,
-                lastRoomProberSnapshot);
+                startedNewCapture ? roomProberSnapshot : lastRoomProberSnapshot);
             summary.Append("]}");
 
             lastGc0 = gc0;

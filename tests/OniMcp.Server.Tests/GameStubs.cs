@@ -66,11 +66,12 @@ namespace OniMcp.Tools
     }
     public static class ToolCallMiddleware
     {
+        public const string TaskDescriptionParameter = "task";
         public static int Presentations;
 
         public static bool TryGetTaskDescription(JObject arguments, out string description)
         {
-            var token = arguments?["task"];
+            var token = arguments?[TaskDescriptionParameter];
             description = token?.Type == JTokenType.String ? token.Value<string>()?.Trim() : null;
             return !string.IsNullOrWhiteSpace(description);
         }

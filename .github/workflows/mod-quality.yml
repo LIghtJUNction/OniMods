@@ -59,8 +59,10 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.401'
-      - name: Check Mod source contracts and behavior
-        run: python3 scripts/check_mods.py
+      - name: Check Mod source contracts and host behavior
+        run: python3 scripts/check_mods.py --skip-synthetic-performance
+      - name: Report CycleTrim synthetic performance evidence
+        run: python3 scripts/run_cycletrim_synthetic_performance.py
       - name: Verify pinned MCP 2026 conformance map
         run: python3 scripts/verify_onimcp_conformance_map.py --verify-upstream
       - name: Verify pinned FastTrack Fetch compatibility contract

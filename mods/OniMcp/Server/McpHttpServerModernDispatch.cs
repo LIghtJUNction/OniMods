@@ -22,6 +22,19 @@ namespace OniMcp.Server
                 return;
             }
 
+            if (IsModernPaginatedListMethod(rpcRequest.Method))
+            {
+                var cursorToken = rpcRequest.Params?["cursor"];
+                if (cursorToken != null)
+                {
+                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                    SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                        "cursor is invalid because this endpoint returns a complete unpaginated list"),
+                        (int)HttpStatusCode.OK);
+                    return;
+                }
+            }
+
             if (string.Equals(rpcRequest.Method, "tools/call", StringComparison.Ordinal))
             {
                 var argumentsToken = rpcRequest.Params?["arguments"];
@@ -72,15 +85,16 @@ namespace OniMcp.Server
                     return;
                 }
 
+                string benchmarkArgumentError;
                 if ((taskToken == null || taskToken.Type == JTokenType.Null)
                     && argumentsObject != null
                     && modernToolAvailable
                     && hasTaskDescription
-                    && !TryNormalizeModernBenchmarkIterations(argumentsObject))
+                    && !TryValidateModernBenchmarkArguments(argumentsObject, out benchmarkArgumentError))
                 {
                     response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
                     var result = CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
-                        "iterations must be an integer from 1 to 5000")));
+                        benchmarkArgumentError)));
                     SendJson(response, JsonRpcResponse.Success(rpcRequest.Id, result), (int)HttpStatusCode.OK);
                     return;
                 }
@@ -128,7 +142,7 @@ namespace OniMcp.Server
                 }
             }
 
-            if (IsModernMetadataOnlyMethod(rpcRequest.Method))
+            if (IsModernWorkerSafeRequest(rpcRequest))
             {
                 object result = null;
                 Exception processEx = null;
@@ -170,6 +184,66 @@ namespace OniMcp.Server
             }), () => CloseStaleHttpResponse(response));
         }
 
+        private static bool TryValidateModernBenchmarkArguments(JObject arguments, out string error)
+        {
+            error = null;
+
+            JToken cases = arguments?["cases"];
+            if (cases != null && cases.Type != JTokenType.String)
+            {
+                error = "cases must be a string when provided";
+                return false;
+            }
+            if (cases?.Type == JTokenType.String && !HasRecognizedModernBenchmarkCase((string)cases))
+            {
+                error = "cases must contain one or more of: all, toolList, toolLookup, jsonSerialize";
+                return false;
+            }
+
+            JToken tool = arguments?["tool"];
+            if (tool != null && tool.Type != JTokenType.String)
+            {
+                error = "tool must be a string when provided";
+                return false;
+            }
+
+            JToken includeDetails = arguments?["includeDetails"];
+            if (includeDetails != null && includeDetails.Type != JTokenType.Boolean)
+            {
+                error = "includeDetails must be a boolean when provided";
+                return false;
+            }
+
+            if (!TryNormalizeModernBenchmarkIterations(arguments))
+            {
+                error = "iterations must be an integer from 1 to 5000";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool HasRecognizedModernBenchmarkCase(string cases)
+        {
+            if (string.IsNullOrWhiteSpace(cases))
+                return true;
+
+            foreach (string item in cases.Split(','))
+            {
+                string normalized = item.Trim().ToLowerInvariant();
+                if (normalized == "all"
+                    || normalized == "toollist"
+                    || normalized == "toollookup"
+                    || normalized == "lookup"
+                    || normalized == "jsonserialize")
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static bool TryNormalizeModernBenchmarkIterations(JObject arguments)
         {
             JToken token = arguments?["iterations"];
@@ -189,6 +263,32 @@ namespace OniMcp.Server
 
             arguments["iterations"] = (int)value;
             return true;
+        }
+
+        private static bool IsModernWorkerSafeRequest(JsonRpcRequest request)
+        {
+            if (request == null)
+                return false;
+
+            if (IsModernMetadataOnlyMethod(request.Method))
+                return true;
+
+            // Worker safety is an explicit audit decision. Do not infer it from
+            // a tool's Mode/Risk metadata or from membership in the modern allowlist.
+            if (!string.Equals(request.Method, "tools/call", StringComparison.Ordinal))
+                return false;
+
+            var name = request.Params?["name"];
+            return name?.Type == JTokenType.String
+                && string.Equals((string)name, "benchmark", StringComparison.Ordinal)
+                && string.Equals(ModernReadOnlyToolName, "benchmark", StringComparison.Ordinal);
+        }
+
+        private static bool IsModernPaginatedListMethod(string method)
+        {
+            return string.Equals(method, "tools/list", StringComparison.Ordinal)
+                || string.Equals(method, "resources/list", StringComparison.Ordinal)
+                || string.Equals(method, "resources/templates/list", StringComparison.Ordinal);
         }
 
         private static bool IsModernMetadataOnlyMethod(string method)

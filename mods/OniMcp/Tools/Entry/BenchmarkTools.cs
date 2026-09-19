@@ -36,7 +36,7 @@ namespace OniMcp.Tools
                     ["tool"] = new McpToolParameter
                     {
                         Type = "string",
-                        Description = "用于 toolLookup 的目标工具名（如 server_control），留空表示随机采样。默认 world_editor。",
+                        Description = "用于 toolLookup 的目标工具名（如 server_control）；留空默认使用 world_editor。",
                         Required = false
                     },
                     ["includeDetails"] = new McpToolParameter
