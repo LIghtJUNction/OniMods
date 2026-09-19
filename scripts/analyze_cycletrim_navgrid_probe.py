@@ -200,29 +200,24 @@ def bucket_key(bucket: dict) -> tuple[str, str, str, str]:
 def subtract_capture(current: dict, baseline: dict) -> dict:
     current_generation = current.get("captureGeneration")
     baseline_generation = baseline.get("captureGeneration")
-    if current_generation is None or baseline_generation is None:
-        raise CaptureError(
-            "controlled workload windows require captureGeneration metadata; "
-            "regather the capture with the updated NavGrid probe"
-        )
-    if current_generation != baseline_generation:
-        raise CaptureError(
-            "NavGrid capture generation changed across the requested workload window"
-        )
+    if (current_generation is None) != (baseline_generation is None):
+        raise CaptureError("capture generation metadata changed across the requested workload window")
+    if current_generation is not None and current_generation != baseline_generation:
+        raise CaptureError("NavGrid capture generation changed across the requested workload window")
 
     calls = current["calls"] - baseline["calls"]
     empty = current["empty"] - baseline["empty"]
     if calls <= 0:
         raise CaptureError("controlled workload window has no fresh NavGrid calls")
     if empty < 0:
-        raise CaptureError("capture empty-call count moved backwards within one generation")
+        raise CaptureError("capture empty-call count moved backwards within one probe run")
 
     current_buckets = {bucket_key(bucket): bucket["count"] for bucket in current["buckets"]}
     baseline_buckets = {bucket_key(bucket): bucket["count"] for bucket in baseline["buckets"]}
     for key, baseline_count in baseline_buckets.items():
         if current_buckets.get(key, 0) < baseline_count:
             raise CaptureError(
-                "capture bucket count moved backwards within one generation: " + str(key)
+                "capture bucket count moved backwards within one probe run: " + str(key)
             )
 
     buckets = []
@@ -242,8 +237,7 @@ def subtract_capture(current: dict, baseline: dict) -> dict:
             f"{bucket_calls}, expected fresh calls={calls}"
         )
 
-    return {
-        "captureGeneration": current_generation,
+    result = {
         "baselineCalls": baseline["calls"],
         "cumulativeCalls": current["calls"],
         "calls": calls,
@@ -254,6 +248,9 @@ def subtract_capture(current: dict, baseline: dict) -> dict:
         "candidateGate": summarize_candidate_gate(buckets, calls),
         "windowed": True,
     }
+    if current_generation is not None:
+        result["captureGeneration"] = current_generation
+    return result
 
 
 def select_capture(capture_lines: list[str], after_calls: int | None) -> dict:
@@ -263,30 +260,19 @@ def select_capture(capture_lines: list[str], after_calls: int | None) -> dict:
         raise CaptureError("--after-calls must be a positive capture call count")
 
     captures = [parse_capture_summary(line) for line in capture_lines]
-    latest = captures[-1]
-    latest_generation = latest.get("captureGeneration")
-    if latest_generation is None:
-        raise CaptureError(
-            "--after-calls requires captureGeneration metadata; "
-            "regather the capture with the updated NavGrid probe"
-        )
-
     baseline_indices = [
         index for index, capture in enumerate(captures[:-1])
-        if capture.get("captureGeneration") == latest_generation
-        and capture["calls"] == after_calls
+        if capture["calls"] == after_calls
     ]
     if not baseline_indices:
         raise CaptureError(
-            f"baseline calls={after_calls} was not found in latest NavGrid capture "
-            f"generation {latest_generation}"
+            f"baseline calls={after_calls} was not found in the current NavGrid probe run"
         )
 
     baseline_index = baseline_indices[-1]
     fresh_captures = [
         capture for capture in captures[baseline_index + 1:]
-        if capture.get("captureGeneration") == latest_generation
-        and capture["calls"] > after_calls
+        if capture["calls"] > after_calls
     ]
     if not fresh_captures:
         raise CaptureError(
@@ -338,7 +324,7 @@ def main() -> int:
         type=int,
         help=(
             "return the exact complete-histogram delta after an existing baseline calls value "
-            "from the latest capture generation"
+            "from the same probe run"
         ),
     )
     args = parser.parse_args()
