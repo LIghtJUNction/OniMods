@@ -86,17 +86,13 @@ internal static class ModernCancellationRejectionRegressionEntry
                     AssertHeaderMismatch(response, "Mismatched modern notification protocol header");
                 }
 
+                // MCP 2026-07-28 defines RequestId as string | number, so fractional JSON numbers
+                // are valid cancellation targets even though integer/string ids are more common.
                 using (var request = BuildCancellationRequest(new JValue(18001.5), includeRequestEnvelope: true,
                     includeProtocolHeader: true, includeMethodHeader: true))
                 using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                 {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Fractional modern cancellation request id returned HTTP " + (int)response.StatusCode);
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int?)json["error"]?["code"] == McpErrorCode.InvalidRequest,
-                        "Fractional modern cancellation used the wrong JSON-RPC error");
-                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Rejected modern cancellation returned a legacy session id");
+                    AssertAcceptedWithoutSession(response, "Fractional numeric modern cancellation request id");
                 }
             }
 
