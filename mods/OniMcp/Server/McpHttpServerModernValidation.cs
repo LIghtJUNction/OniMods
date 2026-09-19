@@ -150,7 +150,7 @@ namespace OniMcp.Server
                 return false;
 
             if (!ValidateObjectMapCapability(capabilities, "experimental", out errorMessage)
-                || !ValidateObjectMapCapability(capabilities, "extensions", out errorMessage))
+                || !ValidateModernExtensionCapabilities(capabilities, out errorMessage))
                 return false;
 
             return true;
@@ -205,6 +205,102 @@ namespace OniMcp.Server
             }
 
             return true;
+        }
+
+        private static bool ValidateModernExtensionCapabilities(JObject capabilities, out string errorMessage)
+        {
+            errorMessage = null;
+            JObject extensions;
+            if (!TryGetObjectCapability(capabilities, "extensions", out extensions, out errorMessage))
+                return false;
+            if (extensions == null)
+                return true;
+
+            foreach (var property in extensions.Properties())
+            {
+                if (property.Value?.Type != JTokenType.Object)
+                {
+                    errorMessage =
+                        $"params._meta.io.modelcontextprotocol/clientCapabilities.extensions.{property.Name} must be an object";
+                    return false;
+                }
+
+                if (!IsValidModernExtensionIdentifier(property.Name))
+                {
+                    errorMessage =
+                        $"params._meta.io.modelcontextprotocol/clientCapabilities.extensions key '{property.Name}' must use a valid prefixed MCP metadata identifier";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsValidModernExtensionIdentifier(string identifier)
+        {
+            if (string.IsNullOrEmpty(identifier))
+                return false;
+
+            int slash = identifier.IndexOf('/');
+            if (slash <= 0 || slash != identifier.LastIndexOf('/'))
+                return false;
+
+            string prefix = identifier.Substring(0, slash);
+            string name = identifier.Substring(slash + 1);
+            string[] labels = prefix.Split('.');
+            if (labels.Length == 0)
+                return false;
+
+            foreach (string label in labels)
+            {
+                if (!IsValidModernMetadataPrefixLabel(label))
+                    return false;
+            }
+
+            return IsValidModernMetadataName(name);
+        }
+
+        private static bool IsValidModernMetadataPrefixLabel(string label)
+        {
+            if (string.IsNullOrEmpty(label) || !IsAsciiLetter(label[0])
+                || !IsAsciiAlphaNumeric(label[label.Length - 1]))
+                return false;
+
+            for (int i = 1; i < label.Length - 1; i++)
+            {
+                char value = label[i];
+                if (!IsAsciiAlphaNumeric(value) && value != '-')
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsValidModernMetadataName(string name)
+        {
+            if (name.Length == 0)
+                return true;
+            if (!IsAsciiAlphaNumeric(name[0]) || !IsAsciiAlphaNumeric(name[name.Length - 1]))
+                return false;
+
+            for (int i = 1; i < name.Length - 1; i++)
+            {
+                char value = name[i];
+                if (!IsAsciiAlphaNumeric(value) && value != '-' && value != '_' && value != '.')
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsAsciiLetter(char value)
+        {
+            return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+        }
+
+        private static bool IsAsciiAlphaNumeric(char value)
+        {
+            return IsAsciiLetter(value) || (value >= '0' && value <= '9');
         }
 
         private static bool ValidateModernNotification(HttpListenerRequest httpRequest, JObject rawMessage,
