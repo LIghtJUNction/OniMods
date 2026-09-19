@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
@@ -24,6 +25,19 @@ internal static class BenchmarkMetadataRegressionEntry
             Group = "core",
             Mode = "write",
             Risk = "high",
+            Handler = args => CallToolResult.Text("ok")
+        };
+        OniToolRegistry.Tools["server_control"] = new McpTool
+        {
+            Name = "server_control",
+            Group = "server",
+            Mode = "read/execute",
+            Risk = "medium",
+            Aliases = new List<string> { "mcp_server_control" },
+            Parameters = new Dictionary<string, McpToolParameter>
+            {
+                ["action"] = new McpToolParameter { Type = "string", Required = true }
+            },
             Handler = args => CallToolResult.Text("ok")
         };
 
@@ -104,5 +118,31 @@ internal static class BenchmarkMetadataRegressionEntry
         });
         if (lookupAlias.IsError)
             throw new InvalidOperationException("benchmark lookup alias was rejected unexpectedly");
+
+        CallToolResult toolNameAlias = benchmark.Handler(new JObject
+        {
+            ["cases"] = "toolLookup",
+            ["iterations"] = 1,
+            ["tool"] = "mcp_server_control",
+            ["includeDetails"] = true
+        });
+        if (toolNameAlias.IsError)
+            throw new InvalidOperationException("benchmark rejected a registered tool-name alias");
+
+        JObject aliasBody = JObject.Parse(toolNameAlias.Content[0].Text);
+        JObject aliasResult = (JObject)aliasBody["results"]?[0];
+        if (!string.Equals((string)aliasResult?["tool"], "mcp_server_control", StringComparison.Ordinal))
+            throw new InvalidOperationException("benchmark no longer reports the requested alias in its tool field");
+
+        JObject aliasDetails = aliasResult?["details"] as JObject;
+        if (!string.Equals((string)aliasDetails?["group"], "server", StringComparison.Ordinal)
+            || !string.Equals((string)aliasDetails?["mode"], "read/execute", StringComparison.Ordinal)
+            || !string.Equals((string)aliasDetails?["risk"], "medium", StringComparison.Ordinal)
+            || (int?)aliasDetails?["aliasCount"] != 1
+            || (int?)aliasDetails?["parameterCount"] != 1)
+        {
+            throw new InvalidOperationException(
+                "benchmark alias lookup did not report metadata from the resolved canonical tool");
+        }
     }
 }

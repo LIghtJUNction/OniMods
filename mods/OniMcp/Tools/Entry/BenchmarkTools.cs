@@ -254,14 +254,15 @@ namespace OniMcp.Tools
 
             if (includeDetails)
             {
-                var first = OniToolRegistry.GetTools().Find(t => string.Equals(t.Name, lookup, StringComparison.Ordinal));
+                McpTool resolvedTool;
+                OniToolRegistry.TryGetTool(lookup, out resolvedTool);
                 test["details"] = new Dictionary<string, object>
                 {
-                    ["group"] = first?.Group,
-                    ["mode"] = first?.Mode,
-                    ["risk"] = first?.Risk,
-                    ["aliasCount"] = first?.Aliases?.Count ?? 0,
-                    ["parameterCount"] = first?.Parameters?.Count ?? 0
+                    ["group"] = resolvedTool?.Group,
+                    ["mode"] = resolvedTool?.Mode,
+                    ["risk"] = resolvedTool?.Risk,
+                    ["aliasCount"] = resolvedTool?.Aliases?.Count ?? 0,
+                    ["parameterCount"] = resolvedTool?.Parameters?.Count ?? 0
                 };
             }
 

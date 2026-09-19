@@ -32,7 +32,17 @@ namespace OniMcp.Tools
     public static class OniToolRegistry
     {
         internal static readonly Dictionary<string, McpTool> Tools = new Dictionary<string, McpTool>(StringComparer.OrdinalIgnoreCase);
-        public static bool TryGetTool(string name, out McpTool tool) => Tools.TryGetValue(name, out tool);
+
+        public static bool TryGetTool(string name, out McpTool tool)
+        {
+            if (Tools.TryGetValue(name, out tool))
+                return true;
+
+            tool = Tools.Values.FirstOrDefault(candidate => candidate.Aliases != null
+                && candidate.Aliases.Any(alias => string.Equals(alias, name, StringComparison.Ordinal)));
+            return tool != null;
+        }
+
         public static CallToolResult CallTool(string name, JObject arguments) => Tools[name].Handler(arguments);
         public static List<McpTool> GetTools() => Tools.Values.OrderBy(tool => tool.Name, StringComparer.Ordinal).ToList();
         public static List<McpToolInfo> GetToolInfos(bool includeAll = false) => GetTools()
