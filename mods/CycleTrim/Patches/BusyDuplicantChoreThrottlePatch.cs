@@ -19,10 +19,8 @@ namespace CycleTrim.Patches
 
         private sealed class State
         {
-            internal readonly VersionedRefreshGate PickupGate =
-                new VersionedRefreshGate(4);
-            internal readonly VersionedRefreshGate ChoreGate =
-                new VersionedRefreshGate(4);
+            internal readonly CoupledRefreshGate RefreshGate =
+                new CoupledRefreshGate(4);
             internal readonly bool IsDuplicant;
             internal NavGrid NavGrid;
 
@@ -33,14 +31,12 @@ namespace CycleTrim.Patches
 
             internal void Invalidate()
             {
-                PickupGate.Invalidate();
-                ChoreGate.Invalidate();
+                RefreshGate.Invalidate();
             }
 
             internal void Reset()
             {
-                PickupGate.Reset();
-                ChoreGate.Reset();
+                RefreshGate.Reset();
             }
         }
 
@@ -149,7 +145,7 @@ namespace CycleTrim.Patches
                     return true;
                 }
 
-                return state.PickupGate.ShouldRefresh(
+                return state.RefreshGate.Begin(
                     CaptureStamp(state, consumer, ___navigator, currentChore));
             }
         }
@@ -197,7 +193,7 @@ namespace CycleTrim.Patches
                     return true;
                 }
 
-                if (state.ChoreGate.ShouldRefresh(
+                if (state.RefreshGate.Complete(
                     CaptureStamp(state, __instance, navigator, currentChore)))
                 {
                     return true;
