@@ -12,7 +12,7 @@ using OniMcp.Server;
 
 internal static class HttpFrontDoorAdmissionRegressionEntry
 {
-    private const int ExpectedFrontDoorCapacity = 32;
+    private const int ExpectedFrontDoorCapacity = 8;
 
     private static void Main()
     {
