@@ -154,19 +154,8 @@ namespace OniMcp.Server
 
         private static bool IsValidModernRequestId(JToken requestId)
         {
-            if (requestId == null)
-                return false;
-
-            if (requestId.Type == JTokenType.String || requestId.Type == JTokenType.Integer)
-                return true;
-
-            if (requestId.Type != JTokenType.Float)
-                return false;
-
-            double numericId = requestId.Value<double>();
-            return !double.IsNaN(numericId)
-                && !double.IsInfinity(numericId)
-                && Math.Truncate(numericId) == numericId;
+            return requestId != null
+                && (requestId.Type == JTokenType.String || requestId.Type == JTokenType.Integer);
         }
 
         private static bool RequiresModernNameHeader(string method)
