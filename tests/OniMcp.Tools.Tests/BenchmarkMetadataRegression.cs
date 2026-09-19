@@ -75,6 +75,27 @@ internal static class BenchmarkMetadataRegressionEntry
                 "benchmark silently replaced an out-of-range integer iteration count with its default");
         }
 
+        CallToolResult invalidIncludeDetails = benchmark.Handler(new JObject
+        {
+            ["cases"] = "toolList",
+            ["iterations"] = 1,
+            ["includeDetails"] = "not-a-bool"
+        });
+        if (!invalidIncludeDetails.IsError)
+        {
+            throw new InvalidOperationException(
+                "benchmark silently replaced an invalid includeDetails value with false");
+        }
+
+        CallToolResult legacyStringIncludeDetails = benchmark.Handler(new JObject
+        {
+            ["cases"] = "toolList",
+            ["iterations"] = 1,
+            ["includeDetails"] = "true"
+        });
+        if (legacyStringIncludeDetails.IsError)
+            throw new InvalidOperationException("benchmark rejected a legacy parseable includeDetails value");
+
         CallToolResult lookupAlias = benchmark.Handler(new JObject
         {
             ["cases"] = "lookup",
