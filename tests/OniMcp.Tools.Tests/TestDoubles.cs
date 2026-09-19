@@ -42,7 +42,12 @@ namespace OniMcp.Tools
 
     public static class ToolUtil
     {
-        public static bool GetBool(JObject args, string name, bool fallback) => args[name]?.Value<bool>() ?? fallback;
+        public static bool GetBool(JObject args, string name, bool fallback)
+        {
+            bool value;
+            return args[name] != null && bool.TryParse(args[name].ToString(), out value) ? value : fallback;
+        }
+
         public static int? GetInt(JObject args, string name) => args[name]?.Value<int?>();
     }
 
