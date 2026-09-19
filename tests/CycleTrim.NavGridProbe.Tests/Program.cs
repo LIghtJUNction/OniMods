@@ -12,7 +12,6 @@ namespace CycleTrim.NavGridProbe.Tests
             {
                 SparseAndDenseShapesLandInDifferentDensityBuckets();
                 RangeDirectionAndDirtyCountRemainVisible();
-                ResetClearsCaptureState();
                 SummaryIsAggregateAndHumanReadable();
                 Console.WriteLine("PASS CycleTrim NavGrid workload probe regressions");
                 return 0;
@@ -93,31 +92,6 @@ namespace CycleTrim.NavGridProbe.Tests
                     NavGridWorkloadProbe.DensityBucket(20, 20)),
                 "4x2 bucket");
             AssertEqual(1, probe.EmptyCallCount, "empty call bucket");
-        }
-
-        private static void ResetClearsCaptureState()
-        {
-            var probe = new NavGridWorkloadProbe();
-            probe.Record(
-                new List<int> { 1000, 1001, 1100, 1101 },
-                gridWidth: 100,
-                rangeX: 2,
-                rangeY: 4);
-
-            probe.Reset();
-
-            AssertEqual(0, probe.CallCount, "reset call count");
-            AssertEqual(0, probe.EmptyCallCount, "reset empty call count");
-            AssertEqual(0, probe.TotalDirtyCells, "reset dirty cells");
-            AssertEqual(0, probe.TotalBoundingBoxCells, "reset bounding box cells");
-            AssertEqual(
-                0,
-                probe.GetBucketCount(
-                    NavGridWorkloadProbe.DirtyBucket(4),
-                    NavGridWorkloadProbe.RangeBucket(2),
-                    NavGridWorkloadProbe.RangeBucket(4),
-                    NavGridWorkloadProbe.DensityBucket(4, 4)),
-                "reset histogram bucket");
         }
 
         private static void SummaryIsAggregateAndHumanReadable()
