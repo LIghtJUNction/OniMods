@@ -23,9 +23,14 @@ GATE_BENCHMARK = (
 )
 
 
-def expect_capture_failure(text: str, expected: str, failures: list[str]) -> None:
+def expect_capture_failure(
+    text: str,
+    expected: str,
+    failures: list[str],
+    after_calls: int | None = None,
+) -> None:
     try:
-        analyze_log(text)
+        analyze_log(text, after_calls=after_calls)
     except CaptureError as error:
         if expected not in str(error):
             failures.append(
@@ -58,8 +63,12 @@ def main() -> int:
         "List<int> ___DirtyCells",
         "__instance.updateRangeX",
         "__instance.updateRangeY",
+        "Game.Instance",
+        "Probe.Reset()",
+        "captureGeneration",
         "UIScheduler.Instance",
-        "ScheduleNextFrame(ReportName, ReportCallback)",
+        "new ReportRequest(scheduler, captureGeneration)",
+        "request.Generation != captureGeneration",
         "Probe.FormatSummary(maxBuckets: 12)",
         "Probe.FormatSummary(maxBuckets: HistogramBucketCapacity)",
         '"[CycleTrim][NavGridProbeCapture] "',
@@ -82,6 +91,11 @@ def main() -> int:
         '"eligibleCallsLowerBound": lower_bound',
         '"eligibleCallsUpperBound": upper_bound',
         '"ambiguousCalls": ambiguous',
+        '"captureGeneration"',
+        "subtract_capture",
+        '"baselineCalls": baseline["calls"]',
+        '"cumulativeCalls": current["calls"]',
+        '"windowed": True',
     )
     for fragment in required_analyzer_fragments:
         if fragment not in analyzer:
@@ -119,6 +133,8 @@ def main() -> int:
         failures.append("probe no longer has an explicit opt-in environment guard")
     if "UnityEngine" in core or "Harmony" in core or "NavGrid" not in core:
         failures.append("aggregate collector must remain independent of Unity/Harmony runtime APIs")
+    if "internal void Reset()" not in core or "Array.Clear(histogram" not in core:
+        failures.append("NavGrid probe collector must support generation reset without replacement")
     record_body = core.split("internal void Record", 1)[1].split(
         "internal long GetBucketCount", 1
     )[0]
@@ -130,15 +146,18 @@ def main() -> int:
             "prefix " +
             "[CycleTrim][NavGridProbe] requested; NavGrid.UpdateGraph() resolved. " +
             "Valid evidence requires a later 'target reached' message with calls > 0.",
-            "prefix [CycleTrim][NavGridProbe] target reached; aggregate sampling started.",
+            "prefix [CycleTrim][NavGridProbe] target reached; aggregate sampling started. " +
+            "captureGeneration=1.",
             "prefix [CycleTrim][NavGridProbeCapture] " +
-            "calls=3, empty=0, avgDirty=8.00, avgSeedBBox=20.00, " +
+            "captureGeneration=1, calls=3, empty=0, avgDirty=8.00, avgSeedBBox=20.00, " +
             "nonzeroBuckets=2, top=[dirty=8-15,rx=2,ry=4,density=<=1/4:2; " +
             "dirty=8-15,rx=4,ry=2,density=>1/2:1]",
         )
     )
     try:
         parsed = analyze_log(valid_capture)
+        if parsed["captureGeneration"] != 1:
+            failures.append("capture analyzer did not preserve capture generation")
         if parsed["calls"] != 3 or parsed["bucketCallTotal"] != 3:
             failures.append("capture analyzer did not preserve complete bucket totals")
         if len(parsed["buckets"]) != 2:
@@ -169,6 +188,59 @@ def main() -> int:
     except CaptureError as error:
         failures.append(f"capture analyzer rejected ambiguous valid fixture: {error}")
 
+    window_capture = "\n".join(
+        (
+            "prefix " +
+            "[CycleTrim][NavGridProbe] requested; NavGrid.UpdateGraph() resolved. " +
+            "Valid evidence requires a later 'target reached' message with calls > 0.",
+            "prefix [CycleTrim][NavGridProbe] target reached; aggregate sampling started. " +
+            "captureGeneration=7.",
+            "prefix [CycleTrim][NavGridProbeCapture] " +
+            "captureGeneration=7, calls=2, empty=0, nonzeroBuckets=1, " +
+            "top=[dirty=8-15,rx=2,ry=4,density=<=1/4:2]",
+            "prefix [CycleTrim][NavGridProbeCapture] " +
+            "captureGeneration=7, calls=5, empty=0, nonzeroBuckets=2, " +
+            "top=[dirty=8-15,rx=2,ry=4,density=<=1/4:3; " +
+            "dirty=24-31,rx=2,ry=4,density=>1/2:2]",
+        )
+    )
+    try:
+        parsed = analyze_log(window_capture, after_calls=2)
+        if not parsed.get("windowed"):
+            failures.append("anchored capture did not identify itself as a workload window")
+        if parsed["captureGeneration"] != 7:
+            failures.append("anchored capture lost its game generation")
+        if parsed["baselineCalls"] != 2 or parsed["cumulativeCalls"] != 5:
+            failures.append("anchored capture lost cumulative baseline/final calls")
+        if parsed["calls"] != 3 or parsed["bucketCallTotal"] != 3:
+            failures.append("anchored capture did not subtract baseline calls/buckets")
+        if len(parsed["buckets"]) != 2:
+            failures.append("anchored capture should preserve both fresh workload buckets")
+        gate = parsed["candidateGate"]
+        if gate["eligibleCallsLowerBound"] != 2 or gate["eligibleCallsUpperBound"] != 2:
+            failures.append("anchored candidate-gate coverage must use fresh bucket deltas only")
+    except CaptureError as error:
+        failures.append(f"capture analyzer rejected valid anchored window: {error}")
+
+    mixed_generation_capture = window_capture.replace(
+        "captureGeneration=7, calls=5, empty=0, nonzeroBuckets=2",
+        "captureGeneration=8, calls=5, empty=0, nonzeroBuckets=2",
+    )
+    expect_capture_failure(
+        mixed_generation_capture,
+        "latest NavGrid capture generation 8",
+        failures,
+        after_calls=2,
+    )
+
+    legacy_window_capture = window_capture.replace("captureGeneration=7, ", "")
+    expect_capture_failure(
+        legacy_window_capture,
+        "requires captureGeneration metadata",
+        failures,
+        after_calls=2,
+    )
+
     truncated_capture = valid_capture.replace(
         "; dirty=8-15,rx=4,ry=2,density=>1/2:1", ""
     )
@@ -188,7 +260,7 @@ def main() -> int:
 
     print(
         "PASS CycleTrim NavGrid workload probe remains opt-in, observational, "
-        "pause-safe, and complete-capture evidence is validated with candidate-gate bounds"
+        "pause-safe, generation-isolated, and anchored windows use complete histogram deltas"
     )
     return 0
 
