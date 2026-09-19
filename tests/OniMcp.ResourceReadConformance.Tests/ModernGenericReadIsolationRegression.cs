@@ -27,6 +27,9 @@ internal static class RegressionEntry
         const string genericReadTemplate = "oni://tools/read/{name}{?...}";
         const string legacySessionUri = "oni://mcp/sessions";
         const string legacySessionAliasUri = "oni://mcp/sessions/?detail=full";
+        const string saveListingUri = "oni://game/saves";
+        const string saveListingAliasUri = "oni://game/saves/?type=local";
+        const string saveListingTemplate = "oni://game/saves{?type,limit}";
         var bridge = new MainThreadBridge();
         Invoke(bridge, "Awake");
         var server = new McpHttpServer();
@@ -100,6 +103,38 @@ internal static class RegressionEntry
                 }
             }
 
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+            {
+                const string meta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"save-resource-isolation-regression\",\"version\":\"1.0\"}}";
+                request.Content = new StringContent(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":93,\"params\":{\"uri\":\"" + saveListingUri + "\"," + meta + "}}",
+                    Encoding.UTF8,
+                    "application/json");
+                request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                request.Headers.Add("Mcp-Method", "resources/read");
+                request.Headers.Add("Mcp-Name", saveListingUri);
+
+                var work = client.SendAsync(request);
+                PumpUntil(work, bridge);
+                using (var response = work.GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Rejected modern save-listing read changed JSON-RPC application status");
+                    var json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["error"]["code"] == -32602,
+                        "Rejected modern save-listing read did not use Invalid Params");
+                    Assert((string)json["error"]["data"]["uri"] == saveListingUri,
+                        "Rejected modern save-listing read omitted error.data.uri");
+                    Assert(((string)json["error"]["message"]).Contains("not available"),
+                        "Modern resources/read still admitted the filesystem-mutating save listing");
+                }
+            }
+
             var uriGuard = typeof(McpHttpServer).GetMethod("IsModernReadOnlyResourceUri",
                 BindingFlags.NonPublic | BindingFlags.Static);
             var templateGuard = typeof(McpHttpServer).GetMethod("IsModernReadOnlyResourceTemplate",
@@ -113,6 +148,12 @@ internal static class RegressionEntry
                 "Modern resource URI guard still exposes legacy session diagnostics");
             Assert(!(bool)uriGuard.Invoke(null, new object[] { legacySessionAliasUri }),
                 "Modern resource URI guard still exposes a legacy-session alias");
+            Assert(!(bool)uriGuard.Invoke(null, new object[] { saveListingUri }),
+                "Modern resource URI guard still exposes a read that can create the save directory");
+            Assert(!(bool)uriGuard.Invoke(null, new object[] { saveListingAliasUri }),
+                "Modern resource URI guard still exposes a save-listing alias");
+            Assert(!(bool)templateGuard.Invoke(null, new object[] { saveListingTemplate }),
+                "Modern resource template list still advertises the filesystem-mutating save listing");
             Assert(server.GetSessionSummaries().Count == 0,
                 "Modern read rejection allocated legacy session state");
         }
