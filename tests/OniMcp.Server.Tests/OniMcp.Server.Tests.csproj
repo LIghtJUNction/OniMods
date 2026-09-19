@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>ModernListCursorRegressionEntry</StartupObject>
+    <StartupObject>ModernCancellationRejectionRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -17,6 +17,7 @@
     <Compile Include="MalformedModernTaskShapeAdmissionRegression.cs" />
     <Compile Include="ModernBenchmarkSchemaAdmissionRegression.cs" />
     <Compile Include="ModernListCursorRegression.cs" />
+    <Compile Include="ModernCancellationRejectionRegression.cs" />
     <Compile Include="GameStubs.cs" />
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Core/*.cs" Link="Core/%(Filename)%(Extension)" />
