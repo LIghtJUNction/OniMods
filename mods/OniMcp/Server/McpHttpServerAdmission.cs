@@ -9,10 +9,10 @@ namespace OniMcp.Server
     public partial class McpHttpServer
     {
         // This is intentionally separate from Unity/main-thread admission below.
-        // Main-thread work allows 20 concurrent requests; 32 front-door slots leave
-        // headroom for short metadata/auth/validation requests while bounding clients
-        // that have completed HTTP headers but stall before finishing their body.
-        internal const int MaxPendingHttpFrontDoorRequests = 32;
+        // Eight front-door slots preserve ordinary MCP client concurrency while
+        // leaving worker-pool headroom to accept and reject a stalled-body overload.
+        // The host regression exercises this boundary with real partial TCP bodies.
+        internal const int MaxPendingHttpFrontDoorRequests = 8;
 
         // A single batch request is already capped at 20 child calls. Keeping the
         // external request backlog to the same finite width permits normal parallel
