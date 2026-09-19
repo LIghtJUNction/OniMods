@@ -23,26 +23,11 @@ namespace CycleTrim.Patches
         private static readonly NavGridWorkloadProbe Probe = new NavGridWorkloadProbe();
         private static readonly Action<object> ReportCallback = ReportDeferred;
         private static MethodBase targetMethod;
-        private static WeakReference captureGame;
-        private static WeakReference reportScheduler;
         private static bool fastTrackChecked;
         private static bool disabledByFastTrack;
         private static bool reportRequested;
         private static bool reportScheduled;
         private static long nextReportAt = 1;
-        private static long captureGeneration;
-
-        private sealed class ReportRequest
-        {
-            internal ReportRequest(object scheduler, long generation)
-            {
-                Scheduler = scheduler;
-                Generation = generation;
-            }
-
-            internal object Scheduler { get; }
-            internal long Generation { get; }
-        }
 
         private static bool Prepare()
         {
@@ -77,11 +62,6 @@ namespace CycleTrim.Patches
             NavGrid __instance,
             List<int> ___DirtyCells)
         {
-            if (__instance == null || !ObserveGameBoundary())
-            {
-                return;
-            }
-
             if (!fastTrackChecked)
             {
                 fastTrackChecked = true;
@@ -95,11 +75,10 @@ namespace CycleTrim.Patches
                 }
 
                 UnityEngine.Debug.Log(
-                    "[CycleTrim][NavGridProbe] target reached; aggregate sampling started. " +
-                    "captureGeneration=" + captureGeneration + ".");
+                    "[CycleTrim][NavGridProbe] target reached; aggregate sampling started.");
             }
 
-            if (disabledByFastTrack)
+            if (disabledByFastTrack || __instance == null)
             {
                 return;
             }
@@ -111,45 +90,6 @@ namespace CycleTrim.Patches
                 __instance.updateRangeY);
             RequestReportIfNeeded();
             TryScheduleReport();
-        }
-
-        private static bool ObserveGameBoundary()
-        {
-            var game = Game.Instance;
-            if (game == null)
-            {
-                return false;
-            }
-            if (captureGame != null && ReferenceEquals(captureGame.Target, game))
-            {
-                return true;
-            }
-
-            if (captureGame == null)
-            {
-                captureGame = new WeakReference(game);
-            }
-            else
-            {
-                captureGame.Target = game;
-            }
-
-            captureGeneration++;
-            Probe.Reset();
-            fastTrackChecked = false;
-            disabledByFastTrack = false;
-            reportRequested = false;
-            reportScheduled = false;
-            nextReportAt = 1;
-            if (reportScheduler != null)
-            {
-                reportScheduler.Target = null;
-            }
-
-            UnityEngine.Debug.Log(
-                "[CycleTrim][NavGridProbe] game capture started; captureGeneration=" +
-                captureGeneration + ".");
-            return true;
         }
 
         private static bool IsRequested()
@@ -218,7 +158,7 @@ namespace CycleTrim.Patches
 
         private static void TryScheduleReport()
         {
-            if (!reportRequested)
+            if (!reportRequested || reportScheduled)
             {
                 return;
             }
@@ -232,66 +172,25 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            // A save/load can replace UIScheduler while the old scheduler drops its pending
-            // callbacks. Do not let a process-static scheduled flag strand the new generation.
-            if (reportScheduled
-                && (reportScheduler == null
-                    || !ReferenceEquals(reportScheduler.Target, scheduler)))
-            {
-                reportScheduled = false;
-                if (reportScheduler != null)
-                {
-                    reportScheduler.Target = null;
-                }
-            }
-            if (reportScheduled)
-            {
-                return;
-            }
-
-            if (reportScheduler == null)
-            {
-                reportScheduler = new WeakReference(scheduler);
-            }
-            else
-            {
-                reportScheduler.Target = scheduler;
-            }
-
-            scheduler.ScheduleNextFrame(
-                ReportName,
-                ReportCallback,
-                new ReportRequest(scheduler, captureGeneration));
+            scheduler.ScheduleNextFrame(ReportName, ReportCallback);
             reportScheduled = true;
         }
 
-        private static void ReportDeferred(object state)
+        private static void ReportDeferred(object ignored)
         {
-            var request = state as ReportRequest;
-            if (request == null
-                || request.Generation != captureGeneration
-                || reportScheduler == null
-                || !ReferenceEquals(reportScheduler.Target, request.Scheduler))
-            {
-                return;
-            }
-
             reportScheduled = false;
-            reportScheduler.Target = null;
             if (!reportRequested)
             {
                 return;
             }
 
             reportRequested = false;
-            var generationPrefix = "captureGeneration=" + captureGeneration + ", ";
             UnityEngine.Debug.Log(
-                "[CycleTrim][NavGridProbe] " + generationPrefix +
-                Probe.FormatSummary(maxBuckets: 12));
+                "[CycleTrim][NavGridProbe] " + Probe.FormatSummary(maxBuckets: 12));
             if (IsCaptureRequested())
             {
                 UnityEngine.Debug.Log(
-                    "[CycleTrim][NavGridProbeCapture] " + generationPrefix +
+                    "[CycleTrim][NavGridProbeCapture] " +
                     Probe.FormatSummary(maxBuckets: HistogramBucketCapacity));
             }
         }
