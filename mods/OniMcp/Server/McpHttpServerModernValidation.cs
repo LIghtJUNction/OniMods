@@ -123,6 +123,15 @@ namespace OniMcp.Server
         {
             error = null;
 
+            var paramsObject = rawMessage["params"] as JObject;
+            var metaToken = paramsObject?["_meta"];
+            if (metaToken != null && metaToken.Type != JTokenType.Object)
+            {
+                error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidParams,
+                    "Notification _meta must be an object when provided");
+                return false;
+            }
+
             var metaVersionToken = meta?["io.modelcontextprotocol/protocolVersion"];
             if (metaVersionToken != null && metaVersionToken.Type != JTokenType.String)
             {
