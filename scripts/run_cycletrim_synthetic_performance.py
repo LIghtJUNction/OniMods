@@ -17,8 +17,10 @@ def build_probe_command(dotnet: str = "dotnet") -> list[str]:
         "run",
         "--project",
         str(PROJECT),
-        "--no-restore",
-        "--no-build",
+        "--configuration",
+        "Release",
+        "-p:ImportDirectoryBuildProps=false",
+        "-p:TreatWarningsAsErrors=true",
         "--",
         "--synthetic-performance-only",
     ]
