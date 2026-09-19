@@ -8,6 +8,12 @@ namespace OniMcp.Server
 {
     public partial class McpHttpServer
     {
+        // This is intentionally separate from Unity/main-thread admission below.
+        // Eight front-door slots preserve ordinary MCP client concurrency while
+        // leaving worker-pool headroom to accept and reject a stalled-body overload.
+        // The host regression exercises this boundary with real partial TCP bodies.
+        internal const int MaxPendingHttpFrontDoorRequests = 8;
+
         // A single batch request is already capped at 20 child calls. Keeping the
         // external request backlog to the same finite width permits normal parallel
         // reads without allowing an arbitrary number of Unity-thread actions to pile up.
@@ -15,9 +21,70 @@ namespace OniMcp.Server
         // MCP 2026-07-28 reserves -32020..-32099 for protocol-defined errors.
         internal const int MainThreadBusyErrorCode = -31950;
 
+        private readonly object _httpFrontDoorAdmissionLock = new object();
+        private int _httpFrontDoorAdmissionGeneration;
+        private int _pendingHttpFrontDoorRequests;
+
         private readonly object _mainThreadAdmissionLock = new object();
         private int _mainThreadAdmissionGeneration;
         private int _pendingMainThreadHttpRequests;
+
+        private bool TryAcquireHttpFrontDoorAdmission(out HttpFrontDoorAdmissionLease lease)
+        {
+            lock (_httpFrontDoorAdmissionLock)
+            {
+                if (_running && _pendingHttpFrontDoorRequests < MaxPendingHttpFrontDoorRequests)
+                {
+                    _pendingHttpFrontDoorRequests++;
+                    lease = new HttpFrontDoorAdmissionLease(this, _httpFrontDoorAdmissionGeneration);
+                    return true;
+                }
+            }
+
+            lease = null;
+            return false;
+        }
+
+        private static void RejectHttpFrontDoorBusy(HttpListenerResponse response)
+        {
+            try
+            {
+                response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                response.KeepAlive = false;
+                response.ContentLength64 = 0;
+                response.Close();
+            }
+            catch { }
+        }
+
+        private void ResetHttpFrontDoorAdmission()
+        {
+            lock (_httpFrontDoorAdmissionLock)
+            {
+                unchecked { _httpFrontDoorAdmissionGeneration++; }
+                _pendingHttpFrontDoorRequests = 0;
+            }
+        }
+
+        private bool IsHttpFrontDoorAdmissionCurrent(int generation)
+        {
+            lock (_httpFrontDoorAdmissionLock)
+            {
+                return _running && generation == _httpFrontDoorAdmissionGeneration;
+            }
+        }
+
+        private void ReleaseHttpFrontDoorAdmission(int generation)
+        {
+            lock (_httpFrontDoorAdmissionLock)
+            {
+                if (generation != _httpFrontDoorAdmissionGeneration)
+                    return;
+                if (_pendingHttpFrontDoorRequests <= 0)
+                    throw new InvalidOperationException("HTTP front-door admission accounting underflow.");
+                _pendingHttpFrontDoorRequests--;
+            }
+        }
 
         private bool TryAcquireMainThreadHttpAdmission(HttpListenerResponse response, object requestId,
             string sessionId, bool modern, out MainThreadHttpAdmissionLease lease)
@@ -123,6 +190,31 @@ namespace OniMcp.Server
                 response.Close();
             }
             catch { }
+        }
+
+        private sealed class HttpFrontDoorAdmissionLease
+        {
+            private McpHttpServer _owner;
+            private readonly int _generation;
+
+            internal HttpFrontDoorAdmissionLease(McpHttpServer owner, int generation)
+            {
+                _owner = owner;
+                _generation = generation;
+            }
+
+            internal bool IsCurrentGeneration()
+            {
+                var owner = Volatile.Read(ref _owner);
+                return owner != null && owner.IsHttpFrontDoorAdmissionCurrent(_generation);
+            }
+
+            internal void Release()
+            {
+                var owner = Interlocked.Exchange(ref _owner, null);
+                if (owner != null)
+                    owner.ReleaseHttpFrontDoorAdmission(_generation);
+            }
         }
 
         private sealed class MainThreadHttpAdmissionLease

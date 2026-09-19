@@ -111,6 +111,7 @@ namespace OniMcp.Server
         public void StopServer()
         {
             _running = false;
+            ResetHttpFrontDoorAdmission();
             ResetMainThreadHttpAdmission();
             try
             {
@@ -148,13 +149,44 @@ namespace OniMcp.Server
                 try
                 {
                     var context = listener.GetContext();
-                    ThreadPool.QueueUserWorkItem(_ =>
+                    HttpFrontDoorAdmissionLease admission;
+                    if (!TryAcquireHttpFrontDoorAdmission(out admission))
                     {
-                        if (_running && ReferenceEquals(listener, _listener))
-                            ProcessRequest(context);
-                        else
-                            try { context.Response.Close(); } catch { }
-                    });
+                        RejectHttpFrontDoorBusy(context.Response);
+                        continue;
+                    }
+
+                    try
+                    {
+                        // Do not put potentially blocking request-body reads on the CLR thread pool.
+                        // A bounded set of dedicated request workers keeps HttpListener's own async
+                        // machinery responsive enough for the listener thread to reject overloads.
+                        var requestThread = new Thread(() =>
+                        {
+                            try
+                            {
+                                if (admission.IsCurrentGeneration() && ReferenceEquals(listener, _listener))
+                                    ProcessRequest(context);
+                                else
+                                    CloseStaleHttpResponse(context.Response);
+                            }
+                            finally
+                            {
+                                admission.Release();
+                            }
+                        })
+                        {
+                            IsBackground = true,
+                            Name = "OniMcpHttpRequest"
+                        };
+                        requestThread.Start();
+                    }
+                    catch
+                    {
+                        admission.Release();
+                        CloseStaleHttpResponse(context.Response);
+                        throw;
+                    }
                 }
                 catch (HttpListenerException)
                 {
