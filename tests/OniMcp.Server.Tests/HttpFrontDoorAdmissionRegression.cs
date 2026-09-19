@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using OniMcp.Config;
+using OniMcp.Core;
 using OniMcp.Server;
 
 internal static class HttpFrontDoorAdmissionRegressionEntry
@@ -17,6 +18,7 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
     private static void Main()
     {
         RunFrontDoorAdmissionRegression();
+        RunLegacySseIsolationRegression();
 
         var existing = typeof(ModernCancellationRejectionRegressionEntry).GetMethod("Main",
             BindingFlags.NonPublic | BindingFlags.Static);
@@ -58,6 +60,103 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
             CloseAll(stalled);
             server.StopServer();
         }
+    }
+
+    private static void RunLegacySseIsolationRegression()
+    {
+        int port = ReservePort();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        var sseClients = new List<TcpClient>();
+        server.StartServer();
+        try
+        {
+            const string sessionId = "sse-admission-regression";
+            AddLegacySession(server, sessionId);
+
+            for (int i = 0; i < ExpectedFrontDoorCapacity; i++)
+                sseClients.Add(OpenLegacySse(port, sessionId));
+
+            Thread.Sleep(250);
+            AssertStatus(port, HttpStatusCode.OK,
+                "Long-lived legacy SSE streams exhausted the pre-body HTTP admission capacity");
+        }
+        finally
+        {
+            CloseAll(sseClients);
+            server.StopServer();
+        }
+    }
+
+    private static void AddLegacySession(McpHttpServer server, string sessionId)
+    {
+        var field = typeof(McpHttpServer).GetField("_sessions", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (field == null)
+            throw new InvalidOperationException("Server session registry was not found");
+        var sessions = field.GetValue(server) as Dictionary<string, McpSession>;
+        if (sessions == null)
+            throw new InvalidOperationException("Server session registry has an unexpected shape");
+        sessions[sessionId] = new McpSession
+        {
+            Id = sessionId,
+            ProtocolVersion = "2025-11-25"
+        };
+    }
+
+    private static TcpClient OpenLegacySse(int port, string sessionId)
+    {
+        var client = new TcpClient
+        {
+            NoDelay = true,
+            SendTimeout = 2000,
+            ReceiveTimeout = 2000
+        };
+        client.Connect(IPAddress.Loopback, port);
+        NetworkStream stream = client.GetStream();
+        string request =
+            "GET /mcp/ HTTP/1.1\r\n"
+            + "Host: 127.0.0.1:" + port + "\r\n"
+            + "Accept: text/event-stream\r\n"
+            + "Mcp-Session-Id: " + sessionId + "\r\n"
+            + "Mcp-Protocol-Version: 2025-11-25\r\n"
+            + "Connection: keep-alive\r\n"
+            + "\r\n";
+        byte[] bytes = Encoding.ASCII.GetBytes(request);
+        stream.Write(bytes, 0, bytes.Length);
+        stream.Flush();
+
+        string headers = ReadHeaders(stream);
+        string[] lines = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
+        if (lines.Length == 0 || !lines[0].Contains(" 200 "))
+        {
+            client.Close();
+            throw new InvalidOperationException("Legacy SSE stream was not accepted: "
+                + (lines.Length == 0 ? "missing status" : lines[0]));
+        }
+        return client;
+    }
+
+    private static string ReadHeaders(NetworkStream stream)
+    {
+        var bytes = new List<byte>();
+        var one = new byte[1];
+        while (bytes.Count < 16384)
+        {
+            int read = stream.Read(one, 0, 1);
+            if (read <= 0)
+                throw new IOException("Connection closed before response headers completed");
+            bytes.Add(one[0]);
+            int count = bytes.Count;
+            if (count >= 4
+                && bytes[count - 4] == (byte)'\r'
+                && bytes[count - 3] == (byte)'\n'
+                && bytes[count - 2] == (byte)'\r'
+                && bytes[count - 1] == (byte)'\n')
+            {
+                return Encoding.ASCII.GetString(bytes.ToArray());
+            }
+        }
+        throw new IOException("Response headers exceeded regression limit");
     }
 
     private static void FillFrontDoor(int port, List<TcpClient> stalled)
