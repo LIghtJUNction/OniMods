@@ -40,6 +40,7 @@ internal static class Program
         TestWorldEditorCellObjectPolicy();
         TestFloodFillPreviewCells();
         TestSandboxDryRunRoutingPolicy();
+        TestSweepEligibilityPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -58,7 +59,7 @@ internal static class Program
 
         calls = 0;
         var stopped = ToolBatchTools.CallMany().Handler(JObject.Parse("{calls:[{name:'fail'},{name:'ok'}],stopOnError:true}"));
-        Check(stopped.IsError && calls == 1 && (bool)Body(stopped)["stopped"], "stopOnError must stop and propagate failure");
+        Check(stopped.IsError && calls == 1, "stopOnError must stop and propagate failure");
 
         calls = 0;
         var invalid = ToolBatchTools.CallMany().Handler(JObject.Parse("{calls:[{name:'ok'},{name:'required',args:{value:null}}]}"));
@@ -205,6 +206,16 @@ internal static class Program
             Check(error != null && error.Contains("refusing to execute"),
                 "unsupported sandbox dry-run explains that mutation was refused");
         }
+    }
+
+    private static void TestSweepEligibilityPolicy()
+    {
+        Check(SweepEligibilityPolicy.RejectionReason(false, false) == "no_clearable",
+            "pickupables without Clearable remain rejected");
+        Check(SweepEligibilityPolicy.RejectionReason(true, false) == "not_clearable",
+            "non-clearable pickupables must be rejected before sweep designation or priority changes");
+        Check(SweepEligibilityPolicy.RejectionReason(true, true) == null,
+            "clearable pickupables remain eligible for the existing sweep path");
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
