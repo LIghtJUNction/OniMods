@@ -83,6 +83,8 @@ namespace OniMcp.Tools
                                 caseSet.Add("toollookup");
                                 caseSet.Add("jsonserialize");
                             }
+                            else
+                                return CallToolResult.Error("cases must contain only: all, toolList, toolLookup, jsonSerialize");
                         }
                     }
 
