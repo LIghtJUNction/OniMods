@@ -49,7 +49,9 @@ namespace OniMcp.Tools
                 Handler = args =>
                 {
                     string cases = (args["cases"]?.ToString() ?? "all").Trim().ToLowerInvariant();
-                    int iterations = ToolUtil.GetInt(args, "iterations") ?? 200;
+                    int iterations = 200;
+                    if (args["iterations"] != null && !int.TryParse(args["iterations"].ToString(), out iterations))
+                        return CallToolResult.Error("iterations must be an integer from 1 to 5000");
                     string targetTool = args["tool"]?.ToString()?.Trim();
                     bool includeDetails = ToolUtil.GetBool(args, "includeDetails", false);
 
