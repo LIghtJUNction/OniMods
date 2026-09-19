@@ -209,9 +209,16 @@ def main() -> int:
     except CaptureError as error:
         failures.append(f"capture analyzer rejected valid anchored window: {error}")
 
-    regressed_bucket_capture = window_capture.replace(
-        "dirty=8-15,rx=2,ry=4,density=<=1/4:3; ",
-        "dirty=8-15,rx=2,ry=4,density=<=1/4:1; ",
+    regressed_bucket_capture = (
+        window_capture
+        .replace(
+            "dirty=8-15,rx=2,ry=4,density=<=1/4:3; ",
+            "dirty=8-15,rx=2,ry=4,density=<=1/4:1; ",
+        )
+        .replace(
+            "dirty=24-31,rx=2,ry=4,density=>1/2:2]",
+            "dirty=24-31,rx=2,ry=4,density=>1/2:4]",
+        )
     )
     expect_capture_failure(
         regressed_bucket_capture,
