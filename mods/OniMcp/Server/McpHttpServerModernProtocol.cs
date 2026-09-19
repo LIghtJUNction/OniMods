@@ -110,16 +110,15 @@ namespace OniMcp.Server
                             cancellationError), 400);
                         return true;
                     }
-
-                    response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
-                    response.StatusCode = (int)HttpStatusCode.Accepted;
-                    response.ContentLength64 = 0;
-                    response.Close();
-                    return true;
                 }
 
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.MethodNotFound,
-                    $"Notification method is not available on the {ModernProtocolVersion} compatibility path: {method}"), 404);
+                // The 2026 core defines no actionable client-to-server notifications over HTTP.
+                // Current official SDKs acknowledge and drop id-less notification POSTs so
+                // fire-and-forget clients do not receive an unusable MethodNotFound response.
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                response.StatusCode = (int)HttpStatusCode.Accepted;
+                response.ContentLength64 = 0;
+                response.Close();
                 return true;
             }
 

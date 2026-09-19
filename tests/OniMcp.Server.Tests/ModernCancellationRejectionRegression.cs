@@ -62,6 +62,14 @@ internal static class ModernCancellationRejectionRegressionEntry
                     AssertAcceptedWithoutSession(response, "Body-routed modern cancellation without standard headers");
                 }
 
+                // Current official SDKs accept and drop id-less notification POSTs on the
+                // stateless 2026 path. They are fire-and-forget and must not allocate legacy state.
+                using (var request = BuildUnsupportedNotificationRequest("notifications/progress"))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    AssertAcceptedWithoutSession(response, "Unsupported modern notification");
+                }
+
                 using (var request = BuildCancellationRequest(new JValue(18004), includeRequestEnvelope: false,
                     includeProtocolHeader: true, includeMethodHeader: true,
                     methodHeader: "notifications/progress"))
@@ -145,6 +153,26 @@ internal static class ModernCancellationRejectionRegressionEntry
             request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
         if (includeMethodHeader)
             request.Headers.TryAddWithoutValidation("Mcp-Method", methodHeader);
+        return request;
+    }
+
+    private static HttpRequestMessage BuildUnsupportedNotificationRequest(string method)
+    {
+        var body = new JObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["method"] = method,
+            ["params"] = new JObject
+            {
+                ["progressToken"] = "modern-notification-regression",
+                ["progress"] = 1
+            }
+        };
+        var request = new HttpRequestMessage(HttpMethod.Post, "");
+        request.Content = new StringContent(body.ToString(Newtonsoft.Json.Formatting.None), Encoding.UTF8,
+            "application/json");
+        request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
         return request;
     }
 
