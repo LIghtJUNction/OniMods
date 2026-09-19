@@ -85,6 +85,7 @@
     <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
+    <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
   </Target>
 
 </Project>
