@@ -239,18 +239,15 @@ internal static class Program
                 PumpUntil(work);
                 using (var response = work.GetAwaiter().GetResult())
                 {
-                    Assert(response.StatusCode == HttpStatusCode.NotFound,
-                        "Unsupported modern notification was incorrectly accepted with 202");
-                    var json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int)json["error"]["code"] == -32601,
-                        "Unsupported modern notification did not use Method Not Found");
-                    Assert(json["id"]?.Type == JTokenType.Null,
-                        "Unsupported notification error must not invent a request id");
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Modern notification was not acknowledged with 202");
+                    Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                        "Acknowledged modern notification returned a response body");
                     Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Unsupported modern notification allocated a legacy session header");
+                        "Acknowledged modern notification allocated a legacy session header");
                 }
                 Assert(server.GetSessionSummaries().Count == 0,
-                    "Unsupported modern notification allocated legacy session state");
+                    "Acknowledged modern notification allocated legacy session state");
             }
 
             Console.WriteLine("PASS: MCP 2026-07-28 resource reads stay stateless and side-effect-free.");
