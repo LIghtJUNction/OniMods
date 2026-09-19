@@ -46,10 +46,18 @@ namespace OniMcp.Server
                 return false;
             }
 
-            if (meta?["io.modelcontextprotocol/clientCapabilities"]?.Type != JTokenType.Object)
+            var clientCapabilities = meta?["io.modelcontextprotocol/clientCapabilities"] as JObject;
+            if (clientCapabilities == null)
             {
                 error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
                     "Modern requests require params._meta.io.modelcontextprotocol/clientCapabilities");
+                return false;
+            }
+
+            string capabilityError;
+            if (!ValidateModernClientCapabilities(clientCapabilities, out capabilityError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, capabilityError);
                 return false;
             }
 
@@ -112,6 +120,87 @@ namespace OniMcp.Server
             if (string.Equals(method, "tools/call", StringComparison.Ordinal)
                 && !ValidateModernToolParameterHeaders(httpRequest, rawMessage, out error))
             {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool ValidateModernClientCapabilities(JObject capabilities, out string errorMessage)
+        {
+            errorMessage = null;
+
+            if (!IsObjectCapabilityWhenPresent(capabilities, "roots", out errorMessage))
+                return false;
+
+            JObject sampling;
+            if (!TryGetObjectCapability(capabilities, "sampling", out sampling, out errorMessage))
+                return false;
+            if (sampling != null
+                && (!IsObjectCapabilityWhenPresent(sampling, "context", out errorMessage)
+                    || !IsObjectCapabilityWhenPresent(sampling, "tools", out errorMessage)))
+                return false;
+
+            JObject elicitation;
+            if (!TryGetObjectCapability(capabilities, "elicitation", out elicitation, out errorMessage))
+                return false;
+            if (elicitation != null
+                && (!IsObjectCapabilityWhenPresent(elicitation, "form", out errorMessage)
+                    || !IsObjectCapabilityWhenPresent(elicitation, "url", out errorMessage)))
+                return false;
+
+            if (!ValidateObjectMapCapability(capabilities, "experimental", out errorMessage)
+                || !ValidateObjectMapCapability(capabilities, "extensions", out errorMessage))
+                return false;
+
+            return true;
+        }
+
+        private static bool IsObjectCapabilityWhenPresent(JObject parent, string name, out string errorMessage)
+        {
+            errorMessage = null;
+            JToken token = parent?[name];
+            if (token == null)
+                return true;
+            if (token.Type == JTokenType.Object)
+                return true;
+
+            errorMessage = $"params._meta.io.modelcontextprotocol/clientCapabilities.{name} must be an object when provided";
+            return false;
+        }
+
+        private static bool TryGetObjectCapability(JObject capabilities, string name, out JObject value,
+            out string errorMessage)
+        {
+            value = null;
+            errorMessage = null;
+            JToken token = capabilities?[name];
+            if (token == null)
+                return true;
+
+            value = token as JObject;
+            if (value != null)
+                return true;
+
+            errorMessage = $"params._meta.io.modelcontextprotocol/clientCapabilities.{name} must be an object when provided";
+            return false;
+        }
+
+        private static bool ValidateObjectMapCapability(JObject capabilities, string name, out string errorMessage)
+        {
+            errorMessage = null;
+            JObject map;
+            if (!TryGetObjectCapability(capabilities, name, out map, out errorMessage))
+                return false;
+            if (map == null)
+                return true;
+
+            foreach (var property in map.Properties())
+            {
+                if (property.Value?.Type == JTokenType.Object)
+                    continue;
+
+                errorMessage = $"params._meta.io.modelcontextprotocol/clientCapabilities.{name}.{property.Name} must be an object";
                 return false;
             }
 
