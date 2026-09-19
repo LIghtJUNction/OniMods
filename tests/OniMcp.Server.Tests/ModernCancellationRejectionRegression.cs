@@ -13,7 +13,7 @@ internal static class ModernCancellationRejectionRegressionEntry
 {
     private static void Main()
     {
-        RunModernCancellationRejectionRegression();
+        RunModernCancellationAcknowledgementRegression();
 
         var existing = typeof(ModernListCursorRegressionEntry).GetMethod("Main",
             BindingFlags.NonPublic | BindingFlags.Static);
@@ -22,7 +22,7 @@ internal static class ModernCancellationRejectionRegressionEntry
         existing.Invoke(null, null);
     }
 
-    private static void RunModernCancellationRejectionRegression()
+    private static void RunModernCancellationAcknowledgementRegression()
     {
         int port = ReservePort();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });
@@ -35,22 +35,33 @@ internal static class ModernCancellationRejectionRegressionEntry
                 BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
                 Timeout = TimeSpan.FromSeconds(5)
             })
-            using (var request = BuildCancellationRequest())
-            using (var response = client.SendAsync(request).GetAwaiter().GetResult())
             {
-                Assert(response.StatusCode == HttpStatusCode.NotFound,
-                    "Modern notifications/cancelled POST was accepted instead of rejected");
-                JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                Assert((int?)json["error"]?["code"] == McpErrorCode.MethodNotFound,
-                    "Modern notifications/cancelled POST used the wrong JSON-RPC error");
-                Assert(json["result"] == null,
-                    "Modern notifications/cancelled POST returned a success result");
-                Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                    "Rejected modern cancellation returned a legacy session id");
+                using (var request = BuildCancellationRequest(new JValue(18001)))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Validated modern cancellation was not acknowledged: " + (int)response.StatusCode);
+                    Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                        "Validated modern cancellation returned a response body");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Validated modern cancellation returned a legacy session id");
+                }
+
+                using (var request = BuildCancellationRequest(new JValue(18001.5)))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Fractional modern cancellation request id returned HTTP " + (int)response.StatusCode);
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int?)json["error"]?["code"] == McpErrorCode.InvalidRequest,
+                        "Fractional modern cancellation used the wrong JSON-RPC error");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern cancellation returned a legacy session id");
+                }
             }
 
             Assert(server.GetSessionSummaries().Count == 0,
-                "Rejected modern cancellation allocated legacy session state");
+                "Modern cancellation allocated legacy session state");
         }
         finally
         {
@@ -58,7 +69,7 @@ internal static class ModernCancellationRejectionRegressionEntry
         }
     }
 
-    private static HttpRequestMessage BuildCancellationRequest()
+    private static HttpRequestMessage BuildCancellationRequest(JToken requestId)
     {
         var body = new JObject
         {
@@ -66,7 +77,7 @@ internal static class ModernCancellationRejectionRegressionEntry
             ["method"] = "notifications/cancelled",
             ["params"] = new JObject
             {
-                ["requestId"] = 18001,
+                ["requestId"] = requestId,
                 ["reason"] = "client abandoned response stream",
                 ["_meta"] = new JObject
                 {
