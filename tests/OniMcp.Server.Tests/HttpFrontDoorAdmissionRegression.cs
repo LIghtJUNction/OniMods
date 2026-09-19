@@ -80,6 +80,8 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
             Thread.Sleep(250);
             AssertStatus(port, HttpStatusCode.OK,
                 "Long-lived legacy SSE streams exhausted the pre-body HTTP admission capacity");
+            AssertLegacySseStatus(port, sessionId, HttpStatusCode.ServiceUnavailable,
+                "Legacy SSE admission allowed an unbounded ninth stream");
         }
         finally
         {
@@ -105,6 +107,32 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
 
     private static TcpClient OpenLegacySse(int port, string sessionId)
     {
+        var client = ConnectLegacySse(port, sessionId);
+        string statusLine = ReadStatusLineAndHeaders(client.GetStream());
+        if (!statusLine.Contains(" 200 "))
+        {
+            client.Close();
+            throw new InvalidOperationException("Legacy SSE stream was not accepted: " + statusLine);
+        }
+        return client;
+    }
+
+    private static void AssertLegacySseStatus(int port, string sessionId, HttpStatusCode expected, string message)
+    {
+        using (var client = ConnectLegacySse(port, sessionId))
+        {
+            string statusLine = ReadStatusLineAndHeaders(client.GetStream());
+            string[] parts = statusLine.Split(' ');
+            int actual;
+            if (parts.Length < 2 || !int.TryParse(parts[1], out actual))
+                throw new InvalidOperationException(message + "; malformed status: " + statusLine);
+            Assert(actual == (int)expected,
+                message + "; expected HTTP " + (int)expected + ", got " + actual);
+        }
+    }
+
+    private static TcpClient ConnectLegacySse(int port, string sessionId)
+    {
         var client = new TcpClient
         {
             NoDelay = true,
@@ -124,19 +152,10 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
         byte[] bytes = Encoding.ASCII.GetBytes(request);
         stream.Write(bytes, 0, bytes.Length);
         stream.Flush();
-
-        string headers = ReadHeaders(stream);
-        string[] lines = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
-        if (lines.Length == 0 || !lines[0].Contains(" 200 "))
-        {
-            client.Close();
-            throw new InvalidOperationException("Legacy SSE stream was not accepted: "
-                + (lines.Length == 0 ? "missing status" : lines[0]));
-        }
         return client;
     }
 
-    private static string ReadHeaders(NetworkStream stream)
+    private static string ReadStatusLineAndHeaders(NetworkStream stream)
     {
         var bytes = new List<byte>();
         var one = new byte[1];
@@ -153,7 +172,9 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
                 && bytes[count - 2] == (byte)'\r'
                 && bytes[count - 1] == (byte)'\n')
             {
-                return Encoding.ASCII.GetString(bytes.ToArray());
+                string headers = Encoding.ASCII.GetString(bytes.ToArray());
+                string[] lines = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                return lines.Length == 0 ? string.Empty : lines[0];
             }
         }
         throw new IOException("Response headers exceeded regression limit");
