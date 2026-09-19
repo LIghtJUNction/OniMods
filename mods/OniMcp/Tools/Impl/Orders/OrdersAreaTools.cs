@@ -9,7 +9,7 @@ using OniMcp.Support;
 namespace OniMcp.Tools
 {
     public static partial class OrdersTools
-{
+    {
         public static McpTool SweepArea()
         {
             return new McpTool
@@ -67,6 +67,7 @@ namespace OniMcp.Tools
                     int skippedEquipped = 0;
                     int skippedNoCell = 0;
                     int skippedNoClearable = 0;
+                    int skippedNotClearable = 0;
                     var liquidScan = ScanLiquidCells(rect, worldId, 12);
                     var targets = new List<Dictionary<string, object>>();
                     var targetCells = new List<int>();
@@ -107,11 +108,17 @@ namespace OniMcp.Tools
                         }
 
                         var clearable = pickupable.GetComponent<Clearable>();
-                        if (clearable == null)
+                        string eligibilityRejection = SweepEligibilityPolicy.RejectionReason(
+                            clearable != null,
+                            clearable != null && clearable.isClearable);
+                        if (eligibilityRejection != null)
                         {
-                            skippedNoClearable++;
-                            IncrementSkip(executionSkipped, "no_clearable");
-                            AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_no_clearable");
+                            if (eligibilityRejection == "no_clearable")
+                                skippedNoClearable++;
+                            else
+                                skippedNotClearable++;
+                            IncrementSkip(executionSkipped, eligibilityRejection);
+                            AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_" + eligibilityRejection);
                             continue;
                         }
 
@@ -140,7 +147,8 @@ namespace OniMcp.Tools
                             ["invalidCell"] = skippedNoCell,
                             ["stored"] = skippedStored,
                             ["equipped"] = skippedEquipped,
-                            ["noClearable"] = skippedNoClearable
+                            ["noClearable"] = skippedNoClearable,
+                            ["notClearable"] = skippedNotClearable
                         },
                         ["execution"] = CellExecutionMetadata("sweep", worldId, targetCells, executionSkipped, detail, limit),
                         ["worldId"] = worldId,
@@ -227,7 +235,7 @@ namespace OniMcp.Tools
                     ["mode"] = new McpToolParameter { Type = "string", Description = "attack/capture 支持：mark、cancel；capture 额外支持 release", Required = false, EnumValues = new List<string> { "mark", "cancel", "release" } },
                     ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "capture 支持：只预览会标记/取消/释放的目标，不实际修改；dryRun 不要求 confirm", Required = false },
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "attack 支持：允许标记友方/协助阵营目标", Required = false },
-                    ["attackAreaConfirm"] = new McpToolParameter { Type = "string", Description = "attack 区域 mark 二次确认，必须精确为 attack area", Required = false },
+                    ["attackAreaConfirm"] = new McToolParameter { Type = "string", Description = "attack 区域 mark 二次确认，必须精确为 attack area", Required = false },
                     ["paused"] = new McpToolParameter { Type = "boolean", Description = "manual_delivery 支持：true 暂停手动补料，false 恢复", Required = false },
                     ["capacityKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 支持：目标储量上限 kg", Required = false },
                     ["refillMassKg"] = new McpToolParameter { Type = "number", Description = "manual_delivery 支持：补料阈值 kg", Required = false },
