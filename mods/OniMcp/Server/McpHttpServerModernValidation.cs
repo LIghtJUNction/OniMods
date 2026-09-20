@@ -15,7 +15,7 @@ namespace OniMcp.Server
             if (rawMessage.Property("id") != null && !IsValidModernRequestId(rawMessage["id"]))
             {
                 error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                    "Modern request id must be a string or integer");
+                    "Modern request id must be a string or number");
                 return false;
             }
 
@@ -384,7 +384,9 @@ namespace OniMcp.Server
         private static bool IsValidModernRequestId(JToken requestId)
         {
             return requestId != null
-                && (requestId.Type == JTokenType.String || requestId.Type == JTokenType.Integer);
+                && (requestId.Type == JTokenType.String
+                    || requestId.Type == JTokenType.Integer
+                    || requestId.Type == JTokenType.Float);
         }
 
         private static bool RequiresModernNameHeader(string method)
@@ -417,7 +419,6 @@ namespace OniMcp.Server
             {
                 return true;
             }
-
             int payloadLength = headerValue.Length - Base64HeaderPrefix.Length - Base64HeaderSuffix.Length;
             if (payloadLength < 0)
                 return false;
