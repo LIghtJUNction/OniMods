@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -12,14 +13,25 @@ from verify_cycletrim_navgrid_source_contract import download_source, method_bod
 
 
 def verify_set_active_contract(set_active_body: str) -> None:
+    branch_match = re.search(r"if\s*\(\s*tech\s*!=\s*null\s*\)", set_active_body)
+    if branch_match is None:
+        raise ValueError("SetActiveResearch no longer has the expected tech branch")
+
+    reset_match = re.search(
+        r"this\.activeResearch\s*=\s*null\s*;",
+        set_active_body,
+    )
+    if reset_match is None:
+        raise ValueError("SetActiveResearch no longer resets activeResearch")
+    if reset_match.start() > branch_match.start():
+        raise ValueError(
+            "SetActiveResearch must reset activeResearch before branching on tech"
+        )
+
     for pattern, message in (
         (
             r"if\s*\(\s*clearQueue\s*\)\s*\{\s*this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}",
             "SetActiveResearch clearQueue=true no longer clears queuedTech",
-        ),
-        (
-            r"this\.activeResearch\s*=\s*null\s*;",
-            "SetActiveResearch no longer resets activeResearch",
         ),
         (
             r"if\s*\(\s*tech\s*!=\s*null\s*\).*?\}\s*else\s*\{\s*"
