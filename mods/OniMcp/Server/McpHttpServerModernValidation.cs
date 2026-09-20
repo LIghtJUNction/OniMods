@@ -46,6 +46,13 @@ namespace OniMcp.Server
                 return false;
             }
 
+            string metaKeyError;
+            if (!ValidateModernMetaKeys(meta, out metaKeyError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, metaKeyError);
+                return false;
+            }
+
             var clientCapabilities = meta?["io.modelcontextprotocol/clientCapabilities"] as JObject;
             if (clientCapabilities == null)
             {
