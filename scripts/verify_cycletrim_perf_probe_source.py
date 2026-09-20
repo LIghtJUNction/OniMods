@@ -10,6 +10,17 @@ CORE = ROOT / "mods/CycleTrim/Core/PerformanceProbeCounter.cs"
 GENERATION_CORE = ROOT / "mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs"
 ANALYZER = ROOT / "scripts/analyze_cycletrim_perf_probe.py"
 
+COUNTERS = (
+    "asyncTickCounter",
+    "asyncWorkCounter",
+    "navigatorProbeCounter",
+    "fetchCounter",
+    "choreCounter",
+    "brainSchedulerCounter",
+    "roomProberCounter",
+)
+MAIN_COUNTERS = tuple(name for name in COUNTERS if name != "asyncWorkCounter")
+
 
 def require(text: str, needle: str, message: str, failures: list[str]) -> None:
     if needle not in text:
@@ -29,37 +40,71 @@ def main() -> int:
     require(patch, "Stopwatch.GetTimestamp()", "wall-clock Stopwatch timing missing", failures)
     require(
         patch,
-        "RecordWorker(__state.Counter, __state.StartedAt)",
+        "RecordWorker(__state)",
         "worker path is not separated from main-thread timing",
         failures,
     )
-    require(
-        patch,
-        "asyncWorkCounter = new PerformanceProbeGenerationCounter()",
-        "worker counter does not own capture generations",
-        failures,
-    )
-    require(
-        patch,
-        "asyncWorkCounter.AdvanceGeneration()",
-        "game boundary does not rotate the worker timing generation",
-        failures,
-    )
+    require(patch, "RecordMain(__state)", "main-thread timing state is not recorded", failures)
+
+    for name in COUNTERS:
+        require(
+            patch,
+            f"private static PerformanceProbeGenerationCounter {name};",
+            f"{name} is not generation-owned",
+            failures,
+        )
+        require(
+            patch,
+            f"{name}.AdvanceGeneration();",
+            f"{name} does not rotate at the game boundary",
+            failures,
+        )
+        require(
+            patch,
+            f"{name}.SnapshotCurrent()",
+            f"{name} reporting is not scoped to the current game generation",
+            failures,
+        )
+
+    if patch.count("new PerformanceProbeGenerationCounter()") != len(MAIN_COUNTERS):
+        failures.append("all six main-thread counters must use lock-free generation ownership")
+    if patch.count("new PerformanceProbeGenerationCounter(consistentSnapshots: true)") != 1:
+        failures.append("only the async worker counter should use coordinated snapshots")
+
     require(
         patch,
         "asyncWorkCounter.CaptureCurrent()",
         "worker Prefix does not capture generation ownership at work start",
         failures,
     )
+    for name in MAIN_COUNTERS:
+        require(
+            patch,
+            f"BeginMainTiming({name})",
+            f"{name} Prefix does not capture current generation ownership",
+            failures,
+        )
+
     require(
         patch,
-        "asyncWorkCounter.SnapshotCurrent()",
-        "reporting does not snapshot the current worker generation",
+        "internal TimingState(PerformanceProbeCounter counter, long startedAt)",
+        "timing state does not retain generation-owned counter identity",
         failures,
     )
-    require(patch, "RecordMain(navigatorProbeCounter", "navigator probe timing is not recorded on the main-thread path", failures)
-    require(patch, "RecordMain(brainSchedulerCounter", "brain scheduler timing is not recorded on the main-thread path", failures)
-    require(patch, "RecordMain(roomProberCounter", "room prober timing is not recorded on the main-thread path", failures)
+    require(
+        patch,
+        "state.Counter.Record(Stopwatch.GetTimestamp() - state.StartedAt)",
+        "timing completion does not record through the captured counter owner",
+        failures,
+    )
+    require(
+        patch,
+        "asyncWorkCounter = new PerformanceProbeGenerationCounter(consistentSnapshots: true)",
+        "worker counter lost coordinated snapshots",
+        failures,
+    )
+    if "RecordMain(navigatorProbeCounter" in patch:
+        failures.append("main-thread Finalizers must record through captured generation ownership")
     require(patch, '"Navigator.UpdateProbe"', "navigator probe target is missing from reports", failures)
     require(patch, '"BrainScheduler.RenderEveryTick"', "brain scheduler target is missing from reports", failures)
     require(patch, '"RoomProber.Sim1000ms"', "room prober target is missing from reports", failures)
@@ -95,7 +140,7 @@ def main() -> int:
     )
     require(
         patch,
-        "private static long BeginMainTiming()",
+        "private static TimingState BeginMainTiming(",
         "main-thread boundary-aware timing helper missing",
         failures,
     )
@@ -111,20 +156,26 @@ def main() -> int:
     )
     require(
         patch,
-        "startedNewCapture ? asyncTickSnapshot : lastAsyncTickSnapshot",
-        "first report in a game session is not rebased away from prior-session timing",
+        "startedNewCapture ? default(PerformanceProbeSnapshot) : lastAsyncTickSnapshot",
+        "first report in a game session discards fresh main-thread timing",
         failures,
     )
-    if patch.count("__state = BeginMainTiming();") != 6:
-        failures.append("all six main-thread probes must rotate the game boundary before target execution")
-    if "private static long BeginMainTiming()" in patch:
-        begin_main = patch.split("private static long BeginMainTiming()", 1)[1].split(
+    require(
+        patch,
+        "startedNewCapture ? default(PerformanceProbeSnapshot) : lastAsyncWorkSnapshot",
+        "first report in a game session discards fresh worker timing",
+        failures,
+    )
+    if patch.count("__state = BeginMainTiming(") != 6:
+        failures.append("all six main-thread probes must capture generation ownership before target execution")
+    if "private static TimingState BeginMainTiming(" in patch:
+        begin_main = patch.split("private static TimingState BeginMainTiming(", 1)[1].split(
             "private static void ObserveGameBoundary()", 1
         )[0]
-        if "ObserveGameBoundary();" not in begin_main or "return BeginTiming();" not in begin_main:
-            failures.append("boundary-aware timing helper must observe the game boundary then start timing")
-        elif begin_main.find("ObserveGameBoundary();") > begin_main.find("return BeginTiming();"):
-            failures.append("game boundary must rotate before the main target timing starts")
+        if "ObserveGameBoundary();" not in begin_main or "counter.CaptureCurrent()" not in begin_main:
+            failures.append("boundary-aware timing helper must rotate then capture the current counter")
+        elif begin_main.find("ObserveGameBoundary();") > begin_main.find("counter.CaptureCurrent()"):
+            failures.append("game boundary must rotate before the current counter is captured")
     record_main = patch.split("private static void RecordMain", 1)[1].split(
         "private static void RecordWorker", 1
     )[0]
@@ -156,21 +207,18 @@ def main() -> int:
         failures.append("recording path must not allocate managed objects")
 
     for needle, message in (
-        ("Volatile.Read(ref current)", "worker generation capture is not an atomic published read"),
-        ("Interlocked.Exchange(ref current, CreateCounter())", "worker generation rotation is not atomic"),
-        (
-            "new PerformanceProbeCounter(consistentSnapshots: true)",
-            "worker generation counters lost coordinated snapshots",
-        ),
+        ("private readonly bool consistentSnapshots", "generation owner does not preserve counter snapshot mode"),
+        ("PerformanceProbeGenerationCounter(bool consistentSnapshots = false)", "generation owner cannot select snapshot mode"),
+        ("Volatile.Read(ref current)", "generation capture is not an atomic published read"),
+        ("Interlocked.Exchange(ref current, CreateCounter())", "generation rotation is not atomic"),
+        ("new PerformanceProbeCounter(consistentSnapshots)", "generation rotation does not preserve snapshot mode"),
     ):
         require(generation_core, needle, message, failures)
-    if generation_core.count("consistentSnapshots: true") != 1:
-        failures.append("snapshot coordination must remain isolated to worker generation counter creation")
     capture_current = generation_core.split(
         "internal PerformanceProbeCounter CaptureCurrent()", 1
     )[1].split("internal PerformanceProbeSnapshot SnapshotCurrent()", 1)[0]
     if "new " in capture_current:
-        failures.append("worker generation capture must not allocate managed objects")
+        failures.append("generation capture must not allocate managed objects")
 
     for needle, message in (
         ("calls <= 0", "analyzer does not fail zero-call captures"),
