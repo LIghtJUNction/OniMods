@@ -61,6 +61,8 @@ jobs:
         with:
           dotnet-version: '10.0.401'
       - name: Verify reference provenance and lag status
+        env:
+          ONIMODS_GITHUB_API_TOKEN: ${{ github.event_name == 'push' && github.token || '' }}
         run: >-
           python3 scripts/verify_oni_reference_provenance.py
           --manifest ci/oni-reference-assemblies.json
