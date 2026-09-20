@@ -22,11 +22,13 @@ namespace CycleTrim.Patches
             internal readonly CoupledRefreshGate RefreshGate =
                 new CoupledRefreshGate(4);
             internal readonly bool IsDuplicant;
+            internal readonly KPrefabID PrefabId;
             internal NavGrid NavGrid;
 
-            internal State(bool isDuplicant)
+            internal State(bool isDuplicant, KPrefabID prefabId)
             {
                 IsDuplicant = isDuplicant;
+                PrefabId = prefabId;
             }
 
             internal void Invalidate()
@@ -47,7 +49,9 @@ namespace CycleTrim.Patches
 
         private static State CreateState(ChoreConsumer consumer)
         {
-            return new State(consumer.GetComponent<MinionIdentity>() != null);
+            return new State(
+                consumer.GetComponent<MinionIdentity>() != null,
+                consumer.GetComponent<KPrefabID>());
         }
 
         private static bool IsBusyChore(Chore currentChore)
@@ -145,8 +149,14 @@ namespace CycleTrim.Patches
                     return true;
                 }
 
-                return state.RefreshGate.Begin(
-                    CaptureStamp(state, consumer, ___navigator, currentChore));
+                var stamp = CaptureStamp(state, consumer, ___navigator, currentChore);
+                if (state.PrefabId != null
+                    && state.PrefabId.HasTag(GameTags.PreventChoreInterruption))
+                {
+                    return state.RefreshGate.BeginProducerOnly(stamp);
+                }
+
+                return state.RefreshGate.Begin(stamp);
             }
         }
 

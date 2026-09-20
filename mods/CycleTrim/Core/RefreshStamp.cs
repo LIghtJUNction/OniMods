@@ -154,6 +154,7 @@ namespace CycleTrim.Core
         private bool hasPending;
         private bool pendingRefresh;
         private bool pendingInvalidated;
+        private bool requirePairedRefresh;
 
         public CoupledRefreshGate(int maxSkippedRefreshes)
         {
@@ -162,14 +163,14 @@ namespace CycleTrim.Core
 
         public bool Begin(RefreshStamp currentStamp)
         {
-            // An unconsumed producer decision means the previous cycle never
-            // reached its paired consumer. Force this cycle to rebuild the
-            // producer-owned state before it can be consumed again.
-            if (hasPending)
+            // A consumer-visible cycle must never inherit producer state from
+            // an earlier cycle that did not reach its matching consumer.
+            if (hasPending || requirePairedRefresh)
             {
                 gate.Invalidate();
             }
 
+            requirePairedRefresh = false;
             pendingRefresh = gate.ShouldRefresh(currentStamp);
             pendingStamp = currentStamp;
             pendingInvalidated = false;
@@ -179,7 +180,14 @@ namespace CycleTrim.Core
 
         public bool BeginProducerOnly(RefreshStamp currentStamp)
         {
-            return Begin(currentStamp);
+            // Vanilla can deliberately suppress chore evaluation while sensor
+            // pre-update continues. Keep the producer's bounded cadence in
+            // that known state, but force a fresh producer before the first
+            // future consumer-visible cycle resumes.
+            ClearPending();
+            var refresh = gate.ShouldRefresh(currentStamp);
+            requirePairedRefresh = true;
+            return refresh;
         }
 
         public bool Complete(RefreshStamp currentStamp)
@@ -195,9 +203,7 @@ namespace CycleTrim.Core
 
             var refresh = pendingRefresh;
             var stale = pendingInvalidated || pendingStamp != currentStamp;
-            hasPending = false;
-            pendingRefresh = false;
-            pendingInvalidated = false;
+            ClearPending();
 
             if (stale)
             {
@@ -223,6 +229,12 @@ namespace CycleTrim.Core
         public void Reset()
         {
             gate.Reset();
+            ClearPending();
+            requirePairedRefresh = false;
+        }
+
+        private void ClearPending()
+        {
             pendingStamp = default(RefreshStamp);
             hasPending = false;
             pendingRefresh = false;
