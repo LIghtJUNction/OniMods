@@ -29,6 +29,19 @@ namespace OniMcp.Server
                 return false;
             }
 
+            var inputResponsesObject = inputResponses?.Value as JObject;
+            if (inputResponsesObject != null)
+            {
+                foreach (var response in inputResponsesObject.Properties())
+                {
+                    if (response.Value.Type == JTokenType.Object)
+                        continue;
+
+                    errorMessage = "params.inputResponses values must be objects";
+                    return false;
+                }
+            }
+
             return true;
         }
     }
