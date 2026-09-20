@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -48,15 +49,23 @@ def download_text(url: str) -> bytes:
         return response.read()
 
 
+def github_api_headers(token: str | None = None) -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "OniMods-reference-ci/1",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 def download_json(url: str) -> dict:
     if not url.startswith(API_PREFIX):
         raise ValueError(f"refusing unexpected GitHub API host: {url}")
     request = urllib.request.Request(
         url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "OniMods-reference-ci/1",
-        },
+        headers=github_api_headers(os.environ.get("ONIMODS_GITHUB_API_TOKEN")),
     )
     with urllib.request.urlopen(request, timeout=60) as response:
         return json.loads(response.read().decode("utf-8"))
