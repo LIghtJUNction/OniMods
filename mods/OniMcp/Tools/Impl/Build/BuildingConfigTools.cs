@@ -214,10 +214,8 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("threshold is required");
 
                     float processed = threshold.ProcessedInputValue(requested.Value);
-                    processed = ThresholdValuePolicy.ClampProcessed(
+                    processed = ThresholdValuePolicy.ClampProcessedToNativeRange(
                         processed,
-                        threshold.GetRangeMinInputField(),
-                        threshold.GetRangeMaxInputField(),
                         threshold.RangeMin,
                         threshold.RangeMax);
 

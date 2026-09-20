@@ -211,29 +211,27 @@ internal static class Program
     private static void TestThresholdValuePolicy()
     {
         const float celsiusInput = 9600f;
-        const float celsiusMin = -273.15f;
-        const float celsiusMax = 9725.85f;
         const float nativeMin = 0f;
         const float nativeMax = 9999f;
         float processedKelvin = celsiusInput + 273.15f;
 
-        float retained = ThresholdValuePolicy.ClampProcessed(
-            processedKelvin, celsiusMin, celsiusMax, nativeMin, nativeMax);
+        float retained = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            processedKelvin, nativeMin, nativeMax);
         Check(Math.Abs(retained - processedKelvin) < 0.01f,
             "converted threshold must remain in the native unit domain after processing");
 
-        float high = ThresholdValuePolicy.ClampProcessed(
-            11000f, celsiusMin, celsiusMax, nativeMin, nativeMax);
+        float high = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            11000f, nativeMin, nativeMax);
         Check(Math.Abs(high - nativeMax) < 0.01f,
             "processed threshold above the native range must clamp to native max");
 
-        float low = ThresholdValuePolicy.ClampProcessed(
-            -10f, celsiusMin, celsiusMax, nativeMin, nativeMax);
+        float low = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            -10f, nativeMin, nativeMax);
         Check(Math.Abs(low - nativeMin) < 0.01f,
             "processed threshold below the native range must clamp to native min");
 
-        float identity = ThresholdValuePolicy.ClampProcessed(
-            42f, 0f, 100f, 0f, 100f);
+        float identity = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            42f, 0f, 100f);
         Check(Math.Abs(identity - 42f) < 0.01f,
             "identity threshold conversions must remain unchanged");
     }
