@@ -61,8 +61,8 @@ def main() -> int:
     failures: list[str] = []
 
     for needle, message in (
-        ('"externalPatched"', "probe report does not expose generic external Harmony ownership"),
-        ('"patchOwners"', "probe report does not expose Harmony owner IDs"),
+        ("externalPatched", "probe report does not expose generic external Harmony ownership"),
+        ("patchOwners", "probe report does not expose Harmony owner IDs"),
         ("patch.owner", "probe does not inspect Harmony owner IDs"),
         ("CycleTrimNamespacePrefix", "probe cannot distinguish its own patches from external patches"),
     ):
