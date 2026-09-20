@@ -21,6 +21,35 @@ namespace OniMcp.Server
                 return false;
             }
 
+            var title = clientInfoObject["title"];
+            if (title != null && title.Type != JTokenType.String)
+            {
+                errorMessage =
+                    "params._meta.io.modelcontextprotocol/clientInfo.title must be a string when provided";
+                return false;
+            }
+
+            var description = clientInfoObject["description"];
+            if (description != null && description.Type != JTokenType.String)
+            {
+                errorMessage =
+                    "params._meta.io.modelcontextprotocol/clientInfo.description must be a string when provided";
+                return false;
+            }
+
+            var websiteUrl = clientInfoObject["websiteUrl"];
+            if (websiteUrl != null)
+            {
+                Uri parsedWebsiteUrl;
+                if (websiteUrl.Type != JTokenType.String
+                    || !Uri.TryCreate((string)websiteUrl, UriKind.Absolute, out parsedWebsiteUrl))
+                {
+                    errorMessage =
+                        "params._meta.io.modelcontextprotocol/clientInfo.websiteUrl must be an absolute URI string when provided";
+                    return false;
+                }
+            }
+
             var iconsToken = clientInfoObject["icons"];
             if (iconsToken == null)
                 return true;

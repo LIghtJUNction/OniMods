@@ -125,6 +125,43 @@ internal static class ModernClientCapabilitiesRegressionEntry
                         "Valid clientInfo.icons did not reach discovery");
                 }
 
+                string[] malformedClientInfoMetadata =
+                {
+                    "\"title\":1",
+                    "\"description\":false",
+                    "\"websiteUrl\":1",
+                    "\"websiteUrl\":\"docs/client\""
+                };
+                for (int i = 0; i < malformedClientInfoMetadata.Length; i++)
+                {
+                    string malformedClientInfoMetadataRequest =
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":" + (20070 + i)
+                        + ",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+                        + "\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{"
+                        + "\"name\":\"bad-metadata-client\",\"version\":\"1.0\"," + malformedClientInfoMetadata[i]
+                        + "}}}}";
+                    using (var response = PostModern(client, malformedClientInfoMetadataRequest))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                            "Modern request accepted malformed clientInfo metadata " + malformedClientInfoMetadata[i]
+                            + " with HTTP " + (int)response.StatusCode);
+                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                            "Malformed clientInfo metadata did not use InvalidParams");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                            "Rejected modern clientInfo metadata allocated legacy session state");
+                    }
+                }
+
+                const string validClientInfoMetadata =
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20074,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"good-metadata-client\",\"title\":\"Good Client\",\"version\":\"1.0\",\"description\":\"Conforming MCP client\",\"websiteUrl\":\"https://example.com/client\",\"vendorExtra\":{\"enabled\":true}}}}}";
+                using (var response = PostModern(client, validClientInfoMetadata))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern request rejected conforming clientInfo metadata with HTTP " + (int)response.StatusCode);
+                    Assert(ReadJson(response)["result"] != null,
+                        "Valid clientInfo metadata did not reach discovery");
+                }
+
                 string[] malformedProgressTokens = { "{}", "[]", "true", "null" };
                 for (int i = 0; i < malformedProgressTokens.Length; i++)
                 {
