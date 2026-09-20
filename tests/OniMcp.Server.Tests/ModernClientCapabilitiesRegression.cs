@@ -95,8 +95,39 @@ internal static class ModernClientCapabilitiesRegressionEntry
                         "Unknown modern logLevel did not use InvalidParams");
                 }
 
+                string[] validLogLevels =
+                {
+                    "debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"
+                };
+                for (int i = 0; i < validLogLevels.Length; i++)
+                {
+                    string validLogLevel =
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":" + (20010 + i)
+                        + ",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+                        + "\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/logLevel\":\""
+                        + validLogLevels[i] + "\"}}}";
+                    using (var response = PostModern(client, validLogLevel))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK,
+                            "Valid modern logLevel '" + validLogLevels[i] + "' was rejected with HTTP "
+                            + (int)response.StatusCode);
+                        Assert(ReadJson(response)["result"] != null,
+                            "Valid modern logLevel '" + validLogLevels[i] + "' did not reach discovery");
+                    }
+                }
+
+                const string omittedLogLevel =
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20020,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}}}";
+                using (var response = PostModern(client, omittedLogLevel))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern request without optional logLevel was rejected with HTTP " + (int)response.StatusCode);
+                    Assert(ReadJson(response)["result"] != null,
+                        "Modern request without optional logLevel did not reach discovery");
+                }
+
                 const string conformant =
-                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20006,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/logLevel\":\"warning\",\"io.modelcontextprotocol/clientCapabilities\":{\"roots\":{},\"sampling\":{\"tools\":{}},\"elicitation\":{\"form\":{}},\"experimental\":{\"example\":{}},\"extensions\":{\"com.example/test\":{},\"io.modelcontextprotocol/tasks\":{}},\"com.example/custom\":{\"enabled\":true}}}}}";
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20021,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/logLevel\":\"warning\",\"io.modelcontextprotocol/clientCapabilities\":{\"roots\":{},\"sampling\":{\"tools\":{}},\"elicitation\":{\"form\":{}},\"experimental\":{\"example\":{}},\"extensions\":{\"com.example/test\":{},\"io.modelcontextprotocol/tasks\":{}},\"com.example/custom\":{\"enabled\":true}}}}}";
                 using (var response = PostModern(client, conformant))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
