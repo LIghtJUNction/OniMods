@@ -83,7 +83,7 @@ internal static class ModernNotificationMetadataRegressionEntry
 
     private static string ProgressNotification(string subscriptionId)
     {
-        return "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{\"_meta\":{" 
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{\"_meta\":{"
             + "\"io.modelcontextprotocol/subscriptionId\":" + subscriptionId
             + "},\"progressToken\":\"subscription-regression\",\"progress\":1}}";
     }
