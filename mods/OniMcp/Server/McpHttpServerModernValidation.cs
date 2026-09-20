@@ -152,17 +152,12 @@ namespace OniMcp.Server
                 }
             }
 
-            if (string.Equals(method, "resources/read", StringComparison.Ordinal))
+            string resourceUriError;
+            if (string.Equals(method, "resources/read", StringComparison.Ordinal)
+                && !ValidateModernResourceReadUri(rawMessage["params"] as JObject, out resourceUriError))
             {
-                JToken uriToken = (rawMessage["params"] as JObject)?["uri"];
-                string uri = uriToken?.Type == JTokenType.String ? (string)uriToken : null;
-                Uri parsedUri;
-                if (string.IsNullOrEmpty(uri) || !Uri.TryCreate(uri, UriKind.Absolute, out parsedUri))
-                {
-                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                        "params.uri must be an absolute URI string for resources/read");
-                    return false;
-                }
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, resourceUriError);
+                return false;
             }
 
             if (expectedName != null)
