@@ -115,6 +115,15 @@ namespace OniMcp.Server
                 return false;
             }
 
+            string inputResponseError;
+            if (!ValidateModernInputResponseRequestParams(method, rawMessage["params"] as JObject,
+                    out inputResponseError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    inputResponseError);
+                return false;
+            }
+
             string methodHeader = httpRequest.Headers["Mcp-Method"];
             if (string.IsNullOrEmpty(methodHeader) || !string.Equals(methodHeader, method, StringComparison.Ordinal))
             {
