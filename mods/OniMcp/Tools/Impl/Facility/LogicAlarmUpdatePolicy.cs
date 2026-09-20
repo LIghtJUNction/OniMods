@@ -14,21 +14,25 @@ namespace OniMcp.Tools
         {
             error = null;
 
-            if (args["name"] != null)
-                setName(Truncate(args["name"].ToString(), 30));
-            if (args["tooltip"] != null)
-                setTooltip(Truncate(args["tooltip"].ToString(), 90));
+            bool hasName = args["name"] != null;
+            bool hasTooltip = args["tooltip"] != null;
+            bool hasType = args["type"] != null;
+            string name = hasName ? Truncate(args["name"].ToString(), 30) : null;
+            string tooltip = hasTooltip ? Truncate(args["tooltip"].ToString(), 90) : null;
+            string normalizedType = null;
 
-            if (args["type"] != null)
+            if (hasType && !TryNormalizeType(args["type"].ToString(), out normalizedType))
             {
-                string normalizedType;
-                if (!TryNormalizeType(args["type"].ToString(), out normalizedType))
-                {
-                    error = "type must be bad, neutral, or duplicant_threatening";
-                    return false;
-                }
-                setType(normalizedType);
+                error = "type must be bad, neutral, or duplicant_threatening";
+                return false;
             }
+
+            if (hasName)
+                setName(name);
+            if (hasTooltip)
+                setTooltip(tooltip);
+            if (hasType)
+                setType(normalizedType);
 
             return true;
         }
