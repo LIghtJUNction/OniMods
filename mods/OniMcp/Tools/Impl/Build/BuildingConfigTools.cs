@@ -214,12 +214,12 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("threshold is required");
 
                     float processed = threshold.ProcessedInputValue(requested.Value);
-                    float min = threshold.GetRangeMinInputField();
-                    float max = threshold.GetRangeMaxInputField();
-                    if (max > min)
-                        processed = Mathf.Clamp(processed, min, max);
-                    else
-                        processed = Mathf.Clamp(processed, threshold.RangeMin, threshold.RangeMax);
+                    processed = ThresholdValuePolicy.ClampProcessed(
+                        processed,
+                        threshold.GetRangeMinInputField(),
+                        threshold.GetRangeMaxInputField(),
+                        threshold.RangeMin,
+                        threshold.RangeMax);
 
                     bool activateAbove = ToolUtil.GetBool(args, "activateAbove", true);
                     threshold.Threshold = processed;
