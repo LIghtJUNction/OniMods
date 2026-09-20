@@ -56,7 +56,7 @@ namespace OniMcp.Server
             if (subscriptionIdProperty != null && !IsValidModernSubscriptionId(subscriptionIdProperty.Value))
             {
                 error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidParams,
-                    "Notification io.modelcontextprotocol/subscriptionId must be a string or number when provided");
+                    "Notification io.modelcontextprotocol/subscriptionId must be a string or integer when provided");
                 return false;
             }
 
@@ -93,8 +93,7 @@ namespace OniMcp.Server
         {
             return subscriptionId != null
                 && (subscriptionId.Type == JTokenType.String
-                    || subscriptionId.Type == JTokenType.Integer
-                    || subscriptionId.Type == JTokenType.Float);
+                    || subscriptionId.Type == JTokenType.Integer);
         }
     }
 }
