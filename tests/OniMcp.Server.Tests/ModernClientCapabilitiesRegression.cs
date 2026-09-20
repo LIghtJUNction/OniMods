@@ -73,6 +73,44 @@ internal static class ModernClientCapabilitiesRegressionEntry
                         "Malformed extension prefix did not use InvalidParams");
                 }
 
+                string[] malformedProgressTokens = { "{}", "[]", "true", "null" };
+                for (int i = 0; i < malformedProgressTokens.Length; i++)
+                {
+                    string invalidProgressToken =
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":" + (20030 + i)
+                        + ",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+                        + "\"io.modelcontextprotocol/clientCapabilities\":{},\"progressToken\":"
+                        + malformedProgressTokens[i] + "}}}";
+                    using (var response = PostModern(client, invalidProgressToken))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                            "Modern request accepted malformed progressToken " + malformedProgressTokens[i]
+                            + " with HTTP " + (int)response.StatusCode);
+                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                            "Malformed modern progressToken did not use InvalidParams");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                            "Rejected modern progressToken allocated legacy session state");
+                    }
+                }
+
+                string[] validProgressTokens = { "\"job-42\"", "42", "3.5" };
+                for (int i = 0; i < validProgressTokens.Length; i++)
+                {
+                    string validProgressToken =
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":" + (20040 + i)
+                        + ",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+                        + "\"io.modelcontextprotocol/clientCapabilities\":{},\"progressToken\":"
+                        + validProgressTokens[i] + "}}}";
+                    using (var response = PostModern(client, validProgressToken))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK,
+                            "Valid modern progressToken " + validProgressTokens[i] + " was rejected with HTTP "
+                            + (int)response.StatusCode);
+                        Assert(ReadJson(response)["result"] != null,
+                            "Valid modern progressToken did not reach discovery");
+                    }
+                }
+
                 const string scalarLogLevel =
                     "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20004,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/logLevel\":1}}}";
                 using (var response = PostModern(client, scalarLogLevel))
