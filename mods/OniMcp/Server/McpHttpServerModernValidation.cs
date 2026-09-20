@@ -75,6 +75,14 @@ namespace OniMcp.Server
                 }
             }
 
+            var logLevel = meta["io.modelcontextprotocol/logLevel"];
+            if (logLevel != null && !IsValidModernLogLevel(logLevel))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "params._meta.io.modelcontextprotocol/logLevel must be a valid MCP logging level when provided");
+                return false;
+            }
+
             string methodHeader = httpRequest.Headers["Mcp-Method"];
             if (string.IsNullOrEmpty(methodHeader) || !string.Equals(methodHeader, method, StringComparison.Ordinal))
             {
@@ -124,6 +132,27 @@ namespace OniMcp.Server
             }
 
             return true;
+        }
+
+        private static bool IsValidModernLogLevel(JToken logLevel)
+        {
+            if (logLevel?.Type != JTokenType.String)
+                return false;
+
+            switch ((string)logLevel)
+            {
+                case "debug":
+                case "info":
+                case "notice":
+                case "warning":
+                case "error":
+                case "critical":
+                case "alert":
+                case "emergency":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static bool ValidateModernClientCapabilities(JObject capabilities, out string errorMessage)
