@@ -1,10 +1,13 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Server;
@@ -99,6 +102,7 @@ internal static class ModernMrtrEnvelopeRegressionEntry
         finally
         {
             server.StopServer();
+            Invoke(_bridge, "OnDestroy");
         }
     }
 
@@ -151,12 +155,27 @@ internal static class ModernMrtrEnvelopeRegressionEntry
 
     private static HttpResponseMessage SendLegacy(HttpClient client, string json, string sessionId)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "");
-        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-        request.Headers.Add("Mcp-Protocol-Version", "2025-11-25");
-        if (!string.IsNullOrEmpty(sessionId))
-            request.Headers.Add("Mcp-Session-Id", sessionId);
-        return client.SendAsync(request).GetAwaiter().GetResult();
+        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+        {
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.Add("Mcp-Protocol-Version", "2025-11-25");
+            if (!string.IsNullOrEmpty(sessionId))
+                request.Headers.Add("Mcp-Session-Id", sessionId);
+            Task<HttpResponseMessage> work = client.SendAsync(request);
+            PumpUntil(work);
+            return work.GetAwaiter().GetResult();
+        }
+    }
+
+    private static void PumpUntil(Task work)
+    {
+        var elapsed = Stopwatch.StartNew();
+        while (!work.IsCompleted && elapsed.ElapsedMilliseconds < 5000)
+        {
+            Invoke(_bridge, "Update");
+            Thread.Sleep(1);
+        }
+        Assert(work.IsCompleted, "Legacy work did not finish before test deadline");
     }
 
     private static void Invoke(object target, string methodName)
