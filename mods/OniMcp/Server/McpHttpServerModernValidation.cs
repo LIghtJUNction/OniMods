@@ -115,6 +115,15 @@ namespace OniMcp.Server
                 return false;
             }
 
+            string inputResponseError;
+            if (!ValidateModernInputResponseRequestParams(method, rawMessage["params"] as JObject,
+                    out inputResponseError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    inputResponseError);
+                return false;
+            }
+
             string methodHeader = httpRequest.Headers["Mcp-Method"];
             if (string.IsNullOrEmpty(methodHeader) || !string.Equals(methodHeader, method, StringComparison.Ordinal))
             {
@@ -160,6 +169,33 @@ namespace OniMcp.Server
             if (string.Equals(method, "tools/call", StringComparison.Ordinal)
                 && !ValidateModernToolParameterHeaders(httpRequest, rawMessage, out error))
             {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool ValidateModernInputResponseRequestParams(string method, JObject parameters,
+            out string errorMessage)
+        {
+            errorMessage = null;
+            if (!string.Equals(method, "tools/call", StringComparison.Ordinal)
+                && !string.Equals(method, "resources/read", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            var requestState = parameters?.Property("requestState");
+            if (requestState != null && requestState.Value.Type != JTokenType.String)
+            {
+                errorMessage = "params.requestState must be a string when provided";
+                return false;
+            }
+
+            var inputResponses = parameters?.Property("inputResponses");
+            if (inputResponses != null && inputResponses.Value.Type != JTokenType.Object)
+            {
+                errorMessage = "params.inputResponses must be an object when provided";
                 return false;
             }
 
