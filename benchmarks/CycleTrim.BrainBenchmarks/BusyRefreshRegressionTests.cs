@@ -10,6 +10,9 @@ namespace CycleTrim.BrainBenchmarks
                 nameof(BusyPickupAndChoreRefreshStayCoupledAfterSuppressedChore),
                 BusyPickupAndChoreRefreshStayCoupledAfterSuppressedChore);
             RunTest(
+                nameof(BusySuppressedConsumerPreservesBoundedPickupCadence),
+                BusySuppressedConsumerPreservesBoundedPickupCadence);
+            RunTest(
                 nameof(BusyStandaloneChoreFailsOpenAndForcesFreshPickup),
                 BusyStandaloneChoreFailsOpenAndForcesFreshPickup);
             RunTest(
@@ -38,6 +41,26 @@ namespace CycleTrim.BrainBenchmarks
 
             AssertFalse(gate.Begin(stable), "stable pickup pair can skip again");
             AssertFalse(gate.Complete(stable), "stable chore pair shares the skip");
+        }
+
+        private static void BusySuppressedConsumerPreservesBoundedPickupCadence()
+        {
+            var gate = new CoupledRefreshGate(4);
+            var stable = new RefreshStamp(10, 20, 30, 40, 50);
+
+            AssertTrue(gate.Begin(stable), "initial pickup refreshes");
+            AssertTrue(gate.Complete(stable), "initial chore scan refreshes");
+
+            AssertFalse(gate.BeginProducerOnly(stable), "suppressed frame 1 can skip pickup");
+            AssertFalse(gate.BeginProducerOnly(stable), "suppressed frame 2 stays throttled");
+            AssertFalse(gate.BeginProducerOnly(stable), "suppressed frame 3 stays throttled");
+            AssertFalse(gate.BeginProducerOnly(stable), "suppressed frame 4 stays throttled");
+            AssertTrue(gate.BeginProducerOnly(stable), "bounded fallback still refreshes pickup");
+
+            AssertTrue(
+                gate.Begin(stable),
+                "first paired frame after suppression refreshes before chore scan");
+            AssertTrue(gate.Complete(stable), "resumed chore scan consumes fresh producer state");
         }
 
         private static void BusyStandaloneChoreFailsOpenAndForcesFreshPickup()

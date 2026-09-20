@@ -177,6 +177,11 @@ namespace CycleTrim.Core
             return pendingRefresh;
         }
 
+        public bool BeginProducerOnly(RefreshStamp currentStamp)
+        {
+            return Begin(currentStamp);
+        }
+
         public bool Complete(RefreshStamp currentStamp)
         {
             if (!hasPending)
