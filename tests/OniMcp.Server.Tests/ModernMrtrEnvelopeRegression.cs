@@ -12,6 +12,8 @@ using OniMcp.Tools;
 
 internal static class ModernMrtrEnvelopeRegressionEntry
 {
+    private static MainThreadBridge _bridge;
+
     private static void Main()
     {
         RunModernMrtrEnvelopeRegression();
@@ -25,6 +27,8 @@ internal static class ModernMrtrEnvelopeRegressionEntry
 
     private static void RunModernMrtrEnvelopeRegression()
     {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
         int port = ReservePort();
         OniMcpOptions.Save(new OniMcpOptions { Port = port });
         OniToolRegistry.ModernToolsEnabled = true;
@@ -38,6 +42,7 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                 Timeout = TimeSpan.FromSeconds(5)
             })
             {
+                int callsBeforeInvalidEnvelopes = OniToolRegistry.Calls;
                 AssertModernRejected(client,
                     BuildBenchmarkCall(33201, "\"requestState\":7,"),
                     "tools/call", "benchmark", "numeric requestState");
@@ -50,6 +55,8 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                 AssertModernRejected(client,
                     BuildResourceRead(33204, "\"inputResponses\":\"bad\","),
                     "resources/read", "oni://missing-mrtr-regression", "string inputResponses");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
+                    "Malformed MRTR envelopes reached tool dispatch");
 
                 using (var response = SendModern(client,
                     BuildBenchmarkCall(33205, "\"requestState\":\"opaque-state\",\"inputResponses\":{},"),
@@ -61,13 +68,15 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                     Assert(body["result"] != null && body["error"] == null,
                         "Valid MRTR envelope shape did not reach the modern tool path");
                 }
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes + 1,
+                    "Valid MRTR envelope did not dispatch exactly once");
 
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern MRTR envelope validation allocated legacy session state");
 
                 string sessionId;
                 using (var initializeResponse = SendLegacy(client,
-                    "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":33206,\"params\":{\"protocolVersion\":\"2025-11-25\"}}",
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":33206,\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"mrtr-envelope-regression\",\"version\":\"1.0\"}}}",
                     null))
                 {
                     Assert(initializeResponse.StatusCode == HttpStatusCode.OK,
@@ -148,6 +157,15 @@ internal static class ModernMrtrEnvelopeRegressionEntry
         if (!string.IsNullOrEmpty(sessionId))
             request.Headers.Add("Mcp-Session-Id", sessionId);
         return client.SendAsync(request).GetAwaiter().GetResult();
+    }
+
+    private static void Invoke(object target, string methodName)
+    {
+        var method = target.GetType().GetMethod(methodName,
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        if (method == null)
+            throw new InvalidOperationException(methodName + " method not found");
+        method.Invoke(target, null);
     }
 
     private static int ReservePort()
