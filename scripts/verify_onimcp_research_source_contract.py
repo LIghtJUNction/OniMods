@@ -13,7 +13,7 @@ from verify_cycletrim_navgrid_source_contract import download_source, method_bod
 
 def verify_set_active_contract(set_active_body: str) -> None:
     require(
-        r"if\s*\(\s*clearQueue\s*\)\s*\{\s*this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}\s*"
+        r"\A\s*if\s*\(\s*clearQueue\s*\)\s*\{\s*this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}\s*"
         r"this\.activeResearch\s*=\s*null\s*;\s*"
         r"if\s*\(\s*tech\s*!=\s*null\s*\)",
         set_active_body,
