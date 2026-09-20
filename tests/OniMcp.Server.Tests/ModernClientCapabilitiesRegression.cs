@@ -73,6 +73,28 @@ internal static class ModernClientCapabilitiesRegressionEntry
                         "Malformed extension prefix did not use InvalidParams");
                 }
 
+                const string malformedClientInfoIcons =
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20006,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"bad-client\",\"version\":\"1.0\",\"icons\":1}}}}";
+                using (var response = PostModern(client, malformedClientInfoIcons))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern request accepted scalar clientInfo.icons with HTTP " + (int)response.StatusCode);
+                    Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                        "Malformed clientInfo.icons did not use InvalidParams");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern clientInfo allocated legacy session state");
+                }
+
+                const string validClientInfoIcons =
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":20007,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"good-client\",\"version\":\"1.0\",\"icons\":[{\"src\":\"https://example.com/icon.png\"}]}}}}";
+                using (var response = PostModern(client, validClientInfoIcons))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern request rejected array clientInfo.icons with HTTP " + (int)response.StatusCode);
+                    Assert(ReadJson(response)["result"] != null,
+                        "Valid clientInfo.icons did not reach discovery");
+                }
+
                 string[] malformedProgressTokens = { "{}", "[]", "true", "null" };
                 for (int i = 0; i < malformedProgressTokens.Length; i++)
                 {

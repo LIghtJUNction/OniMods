@@ -112,6 +112,14 @@ namespace OniMcp.Server
                         "params._meta.io.modelcontextprotocol/clientInfo must contain string name and version when provided");
                     return false;
                 }
+
+                var icons = clientInfoObject["icons"];
+                if (icons != null && icons.Type != JTokenType.Array)
+                {
+                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                        "params._meta.io.modelcontextprotocol/clientInfo.icons must be an array when provided");
+                    return false;
+                }
             }
 
             var logLevel = meta["io.modelcontextprotocol/logLevel"];
