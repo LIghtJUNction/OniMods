@@ -17,7 +17,6 @@ namespace CycleTrim.Patches
     internal static class PerformanceProbePatch
     {
         private const string EnvironmentVariable = "CYCLETRIM_PERF_PROBE";
-        private const string CycleTrimNamespacePrefix = "CycleTrim.";
         private const string FastTrackNamespacePrefix = "PeterHan.FastTrack.";
         private const string ReportName = "CycleTrim.PerformanceProbe";
 
@@ -58,6 +57,12 @@ namespace CycleTrim.Patches
         private static PerformanceProbeSnapshot lastChoreSnapshot;
         private static PerformanceProbeSnapshot lastBrainSchedulerSnapshot;
         private static PerformanceProbeSnapshot lastRoomProberSnapshot;
+        private static string cycleTrimHarmonyId = string.Empty;
+
+        internal static void SetHarmonyId(string harmonyId)
+        {
+            cycleTrimHarmonyId = harmonyId ?? string.Empty;
+        }
 
         private static bool IsRequested()
         {
@@ -455,9 +460,19 @@ namespace CycleTrim.Patches
         {
             foreach (var patch in patches)
             {
-                if (!string.IsNullOrEmpty(patch.owner))
+                if (string.IsNullOrEmpty(patch.owner))
+                {
+                    // Harmony normally supplies an owner ID. If it does not, fail closed:
+                    // an unattributed patch cannot be proven to belong to CycleTrim.
+                    externalPatched = true;
+                }
+                else
                 {
                     owners.Add(patch.owner);
+                    if (!string.Equals(patch.owner, cycleTrimHarmonyId, StringComparison.Ordinal))
+                    {
+                        externalPatched = true;
+                    }
                 }
 
                 var patchMethod = patch.PatchMethod;
@@ -467,11 +482,6 @@ namespace CycleTrim.Patches
                     && fullName.StartsWith(FastTrackNamespacePrefix, StringComparison.Ordinal))
                 {
                     fastTrackPatched = true;
-                }
-                if (fullName == null
-                    || !fullName.StartsWith(CycleTrimNamespacePrefix, StringComparison.Ordinal))
-                {
-                    externalPatched = true;
                 }
             }
         }
@@ -657,7 +667,6 @@ namespace CycleTrim.Patches
             {
                 __state = BeginMainTiming(fetchCounter);
             }
-
             private static Exception Finalizer(Exception __exception, TimingState __state)
             {
                 RecordMain(__state);

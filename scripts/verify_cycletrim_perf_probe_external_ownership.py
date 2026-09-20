@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ANALYZER = ROOT / "scripts/analyze_cycletrim_perf_probe.py"
 PATCH = ROOT / "mods/CycleTrim/Patches/PerformanceProbePatch.cs"
+MOD_INFO = ROOT / "mods/CycleTrim/ModInfo.cs"
 
 
 def load_analyzer():
@@ -27,7 +28,7 @@ def make_target(name: str) -> dict:
         "resolved": True,
         "fastTrackPatched": False,
         "externalPatched": False,
-        "patchOwners": ["CycleTrim.Tests"],
+        "patchOwners": ["LIghtJUNction.CycleTrim"],
         "calls": 3,
         "totalTicks": 45,
         "meanTicks": 15.0,
@@ -58,16 +59,25 @@ def make_report(analyzer, sequence: int = 1) -> dict:
 def main() -> int:
     analyzer = load_analyzer()
     patch = PATCH.read_text(encoding="utf-8")
+    mod_info = MOD_INFO.read_text(encoding="utf-8")
     failures: list[str] = []
 
     for needle, message in (
         ("externalPatched", "probe report does not expose generic external Harmony ownership"),
         ("patchOwners", "probe report does not expose Harmony owner IDs"),
         ("patch.owner", "probe does not inspect Harmony owner IDs"),
-        ("CycleTrimNamespacePrefix", "probe cannot distinguish its own patches from external patches"),
+        (
+            "string.Equals(patch.owner, cycleTrimHarmonyId, StringComparison.Ordinal)",
+            "probe does not classify external patches from the actual Harmony owner ID",
+        ),
     ):
         if needle not in patch:
             failures.append(message)
+
+    if "CycleTrimNamespacePrefix" in patch:
+        failures.append("probe still trusts declaring namespaces for CycleTrim ownership")
+    if "PerformanceProbePatch.SetHarmonyId(harmony.Id);" not in mod_info:
+        failures.append("CycleTrim does not provide the loader-created Harmony ID to the probe")
 
     if '"--reject-external-patches"' not in ANALYZER.read_text(encoding="utf-8"):
         failures.append("analyzer has no fail-closed generic Harmony ownership mode")
@@ -83,7 +93,7 @@ def main() -> int:
 
     external = copy.deepcopy(clean)
     external["targets"][0]["externalPatched"] = True
-    external["targets"][0]["patchOwners"] = ["CycleTrim.Tests", "Example.ThirdParty"]
+    external["targets"][0]["patchOwners"] = ["Example.ThirdParty", "LIghtJUNction.CycleTrim"]
     default_failures = analyzer.validate(external, analyzer.DEFAULT_REQUIRED)
     if any("external Harmony" in failure for failure in default_failures):
         failures.append("default analyzer mode must keep external ownership informational")
@@ -100,7 +110,7 @@ def main() -> int:
             failures.append("strict analyzer mode accepted a third-party-patched target")
 
     malformed = copy.deepcopy(clean)
-    malformed["targets"][0]["patchOwners"] = ["CycleTrim.Tests", 42]
+    malformed["targets"][0]["patchOwners"] = ["LIghtJUNction.CycleTrim", 42]
     malformed_failures = analyzer.validate(malformed, analyzer.DEFAULT_REQUIRED)
     if not any("patchOwners" in failure for failure in malformed_failures):
         failures.append("analyzer accepted malformed Harmony owner metadata")
@@ -108,7 +118,7 @@ def main() -> int:
     drifted = copy.deepcopy(clean)
     drifted["reportSequence"] = 2
     drifted["targets"][0]["externalPatched"] = True
-    drifted["targets"][0]["patchOwners"] = ["CycleTrim.Tests", "Example.ThirdParty"]
+    drifted["targets"][0]["patchOwners"] = ["Example.ThirdParty", "LIghtJUNction.CycleTrim"]
     series_failures = analyzer.validate_series([clean, drifted], analyzer.DEFAULT_REQUIRED)
     if not any("Harmony ownership changed within one capture" in failure for failure in series_failures):
         failures.append("series analyzer accepted mid-capture generic Harmony ownership drift")
