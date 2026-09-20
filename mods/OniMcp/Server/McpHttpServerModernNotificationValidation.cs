@@ -21,6 +21,13 @@ namespace OniMcp.Server
                 return false;
             }
 
+            string metaKeyError;
+            if (!ValidateModernMetaKeys(meta, out metaKeyError))
+            {
+                error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidParams, metaKeyError);
+                return false;
+            }
+
             var traceparentProperty = meta?.Property("traceparent");
             if (traceparentProperty != null && !IsValidModernTraceparent(traceparentProperty.Value))
             {
