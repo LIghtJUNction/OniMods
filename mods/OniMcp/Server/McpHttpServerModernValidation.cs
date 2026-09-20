@@ -141,6 +141,17 @@ namespace OniMcp.Server
                 return false;
             }
 
+            if (string.Equals(method, "tools/call", StringComparison.Ordinal))
+            {
+                JToken nameToken = (rawMessage["params"] as JObject)?["name"];
+                if (nameToken?.Type != JTokenType.String)
+                {
+                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                        "params.name must be a string for tools/call");
+                    return false;
+                }
+            }
+
             if (string.Equals(method, "resources/read", StringComparison.Ordinal))
             {
                 JToken uriToken = (rawMessage["params"] as JObject)?["uri"];
