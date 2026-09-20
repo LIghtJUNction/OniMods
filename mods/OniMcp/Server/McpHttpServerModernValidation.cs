@@ -155,10 +155,12 @@ namespace OniMcp.Server
             if (string.Equals(method, "resources/read", StringComparison.Ordinal))
             {
                 JToken uriToken = (rawMessage["params"] as JObject)?["uri"];
-                if (uriToken?.Type != JTokenType.String || string.IsNullOrEmpty((string)uriToken))
+                string uri = uriToken?.Type == JTokenType.String ? (string)uriToken : null;
+                Uri parsedUri;
+                if (string.IsNullOrEmpty(uri) || !Uri.TryCreate(uri, UriKind.Absolute, out parsedUri))
                 {
                     error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                        "params.uri must be a non-empty string for resources/read");
+                        "params.uri must be an absolute URI string for resources/read");
                     return false;
                 }
             }
