@@ -13,6 +13,7 @@ namespace CycleTrim.BrainBenchmarks
         private const int WarmupIterations = 10000;
         private const int MeasuredIterations = 200000;
         private const int MeasuredSamples = 7;
+        private const int CapacityBurstKeys = 16384;
         private static readonly ConcurrentStack<Dictionary<int, int>> BaselinePool =
             new ConcurrentStack<Dictionary<int, int>>();
 
@@ -35,6 +36,7 @@ namespace CycleTrim.BrainBenchmarks
         internal static void Run()
         {
             VerifyNestedRentAndThreadIsolation();
+            VerifyDictionaryCapacityRetentionAfterBurst();
             RunBaseline(WarmupIterations);
             RunCandidate(WarmupIterations);
 
@@ -189,6 +191,44 @@ namespace CycleTrim.BrainBenchmarks
                 throw new InvalidOperationException("worker activity must not change the main-thread pool");
             }
             ThreadLocalObjectPool<PoolProbe>.Return(mainReused);
+        }
+
+        private static void VerifyDictionaryCapacityRetentionAfterBurst()
+        {
+            var candidates = ThreadLocalObjectPool<Dictionary<long, long>>.Rent();
+            for (var key = 0; key < CapacityBurstKeys; key++)
+            {
+                candidates[key] = key;
+            }
+
+            var burstCapacity = candidates.EnsureCapacity(0);
+            if (burstCapacity < CapacityBurstKeys)
+            {
+                throw new InvalidOperationException("burst dictionary capacity did not cover inserted keys");
+            }
+
+            candidates.Clear();
+            ThreadLocalObjectPool<Dictionary<long, long>>.Return(candidates);
+
+            var reused = ThreadLocalObjectPool<Dictionary<long, long>>.Rent();
+            if (!ReferenceEquals(candidates, reused))
+            {
+                throw new InvalidOperationException("capacity probe did not reuse the retained dictionary");
+            }
+
+            var retainedCapacity = reused.EnsureCapacity(0);
+            if (retainedCapacity != burstCapacity)
+            {
+                throw new InvalidOperationException(
+                    "Clear plus pool return unexpectedly changed retained dictionary capacity");
+            }
+
+            Console.WriteLine(
+                "fetch candidate pool retained capacity after synthetic burst: " +
+                retainedCapacity.ToString(CultureInfo.InvariantCulture) +
+                " slots after " + CapacityBurstKeys.ToString(CultureInfo.InvariantCulture) +
+                " unique keys");
+            ThreadLocalObjectPool<Dictionary<long, long>>.Return(reused);
         }
 
         private static void Print(string name, long elapsedTicks, long allocatedBytes)
