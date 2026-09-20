@@ -141,6 +141,17 @@ namespace OniMcp.Server
                 return false;
             }
 
+            if (string.Equals(method, "resources/read", StringComparison.Ordinal))
+            {
+                JToken uriToken = (rawMessage["params"] as JObject)?["uri"];
+                if (uriToken?.Type != JTokenType.String || string.IsNullOrEmpty((string)uriToken))
+                {
+                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                        "params.uri must be a non-empty string for resources/read");
+                    return false;
+                }
+            }
+
             if (expectedName != null)
             {
                 string decodedNameHeader;
