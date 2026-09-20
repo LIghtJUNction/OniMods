@@ -14,6 +14,9 @@ namespace CycleTrim.BrainBenchmarks
         private const int MeasuredIterations = 200000;
         private const int MeasuredSamples = 7;
         private const int CapacityBurstKeys = 16384;
+        private const int CapacitySteadyStateKeys = 8;
+        private const int CapacitySteadyStateWarmupIterations = 1000;
+        private const int CapacitySteadyStateIterations = 10000;
         private static readonly ConcurrentStack<Dictionary<int, int>> BaselinePool =
             new ConcurrentStack<Dictionary<int, int>>();
 
@@ -195,6 +198,9 @@ namespace CycleTrim.BrainBenchmarks
 
         private static void VerifyDictionaryCapacityRetentionAfterBurst()
         {
+            RunCapacityProbeSteadyState(CapacitySteadyStateWarmupIterations);
+            var beforeBurstAllocated = RunCapacityProbeSteadyState(CapacitySteadyStateIterations);
+
             var candidates = ThreadLocalObjectPool<Dictionary<long, long>>.Rent();
             for (var key = 0; key < CapacityBurstKeys; key++)
             {
@@ -222,13 +228,52 @@ namespace CycleTrim.BrainBenchmarks
                 throw new InvalidOperationException(
                     "Clear plus pool return unexpectedly changed retained dictionary capacity");
             }
+            ThreadLocalObjectPool<Dictionary<long, long>>.Return(reused);
+
+            var afterBurstAllocated = RunCapacityProbeSteadyState(CapacitySteadyStateIterations);
+            var afterSteadyState = ThreadLocalObjectPool<Dictionary<long, long>>.Rent();
+            var afterSteadyStateCapacity = afterSteadyState.EnsureCapacity(0);
+            ThreadLocalObjectPool<Dictionary<long, long>>.Return(afterSteadyState);
+            if (afterSteadyStateCapacity != burstCapacity)
+            {
+                throw new InvalidOperationException(
+                    "small steady-state reuse unexpectedly released retained burst capacity");
+            }
+
+            const long allocationNoiseAllowance = 1024L;
+            if (beforeBurstAllocated > allocationNoiseAllowance
+                || afterBurstAllocated > allocationNoiseAllowance)
+            {
+                throw new InvalidOperationException(
+                    "capacity probe steady-state reuse allocated beyond the existing host noise allowance");
+            }
 
             Console.WriteLine(
                 "fetch candidate pool retained capacity after synthetic burst: " +
                 retainedCapacity.ToString(CultureInfo.InvariantCulture) +
                 " slots after " + CapacityBurstKeys.ToString(CultureInfo.InvariantCulture) +
-                " unique keys");
-            ThreadLocalObjectPool<Dictionary<long, long>>.Return(reused);
+                " unique keys; small steady-state allocated before/after burst=" +
+                beforeBurstAllocated.ToString(CultureInfo.InvariantCulture) + "/" +
+                afterBurstAllocated.ToString(CultureInfo.InvariantCulture) + " bytes across " +
+                CapacitySteadyStateIterations.ToString(CultureInfo.InvariantCulture) + " iterations");
+        }
+
+        private static long RunCapacityProbeSteadyState(int iterations)
+        {
+            var beforeBytes = GC.GetAllocatedBytesForCurrentThread();
+            for (var iteration = 0; iteration < iterations; iteration++)
+            {
+                var candidates = ThreadLocalObjectPool<Dictionary<long, long>>.Rent();
+                for (var key = 0; key < CapacitySteadyStateKeys; key++)
+                {
+                    candidates[key] = key;
+                }
+
+                candidates.Clear();
+                ThreadLocalObjectPool<Dictionary<long, long>>.Return(candidates);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - beforeBytes;
         }
 
         private static void Print(string name, long elapsedTicks, long allocatedBytes)
