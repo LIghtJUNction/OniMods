@@ -55,6 +55,26 @@ else
 this.NotifyResearchCenters(GameHashes.ActiveResearchChanged, this.queuedTech);
 """
 
+BAD_OUTER_CONDITION_BODY = """
+if (featureEnabled)
+{
+    if (clearQueue)
+    {
+        this.queuedTech.Clear();
+    }
+    this.activeResearch = null;
+    if (tech != null)
+    {
+        this.activeResearch = tech;
+    }
+    else
+    {
+        this.queuedTech.Clear();
+    }
+}
+this.NotifyResearchCenters(GameHashes.ActiveResearchChanged, this.queuedTech);
+"""
+
 
 def require_rejected(body: str, scenario: str) -> None:
     try:
@@ -74,6 +94,10 @@ def main() -> int:
     require_rejected(
         BAD_CLEAR_QUEUE_BODY,
         "activeResearch reset that exists only when clearQueue=true",
+    )
+    require_rejected(
+        BAD_OUTER_CONDITION_BODY,
+        "activeResearch reset guarded by an outer condition",
     )
     return 0
 
