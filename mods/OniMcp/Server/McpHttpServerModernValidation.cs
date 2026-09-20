@@ -77,6 +77,14 @@ namespace OniMcp.Server
                 return false;
             }
 
+            var tracestateProperty = meta.Property("tracestate");
+            if (tracestateProperty != null && !IsValidModernTracestate(tracestateProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "params._meta.tracestate must be a valid W3C Trace Context value when provided");
+                return false;
+            }
+
             var clientInfo = meta["io.modelcontextprotocol/clientInfo"];
             if (clientInfo != null)
             {
