@@ -17,6 +17,7 @@ namespace CycleTrim.Patches
     internal static class PerformanceProbePatch
     {
         private const string EnvironmentVariable = "CYCLETRIM_PERF_PROBE";
+        private const string CycleTrimNamespacePrefix = "CycleTrim.";
         private const string FastTrackNamespacePrefix = "PeterHan.FastTrack.";
         private const string ReportName = "CycleTrim.PerformanceProbe";
 
@@ -264,7 +265,7 @@ namespace CycleTrim.Patches
             var brainSchedulerSnapshot = brainSchedulerCounter.SnapshotCurrent();
             var roomProberSnapshot = roomProberCounter.SnapshotCurrent();
             var sequence = ++reportSequence;
-            var summary = new StringBuilder(1280);
+            var summary = new StringBuilder(1536);
             summary.Append('{');
             summary.Append("\"stopwatchFrequency\":").Append(Stopwatch.Frequency);
             summary.Append(",\"captureGeneration\":").Append(captureGeneration);
@@ -359,12 +360,25 @@ namespace CycleTrim.Patches
             PerformanceProbeSnapshot previousSnapshot)
         {
             var interval = snapshot.DeltaSince(previousSnapshot);
+            var ownership = GetHarmonyOwnership(target);
             summary.Append('{');
             summary.Append("\"name\":\"").Append(name).Append("\"");
             summary.Append(",\"thread\":\"").Append(thread).Append("\"");
             summary.Append(",\"resolved\":").Append(target == null ? "false" : "true");
             summary.Append(",\"fastTrackPatched\":")
-                .Append(HasFastTrackPatch(target) ? "true" : "false");
+                .Append(ownership.FastTrackPatched ? "true" : "false");
+            summary.Append(",\"externalPatched\":")
+                .Append(ownership.ExternalPatched ? "true" : "false");
+            summary.Append(",\"patchOwners\":[");
+            for (var index = 0; index < ownership.Owners.Length; index++)
+            {
+                if (index > 0)
+                {
+                    summary.Append(',');
+                }
+                AppendJsonString(summary, ownership.Owners[index]);
+            }
+            summary.Append(']');
             summary.Append(",\"calls\":").Append(snapshot.Calls);
             summary.Append(",\"totalTicks\":").Append(snapshot.TotalTicks);
             summary.Append(",\"meanTicks\":").Append(
@@ -377,37 +391,133 @@ namespace CycleTrim.Patches
             summary.Append('}');
         }
 
-        private static bool HasFastTrackPatch(MethodBase target)
+        private readonly struct HarmonyOwnership
+        {
+            internal HarmonyOwnership(bool fastTrackPatched, bool externalPatched, string[] owners)
+            {
+                FastTrackPatched = fastTrackPatched;
+                ExternalPatched = externalPatched;
+                Owners = owners;
+            }
+
+            internal bool FastTrackPatched { get; }
+            internal bool ExternalPatched { get; }
+            internal string[] Owners { get; }
+        }
+
+        private static HarmonyOwnership GetHarmonyOwnership(MethodBase target)
         {
             if (target == null)
             {
-                return false;
+                return new HarmonyOwnership(false, false, Array.Empty<string>());
             }
 
             var patchInfo = Harmony.GetPatchInfo(target);
-            return patchInfo != null
-                && (ContainsFastTrackPatch(patchInfo.Prefixes)
-                    || ContainsFastTrackPatch(patchInfo.Postfixes)
-                    || ContainsFastTrackPatch(patchInfo.Transpilers)
-                    || ContainsFastTrackPatch(patchInfo.Finalizers));
+            if (patchInfo == null)
+            {
+                return new HarmonyOwnership(false, false, Array.Empty<string>());
+            }
+
+            var owners = new SortedSet<string>(StringComparer.Ordinal);
+            var fastTrackPatched = false;
+            var externalPatched = false;
+            CollectPatchOwnership(
+                patchInfo.Prefixes,
+                owners,
+                ref fastTrackPatched,
+                ref externalPatched);
+            CollectPatchOwnership(
+                patchInfo.Postfixes,
+                owners,
+                ref fastTrackPatched,
+                ref externalPatched);
+            CollectPatchOwnership(
+                patchInfo.Transpilers,
+                owners,
+                ref fastTrackPatched,
+                ref externalPatched);
+            CollectPatchOwnership(
+                patchInfo.Finalizers,
+                owners,
+                ref fastTrackPatched,
+                ref externalPatched);
+
+            var ownerArray = new string[owners.Count];
+            owners.CopyTo(ownerArray);
+            return new HarmonyOwnership(fastTrackPatched, externalPatched, ownerArray);
         }
 
-        private static bool ContainsFastTrackPatch(IEnumerable<Patch> patches)
+        private static void CollectPatchOwnership(
+            IEnumerable<Patch> patches,
+            SortedSet<string> owners,
+            ref bool fastTrackPatched,
+            ref bool externalPatched)
         {
             foreach (var patch in patches)
             {
+                if (!string.IsNullOrEmpty(patch.owner))
+                {
+                    owners.Add(patch.owner);
+                }
+
                 var patchMethod = patch.PatchMethod;
                 var declaringType = patchMethod == null ? null : patchMethod.DeclaringType;
                 var fullName = declaringType == null ? null : declaringType.FullName;
                 if (fullName != null
-                    && fullName.StartsWith(
-                        FastTrackNamespacePrefix,
-                        StringComparison.Ordinal))
+                    && fullName.StartsWith(FastTrackNamespacePrefix, StringComparison.Ordinal))
                 {
-                    return true;
+                    fastTrackPatched = true;
+                }
+                if (fullName == null
+                    || !fullName.StartsWith(CycleTrimNamespacePrefix, StringComparison.Ordinal))
+                {
+                    externalPatched = true;
                 }
             }
-            return false;
+        }
+
+        private static void AppendJsonString(StringBuilder builder, string value)
+        {
+            builder.Append('"');
+            foreach (var character in value)
+            {
+                switch (character)
+                {
+                    case '"':
+                        builder.Append("\\\"");
+                        break;
+                    case '\\':
+                        builder.Append("\\\\");
+                        break;
+                    case '\b':
+                        builder.Append("\\b");
+                        break;
+                    case '\f':
+                        builder.Append("\\f");
+                        break;
+                    case '\n':
+                        builder.Append("\\n");
+                        break;
+                    case '\r':
+                        builder.Append("\\r");
+                        break;
+                    case '\t':
+                        builder.Append("\\t");
+                        break;
+                    default:
+                        if (character < ' ')
+                        {
+                            builder.Append("\\u")
+                                .Append(((int)character).ToString("X4", CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            builder.Append(character);
+                        }
+                        break;
+                }
+            }
+            builder.Append('"');
         }
 
         [HarmonyPatch]
