@@ -37,6 +37,14 @@ namespace OniMcp.Server
                 return false;
             }
 
+            var baggageProperty = meta?.Property("baggage");
+            if (baggageProperty != null && !IsValidModernBaggage(baggageProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidParams,
+                    "Notification baggage must be a valid W3C Baggage value when provided");
+                return false;
+            }
+
             var subscriptionIdProperty = meta?.Property("io.modelcontextprotocol/subscriptionId");
             if (subscriptionIdProperty != null && !IsValidModernSubscriptionId(subscriptionIdProperty.Value))
             {

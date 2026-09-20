@@ -69,6 +69,138 @@ namespace OniMcp.Server
             return true;
         }
 
+        private static bool IsValidModernBaggage(JToken baggage)
+        {
+            if (baggage?.Type != JTokenType.String)
+                return false;
+
+            string[] members = ((string)baggage).Split(',');
+            if (members.Length == 0 || members.Length > 180)
+                return false;
+
+            foreach (string rawMember in members)
+            {
+                string member = TrimTraceOws(rawMember);
+                if (member.Length == 0)
+                    return false;
+
+                string[] parts = member.Split(';');
+                if (!IsValidBaggageKeyValue(parts[0]))
+                    return false;
+
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (!IsValidBaggageProperty(parts[i]))
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsValidBaggageKeyValue(string part)
+        {
+            int equals = part.IndexOf('=');
+            if (equals <= 0)
+                return false;
+
+            string key = TrimTraceOws(part.Substring(0, equals));
+            string value = TrimTraceOws(part.Substring(equals + 1));
+            return IsValidBaggageToken(key) && IsValidBaggageValue(value);
+        }
+
+        private static bool IsValidBaggageProperty(string part)
+        {
+            string property = TrimTraceOws(part);
+            if (property.Length == 0)
+                return false;
+
+            int equals = property.IndexOf('=');
+            if (equals < 0)
+                return IsValidBaggageToken(property);
+            if (equals == 0)
+                return false;
+
+            string key = TrimTraceOws(property.Substring(0, equals));
+            string value = TrimTraceOws(property.Substring(equals + 1));
+            return IsValidBaggageToken(key) && IsValidBaggageValue(value);
+        }
+
+        private static bool IsValidBaggageToken(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return false;
+
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (!IsBaggageTokenCharacter(value[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsBaggageTokenCharacter(char value)
+        {
+            return IsAsciiDigit(value)
+                || (value >= 'A' && value <= 'Z')
+                || (value >= 'a' && value <= 'z')
+                || value == '!'
+                || value == '#'
+                || value == '$'
+                || value == '%'
+                || value == '&'
+                || value == '\''
+                || value == '*'
+                || value == '+'
+                || value == '-'
+                || value == '.'
+                || value == '^'
+                || value == '_'
+                || value == '`'
+                || value == '|'
+                || value == '~';
+        }
+
+        private static bool IsValidBaggageValue(string value)
+        {
+            for (int i = 0; i < value.Length; i++)
+            {
+                char current = value[i];
+                if (!IsBaggageOctet(current))
+                    return false;
+
+                if (current == '%')
+                {
+                    if (i + 2 >= value.Length
+                        || !IsAsciiHex(value[i + 1])
+                        || !IsAsciiHex(value[i + 2]))
+                    {
+                        return false;
+                    }
+                    i += 2;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsBaggageOctet(char value)
+        {
+            return value == 0x21
+                || (value >= 0x23 && value <= 0x2b)
+                || (value >= 0x2d && value <= 0x3a)
+                || (value >= 0x3c && value <= 0x5b)
+                || (value >= 0x5d && value <= 0x7e);
+        }
+
+        private static bool IsAsciiHex(char value)
+        {
+            return (value >= '0' && value <= '9')
+                || (value >= 'a' && value <= 'f')
+                || (value >= 'A' && value <= 'F');
+        }
+
         private static string TrimTraceOws(string value)
         {
             int start = 0;
