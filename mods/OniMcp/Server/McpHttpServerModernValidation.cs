@@ -124,17 +124,6 @@ namespace OniMcp.Server
                 return false;
             }
 
-            if (string.Equals(method, "resources/read", StringComparison.Ordinal))
-            {
-                JToken uriToken = (rawMessage["params"] as JObject)?["uri"];
-                if (uriToken?.Type != JTokenType.String || string.IsNullOrEmpty((string)uriToken))
-                {
-                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                        "params.uri must be a non-empty string for resources/read");
-                    return false;
-                }
-            }
-
             string methodHeader = httpRequest.Headers["Mcp-Method"];
             if (string.IsNullOrEmpty(methodHeader) || !string.Equals(methodHeader, method, StringComparison.Ordinal))
             {
@@ -150,6 +139,17 @@ namespace OniMcp.Server
             {
                 error = HeaderMismatch(rawMessage["id"], $"Mcp-Name header is required for method '{method}'");
                 return false;
+            }
+
+            if (string.Equals(method, "resources/read", StringComparison.Ordinal))
+            {
+                JToken uriToken = (rawMessage["params"] as JObject)?["uri"];
+                if (uriToken?.Type != JTokenType.String || string.IsNullOrEmpty((string)uriToken))
+                {
+                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                        "params.uri must be a non-empty string for resources/read");
+                    return false;
+                }
             }
 
             if (expectedName != null)
