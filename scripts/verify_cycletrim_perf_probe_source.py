@@ -93,6 +93,12 @@ def main() -> int:
         "probe capture does not track game-session identity without retaining the old game",
         failures,
     )
+    require(
+        patch,
+        "private static long BeginMainTiming()",
+        "main-thread boundary-aware timing helper missing",
+        failures,
+    )
     require(patch, "ObserveGameBoundary();", "main-thread observations do not detect a new game session", failures)
     require(patch, "captureBoundaryPending = true", "new game sessions do not mark a rebased report boundary", failures)
     require(patch, "reportObservationCount = 0", "new game sessions inherit the prior report cadence", failures)
@@ -109,11 +115,21 @@ def main() -> int:
         "first report in a game session is not rebased away from prior-session timing",
         failures,
     )
+    if patch.count("__state = BeginMainTiming();") != 6:
+        failures.append("all six main-thread probes must rotate the game boundary before target execution")
+    if "private static long BeginMainTiming()" in patch:
+        begin_main = patch.split("private static long BeginMainTiming()", 1)[1].split(
+            "private static void ObserveGameBoundary()", 1
+        )[0]
+        if "ObserveGameBoundary();" not in begin_main or "return BeginTiming();" not in begin_main:
+            failures.append("boundary-aware timing helper must observe the game boundary then start timing")
+        elif begin_main.find("ObserveGameBoundary();") > begin_main.find("return BeginTiming();"):
+            failures.append("game boundary must rotate before the main target timing starts")
     record_main = patch.split("private static void RecordMain", 1)[1].split(
         "private static void RecordWorker", 1
     )[0]
-    if record_main.find("counter.Record(") > record_main.find("ObserveGameBoundary();"):
-        failures.append("game-boundary bookkeeping must happen after the measured target is recorded")
+    if "ObserveGameBoundary();" in record_main:
+        failures.append("game boundary must rotate before main target execution, not from RecordMain")
     if "GameScheduler.Instance" in patch:
         failures.append("deferred performance reporting must not depend on the paused game clock")
     require(patch, "intervalDurationTicks", "report interval duration is missing", failures)
