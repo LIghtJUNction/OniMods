@@ -11,6 +11,37 @@ from pathlib import Path
 from verify_cycletrim_navgrid_source_contract import download_source, method_body, require
 
 
+def verify_set_active_contract(set_active_body: str) -> None:
+    for pattern, message in (
+        (
+            r"if\s*\(\s*clearQueue\s*\)\s*\{\s*this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}",
+            "SetActiveResearch clearQueue=true no longer clears queuedTech",
+        ),
+        (
+            r"this\.activeResearch\s*=\s*null\s*;",
+            "SetActiveResearch no longer resets activeResearch",
+        ),
+        (
+            r"if\s*\(\s*tech\s*!=\s*null\s*\).*?\}\s*else\s*\{\s*"
+            r"this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}",
+            "SetActiveResearch null path no longer clears queuedTech",
+        ),
+        (
+            r"this\.NotifyResearchCenters\s*\(\s*GameHashes\.ActiveResearchChanged\s*,\s*"
+            r"this\.queuedTech\s*\)\s*;",
+            "SetActiveResearch no longer emits ActiveResearchChanged",
+        ),
+    ):
+        require(pattern, set_active_body, message)
+
+    require(
+        r"else\s*\{\s*this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}\s*"
+        r"this\.NotifyResearchCenters\s*\(",
+        set_active_body,
+        "queue clear must occur before notification",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default="ci/oni-reference-assemblies.json")
@@ -60,34 +91,7 @@ def main() -> int:
         research,
         "public void SetActiveResearch(Tech tech, bool clearQueue = false)",
     )
-    for pattern, message in (
-        (
-            r"if\s*\(\s*clearQueue\s*\)\s*\{\s*this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}",
-            "SetActiveResearch clearQueue=true no longer clears queuedTech",
-        ),
-        (
-            r"this\.activeResearch\s*=\s*null\s*;",
-            "SetActiveResearch no longer resets activeResearch",
-        ),
-        (
-            r"if\s*\(\s*tech\s*!=\s*null\s*\).*?\}\s*else\s*\{\s*"
-            r"this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}",
-            "SetActiveResearch null path no longer clears queuedTech",
-        ),
-        (
-            r"this\.NotifyResearchCenters\s*\(\s*GameHashes\.ActiveResearchChanged\s*,\s*"
-            r"this\.queuedTech\s*\)\s*;",
-            "SetActiveResearch no longer emits ActiveResearchChanged",
-        ),
-    ):
-        require(pattern, set_active_body, message)
-
-    require(
-        r"else\s*\{\s*this\.queuedTech\.Clear\s*\(\s*\)\s*;\s*\}\s*"
-        r"this\.NotifyResearchCenters\s*\(",
-        set_active_body,
-        "queue clear must occur before notification",
-    )
+    verify_set_active_contract(set_active_body)
 
     print(
         f"PASS Research queue source contract matches ONI {expected_build} "
