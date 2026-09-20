@@ -64,12 +64,18 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                 AssertModernRejected(client,
                     BuildResourceRead(33209, "\"inputResponses\":{\"probe\":[]},"),
                     "resources/read", "oni://missing-mrtr-regression", "array inputResponses entry");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33210, "\"inputResponses\":{\"probe\":{\"action\":\"decline\"}},"),
+                    "tools/call", "benchmark", "inputResponses entry without resultType");
+                AssertModernRejected(client,
+                    BuildResourceRead(33211, "\"inputResponses\":{\"probe\":{}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "empty inputResponses entry");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
                     "Malformed MRTR envelopes reached tool dispatch");
 
                 using (var response = SendModern(client,
                     BuildBenchmarkCall(33205,
-                        "\"requestState\":\"opaque-state\",\"inputResponses\":{\"probe\":{\"action\":\"decline\"}},"),
+                        "\"requestState\":\"opaque-state\",\"inputResponses\":{\"probe\":{\"resultType\":\"complete\",\"action\":\"decline\"}},"),
                     "tools/call", "benchmark"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
