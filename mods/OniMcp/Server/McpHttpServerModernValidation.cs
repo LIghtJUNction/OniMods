@@ -61,6 +61,14 @@ namespace OniMcp.Server
                 return false;
             }
 
+            var progressTokenProperty = meta.Property("progressToken");
+            if (progressTokenProperty != null && !IsValidModernProgressToken(progressTokenProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "params._meta.progressToken must be a string or number when provided");
+                return false;
+            }
+
             var clientInfo = meta["io.modelcontextprotocol/clientInfo"];
             if (clientInfo != null)
             {
@@ -132,6 +140,14 @@ namespace OniMcp.Server
             }
 
             return true;
+        }
+
+        private static bool IsValidModernProgressToken(JToken progressToken)
+        {
+            return progressToken != null
+                && (progressToken.Type == JTokenType.String
+                    || progressToken.Type == JTokenType.Integer
+                    || progressToken.Type == JTokenType.Float);
         }
 
         private static bool IsValidModernLogLevel(JToken logLevel)
