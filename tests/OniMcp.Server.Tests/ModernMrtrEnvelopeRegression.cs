@@ -67,22 +67,35 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                 AssertModernRejected(client,
                     BuildResourceRead(33211, "\"inputResponses\":{\"probe\":{}},"),
                     "resources/read", "oni://missing-mrtr-regression", "empty inputResponses entry");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33212, "\"inputResponses\":{\"probe\":{\"action\":\"retry\"}},"),
+                    "tools/call", "benchmark", "invalid elicitation action");
+                AssertModernRejected(client,
+                    BuildResourceRead(33213, "\"inputResponses\":{\"probe\":{\"roots\":\"bad\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "non-array roots result");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33214,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling result without content");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
                     "Malformed MRTR envelopes reached tool dispatch");
 
                 using (var response = SendModern(client,
                     BuildBenchmarkCall(33205,
-                        "\"requestState\":\"opaque-state\",\"inputResponses\":{\"probe\":{\"action\":\"decline\"}},"),
+                        "\"requestState\":\"opaque-state\",\"inputResponses\":{"
+                        + "\"elicitation\":{\"action\":\"decline\",\"x-extension\":true},"
+                        + "\"roots\":{\"roots\":[]},"
+                        + "\"sampling\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":\"ok\"},\"model\":\"fixture\"}},"),
                     "tools/call", "benchmark"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Schema-valid MRTR input response was rejected with HTTP " + (int)response.StatusCode);
+                        "Schema-valid MRTR input responses were rejected with HTTP " + (int)response.StatusCode);
                     JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
                     Assert(body["result"] != null && body["error"] == null,
-                        "Schema-valid MRTR input response did not reach the modern tool path");
+                        "Schema-valid MRTR input responses did not reach the modern tool path");
                 }
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes + 1,
-                    "Schema-valid MRTR input response did not dispatch exactly once");
+                    "Schema-valid MRTR input responses did not dispatch exactly once");
 
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern MRTR envelope validation allocated legacy session state");
