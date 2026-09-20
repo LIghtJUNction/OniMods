@@ -20,13 +20,13 @@ namespace CycleTrim.Patches
         private const string FastTrackNamespacePrefix = "PeterHan.FastTrack.";
         private const string ReportName = "CycleTrim.PerformanceProbe";
 
-        private static PerformanceProbeCounter asyncTickCounter;
+        private static PerformanceProbeGenerationCounter asyncTickCounter;
         private static PerformanceProbeGenerationCounter asyncWorkCounter;
-        private static PerformanceProbeCounter navigatorProbeCounter;
-        private static PerformanceProbeCounter fetchCounter;
-        private static PerformanceProbeCounter choreCounter;
-        private static PerformanceProbeCounter brainSchedulerCounter;
-        private static PerformanceProbeCounter roomProberCounter;
+        private static PerformanceProbeGenerationCounter navigatorProbeCounter;
+        private static PerformanceProbeGenerationCounter fetchCounter;
+        private static PerformanceProbeGenerationCounter choreCounter;
+        private static PerformanceProbeGenerationCounter brainSchedulerCounter;
+        private static PerformanceProbeGenerationCounter roomProberCounter;
         private static MethodBase asyncTickTarget;
         private static MethodBase asyncWorkTarget;
         private static MethodBase navigatorProbeTarget;
@@ -73,13 +73,13 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            asyncTickCounter = new PerformanceProbeCounter();
-            asyncWorkCounter = new PerformanceProbeGenerationCounter();
-            navigatorProbeCounter = new PerformanceProbeCounter();
-            fetchCounter = new PerformanceProbeCounter();
-            choreCounter = new PerformanceProbeCounter();
-            brainSchedulerCounter = new PerformanceProbeCounter();
-            roomProberCounter = new PerformanceProbeCounter();
+            asyncTickCounter = new PerformanceProbeGenerationCounter();
+            asyncWorkCounter = new PerformanceProbeGenerationCounter(consistentSnapshots: true);
+            navigatorProbeCounter = new PerformanceProbeGenerationCounter();
+            fetchCounter = new PerformanceProbeGenerationCounter();
+            choreCounter = new PerformanceProbeGenerationCounter();
+            brainSchedulerCounter = new PerformanceProbeGenerationCounter();
+            roomProberCounter = new PerformanceProbeGenerationCounter();
             reportCallback = ReportDeferred;
             captureGame = new WeakReference(null);
             reportScheduler = new WeakReference(null);
@@ -114,12 +114,13 @@ namespace CycleTrim.Patches
             return Stopwatch.GetTimestamp();
         }
 
-        private static long BeginMainTiming()
+        private static TimingState BeginMainTiming(
+            PerformanceProbeGenerationCounter counter)
         {
             // Rotate the capture before a measured main-thread target can publish work to
             // a worker. Boundary bookkeeping stays outside the target's measured duration.
             ObserveGameBoundary();
-            return BeginTiming();
+            return new TimingState(counter.CaptureCurrent(), BeginTiming());
         }
 
         private static void ObserveGameBoundary()
@@ -130,12 +131,18 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            // A worker captures the current generation-owned counter at Prefix time. Swap
-            // the published counter at the game boundary so an old work order that finishes
-            // later can only update its old counter, never the new game's reporting window.
+            // Every target owns a generation-local counter. Capturing the counter in each
+            // Prefix lets an old/re-entrant invocation finish without contaminating the
+            // new game's cumulative calls, totals, or maxima.
             captureGame.Target = game;
             captureGeneration++;
+            asyncTickCounter.AdvanceGeneration();
             asyncWorkCounter.AdvanceGeneration();
+            navigatorProbeCounter.AdvanceGeneration();
+            fetchCounter.AdvanceGeneration();
+            choreCounter.AdvanceGeneration();
+            brainSchedulerCounter.AdvanceGeneration();
+            roomProberCounter.AdvanceGeneration();
             captureBoundaryPending = true;
             reportObservationCount = 0;
             nextReportAt = 1;
@@ -144,9 +151,9 @@ namespace CycleTrim.Patches
             reportScheduler.Target = null;
         }
 
-        private static void RecordMain(PerformanceProbeCounter counter, long startedAt)
+        private static void RecordMain(TimingState state)
         {
-            counter.Record(Stopwatch.GetTimestamp() - startedAt);
+            state.Counter.Record(Stopwatch.GetTimestamp() - state.StartedAt);
             var observations = Interlocked.Increment(ref reportObservationCount);
             if (observations >= nextReportAt)
             {
@@ -167,14 +174,14 @@ namespace CycleTrim.Patches
             TryScheduleReport();
         }
 
-        private static void RecordWorker(PerformanceProbeCounter counter, long startedAt)
+        private static void RecordWorker(TimingState state)
         {
-            counter.Record(Stopwatch.GetTimestamp() - startedAt);
+            state.Counter.Record(Stopwatch.GetTimestamp() - state.StartedAt);
         }
 
-        private readonly struct WorkerTimingState
+        private readonly struct TimingState
         {
-            internal WorkerTimingState(PerformanceProbeCounter counter, long startedAt)
+            internal TimingState(PerformanceProbeCounter counter, long startedAt)
             {
                 Counter = counter;
                 StartedAt = startedAt;
@@ -249,13 +256,13 @@ namespace CycleTrim.Patches
             var gc1 = GC.CollectionCount(1);
             var gc2 = GC.CollectionCount(2);
             var heapBytes = GC.GetTotalMemory(false);
-            var asyncTickSnapshot = asyncTickCounter.Snapshot();
+            var asyncTickSnapshot = asyncTickCounter.SnapshotCurrent();
             var asyncWorkSnapshot = asyncWorkCounter.SnapshotCurrent();
-            var navigatorProbeSnapshot = navigatorProbeCounter.Snapshot();
-            var fetchSnapshot = fetchCounter.Snapshot();
-            var choreSnapshot = choreCounter.Snapshot();
-            var brainSchedulerSnapshot = brainSchedulerCounter.Snapshot();
-            var roomProberSnapshot = roomProberCounter.Snapshot();
+            var navigatorProbeSnapshot = navigatorProbeCounter.SnapshotCurrent();
+            var fetchSnapshot = fetchCounter.SnapshotCurrent();
+            var choreSnapshot = choreCounter.SnapshotCurrent();
+            var brainSchedulerSnapshot = brainSchedulerCounter.SnapshotCurrent();
+            var roomProberSnapshot = roomProberCounter.SnapshotCurrent();
             var sequence = ++reportSequence;
             var summary = new StringBuilder(1280);
             summary.Append('{');
@@ -277,7 +284,7 @@ namespace CycleTrim.Patches
                 "main",
                 asyncTickTarget,
                 asyncTickSnapshot,
-                startedNewCapture ? asyncTickSnapshot : lastAsyncTickSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastAsyncTickSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -285,7 +292,7 @@ namespace CycleTrim.Patches
                 "worker",
                 asyncWorkTarget,
                 asyncWorkSnapshot,
-                startedNewCapture ? asyncWorkSnapshot : lastAsyncWorkSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastAsyncWorkSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -293,7 +300,7 @@ namespace CycleTrim.Patches
                 "main",
                 navigatorProbeTarget,
                 navigatorProbeSnapshot,
-                startedNewCapture ? navigatorProbeSnapshot : lastNavigatorProbeSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastNavigatorProbeSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -301,7 +308,7 @@ namespace CycleTrim.Patches
                 "main",
                 fetchTarget,
                 fetchSnapshot,
-                startedNewCapture ? fetchSnapshot : lastFetchSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastFetchSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -309,7 +316,7 @@ namespace CycleTrim.Patches
                 "main",
                 choreTarget,
                 choreSnapshot,
-                startedNewCapture ? choreSnapshot : lastChoreSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastChoreSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -317,7 +324,7 @@ namespace CycleTrim.Patches
                 "main",
                 brainSchedulerTarget,
                 brainSchedulerSnapshot,
-                startedNewCapture ? brainSchedulerSnapshot : lastBrainSchedulerSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastBrainSchedulerSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -325,7 +332,7 @@ namespace CycleTrim.Patches
                 "main",
                 roomProberTarget,
                 roomProberSnapshot,
-                startedNewCapture ? roomProberSnapshot : lastRoomProberSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastRoomProberSnapshot);
             summary.Append("]}");
 
             lastGc0 = gc0;
@@ -425,14 +432,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginMainTiming();
+                __state = BeginMainTiming(asyncTickCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(asyncTickCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -464,18 +471,18 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out WorkerTimingState __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = new WorkerTimingState(
+                __state = new TimingState(
                     asyncWorkCounter.CaptureCurrent(),
                     BeginTiming());
             }
 
             private static Exception Finalizer(
                 Exception __exception,
-                WorkerTimingState __state)
+                TimingState __state)
             {
-                RecordWorker(__state.Counter, __state.StartedAt);
+                RecordWorker(__state);
                 return __exception;
             }
         }
@@ -502,14 +509,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginMainTiming();
+                __state = BeginMainTiming(navigatorProbeCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(navigatorProbeCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -536,14 +543,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginMainTiming();
+                __state = BeginMainTiming(fetchCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(fetchCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -570,14 +577,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginMainTiming();
+                __state = BeginMainTiming(choreCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(choreCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -604,14 +611,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginMainTiming();
+                __state = BeginMainTiming(brainSchedulerCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(brainSchedulerCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -638,14 +645,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginMainTiming();
+                __state = BeginMainTiming(roomProberCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(roomProberCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
