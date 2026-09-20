@@ -100,26 +100,11 @@ namespace OniMcp.Server
                 return false;
             }
 
-            var clientInfo = meta["io.modelcontextprotocol/clientInfo"];
-            if (clientInfo != null)
+            string clientInfoError;
+            if (!ValidateModernClientInfo(meta["io.modelcontextprotocol/clientInfo"], out clientInfoError))
             {
-                var clientInfoObject = clientInfo as JObject;
-                if (clientInfoObject == null
-                    || clientInfoObject["name"]?.Type != JTokenType.String
-                    || clientInfoObject["version"]?.Type != JTokenType.String)
-                {
-                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                        "params._meta.io.modelcontextprotocol/clientInfo must contain string name and version when provided");
-                    return false;
-                }
-
-                var icons = clientInfoObject["icons"];
-                if (icons != null && icons.Type != JTokenType.Array)
-                {
-                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                        "params._meta.io.modelcontextprotocol/clientInfo.icons must be an array when provided");
-                    return false;
-                }
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, clientInfoError);
+                return false;
             }
 
             var logLevel = meta["io.modelcontextprotocol/logLevel"];
