@@ -362,6 +362,14 @@ namespace OniMcp.Server
                 return false;
             }
 
+            var subscriptionIdProperty = meta?.Property("io.modelcontextprotocol/subscriptionId");
+            if (subscriptionIdProperty != null && !IsValidModernRequestId(subscriptionIdProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidParams,
+                    "Notification io.modelcontextprotocol/subscriptionId must be a string or integer when provided");
+                return false;
+            }
+
             var metaVersionToken = meta?["io.modelcontextprotocol/protocolVersion"];
             if (metaVersionToken != null && metaVersionToken.Type != JTokenType.String)
             {
