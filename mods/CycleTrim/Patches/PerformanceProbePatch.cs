@@ -114,6 +114,14 @@ namespace CycleTrim.Patches
             return Stopwatch.GetTimestamp();
         }
 
+        private static long BeginMainTiming()
+        {
+            // Rotate the capture before a measured main-thread target can publish work to
+            // a worker. Boundary bookkeeping stays outside the target's measured duration.
+            ObserveGameBoundary();
+            return BeginTiming();
+        }
+
         private static void ObserveGameBoundary()
         {
             var game = Game.Instance;
@@ -138,10 +146,7 @@ namespace CycleTrim.Patches
 
         private static void RecordMain(PerformanceProbeCounter counter, long startedAt)
         {
-            // Record the measured target before any lifecycle bookkeeping so the boundary
-            // check itself is never charged to the target's timing.
             counter.Record(Stopwatch.GetTimestamp() - startedAt);
-            ObserveGameBoundary();
             var observations = Interlocked.Increment(ref reportObservationCount);
             if (observations >= nextReportAt)
             {
@@ -422,7 +427,7 @@ namespace CycleTrim.Patches
             [HarmonyPriority(Priority.First)]
             private static void Prefix(out long __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming();
             }
 
             private static Exception Finalizer(Exception __exception, long __state)
@@ -499,7 +504,7 @@ namespace CycleTrim.Patches
             [HarmonyPriority(Priority.First)]
             private static void Prefix(out long __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming();
             }
 
             private static Exception Finalizer(Exception __exception, long __state)
@@ -533,7 +538,7 @@ namespace CycleTrim.Patches
             [HarmonyPriority(Priority.First)]
             private static void Prefix(out long __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming();
             }
 
             private static Exception Finalizer(Exception __exception, long __state)
@@ -567,7 +572,7 @@ namespace CycleTrim.Patches
             [HarmonyPriority(Priority.First)]
             private static void Prefix(out long __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming();
             }
 
             private static Exception Finalizer(Exception __exception, long __state)
@@ -601,7 +606,7 @@ namespace CycleTrim.Patches
             [HarmonyPriority(Priority.First)]
             private static void Prefix(out long __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming();
             }
 
             private static Exception Finalizer(Exception __exception, long __state)
@@ -635,7 +640,7 @@ namespace CycleTrim.Patches
             [HarmonyPriority(Priority.First)]
             private static void Prefix(out long __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming();
             }
 
             private static Exception Finalizer(Exception __exception, long __state)
