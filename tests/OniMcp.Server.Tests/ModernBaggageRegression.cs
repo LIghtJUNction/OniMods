@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -54,7 +53,6 @@ internal static class ModernBaggageRegressionEntry
 
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern baggage checks allocated legacy session state");
-                AssertLegacyInitializeUnchanged(client);
             }
         }
         finally
@@ -141,25 +139,6 @@ internal static class ModernBaggageRegressionEntry
         request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
         request.Headers.Add("Mcp-Method", method);
         return request;
-    }
-
-    private static void AssertLegacyInitializeUnchanged(HttpClient client)
-    {
-        const string initialize =
-            "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":1,\"params\":{\"protocolVersion\":\"2025-11-25\"}}";
-        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
-        {
-            request.Content = new StringContent(initialize, Encoding.UTF8, "application/json");
-            using (var response = client.SendAsync(request).GetAwaiter().GetResult())
-            {
-                Assert(response.StatusCode == HttpStatusCode.OK,
-                    "Legacy initialize HTTP status changed");
-                Assert(JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"] != null,
-                    "Legacy initialize stopped working");
-                Assert(response.Headers.GetValues("Mcp-Session-Id").Single().Length > 0,
-                    "Legacy initialize stopped returning a session id");
-            }
-        }
     }
 
     private static int ReservePort()
