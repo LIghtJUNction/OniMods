@@ -34,11 +34,18 @@ namespace OniMcp.Server
             {
                 foreach (var response in inputResponsesObject.Properties())
                 {
-                    if (response.Value.Type == JTokenType.Object)
-                        continue;
+                    var responseObject = response.Value as JObject;
+                    if (responseObject == null)
+                    {
+                        errorMessage = "params.inputResponses values must be objects";
+                        return false;
+                    }
 
-                    errorMessage = "params.inputResponses values must be objects";
-                    return false;
+                    if (responseObject["resultType"]?.Type != JTokenType.String)
+                    {
+                        errorMessage = "params.inputResponses values must contain a string resultType";
+                        return false;
+                    }
                 }
             }
 
