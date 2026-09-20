@@ -21,6 +21,14 @@ namespace OniMcp.Server
                 return false;
             }
 
+            var traceparentProperty = meta?.Property("traceparent");
+            if (traceparentProperty != null && !IsValidModernTraceparent(traceparentProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidParams,
+                    "Notification traceparent must be a valid W3C Trace Context value when provided");
+                return false;
+            }
+
             var subscriptionIdProperty = meta?.Property("io.modelcontextprotocol/subscriptionId");
             if (subscriptionIdProperty != null && !IsValidModernSubscriptionId(subscriptionIdProperty.Value))
             {
