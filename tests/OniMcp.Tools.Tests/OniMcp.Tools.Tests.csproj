@@ -15,6 +15,7 @@
     <Compile Include="../../mods/OniMcp/Support/McpJsonUtil.cs" Link="Source/McpJsonUtil.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Entry/BenchmarkTools.cs" Link="Source/BenchmarkTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/SandboxDryRunRoutingPolicy.cs" Link="Source/SandboxDryRunRoutingPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/RadboltDirectionEligibilityPolicy.cs" Link="Source/RadboltDirectionEligibilityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Sandbox/SandboxFloodFillExecution.cs" Link="Source/SandboxFloodFillExecution.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/AgentProgram*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/ToolBatch*.cs" Link="Source/%(Filename)%(Extension)" />
