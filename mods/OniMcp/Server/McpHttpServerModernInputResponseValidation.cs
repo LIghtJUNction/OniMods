@@ -196,7 +196,104 @@ namespace OniMcp.Server
                     && block["input"]?.Type == JTokenType.Object;
             }
 
-            return string.Equals(value, "tool_result", StringComparison.Ordinal);
+            if (!string.Equals(value, "tool_result", StringComparison.Ordinal))
+                return false;
+
+            var toolUseId = block["toolUseId"];
+            var resultContent = block["content"] as JArray;
+            if (toolUseId?.Type != JTokenType.String || resultContent == null)
+                return false;
+
+            var isError = block.Property("isError");
+            if (isError != null && isError.Value.Type != JTokenType.Boolean)
+                return false;
+
+            foreach (var item in resultContent)
+            {
+                var contentBlock = item as JObject;
+                if (contentBlock == null || !IsModernToolResultContentBlock(contentBlock))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsModernToolResultContentBlock(JObject block)
+        {
+            var type = block["type"];
+            if (type?.Type != JTokenType.String)
+                return false;
+
+            string value = (string)type;
+            if (string.Equals(value, "text", StringComparison.Ordinal))
+                return block["text"]?.Type == JTokenType.String;
+
+            if (string.Equals(value, "image", StringComparison.Ordinal)
+                || string.Equals(value, "audio", StringComparison.Ordinal))
+            {
+                return block["data"]?.Type == JTokenType.String
+                    && block["mimeType"]?.Type == JTokenType.String;
+            }
+
+            if (string.Equals(value, "resource_link", StringComparison.Ordinal))
+            {
+                return block["name"]?.Type == JTokenType.String
+                    && block["uri"]?.Type == JTokenType.String
+                    && IsOptionalString(block, "title")
+                    && IsOptionalString(block, "description")
+                    && IsOptionalString(block, "mimeType")
+                    && IsOptionalNumber(block, "size")
+                    && IsOptionalObject(block, "annotations")
+                    && IsOptionalArray(block, "icons")
+                    && IsOptionalObject(block, "_meta");
+            }
+
+            if (!string.Equals(value, "resource", StringComparison.Ordinal))
+                return false;
+
+            if (!IsOptionalObject(block, "annotations") || !IsOptionalObject(block, "_meta"))
+                return false;
+
+            var resource = block["resource"] as JObject;
+            if (resource == null
+                || resource["uri"]?.Type != JTokenType.String
+                || !IsOptionalString(resource, "mimeType")
+                || !IsOptionalObject(resource, "_meta"))
+            {
+                return false;
+            }
+
+            var text = resource["text"];
+            var blob = resource["blob"];
+            bool hasText = text?.Type == JTokenType.String;
+            bool hasBlob = blob?.Type == JTokenType.String;
+            return hasText != hasBlob;
+        }
+
+        private static bool IsOptionalString(JObject value, string propertyName)
+        {
+            var property = value.Property(propertyName);
+            return property == null || property.Value.Type == JTokenType.String;
+        }
+
+        private static bool IsOptionalNumber(JObject value, string propertyName)
+        {
+            var property = value.Property(propertyName);
+            return property == null
+                || property.Value.Type == JTokenType.Integer
+                || property.Value.Type == JTokenType.Float;
+        }
+
+        private static bool IsOptionalObject(JObject value, string propertyName)
+        {
+            var property = value.Property(propertyName);
+            return property == null || property.Value.Type == JTokenType.Object;
+        }
+
+        private static bool IsOptionalArray(JObject value, string propertyName)
+        {
+            var property = value.Property(propertyName);
+            return property == null || property.Value.Type == JTokenType.Array;
         }
     }
 }
