@@ -73,7 +73,36 @@ namespace OniMcp.Server
 
         private static bool IsModernListRootsResponse(JObject response)
         {
-            return response["roots"]?.Type == JTokenType.Array;
+            var roots = response["roots"] as JArray;
+            if (roots == null)
+                return false;
+
+            foreach (var rootToken in roots)
+            {
+                var root = rootToken as JObject;
+                if (root == null)
+                    return false;
+
+                var uriToken = root["uri"];
+                if (uriToken?.Type != JTokenType.String)
+                    return false;
+
+                string uri = (string)uriToken;
+                Uri parsedUri;
+                if (string.IsNullOrEmpty(uri)
+                    || !uri.StartsWith("file://", StringComparison.OrdinalIgnoreCase)
+                    || !Uri.TryCreate(uri, UriKind.Absolute, out parsedUri)
+                    || !string.Equals(parsedUri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                var name = root["name"];
+                if (name != null && name.Type != JTokenType.String)
+                    return false;
+            }
+
+            return true;
         }
 
         private static bool IsModernCreateMessageResponse(JObject response)
