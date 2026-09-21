@@ -48,6 +48,18 @@ internal static class ModernMrtrContentMetadataRegressionEntry
                     "text sampling block with non-object annotations");
                 AssertModernRejected(client,
                     BuildBenchmarkCall(34702,
+                        "{\"type\":\"text\",\"text\":\"ok\",\"annotations\":{\"audience\":[\"user\",7]}}"),
+                    "text sampling block with non-role annotations audience entry");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(34703,
+                        "{\"type\":\"text\",\"text\":\"ok\",\"annotations\":{\"priority\":1.1}}"),
+                    "text sampling block with out-of-range annotations priority");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(34704,
+                        "{\"type\":\"text\",\"text\":\"ok\",\"annotations\":{\"lastModified\":7}}"),
+                    "text sampling block with non-string annotations lastModified");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(34705,
                         "{\"type\":\"tool_result\",\"toolUseId\":\"call-1\",\"content\":["
                         + "{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\",\"_meta\":[]}] }"),
                     "tool-result image block with non-object _meta");
@@ -55,11 +67,13 @@ internal static class ModernMrtrContentMetadataRegressionEntry
                     "Malformed sampling content metadata reached tool dispatch");
 
                 AssertModernAccepted(client,
-                    BuildBenchmarkCall(34703,
-                        "{\"type\":\"text\",\"text\":\"ok\",\"annotations\":{},\"_meta\":{}}"),
-                    "text sampling block with object metadata");
+                    BuildBenchmarkCall(34706,
+                        "{\"type\":\"text\",\"text\":\"ok\",\"annotations\":{"
+                        + "\"audience\":[\"user\",\"assistant\"],\"priority\":0.5,"
+                        + "\"lastModified\":\"2026-09-21T10:00:00Z\",\"com.example/custom\":7},\"_meta\":{}}"),
+                    "text sampling block with schema-valid annotations and extension metadata");
                 AssertModernAccepted(client,
-                    BuildBenchmarkCall(34704,
+                    BuildBenchmarkCall(34707,
                         "{\"type\":\"tool_result\",\"toolUseId\":\"call-2\",\"content\":["
                         + "{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\","
                         + "\"annotations\":{},\"_meta\":{}}]}"),
