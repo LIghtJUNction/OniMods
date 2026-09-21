@@ -91,15 +91,26 @@ internal static class ModernMrtrToolUsePayloadRegressionEntry
                     + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/mime\","
                     + "\"text\":\"fixture\",\"mimeType\":7}}]}"),
                     "embedded resource with non-string mimeType");
+                AssertModernRejected(client, BuildBenchmarkCall(34513,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-13\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"mimeType\":7}]}"),
+                    "resource link with non-string mimeType");
+                AssertModernRejected(client, BuildBenchmarkCall(34514,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-14\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"annotations\":7}]}"),
+                    "resource link with non-object annotations");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults,
                     "Malformed tool_result sampling responses reached tool dispatch");
 
-                AssertModernAccepted(client, BuildBenchmarkCall(34513,
+                AssertModernAccepted(client, BuildBenchmarkCall(34515,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid\",\"content\":["
                     + "{\"type\":\"text\",\"text\":\"ok\"},"
-                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/fixture\"},"
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/fixture\","
+                    + "\"description\":\"fixture link\",\"mimeType\":\"text/plain\",\"annotations\":{}},"
                     + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/embedded\","
-                    + "\"text\":\"fixture\",\"mimeType\":\"text/plain\"}}],"
+                    + "\"text\":\"fixture\",\"mimeType\":\"text/plain\"},\"annotations\":{}}],"
                     + "\"isError\":false,\"x-extension\":{\"kept\":true}}"),
                     "schema-valid tool_result sampling block");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults + 1,
