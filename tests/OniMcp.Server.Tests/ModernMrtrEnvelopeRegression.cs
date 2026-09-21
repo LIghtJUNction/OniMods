@@ -97,6 +97,10 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                     BuildResourceRead(33219,
                         "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":[7],\"model\":\"fixture\"}},"),
                     "resources/read", "oni://missing-mrtr-regression", "sampling content array with a primitive item");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33220,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"video\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling content with an unknown block discriminator");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
                     "Malformed MRTR envelopes reached tool dispatch");
 
