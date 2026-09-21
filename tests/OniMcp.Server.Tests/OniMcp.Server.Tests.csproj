@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>ModernMrtrContentMetadataRegressionEntry</StartupObject>
+    <StartupObject>ModernMrtrUriRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -31,6 +31,7 @@
     <Compile Include="ModernMrtrToolUsePayloadRegression.cs" />
     <Compile Include="ModernMrtrStopReasonRegression.cs" />
     <Compile Include="ModernMrtrContentMetadataRegression.cs" />
+    <Compile Include="ModernMrtrUriRegression.cs" />
     <Compile Include="GameStubs.cs" />
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Core/*.cs" Link="Core/%(Filename)%(Extension)" />
