@@ -135,6 +135,8 @@ namespace OniMcp.Server
                 var name = root["name"];
                 if (name != null && name.Type != JTokenType.String)
                     return false;
+                if (!IsOptionalObject(root, "_meta"))
+                    return false;
             }
 
             return true;
