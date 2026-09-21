@@ -55,15 +55,24 @@ internal static class ModernMrtrRootsResultRegressionEntry
                 AssertModernRejected(client, BuildBenchmarkCall(34406,
                     "{\"roots\":[{\"uri\":\"file:///tmp/onimcp-mrtr-root\",\"name\":7}]}"),
                     "non-string root name");
+                AssertModernRejected(client, BuildBenchmarkCall(34407,
+                    "{\"roots\":[{\"uri\":\"file:///tmp/onimcp-mrtr-root\",\"_meta\":[]}]}"),
+                    "non-object root metadata");
+                AssertModernRejected(client, BuildBenchmarkCall(34408,
+                    "{\"roots\":[{\"uri\":\"file:///tmp/onimcp-mrtr-root\",\"_meta\":{\"bad name\":true}}]}"),
+                    "root metadata with an invalid key");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidRoots,
                     "Malformed MRTR roots responses reached tool dispatch");
 
-                AssertModernAccepted(client, BuildBenchmarkCall(34407, "{\"roots\":[]}"),
+                AssertModernAccepted(client, BuildBenchmarkCall(34409, "{\"roots\":[]}"),
                     "empty roots response");
-                AssertModernAccepted(client, BuildBenchmarkCall(34408,
+                AssertModernAccepted(client, BuildBenchmarkCall(34410,
                     "{\"roots\":[{\"uri\":\"file:///tmp/onimcp-mrtr-root\",\"name\":\"fixture\"}]}"),
                     "schema-valid roots response");
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidRoots + 2,
+                AssertModernAccepted(client, BuildBenchmarkCall(34411,
+                    "{\"roots\":[{\"uri\":\"file:///tmp/onimcp-mrtr-root\",\"_meta\":{\"com.example/cache\":true}}]}"),
+                    "schema-valid root metadata");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidRoots + 3,
                     "Schema-valid MRTR roots responses did not each dispatch exactly once");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern MRTR roots validation allocated legacy session state");
