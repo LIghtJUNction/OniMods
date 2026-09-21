@@ -354,7 +354,9 @@ namespace OniMcp.Server
             }
 
             var lastModifiedProperty = annotations.Property("lastModified");
-            return lastModifiedProperty == null || lastModifiedProperty.Value.Type == JTokenType.String;
+            return lastModifiedProperty == null
+                || lastModifiedProperty.Value.Type == JTokenType.String
+                || lastModifiedProperty.Value.Type == JTokenType.Date;
         }
 
         private static bool IsOptionalModernIcons(JObject value, string propertyName)
