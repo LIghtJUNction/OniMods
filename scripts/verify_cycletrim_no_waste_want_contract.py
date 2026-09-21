@@ -78,8 +78,9 @@ def verify_local(manifest: dict, failures: list[str]) -> None:
     )
     require_regex(
         patch,
-        r"Prepare\(\).*?AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null"
-        r".*?AccessTools\.TypeByName\(NoWasteWantPatchType\)\s*==\s*null",
+        r"Prepare\(\).*?if\s*\(\s*AccessTools\.TypeByName\(NoWasteWantPatchType\)\s*"
+        r"!=\s*null\s*\)\s*\{\s*return\s+false\s*;\s*\}.*?"
+        r"return\s+AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null\s*;",
         "CycleTrim Fetch no longer disables its replacement when Waste Not, Want Not is present",
         failures,
     )
