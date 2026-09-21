@@ -248,9 +248,15 @@ namespace OniMcp.Server
             if (resource == null || resource["uri"]?.Type != JTokenType.String)
                 return false;
 
+            var mimeType = resource["mimeType"];
+            if (mimeType != null && mimeType.Type != JTokenType.String)
+                return false;
+
             var text = resource["text"];
             var blob = resource["blob"];
-            return text?.Type == JTokenType.String || blob?.Type == JTokenType.String;
+            bool hasText = text?.Type == JTokenType.String;
+            bool hasBlob = blob?.Type == JTokenType.String;
+            return hasText != hasBlob;
         }
     }
 }
