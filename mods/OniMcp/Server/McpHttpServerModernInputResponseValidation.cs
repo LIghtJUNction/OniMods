@@ -252,7 +252,7 @@ namespace OniMcp.Server
                     && IsOptionalString(block, "description")
                     && IsOptionalString(block, "mimeType")
                     && IsOptionalNumber(block, "size")
-                    && IsOptionalObject(block, "annotations")
+                    && IsOptionalModernAnnotations(block, "annotations")
                     && IsOptionalModernIcons(block, "icons")
                     && IsOptionalObject(block, "_meta");
             }
@@ -260,7 +260,7 @@ namespace OniMcp.Server
             if (!string.Equals(value, "resource", StringComparison.Ordinal))
                 return false;
 
-            if (!IsOptionalObject(block, "annotations") || !IsOptionalObject(block, "_meta"))
+            if (!IsOptionalModernAnnotations(block, "annotations") || !IsOptionalObject(block, "_meta"))
                 return false;
 
             var resource = block["resource"] as JObject;
@@ -281,7 +281,7 @@ namespace OniMcp.Server
 
         private static bool HasValidModernContentMetadata(JObject block)
         {
-            return IsOptionalObject(block, "annotations")
+            return IsOptionalModernAnnotations(block, "annotations")
                 && IsOptionalObject(block, "_meta");
         }
 
@@ -303,6 +303,58 @@ namespace OniMcp.Server
         {
             var property = value.Property(propertyName);
             return property == null || property.Value.Type == JTokenType.Object;
+        }
+
+        private static bool IsOptionalModernAnnotations(JObject value, string propertyName)
+        {
+            var property = value.Property(propertyName);
+            if (property == null)
+                return true;
+
+            var annotations = property.Value as JObject;
+            if (annotations == null)
+                return false;
+
+            var audienceProperty = annotations.Property("audience");
+            if (audienceProperty != null)
+            {
+                var audience = audienceProperty.Value as JArray;
+                if (audience == null)
+                    return false;
+
+                foreach (var roleToken in audience)
+                {
+                    if (roleToken.Type != JTokenType.String)
+                        return false;
+
+                    string role = (string)roleToken;
+                    if (!string.Equals(role, "user", StringComparison.Ordinal)
+                        && !string.Equals(role, "assistant", StringComparison.Ordinal))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            var priorityProperty = annotations.Property("priority");
+            if (priorityProperty != null)
+            {
+                if (priorityProperty.Value.Type != JTokenType.Integer
+                    && priorityProperty.Value.Type != JTokenType.Float)
+                {
+                    return false;
+                }
+
+                double priority = priorityProperty.Value.Value<double>();
+                if (double.IsNaN(priority) || double.IsInfinity(priority)
+                    || priority < 0d || priority > 1d)
+                {
+                    return false;
+                }
+            }
+
+            var lastModifiedProperty = annotations.Property("lastModified");
+            return lastModifiedProperty == null || lastModifiedProperty.Value.Type == JTokenType.String;
         }
 
         private static bool IsOptionalModernIcons(JObject value, string propertyName)
