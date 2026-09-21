@@ -61,8 +61,13 @@ internal static class ModernMrtrUriRegressionEntry
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"icons\":[{\"src\":\"file:///tmp/icon.png\"}]}]}"),
                     "resource link icon with unsafe file src URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34808,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-fractional-size\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"size\":1.5}]}"),
+                    "resource link with fractional byte size");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidUris,
-                    "Malformed or unsafe MRTR content URIs reached tool dispatch");
+                    "Malformed or unsafe MRTR resource links reached tool dispatch");
 
                 AssertModernAccepted(client, BuildBenchmarkCall(34804,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-link\",\"content\":["
@@ -79,8 +84,13 @@ internal static class ModernMrtrUriRegressionEntry
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"icons\":[{\"src\":\"https://example.invalid/icon.png\"}]}]}"),
                     "resource link with valid https icon URI");
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidUris + 3,
-                    "Schema-valid MRTR content URIs did not dispatch exactly three times");
+                AssertModernAccepted(client, BuildBenchmarkCall(34809,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-size\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"size\":123}]}"),
+                    "resource link with integer byte size");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidUris + 4,
+                    "Schema-valid MRTR resource links did not dispatch exactly four times");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern URI validation allocated legacy session state");
             }
