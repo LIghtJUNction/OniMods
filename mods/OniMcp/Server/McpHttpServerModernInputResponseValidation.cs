@@ -155,6 +155,7 @@ namespace OniMcp.Server
                 || string.Equals(roleValue, "assistant", StringComparison.Ordinal);
             return validRole
                 && IsModernSamplingContent(content)
+                && HasValidModernSamplingMessageComposition(roleValue, content)
                 && IsOptionalString(response, "stopReason")
                 && IsOptionalObject(response, "_meta");
         }
