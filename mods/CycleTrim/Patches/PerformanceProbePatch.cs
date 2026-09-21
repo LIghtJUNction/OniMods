@@ -159,7 +159,13 @@ namespace CycleTrim.Patches
 
         private static void RecordMain(TimingState state)
         {
-            state.Counter.Record(Stopwatch.GetTimestamp() - state.StartedAt);
+            if (!PerformanceProbeCounter.TryRecord(
+                state.Counter,
+                Stopwatch.GetTimestamp() - state.StartedAt))
+            {
+                return;
+            }
+
             var observations = Interlocked.Increment(ref reportObservationCount);
             if (observations >= nextReportAt)
             {
@@ -182,7 +188,9 @@ namespace CycleTrim.Patches
 
         private static void RecordWorker(TimingState state)
         {
-            state.Counter.Record(Stopwatch.GetTimestamp() - state.StartedAt);
+            PerformanceProbeCounter.TryRecord(
+                state.Counter,
+                Stopwatch.GetTimestamp() - state.StartedAt);
         }
 
         private readonly struct TimingState
