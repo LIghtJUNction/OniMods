@@ -125,13 +125,17 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                     BuildResourceRead(33226,
                         "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"audio\",\"data\":7,\"mimeType\":\"audio/wav\"},\"model\":\"fixture\"}},"),
                     "resources/read", "oni://missing-mrtr-regression", "audio sampling block with non-string data");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33227,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"ratio\":1.5}}},"),
+                    "tools/call", "benchmark", "fractional elicitation content value");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
                     "Malformed MRTR envelopes reached tool dispatch");
 
                 using (var response = SendModern(client,
                     BuildBenchmarkCall(33205,
                         "\"requestState\":\"opaque-state\",\"inputResponses\":{"
-                        + "\"elicitation\":{\"action\":\"accept\",\"content\":{\"text\":\"ok\",\"count\":2,\"ratio\":1.5,\"enabled\":true,\"choices\":[\"a\",\"b\"]},\"x-extension\":true},"
+                        + "\"elicitation\":{\"action\":\"accept\",\"content\":{\"text\":\"ok\",\"count\":2,\"ratio\":1,\"enabled\":true,\"choices\":[\"a\",\"b\"]},\"x-extension\":true},"
                         + "\"urlElicitation\":{\"action\":\"accept\"},"
                         + "\"roots\":{\"roots\":[]},"
                         + "\"sampling\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":\"ok\"},\"model\":\"fixture\"},"
