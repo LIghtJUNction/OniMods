@@ -149,8 +149,41 @@ namespace OniMcp.Server
             string roleValue = (string)role;
             bool validRole = string.Equals(roleValue, "user", StringComparison.Ordinal)
                 || string.Equals(roleValue, "assistant", StringComparison.Ordinal);
-            bool validContentShape = content.Type == JTokenType.Object || content.Type == JTokenType.Array;
-            return validRole && validContentShape;
+            return validRole && IsModernSamplingContent(content);
+        }
+
+        private static bool IsModernSamplingContent(JToken content)
+        {
+            var block = content as JObject;
+            if (block != null)
+                return IsModernSamplingContentBlock(block);
+
+            var blocks = content as JArray;
+            if (blocks == null)
+                return false;
+
+            foreach (var item in blocks)
+            {
+                var itemBlock = item as JObject;
+                if (itemBlock == null || !IsModernSamplingContentBlock(itemBlock))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsModernSamplingContentBlock(JObject block)
+        {
+            var type = block["type"];
+            if (type?.Type != JTokenType.String)
+                return false;
+
+            string value = (string)type;
+            return string.Equals(value, "text", StringComparison.Ordinal)
+                || string.Equals(value, "image", StringComparison.Ordinal)
+                || string.Equals(value, "audio", StringComparison.Ordinal)
+                || string.Equals(value, "tool_use", StringComparison.Ordinal)
+                || string.Equals(value, "tool_result", StringComparison.Ordinal);
         }
     }
 }
