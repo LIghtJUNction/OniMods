@@ -68,14 +68,16 @@ namespace CycleTrim.Patches
             out State state)
         {
             consumer = sensor.GetComponent<ChoreConsumer>();
-            if (consumer == null || navigator == null)
+            if (consumer == null
+                || navigator == null
+                || consumer.GetComponent<MinionIdentity>() == null)
             {
                 state = null;
                 return false;
             }
 
             state = States.GetValue(consumer, StateFactory);
-            return state.IsDuplicant;
+            return true;
         }
 
         private static RefreshStamp CaptureStamp(
@@ -177,7 +179,8 @@ namespace CycleTrim.Patches
                 ref Chore.Precondition.Context out_context,
                 ref bool __result)
             {
-                if (!States.TryGetValue(__instance, out var state))
+                if (!States.TryGetValue(__instance, out var state)
+                    || !state.IsDuplicant)
                 {
                     return true;
                 }
