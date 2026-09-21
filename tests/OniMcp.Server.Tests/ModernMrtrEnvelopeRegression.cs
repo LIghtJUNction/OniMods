@@ -101,6 +101,30 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                     BuildBenchmarkCall(33220,
                         "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"video\"},\"model\":\"fixture\"}},"),
                     "tools/call", "benchmark", "sampling content with an unknown block discriminator");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33221,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "text sampling block without text");
+                AssertModernRejected(client,
+                    BuildResourceRead(33222,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":7},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "text sampling block with non-string text");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33223,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"image\",\"mimeType\":\"image/png\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "image sampling block without data");
+                AssertModernRejected(client,
+                    BuildResourceRead(33224,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":7},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "image sampling block with non-string mimeType");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33225,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"audio\",\"data\":\"AA==\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "audio sampling block without mimeType");
+                AssertModernRejected(client,
+                    BuildResourceRead(33226,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"audio\",\"data\":7,\"mimeType\":\"audio/wav\"},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "audio sampling block with non-string data");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
                     "Malformed MRTR envelopes reached tool dispatch");
 
@@ -111,7 +135,7 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                         + "\"urlElicitation\":{\"action\":\"accept\"},"
                         + "\"roots\":{\"roots\":[]},"
                         + "\"sampling\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":\"ok\"},\"model\":\"fixture\"},"
-                        + "\"samplingArray\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"one\"},{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\"}],\"model\":\"fixture\"}},"),
+                        + "\"samplingArray\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"one\"},{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\"},{\"type\":\"audio\",\"data\":\"AA==\",\"mimeType\":\"audio/wav\"}],\"model\":\"fixture\"}},"),
                     "tools/call", "benchmark"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
