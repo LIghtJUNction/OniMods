@@ -149,7 +149,9 @@ namespace OniMcp.Server
             string roleValue = (string)role;
             bool validRole = string.Equals(roleValue, "user", StringComparison.Ordinal)
                 || string.Equals(roleValue, "assistant", StringComparison.Ordinal);
-            return validRole && IsModernSamplingContent(content);
+            return validRole
+                && IsModernSamplingContent(content)
+                && IsOptionalString(response, "stopReason");
         }
 
         private static bool IsModernSamplingContent(JToken content)
