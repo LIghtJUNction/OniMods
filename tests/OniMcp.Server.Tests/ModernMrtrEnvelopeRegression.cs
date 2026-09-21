@@ -77,13 +77,26 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                     BuildBenchmarkCall(33214,
                         "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"model\":\"fixture\"}},"),
                     "tools/call", "benchmark", "sampling result without content");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33215,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":7}},"),
+                    "tools/call", "benchmark", "numeric elicitation content");
+                AssertModernRejected(client,
+                    BuildResourceRead(33216,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"nested\":{\"value\":true}}}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "nested elicitation content value");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33217,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"choices\":[\"a\",2]}}},"),
+                    "tools/call", "benchmark", "non-string elicitation array item");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
                     "Malformed MRTR envelopes reached tool dispatch");
 
                 using (var response = SendModern(client,
                     BuildBenchmarkCall(33205,
                         "\"requestState\":\"opaque-state\",\"inputResponses\":{"
-                        + "\"elicitation\":{\"action\":\"decline\",\"x-extension\":true},"
+                        + "\"elicitation\":{\"action\":\"accept\",\"content\":{\"text\":\"ok\",\"count\":2,\"ratio\":1.5,\"enabled\":true,\"choices\":[\"a\",\"b\"]},\"x-extension\":true},"
+                        + "\"urlElicitation\":{\"action\":\"accept\"},"
                         + "\"roots\":{\"roots\":[]},"
                         + "\"sampling\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":\"ok\"},\"model\":\"fixture\"}},"),
                     "tools/call", "benchmark"))
