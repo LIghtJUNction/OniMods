@@ -1,11 +1,9 @@
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Server;
@@ -49,28 +47,24 @@ internal static class ModernMrtrRootsResultRegressionEntry
                 AssertModernRejected(client, BuildBenchmarkCall(34402, "{\"roots\":[{}]}"),
                     "root entry without uri");
                 AssertModernRejected(client, BuildBenchmarkCall(34403,
-                    "{\"roots\":[{\"uri\":\"relative/root\"}]}"),
-                    "relative root uri");
+                    "{\"roots\":[{\"uri\":7}]}"), "non-string root uri");
                 AssertModernRejected(client, BuildBenchmarkCall(34404,
-                    "{\"roots\":[{\"uri\":\"https://example.com/root\"}]}"),
-                    "non-file root uri");
+                    "{\"roots\":[{\"uri\":\"relative/root\"}]}"), "relative root uri");
                 AssertModernRejected(client, BuildBenchmarkCall(34405,
+                    "{\"roots\":[{\"uri\":\"https://example.com/root\"}]}"), "non-file root uri");
+                AssertModernRejected(client, BuildBenchmarkCall(34406,
                     "{\"roots\":[{\"uri\":\"file:///tmp/onimcp-mrtr-root\",\"name\":7}]}"),
                     "non-string root name");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidRoots,
                     "Malformed MRTR roots responses reached tool dispatch");
 
-                using (var response = SendModern(client, BuildBenchmarkCall(34406,
-                    "{\"roots\":[{\"uri\":\"file:///tmp/onimcp-mrtr-root\",\"name\":\"fixture\"}]}")))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Schema-valid MRTR roots response was rejected with HTTP " + (int)response.StatusCode);
-                    JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert(body["result"] != null && body["error"] == null,
-                        "Schema-valid MRTR roots response did not reach the modern tool path");
-                }
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidRoots + 1,
-                    "Schema-valid MRTR roots response did not dispatch exactly once");
+                AssertModernAccepted(client, BuildBenchmarkCall(34407, "{\"roots\":[]}"),
+                    "empty roots response");
+                AssertModernAccepted(client, BuildBenchmarkCall(34408,
+                    "{\"roots\":[{\"uri\":\"file:///tmp/onimcp-mrtr-root\",\"name\":\"fixture\"}]}"),
+                    "schema-valid roots response");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidRoots + 2,
+                    "Schema-valid MRTR roots responses did not each dispatch exactly once");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern MRTR roots validation allocated legacy session state");
             }
@@ -108,6 +102,18 @@ internal static class ModernMrtrRootsResultRegressionEntry
                 scenario + " did not return InvalidParams");
             Assert(!response.Headers.Contains("Mcp-Session-Id"),
                 scenario + " returned a legacy session id");
+        }
+    }
+
+    private static void AssertModernAccepted(HttpClient client, string json, string scenario)
+    {
+        using (var response = SendModern(client, json))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK,
+                scenario + " was rejected with HTTP " + (int)response.StatusCode);
+            JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            Assert(body["result"] != null && body["error"] == null,
+                scenario + " did not reach the modern tool path");
         }
     }
 
