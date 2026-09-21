@@ -36,13 +36,25 @@ def main() -> int:
     source = PATCH.read_text(encoding="utf-8")
 
     pickup = method_body(source, "private static bool TryGetDuplicantConsumer(")
+    positive_cache = pickup.find("States.TryGetValue(consumer, out state)")
+    negative_cache = pickup.find("NonDuplicants.TryGetValue(consumer, out _)")
     identity_check = pickup.find("consumer.GetComponent<MinionIdentity>()")
+    negative_creation = pickup.find(
+        "NonDuplicants.GetValue(consumer, NonDuplicantFactory)"
+    )
     state_creation = pickup.find("States.GetValue(consumer, StateFactory)")
+    require(positive_cache >= 0, "pickup eligibility does not reuse duplicant state")
+    require(negative_cache >= 0, "pickup eligibility does not cache non-duplicants")
     require(identity_check >= 0, "pickup eligibility does not check MinionIdentity")
-    require(state_creation >= 0, "pickup eligibility no longer uses the shared state table")
+    require(negative_creation >= 0, "non-duplicant classification is not retained")
+    require(state_creation >= 0, "pickup eligibility no longer uses the throttle state table")
     require(
-        identity_check < state_creation,
-        "non-duplicant consumers can be inserted into the throttle state table",
+        positive_cache < identity_check and negative_cache < identity_check,
+        "pickup hot path repeats MinionIdentity classification after a cached result",
+    )
+    require(
+        identity_check < negative_creation and identity_check < state_creation,
+        "throttle state can be created before duplicant eligibility is known",
     )
 
     chore_patch_start = source.find("private static class FindNextChorePatch")
@@ -56,7 +68,9 @@ def main() -> int:
         "FindNextChore does not fail open for a non-duplicant state",
     )
 
-    print("PASS busy chore throttle eligibility is restricted to duplicants")
+    print(
+        "PASS busy chore throttle caches identity once and remains restricted to duplicants"
+    )
     return 0
 
 
