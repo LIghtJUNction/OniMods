@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>ModernMrtrElicitActionRegressionEntry</StartupObject>
+    <StartupObject>ModernClientInfoIconSafetyRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -34,6 +34,7 @@
     <Compile Include="ModernMrtrUriRegression.cs" />
     <Compile Include="ModernMrtrBase64Regression.cs" />
     <Compile Include="ModernMrtrElicitActionRegression.cs" />
+    <Compile Include="ModernClientInfoIconSafetyRegression.cs" />
     <Compile Include="GameStubs.cs" />
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Core/*.cs" Link="Core/%(Filename)%(Extension)" />
