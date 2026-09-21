@@ -101,14 +101,21 @@ internal static class ModernMrtrToolUsePayloadRegressionEntry
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"annotations\":7}]}"),
                     "resource link with non-object annotations");
+                AssertModernRejected(client, BuildBenchmarkCall(34515,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-15\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"mimeType\":\"image/png\",\"sizes\":[48],\"theme\":\"neon\"}]}]}"),
+                    "resource link with malformed icon entry");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults,
                     "Malformed tool_result sampling responses reached tool dispatch");
 
-                AssertModernAccepted(client, BuildBenchmarkCall(34515,
+                AssertModernAccepted(client, BuildBenchmarkCall(34516,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid\",\"content\":["
                     + "{\"type\":\"text\",\"text\":\"ok\"},"
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/fixture\","
-                    + "\"description\":\"fixture link\",\"mimeType\":\"text/plain\",\"annotations\":{}},"
+                    + "\"description\":\"fixture link\",\"mimeType\":\"text/plain\",\"annotations\":{},"
+                    + "\"icons\":[{\"src\":\"data:image/svg+xml;base64,PHN2Zy8+\",\"mimeType\":\"image/svg+xml\","
+                    + "\"sizes\":[\"any\"],\"theme\":\"dark\",\"x-extension\":true}]},"
                     + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/embedded\","
                     + "\"text\":\"fixture\",\"mimeType\":\"text/plain\"},\"annotations\":{}}],"
                     + "\"isError\":false,\"x-extension\":{\"kept\":true}}"),
