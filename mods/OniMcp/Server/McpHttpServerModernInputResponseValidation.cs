@@ -252,7 +252,7 @@ namespace OniMcp.Server
             if (string.Equals(value, "resource_link", StringComparison.Ordinal))
             {
                 return block["name"]?.Type == JTokenType.String
-                    && block["uri"]?.Type == JTokenType.String
+                    && IsModernAbsoluteUri(block["uri"])
                     && IsOptionalString(block, "title")
                     && IsOptionalString(block, "description")
                     && IsOptionalString(block, "mimeType")
@@ -270,7 +270,7 @@ namespace OniMcp.Server
 
             var resource = block["resource"] as JObject;
             if (resource == null
-                || resource["uri"]?.Type != JTokenType.String
+                || !IsModernAbsoluteUri(resource["uri"])
                 || !IsOptionalString(resource, "mimeType")
                 || !IsOptionalObject(resource, "_meta"))
             {
@@ -288,6 +288,17 @@ namespace OniMcp.Server
         {
             return IsOptionalModernAnnotations(block, "annotations")
                 && IsOptionalObject(block, "_meta");
+        }
+
+        private static bool IsModernAbsoluteUri(JToken value)
+        {
+            if (value?.Type != JTokenType.String)
+                return false;
+
+            string uri = (string)value;
+            Uri parsedUri;
+            return !string.IsNullOrWhiteSpace(uri)
+                && Uri.TryCreate(uri, UriKind.Absolute, out parsedUri);
         }
 
         private static bool IsOptionalString(JObject value, string propertyName)
@@ -378,7 +389,7 @@ namespace OniMcp.Server
             {
                 var icon = iconToken as JObject;
                 if (icon == null
-                    || icon["src"]?.Type != JTokenType.String
+                    || !IsModernAbsoluteUri(icon["src"])
                     || !IsOptionalString(icon, "mimeType")
                     || !IsOptionalStringArray(icon, "sizes")
                     || !IsOptionalIconTheme(icon, "theme"))
