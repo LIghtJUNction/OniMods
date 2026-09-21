@@ -334,9 +334,14 @@ namespace OniMcp.Server
                 return false;
             }
 
-            return string.Equals(parsedUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(parsedUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(parsedUri.Scheme, "data", StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(parsedUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(parsedUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return string.Equals(parsedUri.Scheme, "data", StringComparison.OrdinalIgnoreCase)
+                && IsModernBase64ImageDataUri(uri);
         }
 
         private static bool IsOptionalString(JObject value, string propertyName)

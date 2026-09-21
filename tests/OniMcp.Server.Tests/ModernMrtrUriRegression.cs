@@ -61,6 +61,16 @@ internal static class ModernMrtrUriRegressionEntry
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"icons\":[{\"src\":\"file:///tmp/icon.png\"}]}]}"),
                     "resource link icon with unsafe file src URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34811,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-data-html-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"data:text/html;base64,PHNjcmlwdD4=\"}]}]}"),
+                    "resource link icon with non-image data URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34812,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-invalid-base64-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"data:image/png;base64,%%%\"}]}]}"),
+                    "resource link icon with invalid Base64 data URI");
                 AssertModernRejected(client, BuildBenchmarkCall(34808,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-fractional-size\",\"content\":["
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
