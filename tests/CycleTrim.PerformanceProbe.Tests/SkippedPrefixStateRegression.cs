@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using CycleTrim.Core;
 
@@ -10,25 +9,14 @@ namespace CycleTrim.PerformanceProbe.Tests
         [ModuleInitializer]
         internal static void Run()
         {
-            var tryRecord = typeof(PerformanceProbeCounter).GetMethod(
-                "TryRecord",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            if (tryRecord == null)
-            {
-                throw new InvalidOperationException(
-                    "performance probe completion has no null-safe skipped-Prefix recording path");
-            }
-
-            var skipped = (bool)tryRecord.Invoke(null, new object[] { null, 17L });
-            if (skipped)
+            if (PerformanceProbeCounter.TryRecord(null, 17L))
             {
                 throw new InvalidOperationException(
                     "a missing timing owner must fail open without recording a sample");
             }
 
             var counter = new PerformanceProbeCounter();
-            var recorded = (bool)tryRecord.Invoke(null, new object[] { counter, 17L });
-            if (!recorded)
+            if (!PerformanceProbeCounter.TryRecord(counter, 17L))
             {
                 throw new InvalidOperationException("a valid timing owner must record its sample");
             }
