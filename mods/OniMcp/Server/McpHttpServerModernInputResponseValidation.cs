@@ -73,6 +73,8 @@ namespace OniMcp.Server
                 return false;
 
             var content = response["content"];
+            if (content != null && !string.Equals(value, "accept", StringComparison.Ordinal))
+                return false;
             if (content == null)
                 return true;
 
