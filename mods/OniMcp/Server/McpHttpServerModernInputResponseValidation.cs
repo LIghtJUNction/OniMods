@@ -69,7 +69,7 @@ namespace OniMcp.Server
             bool validAction = string.Equals(value, "accept", StringComparison.Ordinal)
                 || string.Equals(value, "decline", StringComparison.Ordinal)
                 || string.Equals(value, "cancel", StringComparison.Ordinal);
-            if (!validAction)
+            if (!validAction || !IsOptionalObject(response, "_meta"))
                 return false;
 
             var content = response["content"];
