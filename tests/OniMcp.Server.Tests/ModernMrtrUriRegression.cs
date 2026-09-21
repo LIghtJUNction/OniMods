@@ -84,13 +84,18 @@ internal static class ModernMrtrUriRegressionEntry
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"icons\":[{\"src\":\"https://example.invalid/icon.png\"}]}]}"),
                     "resource link with valid https icon URI");
+                AssertModernAccepted(client, BuildBenchmarkCall(34810,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-http-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"http://example.invalid/icon.png\"}]}]}"),
+                    "resource link with valid http icon URI");
                 AssertModernAccepted(client, BuildBenchmarkCall(34809,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-size\",\"content\":["
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"size\":123}]}"),
                     "resource link with integer byte size");
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidUris + 4,
-                    "Schema-valid MRTR resource links did not dispatch exactly four times");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidUris + 5,
+                    "Schema-valid MRTR resource links did not dispatch exactly five times");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern URI validation allocated legacy session state");
             }
