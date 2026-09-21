@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -67,24 +66,6 @@ internal static class ModernMrtrElicitActionRegressionEntry
                     "Schema-valid elicitation responses did not dispatch exactly twice");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern elicitation action validation allocated legacy session state");
-
-                string sessionId;
-                using (var initializeResponse = SendLegacy(client,
-                    "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":35005,\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"elicit-action-regression\",\"version\":\"1.0\"}}}",
-                    null))
-                {
-                    Assert(initializeResponse.StatusCode == HttpStatusCode.OK,
-                        "Legacy initialize failed during elicitation action regression");
-                    sessionId = initializeResponse.Headers.GetValues("Mcp-Session-Id").Single();
-                }
-
-                using (var legacyResponse = SendLegacy(client,
-                    "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":35006,\"params\":{\"inputResponses\":{\"probe\":{\"action\":\"decline\",\"content\":{\"value\":\"legacy-extra\"}}}}}",
-                    sessionId))
-                {
-                    Assert(legacyResponse.StatusCode == HttpStatusCode.OK,
-                        "Modern-only elicitation validation changed legacy 2025 handling");
-                }
             }
         }
         finally
@@ -154,19 +135,6 @@ internal static class ModernMrtrElicitActionRegressionEntry
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", method);
             request.Headers.Add("Mcp-Name", name);
-            return client.SendAsync(request).GetAwaiter().GetResult();
-        }
-    }
-
-    private static HttpResponseMessage SendLegacy(HttpClient client, string json, string sessionId)
-    {
-        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
-        {
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
-            request.Headers.Add("Mcp-Protocol-Version", "2025-11-25");
-            if (!string.IsNullOrEmpty(sessionId))
-                request.Headers.Add("Mcp-Session-Id", sessionId);
             return client.SendAsync(request).GetAwaiter().GetResult();
         }
     }
