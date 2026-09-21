@@ -56,21 +56,31 @@ internal static class ModernMrtrUriRegressionEntry
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"icons\":[{\"src\":\"not a uri\"}]}]}"),
                     "resource link icon with malformed src URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34806,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-unsafe-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"file:///tmp/icon.png\"}]}]}"),
+                    "resource link icon with unsafe file src URI");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidUris,
-                    "Malformed MRTR content URIs reached tool dispatch");
+                    "Malformed or unsafe MRTR content URIs reached tool dispatch");
 
                 AssertModernAccepted(client, BuildBenchmarkCall(34804,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-link\",\"content\":["
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"icons\":[{\"src\":\"data:image/png;base64,AA==\"}]}]}"),
-                    "resource link with valid file and data URIs");
+                    "resource link with valid file resource and data icon URIs");
                 AssertModernAccepted(client, BuildBenchmarkCall(34805,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-embedded\",\"content\":["
                     + "{\"type\":\"resource\",\"resource\":{\"uri\":\"https://example.invalid/fixture\","
                     + "\"text\":\"fixture\"}}]}"),
                     "embedded resource with valid https URI");
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidUris + 2,
-                    "Schema-valid MRTR content URIs did not dispatch exactly twice");
+                AssertModernAccepted(client, BuildBenchmarkCall(34807,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-https-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"https://example.invalid/icon.png\"}]}]}"),
+                    "resource link with valid https icon URI");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidUris + 3,
+                    "Schema-valid MRTR content URIs did not dispatch exactly three times");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern URI validation allocated legacy session state");
             }
