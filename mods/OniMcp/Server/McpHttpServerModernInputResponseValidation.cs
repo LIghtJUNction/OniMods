@@ -301,6 +301,23 @@ namespace OniMcp.Server
                 && Uri.TryCreate(uri, UriKind.Absolute, out parsedUri);
         }
 
+        private static bool IsModernSafeIconUri(JToken value)
+        {
+            if (value?.Type != JTokenType.String)
+                return false;
+
+            string uri = (string)value;
+            Uri parsedUri;
+            if (string.IsNullOrWhiteSpace(uri)
+                || !Uri.TryCreate(uri, UriKind.Absolute, out parsedUri))
+            {
+                return false;
+            }
+
+            return string.Equals(parsedUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(parsedUri.Scheme, "data", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static bool IsOptionalString(JObject value, string propertyName)
         {
             var property = value.Property(propertyName);
@@ -389,7 +406,7 @@ namespace OniMcp.Server
             {
                 var icon = iconToken as JObject;
                 if (icon == null
-                    || !IsModernAbsoluteUri(icon["src"])
+                    || !IsModernSafeIconUri(icon["src"])
                     || !IsOptionalString(icon, "mimeType")
                     || !IsOptionalStringArray(icon, "sizes")
                     || !IsOptionalIconTheme(icon, "theme"))
