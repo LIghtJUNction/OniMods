@@ -179,10 +179,17 @@ namespace OniMcp.Server
                 return false;
 
             string value = (string)type;
-            return string.Equals(value, "text", StringComparison.Ordinal)
-                || string.Equals(value, "image", StringComparison.Ordinal)
-                || string.Equals(value, "audio", StringComparison.Ordinal)
-                || string.Equals(value, "tool_use", StringComparison.Ordinal)
+            if (string.Equals(value, "text", StringComparison.Ordinal))
+                return block["text"]?.Type == JTokenType.String;
+
+            if (string.Equals(value, "image", StringComparison.Ordinal)
+                || string.Equals(value, "audio", StringComparison.Ordinal))
+            {
+                return block["data"]?.Type == JTokenType.String
+                    && block["mimeType"]?.Type == JTokenType.String;
+            }
+
+            return string.Equals(value, "tool_use", StringComparison.Ordinal)
                 || string.Equals(value, "tool_result", StringComparison.Ordinal);
         }
     }
