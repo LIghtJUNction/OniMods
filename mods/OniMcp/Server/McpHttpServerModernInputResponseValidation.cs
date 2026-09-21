@@ -191,7 +191,7 @@ namespace OniMcp.Server
             if (string.Equals(value, "image", StringComparison.Ordinal)
                 || string.Equals(value, "audio", StringComparison.Ordinal))
             {
-                return block["data"]?.Type == JTokenType.String
+                return IsModernBase64String(block["data"])
                     && block["mimeType"]?.Type == JTokenType.String
                     && HasValidModernContentMetadata(block);
             }
@@ -244,7 +244,7 @@ namespace OniMcp.Server
             if (string.Equals(value, "image", StringComparison.Ordinal)
                 || string.Equals(value, "audio", StringComparison.Ordinal))
             {
-                return block["data"]?.Type == JTokenType.String
+                return IsModernBase64String(block["data"])
                     && block["mimeType"]?.Type == JTokenType.String
                     && HasValidModernContentMetadata(block);
             }
@@ -280,7 +280,9 @@ namespace OniMcp.Server
             var text = resource["text"];
             var blob = resource["blob"];
             bool hasText = text?.Type == JTokenType.String;
-            bool hasBlob = blob?.Type == JTokenType.String;
+            if (blob != null && !IsModernBase64String(blob))
+                return false;
+            bool hasBlob = blob != null;
             return hasText != hasBlob;
         }
 
@@ -288,6 +290,22 @@ namespace OniMcp.Server
         {
             return IsOptionalModernAnnotations(block, "annotations")
                 && IsOptionalObject(block, "_meta");
+        }
+
+        private static bool IsModernBase64String(JToken value)
+        {
+            if (value?.Type != JTokenType.String)
+                return false;
+
+            try
+            {
+                Convert.FromBase64String((string)value);
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
         }
 
         private static bool IsModernAbsoluteUri(JToken value)
