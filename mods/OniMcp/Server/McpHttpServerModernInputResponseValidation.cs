@@ -359,7 +359,15 @@ namespace OniMcp.Server
         private static bool IsOptionalObject(JObject value, string propertyName)
         {
             var property = value.Property(propertyName);
-            return property == null || property.Value.Type == JTokenType.Object;
+            if (property == null)
+                return true;
+
+            var meta = property.Value as JObject;
+            if (meta == null)
+                return false;
+
+            string errorMessage;
+            return ValidateModernMetaKeys(meta, out errorMessage);
         }
 
         private static bool IsOptionalModernAnnotations(JObject value, string propertyName)

@@ -75,6 +75,11 @@ internal static class ModernMrtrContentMetadataRegressionEntry
                     BuildBenchmarkCall(34710,
                         "{\"type\":\"tool_result\",\"toolUseId\":\"call-4\",\"content\":[],\"_meta\":\"bad\"}"),
                     "tool-result block with non-object _meta");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(34714,
+                        "{\"type\":\"text\",\"text\":\"ok\"}",
+                        ",\"_meta\":{\"bad name\":true}"),
+                    "create-message result with invalid _meta key syntax");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidMetadata,
                     "Malformed sampling content metadata reached tool dispatch");
 
