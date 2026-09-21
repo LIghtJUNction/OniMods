@@ -189,8 +189,14 @@ namespace OniMcp.Server
                     && block["mimeType"]?.Type == JTokenType.String;
             }
 
-            return string.Equals(value, "tool_use", StringComparison.Ordinal)
-                || string.Equals(value, "tool_result", StringComparison.Ordinal);
+            if (string.Equals(value, "tool_use", StringComparison.Ordinal))
+            {
+                return block["id"]?.Type == JTokenType.String
+                    && block["name"]?.Type == JTokenType.String
+                    && block["input"]?.Type == JTokenType.Object;
+            }
+
+            return string.Equals(value, "tool_result", StringComparison.Ordinal);
         }
     }
 }
