@@ -305,12 +305,6 @@ namespace OniMcp.Server
             return property == null || property.Value.Type == JTokenType.Object;
         }
 
-        private static bool IsOptionalArray(JObject value, string propertyName)
-        {
-            var property = value.Property(propertyName);
-            return property == null || property.Value.Type == JTokenType.Array;
-        }
-
         private static bool IsOptionalModernIcons(JObject value, string propertyName)
         {
             var property = value.Property(propertyName);
