@@ -84,6 +84,7 @@ namespace OniMcp.Server
             {
                 if (field.Value.Type == JTokenType.String
                     || field.Value.Type == JTokenType.Integer
+                    || field.Value.Type == JTokenType.Float
                     || field.Value.Type == JTokenType.Boolean)
                 {
                     continue;
