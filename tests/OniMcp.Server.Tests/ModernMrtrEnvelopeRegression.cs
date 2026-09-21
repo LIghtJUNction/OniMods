@@ -89,6 +89,14 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                     BuildBenchmarkCall(33217,
                         "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"choices\":[\"a\",2]}}},"),
                     "tools/call", "benchmark", "non-string elicitation array item");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33218,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling content without a block discriminator");
+                AssertModernRejected(client,
+                    BuildResourceRead(33219,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":[7],\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "sampling content array with a primitive item");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
                     "Malformed MRTR envelopes reached tool dispatch");
 
@@ -98,7 +106,8 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                         + "\"elicitation\":{\"action\":\"accept\",\"content\":{\"text\":\"ok\",\"count\":2,\"ratio\":1.5,\"enabled\":true,\"choices\":[\"a\",\"b\"]},\"x-extension\":true},"
                         + "\"urlElicitation\":{\"action\":\"accept\"},"
                         + "\"roots\":{\"roots\":[]},"
-                        + "\"sampling\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":\"ok\"},\"model\":\"fixture\"}},"),
+                        + "\"sampling\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":\"ok\"},\"model\":\"fixture\"},"
+                        + "\"samplingArray\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"one\"},{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\"}],\"model\":\"fixture\"}},"),
                     "tools/call", "benchmark"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
