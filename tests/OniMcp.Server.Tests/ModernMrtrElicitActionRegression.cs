@@ -51,19 +51,32 @@ internal static class ModernMrtrElicitActionRegressionEntry
                         "\"inputResponses\":{\"probe\":{\"action\":\"cancel\",\"content\":{\"value\":\"unexpected\"}}},"),
                     "resources/read", "oni://missing-elicit-action-regression",
                     "cancelled elicitation carrying form content");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(35003,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"decline\",\"_meta\":[]}},"),
+                    "tools/call", "benchmark", "elicitation result carrying non-object metadata");
+                AssertModernRejected(client,
+                    BuildResourceRead(35004,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"value\":1.5},\"_meta\":{\"bad name\":true}}},"),
+                    "resources/read", "oni://missing-elicit-meta-regression",
+                    "elicitation result carrying an invalid metadata key");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalid,
-                    "Invalid elicitation action/content combinations reached tool dispatch");
+                    "Invalid elicitation responses reached tool dispatch");
 
                 AssertModernAccepted(client,
-                    BuildBenchmarkCall(35003,
+                    BuildBenchmarkCall(35005,
                         "\"inputResponses\":{\"probe\":{\"action\":\"decline\"}},"),
                     "tools/call", "benchmark", "declined elicitation without content");
                 AssertModernAccepted(client,
-                    BuildBenchmarkCall(35004,
+                    BuildBenchmarkCall(35006,
                         "\"inputResponses\":{\"probe\":{\"action\":\"accept\"}},"),
                     "tools/call", "benchmark", "accepted URL elicitation without form content");
-                Assert(OniToolRegistry.Calls == callsBeforeInvalid + 2,
-                    "Schema-valid elicitation responses did not dispatch exactly twice");
+                AssertModernAccepted(client,
+                    BuildBenchmarkCall(35007,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"value\":1.5},\"_meta\":{\"com.example/cache\":true}}},"),
+                    "tools/call", "benchmark", "accepted form elicitation carrying vendor metadata");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalid + 3,
+                    "Schema-valid elicitation responses did not dispatch exactly three times");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern elicitation action validation allocated legacy session state");
             }
