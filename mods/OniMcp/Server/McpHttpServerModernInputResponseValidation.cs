@@ -253,7 +253,7 @@ namespace OniMcp.Server
                     && IsOptionalString(block, "mimeType")
                     && IsOptionalNumber(block, "size")
                     && IsOptionalObject(block, "annotations")
-                    && IsOptionalArray(block, "icons")
+                    && IsOptionalModernIcons(block, "icons")
                     && IsOptionalObject(block, "_meta");
             }
 
@@ -309,6 +309,64 @@ namespace OniMcp.Server
         {
             var property = value.Property(propertyName);
             return property == null || property.Value.Type == JTokenType.Array;
+        }
+
+        private static bool IsOptionalModernIcons(JObject value, string propertyName)
+        {
+            var property = value.Property(propertyName);
+            if (property == null)
+                return true;
+
+            var icons = property.Value as JArray;
+            if (icons == null)
+                return false;
+
+            foreach (var iconToken in icons)
+            {
+                var icon = iconToken as JObject;
+                if (icon == null
+                    || icon["src"]?.Type != JTokenType.String
+                    || !IsOptionalString(icon, "mimeType")
+                    || !IsOptionalStringArray(icon, "sizes")
+                    || !IsOptionalIconTheme(icon, "theme"))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsOptionalStringArray(JObject value, string propertyName)
+        {
+            var property = value.Property(propertyName);
+            if (property == null)
+                return true;
+
+            var items = property.Value as JArray;
+            if (items == null)
+                return false;
+
+            foreach (var item in items)
+            {
+                if (item.Type != JTokenType.String)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsOptionalIconTheme(JObject value, string propertyName)
+        {
+            var property = value.Property(propertyName);
+            if (property == null)
+                return true;
+            if (property.Value.Type != JTokenType.String)
+                return false;
+
+            string theme = (string)property.Value;
+            return string.Equals(theme, "light", StringComparison.Ordinal)
+                || string.Equals(theme, "dark", StringComparison.Ordinal);
         }
     }
 }
