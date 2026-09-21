@@ -63,6 +63,18 @@ internal static class ModernMrtrContentMetadataRegressionEntry
                         "{\"type\":\"tool_result\",\"toolUseId\":\"call-1\",\"content\":["
                         + "{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\",\"_meta\":[]}] }"),
                     "tool-result image block with non-object _meta");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(34708,
+                        "{\"type\":\"text\",\"text\":\"ok\"}", ",\"_meta\":[]"),
+                    "create-message result with non-object _meta");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(34709,
+                        "{\"type\":\"tool_use\",\"id\":\"call-3\",\"name\":\"lookup\",\"input\":{},\"_meta\":7}"),
+                    "tool-use block with non-object _meta");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(34710,
+                        "{\"type\":\"tool_result\",\"toolUseId\":\"call-4\",\"content\":[],\"_meta\":\"bad\"}"),
+                    "tool-result block with non-object _meta");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidMetadata,
                     "Malformed sampling content metadata reached tool dispatch");
 
@@ -78,8 +90,23 @@ internal static class ModernMrtrContentMetadataRegressionEntry
                         + "{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\","
                         + "\"annotations\":{},\"_meta\":{}}]}"),
                     "tool-result image block with object metadata");
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidMetadata + 2,
-                    "Schema-valid sampling content metadata did not dispatch exactly twice");
+                AssertModernAccepted(client,
+                    BuildBenchmarkCall(34711,
+                        "{\"type\":\"tool_use\",\"id\":\"call-5\",\"name\":\"lookup\",\"input\":{},"
+                        + "\"_meta\":{\"com.example/cache\":\"hit\"}}"),
+                    "tool-use block with object extension metadata");
+                AssertModernAccepted(client,
+                    BuildBenchmarkCall(34712,
+                        "{\"type\":\"tool_result\",\"toolUseId\":\"call-5\",\"content\":[],"
+                        + "\"_meta\":{\"com.example/cache\":\"hit\"}}"),
+                    "tool-result block with object extension metadata");
+                AssertModernAccepted(client,
+                    BuildBenchmarkCall(34713,
+                        "{\"type\":\"text\",\"text\":\"ok\"}",
+                        ",\"_meta\":{\"com.example/provider\":\"fixture\"}"),
+                    "create-message result with object extension metadata");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidMetadata + 5,
+                    "Schema-valid sampling content metadata did not dispatch exactly five times");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern content metadata validation allocated legacy session state");
             }
@@ -91,11 +118,11 @@ internal static class ModernMrtrContentMetadataRegressionEntry
         }
     }
 
-    private static string BuildBenchmarkCall(int id, string contentBlock)
+    private static string BuildBenchmarkCall(int id, string contentBlock, string responseExtra = null)
     {
         return "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":" + id
             + ",\"params\":{\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":"
-            + contentBlock + ",\"model\":\"fixture\"}},"
+            + contentBlock + ",\"model\":\"fixture\"" + (responseExtra ?? string.Empty) + "}},"
             + "\"name\":\"benchmark\",\"arguments\":{\"task\":\"content metadata regression\",\"iterations\":1},"
             + ModernMeta() + "}}";
     }

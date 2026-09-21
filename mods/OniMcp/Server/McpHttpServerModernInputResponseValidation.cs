@@ -150,7 +150,8 @@ namespace OniMcp.Server
                 || string.Equals(roleValue, "assistant", StringComparison.Ordinal);
             return validRole
                 && IsModernSamplingContent(content)
-                && IsOptionalString(response, "stopReason");
+                && IsOptionalString(response, "stopReason")
+                && IsOptionalObject(response, "_meta");
         }
 
         private static bool IsModernSamplingContent(JToken content)
@@ -198,7 +199,8 @@ namespace OniMcp.Server
             {
                 return block["id"]?.Type == JTokenType.String
                     && block["name"]?.Type == JTokenType.String
-                    && block["input"]?.Type == JTokenType.Object;
+                    && block["input"]?.Type == JTokenType.Object
+                    && IsOptionalObject(block, "_meta");
             }
 
             if (!string.Equals(value, "tool_result", StringComparison.Ordinal))
@@ -211,6 +213,8 @@ namespace OniMcp.Server
 
             var isError = block.Property("isError");
             if (isError != null && isError.Value.Type != JTokenType.Boolean)
+                return false;
+            if (!IsOptionalObject(block, "_meta"))
                 return false;
 
             foreach (var item in resultContent)
