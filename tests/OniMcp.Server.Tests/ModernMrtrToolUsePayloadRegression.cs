@@ -101,14 +101,41 @@ internal static class ModernMrtrToolUsePayloadRegressionEntry
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
                     + "\"annotations\":7}]}"),
                     "resource link with non-object annotations");
+                AssertModernRejected(client, BuildBenchmarkCall(34515,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-15\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[7]}]}"),
+                    "resource link with non-object icon entry");
+                AssertModernRejected(client, BuildBenchmarkCall(34516,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-16\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"mimeType\":\"image/png\"}]}]}"),
+                    "resource link icon without src");
+                AssertModernRejected(client, BuildBenchmarkCall(34517,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-17\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"data:image/png;base64,AA==\",\"mimeType\":7}]}]}"),
+                    "resource link icon with non-string mimeType");
+                AssertModernRejected(client, BuildBenchmarkCall(34518,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-18\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"data:image/png;base64,AA==\",\"sizes\":[48]}]}]}"),
+                    "resource link icon with non-string size");
+                AssertModernRejected(client, BuildBenchmarkCall(34519,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-19\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"data:image/png;base64,AA==\",\"theme\":\"neon\"}]}]}"),
+                    "resource link icon with unsupported theme");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults,
                     "Malformed tool_result sampling responses reached tool dispatch");
 
-                AssertModernAccepted(client, BuildBenchmarkCall(34515,
+                AssertModernAccepted(client, BuildBenchmarkCall(34520,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid\",\"content\":["
                     + "{\"type\":\"text\",\"text\":\"ok\"},"
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/fixture\","
-                    + "\"description\":\"fixture link\",\"mimeType\":\"text/plain\",\"annotations\":{}},"
+                    + "\"description\":\"fixture link\",\"mimeType\":\"text/plain\",\"annotations\":{},"
+                    + "\"icons\":[{\"src\":\"data:image/svg+xml;base64,PHN2Zy8+\",\"mimeType\":\"image/svg+xml\","
+                    + "\"sizes\":[\"any\"],\"theme\":\"dark\",\"x-extension\":true}]},"
                     + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/embedded\","
                     + "\"text\":\"fixture\",\"mimeType\":\"text/plain\"},\"annotations\":{}}],"
                     + "\"isError\":false,\"x-extension\":{\"kept\":true}}"),
