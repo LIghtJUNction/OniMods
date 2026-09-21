@@ -87,7 +87,8 @@ internal static class ModernMrtrToolUsePayloadRegressionEntry
                 AssertModernAccepted(client, BuildBenchmarkCall(34511,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid\",\"content\":["
                     + "{\"type\":\"text\",\"text\":\"ok\"},"
-                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/fixture\"}],"
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/fixture\"},"
+                    + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/embedded\",\"text\":\"fixture\"}}],"
                     + "\"isError\":false,\"x-extension\":{\"kept\":true}}"),
                     "schema-valid tool_result sampling block");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults + 1,
