@@ -81,14 +81,25 @@ internal static class ModernMrtrToolUsePayloadRegressionEntry
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-10\",\"content\":["
                     + "{\"type\":\"tool_use\",\"id\":\"nested\",\"name\":\"benchmark\",\"input\":{}}]}"),
                     "tool_result sampling block with non-ContentBlock nested type");
+                AssertModernRejected(client, BuildBenchmarkCall(34511,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-11\",\"content\":["
+                    + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/both\","
+                    + "\"text\":\"fixture\",\"blob\":\"Zml4dHVyZQ==\"}}]}"),
+                    "embedded resource containing both text and blob");
+                AssertModernRejected(client, BuildBenchmarkCall(34512,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-12\",\"content\":["
+                    + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/mime\","
+                    + "\"text\":\"fixture\",\"mimeType\":7}}]}"),
+                    "embedded resource with non-string mimeType");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults,
                     "Malformed tool_result sampling responses reached tool dispatch");
 
-                AssertModernAccepted(client, BuildBenchmarkCall(34511,
+                AssertModernAccepted(client, BuildBenchmarkCall(34513,
                     "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid\",\"content\":["
                     + "{\"type\":\"text\",\"text\":\"ok\"},"
                     + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/fixture\"},"
-                    + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/embedded\",\"text\":\"fixture\"}}],"
+                    + "{\"type\":\"resource\",\"resource\":{\"uri\":\"file:///tmp/embedded\","
+                    + "\"text\":\"fixture\",\"mimeType\":\"text/plain\"}}],"
                     + "\"isError\":false,\"x-extension\":{\"kept\":true}}"),
                     "schema-valid tool_result sampling block");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults + 1,
