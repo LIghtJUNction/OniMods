@@ -181,13 +181,17 @@ namespace OniMcp.Server
 
             string value = (string)type;
             if (string.Equals(value, "text", StringComparison.Ordinal))
-                return block["text"]?.Type == JTokenType.String;
+            {
+                return block["text"]?.Type == JTokenType.String
+                    && HasValidModernContentMetadata(block);
+            }
 
             if (string.Equals(value, "image", StringComparison.Ordinal)
                 || string.Equals(value, "audio", StringComparison.Ordinal))
             {
                 return block["data"]?.Type == JTokenType.String
-                    && block["mimeType"]?.Type == JTokenType.String;
+                    && block["mimeType"]?.Type == JTokenType.String
+                    && HasValidModernContentMetadata(block);
             }
 
             if (string.Equals(value, "tool_use", StringComparison.Ordinal))
@@ -227,13 +231,17 @@ namespace OniMcp.Server
 
             string value = (string)type;
             if (string.Equals(value, "text", StringComparison.Ordinal))
-                return block["text"]?.Type == JTokenType.String;
+            {
+                return block["text"]?.Type == JTokenType.String
+                    && HasValidModernContentMetadata(block);
+            }
 
             if (string.Equals(value, "image", StringComparison.Ordinal)
                 || string.Equals(value, "audio", StringComparison.Ordinal))
             {
                 return block["data"]?.Type == JTokenType.String
-                    && block["mimeType"]?.Type == JTokenType.String;
+                    && block["mimeType"]?.Type == JTokenType.String
+                    && HasValidModernContentMetadata(block);
             }
 
             if (string.Equals(value, "resource_link", StringComparison.Ordinal))
@@ -269,6 +277,12 @@ namespace OniMcp.Server
             bool hasText = text?.Type == JTokenType.String;
             bool hasBlob = blob?.Type == JTokenType.String;
             return hasText != hasBlob;
+        }
+
+        private static bool HasValidModernContentMetadata(JObject block)
+        {
+            return IsOptionalObject(block, "annotations")
+                && IsOptionalObject(block, "_meta");
         }
 
         private static bool IsOptionalString(JObject value, string propertyName)
