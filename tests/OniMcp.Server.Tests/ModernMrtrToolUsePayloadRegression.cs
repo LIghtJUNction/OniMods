@@ -60,8 +60,40 @@ internal static class ModernMrtrToolUsePayloadRegressionEntry
                     "schema-valid tool_use sampling block");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidPayloads + 1,
                     "Schema-valid tool_use sampling response did not dispatch exactly once");
+
+                int callsBeforeInvalidToolResults = OniToolRegistry.Calls;
+                AssertModernRejected(client, BuildBenchmarkCall(34505,
+                    "{\"type\":\"tool_result\"}"),
+                    "tool_result sampling block without required fields");
+                AssertModernRejected(client, BuildBenchmarkCall(34506,
+                    "{\"type\":\"tool_result\",\"toolUseId\":7,\"content\":[]}"),
+                    "tool_result sampling block with non-string toolUseId");
+                AssertModernRejected(client, BuildBenchmarkCall(34507,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-7\",\"content\":{}}"),
+                    "tool_result sampling block with non-array content");
+                AssertModernRejected(client, BuildBenchmarkCall(34508,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-8\",\"content\":[7]}"),
+                    "tool_result sampling block with non-object content item");
+                AssertModernRejected(client, BuildBenchmarkCall(34509,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-9\",\"content\":[],\"isError\":\"no\"}"),
+                    "tool_result sampling block with non-boolean isError");
+                AssertModernRejected(client, BuildBenchmarkCall(34510,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-10\",\"content\":["
+                    + "{\"type\":\"tool_use\",\"id\":\"nested\",\"name\":\"benchmark\",\"input\":{}}]}"),
+                    "tool_result sampling block with non-ContentBlock nested type");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults,
+                    "Malformed tool_result sampling responses reached tool dispatch");
+
+                AssertModernAccepted(client, BuildBenchmarkCall(34511,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid\",\"content\":["
+                    + "{\"type\":\"text\",\"text\":\"ok\"},"
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/fixture\"}],"
+                    + "\"isError\":false,\"x-extension\":{\"kept\":true}}"),
+                    "schema-valid tool_result sampling block");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidToolResults + 1,
+                    "Schema-valid tool_result sampling response did not dispatch exactly once");
                 Assert(server.GetSessionSummaries().Count == 0,
-                    "Modern tool_use sampling validation allocated legacy session state");
+                    "Modern sampling validation allocated legacy session state");
             }
         }
         finally
