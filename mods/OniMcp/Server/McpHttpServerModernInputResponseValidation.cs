@@ -66,9 +66,42 @@ namespace OniMcp.Server
                 return false;
 
             string value = (string)action;
-            return string.Equals(value, "accept", StringComparison.Ordinal)
+            bool validAction = string.Equals(value, "accept", StringComparison.Ordinal)
                 || string.Equals(value, "decline", StringComparison.Ordinal)
                 || string.Equals(value, "cancel", StringComparison.Ordinal);
+            if (!validAction)
+                return false;
+
+            var content = response["content"];
+            if (content == null)
+                return true;
+
+            var contentObject = content as JObject;
+            if (contentObject == null)
+                return false;
+
+            foreach (var field in contentObject.Properties())
+            {
+                if (field.Value.Type == JTokenType.String
+                    || field.Value.Type == JTokenType.Integer
+                    || field.Value.Type == JTokenType.Float
+                    || field.Value.Type == JTokenType.Boolean)
+                {
+                    continue;
+                }
+
+                var selections = field.Value as JArray;
+                if (selections == null)
+                    return false;
+
+                foreach (var selection in selections)
+                {
+                    if (selection.Type != JTokenType.String)
+                        return false;
+                }
+            }
+
+            return true;
         }
 
         private static bool IsModernListRootsResponse(JObject response)
