@@ -57,8 +57,25 @@ internal static class LegacySessionLifecycleRegressionEntry
                 string sessionA = Initialize(client, 31001, HttpStatusCode.OK);
                 var retainedA = FindSession(server, sessionA);
                 Assert(server.GetSessionSummaries().Count == 1, "First initialize did not create exactly one session");
+                DateTime originalActivity = retainedA.LastActivityAt;
+                string originalClientName = retainedA.ClientInfo?.Name;
 
-                now = now.AddMinutes(5);
+                now = now.AddMinutes(1);
+                using (var reinitialize = ReinitializeResponse(client, 31009, sessionA, "2025-06-18"))
+                {
+                    Assert(reinitialize.StatusCode == HttpStatusCode.BadRequest,
+                        "Established legacy session accepted a second initialize request");
+                }
+                Assert(server.GetSessionSummaries().Count == 1,
+                    "Rejected legacy reinitialize changed retained session count");
+                Assert(string.Equals(retainedA.ProtocolVersion, "2025-11-25", StringComparison.Ordinal),
+                    "Rejected legacy reinitialize changed the negotiated protocol version");
+                Assert(string.Equals(retainedA.ClientInfo?.Name, originalClientName, StringComparison.Ordinal),
+                    "Rejected legacy reinitialize changed client metadata");
+                Assert(retainedA.LastActivityAt == originalActivity,
+                    "Rejected legacy reinitialize refreshed the session retention timestamp");
+
+                now = now.AddMinutes(4);
                 using (var ping = PostLegacy(client, Ping(31002), sessionA))
                     Assert(ping.StatusCode == HttpStatusCode.OK, "Legacy activity refresh ping failed");
 
@@ -248,6 +265,15 @@ internal static class LegacySessionLifecycleRegressionEntry
             + ",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},"
             + "\"clientInfo\":{\"name\":\"legacy-session-lifecycle-regression\",\"version\":\"1\"}}}";
         return Post(client, body, null, null);
+    }
+
+    private static HttpResponseMessage ReinitializeResponse(HttpClient client, int id, string sessionId,
+        string protocolVersion)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":" + id
+            + ",\"params\":{\"protocolVersion\":\"" + protocolVersion + "\",\"capabilities\":{},"
+            + "\"clientInfo\":{\"name\":\"reinitialize-should-not-apply\",\"version\":\"2\"}}}";
+        return Post(client, body, sessionId, protocolVersion);
     }
 
     private static string Ping(int id)

@@ -36,7 +36,7 @@ namespace OniMcp.Server
                 return true;
 
             McpSession expiredSession = null;
-            bool active = false;
+            bool establishedSession = false;
             System.DateTime now = _legacySessionPolicy.UtcNow();
             lock (_sessionLock)
             {
@@ -51,19 +51,21 @@ namespace OniMcp.Server
                     }
                     else
                     {
-                        session.LastActivityAt = now;
-                        active = true;
+                        establishedSession = true;
                     }
                 }
             }
             expiredSession?.Close();
 
-            if (!active)
+            if (establishedSession)
             {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                    "initialize must start a new session without Mcp-Session-Id"), 400);
                 return false;
             }
-            return true;
+
+            SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
+            return false;
         }
 
         private bool ValidateNonInitRequest(HttpListenerResponse response, string sessionId, string protocolVersion)
