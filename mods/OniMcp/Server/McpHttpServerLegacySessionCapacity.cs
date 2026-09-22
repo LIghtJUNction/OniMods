@@ -9,12 +9,16 @@ namespace OniMcp.Server
     {
         private void PruneExpiredLegacySessionsBeforeMainThreadAdmission()
         {
-            List<McpSession> prunedSessions;
-            System.DateTime now = _legacySessionPolicy.UtcNow();
-
+            List<McpSession> prunedSessions = null;
             lock (_sessionLock)
             {
-                prunedSessions = PruneExpiredLegacySessionsLocked(now);
+                // The request's own session was just refreshed by transport validation.
+                // With no other retained session there is nothing stale to discover.
+                if (_sessions.Count > 1)
+                {
+                    System.DateTime now = _legacySessionPolicy.UtcNow();
+                    prunedSessions = PruneExpiredLegacySessionsLocked(now);
+                }
             }
 
             ClosePrunedLegacySessions(prunedSessions);
