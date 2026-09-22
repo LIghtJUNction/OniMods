@@ -61,6 +61,14 @@ internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
                     CreatedAt = now,
                     LastUpdatedAt = now
                 };
+                var secondExpiredTask = new McpTaskEntry
+                {
+                    TaskId = "expired-session-task-2",
+                    SessionId = expiredSessionId,
+                    Status = "working",
+                    CreatedAt = now,
+                    LastUpdatedAt = now
+                };
                 var retainedTask = new McpTaskEntry
                 {
                     TaskId = "retained-session-task",
@@ -71,6 +79,7 @@ internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
                 };
                 var tasks = TaskDictionary(server);
                 tasks[expiredTask.TaskId] = expiredTask;
+                tasks[secondExpiredTask.TaskId] = secondExpiredTask;
                 tasks[retainedTask.TaskId] = retainedTask;
 
                 string replacementSessionId = Initialize(client, 33002);
@@ -84,11 +93,11 @@ internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
                 Assert(!expiredSession.EnqueueOutbound(new Newtonsoft.Json.Linq.JObject()),
                     "Expired legacy session was removed without being closed");
 
-                Assert(!tasks.ContainsKey(expiredTask.TaskId),
-                    "Expired legacy session left its working task retained indefinitely");
-                Assert(expiredTask.CancelRequested,
+                Assert(!tasks.ContainsKey(expiredTask.TaskId) && !tasks.ContainsKey(secondExpiredTask.TaskId),
+                    "Expired legacy session left one or more working tasks retained indefinitely");
+                Assert(expiredTask.CancelRequested && secondExpiredTask.CancelRequested,
                     "Expired legacy session task was removed without cancellation");
-                Assert(tasks.ContainsKey(retainedTask.TaskId) && !retainedTask.CancelRequested,
+                Assert(tasks.Count == 1 && tasks.ContainsKey(retainedTask.TaskId) && !retainedTask.CancelRequested,
                     "Pruning expired session tasks changed a retained session task");
             }
         }
