@@ -87,29 +87,40 @@ namespace OniMcp.Server
             }
 
             if (removed.Count > 0)
+                CancelAndRemoveLegacySessionTasksLocked(removed.Select(session => session.Id));
+
+            return removed;
+        }
+
+        // Call only while holding _sessionLock so task cleanup follows the server's
+        // established _sessionLock -> _taskLock order and cannot race task creation.
+        private void CancelAndRemoveLegacySessionTasksLocked(IEnumerable<string> sessionIds)
+        {
+            var removedSessionIds = new HashSet<string>(sessionIds, StringComparer.Ordinal);
+            if (removedSessionIds.Count == 0)
+                return;
+
+            lock (_taskLock)
             {
-                var removedSessionIds = new HashSet<string>(
-                    removed.Select(session => session.Id),
-                    StringComparer.Ordinal);
-                lock (_taskLock)
+                var taskIds = _tasks.Values
+                    .Where(task => removedSessionIds.Contains(task.SessionId))
+                    .Select(task => task.TaskId)
+                    .ToArray();
+                foreach (string taskId in taskIds)
                 {
-                    var taskIds = _tasks.Values
-                        .Where(task => removedSessionIds.Contains(task.SessionId))
-                        .Select(task => task.TaskId)
-                        .ToArray();
-                    foreach (string taskId in taskIds)
+                    McpTaskEntry task;
+                    if (_tasks.TryGetValue(taskId, out task))
                     {
-                        McpTaskEntry task;
-                        if (_tasks.TryGetValue(taskId, out task))
-                        {
-                            task.CancelRequested = true;
-                            _tasks.Remove(taskId);
-                        }
+                        task.CancelRequested = true;
+                        _tasks.Remove(taskId);
                     }
                 }
             }
+        }
 
-            return removed;
+        private void CancelAndRemoveLegacySessionTasksLocked(string sessionId)
+        {
+            CancelAndRemoveLegacySessionTasksLocked(new[] { sessionId });
         }
 
         private static void ClosePrunedLegacySessions(IEnumerable<McpSession> sessions)
