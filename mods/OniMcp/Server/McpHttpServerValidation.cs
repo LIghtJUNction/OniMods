@@ -46,6 +46,7 @@ namespace OniMcp.Server
                     if (_legacySessionPolicy.IsExpired(session, now))
                     {
                         _sessions.Remove(sessionId);
+                        CancelAndRemoveLegacySessionTasksLocked(sessionId);
                         expiredSession = session;
                     }
                     else
@@ -88,6 +89,7 @@ namespace OniMcp.Server
                 else if (_legacySessionPolicy.IsExpired(session, now))
                 {
                     _sessions.Remove(sessionId);
+                    CancelAndRemoveLegacySessionTasksLocked(sessionId);
                     expiredSession = session;
                     errorMessage = "Session not found or terminated";
                     errorStatus = 404;
