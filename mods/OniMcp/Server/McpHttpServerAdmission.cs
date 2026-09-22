@@ -99,6 +99,9 @@ namespace OniMcp.Server
                 return false;
             }
 
+            if (!modern && !string.IsNullOrEmpty(sessionId))
+                PruneExpiredLegacySessionsBeforeMainThreadAdmission();
+
             lock (_mainThreadAdmissionLock)
             {
                 if (_running && _pendingMainThreadHttpRequests < MaxPendingMainThreadHttpRequests)

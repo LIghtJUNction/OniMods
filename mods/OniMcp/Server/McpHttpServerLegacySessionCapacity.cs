@@ -7,6 +7,23 @@ namespace OniMcp.Server
 {
     public partial class McpHttpServer
     {
+        private void PruneExpiredLegacySessionsBeforeMainThreadAdmission()
+        {
+            List<McpSession> prunedSessions = null;
+            lock (_sessionLock)
+            {
+                // The request's own session was just refreshed by transport validation.
+                // With no other retained session there is nothing stale to discover.
+                if (_sessions.Count > 1)
+                {
+                    System.DateTime now = _legacySessionPolicy.UtcNow();
+                    prunedSessions = PruneExpiredLegacySessionsLocked(now);
+                }
+            }
+
+            ClosePrunedLegacySessions(prunedSessions);
+        }
+
         private bool TryRejectNewLegacySessionAtCapacity(HttpListenerResponse response)
         {
             List<McpSession> prunedSessions;
