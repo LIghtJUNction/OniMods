@@ -64,6 +64,24 @@ internal static class LegacyOutboundExpiredSessionRegressionEntry
             "Server-message enqueue stopped reaching a retained legacy session");
         Assert(sessions.ContainsKey(activeSse.Id) && activeSse.QueuedOutboundCount == 1,
             "Server-message enqueue expired an active SSE session");
+
+        retained.TryDequeueOutbound();
+        activeSse.TryDequeueOutbound();
+        retained.Capabilities = new ClientCapabilities();
+        activeSse.Capabilities = new ClientCapabilities { Sampling = new object() };
+        int samplingQueued = server.EnqueueClientRequest(new JObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["method"] = "sampling/createMessage",
+            ["id"] = "sampling-regression"
+        }, requireSampling: true);
+
+        Assert(samplingQueued == 1,
+            "Expired-recipient pruning changed the sampling-capability recipient filter");
+        Assert(retained.QueuedOutboundCount == 0,
+            "Sampling-only server request reached a retained session without sampling capability");
+        Assert(activeSse.QueuedOutboundCount == 1,
+            "Sampling-only server request did not reach the active sampling-capable session");
     }
 
     private static McpSession Session(string id, DateTime lastActivity)
