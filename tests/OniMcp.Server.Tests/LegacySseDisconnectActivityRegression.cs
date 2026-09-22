@@ -20,6 +20,7 @@ internal static class LegacySseDisconnectActivityRegressionEntry
 
     private static void Main()
     {
+        RunExpiredIdleSseReconnectRegression();
         RunLongLivedSseDisconnectRegression();
 
         var existing = typeof(LegacySessionLifecycleRegressionEntry).GetMethod("Main",
@@ -27,6 +28,35 @@ internal static class LegacySseDisconnectActivityRegressionEntry
         if (existing == null)
             throw new InvalidOperationException("Existing legacy session regression entrypoint was not found");
         existing.Invoke(null, null);
+    }
+
+    private static void RunExpiredIdleSseReconnectRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        DateTime now = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc);
+        var server = StartServerWithPolicy(TimeSpan.FromMinutes(5), 4, () => now);
+        try
+        {
+            using (var client = NewClient())
+            {
+                string sessionId = Initialize(client, 31100);
+                Assert(SessionDictionary(server).ContainsKey(sessionId),
+                    "Legacy session was not retained before the SSE reconnect regression");
+
+                now = now.AddMinutes(6);
+                string headers = RequestLegacySseHeaders(sessionId);
+                Assert(headers.StartsWith("HTTP/1.1 404", StringComparison.Ordinal),
+                    "Expired idle legacy session was revived by SSE reconnect: " + headers.Split('\n')[0].Trim());
+                Assert(!SessionDictionary(server).ContainsKey(sessionId),
+                    "Expired idle legacy session remained retained after rejected SSE reconnect");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
     }
 
     private static void RunLongLivedSseDisconnectRegression()
@@ -170,6 +200,29 @@ internal static class LegacySseDisconnectActivityRegressionEntry
         transport.Connect(endpoint.Host, endpoint.Port);
         NetworkStream stream = transport.GetStream();
         stream.ReadTimeout = 3000;
+        WriteLegacySseRequest(stream, endpoint, sessionId);
+
+        string headers = ReadHeaders(stream);
+        Assert(headers.StartsWith("HTTP/1.1 200", StringComparison.Ordinal),
+            "Legacy SSE raw transport did not receive HTTP 200: " + headers.Split('\n')[0].Trim());
+        return transport;
+    }
+
+    private static string RequestLegacySseHeaders(string sessionId)
+    {
+        var endpoint = new Uri(OniMcpOptions.Current.EndpointUrl);
+        using (var transport = new TcpClient())
+        {
+            transport.Connect(endpoint.Host, endpoint.Port);
+            NetworkStream stream = transport.GetStream();
+            stream.ReadTimeout = 3000;
+            WriteLegacySseRequest(stream, endpoint, sessionId);
+            return ReadHeaders(stream);
+        }
+    }
+
+    private static void WriteLegacySseRequest(NetworkStream stream, Uri endpoint, string sessionId)
+    {
         string request = "GET " + endpoint.PathAndQuery + " HTTP/1.1\r\n"
             + "Host: " + endpoint.Host + ":" + endpoint.Port + "\r\n"
             + "Accept: text/event-stream\r\n"
@@ -179,11 +232,6 @@ internal static class LegacySseDisconnectActivityRegressionEntry
         byte[] bytes = Encoding.ASCII.GetBytes(request);
         stream.Write(bytes, 0, bytes.Length);
         stream.Flush();
-
-        string headers = ReadHeaders(stream);
-        Assert(headers.StartsWith("HTTP/1.1 200", StringComparison.Ordinal),
-            "Legacy SSE raw transport did not receive HTTP 200: " + headers.Split('\n')[0].Trim());
-        return transport;
     }
 
     private static string ReadHeaders(NetworkStream stream)
