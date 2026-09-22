@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace OniMcp.Server
 {
@@ -57,6 +59,41 @@ namespace OniMcp.Server
                 DefaultIdleTimeout,
                 DefaultMaxRetainedSessions,
                 () => DateTime.UtcNow);
+        }
+    }
+
+    public partial class McpHttpServer
+    {
+        private LegacySessionRetentionPolicy _legacySessionPolicy = LegacySessionRetentionPolicy.CreateDefault();
+
+        private List<McpSession> PruneExpiredLegacySessionsLocked(DateTime now)
+        {
+            var expiredIds = _sessions
+                .Where(pair => _legacySessionPolicy.IsExpired(pair.Value, now))
+                .Select(pair => pair.Key)
+                .ToArray();
+            if (expiredIds.Length == 0)
+                return null;
+
+            var removed = new List<McpSession>(expiredIds.Length);
+            foreach (string sessionId in expiredIds)
+            {
+                McpSession session;
+                if (_sessions.TryGetValue(sessionId, out session))
+                {
+                    _sessions.Remove(sessionId);
+                    removed.Add(session);
+                }
+            }
+            return removed;
+        }
+
+        private static void ClosePrunedLegacySessions(IEnumerable<McpSession> sessions)
+        {
+            if (sessions == null)
+                return;
+            foreach (var session in sessions)
+                session.Close();
         }
     }
 }
