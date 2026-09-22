@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>LegacyOutboundExpiredSessionRegressionEntry</StartupObject>
+    <StartupObject>LegacyDiagnosticsExpiredSessionRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -14,6 +14,7 @@
     <Compile Include="LegacySessionCapacityAdmissionRegression.cs" />
     <Compile Include="LegacyExpiredSessionTaskCleanupRegression.cs" />
     <Compile Include="LegacyOutboundExpiredSessionRegression.cs" />
+    <Compile Include="LegacyDiagnosticsExpiredSessionRegression.cs" />
     <Compile Include="HttpAdmissionRegression.cs" />
     <Compile Include="HttpFrontDoorAdmissionRegression.cs" />
     <Compile Include="UnknownModernMethodAdmissionRegression.cs" />
