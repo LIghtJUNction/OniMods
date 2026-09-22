@@ -18,8 +18,8 @@ namespace OniMcp.Server
         // external request backlog to the same finite width permits normal parallel
         // reads without allowing an arbitrary number of Unity-thread actions to pile up.
         internal const int MaxPendingMainThreadHttpRequests = 20;
-        // MCP 2026-07-28 reserves -32020..-32099 for protocol-defined errors.
-        internal const int MainThreadBusyErrorCode = -31950;
+        // MCP 2026-07-28 reserves -32000..-32019 for implementation-defined server errors.
+        internal const int MainThreadBusyErrorCode = -32000;
 
         private readonly object _httpFrontDoorAdmissionLock = new object();
         private int _httpFrontDoorAdmissionGeneration;
