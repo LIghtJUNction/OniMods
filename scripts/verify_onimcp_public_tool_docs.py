@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 
@@ -56,6 +57,23 @@ def extract_core_tool_table(text: str) -> set[str]:
     return tools
 
 
+def extract_python_string_set(text: str, name: str, source: str) -> set[str]:
+    tree = ast.parse(text, filename=source)
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
+            continue
+        try:
+            value = ast.literal_eval(node.value)
+        except (TypeError, ValueError, SyntaxError) as error:
+            fail(f"{source}: {name} is not a literal string set: {error}")
+        if not isinstance(value, set) or not all(isinstance(item, str) for item in value):
+            fail(f"{source}: {name} must be a literal string set")
+        return value
+    fail(f"{source}: missing {name} assignment")
+
+
 def assert_exact_public(actual: set[str], source: str) -> None:
     if actual != EXPECTED_DEFAULT_PUBLIC:
         fail(
@@ -84,10 +102,19 @@ def main() -> None:
     readme_zh_path = root / "mods" / "OniMcp" / "README.md"
     readme_en_path = root / "mods" / "OniMcp" / "README_EN.md"
     reference_path = root / "docs" / "mcp-tools-reference.md"
+    runtime_smoke_path = (
+        root
+        / ".agents"
+        / "skills"
+        / "oni-mcp-autonomous-iteration"
+        / "scripts"
+        / "runtime_smoke.py"
+    )
 
     readme_zh = readme_zh_path.read_text(encoding="utf-8")
     readme_en = readme_en_path.read_text(encoding="utf-8")
     reference = reference_path.read_text(encoding="utf-8")
+    runtime_smoke = runtime_smoke_path.read_text(encoding="utf-8")
 
     assert_exact_public(
         extract_nested_tool_list(readme_zh, "- 常用公开工具:", str(readme_zh_path.relative_to(root))),
@@ -111,10 +138,19 @@ def main() -> None:
             + ", ".join(sorted(internal_core))
         )
 
+    assert_exact_public(
+        extract_python_string_set(
+            runtime_smoke,
+            "DEFAULT_PUBLIC_TOOLS",
+            str(runtime_smoke_path.relative_to(root)),
+        ),
+        str(runtime_smoke_path.relative_to(root)),
+    )
+
     assert_no_direct_internal_guidance(reference)
 
     print(
-        "OK: OniMcp READMEs and tool reference document exactly "
+        "OK: OniMcp READMEs, tool reference, and runtime smoke exactly "
         f"{len(EXPECTED_DEFAULT_PUBLIC)} registered public tools"
     )
 
