@@ -41,20 +41,18 @@ internal static class LegacySseDisconnectActivityRegressionEntry
             {
                 string sessionId = Initialize(client, 31200);
                 McpSession retained = FindSession(server, sessionId);
-                HttpResponseMessage sse = OpenLegacySse(client, sessionId);
-                try
+                using (var sseClient = NewClient())
                 {
-                    Assert(sse.StatusCode == HttpStatusCode.OK, "Legacy SSE did not open");
-                    Assert(SpinWait.SpinUntil(() => SseConnections(server, sessionId) > 0, 1000),
-                        "Legacy SSE was not registered as active");
+                    using (HttpResponseMessage sse = OpenLegacySse(sseClient, sessionId))
+                    {
+                        Assert(sse.StatusCode == HttpStatusCode.OK, "Legacy SSE did not open");
+                        Assert(SpinWait.SpinUntil(() => SseConnections(server, sessionId) > 0, 1000),
+                            "Legacy SSE was not registered as active");
 
-                    now = now.AddMinutes(6);
-                    Assert(SessionDictionary(server).ContainsKey(sessionId),
-                        "Active SSE session was removed after crossing the idle timeout");
-                }
-                finally
-                {
-                    sse.Dispose();
+                        now = now.AddMinutes(6);
+                        Assert(SessionDictionary(server).ContainsKey(sessionId),
+                            "Active SSE session was removed after crossing the idle timeout");
+                    }
                 }
 
                 if (SseConnections(server, sessionId) > 0)
@@ -66,7 +64,7 @@ internal static class LegacySseDisconnectActivityRegressionEntry
                     });
                 }
                 Assert(SpinWait.SpinUntil(() => SseConnections(server, sessionId) == 0, 3000),
-                    "Legacy SSE did not unregister after the client disconnected");
+                    "Legacy SSE did not unregister after the dedicated client disconnected");
 
                 using (var ping = PostLegacy(client, Ping(31201), sessionId))
                     Assert(ping.StatusCode == HttpStatusCode.OK,
