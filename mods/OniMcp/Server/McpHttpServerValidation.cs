@@ -208,14 +208,9 @@ namespace OniMcp.Server
 
         public List<Dictionary<string, object>> GetSessionSummaries()
         {
-            List<McpSession> prunedSessions;
-            List<Dictionary<string, object>> summaries;
-            System.DateTime now = _legacySessionPolicy.UtcNow();
-
             lock (_sessionLock)
             {
-                prunedSessions = PruneExpiredLegacySessionsLocked(now);
-                summaries = _sessions.Values
+                return _sessions.Values
                     .OrderBy(session => session.CreatedAt)
                     .Select(session =>
                     {
@@ -237,9 +232,6 @@ namespace OniMcp.Server
                     })
                     .ToList();
             }
-
-            ClosePrunedLegacySessions(prunedSessions);
-            return summaries;
         }
 
         public Implementation GetSessionClientInfo(string sessionId)
