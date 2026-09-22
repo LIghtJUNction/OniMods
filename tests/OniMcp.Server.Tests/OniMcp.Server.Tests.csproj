@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>UnknownModernResourceRouteAdmissionRegressionEntry</StartupObject>
+    <StartupObject>ModernFiniteProgressTokenRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -13,6 +13,7 @@
     <Compile Include="HttpFrontDoorAdmissionRegression.cs" />
     <Compile Include="UnknownModernMethodAdmissionRegression.cs" />
     <Compile Include="UnknownModernResourceRouteAdmissionRegression.cs" />
+    <Compile Include="ModernFiniteProgressTokenRegression.cs" />
     <Compile Include="MalformedModernToolAdmissionRegression.cs" />
     <Compile Include="ForeignModernResourceAdmissionRegression.cs" />
     <Compile Include="CoordinateModernToolAdmissionRegression.cs" />
