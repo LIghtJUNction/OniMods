@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using UnityEngine;
 
@@ -34,7 +35,29 @@ namespace OniMcp.Server
             if (string.IsNullOrEmpty(sessionId))
                 return true;
 
-            if (!IsSessionActive(sessionId))
+            McpSession expiredSession = null;
+            bool active = false;
+            System.DateTime now = _legacySessionPolicy.UtcNow();
+            lock (_sessionLock)
+            {
+                McpSession session;
+                if (_sessions.TryGetValue(sessionId, out session))
+                {
+                    if (_legacySessionPolicy.IsExpired(session, now))
+                    {
+                        _sessions.Remove(sessionId);
+                        expiredSession = session;
+                    }
+                    else
+                    {
+                        session.LastActivityAt = now;
+                        active = true;
+                    }
+                }
+            }
+            expiredSession?.Close();
+
+            if (!active)
             {
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
                 return false;
@@ -49,29 +72,47 @@ namespace OniMcp.Server
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Missing Mcp-Session-Id header"), 400);
                 return false;
             }
+
+            McpSession expiredSession = null;
+            string errorMessage = null;
+            int errorStatus = 0;
+            System.DateTime now = _legacySessionPolicy.UtcNow();
             lock (_sessionLock)
             {
                 McpSession session;
                 if (!_sessions.TryGetValue(sessionId, out session))
                 {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
-                    return false;
+                    errorMessage = "Session not found or terminated";
+                    errorStatus = 404;
                 }
-                if (string.IsNullOrEmpty(protocolVersion))
+                else if (_legacySessionPolicy.IsExpired(session, now))
+                {
+                    _sessions.Remove(sessionId);
+                    expiredSession = session;
+                    errorMessage = "Session not found or terminated";
+                    errorStatus = 404;
+                }
+                else if (!string.IsNullOrEmpty(protocolVersion) && !IsSupportedProtocolVersion(protocolVersion))
+                {
+                    errorMessage = $"Unsupported protocol version: {protocolVersion}. Supported: {string.Join(", ", SupportedProtocolVersions)}";
+                    errorStatus = 400;
+                }
+                else if (!string.IsNullOrEmpty(protocolVersion)
+                    && !string.Equals(session.ProtocolVersion, protocolVersion, StringComparison.Ordinal))
+                {
+                    errorMessage = $"Protocol version mismatch for session. Expected {session.ProtocolVersion}, got {protocolVersion}";
+                    errorStatus = 400;
+                }
+                else
+                {
+                    session.LastActivityAt = now;
                     return true;
-
-                if (!IsSupportedProtocolVersion(protocolVersion))
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, $"Unsupported protocol version: {protocolVersion}. Supported: {string.Join(", ", SupportedProtocolVersions)}"), 400);
-                    return false;
-                }
-                if (!string.Equals(session.ProtocolVersion, protocolVersion, StringComparison.Ordinal))
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, $"Protocol version mismatch for session. Expected {session.ProtocolVersion}, got {protocolVersion}"), 400);
-                    return false;
                 }
             }
-            return true;
+            expiredSession?.Close();
+
+            SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, errorMessage), errorStatus);
+            return false;
         }
 
         private void SetResponseProtocolVersion(HttpListenerResponse response, string sessionId)
@@ -95,29 +136,59 @@ namespace OniMcp.Server
 
         private string EnsureSession(HttpListenerResponse response, string sessionId)
         {
+            List<McpSession> prunedSessions = null;
+            bool capacityExceeded = false;
+            bool missingSession = false;
+            System.DateTime now = _legacySessionPolicy.UtcNow();
+
             lock (_sessionLock)
             {
                 if (string.IsNullOrEmpty(sessionId))
                 {
-                    sessionId = Guid.NewGuid().ToString("N");
-                    _sessions[sessionId] = new McpSession
+                    prunedSessions = PruneExpiredLegacySessionsLocked(now);
+                    if (_sessions.Count >= _legacySessionPolicy.MaxRetainedSessions)
                     {
-                        Id = sessionId,
-                        CreatedAt = System.DateTime.UtcNow,
-                        ProtocolVersion = CurrentProtocolVersion
-                    };
+                        capacityExceeded = true;
+                    }
+                    else
+                    {
+                        sessionId = Guid.NewGuid().ToString("N");
+                        _sessions[sessionId] = new McpSession
+                        {
+                            Id = sessionId,
+                            CreatedAt = now,
+                            LastActivityAt = now,
+                            ProtocolVersion = CurrentProtocolVersion
+                        };
+                    }
                 }
                 else if (!_sessions.ContainsKey(sessionId))
                 {
-                    sessionId = null;
+                    missingSession = true;
                 }
             }
 
-            if (sessionId == null)
+            ClosePrunedLegacySessions(prunedSessions);
+
+            if (capacityExceeded)
+            {
+                SendJson(response, JsonRpcResponse.MakeError(null, MainThreadBusyErrorCode,
+                    "Legacy MCP session capacity is exhausted; retry after an idle session expires or is deleted",
+                    new JObject
+                    {
+                        ["reasonCode"] = "legacy_session_capacity",
+                        ["retryable"] = true,
+                        ["maxRetainedSessions"] = _legacySessionPolicy.MaxRetainedSessions
+                    }), (int)HttpStatusCode.ServiceUnavailable);
+                return null;
+            }
+
+            if (missingSession)
             {
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Session not found or terminated"), 404);
                 return null;
             }
+
             response.Headers["Mcp-Session-Id"] = sessionId;
             return sessionId;
         }
@@ -146,6 +217,7 @@ namespace OniMcp.Server
                         {
                             ["id"] = session.Id,
                             ["createdAt"] = session.CreatedAt.ToString("o"),
+                            ["lastActivityAt"] = session.LastActivityAt.ToString("o"),
                             ["protocolVersion"] = session.ProtocolVersion,
                             ["clientInfo"] = session.ClientInfo,
                             ["supportsSampling"] = capabilities?.Sampling != null,

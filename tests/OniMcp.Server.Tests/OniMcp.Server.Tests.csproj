@@ -4,11 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>ModernFiniteProgressTokenRegressionEntry</StartupObject>
+    <StartupObject>LegacySessionLifecycleRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="LegacyPingRegression.cs" />
+    <Compile Include="LegacySessionLifecycleRegression.cs" />
     <Compile Include="HttpAdmissionRegression.cs" />
     <Compile Include="HttpFrontDoorAdmissionRegression.cs" />
     <Compile Include="UnknownModernMethodAdmissionRegression.cs" />
