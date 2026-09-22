@@ -19,6 +19,7 @@ internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
     private static void Main()
     {
         RunExpiredSessionTaskCleanupRegression();
+        RunDirectExpiredSessionTaskCleanupRegression();
 
         var existing = typeof(LegacySessionCapacityAdmissionRegressionEntry).GetMethod("Main",
             BindingFlags.NonPublic | BindingFlags.Static);
@@ -108,6 +109,75 @@ internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
         }
     }
 
+    private static void RunDirectExpiredSessionTaskCleanupRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        DateTime now = new DateTime(2026, 1, 4, 0, 0, 0, DateTimeKind.Utc);
+        int port = ReservePort();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        ConfigurePolicy(server, TimeSpan.FromMinutes(1), 3, () => now);
+        server.StartServer();
+
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                string expiredSessionId = Initialize(client, 33100);
+                string retainedSessionId = Initialize(client, 33101);
+
+                var sessions = SessionDictionary(server);
+                McpSession expiredSession = sessions[expiredSessionId];
+                SetLastActivity(expiredSession, now.AddMinutes(-2));
+
+                var expiredTask = new McpTaskEntry
+                {
+                    TaskId = "direct-expired-session-task",
+                    SessionId = expiredSessionId,
+                    Status = "working",
+                    CreatedAt = now,
+                    LastUpdatedAt = now
+                };
+                var retainedTask = new McpTaskEntry
+                {
+                    TaskId = "direct-retained-session-task",
+                    SessionId = retainedSessionId,
+                    Status = "working",
+                    CreatedAt = now,
+                    LastUpdatedAt = now
+                };
+                var tasks = TaskDictionary(server);
+                tasks[expiredTask.TaskId] = expiredTask;
+                tasks[retainedTask.TaskId] = retainedTask;
+
+                using (var response = PostLegacyPing(client, expiredSessionId, 33102))
+                    Assert(response.StatusCode == HttpStatusCode.NotFound,
+                        "Direct request to expired legacy session did not return HTTP 404");
+
+                Assert(!server.GetSessionSummaries().Any(summary => (string)summary["id"] == expiredSessionId),
+                    "Direct request did not remove the expired legacy session");
+                Assert(!expiredSession.EnqueueOutbound(new Newtonsoft.Json.Linq.JObject()),
+                    "Directly expired legacy session was removed without being closed");
+                Assert(!tasks.ContainsKey(expiredTask.TaskId) && expiredTask.CancelRequested,
+                    "Direct expiry left the legacy session's working task retained indefinitely");
+                Assert(tasks.Count == 1 && tasks.ContainsKey(retainedTask.TaskId) && !retainedTask.CancelRequested,
+                    "Direct expiry changed a retained session task");
+                Assert(server.GetSessionSummaries().Any(summary => (string)summary["id"] == retainedSessionId),
+                    "Direct expiry removed an unrelated retained session");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
     private static void ConfigurePolicy(McpHttpServer server, TimeSpan idleTimeout, int maxSessions,
         Func<DateTime> clock)
     {
@@ -159,6 +229,20 @@ internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
                 return response.Headers.GetValues("Mcp-Session-Id").Single();
             }
         }
+    }
+
+    private static HttpResponseMessage PostLegacyPing(HttpClient client, string sessionId, int id)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "");
+        request.Content = new StringContent(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":" + id + "}",
+            Encoding.UTF8,
+            "application/json");
+        request.Headers.TryAddWithoutValidation("Mcp-Session-Id", sessionId);
+        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2025-11-25");
+        Task<HttpResponseMessage> work = client.SendAsync(request);
+        PumpUntil(work);
+        return work.GetAwaiter().GetResult();
     }
 
     private static int ReservePort()
