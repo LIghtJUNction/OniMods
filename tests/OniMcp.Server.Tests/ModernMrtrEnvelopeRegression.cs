@@ -125,26 +125,12 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                     BuildResourceRead(33226,
                         "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"audio\",\"data\":7,\"mimeType\":\"audio/wav\"},\"model\":\"fixture\"}},"),
                     "resources/read", "oni://missing-mrtr-regression", "audio sampling block with non-string data");
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
-                    "Malformed MRTR envelopes reached tool dispatch");
-
-                // Stable MCP 2026-07-28 commit 5f5440bb26a62e2cf3440b92da5a667efa03b267 is
-                // internally inconsistent here: schema.ts allows number, while generated schema.json
-                // narrows scalar ElicitResult.content values to integer. Preserve type:number round-trips
-                // until upstream clarifies which release artifact is authoritative.
-                using (var response = SendModern(client,
+                AssertModernRejected(client,
                     BuildBenchmarkCall(33227,
                         "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"ratio\":1.5}}},"),
-                    "tools/call", "benchmark"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Fractional MRTR elicitation response was rejected with HTTP " + (int)response.StatusCode);
-                    JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert(body["result"] != null && body["error"] == null,
-                        "Fractional MRTR elicitation response did not reach the modern tool path");
-                }
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes + 1,
-                    "Fractional MRTR elicitation response did not dispatch exactly once");
+                    "tools/call", "benchmark", "fractional elicitation content value");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
+                    "Malformed MRTR envelopes reached tool dispatch");
 
                 using (var response = SendModern(client,
                     BuildBenchmarkCall(33205,
@@ -162,8 +148,8 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                     Assert(body["result"] != null && body["error"] == null,
                         "Schema-valid MRTR input responses did not reach the modern tool path");
                 }
-                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes + 2,
-                    "Schema-valid MRTR input responses did not dispatch exactly twice");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes + 1,
+                    "Schema-valid MRTR input responses did not dispatch exactly once");
 
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern MRTR envelope validation allocated legacy session state");
