@@ -169,6 +169,32 @@ internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
                     "Direct expiry changed a retained session task");
                 Assert(server.GetSessionSummaries().Any(summary => (string)summary["id"] == retainedSessionId),
                     "Direct expiry removed an unrelated retained session");
+
+                string expiredInitializeSessionId = Initialize(client, 33103);
+                McpSession expiredInitializeSession = sessions[expiredInitializeSessionId];
+                SetLastActivity(expiredInitializeSession, now.AddMinutes(-2));
+                var expiredInitializeTask = new McpTaskEntry
+                {
+                    TaskId = "direct-expired-initialize-task",
+                    SessionId = expiredInitializeSessionId,
+                    Status = "working",
+                    CreatedAt = now,
+                    LastUpdatedAt = now
+                };
+                tasks[expiredInitializeTask.TaskId] = expiredInitializeTask;
+
+                using (var response = PostLegacyInitialize(client, expiredInitializeSessionId, 33104))
+                    Assert(response.StatusCode == HttpStatusCode.NotFound,
+                        "Initialize addressed to an expired legacy session did not return HTTP 404");
+
+                Assert(!server.GetSessionSummaries().Any(summary => (string)summary["id"] == expiredInitializeSessionId),
+                    "Expired-session initialize did not remove the expired legacy session");
+                Assert(!expiredInitializeSession.EnqueueOutbound(new Newtonsoft.Json.Linq.JObject()),
+                    "Expired-session initialize removed the legacy session without closing it");
+                Assert(!tasks.ContainsKey(expiredInitializeTask.TaskId) && expiredInitializeTask.CancelRequested,
+                    "Expired-session initialize left its working task retained indefinitely");
+                Assert(tasks.Count == 1 && tasks.ContainsKey(retainedTask.TaskId) && !retainedTask.CancelRequested,
+                    "Expired-session initialize changed a retained session task");
             }
         }
         finally
@@ -238,6 +264,20 @@ internal static class LegacyExpiredSessionTaskCleanupRegressionEntry
             "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":" + id + "}",
             Encoding.UTF8,
             "application/json");
+        request.Headers.TryAddWithoutValidation("Mcp-Session-Id", sessionId);
+        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2025-11-25");
+        Task<HttpResponseMessage> work = client.SendAsync(request);
+        PumpUntil(work);
+        return work.GetAwaiter().GetResult();
+    }
+
+    private static HttpResponseMessage PostLegacyInitialize(HttpClient client, string sessionId, int id)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":" + id
+            + ",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},"
+            + "\"clientInfo\":{\"name\":\"expired-session-task-cleanup-regression\",\"version\":\"1\"}}}";
+        var request = new HttpRequestMessage(HttpMethod.Post, "");
+        request.Content = new StringContent(body, Encoding.UTF8, "application/json");
         request.Headers.TryAddWithoutValidation("Mcp-Session-Id", sessionId);
         request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2025-11-25");
         Task<HttpResponseMessage> work = client.SendAsync(request);
