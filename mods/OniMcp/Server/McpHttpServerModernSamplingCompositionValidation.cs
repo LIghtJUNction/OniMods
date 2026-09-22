@@ -11,7 +11,7 @@ namespace OniMcp.Server
 
             var block = content as JObject;
             if (block != null)
-                return IsModernSamplingBlockAllowedForRole(isUser, (string)block["type"]);
+                return !isUser || !string.Equals((string)block["type"], "tool_use", StringComparison.Ordinal);
 
             var blocks = content as JArray;
             if (blocks == null)
@@ -22,7 +22,7 @@ namespace OniMcp.Server
             foreach (var item in blocks)
             {
                 string type = (string)(item as JObject)?["type"];
-                if (!IsModernSamplingBlockAllowedForRole(isUser, type))
+                if (isUser && string.Equals(type, "tool_use", StringComparison.Ordinal))
                     return false;
 
                 if (string.Equals(type, "tool_result", StringComparison.Ordinal))
@@ -32,15 +32,6 @@ namespace OniMcp.Server
             }
 
             return !isUser || !hasToolResult || !hasOtherContent;
-        }
-
-        private static bool IsModernSamplingBlockAllowedForRole(bool isUser, string type)
-        {
-            if (string.Equals(type, "tool_use", StringComparison.Ordinal))
-                return !isUser;
-            if (string.Equals(type, "tool_result", StringComparison.Ordinal))
-                return isUser;
-            return true;
         }
     }
 }
