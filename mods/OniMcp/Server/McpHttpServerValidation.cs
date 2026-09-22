@@ -37,7 +37,7 @@ namespace OniMcp.Server
 
             McpSession expiredSession = null;
             bool active = false;
-            DateTime now = _legacySessionPolicy.UtcNow();
+            System.DateTime now = _legacySessionPolicy.UtcNow();
             lock (_sessionLock)
             {
                 McpSession session;
@@ -76,7 +76,7 @@ namespace OniMcp.Server
             McpSession expiredSession = null;
             string errorMessage = null;
             int errorStatus = 0;
-            DateTime now = _legacySessionPolicy.UtcNow();
+            System.DateTime now = _legacySessionPolicy.UtcNow();
             lock (_sessionLock)
             {
                 McpSession session;
@@ -139,7 +139,7 @@ namespace OniMcp.Server
             List<McpSession> prunedSessions = null;
             bool capacityExceeded = false;
             bool missingSession = false;
-            DateTime now = _legacySessionPolicy.UtcNow();
+            System.DateTime now = _legacySessionPolicy.UtcNow();
 
             lock (_sessionLock)
             {
