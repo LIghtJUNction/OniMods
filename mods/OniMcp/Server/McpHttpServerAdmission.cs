@@ -89,6 +89,16 @@ namespace OniMcp.Server
         private bool TryAcquireMainThreadHttpAdmission(HttpListenerResponse response, object requestId,
             string sessionId, bool modern, out MainThreadHttpAdmissionLease lease)
         {
+            // On the legacy POST path, sessionless requests can reach this point only
+            // for initialize: ping returns earlier and all other methods require a session.
+            // Capacity is therefore deterministic transport state and must not consume
+            // or be masked by a scarce Unity/main-thread admission slot.
+            if (!modern && string.IsNullOrEmpty(sessionId) && TryRejectNewLegacySessionAtCapacity(response))
+            {
+                lease = null;
+                return false;
+            }
+
             lock (_mainThreadAdmissionLock)
             {
                 if (_running && _pendingMainThreadHttpRequests < MaxPendingMainThreadHttpRequests)
