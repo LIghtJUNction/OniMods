@@ -49,12 +49,12 @@ internal static class ModernMrtrToolResultCompositionRegressionEntry
                 AssertModernRejected(client, BuildBenchmarkCall(35602, "user",
                     "{\"type\":\"tool_use\",\"id\":\"call-2\",\"name\":\"lookup\",\"input\":{}}"),
                     "user sampling response carrying tool_use");
-                AssertModernRejected(client, BuildBenchmarkCall(35603, "assistant",
-                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-3\",\"content\":[]}"),
-                    "assistant sampling response carrying tool_result");
                 Assert(OniToolRegistry.Calls == callsBefore,
-                    "Invalid sampling tool-block composition reached tool dispatch");
+                    "Invalid user sampling tool-block composition reached tool dispatch");
 
+                AssertModernAccepted(client, BuildBenchmarkCall(35603, "assistant",
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-3\",\"content\":[]}"),
+                    "assistant tool_result retained for current wire-schema compatibility");
                 AssertModernAccepted(client, BuildBenchmarkCall(35604, "user",
                     "[{\"type\":\"tool_result\",\"toolUseId\":\"call-4\",\"content\":[]},"
                     + "{\"type\":\"tool_result\",\"toolUseId\":\"call-5\",\"content\":[]}]"),
@@ -65,8 +65,8 @@ internal static class ModernMrtrToolResultCompositionRegressionEntry
                 AssertModernAccepted(client, BuildBenchmarkCall(35606, "assistant",
                     "{\"type\":\"tool_use\",\"id\":\"call-7\",\"name\":\"lookup\",\"input\":{}}"),
                     "assistant sampling response carrying tool_use");
-                Assert(OniToolRegistry.Calls == callsBefore + 3,
-                    "Schema-valid sampling tool-block responses did not dispatch exactly three times");
+                Assert(OniToolRegistry.Calls == callsBefore + 4,
+                    "Schema-compatible sampling tool-block responses did not dispatch exactly four times");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern sampling composition validation allocated legacy session state");
             }
