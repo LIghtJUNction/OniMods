@@ -85,6 +85,30 @@ namespace OniMcp.Server
                     removed.Add(session);
                 }
             }
+
+            if (removed.Count > 0)
+            {
+                var removedSessionIds = new HashSet<string>(
+                    removed.Select(session => session.Id),
+                    StringComparer.Ordinal);
+                lock (_taskLock)
+                {
+                    var taskIds = _tasks.Values
+                        .Where(task => removedSessionIds.Contains(task.SessionId))
+                        .Select(task => task.TaskId)
+                        .ToArray();
+                    foreach (string taskId in taskIds)
+                    {
+                        McpTaskEntry task;
+                        if (_tasks.TryGetValue(taskId, out task))
+                        {
+                            task.CancelRequested = true;
+                            _tasks.Remove(taskId);
+                        }
+                    }
+                }
+            }
+
             return removed;
         }
 
