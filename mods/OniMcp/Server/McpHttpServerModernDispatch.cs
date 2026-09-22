@@ -139,6 +139,15 @@ namespace OniMcp.Server
                             new JObject { ["uri"] = uri }), (int)HttpStatusCode.OK);
                         return;
                     }
+
+                    if (!IsKnownModernResourceAuthority(parsedUri))
+                    {
+                        response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                        SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                            $"Resource not found: {uri}", new JObject { ["uri"] = uri }),
+                            (int)HttpStatusCode.OK);
+                        return;
+                    }
                 }
             }
 
