@@ -13,6 +13,7 @@ PROTOCOL = "2025-11-25"
 MODERN_PROTOCOL = "2026-07-28"
 MODERN_SAFE_TOOLS = {"benchmark"}
 DEFAULT_PUBLIC_TOOLS = {
+    "benchmark",
     "building_control",
     "navigation_control",
     "game_control",
