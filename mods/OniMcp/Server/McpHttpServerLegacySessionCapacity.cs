@@ -7,6 +7,19 @@ namespace OniMcp.Server
 {
     public partial class McpHttpServer
     {
+        private void PruneExpiredLegacySessionsBeforeMainThreadAdmission()
+        {
+            List<McpSession> prunedSessions;
+            System.DateTime now = _legacySessionPolicy.UtcNow();
+
+            lock (_sessionLock)
+            {
+                prunedSessions = PruneExpiredLegacySessionsLocked(now);
+            }
+
+            ClosePrunedLegacySessions(prunedSessions);
+        }
+
         private bool TryRejectNewLegacySessionAtCapacity(HttpListenerResponse response)
         {
             List<McpSession> prunedSessions;
