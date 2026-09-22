@@ -196,10 +196,15 @@ namespace OniMcp.Server
 
         private static bool IsValidModernProgressToken(JToken progressToken)
         {
-            return progressToken != null
-                && (progressToken.Type == JTokenType.String
-                    || progressToken.Type == JTokenType.Integer
-                    || progressToken.Type == JTokenType.Float);
+            if (progressToken == null)
+                return false;
+            if (progressToken.Type == JTokenType.String || progressToken.Type == JTokenType.Integer)
+                return true;
+            if (progressToken.Type != JTokenType.Float)
+                return false;
+
+            double numericValue = progressToken.Value<double>();
+            return !double.IsNaN(numericValue) && !double.IsInfinity(numericValue);
         }
 
         private static bool IsValidModernLogLevel(JToken logLevel)
