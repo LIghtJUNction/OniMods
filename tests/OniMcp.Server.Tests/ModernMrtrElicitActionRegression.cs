@@ -57,24 +57,28 @@ internal static class ModernMrtrElicitActionRegressionEntry
                     "tools/call", "benchmark", "elicitation result carrying non-object metadata");
                 AssertModernRejected(client,
                     BuildResourceRead(35004,
-                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"value\":1.5},\"_meta\":{\"bad name\":true}}},"),
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"value\":1},\"_meta\":{\"bad name\":true}}},"),
                     "resources/read", "oni://missing-elicit-meta-regression",
                     "elicitation result carrying an invalid metadata key");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(35005,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"value\":1.5},\"_meta\":{\"com.example/cache\":true}}},"),
+                    "tools/call", "benchmark", "accepted form elicitation carrying a fractional value");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalid,
                     "Invalid elicitation responses reached tool dispatch");
 
                 AssertModernAccepted(client,
-                    BuildBenchmarkCall(35005,
+                    BuildBenchmarkCall(35006,
                         "\"inputResponses\":{\"probe\":{\"action\":\"decline\"}},"),
                     "tools/call", "benchmark", "declined elicitation without content");
                 AssertModernAccepted(client,
-                    BuildBenchmarkCall(35006,
+                    BuildBenchmarkCall(35007,
                         "\"inputResponses\":{\"probe\":{\"action\":\"accept\"}},"),
                     "tools/call", "benchmark", "accepted URL elicitation without form content");
                 AssertModernAccepted(client,
-                    BuildBenchmarkCall(35007,
-                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"value\":1.5},\"_meta\":{\"com.example/cache\":true}}},"),
-                    "tools/call", "benchmark", "accepted form elicitation carrying vendor metadata");
+                    BuildBenchmarkCall(35008,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"value\":1},\"_meta\":{\"com.example/cache\":true}}},"),
+                    "tools/call", "benchmark", "accepted form elicitation carrying integer content and vendor metadata");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalid + 3,
                     "Schema-valid elicitation responses did not dispatch exactly three times");
                 Assert(server.GetSessionSummaries().Count == 0,
