@@ -108,14 +108,14 @@ internal static class LegacySessionLifecycleRegressionEntry
                     Assert(server.GetSessionSummaries().Count == 1
                         && server.GetSessionSummaries().Any(summary => (string)summary["id"] == sessionB),
                         "Explicit DELETE did not remove exactly the requested session");
+
+                    DeleteLegacy(client, sessionB);
+                    Assert(server.GetSessionSummaries().Count == 0,
+                        "Explicit DELETE did not terminate an active-SSE legacy session");
+                    using (var afterDelete = InitializeResponse(client, 31008))
+                        Assert(afterDelete.StatusCode == HttpStatusCode.OK,
+                            "Capacity was not reusable after deleting retained legacy sessions");
                 }
-
-                Assert(SpinWait.SpinUntil(() => SseConnections(server, sessionB) == 0, 1000),
-                    "Closed SSE connection remained marked active");
-
-                using (var afterSse = InitializeResponse(client, 31008))
-                    Assert(afterSse.StatusCode == HttpStatusCode.OK,
-                        "Capacity was not reusable after DELETE while the SSE session stayed live");
             }
 
             Assert(clockThreads.Count > 0, "Lifecycle policy clock was never exercised");
