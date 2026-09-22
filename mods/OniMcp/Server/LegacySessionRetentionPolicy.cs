@@ -19,10 +19,10 @@ namespace OniMcp.Server
         // a hard bound on memory and diagnostics work if clients repeatedly initialize.
         internal const int DefaultMaxRetainedSessions = 1024;
 
-        private readonly Func<DateTime> _utcNow;
+        private readonly Func<System.DateTime> _utcNow;
 
         internal LegacySessionRetentionPolicy(TimeSpan idleTimeout, int maxRetainedSessions,
-            Func<DateTime> utcNow)
+            Func<System.DateTime> utcNow)
         {
             if (idleTimeout <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(idleTimeout));
@@ -37,20 +37,20 @@ namespace OniMcp.Server
 
         internal int MaxRetainedSessions { get; }
 
-        internal DateTime UtcNow()
+        internal System.DateTime UtcNow()
         {
             return _utcNow();
         }
 
-        internal bool IsExpired(McpSession session, DateTime now)
+        internal bool IsExpired(McpSession session, System.DateTime now)
         {
             if (session == null || session.SseConnections > 0)
                 return false;
 
-            DateTime lastActivity = session.LastActivityAt == default(DateTime)
+            System.DateTime lastActivity = session.LastActivityAt == default(System.DateTime)
                 ? session.CreatedAt
                 : session.LastActivityAt;
-            return lastActivity != default(DateTime) && now - lastActivity >= IdleTimeout;
+            return lastActivity != default(System.DateTime) && now - lastActivity >= IdleTimeout;
         }
 
         internal static LegacySessionRetentionPolicy CreateDefault()
@@ -58,7 +58,7 @@ namespace OniMcp.Server
             return new LegacySessionRetentionPolicy(
                 DefaultIdleTimeout,
                 DefaultMaxRetainedSessions,
-                () => DateTime.UtcNow);
+                () => System.DateTime.UtcNow);
         }
     }
 
@@ -66,7 +66,7 @@ namespace OniMcp.Server
     {
         private LegacySessionRetentionPolicy _legacySessionPolicy = LegacySessionRetentionPolicy.CreateDefault();
 
-        private List<McpSession> PruneExpiredLegacySessionsLocked(DateTime now)
+        private List<McpSession> PruneExpiredLegacySessionsLocked(System.DateTime now)
         {
             var expiredIds = _sessions
                 .Where(pair => _legacySessionPolicy.IsExpired(pair.Value, now))
