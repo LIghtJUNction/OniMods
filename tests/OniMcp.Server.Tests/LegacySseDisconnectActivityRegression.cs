@@ -41,30 +41,23 @@ internal static class LegacySseDisconnectActivityRegressionEntry
             {
                 string sessionId = Initialize(client, 31200);
                 McpSession retained = FindSession(server, sessionId);
-                using (var sseClient = NewClient())
+                using (TcpClient sseTransport = OpenLegacySseTransport(sessionId))
                 {
-                    using (HttpResponseMessage sse = OpenLegacySse(sseClient, sessionId))
-                    {
-                        Assert(sse.StatusCode == HttpStatusCode.OK, "Legacy SSE did not open");
-                        Assert(SpinWait.SpinUntil(() => SseConnections(server, sessionId) > 0, 1000),
-                            "Legacy SSE was not registered as active");
+                    Assert(SpinWait.SpinUntil(() => SseConnections(server, sessionId) > 0, 1000),
+                        "Legacy SSE was not registered as active");
 
-                        now = now.AddMinutes(6);
-                        Assert(SessionDictionary(server).ContainsKey(sessionId),
-                            "Active SSE session was removed after crossing the idle timeout");
-                    }
+                    now = now.AddMinutes(6);
+                    Assert(SessionDictionary(server).ContainsKey(sessionId),
+                        "Active SSE session was removed after crossing the idle timeout");
                 }
 
-                if (SseConnections(server, sessionId) > 0)
+                retained.EnqueueOutbound(new JObject
                 {
-                    retained.EnqueueOutbound(new JObject
-                    {
-                        ["jsonrpc"] = "2.0",
-                        ["method"] = "notifications/sse_disconnect_regression"
-                    });
-                }
+                    ["jsonrpc"] = "2.0",
+                    ["method"] = "notifications/sse_disconnect_regression"
+                });
                 Assert(SpinWait.SpinUntil(() => SseConnections(server, sessionId) == 0, 3000),
-                    "Legacy SSE did not unregister after the dedicated client disconnected");
+                    "Legacy SSE did not unregister after its TCP transport closed");
 
                 using (var ping = PostLegacy(client, Ping(31201), sessionId))
                     Assert(ping.StatusCode == HttpStatusCode.OK,
@@ -170,13 +163,47 @@ internal static class LegacySseDisconnectActivityRegressionEntry
         return work.GetAwaiter().GetResult();
     }
 
-    private static HttpResponseMessage OpenLegacySse(HttpClient client, string sessionId)
+    private static TcpClient OpenLegacySseTransport(string sessionId)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "");
-        request.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
-        request.Headers.TryAddWithoutValidation("Mcp-Session-Id", sessionId);
-        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2025-11-25");
-        return client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult();
+        var endpoint = new Uri(OniMcpOptions.Current.EndpointUrl);
+        var transport = new TcpClient();
+        transport.Connect(endpoint.Host, endpoint.Port);
+        NetworkStream stream = transport.GetStream();
+        stream.ReadTimeout = 3000;
+        string request = "GET " + endpoint.PathAndQuery + " HTTP/1.1\r\n"
+            + "Host: " + endpoint.Host + ":" + endpoint.Port + "\r\n"
+            + "Accept: text/event-stream\r\n"
+            + "Mcp-Session-Id: " + sessionId + "\r\n"
+            + "Mcp-Protocol-Version: 2025-11-25\r\n"
+            + "Connection: keep-alive\r\n\r\n";
+        byte[] bytes = Encoding.ASCII.GetBytes(request);
+        stream.Write(bytes, 0, bytes.Length);
+        stream.Flush();
+
+        string headers = ReadHeaders(stream);
+        Assert(headers.StartsWith("HTTP/1.1 200", StringComparison.Ordinal),
+            "Legacy SSE raw transport did not receive HTTP 200: " + headers.Split('\n')[0].Trim());
+        return transport;
+    }
+
+    private static string ReadHeaders(NetworkStream stream)
+    {
+        var bytes = new List<byte>();
+        while (bytes.Count < 16384)
+        {
+            int value = stream.ReadByte();
+            if (value < 0)
+                break;
+            bytes.Add((byte)value);
+            int count = bytes.Count;
+            if (count >= 4
+                && bytes[count - 4] == '\r'
+                && bytes[count - 3] == '\n'
+                && bytes[count - 2] == '\r'
+                && bytes[count - 1] == '\n')
+                break;
+        }
+        return Encoding.ASCII.GetString(bytes.ToArray());
     }
 
     private static int ReservePort()
