@@ -42,19 +42,31 @@ internal static class ModernMrtrToolResultCompositionRegressionEntry
             })
             {
                 int callsBefore = OniToolRegistry.Calls;
-                AssertModernRejected(client, BuildBenchmarkCall(35601,
+                AssertModernRejected(client, BuildBenchmarkCall(35601, "user",
                     "[{\"type\":\"text\",\"text\":\"mixed\"},"
                     + "{\"type\":\"tool_result\",\"toolUseId\":\"call-1\",\"content\":[]}]"),
                     "user sampling response mixing text with tool_result");
+                AssertModernRejected(client, BuildBenchmarkCall(35602, "user",
+                    "{\"type\":\"tool_use\",\"id\":\"call-2\",\"name\":\"lookup\",\"input\":{}}"),
+                    "user sampling response carrying tool_use");
                 Assert(OniToolRegistry.Calls == callsBefore,
-                    "Mixed tool_result sampling response reached tool dispatch");
+                    "Invalid user sampling tool-block composition reached tool dispatch");
 
-                AssertModernAccepted(client, BuildBenchmarkCall(35602,
-                    "[{\"type\":\"tool_result\",\"toolUseId\":\"call-1\",\"content\":[]},"
-                    + "{\"type\":\"tool_result\",\"toolUseId\":\"call-2\",\"content\":[]}]"),
+                AssertModernAccepted(client, BuildBenchmarkCall(35603, "assistant",
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-3\",\"content\":[]}"),
+                    "assistant tool_result retained for current wire-schema compatibility");
+                AssertModernAccepted(client, BuildBenchmarkCall(35604, "user",
+                    "[{\"type\":\"tool_result\",\"toolUseId\":\"call-4\",\"content\":[]},"
+                    + "{\"type\":\"tool_result\",\"toolUseId\":\"call-5\",\"content\":[]}]"),
                     "user sampling response containing only tool results");
-                Assert(OniToolRegistry.Calls == callsBefore + 1,
-                    "Valid tool-result-only sampling response did not dispatch exactly once");
+                AssertModernAccepted(client, BuildBenchmarkCall(35605, "user",
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-6\",\"content\":[]}"),
+                    "user sampling response containing one tool result");
+                AssertModernAccepted(client, BuildBenchmarkCall(35606, "assistant",
+                    "{\"type\":\"tool_use\",\"id\":\"call-7\",\"name\":\"lookup\",\"input\":{}}"),
+                    "assistant sampling response carrying tool_use");
+                Assert(OniToolRegistry.Calls == callsBefore + 4,
+                    "Schema-compatible sampling tool-block responses did not dispatch exactly four times");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern sampling composition validation allocated legacy session state");
             }
@@ -66,10 +78,10 @@ internal static class ModernMrtrToolResultCompositionRegressionEntry
         }
     }
 
-    private static string BuildBenchmarkCall(int id, string content)
+    private static string BuildBenchmarkCall(int id, string role, string content)
     {
         return "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":" + id
-            + ",\"params\":{\"inputResponses\":{\"probe\":{\"role\":\"user\",\"content\":"
+            + ",\"params\":{\"inputResponses\":{\"probe\":{\"role\":\"" + role + "\",\"content\":"
             + content + ",\"model\":\"fixture\"}},"
             + "\"name\":\"benchmark\",\"arguments\":{\"task\":\"tool result composition regression\",\"iterations\":1},"
             + ModernMeta() + "}}";

@@ -7,8 +7,11 @@ namespace OniMcp.Server
     {
         private static bool HasValidModernSamplingMessageComposition(string role, JToken content)
         {
-            if (!string.Equals(role, "user", StringComparison.Ordinal))
-                return true;
+            bool isUser = string.Equals(role, "user", StringComparison.Ordinal);
+
+            var block = content as JObject;
+            if (block != null)
+                return !isUser || !string.Equals((string)block["type"], "tool_use", StringComparison.Ordinal);
 
             var blocks = content as JArray;
             if (blocks == null)
@@ -18,15 +21,17 @@ namespace OniMcp.Server
             bool hasOtherContent = false;
             foreach (var item in blocks)
             {
-                var block = item as JObject;
-                string type = (string)block?["type"];
+                string type = (string)(item as JObject)?["type"];
+                if (isUser && string.Equals(type, "tool_use", StringComparison.Ordinal))
+                    return false;
+
                 if (string.Equals(type, "tool_result", StringComparison.Ordinal))
                     hasToolResult = true;
                 else
                     hasOtherContent = true;
             }
 
-            return !hasToolResult || !hasOtherContent;
+            return !isUser || !hasToolResult || !hasOtherContent;
         }
     }
 }
