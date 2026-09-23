@@ -108,6 +108,14 @@ namespace OniMcp.Server
             bool isClientResponse = rawMessage["method"] == null
                 && (rawMessage["result"] != null || rawMessage["error"] != null);
             bool expectsLegacyJsonResponse = rawMessage.Property("id") != null && !isClientResponse;
+            if (expectsLegacyJsonResponse && requestId?.Type == JTokenType.Float)
+            {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                    "Legacy MCP request id must be a string or integer"), 200);
+                return;
+            }
             if (expectsLegacyJsonResponse
                 && RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, requestId))
             {
