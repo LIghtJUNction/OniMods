@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
+using OniMcp.Tools;
 
 internal static class LegacyRequestIdRegressionEntry
 {
@@ -57,7 +58,8 @@ internal static class LegacyRequestIdRegressionEntry
                 Assert(server.GetSessionSummaries().Count == 1,
                     "Legacy initialize did not retain exactly one session");
 
-                using (var response = Post(client, FractionalPingRequest(), sessionId, "2025-11-25"))
+                int calls = OniToolRegistry.Calls;
+                using (var response = Post(client, FractionalToolCallRequest(), sessionId, "2025-11-25"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
                         "Legacy invalid-request response changed HTTP status");
@@ -68,6 +70,9 @@ internal static class LegacyRequestIdRegressionEntry
                     Assert(payload["id"] == null || payload["id"].Type == JTokenType.Null,
                         "Invalid fractional request id was echoed in the error response");
                 }
+                Invoke(_bridge, "Update");
+                Assert(OniToolRegistry.Calls == calls,
+                    "Rejected fractional request id dispatched legacy tool work");
                 Assert(server.GetSessionSummaries().Count == 1,
                     "Rejected fractional request id changed legacy session state");
 
@@ -123,9 +128,10 @@ internal static class LegacyRequestIdRegressionEntry
             + "\"clientInfo\":{\"name\":\"legacy-id-regression\",\"version\":\"1.0\"}}}";
     }
 
-    private static string FractionalPingRequest()
+    private static string FractionalToolCallRequest()
     {
-        return "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":52001.5,\"params\":{}}";
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":52001.5,"
+            + "\"params\":{\"name\":\"test\",\"arguments\":{}}}";
     }
 
     private static string IntegerPingRequest()
