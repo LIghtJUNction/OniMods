@@ -81,6 +81,18 @@ namespace OniMcp.Server
             if (TryHandleModernPost(request, response, rawMessage, protocolVersion))
                 return;
 
+            // Both supported 2025 Streamable HTTP revisions require clients to
+            // advertise both legal response media types for every POST. Enforce
+            // this after modern routing is ruled out but before any legacy session
+            // state or Unity/main-thread admission can be consumed.
+            if (!AcceptsModernResponseMediaTypes(request))
+            {
+                SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InvalidRequest,
+                    "MCP 2025 Streamable HTTP POST requests require Accept to list both application/json and text/event-stream"),
+                    (int)HttpStatusCode.NotAcceptable);
+                return;
+            }
+
             if (rawMessage["method"] == null && (rawMessage["result"] != null || rawMessage["error"] != null))
             {
                 if (!ValidateNonInitRequest(response, sessionId, protocolVersion))
