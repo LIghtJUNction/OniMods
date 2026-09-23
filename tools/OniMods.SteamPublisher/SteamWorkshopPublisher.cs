@@ -145,7 +145,8 @@ internal static partial class SteamWorkshopPublisher
     {
         var workshopId = candidateId ?? WorkshopTarget.WorkshopId;
         var titleContains = candidateId.HasValue
-            ? LegacyCandidatePlan.CandidateTitle : WorkshopTarget.TitleContains;
+            ? LegacyCandidatePlan.ResolveFixedTarget().CandidateTitle
+            : WorkshopTarget.TitleContains;
         var fileId = new PublishedFileId_t(workshopId);
         var expectedHash = System.Security.Cryptography.SHA256.HashData(package.Bytes);
         var started = DateTime.UtcNow;

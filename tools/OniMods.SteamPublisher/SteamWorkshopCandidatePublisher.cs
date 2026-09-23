@@ -7,7 +7,7 @@ internal static partial class SteamWorkshopPublisher
     {
         var journalDirectory = CandidateCreationJournal.DefaultDirectory();
         CandidateCreationJournal.RequireNoPriorAttempt(
-            journalDirectory, LegacyCandidatePlan.OriginalWorkshopId);
+            journalDirectory, plan.Target.OriginalWorkshopId);
 
         ShareCloudFile(plan.Package.CloudFileName, plan.Package.Bytes, "candidate ZIP");
         ShareCloudFile(plan.PreviewCloudFileName, plan.PreviewBytes, "candidate preview");
@@ -16,7 +16,7 @@ internal static partial class SteamWorkshopPublisher
         // CreateNew plus fsync happens before Steam receives the create call.
         // An ambiguous callback or process crash leaves this marker in place.
         var journal = CandidateCreationJournal.Begin(
-            journalDirectory, LegacyCandidatePlan.OriginalWorkshopId,
+            journalDirectory, plan.Target.OriginalWorkshopId,
             plan.PlanSha256);
         var callbackReceived = false;
         try
@@ -40,7 +40,7 @@ internal static partial class SteamWorkshopPublisher
             if (result.m_eResult != EResult.k_EResultOK
                 || result.m_bUserNeedsToAcceptWorkshopLegalAgreement
                 || newId == 0 || newId == ulong.MaxValue
-                || newId == LegacyCandidatePlan.OriginalWorkshopId)
+                || newId == plan.Target.OriginalWorkshopId)
             {
                 throw new InvalidOperationException(
                     $"Private candidate callback was not a usable success: "

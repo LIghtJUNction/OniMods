@@ -153,10 +153,10 @@ internal static class Program
         ulong? candidateId = null;
         if (!string.IsNullOrWhiteSpace(candidateText))
         {
-            LegacyCandidatePlan.ValidateFixedTarget();
+            var target = LegacyCandidatePlan.ResolveFixedTarget();
             if (!ulong.TryParse(candidateText, NumberStyles.None,
                     CultureInfo.InvariantCulture, out var parsedId)
-                || parsedId is 0 or LegacyCandidatePlan.OriginalWorkshopId)
+                || parsedId == 0 || parsedId == target.OriginalWorkshopId)
             {
                 throw new ArgumentException("Invalid private candidate Workshop ID");
             }
@@ -190,7 +190,8 @@ internal static class Program
             SteamWorkshopPublisher.ValidateAccount();
             var current = candidateId.HasValue
                 ? SteamWorkshopPublisher.QueryItem(
-                    candidateId.Value, LegacyCandidatePlan.CandidateTitle,
+                    candidateId.Value,
+                    LegacyCandidatePlan.ResolveFixedTarget().CandidateTitle,
                     requirePrivate: true)
                 : SteamWorkshopPublisher.QueryTarget();
             SteamWorkshopPublisher.VerifyInstalledLegacy(
@@ -219,7 +220,7 @@ internal static class Program
         plan.Print();
         var journalDirectory = CandidateCreationJournal.DefaultDirectory();
         Console.WriteLine($"creationJournal={CandidateCreationJournal.JournalPath(
-            journalDirectory, LegacyCandidatePlan.OriginalWorkshopId)}");
+            journalDirectory, plan.Target.OriginalWorkshopId)}");
         if (!create)
         {
             Console.WriteLine("privateCandidatePrepared=true; Steam API not initialized");
@@ -236,7 +237,7 @@ internal static class Program
                 + "exact planSha256 printed by the offline preparation command");
         }
         CandidateCreationJournal.RequireNoPriorAttempt(
-            journalDirectory, LegacyCandidatePlan.OriginalWorkshopId);
+            journalDirectory, plan.Target.OriginalWorkshopId);
         SteamAppContext.Prepare(SteamAppRole.Creator);
         if (!SteamAPI.IsSteamRunning() || !SteamAPI.Init())
         {
@@ -255,7 +256,7 @@ internal static class Program
                 plan, original);
             try
             {
-                WaitForPrivateCandidate(newId, plan.Package.Bytes.Length);
+                WaitForPrivateCandidate(newId, plan.Package.Bytes.Length, plan.Title);
                 SteamWorkshopPublisher.VerifyOriginalUnchanged(original);
             }
             catch (Exception error)
@@ -287,7 +288,8 @@ internal static class Program
         return 0;
     }
 
-    private static void WaitForPrivateCandidate(ulong newId, int expectedBytes)
+    private static void WaitForPrivateCandidate(
+        ulong newId, int expectedBytes, string expectedTitle)
     {
         var deadline = DateTime.UtcNow.AddMinutes(2);
         string lastError = "not queried";
@@ -296,7 +298,7 @@ internal static class Program
             try
             {
                 var details = SteamWorkshopPublisher.QueryItem(
-                    newId, LegacyCandidatePlan.CandidateTitle,
+                    newId, expectedTitle,
                     requirePrivate: true);
                 if (details.m_nFileSize == expectedBytes)
                 {
