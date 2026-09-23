@@ -336,9 +336,6 @@ namespace OniMcp.Server
 
             string prefix = identifier.Substring(0, slash);
             string name = identifier.Substring(slash + 1);
-            if (name.Length == 0)
-                return false;
-
             string[] labels = prefix.Split('.');
             if (labels.Length == 0)
                 return false;
