@@ -48,6 +48,16 @@ internal sealed record WorkshopPromotionPlan(
         "The Frosty Planet Pack",
         "New Features",
     ];
+    internal static readonly string[] CycleTrimApprovedTags =
+    [
+        "tweaks",
+        "Base Game",
+        "Spaced Out!",
+        "The Frosty Planet Pack",
+        "The Bionic Booster Pack",
+        "The Prehistoric Planet Pack",
+        "The Aquatic Planet Pack",
+    ];
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -60,10 +70,9 @@ internal sealed record WorkshopPromotionPlan(
         ulong expectedNewId)
     {
         var target = LegacyCandidatePlan.ResolveFixedTarget();
-        if (target.OriginalWorkshopId != LegacyCandidatePlan.OriginalWorkshopId)
-        {
-            throw new InvalidOperationException("Promotion is limited to OniMcp");
-        }
+        var isOniMcp = target.OriginalWorkshopId
+            == LegacyCandidatePlan.OriginalWorkshopId;
+        var approvedTags = isOniMcp ? ApprovedTags : CycleTrimApprovedTags;
         var verified = VerifiedCandidateRecord.Load(
             creationJournalPath, target.OriginalWorkshopId);
         if (verified.NewId != expectedNewId)
@@ -80,33 +89,48 @@ internal sealed record WorkshopPromotionPlan(
         }
         var zipHash = Convert.ToHexString(
             SHA256.HashData(candidatePlan.Package.Bytes));
-        ValidateSnapshot(snapshot, verified.NewId,
-            candidatePlan.Package.Bytes.Length);
+        ValidateSnapshot(snapshot, target, approvedTags,
+            verified.NewId, candidatePlan.Package.Bytes.Length);
         var url = $"https://steamcommunity.com/sharedfiles/filedetails/?id={verified.NewId}";
         if (snapshot.Original.DescriptionEnglish.Contains(url, StringComparison.Ordinal)
             || snapshot.Original.DescriptionChinese.Contains(url, StringComparison.Ordinal))
         {
             throw new InvalidOperationException("Old page already contains this migration link");
         }
-        var oldEnglishNotice =
+        var oldEnglishNotice = isOniMcp ?
             "[h1]Moved to the new ONI MCP Server Workshop item[/h1]\n"
             + "[b]The original item's Steam content format cannot be installed by ONI.[/b]\n"
             + $"[url={url}]Open and subscribe to ONI MCP Server 0.2.5[/url]\n"
             + "[b]Subscriptions do not transfer automatically.[/b] "
             + "Unsubscribe from this old item, then subscribe to the new item. "
+            + "This page remains available as a migration link and history."
+            : "[h1]Moved to the new CycleTrim Workshop item[/h1]\n"
+            + "[b]The original item's Steam content format cannot be installed by ONI.[/b]\n"
+            + $"[url={url}]Open and subscribe to CycleTrim 0.3.4[/url]\n"
+            + "[b]Subscriptions do not transfer automatically.[/b] "
+            + "Unsubscribe from this old item, then subscribe to the new item. "
             + "This page remains available as a migration link and history.";
-        var oldChineseNotice =
+        var oldChineseNotice = isOniMcp ?
             "[h1]ONI MCP Server 已迁移至新创意工坊条目[/h1]\n"
             + "[b]原条目的 Steam 内容格式无法被《缺氧》安装。[/b]\n"
             + $"[url={url}]打开并订阅新的 ONI MCP Server 0.2.5[/url]\n"
+            + "[b]旧订阅不会自动迁移。[/b] 请先取消订阅本旧条目，再订阅新条目。"
+            + "旧页面保留作为迁移入口和历史记录。"
+            : "[h1]CycleTrim 已迁移至新创意工坊条目[/h1]\n"
+            + "[b]原条目的 Steam 内容格式无法被《缺氧》安装。[/b]\n"
+            + $"[url={url}]打开并订阅新的 CycleTrim 0.3.4[/url]\n"
             + "[b]旧订阅不会自动迁移。[/b] 请先取消订阅本旧条目，再订阅新条目。"
             + "旧页面保留作为迁移入口和历史记录。";
         var oldEnglish = oldEnglishNotice + "\n\n"
             + snapshot.Original.DescriptionEnglish;
         var oldChinese = oldChineseNotice + "\n\n"
             + snapshot.Original.DescriptionChinese;
-        var oldTitle = $"ONI MCP Server (Moved to Workshop {verified.NewId})";
-        var oldTitleChinese = $"ONI MCP Server（已迁移至工坊条目 {verified.NewId}）";
+        var oldTitle = isOniMcp
+            ? $"ONI MCP Server (Moved to Workshop {verified.NewId})"
+            : $"CycleTrim (Moved to Workshop {verified.NewId})";
+        var oldTitleChinese = isOniMcp
+            ? $"ONI MCP Server（已迁移至工坊条目 {verified.NewId}）"
+            : $"CycleTrim（已迁移至工坊条目 {verified.NewId}）";
         if (oldTitle.Length > 128 || oldTitleChinese.Length > 128
             || oldEnglish.Length > 8000
             || oldChinese.Length > 8000)
@@ -118,7 +142,7 @@ internal sealed record WorkshopPromotionPlan(
             verified.CreationPlanSha256, Path.GetFullPath(zipPath),
             zipHash, candidatePlan.Package.Bytes.Length, snapshot,
             metadata.Title, metadata.Title, metadata.EnglishDescription,
-            metadata.ChineseDescription, ApprovedTags,
+            metadata.ChineseDescription, approvedTags,
             oldTitle, oldTitleChinese, oldEnglish, oldChinese, string.Empty);
         return draft with { PlanSha256 = draft.ComputeSha256() };
     }
@@ -173,7 +197,9 @@ internal sealed record WorkshopPromotionPlan(
     internal string ReviewMarkdown()
     {
         var text = new StringBuilder();
-        text.AppendLine("# ONI MCP Server Workshop migration review");
+        var displayName = OriginalId == LegacyCandidatePlan.OriginalWorkshopId
+            ? "ONI MCP Server" : "CycleTrim";
+        text.AppendLine($"# {displayName} Workshop migration review");
         text.AppendLine();
         text.AppendLine($"- Plan SHA256: `{PlanSha256}`");
         text.AppendLine($"- Verified creation plan SHA256: `{CreationPlanSha256}`");
@@ -220,7 +246,8 @@ internal sealed record WorkshopPromotionPlan(
     }
 
     private static void ValidateSnapshot(
-        WorkshopPromotionSnapshot snapshot, ulong newId, int expectedZipBytes)
+        WorkshopPromotionSnapshot snapshot, LegacyCandidateTarget target,
+        string[] approvedTags, ulong newId, int expectedZipBytes)
     {
         foreach (var page in new[] { snapshot.Original, snapshot.Candidate })
         {
@@ -232,18 +259,19 @@ internal sealed record WorkshopPromotionPlan(
                 throw new InvalidOperationException("Snapshot has wrong owner, App IDs, or missing language copy");
             }
         }
-        if (snapshot.Original.Id != LegacyCandidatePlan.OriginalWorkshopId
+        if (snapshot.Original.Id != target.OriginalWorkshopId
             || snapshot.Original.Visibility != "Public"
-            || !snapshot.Original.Title.Contains("ONI MCP Server", StringComparison.OrdinalIgnoreCase)
+            || !snapshot.Original.Title.Contains(
+                target.SourceTitleContains, StringComparison.OrdinalIgnoreCase)
             || snapshot.Candidate.Id != newId
             || snapshot.Candidate.Visibility != "Private"
-            || snapshot.Candidate.Title != LegacyCandidatePlan.CandidateTitle
+            || snapshot.Candidate.Title != target.CandidateTitle
             || snapshot.Candidate.FileSize != expectedZipBytes)
         {
             throw new InvalidOperationException("Snapshot does not match the old and private candidate items");
         }
         if (!snapshot.Original.Tags.ToHashSet(StringComparer.Ordinal)
-            .SetEquals(ApprovedTags))
+            .SetEquals(approvedTags))
         {
             throw new InvalidOperationException("Old item tags differ from the approved baseline");
         }

@@ -19,3 +19,11 @@
 3. `--link-old-item`：只在新项公开 Web API 回读通过后，给**旧公开项**设置迁移标题与英/简中说明顶部提示。每次提交等待回调；回读完整正文、原 tags、Public 可见性和未变的旧内容大小，再用公开 Web API 核对旧页的新链接。该阶段不调用 `SetItemContent`，不删除旧项，也不自动改订用户。
 
 任一阶段失败或超时后，阶段 journal 仍保留意图并阻止同一阶段自动重试。先核查 Steam 账号页、公开 API、旧/新安装状态与 journal，再由维护者决定人工恢复。计划 SHA、ZIP 或页面基线变化时必须重新生成计划并复审。上述工具不会自动执行下一阶段。
+
+## CycleTrim 0.3.4 的独立迁移
+
+同一分阶段工具也允许固定的 CycleTrim 原公开 ID `3766318556` 与**已创建但尚未公开**的 Legacy ID `3806858440`。它读取独立的 `cycletrim-legacy-candidate-from-3766318556.jsonl` 创建记录，计划必须引用安全的 CycleTrim 0.3.4 发布工作区里的 `dist/CycleTrim.workshop.vdf`、实际 Legacy ZIP 和预览图；不得用 main 的其他 CycleTrim 游戏逻辑重新打包后沿用旧计划 SHA。
+
+新页正式标题为 `CycleTrim (Early Development)`，英/简中说明逐字取自该 0.3.4 包；tags 沿用旧页的 `tweaks`、`Base Game`、`Spaced Out!`、`The Frosty Planet Pack`、`The Bionic Booster Pack`、`The Prehistoric Planet Pack`、`The Aquatic Planet Pack`。旧页标题为 `CycleTrim (Moved to Workshop 3806858440)`；英/简中说明顶部写明原 Steam 内容格式无法被 ONI 安装、给出新页链接，并提醒先取消旧订阅再手动订阅新项，下面保留原正文。完整 before/after 文本由 CycleTrim 的离线 `--prepare-promotion` 单独输出。
+
+CycleTrim 阶段 journal 固定为 `~/.local/state/onim/workshop-create/promotion/cycletrim-3766318556-to-3806858440.jsonl`，与 OniMcp 的计划和 journal 完全独立。后续依旧按 Private 状态下正式双语 copy/七 tags → 新项 Public 与公开 Web API/Legacy ZIP 回读 → 旧页迁移链接的顺序执行。当前新增支持只供离线计划和审查；未经单独审查与指示，不运行任何 CycleTrim 写入阶段。

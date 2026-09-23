@@ -34,11 +34,42 @@ internal static class Program
         var createCandidate = args.Contains("--create-private-candidate", StringComparer.Ordinal);
         var capturePromotion = args.Contains("--capture-promotion-snapshot", StringComparer.Ordinal);
         var preparePromotion = args.Contains("--prepare-promotion", StringComparer.Ordinal);
+        var validatePromotionPlan = args.Contains("--validate-promotion-plan", StringComparer.Ordinal);
         var stagePrivateMetadata = args.Contains("--stage-private-metadata", StringComparer.Ordinal);
         var publishPromotedItem = args.Contains("--publish-promoted-item", StringComparer.Ordinal);
         var linkOldItem = args.Contains("--link-old-item", StringComparer.Ordinal);
         var updatePreview = args.Contains("--update-preview", StringComparer.Ordinal);
         var noChangeNote = args.Contains("--no-change-note", StringComparer.Ordinal);
+        if (validatePromotionPlan)
+        {
+            if (queryOnly || consumerContext || validateOnly || metadataOnly
+                || verifyInstalled || prepareCandidate || createCandidate
+                || capturePromotion || preparePromotion || stagePrivateMetadata
+                || publishPromotedItem || linkOldItem || updatePreview || noChangeNote)
+            {
+                throw new ArgumentException("Promotion plan validation cannot be combined with another mode");
+            }
+            var planPath = ReadOption(args, "--plan");
+            var expectedHash = ReadOption(args, "--expected-plan-sha256");
+            if (string.IsNullOrWhiteSpace(planPath)
+                || expectedHash.Length != 64 || !expectedHash.All(Uri.IsHexDigit))
+            {
+                throw new ArgumentException(
+                    "Use --validate-promotion-plan --plan <path> --expected-plan-sha256 <hash>");
+            }
+            var plan = WorkshopPromotionPlan.Load(
+                Path.GetFullPath(planPath), expectedHash);
+            if (plan.OriginalId
+                != LegacyCandidatePlan.ResolveFixedTarget().OriginalWorkshopId)
+            {
+                throw new InvalidOperationException("Promotion plan has the wrong fixed target");
+            }
+            Console.WriteLine($"validatedPromotionPlanSha256={plan.PlanSha256}");
+            Console.WriteLine($"oldId={plan.OriginalId} newId={plan.NewId}");
+            Console.WriteLine($"zipSha256={plan.ZipSha256}");
+            Console.WriteLine("promotionPlanValidatedOffline=true; Steam API not initialized");
+            return 0;
+        }
         var promotionStageCount = new[]
         {
             stagePrivateMetadata, publishPromotedItem, linkOldItem,
@@ -367,10 +398,6 @@ internal static class Program
                 "Usage: --capture-promotion-snapshot --expected-new-id <id> --output <path>");
         }
         var target = LegacyCandidatePlan.ResolveFixedTarget();
-        if (target.OriginalWorkshopId != LegacyCandidatePlan.OriginalWorkshopId)
-        {
-            throw new InvalidOperationException("Promotion snapshot is limited to OniMcp");
-        }
         var record = VerifiedCandidateRecord.Load(
             CandidateCreationJournal.JournalPath(
                 CandidateCreationJournal.DefaultDirectory(), target.OriginalWorkshopId),
@@ -433,9 +460,10 @@ internal static class Program
         var snapshot = JsonSerializer.Deserialize<WorkshopPromotionSnapshot>(
             File.ReadAllText(snapshotPath))
             ?? throw new InvalidOperationException("Promotion snapshot JSON is empty");
+        var target = LegacyCandidatePlan.ResolveFixedTarget();
         var journalPath = CandidateCreationJournal.JournalPath(
             CandidateCreationJournal.DefaultDirectory(),
-            LegacyCandidatePlan.OriginalWorkshopId);
+            target.OriginalWorkshopId);
         var plan = WorkshopPromotionPlan.Create(
             metadata, zipPath, snapshot, journalPath, newId);
         var (planPath, reviewPath) = plan.Save(outputPath);
@@ -455,9 +483,10 @@ internal static class Program
 
     private static ulong ReadExpectedNewId(string[] args)
     {
+        var target = LegacyCandidatePlan.ResolveFixedTarget();
         if (!ulong.TryParse(ReadOption(args, "--expected-new-id"),
             NumberStyles.None, CultureInfo.InvariantCulture, out var id)
-            || id == 0 || id == LegacyCandidatePlan.OriginalWorkshopId)
+            || id == 0 || id == target.OriginalWorkshopId)
         {
             throw new ArgumentException("A distinct --expected-new-id is required");
         }

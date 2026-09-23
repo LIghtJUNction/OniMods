@@ -22,8 +22,14 @@ internal sealed class PromotionStageJournal
     internal static string DefaultPath(ulong originalId, ulong newId)
     {
         var baseDirectory = CandidateCreationJournal.DefaultDirectory();
+        var prefix = originalId switch
+        {
+            LegacyCandidatePlan.OriginalWorkshopId => "onimcp",
+            LegacyCandidatePlan.CycleTrimOriginalWorkshopId => "cycletrim",
+            _ => throw new ArgumentException("Unknown fixed promotion target", nameof(originalId)),
+        };
         return System.IO.Path.Combine(baseDirectory, "promotion",
-            $"onimcp-{originalId}-to-{newId}.jsonl");
+            $"{prefix}-{originalId}-to-{newId}.jsonl");
     }
 
     internal static PromotionStageJournal Start(
