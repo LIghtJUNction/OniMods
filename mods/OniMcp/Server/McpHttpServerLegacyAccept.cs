@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Net;
 
 namespace OniMcp.Server
@@ -13,7 +12,7 @@ namespace OniMcp.Server
                 return true;
 
             int bestSpecificity = -1;
-            double bestQuality = 0.0;
+            decimal bestQuality = 0m;
             foreach (string rawEntry in accept.Split(','))
             {
                 string entry = rawEntry.Trim();
@@ -25,9 +24,10 @@ namespace OniMcp.Server
                 if (specificity < 0)
                     continue;
 
-                double quality = 1.0;
+                decimal quality = 1m;
                 bool validQuality = true;
                 bool mediaParametersMatch = true;
+                bool qualitySeen = false;
                 for (int i = 1; i < parts.Length; i++)
                 {
                     string parameter = parts[i].Trim();
@@ -39,16 +39,13 @@ namespace OniMcp.Server
                         continue;
                     }
 
-                    string rawQuality = parameter.Substring(separator + 1).Trim().Trim('"');
-                    double parsedQuality;
-                    if (!double.TryParse(rawQuality, NumberStyles.AllowDecimalPoint,
-                        CultureInfo.InvariantCulture, out parsedQuality)
-                        || parsedQuality < 0.0 || parsedQuality > 1.0)
+                    if (qualitySeen
+                        || !TryParseHttpQualityValue(parameter.Substring(separator + 1), out quality))
                     {
                         validQuality = false;
                         break;
                     }
-                    quality = parsedQuality;
+                    qualitySeen = true;
                 }
 
                 if (!validQuality || !mediaParametersMatch)
@@ -65,7 +62,7 @@ namespace OniMcp.Server
                 }
             }
 
-            return bestSpecificity >= 0 && bestQuality > 0.0;
+            return bestSpecificity >= 0 && bestQuality > 0m;
         }
 
         private static int GetJsonMediaRangeSpecificity(string mediaRange)
