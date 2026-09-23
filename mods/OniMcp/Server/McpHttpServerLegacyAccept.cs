@@ -12,6 +12,8 @@ namespace OniMcp.Server
             if (string.IsNullOrWhiteSpace(accept))
                 return true;
 
+            int bestSpecificity = -1;
+            double bestQuality = 0.0;
             foreach (string rawEntry in accept.Split(','))
             {
                 string entry = rawEntry.Trim();
@@ -19,8 +21,8 @@ namespace OniMcp.Server
                     continue;
 
                 string[] parts = entry.Split(';');
-                string mediaRange = parts[0].Trim();
-                if (!MatchesJsonMediaRange(mediaRange))
+                int specificity = GetJsonMediaRangeSpecificity(parts[0].Trim());
+                if (specificity < 0)
                     continue;
 
                 double quality = 1.0;
@@ -47,18 +49,32 @@ namespace OniMcp.Server
                     quality = parsedQuality;
                 }
 
-                if (validQuality && quality > 0.0)
-                    return true;
+                if (!validQuality)
+                    continue;
+
+                if (specificity > bestSpecificity)
+                {
+                    bestSpecificity = specificity;
+                    bestQuality = quality;
+                }
+                else if (specificity == bestSpecificity && quality > bestQuality)
+                {
+                    bestQuality = quality;
+                }
             }
 
-            return false;
+            return bestSpecificity >= 0 && bestQuality > 0.0;
         }
 
-        private static bool MatchesJsonMediaRange(string mediaRange)
+        private static int GetJsonMediaRangeSpecificity(string mediaRange)
         {
-            return string.Equals(mediaRange, "application/json", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(mediaRange, "application/*", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(mediaRange, "*/*", StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(mediaRange, "application/json", StringComparison.OrdinalIgnoreCase))
+                return 2;
+            if (string.Equals(mediaRange, "application/*", StringComparison.OrdinalIgnoreCase))
+                return 1;
+            if (string.Equals(mediaRange, "*/*", StringComparison.OrdinalIgnoreCase))
+                return 0;
+            return -1;
         }
     }
 }
