@@ -27,6 +27,7 @@ namespace OniMcp.Server
 
                 double quality = 1.0;
                 bool validQuality = true;
+                bool mediaParametersMatch = true;
                 for (int i = 1; i < parts.Length; i++)
                 {
                     string parameter = parts[i].Trim();
@@ -34,6 +35,7 @@ namespace OniMcp.Server
                     if (separator <= 0
                         || !string.Equals(parameter.Substring(0, separator).Trim(), "q", StringComparison.OrdinalIgnoreCase))
                     {
+                        mediaParametersMatch = false;
                         continue;
                     }
 
@@ -49,7 +51,7 @@ namespace OniMcp.Server
                     quality = parsedQuality;
                 }
 
-                if (!validQuality)
+                if (!validQuality || !mediaParametersMatch)
                     continue;
 
                 if (specificity > bestSpecificity)
