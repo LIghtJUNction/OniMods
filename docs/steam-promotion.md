@@ -12,7 +12,7 @@
 
 ## 分阶段上线门禁
 
-以下命令模式只在计划和文案获准后使用，每次都必须携带 `--plan <plan.json> --expected-plan-sha256 <审过的计划 SHA> --confirm-promotion-stage`。每阶段调用前核对 creator `636750`、consumer `457140`、owner `76561199137573787`、新旧 ID、页面现状和计划 ZIP SHA；阶段意图先写入 `~/.local/state/onim/workshop-create/promotion/onimcp-3731864673-to-3806839864.jsonl` 并落盘。
+以下命令模式只在计划和文案获准后使用，每次都必须携带 `--plan <plan.json> --expected-plan-sha256 <审过的计划 SHA> --confirm-promotion-stage`。父进程为每个写阶段启动独立的 **Consumer `457140`** 进程，进程启动前设置 App 环境并使用 `consumer/steam_appid.txt`；UGC 元数据写入沿用已验证的游戏 App 上下文。Creator `636750` 仅用于只读基线查询。每阶段调用前核对 creator `636750`、consumer `457140`、owner `76561199137573787`、新旧 ID、页面现状和计划 ZIP SHA；阶段意图先写入 `~/.local/state/onim/workshop-create/promotion/onimcp-3731864673-to-3806839864.jsonl` 并落盘。
 
 1. `--stage-private-metadata`：只更新**新私有项**的正式英文标题/说明、五个 tags，再更新简中标题/说明。各次提交等待有界回调和语言回读；确认仍为 Private、ZIP 大小不变，再在 ONI `457140` 独立进程验证 `LegacyItem`、安装文件路径与 ZIP SHA。旧项的标题、说明和内容保持原样。
 2. `--publish-promoted-item`：只在上一步 journal 验证完成后，把新项可见性改为 Public。先回读 Steam 元数据和 ONI 安装 ZIP，再等待无密钥的公开 [GetPublishedFileDetails Web API](https://partner.steamgames.com/doc/webapi/ISteamRemoteStorage) 返回 result `1`、正确 ID/owner/双 App/正式英文标题/说明/tags。公开 API 对 Private 项返回不可见，不能用创建回调代替公开回读。

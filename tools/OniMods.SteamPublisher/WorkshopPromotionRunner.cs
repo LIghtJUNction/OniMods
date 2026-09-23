@@ -29,15 +29,15 @@ internal static class WorkshopPromotionRunner
         PromotionStageJournal? journal = null;
         try
         {
-            SteamAppContext.Prepare(SteamAppRole.Creator);
+            SteamAppContext.Prepare(SteamAppRole.Consumer);
             if (!SteamAPI.IsSteamRunning() || !SteamAPI.Init())
             {
                 throw new InvalidOperationException(
-                    "Steam creator context could not initialize for promotion");
+                    "Steam consumer context could not initialize for promotion");
             }
             try
             {
-                SteamAppContext.VerifyActive(SteamAppRole.Creator);
+                SteamAppContext.VerifyActive(SteamAppRole.Consumer);
                 SteamWorkshopPublisher.ValidateAccount();
                 RequirePrerequisites(plan, stage, journalPath);
                 journal = PromotionStageJournal.Start(
