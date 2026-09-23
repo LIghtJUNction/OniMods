@@ -8,10 +8,10 @@ internal static class WorkshopPromotionRunner
         var plan = WorkshopPromotionPlan.Load(
             Path.GetFullPath(planPath), expectedPlanSha256);
         var target = LegacyCandidatePlan.ResolveFixedTarget();
-        if (target.OriginalWorkshopId != LegacyCandidatePlan.OriginalWorkshopId
-            || plan.OriginalId != target.OriginalWorkshopId)
+        if (plan.OriginalId != target.OriginalWorkshopId)
         {
-            throw new InvalidOperationException("Promotion is limited to the verified OniMcp item");
+            throw new InvalidOperationException(
+                "Promotion plan does not match the selected fixed Workshop item");
         }
         var creation = VerifiedCandidateRecord.Load(
             CandidateCreationJournal.JournalPath(

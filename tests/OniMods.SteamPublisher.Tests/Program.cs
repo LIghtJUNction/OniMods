@@ -16,6 +16,7 @@ if (oniPlanSha == cyclePlanSha)
     throw new InvalidOperationException("Different source items shared a candidate plan SHA");
 }
 RunPromotionCase();
+RunCycleTrimPromotionCase();
 
 var directory = Path.Combine(Path.GetTempPath(),
     "onim-candidate-journal-" + Guid.NewGuid().ToString("N"));
@@ -349,3 +350,89 @@ static void RunPromotionCase()
 static string ProposedDescription(string section) =>
     section.Split("Description after (complete, proposed):\n\n```text\n", 2)[1]
         .Split("\n```", 2)[0];
+
+static void RunCycleTrimPromotionCase()
+{
+    Environment.SetEnvironmentVariable("ONIM_PUBLISH_WORKSHOP_ID", "3766318556");
+    Environment.SetEnvironmentVariable("ONIM_PUBLISH_NAME", "CycleTrim");
+    var root = Path.Combine(Path.GetTempPath(),
+        "cycletrim-promotion-" + Guid.NewGuid().ToString("N"));
+    try
+    {
+        var content = Path.Combine(root, "CycleTrim");
+        Directory.CreateDirectory(content);
+        File.WriteAllBytes(Path.Combine(content, "CycleTrim.dll"), [4, 5, 6]);
+        File.WriteAllText(Path.Combine(content, "mod.yaml"), "title: CycleTrim\n");
+        File.WriteAllText(Path.Combine(content, "mod_info.yaml"), "version: 0.3.4\n");
+        var preview = Path.Combine(content, "preview.png");
+        File.WriteAllBytes(preview, [0x89, 0x50, 0x4E, 0x47]);
+        var metadata = new WorkshopMetadata(
+            content, preview, "CycleTrim (Early Development)",
+            "[h2]v0.3.4 Workshop installation update[/h2]\nEnglish body",
+            "[h2]v0.3.4 创意工坊安装更新[/h2]\n中文正文", "Test");
+        var candidate = LegacyCandidatePlan.Create(metadata);
+        var journal = CandidateCreationJournal.Begin(
+            root, LegacyCandidatePlan.CycleTrimOriginalWorkshopId,
+            candidate.PlanSha256);
+        journal.RecordCallback("k_EResultOK", 3806858440, false);
+        journal.RecordVerification(true, "Private Legacy ZIP installed with matching bytes");
+        const string oldEnglish = "[h1]Old CycleTrim body[/h1]";
+        const string oldChinese = "[h1]旧版 CycleTrim 中文正文[/h1]";
+        var snapshot = new WorkshopPromotionSnapshot(
+            DateTimeOffset.UtcNow,
+            new WorkshopPageSnapshot(
+                3766318556, 636750, 457140, 76561199137573787,
+                "CycleTrim (Early Development)", string.Empty,
+                oldEnglish, oldChinese, WorkshopPromotionPlan.CycleTrimApprovedTags,
+                "Public", 400000, 100),
+            new WorkshopPageSnapshot(
+                3806858440, 636750, 457140, 76561199137573787,
+                LegacyCandidatePlan.CycleTrimCandidateTitle,
+                LegacyCandidatePlan.CycleTrimCandidateTitle,
+                candidate.Description, candidate.Description, [],
+                "Private", candidate.Package.Bytes.Length, 200));
+        var plan = WorkshopPromotionPlan.Create(
+            metadata, candidate.Package.Path, snapshot, journal.Path, 3806858440);
+        var repeated = WorkshopPromotionPlan.Create(
+            metadata, candidate.Package.Path, snapshot, journal.Path, 3806858440);
+        if (plan.PlanSha256 != repeated.PlanSha256
+            || plan.OriginalId != 3766318556
+            || plan.NewId != 3806858440
+            || plan.NewTitle != "CycleTrim (Early Development)"
+            || plan.OldTitle != "CycleTrim (Moved to Workshop 3806858440)"
+            || !plan.NewTags.SequenceEqual(WorkshopPromotionPlan.CycleTrimApprovedTags)
+            || !plan.OldDescriptionEnglish.EndsWith(oldEnglish, StringComparison.Ordinal)
+            || !plan.OldDescriptionChinese.EndsWith(oldChinese, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("CycleTrim promotion plan changed identity, SHA, tags, or old body");
+        }
+        var review = plan.ReviewMarkdown();
+        var newChinese = ProposedDescription(
+            review.Split("## New item / 简体中文", 2)[1].Split("## New tags", 2)[0]);
+        var oldChineseSection = ProposedDescription(
+            review.Split("## Old item / 简体中文", 2)[1]);
+        if (!newChinese.Contains("v0.3.4 创意工坊安装更新", StringComparison.Ordinal)
+            || !oldChineseSection.Contains("原条目的 Steam 内容格式无法被《缺氧》安装", StringComparison.Ordinal)
+            || !oldChineseSection.Contains("旧订阅不会自动迁移", StringComparison.Ordinal)
+            || !oldChineseSection.Contains("3806858440", StringComparison.Ordinal)
+            || !PromotionStageJournal.DefaultPath(3766318556, 3806858440)
+                .Contains("cycletrim-3766318556-to-3806858440.jsonl", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("CycleTrim review or independent stage journal is wrong");
+        }
+        var (planPath, _) = plan.Save(Path.Combine(root, "promotion.json"));
+        if (WorkshopPromotionPlan.Load(planPath, plan.PlanSha256).PlanSha256
+            != plan.PlanSha256)
+        {
+            throw new InvalidOperationException("CycleTrim plan could not be read back");
+        }
+        Console.WriteLine("CycleTrim promotion plan, bilingual copy, and journal path passed");
+    }
+    finally
+    {
+        if (Directory.Exists(root))
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+}
