@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OniMcp.Server;
 using OniMcp.Support;
+using PeterHan.PLib;
 using PeterHan.PLib.Options;
 using UnityEngine;
 
@@ -20,6 +21,8 @@ namespace OniMcp.Config
         private static readonly object SyncRoot = new object();
         private static volatile OniMcpOptions _current;
         private const int CurrentSecurityMigrationVersion = 1;
+        private const int MaxDisplayedEndpointLength = 48;
+        private const string ProjectSupportUrl = "https://api.lmm.best";
 
         public int SecurityMigrationVersion { get; set; } = CurrentSecurityMigrationVersion;
 
@@ -39,7 +42,7 @@ namespace OniMcp.Config
         [Option("Require token", "Disabled by default for loopback-only access. Non-loopback hosts require authentication.", "Security")]
         public bool AuthEnabled { get; set; } = false;
 
-        [Option("Token", "Used only when Require token is enabled. A token is generated safely if enabled while empty.", "Security")]
+        [DynamicOption(typeof(MaskedTokenOptionsEntry))]
         public string AuthToken { get; set; } = CreateAuthToken();
 
         [Option("Disable auto disinfect globally", "Keep ONI's global auto disinfect setting disabled when the mod applies this policy.", "Gameplay")]
@@ -178,11 +181,15 @@ namespace OniMcp.Config
 
         public IEnumerable<IOptionsEntry> CreateOptions()
         {
+            string endpoint = EndpointUrl;
+            string displayedEndpoint = endpoint.Length > MaxDisplayedEndpointLength
+                ? endpoint.Substring(0, MaxDisplayedEndpointLength - 3) + "..."
+                : endpoint;
             yield return new TextBlockOptionsEntry(
                 "OniMcpStatus",
                 new OptionAttribute(
-                    "Endpoint: " + EndpointUrl + "\nConfig: " + ConfigPath + "\nAuthentication: " + (AuthEnabled ? "enabled" : "disabled by default"),
-                    "Current endpoint and config path. Expand Status, Server, Security, and Screenshots; PLib scrolls the dialog when needed.",
+                    "Endpoint: " + displayedEndpoint + "\nConfig: OniMcpConfig.json\nAuthentication: " + (AuthEnabled ? "enabled" : "disabled by default"),
+                    "Endpoint: " + endpoint + "\nConfig: " + ConfigPath + "\nUse Open config folder to locate the file.",
                     "Status"));
 
             var browseButton = new ButtonOptionsEntry(
@@ -211,6 +218,15 @@ namespace OniMcp.Config
                     "Status"));
             configButton.Value = (Action<object>)(_ => OpenConfigFolder());
             yield return configButton;
+
+            var supportButton = new ButtonOptionsEntry(
+                "OpenProjectSupport",
+                new OptionAttribute(
+                    "支持项目 / AI API · api.lmm.best",
+                    "打开 " + ProjectSupportUrl + "。这是可选链接；使用 OniMcp 不需要此服务。",
+                    "Support"));
+            supportButton.Value = (Action<object>)(_ => Application.OpenURL(ProjectSupportUrl));
+            yield return supportButton;
         }
 
         public void OnOptionsChanged()
