@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -11,6 +10,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Server;
+using OniMcp.Tools;
 
 internal static class ModernBase64CanonicalRegression
 {
