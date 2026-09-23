@@ -7,7 +7,9 @@
 [*] Support modern MCP discovery and protocol negotiation while retaining legacy client compatibility.
 [*] Reject malformed HTTP and MCP requests before they reach game actions; bound session and task lifetimes.
 [*] Report the installed mod version consistently to both modern and legacy clients.
+[*] Keep the options dialog compact, hide the token while editing it, and add an optional project-support button.
 [/list]
+[b]Validation note:[/b] Automated checks and the PLib options UI call chain passed; a full in-game click-through of the dialog has not been completed.
 
 [h2]v0.2.3 stability update[/h2]
 [list]

@@ -9,6 +9,7 @@ Generated from `git log -- mods/OniMcp`.
 - Bound legacy sessions and queued tasks, clean up expired work, and isolate tool-call state between requests.
 - Harden sandbox and world-editor routing, error reporting, and resource URI handling.
 - Report the package version consistently in legacy and modern `serverInfo` responses.
+- Keep the options dialog compact, mask the editable token field, and add an optional `https://api.lmm.best` project-support button. Automated checks and the PLib UI call chain were verified; full in-game click-through remains unverified.
 
 ## 2026-09-12 — 0.2.3
 
