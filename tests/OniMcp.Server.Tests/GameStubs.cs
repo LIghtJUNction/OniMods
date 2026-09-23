@@ -15,6 +15,18 @@ namespace UnityEngine
     }
 }
 
+public sealed class Game
+{
+    public static Game Instance { get; set; }
+    public bool Loading { get; set; }
+    public bool IsLoading() { return Loading; }
+}
+
+public static class Grid
+{
+    public static int CellCount { get; set; } = 1;
+}
+
 namespace OniMcp.Support
 {
     public static class OniMcpLog
@@ -90,6 +102,7 @@ namespace OniMcp.Tools
     public static class OniToolRegistry
     {
         public static int Calls;
+        public static Action<string, JObject> OnCall;
         public static int MiddlewareCalls;
         public static string LastName;
         public static JObject LastArguments;
@@ -212,6 +225,7 @@ namespace OniMcp.Tools
             Calls++;
             LastName = name;
             LastArguments = arguments;
+            OnCall?.Invoke(name, arguments);
             return CallToolResult.Text("ok");
         }
     }

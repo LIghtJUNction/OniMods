@@ -20,6 +20,7 @@ namespace OniMcp.Server
         internal const int MaxPendingMainThreadHttpRequests = 20;
         // MCP 2026-07-28 reserves -32000..-32019 for implementation-defined server errors.
         internal const int MainThreadBusyErrorCode = -32000;
+        internal const int GameContextLifecycleErrorCode = -32001;
 
         private readonly object _httpFrontDoorAdmissionLock = new object();
         private int _httpFrontDoorAdmissionGeneration;
@@ -165,6 +166,29 @@ namespace OniMcp.Server
             }
         }
 
+        private static bool IsGameContextBoundLegacyRequest(string method)
+        {
+            return string.Equals(method, "tools/call", StringComparison.Ordinal)
+                || string.Equals(method, "resources/read", StringComparison.Ordinal);
+        }
+
+        private static JsonRpcResponse GameContextError(object requestId, int capturedGeneration)
+        {
+            string reason = GameContextLifecycle.RejectionReason(capturedGeneration);
+            if (reason == null)
+                return null;
+
+            return JsonRpcResponse.MakeError(requestId, GameContextLifecycleErrorCode,
+                reason == "stale_game_context"
+                    ? "Game context changed before this request ran; retry in the current game"
+                    : "Game is loading; retry after the new game is ready",
+                new JObject
+                {
+                    ["reasonCode"] = reason,
+                    ["retryable"] = true
+                });
+        }
+
         private void ResetMainThreadHttpAdmission()
         {
             lock (_mainThreadAdmissionLock)
@@ -235,10 +259,13 @@ namespace OniMcp.Server
             private McpHttpServer _owner;
             private readonly int _generation;
 
+            internal readonly int GameContextGeneration;
+
             internal MainThreadHttpAdmissionLease(McpHttpServer owner, int generation)
             {
                 _owner = owner;
                 _generation = generation;
+                GameContextGeneration = GameContextLifecycle.CaptureGeneration();
             }
 
             internal bool IsCurrentGeneration()
