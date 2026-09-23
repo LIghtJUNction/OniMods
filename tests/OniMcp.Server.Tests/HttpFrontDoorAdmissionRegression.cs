@@ -107,6 +107,15 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
                 "application/json;q=0.5, text/event-stream;q=0.5", HttpStatusCode.OK,
                 "Weighted exact modern media ranges were rejected");
             AssertModernPostStatus(port, discover, "server/discover",
+                "application/json;q=0.123, text/event-stream;q=0.123", HttpStatusCode.OK,
+                "Valid three-digit modern qvalues were rejected");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json;q=0.1234, text/event-stream", HttpStatusCode.NotAcceptable,
+                "Modern request treated a malformed four-digit JSON qvalue as acceptable");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json, text/event-stream;q=0.1234", HttpStatusCode.NotAcceptable,
+                "Modern request treated a malformed four-digit SSE qvalue as acceptable");
+            AssertModernPostStatus(port, discover, "server/discover",
                 "application/json", HttpStatusCode.NotAcceptable,
                 "Modern request accepted a client that cannot consume SSE responses");
             AssertModernPostStatus(port, discover, "server/discover",
