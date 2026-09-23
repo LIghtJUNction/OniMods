@@ -436,7 +436,11 @@ namespace OniMcp.Server
             string payload = headerValue.Substring(Base64HeaderPrefix.Length, payloadLength);
             try
             {
-                decodedValue = StrictUtf8.GetString(Convert.FromBase64String(payload));
+                byte[] bytes = Convert.FromBase64String(payload);
+                if (!string.Equals(Convert.ToBase64String(bytes), payload, StringComparison.Ordinal))
+                    return false;
+
+                decodedValue = StrictUtf8.GetString(bytes);
                 return true;
             }
             catch (FormatException)
