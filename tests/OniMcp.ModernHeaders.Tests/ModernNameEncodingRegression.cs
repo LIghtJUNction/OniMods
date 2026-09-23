@@ -9,6 +9,7 @@ internal static class ModernNameEncodingRegression
     {
         VerifyNameEncodingBoundary();
         ModernContentTypeRegression.Verify();
+        DuplicateModernRoutingHeaderRegression.Verify();
         typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static)
             .Invoke(null, null);
     }
