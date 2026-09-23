@@ -79,6 +79,14 @@ internal static class LegacyAcceptNegotiationRegressionEntry
                 Assert(server.GetSessionSummaries().Count == 1,
                     "Rejected established request changed legacy session ownership");
 
+                using (var response = Post(client, MissingMethodRequest(51011), "text/event-stream", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Response-bearing legacy request with missing method bypassed explicit JSON rejection");
+                }
+                Assert(server.GetSessionSummaries().Count == 1,
+                    "Rejected malformed request changed legacy session ownership");
+
                 using (var response = Post(client, PingRequest(51005), null, sessionId, "2025-11-25"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
@@ -171,6 +179,11 @@ internal static class LegacyAcceptNegotiationRegressionEntry
     {
         return "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":" + id
             + ",\"params\":{\"name\":\"test\",\"arguments\":{}}}";
+    }
+
+    private static string MissingMethodRequest(int id)
+    {
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"params\":{}}";
     }
 
     private static string PingRequest(int id)
