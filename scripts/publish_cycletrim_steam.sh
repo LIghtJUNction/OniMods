@@ -5,7 +5,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOD_KEY="${ONIM_PUBLISH_MOD:-CycleTrim}"
 APP_ID="457140"
 EXPECTED_OWNER="76561199137573787"
-STEAMCMD_URL="https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
 PUBLISHER_PROJECT="$ROOT/tools/OniMods.SteamPublisher/OniMods.SteamPublisher.csproj"
 PUBLISHER_DLL="$ROOT/tools/OniMods.SteamPublisher/bin/Release/net10.0/OniMods.SteamPublisher.dll"
 case "$MOD_KEY" in
@@ -25,34 +24,30 @@ esac
 DIST_DIR="$ROOT/dist/$MOD_KEY"
 VDF_PATH="$ROOT/dist/$MOD_KEY.workshop.vdf"
 DRY_RUN=false
-LOGIN_ONLY=false
 SKIP_TESTS=false
 ALLOW_DIRTY=false
-TRANSPORT="client"
 
 usage() {
   cat <<'EOF'
 Usage: scripts/publish_cycletrim_steam.sh [options]
 
   --dry-run      Build, test, and validate metadata without uploading
-  --steamcmd     Use SteamCMD instead of the logged-in Steam client UGC API
-  --login        Seed SteamCMD's cached login; implies --steamcmd
   --skip-tests   Skip contract, binary, benchmark, and Rust tests
   --allow-dirty  Permit publishing an uncommitted worktree
   -h, --help     Show this help
 
-The default client transport starts Steam when needed but never starts ONI.
-It verifies app, item, and owner IDs before submitting the update.
+The publisher uses the logged-in Steam client and uploads a single legacy ZIP.
+SteamCMD's directory upload is incompatible with ONI's Workshop loader.
+It verifies app, item, owner, and installed ZIP before reporting success.
 EOF
 }
 
 while (($#)); do
   case "$1" in
   --dry-run) DRY_RUN=true ;;
-  --steamcmd) TRANSPORT="steamcmd" ;;
-  --login)
-    LOGIN_ONLY=true
-    TRANSPORT="steamcmd"
+  --steamcmd | --login)
+    echo "SteamCMD directory upload cannot produce an ONI-compatible legacy item" >&2
+    exit 2
     ;;
   --skip-tests) SKIP_TESTS=true ;;
   --allow-dirty) ALLOW_DIRTY=true ;;
@@ -68,11 +63,6 @@ while (($#)); do
   esac
   shift
 done
-
-if [[ "$DRY_RUN" == true && "$LOGIN_ONLY" == true ]]; then
-  echo "--dry-run and --login cannot be used together" >&2
-  exit 2
-fi
 
 lock_dir="${XDG_RUNTIME_DIR:-/tmp}/onim-${MOD_KEY,,}-publish.lock.d"
 mkdir "$lock_dir" 2>/dev/null || {
@@ -130,7 +120,9 @@ run_tests() {
     (cd "$ROOT" && python scripts/verify_cycletrim_release_binary.py)
     (cd "$ROOT" && dotnet run --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj)
   else
+    (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Debug -warnaserror)
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Release -warnaserror)
+    (cd "$ROOT" && dotnet build mods/CycleTrim/CycleTrim.csproj -c Release -warnaserror)
     (cd "$ROOT" && dotnet format mods/OniMcp/OniMcp.csproj style \
       --diagnostics IDE0005 --verify-no-changes --no-restore)
     (cd "$ROOT" && for verifier in scripts/verify_*.py; do python "$verifier"; done)
@@ -138,6 +130,7 @@ run_tests() {
   fi
   (cd "$ROOT" && cargo test)
   (cd "$ROOT" && dotnet build "$PUBLISHER_PROJECT" -c Release)
+  (cd "$ROOT" && python scripts/test_legacy_workshop_package.py)
 }
 
 run_publisher() {
@@ -158,108 +151,6 @@ build_metadata() {
   grep -Eq "\"publishedfileid\"[[:space:]]+\"$EXPECTED_ID\"" "$VDF_PATH"
   dotnet build "$PUBLISHER_PROJECT" -c Release >/dev/null
   run_publisher --validate-vdf --vdf "$VDF_PATH"
-}
-
-find_steamcmd() {
-  if [[ -n "${STEAMCMD:-}" && -x "$STEAMCMD" ]]; then
-    printf '%s\n' "$STEAMCMD"
-    return
-  fi
-  if command -v steamcmd >/dev/null 2>&1; then
-    command -v steamcmd
-    return
-  fi
-
-  local data_home steamcmd_dir archive
-  data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
-  steamcmd_dir="$data_home/onim/steamcmd"
-  if [[ -x "$steamcmd_dir/steamcmd.sh" ]]; then
-    printf '%s\n' "$steamcmd_dir/steamcmd.sh"
-    return
-  fi
-
-  mkdir -p "$steamcmd_dir"
-  archive="$(mktemp "$steamcmd_dir/.steamcmd.XXXXXX.tar.gz")"
-  trap 'rm -f "$archive"' RETURN
-  curl --proto '=https' --tlsv1.2 -fsSL "$STEAMCMD_URL" -o "$archive"
-  tar -tzf "$archive" >/dev/null
-  tar -xzf "$archive" -C "$steamcmd_dir"
-  chmod +x "$steamcmd_dir/steamcmd.sh"
-  rm -f "$archive"
-  trap - RETURN
-  printf '%s\n' "$steamcmd_dir/steamcmd.sh"
-}
-
-check_cached_login() {
-  local steamcmd_path="$1"
-  local steam_user="$2"
-  local output
-  output="$("$steamcmd_path" +login "$steam_user" +quit </dev/null 2>&1 || true)"
-  if grep -Eqi 'Cached credentials not found|Invalid Password|ERROR \(' <<<"$output"; then
-    echo "SteamCMD has no valid cached login. Run this script with --login once." >&2
-    exit 1
-  fi
-  grep -Fqi 'Logged in OK' <<<"$output" || {
-    echo "SteamCMD login preflight failed. Run this script with --login and retry." >&2
-    exit 1
-  }
-}
-
-upload_vdf_with_steamcmd() {
-  local output
-  output="$("$steamcmd_path" \
-    +login "$steam_user" \
-    +workshop_build_item "$VDF_PATH" \
-    +quit 2>&1)" || {
-    tail -40 <<<"$output" >&2
-    echo "SteamCMD upload failed" >&2
-    exit 1
-  }
-  if grep -Eqi 'error!' <<<"$output"; then
-    tail -40 <<<"$output" >&2
-    echo "SteamCMD upload reported an error" >&2
-    exit 1
-  fi
-  echo "SteamCMD upload completed"
-}
-
-detect_steam_user() {
-  if [[ -n "${STEAM_USERNAME:-}" ]]; then
-    printf '%s\n' "$STEAM_USERNAME"
-    return
-  fi
-
-  local file
-  for file in \
-    "$HOME/.local/share/Steam/config/loginusers.vdf" \
-    "$HOME/.steam/steam/config/loginusers.vdf"; do
-    [[ -f "$file" ]] || continue
-    python - "$file" <<'PY'
-import re
-import sys
-
-account = None
-accounts = []
-with open(sys.argv[1], encoding="utf-8", errors="replace") as handle:
-    for line in handle:
-        match = re.match(r'\s*"([^"]+)"\s*"([^"]*)"', line)
-        if not match:
-            continue
-        key, value = match.groups()
-        if key == "AccountName":
-            account = value
-            accounts.append(value)
-        elif key == "MostRecent" and value == "1" and account:
-            print(account)
-            raise SystemExit(0)
-if len(set(accounts)) == 1:
-    print(accounts[0])
-    raise SystemExit(0)
-raise SystemExit(1)
-PY
-    return
-  done
-  return 1
 }
 
 start_steam_client() {
@@ -315,30 +206,10 @@ client_preflight() {
 
 validate_target
 
-if [[ "$LOGIN_ONLY" == true ]]; then
-  steamcmd_path="$(find_steamcmd)"
-  steam_user="$(detect_steam_user)" || {
-    echo "Set STEAM_USERNAME to the Workshop owner's login name" >&2
-    exit 1
-  }
-  exec "$steamcmd_path" +login "$steam_user" +quit
-fi
-
 require_clean_worktree
 
-steamcmd_path=""
-steam_user=""
 if [[ "$DRY_RUN" != true ]]; then
-  if [[ "$TRANSPORT" == "client" ]]; then
-    client_preflight
-  else
-    steamcmd_path="$(find_steamcmd)"
-    steam_user="$(detect_steam_user)" || {
-      echo "Set STEAM_USERNAME to the Workshop owner's login name" >&2
-      exit 1
-    }
-    check_cached_login "$steamcmd_path" "$steam_user"
-  fi
+  client_preflight
 fi
 
 run_tests
@@ -352,8 +223,4 @@ fi
 # before uploading so an unexpected mutation cannot be published silently.
 require_clean_worktree
 
-if [[ "$TRANSPORT" == "client" ]]; then
-  run_publisher --vdf "$VDF_PATH"
-else
-  upload_vdf_with_steamcmd
-fi
+run_publisher --vdf "$VDF_PATH"
