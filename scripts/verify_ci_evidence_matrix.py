@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Lock the CI evidence matrix so synthetic timing cannot masquerade as correctness."""
 
+from fnmatch import fnmatchcase
 from pathlib import Path
 import sys
 
@@ -20,11 +21,65 @@ HOST_REGRESSION_COMMAND = "python3 scripts/check_mods.py --skip-synthetic-perfor
 SYNTHETIC_REPORT_COMMAND = "python3 scripts/run_cycletrim_synthetic_performance.py"
 SYNTHETIC_ONLY_ARGUMENT = "--synthetic-performance-only"
 SKIP_SYNTHETIC_ARGUMENT = "--skip-synthetic-performance"
+STEAM_PUBLISHER_TEST_INPUTS = (
+    "tools/OniMods.SteamPublisher/CandidateCreationJournal.cs",
+    "tools/OniMods.SteamPublisher/LegacyCandidatePlan.cs",
+    "tools/OniMods.SteamPublisher/LegacyPackage.cs",
+    "tools/OniMods.SteamPublisher/WorkshopMetadata.cs",
+    "tools/OniMods.SteamPublisher/WorkshopTarget.cs",
+)
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def workflow_paths(workflow: Path, event_name: str) -> list[str]:
+    lines = workflow.read_text(encoding="utf-8").splitlines()
+    event_header = f"  {event_name}:"
+    try:
+        start = lines.index(event_header)
+    except ValueError as error:
+        raise AssertionError(f"missing {event_name} trigger in {workflow.name}") from error
+
+    paths_start = None
+    for index in range(start + 1, len(lines)):
+        line = lines[index]
+        if line.startswith("  ") and not line.startswith("    ") and line.strip():
+            break
+        if line == "    paths:":
+            paths_start = index + 1
+            break
+    if paths_start is None:
+        raise AssertionError(f"missing {event_name}.paths trigger list in {workflow.name}")
+
+    paths = []
+    for line in lines[paths_start:]:
+        if not line.startswith("      - "):
+            if line.strip():
+                break
+            continue
+        value = line[len("      - "):].strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]
+        paths.append(value)
+    return paths
+
+
+def verify_steam_publisher_trigger_coverage() -> None:
+    workflows = (
+        ("reference CI", REFERENCE_WORKFLOW),
+        ("Mod quality", MOD_QUALITY_WORKFLOW),
+    )
+    for workflow_name, workflow in workflows:
+        for event_name in ("pull_request", "push"):
+            patterns = workflow_paths(workflow, event_name)
+            for path in STEAM_PUBLISHER_TEST_INPUTS:
+                require(
+                    any(fnmatchcase(path, pattern) for pattern in patterns),
+                    f"{workflow_name} {event_name} does not cover Steam publisher test input {path}",
+                )
 
 
 def verify_project_command_selection() -> None:
@@ -126,13 +181,14 @@ def main() -> int:
             SYNTHETIC_TIMING_REGRESSION_MARKER in performance_program,
             "the managed timing-only verdict must emit the reporter marker",
         )
+        verify_steam_publisher_trigger_coverage()
         verify_project_command_selection()
         verify_synthetic_reporter_policy()
     except (AssertionError, OSError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
 
-    print("PASS: CI separates correctness evidence from synthetic wall-clock timing")
+    print("PASS: CI separates correctness evidence from synthetic wall-clock timing and covers publisher inputs")
     return 0
 
 
