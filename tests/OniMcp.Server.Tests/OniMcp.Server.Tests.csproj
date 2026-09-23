@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>LegacyAcceptNegotiationRegressionEntry</StartupObject>
+    <StartupObject>HostHeaderRebindingRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -16,6 +16,7 @@
     <Compile Include="LegacyOutboundExpiredSessionRegression.cs" />
     <Compile Include="LegacyDiagnosticsExpiredSessionRegression.cs" />
     <Compile Include="LegacyAcceptNegotiationRegression.cs" />
+    <Compile Include="HostHeaderRebindingRegression.cs" />
     <Compile Include="HttpAdmissionRegression.cs" />
     <Compile Include="HttpFrontDoorAdmissionRegression.cs" />
     <Compile Include="UnknownModernMethodAdmissionRegression.cs" />
