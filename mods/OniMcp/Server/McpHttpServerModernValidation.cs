@@ -466,7 +466,10 @@ namespace OniMcp.Server
 
         private static JArray BuildSupportedProtocolVersions()
         {
-            return new JArray(ModernProtocolVersion);
+            var versions = new JArray(ModernProtocolVersion);
+            foreach (string version in SupportedProtocolVersions)
+                versions.Add(version);
+            return versions;
         }
 
         private static string ModernPrincipalName(string method, JObject @params)

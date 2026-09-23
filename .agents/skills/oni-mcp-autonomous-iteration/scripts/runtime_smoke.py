@@ -10,6 +10,7 @@ from loopback_http import open_url
 
 URL = "http://localhost:8788/mcp/"
 PROTOCOL = "2025-11-25"
+LEGACY_PROTOCOL = "2025-06-18"
 MODERN_PROTOCOL = "2026-07-28"
 MODERN_SAFE_TOOLS = {"benchmark"}
 DEFAULT_PUBLIC_TOOLS = {
@@ -178,8 +179,10 @@ def run_modern_smoke(url):
     client = ModernMcpClient(url)
     discover = client.request("server/discover")
     supported = set(discover.get("supportedVersions", []))
-    assert_true(supported == {MODERN_PROTOCOL},
-                f"modern discovery advertised unexpected versions: {sorted(supported)}")
+    assert_true(
+        supported == {MODERN_PROTOCOL, PROTOCOL, LEGACY_PROTOCOL},
+        f"modern discovery advertised unexpected versions: {sorted(supported)}",
+    )
     capabilities = discover.get("capabilities") or {}
     assert_true("resources" in capabilities, "modern discovery omitted resources capability")
     assert_true("tools" in capabilities, "modern discovery omitted tools capability")

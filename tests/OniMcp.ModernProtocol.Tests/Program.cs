@@ -340,8 +340,8 @@ internal static class Program
         Assert((string)json["error"]["data"]["requested"] == requested,
             context + ": requested version was not echoed");
         var supported = ((JArray)json["error"]["data"]["supported"]).Values<string>().ToArray();
-        Assert(supported.SequenceEqual(new[] { "2026-07-28" }),
-            context + ": modern retry list leaked legacy initialize-era versions");
+        Assert(supported.SequenceEqual(new[] { "2026-07-28", "2025-11-25", "2025-06-18" }),
+            context + ": retry list omitted protocol versions supported by the hybrid endpoint");
     }
 
     private static HttpResponseMessage Post(HttpClient client, string json, string sessionId = null,

@@ -69,7 +69,11 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if method == "server/discover":
             return {
                 "resultType": "complete",
-                "supportedVersions": [runtime_smoke.MODERN_PROTOCOL],
+                "supportedVersions": [
+                    runtime_smoke.MODERN_PROTOCOL,
+                    runtime_smoke.PROTOCOL,
+                    runtime_smoke.LEGACY_PROTOCOL,
+                ],
                 "capabilities": {"resources": {}, "tools": {}},
                 "ttlMs": 3600000,
                 "cacheScope": "public",
