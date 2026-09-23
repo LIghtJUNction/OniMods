@@ -1,4 +1,5 @@
 using Steamworks;
+using System.Security.Cryptography;
 
 internal static partial class SteamWorkshopPublisher
 {
@@ -104,6 +105,38 @@ internal static partial class SteamWorkshopPublisher
             && page.Tags.ToHashSet(StringComparer.Ordinal)
                 .SetEquals(plan.Baseline.Original.Tags),
             "old bilingual migration copy");
+    }
+
+    internal static void RequireInstalledLegacyReadOnly(
+        WorkshopPromotionPlan plan)
+    {
+        var id = new PublishedFileId_t(plan.NewId);
+        var state = (EItemState)SteamUGC.GetItemState(id);
+        if ((state & EItemState.k_EItemStateInstalled) == 0
+            || (state & EItemState.k_EItemStateLegacyItem) == 0
+            || (state & EItemState.k_EItemStateNeedsUpdate) != 0
+            || !SteamUGC.GetItemInstallInfo(
+                id, out _, out var installedPath, 4096, out _)
+            || !File.Exists(installedPath)
+            || Directory.Exists(installedPath))
+        {
+            throw new InvalidOperationException(
+                $"Private candidate is not an installed Legacy ZIP file: state={state}");
+        }
+        LegacyPackage.ValidateArchive(installedPath);
+        var file = new FileInfo(installedPath);
+        var digest = Convert.ToHexString(SHA256.HashData(
+            File.ReadAllBytes(installedPath)));
+        if (file.Length != plan.ZipBytes
+            || !string.Equals(digest, plan.ZipSha256,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Installed Legacy ZIP differs from the reviewed promotion package");
+        }
+        Console.WriteLine($"recoveryInstalledLegacyZip={installedPath}");
+        Console.WriteLine($"recoveryInstalledState={state}");
+        Console.WriteLine($"recoveryInstalledSha256={digest}");
     }
 
     private static void SubmitLocalizedPage(
