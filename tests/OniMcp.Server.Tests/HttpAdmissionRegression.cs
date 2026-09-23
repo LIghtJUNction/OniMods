@@ -216,6 +216,10 @@ internal static class HttpAdmissionRegression
             using (var response = SendLegacyPumped(client, ToolCallBody(15703, "during-load"), sessionId))
                 AssertContextError(response, "game_loading");
             using (var response = SendLegacyPumped(client,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":15715,\"params\":{\"name\":\"server_control\",\"arguments\":{\"domain\":\"catalog\",\"action\":\"manifest\",\"task\":\"Inspect tool catalog\"}}}",
+                sessionId))
+                AssertContextError(response, "game_loading");
+            using (var response = SendLegacyPumped(client,
                 "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15713,\"params\":{\"uri\":\"oni://tools/read/game_control\"}}",
                 sessionId))
                 AssertContextError(response, "game_loading");
