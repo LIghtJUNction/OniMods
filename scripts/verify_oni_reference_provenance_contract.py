@@ -10,6 +10,7 @@ from verify_oni_reference_provenance import (
     compare_method_body_upstream_state,
     compare_official_steam_state,
     compare_upstream_state,
+    github_api_headers,
     report_method_body_upstream_state,
     report_upstream_state,
     validate_manifest,
@@ -178,6 +179,19 @@ def verify_workflow_sdk_pin() -> None:
         )
 
 
+def verify_workflow_github_api_auth() -> None:
+    text = REFERENCE_WORKFLOW.read_text(encoding="utf-8")
+    require(
+        "permissions:\n  contents: read" in text,
+        "reference CI must keep the GitHub token read-only",
+    )
+    require(
+        "ONIMODS_GITHUB_API_TOKEN: ${{ github.event_name == 'push' && github.token || '' }}"
+        in text,
+        "reference CI must authenticate upstream GitHub API reads only on trusted push runs",
+    )
+
+
 def manifest_with_tracking(tracked_paths: list[str]) -> dict:
     blob_by_path = {
         "Lib/Assembly-CSharp.dll": ASSEMBLY_CSHARP,
@@ -228,6 +242,17 @@ def manifest_with_tracking(tracked_paths: list[str]) -> dict:
 
 
 def main() -> int:
+    unauthenticated_headers = github_api_headers(None)
+    require(
+        "Authorization" not in unauthenticated_headers,
+        "GitHub API helper must not invent credentials when no token is supplied",
+    )
+    authenticated_headers = github_api_headers("test-token")
+    require(
+        authenticated_headers.get("Authorization") == "Bearer test-token",
+        "GitHub API helper must attach the supplied bearer token",
+    )
+
     current_news = [
         {
             "gid": "900000000000000000",
@@ -494,9 +519,10 @@ def main() -> int:
     validate_manifest(complete_manifest)
     verify_workflow_contract_inputs()
     verify_workflow_sdk_pin()
+    verify_workflow_github_api_auth()
 
     print(
-        "PASS: official/upstream reference and method-body drift classification, provenance metadata, CI input coverage, and SDK pin"
+        "PASS: official/upstream reference and method-body drift classification, provenance metadata, authenticated GitHub API coverage, CI input coverage, and SDK pin"
     )
     return 0
 
