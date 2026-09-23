@@ -40,15 +40,13 @@ internal static class ModernEmptyExtensionIdentifierRegressionEntry
                     "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":53001,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{\"extensions\":{\"com.example/\":{}}}}}}";
                 using (var response = PostModern(client, emptyName))
                 {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Modern request accepted an extension identifier with an empty name with HTTP "
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Spec-valid empty-name extension identifier was rejected with HTTP "
                         + (int)response.StatusCode);
-                    JObject payload = ReadJson(response);
-                    Assert(payload["error"] != null
-                        && (int)payload["error"]["code"] == McpErrorCode.InvalidParams,
-                        "Empty-name extension identifier did not use InvalidParams");
+                    Assert(ReadJson(response)["result"] != null,
+                        "Spec-valid empty-name extension identifier did not reach discovery");
                     Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Rejected empty-name extension identifier allocated legacy session state");
+                        "Modern empty-name extension identifier allocated legacy session state");
                 }
 
                 const string conformant =
