@@ -83,12 +83,13 @@ namespace OniMcp.Server
 
             // Legacy compatibility remains permissive for an absent Accept header and
             // for JSON-only clients because this server's 2025 POST path returns JSON.
-            // If a request explicitly excludes JSON, however, do not send a media type
-            // the client said it cannot consume. Notifications/responses stay on their
-            // existing 202 no-body path and therefore do not need response negotiation.
-            bool isLegacyRequest = rawMessage["method"]?.Type == JTokenType.String
-                && rawMessage.Property("id") != null;
-            if (isLegacyRequest && !AcceptsLegacyJsonResponse(request))
+            // If a response-bearing request explicitly excludes JSON, however, do not
+            // send a media type the client said it cannot consume. Notifications and
+            // client responses stay on their existing 202 no-body path.
+            bool isClientResponse = rawMessage["method"] == null
+                && (rawMessage["result"] != null || rawMessage["error"] != null);
+            bool expectsLegacyJsonResponse = rawMessage.Property("id") != null && !isClientResponse;
+            if (expectsLegacyJsonResponse && !AcceptsLegacyJsonResponse(request))
             {
                 SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InvalidRequest,
                     "Legacy MCP request does not accept application/json responses"),
@@ -96,7 +97,7 @@ namespace OniMcp.Server
                 return;
             }
 
-            if (rawMessage["method"] == null && (rawMessage["result"] != null || rawMessage["error"] != null))
+            if (isClientResponse)
             {
                 if (!ValidateNonInitRequest(response, sessionId, protocolVersion))
                     return;
