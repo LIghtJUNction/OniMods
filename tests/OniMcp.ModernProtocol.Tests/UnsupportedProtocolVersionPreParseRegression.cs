@@ -40,10 +40,8 @@ internal static class UnsupportedProtocolVersionPreParseRegression
                     Assert((string)json["error"]["data"]["requested"] == "2027-01-01",
                         "Unsupported-version response lost the requested protocol version");
                     string[] supported = ((JArray)json["error"]["data"]["supported"]).Values<string>().ToArray();
-                    Assert(supported.Contains("2026-07-28")
-                        && supported.Contains("2025-11-25")
-                        && supported.Contains("2025-06-18"),
-                        "Unsupported-version response did not advertise the implemented protocol versions");
+                    Assert(supported.SequenceEqual(new[] { "2026-07-28" }),
+                        "Unsupported-version response leaked legacy initialize-era versions");
                     Assert(!response.Headers.Contains("Mcp-Session-Id"),
                         "Unsupported protocol version allocated a legacy session header");
                 }

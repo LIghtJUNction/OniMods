@@ -75,11 +75,9 @@ internal static class Program
                     Assert(result != null, "Modern discovery returned no result");
                     var supportedVersions = result["supportedVersions"] as JArray;
                     Assert(supportedVersions != null
-                        && supportedVersions.Count == 3
-                        && (string)supportedVersions[0] == "2026-07-28"
-                        && (string)supportedVersions[1] == "2025-11-25"
-                        && (string)supportedVersions[2] == "2025-06-18",
-                        "Modern discovery omitted supported legacy protocol versions");
+                        && supportedVersions.Count == 1
+                        && (string)supportedVersions[0] == "2026-07-28",
+                        "Modern discovery advertised handshake-era protocol versions");
                     Assert(result["serverInfo"] == null,
                         "DiscoverResult regressed to the pre-final body-level serverInfo shape");
                     var serverInfo = result["_meta"]?["io.modelcontextprotocol/serverInfo"] as JObject;
