@@ -48,6 +48,26 @@ internal static class LegacyAcceptNegotiationRegressionEntry
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Regression server started with unexpected legacy session state");
 
+                using (var response = Post(client, "{", "text/event-stream", null, null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Malformed legacy JSON bypassed explicit JSON response rejection");
+                }
+                using (var response = Post(client, "[]", "text/event-stream", null, null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Non-object legacy JSON bypassed explicit JSON response rejection");
+                }
+                using (var response = Post(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":{}}",
+                    "text/event-stream", null, null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Invalid legacy JSON-RPC envelope bypassed explicit JSON response rejection");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Rejected early legacy errors allocated session state");
+
                 AssertRejected(client, InitializeRequest(51001), "text/event-stream",
                     "SSE-only legacy initialize");
                 AssertRejected(client, InitializeRequest(51002), "text/plain",

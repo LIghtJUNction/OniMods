@@ -36,12 +36,16 @@ namespace OniMcp.Server
             }
             catch (RequestBodyTooLargeException ex)
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, ex.Message), 413);
                 return;
             }
 
             if (string.IsNullOrEmpty(body))
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Empty request body"), 400);
                 return;
             }
@@ -53,6 +57,8 @@ namespace OniMcp.Server
             }
             catch (JsonException ex)
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 int statusCode = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal) ? 400 : 200;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), statusCode);
                 return;
@@ -61,6 +67,8 @@ namespace OniMcp.Server
             var rawMessage = parsedMessage as JObject;
             if (rawMessage == null)
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
                     "JSON-RPC request must be a single object"), 400);
                 return;
@@ -71,6 +79,8 @@ namespace OniMcp.Server
                 || (requestId != null && requestId.Type != JTokenType.Null && requestId.Type != JTokenType.String
                     && requestId.Type != JTokenType.Integer && requestId.Type != JTokenType.Float))
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 int statusCode = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal) ? 400 : 200;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), statusCode);
                 return;
@@ -89,11 +99,9 @@ namespace OniMcp.Server
             bool isClientResponse = rawMessage["method"] == null
                 && (rawMessage["result"] != null || rawMessage["error"] != null);
             bool expectsLegacyJsonResponse = rawMessage.Property("id") != null && !isClientResponse;
-            if (expectsLegacyJsonResponse && !AcceptsLegacyJsonResponse(request))
+            if (expectsLegacyJsonResponse
+                && RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, requestId))
             {
-                SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InvalidRequest,
-                    "Legacy MCP request does not accept application/json responses"),
-                    (int)HttpStatusCode.NotAcceptable);
                 return;
             }
 
@@ -198,6 +206,21 @@ namespace OniMcp.Server
             }
 
             DispatchPostResponse(response, rpcRequest, sessionId, admission);
+        }
+
+        private bool RejectUnacceptableLegacyJsonResponse(HttpListenerRequest request,
+            HttpListenerResponse response, string protocolVersion, object requestId)
+        {
+            if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
+                || AcceptsLegacyJsonResponse(request))
+            {
+                return false;
+            }
+
+            SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InvalidRequest,
+                "Legacy MCP request does not accept application/json responses"),
+                (int)HttpStatusCode.NotAcceptable);
+            return true;
         }
 
         private static bool IsJsonRequestMediaType(string contentType)
