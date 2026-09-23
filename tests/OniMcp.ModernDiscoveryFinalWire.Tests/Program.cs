@@ -257,6 +257,7 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", protocolVersion);
             var work = client.SendAsync(request);
             PumpUntil(work);
