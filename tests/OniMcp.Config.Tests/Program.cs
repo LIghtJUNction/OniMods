@@ -234,8 +234,13 @@ internal static class Program
             "The token no longer uses the masked input handler.");
 
         var support = entries.OfType<ButtonOptionsEntry>().Single(entry => entry.Name == "OpenProjectSupport");
-        Check(support.Option.Category == "Support" && support.Option.Title.Contains("api.lmm.best"),
-            "The optional support link is not recognizable in its own section.");
+        Check(support.Option.Category == "Support" && support.Option.Title == "购买 AI Token / 支持项目",
+            "The support button does not clearly name the optional AI token purchase.");
+        Check(support.Option.Tooltip.Contains("https://api.lmm.best")
+            && support.Option.Tooltip.Contains("完全可选")
+            && support.Option.Tooltip.Contains("optional")
+            && support.Option.Tooltip.Contains("与模组访问令牌无关"),
+            "The support tooltip must distinguish optional AI tokens from OniMcp access tokens in both languages.");
         ((Action<object>)support.Value)(null);
         Check(UnityEngine.Application.LastOpenedUrl == "https://api.lmm.best", "The support button opened the wrong URL.");
     }
