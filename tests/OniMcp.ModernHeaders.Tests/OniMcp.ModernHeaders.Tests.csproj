@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="ModernNameEncodingRegression.cs" />
     <Compile Include="ModernContentTypeRegression.cs" />
+    <Compile Include="ModernBase64CanonicalRegression.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="../OniMcp.Server.Tests/GameStubs.cs" Link="GameStubs.cs" />
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />
