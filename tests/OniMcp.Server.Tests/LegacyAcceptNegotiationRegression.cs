@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
@@ -8,7 +7,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
@@ -50,45 +48,59 @@ internal static class LegacyAcceptNegotiationRegressionEntry
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Regression server started with unexpected legacy session state");
 
-                AssertRejected(client, InitializeRequest(51001, "2025-11-25"), null,
-                    "Missing Accept header");
-                AssertRejected(client, InitializeRequest(51002, "2025-11-25"), "application/json",
-                    "JSON-only Accept header");
-                AssertRejected(client, InitializeRequest(51003, "2025-11-25"), "text/event-stream",
-                    "SSE-only Accept header");
+                AssertRejected(client, InitializeRequest(51001), "text/event-stream",
+                    "SSE-only legacy initialize");
+                AssertRejected(client, InitializeRequest(51002), "text/plain",
+                    "Legacy initialize excluding JSON");
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Rejected legacy initialize allocated session state");
 
                 string sessionId;
-                using (var response = Post(client, InitializeRequest(51004, "2025-11-25"),
-                    "application/json, text/event-stream", null, null))
+                using (var response = Post(client, InitializeRequest(51003), "application/json", null, null))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Valid legacy Accept negotiation did not reach initialize");
+                        "JSON-only legacy client was rejected despite the JSON response path");
                     Assert(response.Headers.Contains("Mcp-Session-Id"),
-                        "Valid legacy initialize did not return a session id");
+                        "Accepted legacy initialize did not return a session id");
                     sessionId = string.Join("", response.Headers.GetValues("Mcp-Session-Id"));
                 }
                 Assert(server.GetSessionSummaries().Count == 1,
-                    "Valid legacy initialize did not retain exactly one session");
+                    "Accepted legacy initialize did not retain exactly one session");
 
                 int calls = OniToolRegistry.Calls;
-                using (var response = Post(client, ToolCall(51005), "application/json", sessionId, "2025-11-25"))
+                using (var response = Post(client, ToolCall(51004), "text/event-stream", sessionId, "2025-11-25"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
-                        "Established legacy JSON-only request was not rejected with HTTP 406");
+                        "Established legacy request excluding JSON was not rejected with HTTP 406");
                 }
                 Invoke(_bridge, "Update");
                 Assert(OniToolRegistry.Calls == calls,
-                    "Rejected legacy media negotiation dispatched tool work");
+                    "Rejected legacy response negotiation dispatched tool work");
                 Assert(server.GetSessionSummaries().Count == 1,
                     "Rejected established request changed legacy session ownership");
 
-                using (var response = Post(client, PingRequest(51006),
-                    "application/json, text/event-stream", sessionId, "2025-11-25"))
+                using (var response = Post(client, PingRequest(51005), null, sessionId, "2025-11-25"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Valid established legacy request stopped working after Accept enforcement");
+                        "Headerless legacy request lost backwards-compatible JSON handling");
+                }
+
+                using (var response = Post(client, PingRequest(51006), "application/*", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Legacy application wildcard did not accept a JSON response");
+                }
+
+                using (var response = Post(client, PingRequest(51007), "application/json, text/event-stream", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Conforming legacy Accept header stopped working");
+                }
+
+                using (var response = Post(client, InitializedNotification(), "text/event-stream", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "No-body legacy notification was incorrectly subjected to response negotiation");
                 }
             }
         }
@@ -97,11 +109,6 @@ internal static class LegacyAcceptNegotiationRegressionEntry
             server.StopServer();
             Invoke(_bridge, "OnDestroy");
         }
-    }
-
-    private static void AssertRejected(HttpClient client, string body, string accept)
-    {
-        AssertRejected(client, body, accept, accept ?? "missing Accept");
     }
 
     private static void AssertRejected(HttpClient client, string body, string accept, string scenario)
@@ -132,11 +139,11 @@ internal static class LegacyAcceptNegotiationRegressionEntry
         return work.GetAwaiter().GetResult();
     }
 
-    private static string InitializeRequest(int id, string version)
+    private static string InitializeRequest(int id)
     {
         return "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":" + id
-            + ",\"params\":{\"protocolVersion\":\"" + version
-            + "\",\"capabilities\":{},\"clientInfo\":{\"name\":\"accept-regression\",\"version\":\"1.0\"}}}";
+            + ",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},"
+            + "\"clientInfo\":{\"name\":\"accept-regression\",\"version\":\"1.0\"}}}";
     }
 
     private static string ToolCall(int id)
@@ -148,6 +155,11 @@ internal static class LegacyAcceptNegotiationRegressionEntry
     private static string PingRequest(int id)
     {
         return "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":" + id + ",\"params\":{}}";
+    }
+
+    private static string InitializedNotification()
+    {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{}}";
     }
 
     private static void PumpUntil(Task work)
