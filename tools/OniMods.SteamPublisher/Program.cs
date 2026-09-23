@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text.Json;
 using Steamworks;
 
 internal static class Program
@@ -31,8 +32,62 @@ internal static class Program
         var verifyInstalled = args.Contains("--verify-installed", StringComparer.Ordinal);
         var prepareCandidate = args.Contains("--prepare-private-candidate", StringComparer.Ordinal);
         var createCandidate = args.Contains("--create-private-candidate", StringComparer.Ordinal);
+        var capturePromotion = args.Contains("--capture-promotion-snapshot", StringComparer.Ordinal);
+        var preparePromotion = args.Contains("--prepare-promotion", StringComparer.Ordinal);
+        var stagePrivateMetadata = args.Contains("--stage-private-metadata", StringComparer.Ordinal);
+        var publishPromotedItem = args.Contains("--publish-promoted-item", StringComparer.Ordinal);
+        var linkOldItem = args.Contains("--link-old-item", StringComparer.Ordinal);
         var updatePreview = args.Contains("--update-preview", StringComparer.Ordinal);
         var noChangeNote = args.Contains("--no-change-note", StringComparer.Ordinal);
+        var promotionStageCount = new[]
+        {
+            stagePrivateMetadata, publishPromotedItem, linkOldItem,
+        }.Count(selected => selected);
+        if (promotionStageCount > 0)
+        {
+            if (promotionStageCount != 1
+                || queryOnly || consumerContext || validateOnly || metadataOnly
+                || verifyInstalled || prepareCandidate || createCandidate
+                || capturePromotion || preparePromotion || updatePreview || noChangeNote)
+            {
+                throw new ArgumentException("Promotion stage cannot be combined with another mode");
+            }
+            if (!args.Contains("--confirm-promotion-stage", StringComparer.Ordinal))
+            {
+                throw new ArgumentException("Promotion stage requires --confirm-promotion-stage");
+            }
+            var planPath = ReadOption(args, "--plan");
+            var planHash = ReadOption(args, "--expected-plan-sha256");
+            if (string.IsNullOrWhiteSpace(planPath)
+                || planHash.Length != 64 || !planHash.All(Uri.IsHexDigit))
+            {
+                throw new ArgumentException(
+                    "Promotion stage requires --plan <path> and reviewed --expected-plan-sha256 <hash>");
+            }
+            var stage = stagePrivateMetadata ? PromotionStage.PrivateMetadata
+                : publishPromotedItem ? PromotionStage.PublishNew
+                : PromotionStage.LinkOld;
+            return args.Contains("--promotion-consumer-child", StringComparer.Ordinal)
+                ? WorkshopPromotionRunner.Run(
+                    stage, Path.GetFullPath(planPath), planHash)
+                : RunPromotionConsumerChild(
+                    stage, Path.GetFullPath(planPath), planHash);
+        }
+        if (capturePromotion || preparePromotion)
+        {
+            if (capturePromotion == preparePromotion
+                || queryOnly || (consumerContext && !capturePromotion)
+                || validateOnly || metadataOnly
+                || verifyInstalled || prepareCandidate || createCandidate
+                || updatePreview || noChangeNote)
+            {
+                throw new ArgumentException("Promotion mode cannot be combined with another mode");
+            }
+            return capturePromotion
+                ? CapturePromotionSnapshot(args,
+                    consumerContext ? SteamAppRole.Consumer : SteamAppRole.Creator)
+                : PreparePromotion(args);
+        }
         if (prepareCandidate || createCandidate)
         {
             if (prepareCandidate == createCandidate
@@ -150,6 +205,8 @@ internal static class Program
         var updatedText = ReadOption(args, "--previous-updated");
         var expectedHash = ReadOption(args, "--expected-sha256");
         var candidateText = ReadOption(args, "--candidate-id");
+        var candidateTitle = ReadOption(args, "--candidate-title");
+        var candidatePublic = args.Contains("--candidate-public", StringComparer.Ordinal);
         ulong? candidateId = null;
         if (!string.IsNullOrWhiteSpace(candidateText))
         {
@@ -161,6 +218,15 @@ internal static class Program
                 throw new ArgumentException("Invalid private candidate Workshop ID");
             }
             candidateId = parsedId;
+        }
+        if (!candidateId.HasValue
+            && (!string.IsNullOrEmpty(candidateTitle) || candidatePublic))
+        {
+            throw new ArgumentException("Candidate title/visibility requires --candidate-id");
+        }
+        if (candidateId.HasValue && string.IsNullOrWhiteSpace(candidateTitle))
+        {
+            candidateTitle = LegacyCandidatePlan.ResolveFixedTarget().CandidateTitle;
         }
         if (string.IsNullOrWhiteSpace(zipPath)
             || !uint.TryParse(updatedText, NumberStyles.None,
@@ -191,11 +257,13 @@ internal static class Program
             var current = candidateId.HasValue
                 ? SteamWorkshopPublisher.QueryItem(
                     candidateId.Value,
-                    LegacyCandidatePlan.ResolveFixedTarget().CandidateTitle,
-                    requirePrivate: true)
+                    candidateTitle,
+                    requirePrivate: !candidatePublic,
+                    requirePublic: candidatePublic)
                 : SteamWorkshopPublisher.QueryTarget();
             SteamWorkshopPublisher.VerifyInstalledLegacy(
-                package, current, previousUpdated, candidateId);
+                package, current, previousUpdated, candidateId,
+                candidateTitle, candidatePublic);
             return 0;
         }
         finally
@@ -288,6 +356,159 @@ internal static class Program
         return 0;
     }
 
+    private static int CapturePromotionSnapshot(
+        string[] args, SteamAppRole role)
+    {
+        var output = ReadOption(args, "--output");
+        var newId = ReadExpectedNewId(args);
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            throw new ArgumentException(
+                "Usage: --capture-promotion-snapshot --expected-new-id <id> --output <path>");
+        }
+        var target = LegacyCandidatePlan.ResolveFixedTarget();
+        if (target.OriginalWorkshopId != LegacyCandidatePlan.OriginalWorkshopId)
+        {
+            throw new InvalidOperationException("Promotion snapshot is limited to OniMcp");
+        }
+        var record = VerifiedCandidateRecord.Load(
+            CandidateCreationJournal.JournalPath(
+                CandidateCreationJournal.DefaultDirectory(), target.OriginalWorkshopId),
+            target.OriginalWorkshopId);
+        if (record.NewId != newId)
+        {
+            throw new InvalidOperationException("Expected new ID differs from verified journal");
+        }
+        SteamAppContext.Prepare(role);
+        if (!SteamAPI.IsSteamRunning() || !SteamAPI.Init())
+        {
+            throw new InvalidOperationException(
+                $"Steam {role} context could not initialize for read-only snapshot");
+        }
+        WorkshopPromotionSnapshot snapshot;
+        try
+        {
+            SteamAppContext.VerifyActive(role);
+            SteamWorkshopPublisher.ValidateAccount();
+            snapshot = SteamWorkshopPublisher.CapturePromotionSnapshot(
+                target.OriginalWorkshopId, newId);
+        }
+        finally
+        {
+            SteamAPI.Shutdown();
+        }
+        output = Path.GetFullPath(output);
+        Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+        var serialized = JsonSerializer.Serialize(snapshot,
+            new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        File.WriteAllText(output, serialized);
+        Console.WriteLine($"promotionSnapshot={output}");
+        Console.WriteLine($"promotionSnapshotContext={role}");
+        Console.WriteLine($"promotionSnapshotSha256={Convert.ToHexString(
+            SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(serialized)))}");
+        Console.WriteLine($"oldTitle={snapshot.Original.Title}");
+        Console.WriteLine($"newPrivateTitle={snapshot.Candidate.Title}");
+        Console.WriteLine($"oldVisibility={snapshot.Original.Visibility}");
+        Console.WriteLine($"newVisibility={snapshot.Candidate.Visibility}");
+        Console.WriteLine("promotionSnapshotReadOnly=true");
+        return 0;
+    }
+
+    private static int PreparePromotion(string[] args)
+    {
+        var vdfPath = ReadOption(args, "--vdf");
+        var zipPath = ReadOption(args, "--zip");
+        var snapshotPath = ReadOption(args, "--snapshot");
+        var outputPath = ReadOption(args, "--output");
+        var newId = ReadExpectedNewId(args);
+        if (new[] { vdfPath, zipPath, snapshotPath, outputPath }
+            .Any(string.IsNullOrWhiteSpace))
+        {
+            throw new ArgumentException(
+                "Usage: --prepare-promotion --vdf <path> --zip <path> "
+                + "--snapshot <path> --expected-new-id <id> --output <path>");
+        }
+        SteamAppContext.ValidateHints();
+        var metadata = WorkshopMetadataReader.Read(Path.GetFullPath(vdfPath));
+        var snapshot = JsonSerializer.Deserialize<WorkshopPromotionSnapshot>(
+            File.ReadAllText(snapshotPath))
+            ?? throw new InvalidOperationException("Promotion snapshot JSON is empty");
+        var journalPath = CandidateCreationJournal.JournalPath(
+            CandidateCreationJournal.DefaultDirectory(),
+            LegacyCandidatePlan.OriginalWorkshopId);
+        var plan = WorkshopPromotionPlan.Create(
+            metadata, zipPath, snapshot, journalPath, newId);
+        var (planPath, reviewPath) = plan.Save(outputPath);
+        Console.WriteLine($"promotionPlan={planPath}");
+        Console.WriteLine($"promotionReview={reviewPath}");
+        Console.WriteLine($"promotionPlanSha256={plan.PlanSha256}");
+        Console.WriteLine($"promotionStageJournal={PromotionStageJournal.DefaultPath(
+            plan.OriginalId, plan.NewId)}");
+        Console.WriteLine($"verifiedNewId={plan.NewId}");
+        Console.WriteLine($"verifiedZipSha256={plan.ZipSha256}");
+        Console.WriteLine($"newTitle={plan.NewTitle}");
+        Console.WriteLine($"oldMovedTitle={plan.OldTitle}");
+        Console.WriteLine($"newTags={string.Join(", ", plan.NewTags)}");
+        Console.WriteLine("promotionPreparedOffline=true; Steam API not initialized");
+        return 0;
+    }
+
+    private static ulong ReadExpectedNewId(string[] args)
+    {
+        if (!ulong.TryParse(ReadOption(args, "--expected-new-id"),
+            NumberStyles.None, CultureInfo.InvariantCulture, out var id)
+            || id == 0 || id == LegacyCandidatePlan.OriginalWorkshopId)
+        {
+            throw new ArgumentException("A distinct --expected-new-id is required");
+        }
+        return id;
+    }
+
+    private static int RunPromotionConsumerChild(
+        PromotionStage stage, string planPath, string planHash)
+    {
+        SteamAppContext.ValidateHints();
+        var start = new ProcessStartInfo("dotnet")
+        {
+            UseShellExecute = false,
+            WorkingDirectory = SteamAppContext.HintDirectory(SteamAppRole.Consumer),
+        };
+        var consumerAppId = WorkshopTarget.ConsumerAppId.ToString(
+            CultureInfo.InvariantCulture);
+        start.Environment["SteamAppId"] = consumerAppId;
+        start.Environment["SteamGameId"] = consumerAppId;
+        start.ArgumentList.Add(typeof(Program).Assembly.Location);
+        start.ArgumentList.Add(stage switch
+        {
+            PromotionStage.PrivateMetadata => "--stage-private-metadata",
+            PromotionStage.PublishNew => "--publish-promoted-item",
+            PromotionStage.LinkOld => "--link-old-item",
+            _ => throw new ArgumentOutOfRangeException(nameof(stage)),
+        });
+        start.ArgumentList.Add("--plan");
+        start.ArgumentList.Add(planPath);
+        start.ArgumentList.Add("--expected-plan-sha256");
+        start.ArgumentList.Add(planHash);
+        start.ArgumentList.Add("--confirm-promotion-stage");
+        start.ArgumentList.Add("--promotion-consumer-child");
+        using var child = Process.Start(start)
+            ?? throw new InvalidOperationException(
+                "Could not start Consumer App promotion process");
+        if (!child.WaitForExit(TimeSpan.FromMinutes(60)))
+        {
+            child.Kill(entireProcessTree: true);
+            throw new TimeoutException(
+                "Consumer App promotion stage timed out; inspect the stage journal");
+        }
+        if (child.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"Consumer App promotion stage failed: exit={child.ExitCode}; "
+                + "inspect the stage journal before any retry");
+        }
+        return 0;
+    }
+
     private static void WaitForPrivateCandidate(
         ulong newId, int expectedBytes, string expectedTitle)
     {
@@ -318,8 +539,9 @@ internal static class Program
             $"Private candidate {newId} did not pass creator-side readback: {lastError}");
     }
 
-    private static void RunConsumerVerifier(
-        LegacyPackage package, uint previousUpdated, ulong? candidateId = null)
+    internal static void RunConsumerVerifier(
+        LegacyPackage package, uint previousUpdated, ulong? candidateId = null,
+        string? candidateTitle = null, bool candidatePublic = false)
     {
         var start = new ProcessStartInfo("dotnet")
         {
@@ -342,6 +564,15 @@ internal static class Program
         {
             start.ArgumentList.Add("--candidate-id");
             start.ArgumentList.Add(candidateId.Value.ToString(CultureInfo.InvariantCulture));
+            if (!string.IsNullOrWhiteSpace(candidateTitle))
+            {
+                start.ArgumentList.Add("--candidate-title");
+                start.ArgumentList.Add(candidateTitle);
+            }
+            if (candidatePublic)
+            {
+                start.ArgumentList.Add("--candidate-public");
+            }
         }
         using var child = Process.Start(start)
             ?? throw new InvalidOperationException("Could not start consumer verification process");

@@ -233,4 +233,14 @@ wrong_consumer = subprocess.run(
 )
 assert wrong_consumer.returncode != 0
 assert "Set it before starting the process" in wrong_consumer.stderr
+
+unconfirmed_promotion = subprocess.run(
+    ["dotnet", str(PUBLISHER), "--stage-private-metadata"],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+assert unconfirmed_promotion.returncode != 0
+assert "requires --confirm-promotion-stage" in unconfirmed_promotion.stderr
+assert "[S_API]" not in unconfirmed_promotion.stderr
 print("legacy Workshop package and directory-transport guard passed")

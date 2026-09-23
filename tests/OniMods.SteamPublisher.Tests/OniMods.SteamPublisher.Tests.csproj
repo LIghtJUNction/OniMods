@@ -17,5 +17,13 @@
              Link="WorkshopMetadata.cs" />
     <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopTarget.cs"
              Link="WorkshopTarget.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/VerifiedCandidateRecord.cs"
+             Link="VerifiedCandidateRecord.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopPromotionPlan.cs"
+             Link="WorkshopPromotionPlan.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/PromotionStageJournal.cs"
+             Link="PromotionStageJournal.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/SteamPublicPageReadback.cs"
+             Link="SteamPublicPageReadback.cs" />
   </ItemGroup>
 </Project>
