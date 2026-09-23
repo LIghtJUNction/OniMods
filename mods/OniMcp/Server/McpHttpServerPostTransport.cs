@@ -19,6 +19,15 @@ namespace OniMcp.Server
     {
         private void HandlePost(HttpListenerRequest request, HttpListenerResponse response, string sessionId, string protocolVersion)
         {
+            if (!string.IsNullOrEmpty(protocolVersion)
+                && !string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
+                && !IsSupportedProtocolVersion(protocolVersion))
+            {
+                SendJson(response, UnsupportedProtocolVersion(null, protocolVersion),
+                    (int)HttpStatusCode.BadRequest);
+                return;
+            }
+
             if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
                 && !IsJsonRequestMediaType(request.ContentType))
             {
