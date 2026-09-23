@@ -23,6 +23,7 @@ internal static class SteamWorkshopPublisher
     {
         var fileId = new PublishedFileId_t(WorkshopTarget.WorkshopId);
         var query = SteamUGC.CreateQueryUGCDetailsRequest([fileId], 1);
+        Require(SteamUGC.SetLanguage(query, "english"), "SetLanguage");
         SteamUGC.SetAllowCachedResponse(query, 0);
         try
         {
@@ -128,7 +129,7 @@ internal static class SteamWorkshopPublisher
     }
 
     internal static void VerifyInstalledLegacy(
-        LegacyPackage package, SteamUGCDetails_t before)
+        LegacyPackage package, SteamUGCDetails_t current, uint previousServerUpdated)
     {
         var fileId = new PublishedFileId_t(WorkshopTarget.WorkshopId);
         var expectedHash = System.Security.Cryptography.SHA256.HashData(package.Bytes);
@@ -136,7 +137,7 @@ internal static class SteamWorkshopPublisher
         var deadline = started.AddMinutes(5);
         var nextRemoteQuery = started;
         var lastDownload = DateTime.MinValue;
-        var remote = before;
+        var remote = current;
         var remoteQueryError = "none";
         var localState = EItemState.k_EItemStateNone;
         var localPath = "<not installed>";
@@ -149,7 +150,7 @@ internal static class SteamWorkshopPublisher
         var downloadResult = EResult.k_EResultOK;
         using var callback = Callback<DownloadItemResult_t>.Create(result =>
         {
-            if (result.m_unAppID.m_AppId == WorkshopTarget.AppId
+            if (result.m_unAppID.m_AppId == WorkshopTarget.ConsumerAppId
                 && result.m_nPublishedFileId.m_PublishedFileId == WorkshopTarget.WorkshopId)
             {
                 downloadResult = result.m_eResult;
@@ -257,7 +258,7 @@ internal static class SteamWorkshopPublisher
             + $"serverFileSize={remote.m_nFileSize}, "
             + $"expectedFileSize={package.Bytes.Length}, "
             + $"serverUpdated={remote.m_rtimeUpdated}, "
-            + $"previousServerUpdated={before.m_rtimeUpdated}, "
+            + $"previousServerUpdated={previousServerUpdated}, "
             + $"serverQueryError={remoteQueryError}; "
             + $"localState={localState}, localPathKind={localKind}, "
             + $"localPath={localPath}, localBytes={localBytes}, "
@@ -284,7 +285,7 @@ internal static class SteamWorkshopPublisher
     private static UGCUpdateHandle_t StartUpdate()
     {
         return SteamUGC.StartItemUpdate(
-            new AppId_t(WorkshopTarget.AppId),
+            new AppId_t(WorkshopTarget.ConsumerAppId),
             new PublishedFileId_t(WorkshopTarget.WorkshopId));
     }
 
@@ -379,15 +380,17 @@ internal static class SteamWorkshopPublisher
     private static void ValidateTarget(SteamUGCDetails_t details)
     {
         if (details.m_nPublishedFileId.m_PublishedFileId != WorkshopTarget.WorkshopId
-            || details.m_nConsumerAppID.m_AppId != WorkshopTarget.AppId
+            || details.m_nCreatorAppID.m_AppId != WorkshopTarget.CreatorAppId
+            || details.m_nConsumerAppID.m_AppId != WorkshopTarget.ConsumerAppId
             || details.m_ulSteamIDOwner != WorkshopTarget.ExpectedOwner
-            || (!string.IsNullOrEmpty(details.m_rgchTitle)
-                && !details.m_rgchTitle.Contains(
-                    WorkshopTarget.TitleContains, StringComparison.OrdinalIgnoreCase)))
+            || string.IsNullOrWhiteSpace(details.m_rgchTitle)
+            || !details.m_rgchTitle.Contains(
+                WorkshopTarget.TitleContains, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
                 $"Workshop target identity check failed for {WorkshopTarget.DisplayName}: "
                 + $"id={details.m_nPublishedFileId.m_PublishedFileId}, "
+                + $"creatorApp={details.m_nCreatorAppID.m_AppId}, "
                 + $"consumerApp={details.m_nConsumerAppID.m_AppId}, "
                 + $"owner={details.m_ulSteamIDOwner}, title={details.m_rgchTitle}");
         }
@@ -404,6 +407,7 @@ internal static class SteamWorkshopPublisher
     internal static void PrintTarget(SteamUGCDetails_t details)
     {
         Console.WriteLine($"workshopId={details.m_nPublishedFileId.m_PublishedFileId}");
+        Console.WriteLine($"creatorApp={details.m_nCreatorAppID.m_AppId}");
         Console.WriteLine($"consumerApp={details.m_nConsumerAppID.m_AppId}");
         Console.WriteLine($"owner={details.m_ulSteamIDOwner}");
         Console.WriteLine($"title={details.m_rgchTitle}");

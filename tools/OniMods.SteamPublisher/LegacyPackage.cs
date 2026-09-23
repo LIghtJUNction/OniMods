@@ -39,6 +39,22 @@ internal sealed record LegacyPackage(string Path, byte[] Bytes, string CloudFile
         return new LegacyPackage(output, bytes, cloudFileName);
     }
 
+    internal static LegacyPackage LoadForVerification(string path)
+    {
+        path = System.IO.Path.GetFullPath(path);
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("Workshop ZIP for verification is missing", path);
+        }
+        ValidateArchive(path);
+        var bytes = File.ReadAllBytes(path);
+        if (bytes.Length == 0 || bytes.Length > MaximumCloudFileBytes)
+        {
+            throw new InvalidOperationException("Workshop ZIP for verification has invalid size");
+        }
+        return new LegacyPackage(path, bytes, string.Empty);
+    }
+
     private static void ValidateSourceFolder(DirectoryInfo directory)
     {
         if (IsLink(directory))

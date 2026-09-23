@@ -13,6 +13,8 @@ PUBLISHER = (
     ROOT
     / "tools/OniMods.SteamPublisher/bin/Release/net10.0/OniMods.SteamPublisher.dll"
 )
+assert (PUBLISHER.parent / "steam_appid.txt").read_text().strip() == "636750"
+assert (PUBLISHER.parent / "consumer/steam_appid.txt").read_text().strip() == "457140"
 TARGETS = (
     ("OniMcp", "3731864673"),
     ("CycleTrim", "3766318556"),
@@ -66,7 +68,8 @@ def run_preflight(
         )
         env = os.environ.copy()
         env.update(
-            ONIM_PUBLISH_APP_ID="457140",
+            ONIM_PUBLISH_CREATOR_APP_ID="636750",
+            ONIM_PUBLISH_CONSUMER_APP_ID="457140",
             ONIM_PUBLISH_WORKSHOP_ID=item_id,
             ONIM_PUBLISH_NAME=name,
         )
@@ -82,6 +85,8 @@ def run_preflight(
             assert result.returncode == 0, result.stderr
             assert archive.is_file(), "preflight did not stage a single ZIP file"
             assert f"legacyZip={archive}" in result.stdout
+            assert "creatorApp=636750" in result.stdout
+            assert "consumerApp=457140" in result.stdout
             with zipfile.ZipFile(archive) as zip_file:
                 assert set(zip_file.namelist()) >= {
                     "mod.yaml",
@@ -90,6 +95,18 @@ def run_preflight(
                     "docs/steam-description-en.md",
                 }
                 assert zip_file.testzip() is None
+            changed = subprocess.run(
+                [
+                    "dotnet", str(PUBLISHER), "--verify-installed", "--zip", str(archive),
+                    "--previous-updated", "0", "--expected-sha256", "0" * 64,
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            assert changed.returncode != 0
+            assert "ZIP changed after upload" in changed.stderr
         elif not include_dll:
             assert result.returncode != 0, "missing DLL passed package validation"
             assert f"missing root entry {name}.dll" in result.stderr
@@ -120,4 +137,29 @@ blocked = subprocess.run(
 )
 assert blocked.returncode == 2, blocked.stderr
 assert "cannot produce an ONI-compatible legacy item" in blocked.stderr
+
+for wrong_role in ("ONIM_PUBLISH_CREATOR_APP_ID", "ONIM_PUBLISH_CONSUMER_APP_ID"):
+    env = os.environ.copy()
+    env[wrong_role] = "1"
+    rejected = subprocess.run(
+        ["dotnet", str(PUBLISHER), "--validate-vdf", "--vdf", "/missing.vdf"],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    assert rejected.returncode != 0
+    assert "App ID hint must be" in rejected.stderr
+
+wrong_launch = os.environ.copy()
+wrong_launch.update(SteamAppId="636750", SteamGameId="636750")
+wrong_consumer = subprocess.run(
+    ["dotnet", str(PUBLISHER), "--query-only", "--consumer-context"],
+    capture_output=True,
+    text=True,
+    check=False,
+    env=wrong_launch,
+)
+assert wrong_consumer.returncode != 0
+assert "Set it before starting the process" in wrong_consumer.stderr
 print("legacy Workshop package and directory-transport guard passed")
