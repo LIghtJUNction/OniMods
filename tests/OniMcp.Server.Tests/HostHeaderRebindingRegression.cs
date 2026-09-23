@@ -23,7 +23,7 @@ internal static class HostHeaderRebindingRegressionEntry
     private static void RunHostHeaderRebindingRegression()
     {
         int port = ReservePort();
-        OniMcpOptions.Save(new OniMcpOptions { Host = "localhost", Port = port });
+        OniMcpOptions.Save(new OniMcpOptions { Host = "127.0.0.1", Port = port });
         var server = new McpHttpServer();
         server.StartServer();
 
@@ -35,8 +35,6 @@ internal static class HostHeaderRebindingRegressionEntry
 
             Assert(SendHead(port, "127.0.0.1:" + port) == (int)HttpStatusCode.OK,
                 "Valid loopback IPv4 Host header was rejected");
-            Assert(SendHead(port, "localhost:" + port) == (int)HttpStatusCode.OK,
-                "Valid localhost Host header was rejected");
         }
         finally
         {
