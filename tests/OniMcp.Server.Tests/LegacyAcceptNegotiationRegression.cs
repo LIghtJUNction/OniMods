@@ -146,6 +146,27 @@ internal static class LegacyAcceptNegotiationRegressionEntry
                         "Exact JSON media range did not override a rejecting global wildcard");
                 }
 
+                using (var response = Post(client, PingRequest(51012),
+                    "application/json;profile=fixture, */*;q=0", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Parameterized JSON media range matched an unparameterized JSON response");
+                }
+
+                using (var response = Post(client, PingRequest(51013),
+                    "application/*;version=2, */*;q=0", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Parameterized application wildcard matched an unparameterized JSON response");
+                }
+
+                using (var response = Post(client, PingRequest(51014),
+                    "application/json;profile=fixture;q=1, application/json;q=0.5", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Nonmatching parameterized range masked a separate matching JSON range");
+                }
+
                 using (var response = Post(client, InitializedNotification(), "text/event-stream", sessionId, "2025-11-25"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.Accepted,
