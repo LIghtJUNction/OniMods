@@ -20,6 +20,8 @@
 
 任一阶段失败或超时后，阶段 journal 仍保留意图并阻止同一阶段自动重试。先核查 Steam 账号页、公开 API、旧/新安装状态与 journal，再由维护者决定人工恢复。计划 SHA、ZIP 或页面基线变化时必须重新生成计划并复审。上述工具不会自动执行下一阶段。
 
+若 Stage1 的英/简中提交和 ZIP 校验已完成，但短命的消费端验证进程退出超时，journal 可能只剩唯一的 `private-metadata-intent`。在确认没有失败或 verified 事件后，可以用**原封不动的已归档计划 JSON**运行 `--recover-private-metadata --plan <plan.json> --expected-plan-sha256 <原计划 SHA> --confirm-readback-recovery`。该命令分别在 Creator `636750` 与 Consumer `457140` 的独立进程中只读查询：旧页的全部基线字段、新私有页的完整英/简中标题与说明及 tags、消费端 `LegacyItem` 安装文件路径和 ZIP SHA。它不调用 Steam 写入 API、不重新提交 Stage1，也不会执行 Stage2。只有两端读回全匹配、journal 仍恰好只有一个 Stage1 intent 时，才原子追加 `private-metadata-verified`；任何不匹配都保留待审状态。
+
 ## CycleTrim 0.3.4 的独立迁移
 
 同一分阶段工具也允许固定的 CycleTrim 原公开 ID `3766318556` 与**已创建但尚未公开**的 Legacy ID `3806858440`。它读取独立的 `cycletrim-legacy-candidate-from-3766318556.jsonl` 创建记录，计划必须引用安全的 CycleTrim 0.3.4 发布工作区里的 `dist/CycleTrim.workshop.vdf`、实际 Legacy ZIP 和预览图；不得用 main 的其他 CycleTrim 游戏逻辑重新打包后沿用旧计划 SHA。

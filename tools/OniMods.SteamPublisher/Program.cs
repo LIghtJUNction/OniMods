@@ -35,6 +35,8 @@ internal static class Program
         var capturePromotion = args.Contains("--capture-promotion-snapshot", StringComparer.Ordinal);
         var preparePromotion = args.Contains("--prepare-promotion", StringComparer.Ordinal);
         var validatePromotionPlan = args.Contains("--validate-promotion-plan", StringComparer.Ordinal);
+        var recoverPrivateMetadata = args.Contains(
+            "--recover-private-metadata", StringComparer.Ordinal);
         var stagePrivateMetadata = args.Contains("--stage-private-metadata", StringComparer.Ordinal);
         var publishPromotedItem = args.Contains("--publish-promoted-item", StringComparer.Ordinal);
         var linkOldItem = args.Contains("--link-old-item", StringComparer.Ordinal);
@@ -45,7 +47,8 @@ internal static class Program
             if (queryOnly || consumerContext || validateOnly || metadataOnly
                 || verifyInstalled || prepareCandidate || createCandidate
                 || capturePromotion || preparePromotion || stagePrivateMetadata
-                || publishPromotedItem || linkOldItem || updatePreview || noChangeNote)
+                || publishPromotedItem || linkOldItem || recoverPrivateMetadata
+                || updatePreview || noChangeNote)
             {
                 throw new ArgumentException("Promotion plan validation cannot be combined with another mode");
             }
@@ -69,6 +72,41 @@ internal static class Program
             Console.WriteLine($"zipSha256={plan.ZipSha256}");
             Console.WriteLine("promotionPlanValidatedOffline=true; Steam API not initialized");
             return 0;
+        }
+        var recoveryRoleText = ReadOption(args, "--recovery-role");
+        if (!recoverPrivateMetadata && recoveryRoleText.Length != 0)
+        {
+            throw new ArgumentException("--recovery-role requires --recover-private-metadata");
+        }
+        if (recoverPrivateMetadata)
+        {
+            if (queryOnly || consumerContext || validateOnly || metadataOnly
+                || verifyInstalled || prepareCandidate || createCandidate
+                || capturePromotion || preparePromotion || stagePrivateMetadata
+                || publishPromotedItem || linkOldItem || updatePreview || noChangeNote
+                || args.Contains("--promotion-consumer-child", StringComparer.Ordinal)
+                || !args.Contains("--confirm-readback-recovery", StringComparer.Ordinal))
+            {
+                throw new ArgumentException(
+                    "Readback recovery requires only --recover-private-metadata and --confirm-readback-recovery");
+            }
+            var planPath = ReadOption(args, "--plan");
+            var planHash = ReadOption(args, "--expected-plan-sha256");
+            if (string.IsNullOrWhiteSpace(planPath)
+                || planHash.Length != 64 || !planHash.All(Uri.IsHexDigit))
+            {
+                throw new ArgumentException(
+                    "Recovery requires --plan <path> and reviewed --expected-plan-sha256 <hash>");
+            }
+            var recoveryRole = recoveryRoleText switch
+            {
+                "" => (SteamAppRole?)null,
+                "Creator" => SteamAppRole.Creator,
+                "Consumer" => SteamAppRole.Consumer,
+                _ => throw new ArgumentException("Invalid recovery role"),
+            };
+            return WorkshopPromotionRecovery.Run(
+                Path.GetFullPath(planPath), planHash, recoveryRole);
         }
         var promotionStageCount = new[]
         {
@@ -281,26 +319,22 @@ internal static class Program
             throw new InvalidOperationException(
                 "Steam consumer context could not initialize for install verification");
         }
-        try
-        {
-            SteamAppContext.VerifyActive(SteamAppRole.Consumer);
-            SteamWorkshopPublisher.ValidateAccount();
-            var current = candidateId.HasValue
-                ? SteamWorkshopPublisher.QueryItem(
-                    candidateId.Value,
-                    candidateTitle,
-                    requirePrivate: !candidatePublic,
-                    requirePublic: candidatePublic)
-                : SteamWorkshopPublisher.QueryTarget();
-            SteamWorkshopPublisher.VerifyInstalledLegacy(
-                package, current, previousUpdated, candidateId,
-                candidateTitle, candidatePublic);
-            return 0;
-        }
-        finally
-        {
-            SteamAPI.Shutdown();
-        }
+        SteamAppContext.VerifyActive(SteamAppRole.Consumer);
+        SteamWorkshopPublisher.ValidateAccount();
+        var current = candidateId.HasValue
+            ? SteamWorkshopPublisher.QueryItem(
+                candidateId.Value,
+                candidateTitle,
+                requirePrivate: !candidatePublic,
+                requirePublic: candidatePublic)
+            : SteamWorkshopPublisher.QueryTarget();
+        SteamWorkshopPublisher.VerifyInstalledLegacy(
+            package, current, previousUpdated, candidateId,
+            candidateTitle, candidatePublic);
+        // This is a dedicated verification process. SteamAPI.Shutdown may hang
+        // after DownloadItem completes, even when the ZIP SHA already matches.
+        // Returning from Main releases the Steam client with the process.
+        return 0;
     }
 
     private static int RunPrivateCandidate(string[] args, bool create)

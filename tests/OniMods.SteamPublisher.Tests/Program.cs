@@ -214,6 +214,7 @@ static void RunPromotionCase()
         {
             throw new InvalidOperationException("Repeated promotion plan changed SHA");
         }
+        RunRecoveryCase(plan, root);
         var publicJson = JsonSerializer.Serialize(new
         {
             response = new
@@ -406,6 +407,7 @@ static void RunCycleTrimPromotionCase()
         {
             throw new InvalidOperationException("CycleTrim promotion plan changed identity, SHA, tags, or old body");
         }
+        RunRecoveryCase(plan, root);
         var review = plan.ReviewMarkdown();
         var newChinese = ProposedDescription(
             review.Split("## New item / 简体中文", 2)[1].Split("## New tags", 2)[0]);
@@ -434,5 +436,99 @@ static void RunCycleTrimPromotionCase()
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+}
+
+static void RunRecoveryCase(WorkshopPromotionPlan plan, string root)
+{
+    var formalCandidate = plan.Baseline.Candidate with
+    {
+        Title = plan.NewTitle,
+        TitleChinese = plan.NewTitleChinese,
+        DescriptionEnglish = plan.NewDescriptionEnglish,
+        DescriptionChinese = plan.NewDescriptionChinese,
+        Tags = plan.NewTags,
+        Visibility = "Private",
+    };
+    var ready = plan.Baseline with { Candidate = formalCandidate };
+    WorkshopPromotionRecoveryReadback.RequireMatchingPages(plan, ready);
+
+    ExpectRecoveryPageRejection(plan, ready with
+    {
+        Original = ready.Original with { DescriptionChinese = "changed" },
+    });
+    ExpectRecoveryPageRejection(plan, ready with
+    {
+        Original = ready.Original with { UpdatedAt = ready.Original.UpdatedAt + 1 },
+    });
+    ExpectRecoveryPageRejection(plan, ready with
+    {
+        Original = ready.Original with { Tags = ["changed"] },
+    });
+    ExpectRecoveryPageRejection(plan, ready with
+    {
+        Candidate = formalCandidate with { Visibility = "Public" },
+    });
+    ExpectRecoveryPageRejection(plan, ready with
+    {
+        Candidate = formalCandidate with { DescriptionChinese = "changed" },
+    });
+    ExpectRecoveryPageRejection(plan, ready with
+    {
+        Candidate = formalCandidate with { Tags = [] },
+    });
+    ExpectRecoveryPageRejection(plan, ready with
+    {
+        Candidate = formalCandidate with { FileSize = 0 },
+    });
+    ExpectRecoveryPageRejection(plan, ready with
+    {
+        Candidate = formalCandidate with { OwnerId = 0 },
+    });
+
+    var path = Path.Combine(root, "recovery.jsonl");
+    PromotionStageJournal.Start(
+        path, plan.PlanSha256, PromotionStage.PrivateMetadata);
+    PromotionStageJournal.RequireRecoverablePrivateMetadata(path, plan.PlanSha256);
+    ExpectRecoveryJournalRejection(path, new string('F', 64));
+    PromotionStageJournal.CompleteRecoveredPrivateMetadata(path, plan.PlanSha256);
+    PromotionStageJournal.RequireCompleted(
+        path, plan.PlanSha256, PromotionStage.PrivateMetadata);
+    ExpectRecoveryJournalRejection(path, plan.PlanSha256);
+
+    var failedPath = Path.Combine(root, "failed-recovery.jsonl");
+    var failed = PromotionStageJournal.Start(
+        failedPath, plan.PlanSha256, PromotionStage.PrivateMetadata);
+    failed.Fail(PromotionStage.PrivateMetadata, "callback uncertain");
+    ExpectRecoveryJournalRejection(failedPath, plan.PlanSha256);
+    Console.WriteLine($"{plan.OriginalId} readback-only recovery gates passed");
+}
+
+static void ExpectRecoveryPageRejection(
+    WorkshopPromotionPlan plan, WorkshopPromotionSnapshot snapshot)
+{
+    try
+    {
+        WorkshopPromotionRecoveryReadback.RequireMatchingPages(plan, snapshot);
+        throw new InvalidOperationException("Recovery accepted a changed Workshop page");
+    }
+    catch (InvalidOperationException error) when (
+        error.Message.Contains("differs from", StringComparison.Ordinal)
+        || error.Message.Contains("does not match", StringComparison.Ordinal))
+    {
+    }
+}
+
+static void ExpectRecoveryJournalRejection(string path, string planSha256)
+{
+    try
+    {
+        PromotionStageJournal.RequireRecoverablePrivateMetadata(path, planSha256);
+        throw new InvalidOperationException("Recovery accepted an ineligible journal");
+    }
+    catch (InvalidOperationException error) when (
+        error.Message.Contains("recovery requires", StringComparison.OrdinalIgnoreCase)
+        || error.Message.Contains("different reviewed plan", StringComparison.Ordinal))
+    {
     }
 }

@@ -101,6 +101,35 @@ internal sealed class PromotionStageJournal
         }
     }
 
+    internal static void RequireRecoverablePrivateMetadata(
+        string path, string planSha256)
+    {
+        using var stream = new FileStream(
+            path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        RequireOnlyPrivateMetadataIntent(ReadEvents(stream), planSha256);
+    }
+
+    internal static void CompleteRecoveredPrivateMetadata(
+        string path, string planSha256)
+    {
+        using var stream = new FileStream(
+            path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        RequireOnlyPrivateMetadataIntent(ReadEvents(stream), planSha256);
+        Append(stream, "private-metadata-verified", planSha256,
+            "Creator and Consumer bilingual pages, old baseline, and installed Legacy ZIP SHA read back; no Steam update submitted");
+    }
+
+    private static void RequireOnlyPrivateMetadataIntent(
+        List<(string Name, string PlanSha256)> events, string planSha256)
+    {
+        ValidatePlanHash(events, planSha256);
+        if (events.Count != 1 || events[0].Name != "private-metadata-intent")
+        {
+            throw new InvalidOperationException(
+                "Readback recovery requires exactly one private-metadata intent and no other stage result");
+        }
+    }
+
     private void AppendResult(PromotionStage stage, string name, string detail)
     {
         using var stream = new FileStream(
