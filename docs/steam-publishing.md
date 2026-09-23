@@ -77,3 +77,26 @@ scripts/publish_onimcp_steam.sh --allow-dirty
 `--skip-tests` 只用于刚完成完整 dry-run 后的同一份发布包。
 
 Steam API 依据：[独立上传工具与 App Publish Permissions](https://partner.steamgames.com/doc/features/workshop/implementation)、[SteamAPI App ID 初始化](https://partner.steamgames.com/doc/sdk/api)、[ISteamUGC.GetItemInstallInfo 与 LegacyItem](https://partner.steamgames.com/doc/api/ISteamUGC)、[ISteamRemoteStorage 旧版文件更新接口](https://partner.steamgames.com/doc/api/ISteamRemoteStorage)。
+
+## OniMcp 新建私有 Legacy 候选（备用方案）
+
+现有 OniMcp 条目 `3731864673` 已是目录模式：旧文件详情没有有效 `m_hFile` 或文件名；一次受控的旧接口更新在 `CommitPublishedFileUpdate` 返回失败。不要对该 ID 重试旧文件更新。备用流程只为 OniMcp 创建**新条目**，不会修改旧条目，也不会自行公开或替换原链接。
+
+先在干净的待发布提交上执行完整 dry-run，生成 `dist/OniMcp.workshop.vdf` 和内容目录。然后用固定目标环境运行**离线**准备命令：
+
+```bash
+ONIM_PUBLISH_CREATOR_APP_ID=636750 \
+ONIM_PUBLISH_CONSUMER_APP_ID=457140 \
+ONIM_PUBLISH_WORKSHOP_ID=3731864673 \
+ONIM_PUBLISH_EXPECTED_OWNER=76561199137573787 \
+ONIM_PUBLISH_NAME=OniMcp \
+ONIM_PUBLISH_TITLE_CONTAINS='ONI MCP Server' \
+dotnet tools/OniMods.SteamPublisher/bin/Release/net10.0/OniMods.SteamPublisher.dll \
+  --prepare-private-candidate --vdf "$PWD/dist/OniMcp.workshop.vdf"
+```
+
+这一步不初始化 Steam API。检查输出的固定标题 `ONI MCP Server [Private Legacy Test Candidate for 3731864673]`、Private 可见性、creator `636750`、consumer `457140`、owner、ZIP/预览 SHA256、`planSha256` 和 one-shot journal 路径。Linux 的 journal 固定为 `~/.local/state/onim/workshop-create/onimcp-legacy-candidate-from-3731864673.jsonl`（Windows 位于 LocalAppData 的 `OniMods/workshop-create`）。它跨工作区保留，不随 `dist/` 清理。
+
+只有在复核输出并另行决定创建时，才可把同一命令改成 `--create-private-candidate --expected-plan-sha256 <刚复核的哈希> --confirm-private-create-once`，且让进程**启动前**带 `SteamAppId=636750 SteamGameId=636750`。程序会先确认原条目 ID、双 App、owner、标题；把单 ZIP 与预览分别写入并共享到上传器 Cloud，复核旧条目未变，**再在调用 `PublishWorkshopFile` 前以 CreateNew + fsync 写入 journal**。调用参数固定为 Private 和 Community。成功回调的新 ID 会进入 journal；随后程序复核新条目仍为 Private、旧条目未变，并在独立的 ONI `457140` 进程中等待下载回调、核对 `LegacyItem`、文件路径和 ZIP SHA256。
+
+如果创建回调超时、I/O 失败、进程崩溃，或后续验证失败，**不得直接再运行创建命令**。journal 会阻止再次创建；先查看其中记录和 Steam 账号已发布的私有条目，用固定候选标题搜索是否已有新 ID，核对 owner/双 App/Private，再决定是否单独验证该 ID。只有确认没有创建且完成记录审计后，才可由维护者人工处理 journal 与新尝试。验证通过也不会自动公开候选或弃用原 ID。

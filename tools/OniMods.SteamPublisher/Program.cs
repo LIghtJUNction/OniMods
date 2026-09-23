@@ -29,8 +29,20 @@ internal static class Program
         var validateOnly = args.Contains("--validate-vdf", StringComparer.Ordinal);
         var metadataOnly = args.Contains("--metadata-only", StringComparer.Ordinal);
         var verifyInstalled = args.Contains("--verify-installed", StringComparer.Ordinal);
+        var prepareCandidate = args.Contains("--prepare-private-candidate", StringComparer.Ordinal);
+        var createCandidate = args.Contains("--create-private-candidate", StringComparer.Ordinal);
         var updatePreview = args.Contains("--update-preview", StringComparer.Ordinal);
         var noChangeNote = args.Contains("--no-change-note", StringComparer.Ordinal);
+        if (prepareCandidate || createCandidate)
+        {
+            if (prepareCandidate == createCandidate
+                || queryOnly || consumerContext || validateOnly || metadataOnly
+                || verifyInstalled || updatePreview || noChangeNote)
+            {
+                throw new ArgumentException("Private candidate mode cannot be combined with another mode");
+            }
+            return RunPrivateCandidate(args, createCandidate);
+        }
         if (verifyInstalled)
         {
             if (queryOnly || validateOnly || metadataOnly || updatePreview || noChangeNote)
@@ -137,6 +149,19 @@ internal static class Program
         var zipPath = ReadOption(args, "--zip");
         var updatedText = ReadOption(args, "--previous-updated");
         var expectedHash = ReadOption(args, "--expected-sha256");
+        var candidateText = ReadOption(args, "--candidate-id");
+        ulong? candidateId = null;
+        if (!string.IsNullOrWhiteSpace(candidateText))
+        {
+            LegacyCandidatePlan.ValidateFixedTarget();
+            if (!ulong.TryParse(candidateText, NumberStyles.None,
+                    CultureInfo.InvariantCulture, out var parsedId)
+                || parsedId is 0 or LegacyCandidatePlan.OriginalWorkshopId)
+            {
+                throw new ArgumentException("Invalid private candidate Workshop ID");
+            }
+            candidateId = parsedId;
+        }
         if (string.IsNullOrWhiteSpace(zipPath)
             || !uint.TryParse(updatedText, NumberStyles.None,
                 CultureInfo.InvariantCulture, out var previousUpdated)
@@ -163,9 +188,13 @@ internal static class Program
         {
             SteamAppContext.VerifyActive(SteamAppRole.Consumer);
             SteamWorkshopPublisher.ValidateAccount();
-            var current = SteamWorkshopPublisher.QueryTarget();
+            var current = candidateId.HasValue
+                ? SteamWorkshopPublisher.QueryItem(
+                    candidateId.Value, LegacyCandidatePlan.CandidateTitle,
+                    requirePrivate: true)
+                : SteamWorkshopPublisher.QueryTarget();
             SteamWorkshopPublisher.VerifyInstalledLegacy(
-                package, current, previousUpdated);
+                package, current, previousUpdated, candidateId);
             return 0;
         }
         finally
@@ -174,8 +203,121 @@ internal static class Program
         }
     }
 
+    private static int RunPrivateCandidate(string[] args, bool create)
+    {
+        var vdfPath = ReadOption(args, "--vdf");
+        if (string.IsNullOrWhiteSpace(vdfPath))
+        {
+            throw new ArgumentException(
+                "Usage: --prepare-private-candidate --vdf <path> | "
+                + "--create-private-candidate --vdf <path> "
+                + "--expected-plan-sha256 <hash> --confirm-private-create-once");
+        }
+        SteamAppContext.ValidateHints();
+        var metadata = WorkshopMetadataReader.Read(Path.GetFullPath(vdfPath));
+        var plan = LegacyCandidatePlan.Create(metadata);
+        plan.Print();
+        var journalDirectory = CandidateCreationJournal.DefaultDirectory();
+        Console.WriteLine($"creationJournal={CandidateCreationJournal.JournalPath(
+            journalDirectory, LegacyCandidatePlan.OriginalWorkshopId)}");
+        if (!create)
+        {
+            Console.WriteLine("privateCandidatePrepared=true; Steam API not initialized");
+            return 0;
+        }
+
+        var expectedPlanHash = ReadOption(args, "--expected-plan-sha256");
+        if (!args.Contains("--confirm-private-create-once", StringComparer.Ordinal)
+            || !string.Equals(expectedPlanHash, plan.PlanSha256,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Private creation requires --confirm-private-create-once and the "
+                + "exact planSha256 printed by the offline preparation command");
+        }
+        CandidateCreationJournal.RequireNoPriorAttempt(
+            journalDirectory, LegacyCandidatePlan.OriginalWorkshopId);
+        SteamAppContext.Prepare(SteamAppRole.Creator);
+        if (!SteamAPI.IsSteamRunning() || !SteamAPI.Init())
+        {
+            throw new InvalidOperationException(
+                "Steam creator context could not initialize for private candidate creation");
+        }
+
+        ulong newId;
+        CandidateCreationJournal journal;
+        try
+        {
+            SteamAppContext.VerifyActive(SteamAppRole.Creator);
+            SteamWorkshopPublisher.ValidateAccount();
+            var original = SteamWorkshopPublisher.QueryTarget();
+            (newId, journal) = SteamWorkshopPublisher.PublishPrivateCandidate(
+                plan, original);
+            try
+            {
+                WaitForPrivateCandidate(newId, plan.Package.Bytes.Length);
+                SteamWorkshopPublisher.VerifyOriginalUnchanged(original);
+            }
+            catch (Exception error)
+            {
+                journal.RecordVerification(false,
+                    "Creator-side readback failed: " + error.Message);
+                throw;
+            }
+        }
+        finally
+        {
+            SteamAPI.Shutdown();
+        }
+
+        try
+        {
+            RunConsumerVerifier(plan.Package, previousUpdated: 0, candidateId: newId);
+            journal.RecordVerification(true, "Private Legacy ZIP installed with matching bytes");
+        }
+        catch (Exception error)
+        {
+            journal.RecordVerification(false,
+                "Consumer-side readback failed: " + error.Message);
+            throw;
+        }
+        Console.WriteLine("privateCandidateVerified=true");
+        Console.WriteLine($"candidateWorkshopUrl=https://steamcommunity.com/sharedfiles/filedetails/?id={newId}");
+        Console.WriteLine("visibility=Private; original Workshop ID unchanged");
+        return 0;
+    }
+
+    private static void WaitForPrivateCandidate(ulong newId, int expectedBytes)
+    {
+        var deadline = DateTime.UtcNow.AddMinutes(2);
+        string lastError = "not queried";
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                var details = SteamWorkshopPublisher.QueryItem(
+                    newId, LegacyCandidatePlan.CandidateTitle,
+                    requirePrivate: true);
+                if (details.m_nFileSize == expectedBytes)
+                {
+                    SteamWorkshopPublisher.PrintTarget(details);
+                    return;
+                }
+                lastError = $"candidate fileSize={details.m_nFileSize}, expected={expectedBytes}";
+            }
+            catch (Exception error) when (
+                error is InvalidOperationException or TimeoutException)
+            {
+                lastError = error.Message;
+            }
+            Thread.Sleep(5000);
+        }
+        throw new TimeoutException(
+            $"Private candidate {newId} did not pass creator-side readback: {lastError}");
+    }
+
     private static void RunConsumerVerifier(
-        LegacyPackage package, uint previousUpdated)
+        LegacyPackage package, uint previousUpdated, ulong? candidateId = null)
     {
         var start = new ProcessStartInfo("dotnet")
         {
@@ -194,6 +336,11 @@ internal static class Program
         start.ArgumentList.Add(previousUpdated.ToString(CultureInfo.InvariantCulture));
         start.ArgumentList.Add("--expected-sha256");
         start.ArgumentList.Add(Convert.ToHexString(SHA256.HashData(package.Bytes)));
+        if (candidateId.HasValue)
+        {
+            start.ArgumentList.Add("--candidate-id");
+            start.ArgumentList.Add(candidateId.Value.ToString(CultureInfo.InvariantCulture));
+        }
         using var child = Process.Start(start)
             ?? throw new InvalidOperationException("Could not start consumer verification process");
         if (!child.WaitForExit(TimeSpan.FromMinutes(7)))

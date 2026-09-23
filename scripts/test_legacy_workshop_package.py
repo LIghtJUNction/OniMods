@@ -2,6 +2,7 @@
 """Exercise the publisher's offline ZIP preflight without starting Steam."""
 
 import os
+import hashlib
 import subprocess
 import tempfile
 import zipfile
@@ -53,6 +54,7 @@ def run_preflight(
             (content / "docs" / hazard).write_text("dummy private content", encoding="utf-8")
         preview = root / "preview.png"
         preview.write_bytes(b"test preview")
+        title = "ONI MCP Server (Test)" if name == "OniMcp" else name
         vdf = root / "workshop.vdf"
         vdf.write_text(
             '"workshopitem"\n{\n'
@@ -60,7 +62,7 @@ def run_preflight(
             f'"publishedfileid" "{item_id}"\n'
             f'"contentfolder" "{content}"\n'
             f'"previewfile" "{preview}"\n'
-            f'"title" "{name}"\n'
+            f'"title" "{title}"\n'
             '"description" "Combined description"\n'
             '"changenote" "Test"\n'
             '}\n',
@@ -107,6 +109,75 @@ def run_preflight(
             )
             assert changed.returncode != 0
             assert "ZIP changed after upload" in changed.stderr
+            prepared = subprocess.run(
+                ["dotnet", str(PUBLISHER), "--prepare-private-candidate", "--vdf", str(vdf)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if name == "OniMcp":
+                assert prepared.returncode == 0, prepared.stderr
+                assert "candidateVisibility=Private" in prepared.stdout
+                assert (
+                    "candidateTitle=ONI MCP Server [Private Legacy Test Candidate for 3731864673]"
+                    in prepared.stdout
+                )
+                assert "sourceWorkshopId=3731864673" in prepared.stdout
+                assert "creatorApp=636750" in prepared.stdout
+                assert "consumerApp=457140" in prepared.stdout
+                assert (
+                    "legacyZipSha256=" + hashlib.sha256(archive.read_bytes()).hexdigest().upper()
+                    in prepared.stdout
+                )
+                assert (
+                    "previewSha256=" + hashlib.sha256(preview.read_bytes()).hexdigest().upper()
+                    in prepared.stdout
+                )
+                assert "Steam API not initialized" in prepared.stdout
+                assert "[S_API]" not in prepared.stderr
+                plan_hash = next(
+                    line.split("=", 1)[1]
+                    for line in prepared.stdout.splitlines()
+                    if line.startswith("planSha256=")
+                )
+                repeated = subprocess.run(
+                    ["dotnet", str(PUBLISHER), "--prepare-private-candidate", "--vdf", str(vdf)],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env=env,
+                )
+                assert repeated.returncode == 0, repeated.stderr
+                assert f"planSha256={plan_hash}" in repeated.stdout
+                rejected_plan = subprocess.run(
+                    [
+                        "dotnet", str(PUBLISHER), "--create-private-candidate", "--vdf", str(vdf),
+                        "--expected-plan-sha256", "0" * 64, "--confirm-private-create-once",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env=env,
+                )
+                assert rejected_plan.returncode != 0
+                assert "exact planSha256" in rejected_plan.stderr
+                missing_confirmation = subprocess.run(
+                    [
+                        "dotnet", str(PUBLISHER), "--create-private-candidate", "--vdf", str(vdf),
+                        "--expected-plan-sha256", plan_hash,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env=env,
+                )
+                assert missing_confirmation.returncode != 0
+                assert "exact planSha256" in missing_confirmation.stderr
+                assert "[S_API]" not in missing_confirmation.stderr
+            else:
+                assert prepared.returncode != 0
+                assert "limited to the owned OniMcp item" in prepared.stderr
         elif not include_dll:
             assert result.returncode != 0, "missing DLL passed package validation"
             assert f"missing root entry {name}.dll" in result.stderr

@@ -140,6 +140,7 @@ run_tests() {
   (cd "$ROOT" && cargo test)
   (cd "$ROOT" && dotnet build "$PUBLISHER_PROJECT" -c Release)
   (cd "$ROOT" && python scripts/test_legacy_workshop_package.py)
+  (cd "$ROOT" && dotnet run --project tests/OniMods.SteamPublisher.Tests/OniMods.SteamPublisher.Tests.csproj -c Release)
 }
 
 run_publisher() {
