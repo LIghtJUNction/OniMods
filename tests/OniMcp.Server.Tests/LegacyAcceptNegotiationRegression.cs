@@ -97,6 +97,27 @@ internal static class LegacyAcceptNegotiationRegressionEntry
                         "Conforming legacy Accept header stopped working");
                 }
 
+                using (var response = Post(client, PingRequest(51008),
+                    "application/json;q=0, */*;q=1", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Exact JSON q=0 did not override the less-specific wildcard");
+                }
+
+                using (var response = Post(client, PingRequest(51009),
+                    "application/*;q=0, */*;q=1", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Application wildcard q=0 did not override the global wildcard");
+                }
+
+                using (var response = Post(client, PingRequest(51010),
+                    "application/json;q=0.1, */*;q=0", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Exact JSON media range did not override a rejecting global wildcard");
+                }
+
                 using (var response = Post(client, InitializedNotification(), "text/event-stream", sessionId, "2025-11-25"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.Accepted,
