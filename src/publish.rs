@@ -462,8 +462,17 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
     println!("   VDF: {}", vdf.display());
 
     if dry_run {
-        println!("✅ dry-run 通过，未调用 SteamCMD");
+        println!("✅ 元数据 dry-run 通过；发布脚本会另行验证单文件 ZIP");
         return Ok(());
+    }
+
+    // These existing ONI items must stay as legacy single-file ZIP uploads.
+    // A direct SteamCMD contentfolder upload makes ONI reject the installed
+    // directory as a failed download.
+    if matches!(publishedfileid.as_str(), "3766318556" | "3731864673") {
+        anyhow::bail!(
+            "此 SteamCMD/UGC 目录发布路径不兼容 ONI；请使用 scripts/publish_cycletrim_steam.sh 或 scripts/publish_onimcp_steam.sh"
+        );
     }
 
     let Some(steamcmd_path) = resolve_steamcmd(steamcmd.as_deref()) else {

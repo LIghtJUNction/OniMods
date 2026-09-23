@@ -44,10 +44,13 @@ internal static class Program
         }
         if (validateOnly)
         {
+            var package = LegacyPackage.Create(metadata!);
             Console.WriteLine($"title={metadata!.Title}");
             Console.WriteLine($"englishDescriptionChars={metadata.EnglishDescription.Length}");
             Console.WriteLine($"chineseDescriptionChars={metadata.ChineseDescription.Length}");
-            Console.WriteLine($"{WorkshopTarget.DisplayName} Workshop VDF is valid");
+            Console.WriteLine($"legacyZip={package.Path}");
+            Console.WriteLine($"legacyZipBytes={package.Bytes.Length}");
+            Console.WriteLine($"{WorkshopTarget.DisplayName} legacy Workshop ZIP is valid");
             return 0;
         }
         var appId = WorkshopTarget.AppId.ToString(CultureInfo.InvariantCulture);
@@ -81,7 +84,12 @@ internal static class Program
             }
             else
             {
-                SteamWorkshopPublisher.SubmitUpdate(metadata!, before, updatePreview);
+                var package = LegacyPackage.Create(metadata!);
+                Console.WriteLine($"legacyZip={package.Path}");
+                Console.WriteLine($"legacyZipBytes={package.Bytes.Length}");
+                SteamWorkshopPublisher.SubmitLegacyUpdate(
+                    metadata!, package, before, updatePreview);
+                SteamWorkshopPublisher.VerifyInstalledLegacy(package, before);
             }
             var after = SteamWorkshopPublisher.QueryTarget();
             SteamWorkshopPublisher.PrintTarget(after);
