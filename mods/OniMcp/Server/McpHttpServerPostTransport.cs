@@ -81,14 +81,17 @@ namespace OniMcp.Server
             if (TryHandleModernPost(request, response, rawMessage, protocolVersion))
                 return;
 
-            // Both supported 2025 Streamable HTTP revisions require clients to
-            // advertise both legal response media types for every POST. Enforce
-            // this after modern routing is ruled out but before any legacy session
-            // state or Unity/main-thread admission can be consumed.
-            if (!AcceptsModernResponseMediaTypes(request))
+            // Legacy compatibility remains permissive for an absent Accept header and
+            // for JSON-only clients because this server's 2025 POST path returns JSON.
+            // If a request explicitly excludes JSON, however, do not send a media type
+            // the client said it cannot consume. Notifications/responses stay on their
+            // existing 202 no-body path and therefore do not need response negotiation.
+            bool isLegacyRequest = rawMessage["method"]?.Type == JTokenType.String
+                && rawMessage.Property("id") != null;
+            if (isLegacyRequest && !AcceptsLegacyJsonResponse(request))
             {
                 SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InvalidRequest,
-                    "MCP 2025 Streamable HTTP POST requests require Accept to list both application/json and text/event-stream"),
+                    "Legacy MCP request does not accept application/json responses"),
                     (int)HttpStatusCode.NotAcceptable);
                 return;
             }
