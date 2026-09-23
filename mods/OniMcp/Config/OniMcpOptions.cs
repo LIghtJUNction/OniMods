@@ -222,8 +222,9 @@ namespace OniMcp.Config
             var supportButton = new ButtonOptionsEntry(
                 "OpenProjectSupport",
                 new OptionAttribute(
-                    "支持项目 / AI API · api.lmm.best",
-                    "打开 " + ProjectSupportUrl + "。这是可选链接；使用 OniMcp 不需要此服务。",
+                    "购买 AI Token / 支持项目",
+                    ProjectSupportUrl + "\n可购买 AI Token（完全可选），与模组访问令牌无关。"
+                        + "\nBuy AI tokens there (optional); OniMcp requires no purchase.",
                     "Support"));
             supportButton.Value = (Action<object>)(_ => Application.OpenURL(ProjectSupportUrl));
             yield return supportButton;
