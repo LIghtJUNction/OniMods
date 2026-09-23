@@ -2,6 +2,13 @@
 
 [b]A local MCP bridge mod for Oxygen Not Included[/b]
 
+[h2]v0.2.5 Workshop installation update[/h2]
+[list]
+[*] Repackage the Workshop files as one legacy ZIP for ONI's mod loader. The previous directory download was complete in Steam but ONI reported it as a failed mod download.
+[*] Reject queued MCP actions from before a save-load context change, so they cannot run against the new world.
+[*] Label the optional support button clearly as an AI-token purchase link, separate from OniMcp's local authentication token.
+[/list]
+
 [h2]v0.2.4 protocol and reliability update[/h2]
 [list]
 [*] Support modern MCP discovery and protocol negotiation while retaining legacy client compatibility.
@@ -53,11 +60,11 @@
 [/list]
 
 [h2]Documentation[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.4/mods/OniMcp/README_EN.md]Read English docs[/url]
-[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.4/mods/OniMcp/README.md]查看中文文档[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README_EN.md]Read English docs[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README.md]查看中文文档[/url]
 
 [h2]Optional project support[/h2]
-[url=https://api.lmm.best]api.lmm.best[/url] offers optional AI service tokens that support OniMods development. The mod does not require this site or a purchase; you can use a compatible MCP client and model of your choice.
+[url=https://api.lmm.best]Buy AI tokens (optional)[/url] to support OniMods development. This purchase is unrelated to the mod's local authentication token. OniMcp does not require this site or a purchase; you can use a compatible MCP client and model of your choice.
 
 [h2]Benchmark skill[/h2]
 [list]
