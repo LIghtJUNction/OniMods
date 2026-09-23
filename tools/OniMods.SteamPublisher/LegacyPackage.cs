@@ -8,6 +8,7 @@ internal sealed record LegacyPackage(string Path, byte[] Bytes, string CloudFile
     internal static LegacyPackage Create(WorkshopMetadata metadata)
     {
         var folder = metadata.ContentFolder;
+        ValidateSourceFolder(new DirectoryInfo(folder));
         var output = System.IO.Path.Combine(
             System.IO.Path.GetDirectoryName(folder)!,
             $"{WorkshopTarget.DisplayName}.workshop-legacy.zip");
@@ -38,6 +39,49 @@ internal sealed record LegacyPackage(string Path, byte[] Bytes, string CloudFile
         return new LegacyPackage(output, bytes, cloudFileName);
     }
 
+    private static void ValidateSourceFolder(DirectoryInfo directory)
+    {
+        if (IsLink(directory))
+        {
+            throw new InvalidOperationException(
+                $"Workshop content contains a symbolic link: {directory.FullName}");
+        }
+        foreach (var entry in directory.EnumerateFileSystemInfos())
+        {
+            if (IsLink(entry))
+            {
+                throw new InvalidOperationException(
+                    $"Workshop content contains a symbolic link: {entry.FullName}");
+            }
+            if (IsSensitiveName(entry.Name))
+            {
+                throw new InvalidOperationException(
+                    $"Workshop content contains a sensitive file name: {entry.FullName}");
+            }
+            if (entry is DirectoryInfo child)
+            {
+                ValidateSourceFolder(child);
+            }
+        }
+    }
+
+    private static bool IsLink(FileSystemInfo entry) =>
+        entry.LinkTarget is not null
+        || (entry.Attributes & FileAttributes.ReparsePoint) != 0;
+
+    private static bool IsSensitiveName(string name) =>
+        name.Equals("OniMcpConfig.json", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("credentials.json", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("secrets.json", StringComparison.OrdinalIgnoreCase)
+        || name.Equals(".git", StringComparison.OrdinalIgnoreCase)
+        || name.Equals(".ssh", StringComparison.OrdinalIgnoreCase)
+        || name.Equals(".env", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith(".env.", StringComparison.OrdinalIgnoreCase)
+        || name.EndsWith(".key", StringComparison.OrdinalIgnoreCase)
+        || name.EndsWith(".pem", StringComparison.OrdinalIgnoreCase)
+        || name.EndsWith(".p12", StringComparison.OrdinalIgnoreCase)
+        || name.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase);
+
     internal static void ValidateArchive(string path)
     {
         using var archive = ZipFile.OpenRead(path);
@@ -52,6 +96,7 @@ internal sealed record LegacyPackage(string Path, byte[] Bytes, string CloudFile
                 || name.StartsWith("/", StringComparison.Ordinal)
                 || name.Contains("\\", StringComparison.Ordinal)
                 || segments.Any(segment => segment is "" or "." or "..")
+                || segments.Any(IsSensitiveName)
                 || !names.Add(name))
             {
                 throw new InvalidOperationException($"Unsafe Workshop ZIP entry: {name}");

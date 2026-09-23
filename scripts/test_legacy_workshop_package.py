@@ -19,7 +19,9 @@ TARGETS = (
 )
 
 
-def run_preflight(name: str, item_id: str, *, include_dll: bool) -> subprocess.CompletedProcess[str]:
+def run_preflight(
+    name: str, item_id: str, *, include_dll: bool, hazard: str | None = None
+) -> subprocess.CompletedProcess[str]:
     with tempfile.TemporaryDirectory(prefix="onim-legacy-package-") as temporary:
         root = Path(temporary)
         content = root / name
@@ -32,6 +34,21 @@ def run_preflight(name: str, item_id: str, *, include_dll: bool) -> subprocess.C
         (content / "docs" / "steam-description-en.md").write_text(
             "English description", encoding="utf-8"
         )
+        if hazard == "file-link":
+            private = root / "private.txt"
+            private.write_text("dummy private content", encoding="utf-8")
+            (content / "readme-linked.txt").symlink_to(private)
+        elif hazard == "directory-link":
+            private = root / "private"
+            private.mkdir()
+            (private / "dummy.txt").write_text("private", encoding="utf-8")
+            (content / "linked-directory").symlink_to(private, target_is_directory=True)
+        elif hazard == "root-link":
+            alias = root / f"{name}-alias"
+            alias.symlink_to(content, target_is_directory=True)
+            content = alias
+        elif hazard is not None:
+            (content / "docs" / hazard).write_text("dummy private content", encoding="utf-8")
         preview = root / "preview.png"
         preview.write_bytes(b"test preview")
         vdf = root / "workshop.vdf"
@@ -61,7 +78,7 @@ def run_preflight(name: str, item_id: str, *, include_dll: bool) -> subprocess.C
             env=env,
         )
         archive = root / f"{name}.workshop-legacy.zip"
-        if include_dll:
+        if include_dll and hazard is None:
             assert result.returncode == 0, result.stderr
             assert archive.is_file(), "preflight did not stage a single ZIP file"
             assert f"legacyZip={archive}" in result.stdout
@@ -73,15 +90,27 @@ def run_preflight(name: str, item_id: str, *, include_dll: bool) -> subprocess.C
                     "docs/steam-description-en.md",
                 }
                 assert zip_file.testzip() is None
-        else:
+        elif not include_dll:
             assert result.returncode != 0, "missing DLL passed package validation"
             assert f"missing root entry {name}.dll" in result.stderr
+        else:
+            assert result.returncode != 0, f"hazard {hazard} passed package validation"
+            assert not archive.exists(), f"hazard {hazard} left a ZIP for upload"
+            if "link" in hazard:
+                assert "symbolic link" in result.stderr
+            else:
+                assert "sensitive file name" in result.stderr
         return result
 
 
 for target_name, workshop_id in TARGETS:
     run_preflight(target_name, workshop_id, include_dll=True)
     run_preflight(target_name, workshop_id, include_dll=False)
+    for sensitive in ("OniMcpConfig.json", ".env", ".env.local", "private.key", "private.pem"):
+        run_preflight(target_name, workshop_id, include_dll=True, hazard=sensitive)
+    if os.name != "nt":
+        for linked in ("file-link", "directory-link", "root-link"):
+            run_preflight(target_name, workshop_id, include_dll=True, hazard=linked)
 
 blocked = subprocess.run(
     [str(ROOT / "scripts/publish_cycletrim_steam.sh"), "--dry-run", "--steamcmd"],
