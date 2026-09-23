@@ -5,13 +5,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <OniGamePath Condition="'$(OniGamePath)' == ''">$(HOME)/.local/share/Steam/steamapps/common/OxygenNotIncluded</OniGamePath>
-    <OniManagedPath Condition="'$(OniManagedPath)' == ''">$(OniGamePath)/OxygenNotIncluded_Data/Managed</OniManagedPath>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../tools/OniMods.SteamPublisher/OniMods.SteamPublisher.csproj" />
-    <Reference Include="Steamworks.NET">
-      <HintPath>$(OniManagedPath)/com.rlabrecque.steamworks.net.dll</HintPath>
-    </Reference>
+    <Compile Include="../../tools/OniMods.SteamPublisher/CandidateCreationJournal.cs"
+             Link="CandidateCreationJournal.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/LegacyCandidatePlan.cs"
+             Link="LegacyCandidatePlan.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/LegacyPackage.cs"
+             Link="LegacyPackage.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopMetadata.cs"
+             Link="WorkshopMetadata.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopTarget.cs"
+             Link="WorkshopTarget.cs" />
   </ItemGroup>
 </Project>
