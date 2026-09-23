@@ -104,11 +104,20 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
                 "application/json, text/event-stream", HttpStatusCode.OK,
                 "A conformant modern Accept header was rejected");
             AssertModernPostStatus(port, discover, "server/discover",
+                "application/json;q=0.5, text/event-stream;q=0.5", HttpStatusCode.OK,
+                "Weighted exact modern media ranges were rejected");
+            AssertModernPostStatus(port, discover, "server/discover",
                 "application/json", HttpStatusCode.NotAcceptable,
                 "Modern request accepted a client that cannot consume SSE responses");
             AssertModernPostStatus(port, discover, "server/discover",
                 "application/json, text/event-stream;q=0", HttpStatusCode.NotAcceptable,
                 "Modern request treated q=0 text/event-stream as acceptable");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json;profile=fixture, text/event-stream", HttpStatusCode.NotAcceptable,
+                "Modern request treated parameterized JSON as accepting the bare JSON response");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json, text/event-stream;profile=fixture", HttpStatusCode.NotAcceptable,
+                "Modern request treated parameterized event-stream as accepting the bare SSE response");
             AssertModernPostStatus(port, discover, "server/discover",
                 null, HttpStatusCode.NotAcceptable,
                 "Modern request accepted a missing Accept header");

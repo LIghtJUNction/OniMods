@@ -30,6 +30,7 @@ namespace OniMcp.Server
                 decimal quality = 1m;
                 bool qualitySeen = false;
                 bool valid = true;
+                bool mediaParametersMatch = true;
                 for (int index = 1; index < segments.Length; index++)
                 {
                     string parameter = segments[index].Trim();
@@ -38,6 +39,7 @@ namespace OniMcp.Server
                         || !string.Equals(parameter.Substring(0, equals).Trim(), "q",
                             StringComparison.OrdinalIgnoreCase))
                     {
+                        mediaParametersMatch = false;
                         continue;
                     }
 
@@ -52,7 +54,7 @@ namespace OniMcp.Server
                     qualitySeen = true;
                 }
 
-                if (valid && quality > 0m)
+                if (valid && mediaParametersMatch && quality > 0m)
                     return true;
             }
 
