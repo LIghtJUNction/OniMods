@@ -3,7 +3,8 @@ set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOD_KEY="${ONIM_PUBLISH_MOD:-CycleTrim}"
-APP_ID="457140"
+CREATOR_APP_ID="636750"
+CONSUMER_APP_ID="457140"
 EXPECTED_OWNER="76561199137573787"
 PUBLISHER_PROJECT="$ROOT/tools/OniMods.SteamPublisher/OniMods.SteamPublisher.csproj"
 PUBLISHER_DLL="$ROOT/tools/OniMods.SteamPublisher/bin/Release/net10.0/OniMods.SteamPublisher.dll"
@@ -24,6 +25,7 @@ esac
 DIST_DIR="$ROOT/dist/$MOD_KEY"
 VDF_PATH="$ROOT/dist/$MOD_KEY.workshop.vdf"
 DRY_RUN=false
+PREFLIGHT_ONLY=false
 SKIP_TESTS=false
 ALLOW_DIRTY=false
 
@@ -32,6 +34,7 @@ usage() {
 Usage: scripts/publish_cycletrim_steam.sh [options]
 
   --dry-run      Build, test, and validate metadata without uploading
+  --preflight-only  Query both Steam App contexts without uploading
   --skip-tests   Skip contract, binary, benchmark, and Rust tests
   --allow-dirty  Permit publishing an uncommitted worktree
   -h, --help     Show this help
@@ -45,6 +48,7 @@ EOF
 while (($#)); do
   case "$1" in
   --dry-run) DRY_RUN=true ;;
+  --preflight-only) PREFLIGHT_ONLY=true ;;
   --steamcmd | --login)
     echo "SteamCMD directory upload cannot produce an ONI-compatible legacy item" >&2
     exit 2
@@ -63,6 +67,11 @@ while (($#)); do
   esac
   shift
 done
+
+if [[ "$DRY_RUN" == true && "$PREFLIGHT_ONLY" == true ]]; then
+  echo "--dry-run and --preflight-only cannot be combined" >&2
+  exit 2
+fi
 
 lock_dir="${XDG_RUNTIME_DIR:-/tmp}/onim-${MOD_KEY,,}-publish.lock.d"
 mkdir "$lock_dir" 2>/dev/null || {
@@ -92,8 +101,8 @@ PY
     local page
     page="$(curl --proto '=https' --tlsv1.2 -fsSL --max-time 20 \
       "https://steamcommunity.com/sharedfiles/filedetails/?id=$EXPECTED_ID")"
-    grep -Fq "steamcommunity.com/app/$APP_ID" <<<"$page" || {
-      echo "Refusing upload: Workshop item does not belong to ONI app $APP_ID" >&2
+    grep -Fq "steamcommunity.com/app/$CONSUMER_APP_ID" <<<"$page" || {
+      echo "Refusing upload: Workshop item does not belong to ONI app $CONSUMER_APP_ID" >&2
       exit 1
     }
     grep -Fqi "$TITLE_CONTAINS" <<<"$page" || {
@@ -131,10 +140,20 @@ run_tests() {
   (cd "$ROOT" && cargo test)
   (cd "$ROOT" && dotnet build "$PUBLISHER_PROJECT" -c Release)
   (cd "$ROOT" && python scripts/test_legacy_workshop_package.py)
+  (cd "$ROOT" && dotnet run --project tests/OniMods.SteamPublisher.Tests/OniMods.SteamPublisher.Tests.csproj -c Release)
 }
 
 run_publisher() {
-  env ONIM_PUBLISH_APP_ID="$APP_ID" \
+  local context_app_id="$CREATOR_APP_ID"
+  local argument
+  for argument in "$@"; do
+    if [[ "$argument" == "--consumer-context" || "$argument" == "--verify-installed" ]]; then
+      context_app_id="$CONSUMER_APP_ID"
+    fi
+  done
+  env SteamAppId="$context_app_id" SteamGameId="$context_app_id" \
+    ONIM_PUBLISH_CREATOR_APP_ID="$CREATOR_APP_ID" \
+    ONIM_PUBLISH_CONSUMER_APP_ID="$CONSUMER_APP_ID" \
     ONIM_PUBLISH_WORKSHOP_ID="$EXPECTED_ID" \
     ONIM_PUBLISH_EXPECTED_OWNER="$EXPECTED_OWNER" \
     ONIM_PUBLISH_TITLE_CONTAINS="$TITLE_CONTAINS" \
@@ -190,21 +209,37 @@ client_preflight() {
   dotnet build "$PUBLISHER_PROJECT" -c Release >/dev/null
   start_steam_client
 
-  local log="$ROOT/dist/$MOD_KEY.client-preflight.log"
+  local creator_log="$ROOT/dist/$MOD_KEY.creator-preflight.log"
+  local consumer_log="$ROOT/dist/$MOD_KEY.consumer-preflight.log"
   mkdir -p "$ROOT/dist"
+  : >"$creator_log"
+  : >"$consumer_log"
   for _ in {1..90}; do
-    if run_publisher --query-only >"$log" 2>&1; then
-      cat "$log"
+    if run_publisher --query-only >"$creator_log" 2>&1 \
+      && grep -Fq "steamContext=Creator appId=$CREATOR_APP_ID" "$creator_log" \
+      && run_publisher --query-only --consumer-context >"$consumer_log" 2>&1 \
+      && grep -Fq "steamContext=Consumer appId=$CONSUMER_APP_ID" "$consumer_log"; then
+      cat "$creator_log" "$consumer_log"
       return
     fi
     sleep 2
   done
-  tail -40 "$log" >&2
-  echo "Steam client UGC preflight failed" >&2
+  tail -20 "$creator_log" "$consumer_log" >&2
+  echo "Steam creator/consumer context preflight failed" >&2
   exit 1
 }
 
 validate_target
+
+if [[ "$PREFLIGHT_ONLY" == true ]]; then
+  pgrep -x steam >/dev/null 2>&1 || {
+    echo "Steam client must already be running for read-only preflight" >&2
+    exit 1
+  }
+  client_preflight
+  echo "$MOD_KEY Steam creator/consumer preflight passed without upload"
+  exit 0
+fi
 
 require_clean_worktree
 
