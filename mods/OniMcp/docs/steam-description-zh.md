@@ -2,6 +2,13 @@
 
 [b]为缺氧提供安全 MCP 访问的服务端 Mod[/b]
 
+[h2]v0.2.5 创意工坊安装更新[/h2]
+[list]
+[*] 将工坊文件重新打包为 ONI 模组加载器需要的单文件旧版 ZIP。此前 Steam 已下载完整目录，游戏却将其报为“下载失败”。
+[*] 存档切换后拒绝切换前排队的 MCP 操作，避免对新世界执行旧请求。
+[*] 明确标注可选支持按钮为购买 AI Token 的入口；它与 OniMcp 本地鉴权 Token 无关。
+[/list]
+
 [h2]v0.2.4 协议与稳定性更新[/h2]
 [list]
 [*] 支持现代 MCP 发现与协议协商，同时保留旧版客户端兼容路径。
@@ -53,11 +60,11 @@
 [/list]
 
 [h2]文档[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.4/mods/OniMcp/README.md]查看中文说明[/url]
-[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.4/mods/OniMcp/README_EN.md]View English documentation[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README.md]查看中文说明[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README_EN.md]View English documentation[/url]
 
 [h2]可选支持项目[/h2]
-[url=https://api.lmm.best]api.lmm.best[/url] 提供可选的 AI 服务 Token，可用于支持 OniMods 后续开发。使用本 Mod 不需要访问该网站或购买服务；你可以自行选择兼容的 MCP 客户端与模型。
+[url=https://api.lmm.best]购买 AI Token（可选）[/url]，可用于支持 OniMods 后续开发。这与模组本地鉴权 Token 无关。使用本 Mod 不需要访问该网站或购买服务；你可以自行选择兼容的 MCP 客户端与模型。
 
 [h2]基准测试技能[/h2]
 [list]
