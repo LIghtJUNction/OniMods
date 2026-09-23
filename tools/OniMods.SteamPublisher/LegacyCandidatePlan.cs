@@ -1,7 +1,14 @@
 using System.Security.Cryptography;
 using System.Text;
 
+internal sealed record LegacyCandidateTarget(
+    ulong OriginalWorkshopId,
+    string DisplayName,
+    string SourceTitleContains,
+    string CandidateTitle);
+
 internal sealed record LegacyCandidatePlan(
+    LegacyCandidateTarget Target,
     WorkshopMetadata Metadata,
     LegacyPackage Package,
     byte[] PreviewBytes,
@@ -13,13 +20,18 @@ internal sealed record LegacyCandidatePlan(
     internal const ulong OriginalWorkshopId = 3731864673;
     internal const string CandidateTitle =
         "ONI MCP Server [Private Legacy Test Candidate for 3731864673]";
+    internal const ulong CycleTrimOriginalWorkshopId = 3766318556;
+    internal const string CycleTrimCandidateTitle =
+        "CycleTrim [Private Legacy Test Candidate for 3766318556]";
 
     internal static LegacyCandidatePlan Create(WorkshopMetadata metadata)
     {
-        ValidateFixedTarget();
-        if (!metadata.Title.Contains("ONI MCP Server", StringComparison.OrdinalIgnoreCase))
+        var target = ResolveFixedTarget();
+        if (!metadata.Title.Contains(
+            target.SourceTitleContains, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Candidate VDF title is not OniMcp");
+            throw new InvalidOperationException(
+                $"Candidate VDF title is not {target.DisplayName}");
         }
 
         var package = LegacyPackage.Create(metadata);
@@ -34,12 +46,13 @@ internal sealed record LegacyCandidatePlan(
             throw new InvalidOperationException("Candidate preview must be PNG or JPEG");
         }
         var previewHash = Convert.ToHexString(SHA256.HashData(previewBytes));
-        var previewName = $"onim_candidate_{OriginalWorkshopId}_{previewHash[..16]}{extension}";
+        var previewName =
+            $"onim_candidate_{target.OriginalWorkshopId}_{previewHash[..16]}{extension}";
         var description =
             "PRIVATE LEGACY TEST CANDIDATE — DO NOT SUBSCRIBE. "
-            + $"Compatibility test for original Workshop item {OriginalWorkshopId}.\n\n"
+            + $"Compatibility test for original Workshop item {target.OriginalWorkshopId}.\n\n"
             + metadata.EnglishDescription;
-        if (CandidateTitle.Length > 128 || description.Length > 8000)
+        if (target.CandidateTitle.Length > 128 || description.Length > 8000)
         {
             throw new InvalidOperationException("Candidate Workshop metadata is too long");
         }
@@ -47,11 +60,11 @@ internal sealed record LegacyCandidatePlan(
         var descriptionHash = Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(description)));
         var planData = string.Join('\n',
-            OriginalWorkshopId,
+            target.OriginalWorkshopId,
             WorkshopTarget.CreatorAppId,
             WorkshopTarget.ConsumerAppId,
             WorkshopTarget.ExpectedOwner,
-            CandidateTitle,
+            target.CandidateTitle,
             descriptionHash,
             packageHash,
             previewHash,
@@ -60,26 +73,34 @@ internal sealed record LegacyCandidatePlan(
         var planHash = Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(planData)));
         return new LegacyCandidatePlan(
-            metadata, package, previewBytes, previewName,
-            CandidateTitle, description, planHash);
+            target, metadata, package, previewBytes, previewName,
+            target.CandidateTitle, description, planHash);
     }
 
-    internal static void ValidateFixedTarget()
+    internal static LegacyCandidateTarget ResolveFixedTarget()
     {
-        if (WorkshopTarget.WorkshopId != OriginalWorkshopId
-            || WorkshopTarget.CreatorAppId != 636750
+        if (WorkshopTarget.CreatorAppId != 636750
             || WorkshopTarget.ConsumerAppId != 457140
-            || WorkshopTarget.ExpectedOwner != 76561199137573787
-            || !string.Equals(WorkshopTarget.DisplayName, "OniMcp", StringComparison.Ordinal))
+            || WorkshopTarget.ExpectedOwner != 76561199137573787)
         {
             throw new InvalidOperationException(
-                "Private Legacy candidate creation is limited to the owned OniMcp item 3731864673");
+                "Private Legacy candidate target has the wrong owner or App IDs");
         }
+        return (WorkshopTarget.WorkshopId, WorkshopTarget.DisplayName) switch
+        {
+            (OriginalWorkshopId, "OniMcp") => new LegacyCandidateTarget(
+                OriginalWorkshopId, "OniMcp", "ONI MCP Server", CandidateTitle),
+            (CycleTrimOriginalWorkshopId, "CycleTrim") => new LegacyCandidateTarget(
+                CycleTrimOriginalWorkshopId, "CycleTrim", "CycleTrim",
+                CycleTrimCandidateTitle),
+            _ => throw new InvalidOperationException(
+                "Private Legacy candidate creation is limited to the two owned OniMods items"),
+        };
     }
 
     internal void Print()
     {
-        Console.WriteLine($"sourceWorkshopId={OriginalWorkshopId}");
+        Console.WriteLine($"sourceWorkshopId={Target.OriginalWorkshopId}");
         Console.WriteLine($"candidateTitle={Title}");
         Console.WriteLine("candidateVisibility=Private");
         Console.WriteLine($"creatorApp={WorkshopTarget.CreatorAppId}");

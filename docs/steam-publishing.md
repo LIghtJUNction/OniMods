@@ -100,3 +100,13 @@ dotnet tools/OniMods.SteamPublisher/bin/Release/net10.0/OniMods.SteamPublisher.d
 只有在复核输出并另行决定创建时，才可把同一命令改成 `--create-private-candidate --expected-plan-sha256 <刚复核的哈希> --confirm-private-create-once`，且让进程**启动前**带 `SteamAppId=636750 SteamGameId=636750`。程序会先确认原条目 ID、双 App、owner、标题；把单 ZIP 与预览分别写入并共享到上传器 Cloud，复核旧条目未变，**再在调用 `PublishWorkshopFile` 前以 CreateNew + fsync 写入 journal**。调用参数固定为 Private 和 Community。成功回调的新 ID 会进入 journal；随后程序复核新条目仍为 Private、旧条目未变，并在独立的 ONI `457140` 进程中等待下载回调、核对 `LegacyItem`、文件路径和 ZIP SHA256。
 
 如果创建回调超时、I/O 失败、进程崩溃，或后续验证失败，**不得直接再运行创建命令**。journal 会阻止再次创建；先查看其中记录和 Steam 账号已发布的私有条目，用固定候选标题搜索是否已有新 ID，核对 owner/双 App/Private，再决定是否单独验证该 ID。只有确认没有创建且完成记录审计后，才可由维护者人工处理 journal 与新尝试。验证通过也不会自动公开候选或弃用原 ID。
+
+## CycleTrim 0.3.4 新建私有 Legacy 候选
+
+CycleTrim 使用另一套固定目标：原条目 `3766318556`、标题 `CycleTrim [Private Legacy Test Candidate for 3766318556]`、creator `636750`、consumer `457140`、owner `76561199137573787`，可见性固定 Private。它有独立的 one-shot journal：Linux 上是 `~/.local/state/onim/workshop-create/cycletrim-legacy-candidate-from-3766318556.jsonl`；不会读取、覆盖或解除 OniMcp 的 `onimcp-legacy-candidate-from-3731864673.jsonl`。两份计划的 ZIP、预览图及 plan SHA 分别计算。
+
+CycleTrim 候选包必须来自经审查的 **0.3.4 安全发布工作区**，而非自动改用 main 的 CycleTrim 游戏逻辑。在该工作区先运行 `scripts/publish_cycletrim_steam.sh --dry-run` 生成 Release 内容及 `dist/CycleTrim.workshop.vdf`，再用包含此候选流程的 Publisher 构建产物，对该 VDF 执行离线 `--prepare-private-candidate`。环境需固定 `ONIM_PUBLISH_NAME=CycleTrim`、`ONIM_PUBLISH_WORKSHOP_ID=3766318556`、`ONIM_PUBLISH_TITLE_CONTAINS=CycleTrim`，以及上面的两个 App ID 和 owner。审查输出的实际 ZIP/预览 SHA、plan SHA、Private 标记和 journal 路径；**在 OniMcp 真实 ONI 安装测试通过并获得单独授权前，不运行 `--create-private-candidate`**。
+
+## 原公开条目到新公开条目的链接迁移
+
+新 ID 先保持 Private，完成 Steam `LegacyItem`/ZIP 哈希验证及 ONI 内真实加载测试。决定正式迁移后，先审查新条目的最终标题、双语说明、预览和版本，去掉“Test Candidate”字样，再由所有者将**新 ID**公开并回读其页面和订阅安装结果。随后在**旧公开条目**的标题、说明和公告显著位置写明新页面链接、迁移原因与版本，提醒原订阅用户自行改订新 ID；保留旧页作为入口和历史记录，观察反馈后再单独决定后续处理。当前候选代码不会自动公开、修改旧页、改订用户或删除任何条目。

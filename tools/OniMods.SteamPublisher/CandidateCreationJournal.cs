@@ -20,9 +20,18 @@ internal sealed class CandidateCreationJournal
             ".local", "state", "onim", "workshop-create");
     }
 
-    internal static string JournalPath(string directory, ulong originalId) =>
-        System.IO.Path.Combine(directory,
-            $"onimcp-legacy-candidate-from-{originalId}.jsonl");
+    internal static string JournalPath(string directory, ulong originalId)
+    {
+        var prefix = originalId switch
+        {
+            LegacyCandidatePlan.OriginalWorkshopId => "onimcp",
+            LegacyCandidatePlan.CycleTrimOriginalWorkshopId => "cycletrim",
+            _ => throw new ArgumentException(
+                "Unknown fixed Legacy candidate source ID", nameof(originalId)),
+        };
+        return System.IO.Path.Combine(directory,
+            $"{prefix}-legacy-candidate-from-{originalId}.jsonl");
+    }
 
     internal static void RequireNoPriorAttempt(string directory, ulong originalId)
     {
