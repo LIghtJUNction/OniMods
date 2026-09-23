@@ -2,6 +2,14 @@
 
 Generated from `git log -- mods/OniMcp`.
 
+## 2026-09-23 — 0.2.4
+
+- Add the modern MCP protocol path and discovery while retaining legacy client compatibility.
+- Validate protocol versions, HTTP media types, JSON-RPC payloads, and modern request and result metadata before accepting work.
+- Bound legacy sessions and queued tasks, clean up expired work, and isolate tool-call state between requests.
+- Harden sandbox and world-editor routing, error reporting, and resource URI handling.
+- Report the package version consistently in legacy and modern `serverInfo` responses.
+
 ## 2026-09-12 — 0.2.3
 
 - Fix resource dispatch and JSON-RPC null responses; preserve tool visibility and protect cached metadata from caller mutation.

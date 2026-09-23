@@ -130,7 +130,9 @@ run_tests() {
     (cd "$ROOT" && python scripts/verify_cycletrim_release_binary.py)
     (cd "$ROOT" && dotnet run --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj)
   else
+    (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Debug -warnaserror)
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Release -warnaserror)
+    (cd "$ROOT" && dotnet build mods/CycleTrim/CycleTrim.csproj -c Release -warnaserror)
     (cd "$ROOT" && dotnet format mods/OniMcp/OniMcp.csproj style \
       --diagnostics IDE0005 --verify-no-changes --no-restore)
     (cd "$ROOT" && for verifier in scripts/verify_*.py; do python "$verifier"; done)
