@@ -2,6 +2,9 @@
 
 [b]轻量级性能优化 Mod（缺氧 / Oxygen Not Included）[/b]
 
+[h2]v0.3.4 创意工坊安装更新[/h2]
+Steam 将此前的工坊版本下载为目录，但 ONI 模组加载器要求单文件旧版 ZIP，因此游戏把完整目录误报为“下载失败”。本版仅调整工坊打包格式，游戏运行代码沿用 v0.3.3。
+
 [h2]v0.3.3 分发刷新[/h2]
 沿用 v0.3.2 的游戏运行代码，更新版本元数据和说明，并重新发布 Steam 创意工坊文件。用户反馈的 Steam 下载失败仍在调查中；此版本不代表已确认或修复下载故障。
 
@@ -46,4 +49,4 @@ CycleTrim 减少六条高频模拟路径中的重复计算。它不改复制人�
 [b]PathProbe 合成矩阵也不是 FPS：[/b] 0/25/50/75/90% 目标命中率下，10,000 请求实际执行 10000/7701/5501/3301/2000 次；理论工作下降 0/22.99/44.99/66.99/80.00%。缓存最多连续跳过 8 次后强制刷新。
 
 [h2]详情与下载[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/cycletrim-v0.3.3/mods/CycleTrim/README.md]查看详情（中文）[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/cycletrim-v0.3.4/mods/CycleTrim/README.md]查看详情（中文）[/url]

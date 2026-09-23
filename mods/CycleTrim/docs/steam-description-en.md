@@ -2,6 +2,9 @@
 
 [b]Lightweight performance optimization mod for Oxygen Not Included[/b]
 
+[h2]v0.3.4 Workshop installation update[/h2]
+Steam downloaded the previous Workshop version as a directory, but ONI's mod loader expects one legacy ZIP file and reported the directory as a failed download. This release changes the Workshop package format while keeping the v0.3.3 gameplay code.
+
 [h2]v0.3.3 distribution refresh[/h2]
 This release keeps the v0.3.2 gameplay code, refreshes the package version and descriptions, and republishes the Steam Workshop files. User-reported Steam download failures remain under investigation; this release is not a confirmed fix for them.
 
@@ -45,4 +48,4 @@ Creature calls were 36,000 → 12,000 (-66.67%); local median elapsed time was 2
 [b]The PathProbe matrix is also synthetic, not FPS:[/b] at requested 0/25/50/75/90% hit rates, 10,000 requests executed 10000/7701/5501/3301/2000 probes, for theoretical work reductions of 0/22.99/44.99/66.99/80.00%. A refresh is forced after eight consecutive skips.
 
 [h2]Details[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/cycletrim-v0.3.3/mods/CycleTrim/README_EN.md]Full details [English](/url)
+[url=https://github.com/LIghtJUNction/OniMods/blob/cycletrim-v0.3.4/mods/CycleTrim/README_EN.md]Full details [English](/url)

@@ -2,6 +2,11 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
+## 2026-09-23 — 0.3.4
+
+- Repackage the unchanged 0.3.3 gameplay code as a single legacy Workshop ZIP. Steam downloaded the previous directory package, but ONI's mod loader rejected the directory as a failed download.
+- Keep this release limited to distribution and version metadata, with Steam LegacyItem and in-game installation checks required before publication.
+
 ## 2026-09-23 — 0.3.3
 
 - Republish the 0.3.2 gameplay code with refreshed package metadata to produce a new Steam Workshop content manifest.
