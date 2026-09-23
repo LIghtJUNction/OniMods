@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Net;
 
 namespace OniMcp.Server
@@ -44,9 +43,7 @@ namespace OniMcp.Server
                     }
 
                     if (qualitySeen
-                        || !decimal.TryParse(parameter.Substring(equals + 1).Trim(), NumberStyles.AllowDecimalPoint,
-                            CultureInfo.InvariantCulture, out quality)
-                        || quality < 0m || quality > 1m)
+                        || !TryParseHttpQualityValue(parameter.Substring(equals + 1), out quality))
                     {
                         valid = false;
                         break;

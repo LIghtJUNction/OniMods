@@ -167,6 +167,20 @@ internal static class LegacyAcceptNegotiationRegressionEntry
                         "Nonmatching parameterized range masked a separate matching JSON range");
                 }
 
+                using (var response = Post(client, PingRequest(51015),
+                    "application/json;q=0.1234", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
+                        "Malformed four-digit legacy qvalue was treated as acceptable");
+                }
+
+                using (var response = Post(client, PingRequest(51016),
+                    "application/json;q=0.123", sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Valid three-digit legacy qvalue was rejected");
+                }
+
                 using (var response = Post(client, InitializedNotification(), "text/event-stream", sessionId, "2025-11-25"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.Accepted,
