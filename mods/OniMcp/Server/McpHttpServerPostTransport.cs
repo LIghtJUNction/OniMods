@@ -95,6 +95,20 @@ namespace OniMcp.Server
                 return;
             }
 
+            if (IsSupportedProtocolVersion(protocolVersion))
+            {
+                var requestMeta = (rawMessage["params"] as JObject)?["_meta"] as JObject;
+                var bodyProtocolVersion = requestMeta?["io.modelcontextprotocol/protocolVersion"];
+                if (bodyProtocolVersion?.Type == JTokenType.String
+                    && string.Equals((string)bodyProtocolVersion, ModernProtocolVersion, StringComparison.Ordinal))
+                {
+                    SendJson(response, HeaderMismatch(requestId,
+                        $"Mcp-Protocol-Version '{protocolVersion}' must match params._meta.io.modelcontextprotocol/protocolVersion '{ModernProtocolVersion}'"),
+                        (int)HttpStatusCode.BadRequest);
+                    return;
+                }
+            }
+
             // MCP 2026-07-28 is a stateless protocol era. Route it before the
             // initialize/session code so legacy transport semantics remain untouched.
             if (TryHandleModernPost(request, response, rawMessage, protocolVersion))
@@ -257,7 +271,6 @@ namespace OniMcp.Server
             Uri originUri;
             if (!Uri.TryCreate(origin, UriKind.Absolute, out originUri) || !originUri.IsLoopback)
                 return false;
-
             return true;
         }
 
