@@ -204,7 +204,11 @@ namespace OniMcp.Server
                 EnqueueAdmittedMainThread(admission, new System.Action(() =>
                 {
                     if (_running && IsSessionActive(sessionId))
-                        ProcessMethod(rpcRequest, sessionId);
+                    {
+                        if (!IsGameContextBoundLegacyRequest(rpcRequest.Method, rpcRequest.Params)
+                            || GameContextError(null, admission.GameContextGeneration) == null)
+                            ProcessMethod(rpcRequest, sessionId);
+                    }
                 }));
                 SetResponseSessionId(response, sessionId);
                 SetResponseProtocolVersion(response, sessionId);
@@ -341,9 +345,13 @@ namespace OniMcp.Server
                 Exception processEx = null;
                 try
                 {
-                    result = _running && IsSessionActive(sessionId)
-                        ? ProcessMethod(rpcRequest, sessionId)
-                        : JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidRequest, "Session not found or terminated");
+                    if (!_running || !IsSessionActive(sessionId))
+                        result = JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidRequest,
+                            "Session not found or terminated");
+                    else if (IsGameContextBoundLegacyRequest(rpcRequest.Method, rpcRequest.Params))
+                        result = GameContextError(rpcRequest.Id, admission.GameContextGeneration);
+                    if (result == null)
+                        result = ProcessMethod(rpcRequest, sessionId);
                 }
                 catch (Exception ex)
                 {

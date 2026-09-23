@@ -13,6 +13,7 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
+using OniMcp.Tools;
 
 internal static class HttpAdmissionRegression
 {
@@ -92,6 +93,8 @@ internal static class HttpAdmissionRegression
                 PumpPending(admitted, requireSuccess: true);
                 Assert(QueuedActions() == 0, "Admitted request queue did not drain");
 
+                TestSaveLoadContext(client, server, sessionId);
+
                 using (var response = SendLegacyPumped(client,
                     "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":15300}", sessionId))
                 {
@@ -137,6 +140,217 @@ internal static class HttpAdmissionRegression
             server.StopServer();
             Invoke(_bridge, "OnDestroy");
         }
+    }
+
+    private static void TestSaveLoadContext(HttpClient client, McpHttpServer server, string sessionId)
+    {
+        Game.Instance = new Game();
+        OniToolRegistry.OnCall = (name, arguments) =>
+        {
+            if (name == "load")
+            {
+                GameContextLifecycle.BeginSaveLoad();
+                Game.Instance.Loading = true;
+                Grid.CellCount = 0;
+            }
+        };
+        try
+        {
+            int initialCalls = OniToolRegistry.Calls;
+            int initialReads = OniResourceRegistry.ResourceReads;
+            int initialCatalogReads = OniResourceRegistry.CatalogReads;
+            using (var loadRequest = BuildLegacyRequest(ToolCallBody(15700, "load"), sessionId))
+            using (var staleRequest = BuildLegacyRequest(ToolCallBody(15701, "stale"), sessionId))
+            using (var legacyReadRequest = BuildLegacyRequest(
+                "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15702,\"params\":{\"uri\":\"oni://test\"}}",
+                sessionId))
+            using (var modernReadRequest = BuildModernResourceReadRequest(15710, "oni://test"))
+            using (var legacyCatalogRequest = BuildLegacyRequest(
+                "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15711,\"params\":{\"uri\":\"oni://tools/manifest?query=power\"}}",
+                sessionId))
+            using (var modernCatalogRequest = BuildModernResourceReadRequest(15712, "oni://tools/manifest"))
+            {
+                var load = client.SendAsync(loadRequest);
+                WaitForQueuedActions(1);
+                var stale = client.SendAsync(staleRequest);
+                WaitForQueuedActions(2);
+                var legacyRead = client.SendAsync(legacyReadRequest);
+                WaitForQueuedActions(3);
+                var modernRead = client.SendAsync(modernReadRequest);
+                WaitForQueuedActions(4);
+                var legacyCatalog = client.SendAsync(legacyCatalogRequest);
+                WaitForQueuedActions(5);
+                var modernCatalog = client.SendAsync(modernCatalogRequest);
+                WaitForQueuedActions(6);
+
+                // One Update drains the whole snapshot, including work admitted
+                // against the old colony after the load action starts teardown.
+                Invoke(_bridge, "Update");
+                Assert(Task.WaitAll(new Task[] { load, stale, legacyRead, modernRead,
+                    legacyCatalog, modernCatalog }, 5000),
+                    "A save-load queue left an HTTP request hanging");
+                using (var response = load.GetAwaiter().GetResult())
+                    Assert(ReadJson(response)["result"] != null, "Load stand-in failed");
+                using (var response = stale.GetAwaiter().GetResult())
+                    AssertContextError(response, "stale_game_context");
+                using (var response = legacyRead.GetAwaiter().GetResult())
+                    AssertContextError(response, "stale_game_context");
+                using (var response = modernRead.GetAwaiter().GetResult())
+                    AssertContextError(response, "stale_game_context");
+                using (var response = legacyCatalog.GetAwaiter().GetResult())
+                    Assert(ReadJson(response)["result"] != null,
+                        "Legacy catalog resource was rejected after a load began");
+                using (var response = modernCatalog.GetAwaiter().GetResult())
+                    Assert(ReadJson(response)["result"] != null,
+                        "Modern catalog resource was rejected after a load began");
+            }
+            Assert(OniToolRegistry.Calls == initialCalls + 1,
+                "A stale queued tool body ran after the load boundary");
+            Assert(OniResourceRegistry.ResourceReads == initialReads,
+                "A stale queued resource read reached game state");
+            Assert(OniResourceRegistry.CatalogReads == initialCatalogReads + 2,
+                "Safe catalog reads did not remain available across the load boundary");
+            Assert(PendingMainThreadRequests(server) == 0,
+                "Stale request releases leaked main-thread admission slots");
+
+            using (var response = SendLegacyPumped(client, ToolCallBody(15703, "during-load"), sessionId))
+                AssertContextError(response, "game_loading");
+            using (var response = SendLegacyPumped(client,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":15715,\"params\":{\"name\":\"server_control\",\"arguments\":{\"domain\":\"catalog\",\"action\":\"manifest\",\"task\":\"Inspect tool catalog\"}}}",
+                sessionId))
+                AssertContextError(response, "game_loading");
+            using (var response = SendLegacyPumped(client,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15713,\"params\":{\"uri\":\"oni://tools/read/game_control\"}}",
+                sessionId))
+                AssertContextError(response, "game_loading");
+            using (var response = SendLegacyPumped(client,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15714,\"params\":{\"uri\":\"oni://mcp/sessions\"}}",
+                sessionId))
+                Assert(ReadJson(response)["result"] != null,
+                    "Server session diagnostic was blocked during game loading");
+            Assert(OniToolRegistry.Calls == initialCalls + 1,
+                "Fresh work ran while the game reported loading");
+            using (var response = SendLegacyPumped(client,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":15704}", sessionId))
+                Assert(ReadJson(response)["result"] != null, "Tool catalog was blocked during loading");
+            using (var response = SendLegacyPumped(client,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"resources/list\",\"id\":15705}", sessionId))
+                Assert(ReadJson(response)["result"] != null, "Resource catalog was blocked during loading");
+
+            Game.Instance = new Game();
+            Grid.CellCount = 1;
+            using (var response = SendLegacyPumped(client, ToolCallBody(15706, "fresh"), sessionId))
+                Assert(ReadJson(response)["result"] != null, "Fresh game context stayed blocked");
+            Assert(OniToolRegistry.Calls == initialCalls + 2,
+                "Fresh request did not execute in the new game context");
+
+            using (var taskRequest = BuildLegacyRequest(ToolTaskBody(15707), sessionId))
+            using (var loadRequest = BuildLegacyRequest(ToolCallBody(15708, "load"), sessionId))
+            {
+                var task = client.SendAsync(taskRequest);
+                WaitForQueuedActions(1);
+                var load = client.SendAsync(loadRequest);
+                WaitForQueuedActions(2);
+                Invoke(_bridge, "Update");
+                Assert(Task.WaitAll(new Task[] { task, load }, 3000),
+                    "Task creation or save load left a request hanging");
+                string taskId;
+                using (var response = task.GetAwaiter().GetResult())
+                    taskId = (string)ReadJson(response)["result"]?["task"]?["taskId"];
+                Assert(!string.IsNullOrEmpty(taskId), "Task was not created before the load");
+                using (var response = load.GetAwaiter().GetResult())
+                    Assert(ReadJson(response)["result"] != null, "Second load stand-in failed");
+
+                // The task was created in the old context but deferred to the
+                // following Update; it must fail instead of calling its handler.
+                Invoke(_bridge, "Update");
+                using (var response = SendLegacyPumped(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"tasks/result\",\"id\":15709,\"params\":{\"taskId\":\""
+                    + taskId + "\"}}", sessionId))
+                {
+                    var result = ReadJson(response)["result"];
+                    Assert(((string)result?["error"])?.Contains("stale_game_context") == true,
+                        "Deferred task did not report a stale game context");
+                }
+            }
+            Assert(OniToolRegistry.Calls == initialCalls + 3,
+                "A deferred old-context task executed after the load");
+            Assert(PendingMainThreadRequests(server) == 0,
+                "Task/load sequence leaked main-thread admission slots");
+
+            Game.Instance = new Game();
+            Grid.CellCount = 1;
+            int failedGeneration = GameContextLifecycle.BeginSaveLoad();
+            GameContextLifecycle.SaveLoadFailed(failedGeneration);
+            Assert(GameContextLifecycle.RejectionReason(failedGeneration) == null,
+                "A load that failed before teardown wedged fresh game work");
+            int interruptedGeneration = GameContextLifecycle.BeginSaveLoad();
+            Game.Instance.Loading = true;
+            Grid.CellCount = 0;
+            GameContextLifecycle.SaveLoadFailed(interruptedGeneration);
+            Assert(GameContextLifecycle.RejectionReason(interruptedGeneration) == "game_loading",
+                "A failed load during teardown reopened the old context");
+            Game.Instance = new Game();
+            Grid.CellCount = 1;
+            Assert(GameContextLifecycle.RejectionReason(interruptedGeneration) == null,
+                "A usable game did not recover after interrupted loading");
+
+            Game.Instance = null;
+            Grid.CellCount = 0;
+            int menuFailureGeneration = GameContextLifecycle.BeginSaveLoad();
+            GameContextLifecycle.SaveLoadFailed(menuFailureGeneration);
+            Assert(GameContextLifecycle.RejectionReason(menuFailureGeneration) == null,
+                "A failed load from the menu prevented another attempt");
+        }
+        finally
+        {
+            OniToolRegistry.OnCall = null;
+            Game.Instance = new Game();
+            Grid.CellCount = 1;
+            GameContextLifecycle.RejectionReason(GameContextLifecycle.CaptureGeneration());
+            Game.Instance = null;
+        }
+    }
+
+    private static string ToolCallBody(int id, string name)
+    {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":" + id
+            + ",\"params\":{\"name\":\"" + name + "\",\"arguments\":{}}}";
+    }
+
+    private static string ToolTaskBody(int id)
+    {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":" + id
+            + ",\"params\":{\"name\":\"deferred\",\"arguments\":{},\"task\":{}}}";
+    }
+
+    private static HttpRequestMessage BuildModernResourceReadRequest(int id, string uri)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "");
+        request.Content = new StringContent(ModernResourceRead(id, uri), Encoding.UTF8, "application/json");
+        request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
+        request.Headers.TryAddWithoutValidation("Mcp-Method", "resources/read");
+        request.Headers.TryAddWithoutValidation("Mcp-Name", uri);
+        return request;
+    }
+
+    private static void AssertContextError(HttpResponseMessage response, string reason)
+    {
+        Assert(response.StatusCode == HttpStatusCode.OK,
+            "Lifecycle rejection changed JSON-RPC transport status");
+        var error = ReadJson(response)["error"];
+        Assert((int)error?["code"] == McpHttpServer.GameContextLifecycleErrorCode,
+            "Lifecycle rejection used the wrong JSON-RPC code");
+        Assert((string)error?["data"]?["reasonCode"] == reason
+            && (bool?)error?["data"]?["retryable"] == true,
+            "Lifecycle rejection lost its stable retryable reason");
+    }
+
+    private static int PendingMainThreadRequests(McpHttpServer server)
+    {
+        return (int)typeof(McpHttpServer).GetField("_pendingMainThreadHttpRequests",
+            BindingFlags.Instance | BindingFlags.NonPublic).GetValue(server);
     }
 
     private static string Initialize(HttpClient client, int id)
