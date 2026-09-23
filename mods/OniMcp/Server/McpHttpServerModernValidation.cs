@@ -460,7 +460,7 @@ namespace OniMcp.Server
                 $"Unsupported protocol version: {requestedVersion}", new JObject
                 {
                     ["requested"] = requestedVersion,
-                    ["supported"] = BuildSupportedProtocolVersions()
+                    ["supported"] = new JArray(ModernProtocolVersion)
                 });
         }
 
