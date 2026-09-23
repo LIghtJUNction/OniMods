@@ -2,6 +2,12 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
+## 2026-09-23 — 0.3.3
+
+- Republish the 0.3.2 gameplay code with refreshed package metadata to produce a new Steam Workshop content manifest.
+- Update the Chinese and English Workshop descriptions to reflect the current version and the 0.3.2 safety changes.
+- Steam download failures reported by users remain under investigation; this distribution refresh is not a confirmed download fix.
+
 ## 2026-09-12 — 0.3.2
 
 - Invalidate path-probe results when replacement work is queued, discarded, unsupported, or fails; invalidate cached navigation state when the `NavGrid` object changes.

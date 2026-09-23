@@ -2,6 +2,12 @@
 
 [b]轻量级性能优化 Mod（缺氧 / Oxygen Not Included）[/b]
 
+[h2]v0.3.3 分发刷新[/h2]
+沿用 v0.3.2 的游戏运行代码，更新版本元数据和说明，并重新发布 Steam 创意工坊文件。用户反馈的 Steam 下载失败仍在调查中；此版本不代表已确认或修复下载故障。
+
+[h2]v0.3.2 安全修复[/h2]
+替换任务被排队、丢弃、不受支持或失败时，清除路径探针结果；`NavGrid` 对象变更时清除导航缓存。对不受支持的小动物 abilities、无效格子和 worker 配额溢出保留安全回退。
+
 [h2]v0.3.1 修复[/h2]
 CycleTrim 之前只用 `currentChore != null` 判断复制人是否忙碌。ONI 空闲时仍会保留一个非空的 `IdleChore`，所以拾取和差事刷新也受到了节流。
 
@@ -40,4 +46,4 @@ CycleTrim 减少六条高频模拟路径中的重复计算。它不改复制人�
 [b]PathProbe 合成矩阵也不是 FPS：[/b] 0/25/50/75/90% 目标命中率下，10,000 请求实际执行 10000/7701/5501/3301/2000 次；理论工作下降 0/22.99/44.99/66.99/80.00%。缓存最多连续跳过 8 次后强制刷新。
 
 [h2]详情与下载[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md]查看详情（中文）[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/cycletrim-v0.3.3/mods/CycleTrim/README.md]查看详情（中文）[/url]
