@@ -25,6 +25,14 @@ internal sealed record LegacyCandidatePlan(
         "CycleTrim [Private Legacy Test Candidate for 3766318556]";
 
     internal static LegacyCandidatePlan Create(WorkshopMetadata metadata)
+        => Build(metadata, LegacyPackage.Create(metadata));
+
+    internal static LegacyCandidatePlan FromExistingPackage(
+        WorkshopMetadata metadata, string zipPath)
+        => Build(metadata, LegacyPackage.LoadForVerification(zipPath));
+
+    private static LegacyCandidatePlan Build(
+        WorkshopMetadata metadata, LegacyPackage package)
     {
         var target = ResolveFixedTarget();
         if (!metadata.Title.Contains(
@@ -34,7 +42,6 @@ internal sealed record LegacyCandidatePlan(
                 $"Candidate VDF title is not {target.DisplayName}");
         }
 
-        var package = LegacyPackage.Create(metadata);
         var previewBytes = File.ReadAllBytes(metadata.PreviewFile);
         if (previewBytes.Length == 0 || previewBytes.Length > 10 * 1024 * 1024)
         {

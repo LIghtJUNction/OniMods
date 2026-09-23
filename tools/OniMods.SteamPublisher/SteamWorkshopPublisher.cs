@@ -24,7 +24,8 @@ internal static partial class SteamWorkshopPublisher
             requirePrivate: false);
 
     internal static SteamUGCDetails_t QueryItem(
-        ulong workshopId, string titleContains, bool requirePrivate)
+        ulong workshopId, string titleContains, bool requirePrivate,
+        bool requirePublic = false)
     {
         var fileId = new PublishedFileId_t(workshopId);
         var query = SteamUGC.CreateQueryUGCDetailsRequest([fileId], 1);
@@ -44,7 +45,8 @@ internal static partial class SteamWorkshopPublisher
             {
                 throw new InvalidOperationException("SteamUGC.GetQueryUGCResult failed");
             }
-            ValidateItem(details, workshopId, titleContains, requirePrivate);
+            ValidateItem(details, workshopId, titleContains,
+                requirePrivate, requirePublic);
             return details;
         }
         finally
@@ -141,11 +143,13 @@ internal static partial class SteamWorkshopPublisher
 
     internal static void VerifyInstalledLegacy(
         LegacyPackage package, SteamUGCDetails_t current, uint previousServerUpdated,
-        ulong? candidateId = null)
+        ulong? candidateId = null, string? expectedCandidateTitle = null,
+        bool expectPublic = false)
     {
         var workshopId = candidateId ?? WorkshopTarget.WorkshopId;
         var titleContains = candidateId.HasValue
-            ? LegacyCandidatePlan.ResolveFixedTarget().CandidateTitle
+            ? expectedCandidateTitle
+                ?? LegacyCandidatePlan.ResolveFixedTarget().CandidateTitle
             : WorkshopTarget.TitleContains;
         var fileId = new PublishedFileId_t(workshopId);
         var expectedHash = System.Security.Cryptography.SHA256.HashData(package.Bytes);
@@ -186,7 +190,8 @@ internal static partial class SteamWorkshopPublisher
                 try
                 {
                     remote = QueryItem(workshopId, titleContains,
-                        requirePrivate: candidateId.HasValue);
+                        requirePrivate: candidateId.HasValue && !expectPublic,
+                        requirePublic: candidateId.HasValue && expectPublic);
                     remoteQueryError = "none";
                 }
                 catch (Exception error) when (
@@ -396,7 +401,7 @@ internal static partial class SteamWorkshopPublisher
 
     private static void ValidateItem(
         SteamUGCDetails_t details, ulong workshopId,
-        string titleContains, bool requirePrivate)
+        string titleContains, bool requirePrivate, bool requirePublic)
     {
         if (details.m_nPublishedFileId.m_PublishedFileId != workshopId
             || details.m_nCreatorAppID.m_AppId != WorkshopTarget.CreatorAppId
@@ -407,7 +412,10 @@ internal static partial class SteamWorkshopPublisher
                 titleContains, StringComparison.OrdinalIgnoreCase)
             || (requirePrivate
                 && details.m_eVisibility
-                    != ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPrivate))
+                    != ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPrivate)
+            || (requirePublic
+                && details.m_eVisibility
+                    != ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPublic))
         {
             throw new InvalidOperationException(
                 $"Workshop item identity check failed for {WorkshopTarget.DisplayName}: "
