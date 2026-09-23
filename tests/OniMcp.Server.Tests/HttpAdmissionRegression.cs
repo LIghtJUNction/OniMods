@@ -158,12 +158,17 @@ internal static class HttpAdmissionRegression
         {
             int initialCalls = OniToolRegistry.Calls;
             int initialReads = OniResourceRegistry.ResourceReads;
+            int initialCatalogReads = OniResourceRegistry.CatalogReads;
             using (var loadRequest = BuildLegacyRequest(ToolCallBody(15700, "load"), sessionId))
             using (var staleRequest = BuildLegacyRequest(ToolCallBody(15701, "stale"), sessionId))
             using (var legacyReadRequest = BuildLegacyRequest(
                 "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15702,\"params\":{\"uri\":\"oni://test\"}}",
                 sessionId))
-            using (var modernReadRequest = BuildModernResourceReadRequest(15710))
+            using (var modernReadRequest = BuildModernResourceReadRequest(15710, "oni://test"))
+            using (var legacyCatalogRequest = BuildLegacyRequest(
+                "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15711,\"params\":{\"uri\":\"oni://tools/manifest?query=power\"}}",
+                sessionId))
+            using (var modernCatalogRequest = BuildModernResourceReadRequest(15712, "oni://tools/manifest"))
             {
                 var load = client.SendAsync(loadRequest);
                 WaitForQueuedActions(1);
@@ -173,11 +178,16 @@ internal static class HttpAdmissionRegression
                 WaitForQueuedActions(3);
                 var modernRead = client.SendAsync(modernReadRequest);
                 WaitForQueuedActions(4);
+                var legacyCatalog = client.SendAsync(legacyCatalogRequest);
+                WaitForQueuedActions(5);
+                var modernCatalog = client.SendAsync(modernCatalogRequest);
+                WaitForQueuedActions(6);
 
                 // One Update drains the whole snapshot, including work admitted
                 // against the old colony after the load action starts teardown.
                 Invoke(_bridge, "Update");
-                Assert(Task.WaitAll(new Task[] { load, stale, legacyRead, modernRead }, 3000),
+                Assert(Task.WaitAll(new Task[] { load, stale, legacyRead, modernRead,
+                    legacyCatalog, modernCatalog }, 5000),
                     "A save-load queue left an HTTP request hanging");
                 using (var response = load.GetAwaiter().GetResult())
                     Assert(ReadJson(response)["result"] != null, "Load stand-in failed");
@@ -187,16 +197,33 @@ internal static class HttpAdmissionRegression
                     AssertContextError(response, "stale_game_context");
                 using (var response = modernRead.GetAwaiter().GetResult())
                     AssertContextError(response, "stale_game_context");
+                using (var response = legacyCatalog.GetAwaiter().GetResult())
+                    Assert(ReadJson(response)["result"] != null,
+                        "Legacy catalog resource was rejected after a load began");
+                using (var response = modernCatalog.GetAwaiter().GetResult())
+                    Assert(ReadJson(response)["result"] != null,
+                        "Modern catalog resource was rejected after a load began");
             }
             Assert(OniToolRegistry.Calls == initialCalls + 1,
                 "A stale queued tool body ran after the load boundary");
             Assert(OniResourceRegistry.ResourceReads == initialReads,
                 "A stale queued resource read reached game state");
+            Assert(OniResourceRegistry.CatalogReads == initialCatalogReads + 2,
+                "Safe catalog reads did not remain available across the load boundary");
             Assert(PendingMainThreadRequests(server) == 0,
                 "Stale request releases leaked main-thread admission slots");
 
             using (var response = SendLegacyPumped(client, ToolCallBody(15703, "during-load"), sessionId))
                 AssertContextError(response, "game_loading");
+            using (var response = SendLegacyPumped(client,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15713,\"params\":{\"uri\":\"oni://tools/read/game_control\"}}",
+                sessionId))
+                AssertContextError(response, "game_loading");
+            using (var response = SendLegacyPumped(client,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15714,\"params\":{\"uri\":\"oni://mcp/sessions\"}}",
+                sessionId))
+                Assert(ReadJson(response)["result"] != null,
+                    "Server session diagnostic was blocked during game loading");
             Assert(OniToolRegistry.Calls == initialCalls + 1,
                 "Fresh work ran while the game reported loading");
             using (var response = SendLegacyPumped(client,
@@ -293,14 +320,14 @@ internal static class HttpAdmissionRegression
             + ",\"params\":{\"name\":\"deferred\",\"arguments\":{},\"task\":{}}}";
     }
 
-    private static HttpRequestMessage BuildModernResourceReadRequest(int id)
+    private static HttpRequestMessage BuildModernResourceReadRequest(int id, string uri)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "");
-        request.Content = new StringContent(ModernResourceRead(id, "oni://test"), Encoding.UTF8, "application/json");
+        request.Content = new StringContent(ModernResourceRead(id, uri), Encoding.UTF8, "application/json");
         request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
         request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
         request.Headers.TryAddWithoutValidation("Mcp-Method", "resources/read");
-        request.Headers.TryAddWithoutValidation("Mcp-Name", "oni://test");
+        request.Headers.TryAddWithoutValidation("Mcp-Name", uri);
         return request;
     }
 

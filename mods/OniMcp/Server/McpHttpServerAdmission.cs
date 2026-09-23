@@ -166,10 +166,46 @@ namespace OniMcp.Server
             }
         }
 
-        private static bool IsGameContextBoundLegacyRequest(string method)
+        private static bool IsGameContextBoundLegacyRequest(string method, JObject parameters)
         {
             return string.Equals(method, "tools/call", StringComparison.Ordinal)
-                || string.Equals(method, "resources/read", StringComparison.Ordinal);
+                || (string.Equals(method, "resources/read", StringComparison.Ordinal)
+                    && IsGameContextBoundResourceRead(parameters));
+        }
+
+        private static bool IsGameContextBoundResourceRead(JObject parameters)
+        {
+            var uriToken = parameters?["uri"];
+            if (uriToken?.Type != JTokenType.String
+                || !Uri.TryCreate((string)uriToken, UriKind.Absolute, out var uri)
+                || !string.Equals(uri.Scheme, "oni", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            string path = uri.AbsolutePath.TrimEnd('/');
+            // These exact resource routes delegate only to server catalog/audit
+            // handlers. Unknown tools routes and /read/{name} remain game-bound.
+            if (string.Equals(uri.Host, "tools", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (path)
+                {
+                    case "/manifest":
+                    case "/search":
+                    case "/guide":
+                    case "/player-action-coverage":
+                    case "/static-audit":
+                    case "/side-screen-surfaces":
+                    case "/user-menu-surfaces":
+                    case "/management-surfaces":
+                    case "/tool-menu-surfaces":
+                    case "/ui-menu-surfaces":
+                    case "/global-control-surfaces":
+                    case "/notification-surfaces":
+                        return false;
+                }
+            }
+
+            return !(string.Equals(uri.Host, "mcp", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(path, "/sessions", StringComparison.Ordinal));
         }
 
         private static JsonRpcResponse GameContextError(object requestId, int capturedGeneration)

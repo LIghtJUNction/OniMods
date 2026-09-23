@@ -183,7 +183,8 @@ namespace OniMcp.Server
                     if (!_running)
                         result = JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InternalError,
                             "MCP server is stopping");
-                    else if (string.Equals(rpcRequest.Method, "resources/read", StringComparison.Ordinal))
+                    else if (string.Equals(rpcRequest.Method, "resources/read", StringComparison.Ordinal)
+                        && IsGameContextBoundResourceRead(rpcRequest.Params))
                         result = GameContextError(rpcRequest.Id, admission.GameContextGeneration);
                     if (result == null)
                         result = ProcessModernMethod(rpcRequest);

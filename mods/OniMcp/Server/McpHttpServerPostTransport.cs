@@ -205,7 +205,7 @@ namespace OniMcp.Server
                 {
                     if (_running && IsSessionActive(sessionId))
                     {
-                        if (!IsGameContextBoundLegacyRequest(rpcRequest.Method)
+                        if (!IsGameContextBoundLegacyRequest(rpcRequest.Method, rpcRequest.Params)
                             || GameContextError(null, admission.GameContextGeneration) == null)
                             ProcessMethod(rpcRequest, sessionId);
                     }
@@ -348,7 +348,7 @@ namespace OniMcp.Server
                     if (!_running || !IsSessionActive(sessionId))
                         result = JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidRequest,
                             "Session not found or terminated");
-                    else if (IsGameContextBoundLegacyRequest(rpcRequest.Method))
+                    else if (IsGameContextBoundLegacyRequest(rpcRequest.Method, rpcRequest.Params))
                         result = GameContextError(rpcRequest.Id, admission.GameContextGeneration);
                     if (result == null)
                         result = ProcessMethod(rpcRequest, sessionId);
