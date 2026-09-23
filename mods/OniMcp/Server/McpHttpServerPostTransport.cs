@@ -108,9 +108,7 @@ namespace OniMcp.Server
             bool isClientResponse = rawMessage["method"] == null
                 && (rawMessage["result"] != null || rawMessage["error"] != null);
             bool expectsLegacyJsonResponse = rawMessage.Property("id") != null && !isClientResponse;
-            if (expectsLegacyJsonResponse
-                && requestId?.Type != JTokenType.String
-                && requestId?.Type != JTokenType.Integer)
+            if (expectsLegacyJsonResponse && requestId?.Type == JTokenType.Float)
             {
                 if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
                     return;
