@@ -27,7 +27,6 @@ namespace OniMcp.Server
                 decimal quality = 1m;
                 bool validQuality = true;
                 bool mediaParametersMatch = true;
-                bool qualitySeen = false;
                 for (int i = 1; i < parts.Length; i++)
                 {
                     string parameter = parts[i].Trim();
@@ -39,13 +38,11 @@ namespace OniMcp.Server
                         continue;
                     }
 
-                    if (qualitySeen
-                        || !TryParseHttpQualityValue(parameter.Substring(separator + 1), out quality))
+                    if (!TryParseHttpQualityValue(parameter.Substring(separator + 1), out quality))
                     {
                         validQuality = false;
                         break;
                     }
-                    qualitySeen = true;
                 }
 
                 if (!validQuality || !mediaParametersMatch)
