@@ -256,7 +256,7 @@ namespace OniMcp.Server
                     && IsOptionalString(block, "title")
                     && IsOptionalString(block, "description")
                     && IsOptionalString(block, "mimeType")
-                    && IsOptionalInteger(block, "size")
+                    && IsOptionalFiniteNumber(block, "size")
                     && IsOptionalModernAnnotations(block, "annotations")
                     && IsOptionalModernIcons(block, "icons")
                     && IsOptionalObject(block, "_meta");
@@ -348,10 +348,16 @@ namespace OniMcp.Server
             return property == null || property.Value.Type == JTokenType.String;
         }
 
-        private static bool IsOptionalInteger(JObject value, string propertyName)
+        private static bool IsOptionalFiniteNumber(JObject value, string propertyName)
         {
             var property = value.Property(propertyName);
-            return property == null || property.Value.Type == JTokenType.Integer;
+            if (property == null || property.Value.Type == JTokenType.Integer)
+                return true;
+            if (property.Value.Type != JTokenType.Float)
+                return false;
+
+            double number = property.Value.Value<double>();
+            return !double.IsNaN(number) && !double.IsInfinity(number);
         }
 
         private static bool IsOptionalObject(JObject value, string propertyName)
