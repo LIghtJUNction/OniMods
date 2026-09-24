@@ -17,6 +17,7 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Bio/HarvestMarkPolicy.cs" Link="Source/HarvestMarkPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningBackwallSupportPolicy.cs" Link="Source/BuildPlanningBackwallSupportPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/SandboxDryRunRoutingPolicy.cs" Link="Source/SandboxDryRunRoutingPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/AttackDesignationPolicy.cs" Link="Source/AttackDesignationPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Sandbox/SandboxFloodFillExecution.cs" Link="Source/SandboxFloodFillExecution.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/AgentProgram*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/ToolBatch*.cs" Link="Source/%(Filename)%(Extension)" />
