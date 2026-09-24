@@ -158,7 +158,7 @@ namespace OniMcp.Server
             var requestId = parameters["requestId"];
             if (!IsValidModernRequestId(requestId))
             {
-                errorMessage = "Modern cancellation notification requires a string or integer requestId";
+                errorMessage = "Modern cancellation notification requires a string or number requestId";
                 return false;
             }
 
