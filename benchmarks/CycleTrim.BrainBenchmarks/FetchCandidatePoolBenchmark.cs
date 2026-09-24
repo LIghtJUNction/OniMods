@@ -115,6 +115,14 @@ namespace CycleTrim.BrainBenchmarks
                 throw new InvalidOperationException(
                     "Efficient Supply presence must disable CycleTrim fetch replacement");
             }
+
+            if (FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
+                    efficientSupplyPresent: false,
+                    bundledEfficientFetchPresent: true))
+            {
+                throw new InvalidOperationException(
+                    "bundled Efficient Fetch presence must disable CycleTrim fetch replacement");
+            }
         }
 
         private static Sample RunBaseline(int iterations)
