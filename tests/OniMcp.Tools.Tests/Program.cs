@@ -41,6 +41,7 @@ internal static class Program
         TestFloodFillPreviewCells();
         TestSandboxDryRunRoutingPolicy();
         TestBackwallSupportPolicy();
+        TestExistingMaterialPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -223,6 +224,30 @@ internal static class Program
         var floor = BuildPlanningBackwallSupportPolicy.Evaluate("OnFloor", false);
         Check(floor.Valid,
             "non-backwall rules remain outside this narrow policy so OnFloor planned-support semantics are unchanged");
+    }
+
+    private static void TestExistingMaterialPolicy()
+    {
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting(null, null, null, false),
+            "omitted material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("auto", null, null, false),
+            "auto material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("default", null, null, false),
+            "default material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("IgneousRock", "IgneousRock", "Igneous Rock", false),
+            "explicit canonical material must match the existing construction material");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Igneous Rock", "IgneousRock", "Igneous Rock", false),
+            "explicit proper material name must match the existing construction material");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("BuildableRaw", "IgneousRock", "Igneous Rock", true),
+            "explicit material category must accept an existing material in that category");
+        Check(!BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Granite", "IgneousRock", "Igneous Rock", false),
+            "different explicit material must not be treated as already satisfied");
+        Check(!BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Granite", null, null, false),
+            "unknown existing material must fail closed for an explicit request");
+        Check(BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "Granite"),
+            "resolved explicit material must match the existing tag exactly");
+        Check(!BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "IgneousRock"),
+            "resolved different material must be rejected");
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });

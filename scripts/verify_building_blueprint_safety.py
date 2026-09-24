@@ -37,6 +37,7 @@ def verify_building_blueprint_safety(
         "placement": build_root / "BuildPlanningActionPlacement.cs",
         "plan_one": build_root / "BuildPlanningPlanOne.cs",
         "materials": build_root / "BuildPlanningMaterials.cs",
+        "runtime": build_root / "BuildPlanningRuntimePlacement.cs",
     }
     for path in paths.values():
         if not path.is_file():
@@ -148,6 +149,25 @@ def verify_building_blueprint_safety(
     )
     if validated_success.count("return MaterialSelection.Invalid(") < 2:
         fail("material success validation must reject empty and invalid primary elements")
+
+    require_order(
+        plan_one,
+        (
+            "var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);",
+            "ExistingMaterialRequestSatisfied(def, earlyExistingBuild, args[\"material\"]?.ToString())",
+            "var materialResult = SelectElements(def, args[\"material\"]?.ToString(), worldId);",
+        ),
+        "explicit material requests must not bypass material resolution through early existing-placement reuse",
+    )
+    if plan_one.count("ExistingMaterialMismatchResult(") < 2:
+        fail("resolved existing-building checks must reject material mismatches before preview or execution reuse")
+
+    runtime_existing = extract_block(
+        selected[paths["runtime"]],
+        "private static Dictionary<string, object> ExistingMatchingBuildAtPlacement",
+    )
+    if runtime_existing.count('["material"]') < 2:
+        fail("existing completed buildings and blueprints must both report their construction material identity")
 
 
 def main() -> None:
