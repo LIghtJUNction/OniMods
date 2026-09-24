@@ -4,7 +4,7 @@ namespace OniMcp.Tools
     {
         public static bool ShouldMarkNow(bool canBeHarvested, bool readyOnly)
         {
-            return !readyOnly || canBeHarvested;
+            return canBeHarvested;
         }
     }
 }
