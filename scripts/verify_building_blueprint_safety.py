@@ -159,7 +159,7 @@ def verify_building_blueprint_safety(
         ),
         "explicit material requests must not bypass material resolution through early existing-placement reuse",
     )
-    if plan_one.count("ExistingMaterialMismatchResult(") < 2:
+    if plan_one.count("ExistingMaterialMismatchResult(") < 3:
         fail("resolved existing-building checks must reject material mismatches before preview or execution reuse")
 
     runtime_existing = extract_block(
