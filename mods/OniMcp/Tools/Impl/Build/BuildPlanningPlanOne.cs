@@ -225,6 +225,78 @@ namespace OniMcp.Tools
             anchor["coordMode"] = "relative";
         }
 
+        private static string ExistingMaterialTag(Dictionary<string, object> existing)
+        {
+            object value;
+            return existing != null
+                && existing.TryGetValue("material", out value)
+                && value != null
+                ? value.ToString()
+                : null;
+        }
+
+        private static bool ExistingMaterialRequestSatisfied(
+            BuildingDef def,
+            Dictionary<string, object> existing,
+            string requested)
+        {
+            if (!BuildPlanningExistingMaterialPolicy.IsExplicitRequest(requested))
+                return true;
+
+            string existingTag = ExistingMaterialTag(existing);
+            if (string.IsNullOrWhiteSpace(existingTag))
+                return false;
+
+            var materialTag = new Tag(existingTag);
+            string existingName = materialTag.IsValid ? materialTag.ProperNameStripLink() : null;
+            string request = requested.Trim();
+            var requestedCategory = MaterialCategoryTags(def)
+                .FirstOrDefault(category => EqualsIgnoreCase(category.Name, request));
+            bool categoryMatches = requestedCategory.IsValid
+                && materialTag.IsValid
+                && MaterialMatchesCategory(materialTag, requestedCategory);
+
+            return BuildPlanningExistingMaterialPolicy.RequestMatchesExisting(
+                requested,
+                existingTag,
+                existingName,
+                categoryMatches);
+        }
+
+        private static Dictionary<string, object> ExistingMaterialMismatchResult(
+            string prefabId,
+            int x,
+            int y,
+            Dictionary<string, object> existing,
+            MaterialSelection materialResult,
+            string requested)
+        {
+            if (!BuildPlanningExistingMaterialPolicy.IsExplicitRequest(requested))
+                return null;
+
+            string existingTag = ExistingMaterialTag(existing);
+            Tag selected = materialResult != null && materialResult.Elements != null && materialResult.Elements.Count > 0
+                ? materialResult.Elements[0]
+                : Tag.Invalid;
+            string selectedTag = selected.IsValid ? selected.Name : null;
+            if (BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting(selectedTag, existingTag))
+                return null;
+
+            string error = string.IsNullOrWhiteSpace(existingTag)
+                ? "Existing placement material could not be verified for this explicit material request."
+                : "Existing placement uses material '" + existingTag + "', not requested material '" + selectedTag + "'.";
+
+            return ErrorResult(prefabId, x, y, error, new Dictionary<string, object>
+            {
+                ["reasonCode"] = "existing_material_mismatch",
+                ["requestedMaterial"] = requested,
+                ["resolvedMaterial"] = selectedTag,
+                ["existingMaterial"] = existingTag,
+                ["existing"] = existing,
+                ["materialSelection"] = materialResult?.ToDictionary()
+            });
+        }
+
         private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args, HashSet<int> plannedSupportCells = null, AutoDigContext autoDigContext = null)
         {
             string resolvedPrefabId;
@@ -254,7 +326,7 @@ int cell = Grid.XYToCell(x, y);
             var orientation = ParseOrientation(args["orientation"]?.ToString());
             var earlyPlacement = BuildPlacementDetails(def, x, y, worldId, orientation);
             var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);
-            if (earlyExistingBuild != null)
+            if (earlyExistingBuild != null && ExistingMaterialRequestSatisfied(def, earlyExistingBuild, args["material"]?.ToString()))
             {
                 var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, earlyPlacement, args, earlyExistingBuild);
                 if (instantRetry != null)
@@ -297,6 +369,10 @@ int cell = Grid.XYToCell(x, y);
             var existingBuild = ExistingMatchingBuildAtPlacement(def, placement);
             if (existingBuild != null)
             {
+                var materialMismatch = ExistingMaterialMismatchResult(
+                    prefabId, x, y, existingBuild, materialResult, args["material"]?.ToString());
+                if (materialMismatch != null)
+                    return materialMismatch;
                 var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, placement, args, existingBuild);
                 if (instantRetry != null)
                     return instantRetry;
@@ -376,6 +452,10 @@ int cell = Grid.XYToCell(x, y);
             var executionExistingBuild = ExistingMatchingBuildAtPlacement(def, placement);
             if (executionExistingBuild != null)
             {
+                var materialMismatch = ExistingMaterialMismatchResult(
+                    prefabId, x, y, executionExistingBuild, materialResult, args["material"]?.ToString());
+                if (materialMismatch != null)
+                    return materialMismatch;
                 var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, placement, args, executionExistingBuild);
                 if (instantRetry != null)
                     return instantRetry;

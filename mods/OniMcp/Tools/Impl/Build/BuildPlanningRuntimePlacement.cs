@@ -89,6 +89,26 @@ namespace OniMcp.Tools
             return null;
         }
 
+        private static string ExistingConstructionMaterialTag(GameObject go)
+        {
+            if (go == null)
+                return null;
+
+            var constructable = go.GetComponent<Constructable>();
+            var selected = constructable?.SelectedElementsTags;
+            if (selected != null)
+            {
+                foreach (var tag in selected)
+                {
+                    if (tag.IsValid)
+                        return tag.Name;
+                }
+            }
+
+            var primary = go.GetComponent<PrimaryElement>();
+            return primary == null ? null : primary.ElementID.ToString();
+        }
+
         private static Dictionary<string, object> ExistingMatchingBuildAtPlacement(BuildingDef def, PlacementDetails placement)
         {
             if (def == null || placement == null)
@@ -120,6 +140,7 @@ namespace OniMcp.Tools
                     ["kind"] = "building",
                     ["prefabId"] = existingPrefabId,
                     ["id"] = go.GetComponent<KPrefabID>()?.InstanceID ?? -1,
+                    ["material"] = ExistingConstructionMaterialTag(go),
                     ["actualPlacement"] = actual,
                     ["placementCheck"] = check
                 };
@@ -135,6 +156,7 @@ namespace OniMcp.Tools
                 ["kind"] = "blueprint",
                 ["prefabId"] = blueprintBuilding?.Def?.PrefabID ?? blueprint.GetComponent<KPrefabID>()?.PrefabTag.Name ?? blueprint.name,
                 ["id"] = blueprint.GetComponent<KPrefabID>()?.InstanceID ?? -1,
+                ["material"] = ExistingConstructionMaterialTag(blueprint),
                 ["actualPlacement"] = ActualPlacementDetails(blueprint, def, placement.AnchorX, placement.AnchorY),
                 ["placementCheck"] = ComparePlacement(placement, ActualPlacementDetails(blueprint, def, placement.AnchorX, placement.AnchorY))
             };
