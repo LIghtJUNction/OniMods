@@ -53,7 +53,8 @@ namespace CycleTrim.Patches
             private static bool Prepare()
             {
                 if (!FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
-                        AccessTools.TypeByName(EfficientSupplyType) != null))
+                        AccessTools.TypeByName(EfficientSupplyType) != null,
+                        bundledEfficientFetchPresent: false))
                 {
                     return false;
                 }
