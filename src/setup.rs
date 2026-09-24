@@ -33,15 +33,21 @@ fn prompt(question: &str, default: Option<&str>) -> Result<String> {
     }
 }
 
+fn managed_relative_path(os: &str) -> &'static str {
+    match os {
+        "macos" => "OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed",
+        _ => "OxygenNotIncluded_Data/Managed",
+    }
+}
+
+fn managed_path(game_path: &Path, os: &str) -> PathBuf {
+    game_path.join(managed_relative_path(os))
+}
+
 fn auto_detect() -> Option<PathBuf> {
     for steam_root in crate::steam::library_roots() {
         let game_path = steam_root.join("steamapps/common/OxygenNotIncluded");
-        #[cfg(target_os = "macos")]
-        let assembly = game_path.join(
-            "OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll",
-        );
-        #[cfg(not(target_os = "macos"))]
-        let assembly = game_path.join("OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll");
+        let assembly = managed_path(&game_path, env::consts::OS).join("Assembly-CSharp.dll");
 
         if assembly.is_file() {
             return Some(game_path);
@@ -53,18 +59,7 @@ fn auto_detect() -> Option<PathBuf> {
 
 fn validate_game_path(path: &Path) -> Result<Vec<String>> {
     let mut errors = vec![];
-    let managed = if cfg!(target_os = "macos") {
-        let mac = path.join("OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed");
-        if mac.exists() {
-            mac
-        } else {
-            path.join("OxygenNotIncluded_Data/Managed")
-        }
-    } else if cfg!(target_os = "windows") {
-        path.join("OxygenNotIncluded_Data\\Managed")
-    } else {
-        path.join("OxygenNotIncluded_Data/Managed")
-    };
+    let managed = managed_path(path, env::consts::OS);
 
     let required = [
         ("Assembly-CSharp.dll", "游戏主逻辑 DLL"),
@@ -203,6 +198,7 @@ path = "mods/OniModTemplate"
 
     // 4. 写入 Directory.Build.props
     let sep = std::path::MAIN_SEPARATOR_STR;
+    let managed_relative = managed_relative_path(env::consts::OS).replace('/', sep);
     let props_content = format!(
         r#"<Project>
 
@@ -213,7 +209,7 @@ path = "mods/OniModTemplate"
   </PropertyGroup>
 
   <PropertyGroup>
-    <OniManagedPath>$(OniGamePath){}OxygenNotIncluded_Data{}Managed</OniManagedPath>
+    <OniManagedPath>$(OniGamePath){}{}</OniManagedPath>
   </PropertyGroup>
 
   <Target Name="ValidateOniGamePath" BeforeTargets="BeforeBuild">
@@ -224,7 +220,7 @@ path = "mods/OniModTemplate"
 "#,
         game_path.to_string_lossy().replace('"', "&quot;"),
         sep,
-        sep
+        managed_relative
     );
 
     println!("📝 写入 {} ...", BUILD_PROPS);
@@ -240,4 +236,29 @@ path = "mods/OniModTemplate"
     println!("  onim init <name> 创建新 Mod");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::managed_relative_path;
+
+    #[test]
+    fn uses_current_macos_managed_layout() {
+        assert_eq!(
+            managed_relative_path("macos"),
+            "OxygenNotIncluded.app/Contents/Resources/Data/Managed"
+        );
+    }
+
+    #[test]
+    fn preserves_windows_and_linux_managed_layout() {
+        assert_eq!(
+            managed_relative_path("windows"),
+            "OxygenNotIncluded_Data/Managed"
+        );
+        assert_eq!(
+            managed_relative_path("linux"),
+            "OxygenNotIncluded_Data/Managed"
+        );
+    }
 }
