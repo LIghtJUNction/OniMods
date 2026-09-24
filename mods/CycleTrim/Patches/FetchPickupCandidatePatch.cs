@@ -59,7 +59,7 @@ namespace CycleTrim.Patches
             }
 
             installAttempted = true;
-            if (AccessTools.TypeByName(FastTrackPatchType) != null
+            if (!IsFastTrackAbsent()
                 || AccessTools.TypeByName(
                     FetchPatchCompatibility
                         .DeliveryTemperatureLimitSupercooledPickupGroupingType) != null)
@@ -75,6 +75,11 @@ namespace CycleTrim.Patches
 
             installRequested = true;
             harmony.CreateClassProcessor(typeof(UpdatePickupsPatch)).Patch();
+        }
+
+        private static bool IsFastTrackAbsent()
+        {
+            return AccessTools.TypeByName(FastTrackPatchType) == null;
         }
 
         [HarmonyPatch]
