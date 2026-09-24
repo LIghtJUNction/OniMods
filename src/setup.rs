@@ -35,7 +35,7 @@ fn prompt(question: &str, default: Option<&str>) -> Result<String> {
 
 fn managed_relative_path(os: &str) -> &'static str {
     match os {
-        "macos" => "OxygenNotIncluded.app/Contents/OxygenNotIncluded_Data/Managed",
+        "macos" => "OxygenNotIncluded.app/Contents/Resources/Data/Managed",
         _ => "OxygenNotIncluded_Data/Managed",
     }
 }
