@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Tools;
@@ -42,9 +41,6 @@ namespace OniMcp.Server
             if (!explicitModern && IsSessionActive(sessionId))
                 return false;
 
-            if (explicitModern && TryHandleModernCancellationNotification(response, rawMessage))
-                return true;
-
             var paramsToken = rawMessage["params"];
             var paramsObject = paramsToken as JObject;
             if (paramsToken != null && paramsObject == null)
@@ -77,12 +73,6 @@ namespace OniMcp.Server
             if (!modernSignal)
                 return false;
 
-            // 2026-07-28 does not define routing-header requirements for notification POSTs.
-            // Some current clients still send notifications/cancelled over HTTP, so accept the
-            // body-level modern signal and preserve the existing acknowledge-and-drop behavior.
-            if (!explicitModern && TryHandleModernCancellationNotification(response, rawMessage))
-                return true;
-
             var methodToken = rawMessage["method"];
             if (methodToken?.Type != JTokenType.String)
             {
@@ -101,18 +91,42 @@ namespace OniMcp.Server
             }
 
             bool isNotification = rawMessage.Property("id") == null;
+            if (!isNotification && !AcceptsModernResponseMediaTypes(httpRequest))
+            {
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
+                    "Modern requests require Accept to list both application/json and text/event-stream"),
+                    (int)HttpStatusCode.NotAcceptable);
+                return true;
+            }
+
             if (isNotification)
             {
                 if (IsModernRequestMethod(method))
                 {
                     SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
                         $"Modern request method '{method}' requires a request id"), 400);
+                    return true;
                 }
-                else
+
+                if (string.Equals(method, "notifications/cancelled", StringComparison.Ordinal))
                 {
-                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.MethodNotFound,
-                        $"Notification method is not available on the {ModernProtocolVersion} compatibility path: {method}"), 404);
+                    string cancellationError;
+                    if (!ValidateModernCancellationNotification(rawMessage["params"], out cancellationError))
+                    {
+                        SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                            cancellationError), 400);
+                        return true;
+                    }
                 }
+
+                // The 2026 core defines no actionable client-to-server notifications over HTTP.
+                // Current official SDKs acknowledge and drop id-less notification POSTs so
+                // fire-and-forget clients do not receive an unusable MethodNotFound response.
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                response.StatusCode = (int)HttpStatusCode.Accepted;
+                response.ContentLength64 = 0;
+                response.Close();
                 return true;
             }
 
@@ -132,33 +146,6 @@ namespace OniMcp.Server
             return true;
         }
 
-        private bool TryHandleModernCancellationNotification(HttpListenerResponse response, JObject rawMessage)
-        {
-            var method = rawMessage["method"];
-            if (rawMessage.Property("id") != null
-                || method?.Type != JTokenType.String
-                || !string.Equals((string)method, "notifications/cancelled", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            string cancellationError;
-            if (!ValidateModernCancellationNotification(rawMessage["params"], out cancellationError))
-            {
-                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                    cancellationError), 400);
-                return true;
-            }
-
-            // This stateless compatibility path has no request-owned work to cancel.
-            // Acknowledge and drop the notification rather than turning it into a 4xx.
-            response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
-            response.StatusCode = (int)HttpStatusCode.Accepted;
-            response.ContentLength64 = 0;
-            response.Close();
-            return true;
-        }
-
         private static bool ValidateModernCancellationNotification(JToken paramsToken, out string errorMessage)
         {
             var parameters = paramsToken as JObject;
@@ -171,7 +158,7 @@ namespace OniMcp.Server
             var requestId = parameters["requestId"];
             if (!IsValidModernRequestId(requestId))
             {
-                errorMessage = "Modern cancellation notification requires a string or integer requestId";
+                errorMessage = "Modern cancellation notification requires a string or number requestId";
                 return false;
             }
 
@@ -280,6 +267,20 @@ namespace OniMcp.Server
                 return false;
             }
 
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "mcp", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(canonicalPath, "/sessions", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "game", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(canonicalPath, "/saves", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             return !string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(parsed.Host, "world", StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(canonicalPath, "/coordinate-screenshot", StringComparison.Ordinal);
@@ -289,7 +290,8 @@ namespace OniMcp.Server
         {
             return string.IsNullOrEmpty(uriTemplate)
                 || (!uriTemplate.StartsWith("oni://world/coordinate-screenshot", StringComparison.Ordinal)
-                    && !uriTemplate.StartsWith("oni://tools/read/", StringComparison.Ordinal));
+                    && !uriTemplate.StartsWith("oni://tools/read/", StringComparison.Ordinal)
+                    && !uriTemplate.StartsWith("oni://game/saves{", StringComparison.Ordinal));
         }
         private static JsonRpcResponse ModernToolMethodUnavailable(JsonRpcRequest request)
         {
@@ -316,6 +318,16 @@ namespace OniMcp.Server
             // `execution.taskSupport` belonged to the 2025 core task model. Tasks moved
             // out of core in 2026, so do not advertise that legacy field here.
             modernToolInfo.Remove("execution");
+
+            var inputSchema = modernToolInfo["inputSchema"] as JObject;
+            var properties = inputSchema?["properties"] as JObject;
+            var taskProperty = properties?[ToolCallMiddleware.TaskDescriptionParameter] as JObject;
+            if (taskProperty != null)
+            {
+                taskProperty["description"] =
+                    "Required for this benchmark call: briefly describe what you are doing. The stateless 2026 path does not display this text in ONI.";
+            }
+
             result.Add(modernToolInfo);
             return result;
         }
@@ -443,7 +455,7 @@ namespace OniMcp.Server
                 ["io.modelcontextprotocol/serverInfo"] = new JObject
                 {
                     ["name"] = "OniMcp",
-                    ["version"] = "0.2.3"
+                    ["version"] = ServerVersion
                 }
             };
         }

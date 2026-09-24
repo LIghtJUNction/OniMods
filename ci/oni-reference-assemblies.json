@@ -44,12 +44,13 @@
     "upstream_tracking": {
       "branch": "main",
       "version_marker": "KleiVersion.cs",
-      "contract_files": ["NavGrid.cs", "FetchManager.cs"]
+      "contract_files": ["NavGrid.cs", "FetchManager.cs", "Research.cs"]
     },
     "note": "Transient source-only method-body evidence. KleiVersion.cs declares release ChangeList 744825. The mirror has no declared license, so CI verifies provenance and semantics without vendoring or redistributing the decompiled source.",
     "files": [
       {"name":"NavGrid.cs","path":"Assembly-CSharp/NavGrid.cs","blob_sha":"8db6d7f2e84fda45504d06844722a693e5338f0c"},
       {"name":"FetchManager.cs","path":"Assembly-CSharp/FetchManager.cs","blob_sha":"85ac7fedf30f9c337b2759a15490974d856fadf5"},
+      {"name":"Research.cs","path":"Assembly-CSharp/Research.cs","blob_sha":"d92cec77f8593c92fdedf7aba2bf435d3eff4857"},
       {"name":"KleiVersion.cs","path":"Assembly-CSharp/KleiVersion.cs","blob_sha":"2f5b3266033b2868e9b475a55ac208f70eca647a"}
     ]
   },

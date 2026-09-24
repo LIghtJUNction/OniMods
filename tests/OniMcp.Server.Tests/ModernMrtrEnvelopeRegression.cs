@@ -1,0 +1,277 @@
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
+using System.Reflection;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+using OniMcp.Config;
+using OniMcp.Server;
+using OniMcp.Tools;
+
+internal static class ModernMrtrEnvelopeRegressionEntry
+{
+    private static MainThreadBridge _bridge;
+
+    private static void Main()
+    {
+        RunModernMrtrEnvelopeRegression();
+
+        var existing = typeof(ModernMetaKeyRegressionEntry).GetMethod("Main",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        if (existing == null)
+            throw new InvalidOperationException("Existing server regression entrypoint was not found");
+        existing.Invoke(null, null);
+    }
+
+    private static void RunModernMrtrEnvelopeRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        int port = ReservePort();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        OniToolRegistry.ModernToolsEnabled = true;
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                int callsBeforeInvalidEnvelopes = OniToolRegistry.Calls;
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33201, "\"requestState\":7,"),
+                    "tools/call", "benchmark", "numeric requestState");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33202, "\"inputResponses\":[1],"),
+                    "tools/call", "benchmark", "array inputResponses");
+                AssertModernRejected(client,
+                    BuildResourceRead(33203, "\"requestState\":false,"),
+                    "resources/read", "oni://missing-mrtr-regression", "boolean requestState");
+                AssertModernRejected(client,
+                    BuildResourceRead(33204, "\"inputResponses\":\"bad\","),
+                    "resources/read", "oni://missing-mrtr-regression", "string inputResponses");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33208, "\"inputResponses\":{\"probe\":7},"),
+                    "tools/call", "benchmark", "numeric inputResponses entry");
+                AssertModernRejected(client,
+                    BuildResourceRead(33209, "\"inputResponses\":{\"probe\":[]},"),
+                    "resources/read", "oni://missing-mrtr-regression", "array inputResponses entry");
+                AssertModernRejected(client,
+                    BuildResourceRead(33211, "\"inputResponses\":{\"probe\":{}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "empty inputResponses entry");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33212, "\"inputResponses\":{\"probe\":{\"action\":\"retry\"}},"),
+                    "tools/call", "benchmark", "invalid elicitation action");
+                AssertModernRejected(client,
+                    BuildResourceRead(33213, "\"inputResponses\":{\"probe\":{\"roots\":\"bad\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "non-array roots result");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33214,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling result without content");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33215,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":7}},"),
+                    "tools/call", "benchmark", "numeric elicitation content");
+                AssertModernRejected(client,
+                    BuildResourceRead(33216,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"nested\":{\"value\":true}}}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "nested elicitation content value");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33217,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"choices\":[\"a\",2]}}},"),
+                    "tools/call", "benchmark", "non-string elicitation array item");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33218,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling content without a block discriminator");
+                AssertModernRejected(client,
+                    BuildResourceRead(33219,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":[7],\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "sampling content array with a primitive item");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33220,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"video\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling content with an unknown block discriminator");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33221,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "text sampling block without text");
+                AssertModernRejected(client,
+                    BuildResourceRead(33222,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":7},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "text sampling block with non-string text");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33223,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"image\",\"mimeType\":\"image/png\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "image sampling block without data");
+                AssertModernRejected(client,
+                    BuildResourceRead(33224,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":7},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "image sampling block with non-string mimeType");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33225,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"audio\",\"data\":\"AA==\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "audio sampling block without mimeType");
+                AssertModernRejected(client,
+                    BuildResourceRead(33226,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"audio\",\"data\":7,\"mimeType\":\"audio/wav\"},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "audio sampling block with non-string data");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
+                    "Malformed MRTR envelopes reached tool dispatch");
+
+                using (var response = SendModern(client,
+                    BuildBenchmarkCall(33205,
+                        "\"requestState\":\"opaque-state\",\"inputResponses\":{"
+                        + "\"elicitation\":{\"action\":\"accept\",\"content\":{\"text\":\"ok\",\"count\":2,\"ratio\":1.5,\"enabled\":true,\"choices\":[\"a\",\"b\"]},\"x-extension\":true},"
+                        + "\"urlElicitation\":{\"action\":\"accept\"},"
+                        + "\"roots\":{\"roots\":[]},"
+                        + "\"sampling\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":\"ok\"},\"model\":\"fixture\"},"
+                        + "\"samplingArray\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"one\"},{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\"},{\"type\":\"audio\",\"data\":\"AA==\",\"mimeType\":\"audio/wav\"}],\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Schema-valid MRTR input responses were rejected with HTTP " + (int)response.StatusCode);
+                    JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(body["result"] != null && body["error"] == null,
+                        "Schema-valid MRTR input responses did not reach the modern tool path");
+                }
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes + 1,
+                    "Schema-valid MRTR input responses did not dispatch exactly once");
+
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Modern MRTR envelope validation allocated legacy session state");
+
+                string sessionId;
+                using (var initializeResponse = SendLegacy(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":33206,\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"mrtr-envelope-regression\",\"version\":\"1.0\"}}}",
+                    null))
+                {
+                    Assert(initializeResponse.StatusCode == HttpStatusCode.OK,
+                        "Legacy initialize failed during MRTR regression");
+                    sessionId = initializeResponse.Headers.GetValues("Mcp-Session-Id").Single();
+                }
+
+                using (var legacyResponse = SendLegacy(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":33207,\"params\":{\"requestState\":7,\"inputResponses\":[1]}}",
+                    sessionId))
+                {
+                    Assert(legacyResponse.StatusCode == HttpStatusCode.OK,
+                        "Modern-only MRTR validation changed legacy 2025 request handling");
+                    JObject body = JObject.Parse(legacyResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(body["result"] != null,
+                        "Legacy 2025 tools/list failed after unrelated MRTR-shaped fields");
+                }
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
+    private static string BuildBenchmarkCall(int id, string extraParams)
+    {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":" + id
+            + ",\"params\":{" + extraParams
+            + "\"name\":\"benchmark\",\"arguments\":{\"task\":\"mrtr envelope regression\",\"iterations\":1},"
+            + ModernMeta() + "}}";
+    }
+
+    private static string BuildResourceRead(int id, string extraParams)
+    {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":" + id
+            + ",\"params\":{" + extraParams + "\"uri\":\"oni://missing-mrtr-regression\"," + ModernMeta() + "}}";
+    }
+
+    private static string ModernMeta()
+    {
+        return "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+            + "\"io.modelcontextprotocol/clientCapabilities\":{},"
+            + "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"mrtr-envelope-regression\",\"version\":\"1.0\"}}";
+    }
+
+    private static void AssertModernRejected(HttpClient client, string json, string method, string name,
+        string scenario)
+    {
+        using (var response = SendModern(client, json, method, name))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "Modern server accepted " + scenario + " with HTTP " + (int)response.StatusCode);
+            JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            Assert((int?)body["error"]?["code"] == -32602,
+                scenario + " did not return InvalidParams");
+            Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                scenario + " returned a legacy session id");
+        }
+    }
+
+    private static HttpResponseMessage SendModern(HttpClient client, string json, string method, string name)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "");
+        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+        request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+        request.Headers.Add("Mcp-Method", method);
+        request.Headers.Add("Mcp-Name", name);
+        return client.SendAsync(request).GetAwaiter().GetResult();
+    }
+
+    private static HttpResponseMessage SendLegacy(HttpClient client, string json, string sessionId)
+    {
+        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+        {
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.Add("Mcp-Protocol-Version", "2025-11-25");
+            if (!string.IsNullOrEmpty(sessionId))
+                request.Headers.Add("Mcp-Session-Id", sessionId);
+            Task<HttpResponseMessage> work = client.SendAsync(request);
+            PumpUntil(work);
+            return work.GetAwaiter().GetResult();
+        }
+    }
+
+    private static void PumpUntil(Task work)
+    {
+        var elapsed = Stopwatch.StartNew();
+        while (!work.IsCompleted && elapsed.ElapsedMilliseconds < 5000)
+        {
+            Invoke(_bridge, "Update");
+            Thread.Sleep(1);
+        }
+        Assert(work.IsCompleted, "Legacy work did not finish before test deadline");
+    }
+
+    private static void Invoke(object target, string methodName)
+    {
+        var method = target.GetType().GetMethod(methodName,
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        if (method == null)
+            throw new InvalidOperationException(methodName + " method not found");
+        method.Invoke(target, null);
+    }
+
+    private static int ReservePort()
+    {
+        var probe = new TcpListener(IPAddress.Loopback, 0);
+        probe.Start();
+        int port = ((IPEndPoint)probe.LocalEndpoint).Port;
+        probe.Stop();
+        return port;
+    }
+
+    private static void Assert(bool condition, string message)
+    {
+        if (!condition)
+            throw new InvalidOperationException(message);
+    }
+}

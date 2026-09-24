@@ -9,19 +9,44 @@ namespace CycleTrim.PerformanceProbe.Tests
     internal static class Program
     {
         private const double MaxAcceptedMedianOverheadRatio = 2.0d;
+        private const int SyntheticTimingRegressionExitCode = 2;
+        private const string SyntheticTimingRegressionMarker = "ONIMODS_SYNTHETIC_TIMING_REGRESSION:";
 
-        private static int Main()
+        private static int Main(string[] args)
         {
+            var syntheticOnly = args.Length == 1 && args[0] == "--synthetic-performance-only";
             try
             {
+                var skipSynthetic = args.Length == 1 && args[0] == "--skip-synthetic-performance";
+                if (args.Length > 0 && !syntheticOnly && !skipSynthetic)
+                {
+                    throw new ArgumentException("expected --skip-synthetic-performance or --synthetic-performance-only");
+                }
+
+                if (syntheticOnly)
+                {
+                    MeasuresConsistentSnapshotOverhead();
+                    Console.WriteLine("PASS CycleTrim synthetic performance probe regression");
+                    return 0;
+                }
+
                 RecordsCountTotalMeanAndMax();
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();
                 AggregatesConcurrentWriters();
                 SnapshotsDoNotSplitConcurrentSamplesAcrossIntervals();
-                MeasuresConsistentSnapshotOverhead();
+                GenerationCounterRegression.Run();
+                if (!skipSynthetic)
+                {
+                    MeasuresConsistentSnapshotOverhead();
+                }
                 Console.WriteLine("PASS CycleTrim performance probe counter regressions");
                 return 0;
+            }
+            catch (SyntheticTimingRegressionException exception) when (syntheticOnly)
+            {
+                Console.Error.WriteLine(SyntheticTimingRegressionMarker + " " + exception.Message);
+                return SyntheticTimingRegressionExitCode;
             }
             catch (Exception exception)
             {
@@ -225,7 +250,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             if (serialRatios[samples / 2] > MaxAcceptedMedianOverheadRatio
                 || concurrentRatios[samples / 2] > MaxAcceptedMedianOverheadRatio)
             {
-                throw new InvalidOperationException(
+                throw new SyntheticTimingRegressionException(
                     "coordinated snapshot median observer overhead exceeded predeclared 2.0x limit");
             }
         }
@@ -291,6 +316,14 @@ namespace CycleTrim.PerformanceProbe.Tests
             {
                 throw new InvalidOperationException(
                     name + " expected " + expected + ", got " + actual);
+            }
+        }
+
+        private sealed class SyntheticTimingRegressionException : InvalidOperationException
+        {
+            public SyntheticTimingRegressionException(string message)
+                : base(message)
+            {
             }
         }
     }

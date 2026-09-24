@@ -196,44 +196,22 @@ internal static class Program
                     }
                     Assert(server.GetSessionSummaries().Count == 0, "Rejected parse error allocated legacy session state");
                 });
-                Check("HTTP modern notifications are acknowledged without dispatch or session state", () =>
+                Check("HTTP modern cancellation notifications are acknowledged without dispatch or session state", () =>
                 {
                     const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":100}}";
                     int calls = OniToolRegistry.Calls;
                     using (var response = PostModern(client, notification, null))
                     {
                         Assert(response.StatusCode == HttpStatusCode.Accepted,
-                            "Modern notification returned HTTP " + (int)response.StatusCode);
-                        Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == "",
-                            "Modern notification returned a response body");
+                            "Header-routed modern cancellation was not acknowledged");
+                        Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                            "Modern cancellation acknowledgement returned a response body");
                         Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                            "Modern notification returned a legacy session id");
+                            "Modern cancellation returned a legacy session id");
                     }
                     Invoke(_bridge, "Update");
-                    Assert(OniToolRegistry.Calls == calls, "Modern notification was dispatched as a tool call");
-                    Assert(server.GetSessionSummaries().Count == 0, "Modern notification allocated legacy session state");
-                });
-                Check("HTTP modern cancellation notifications require a valid request id", () =>
-                {
-                    foreach (var notification in new[]
-                    {
-                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\"}",
-                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{}}",
-                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":null}}",
-                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":true}}",
-                        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":{}}}"
-                    })
-                    using (var response = PostModern(client, notification, null))
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                            "Malformed modern cancellation returned HTTP " + (int)response.StatusCode);
-                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidRequest,
-                            "Malformed modern cancellation used wrong JSON-RPC code");
-                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                            "Malformed modern cancellation returned a legacy session id");
-                    }
-                    Assert(server.GetSessionSummaries().Count == 0,
-                        "Rejected modern cancellation allocated legacy session state");
+                    Assert(OniToolRegistry.Calls == calls, "Modern cancellation was dispatched as a tool call");
+                    Assert(server.GetSessionSummaries().Count == 0, "Modern cancellation allocated legacy session state");
                 });
                 Check("HTTP modern discovery is stateless and advertises only implemented capabilities", () =>
                 {
@@ -412,6 +390,7 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             if (method != null)
                 request.Headers.Add("Mcp-Method", method);

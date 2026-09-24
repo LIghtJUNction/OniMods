@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../tools/OniMods.SteamPublisher/CandidateCreationJournal.cs"
+             Link="CandidateCreationJournal.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/LegacyCandidatePlan.cs"
+             Link="LegacyCandidatePlan.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/LegacyPackage.cs"
+             Link="LegacyPackage.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopMetadata.cs"
+             Link="WorkshopMetadata.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopTarget.cs"
+             Link="WorkshopTarget.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/VerifiedCandidateRecord.cs"
+             Link="VerifiedCandidateRecord.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopPromotionPlan.cs"
+             Link="WorkshopPromotionPlan.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/PromotionStageJournal.cs"
+             Link="PromotionStageJournal.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopPromotionRecoveryReadback.cs"
+             Link="WorkshopPromotionRecoveryReadback.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/SteamPublicPageReadback.cs"
+             Link="SteamPublicPageReadback.cs" />
+  </ItemGroup>
+</Project>

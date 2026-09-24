@@ -36,7 +36,7 @@ namespace OniMcp.Tools
                     ["tool"] = new McpToolParameter
                     {
                         Type = "string",
-                        Description = "用于 toolLookup 的目标工具名（如 server_control），留空表示随机采样。默认 world_editor。",
+                        Description = "用于 toolLookup 的目标工具名（如 server_control）；留空默认使用 world_editor。",
                         Required = false
                     },
                     ["includeDetails"] = new McpToolParameter
@@ -49,9 +49,16 @@ namespace OniMcp.Tools
                 Handler = args =>
                 {
                     string cases = (args["cases"]?.ToString() ?? "all").Trim().ToLowerInvariant();
-                    int iterations = ToolUtil.GetInt(args, "iterations") ?? 200;
+                    int iterations = 200;
+                    if (args["iterations"] != null && !int.TryParse(args["iterations"].ToString(), out iterations))
+                        return CallToolResult.Error("iterations must be an integer from 1 to 5000");
                     string targetTool = args["tool"]?.ToString()?.Trim();
-                    bool includeDetails = ToolUtil.GetBool(args, "includeDetails", false);
+                    bool includeDetails = false;
+                    if (args["includeDetails"] != null
+                        && !bool.TryParse(args["includeDetails"].ToString(), out includeDetails))
+                    {
+                        return CallToolResult.Error("includeDetails must be a boolean when provided");
+                    }
 
                     if (iterations < 1 || iterations > 5000)
                         return CallToolResult.Error("iterations must be an integer from 1 to 5000");
@@ -83,6 +90,8 @@ namespace OniMcp.Tools
                                 caseSet.Add("toollookup");
                                 caseSet.Add("jsonserialize");
                             }
+                            else
+                                return CallToolResult.Error("cases must contain only: all, toolList, toolLookup, jsonSerialize");
                         }
                     }
 
@@ -245,14 +254,15 @@ namespace OniMcp.Tools
 
             if (includeDetails)
             {
-                var first = OniToolRegistry.GetTools().Find(t => string.Equals(t.Name, lookup, StringComparison.Ordinal));
+                McpTool resolvedTool;
+                OniToolRegistry.TryGetTool(lookup, out resolvedTool);
                 test["details"] = new Dictionary<string, object>
                 {
-                    ["group"] = first?.Group,
-                    ["mode"] = first?.Mode,
-                    ["risk"] = first?.Risk,
-                    ["aliasCount"] = first?.Aliases?.Count ?? 0,
-                    ["parameterCount"] = first?.Parameters?.Count ?? 0
+                    ["group"] = resolvedTool?.Group,
+                    ["mode"] = resolvedTool?.Mode,
+                    ["risk"] = resolvedTool?.Risk,
+                    ["aliasCount"] = resolvedTool?.Aliases?.Count ?? 0,
+                    ["parameterCount"] = resolvedTool?.Parameters?.Count ?? 0
                 };
             }
 

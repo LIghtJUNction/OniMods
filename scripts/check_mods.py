@@ -16,12 +16,40 @@ GAME_CHECKS = {
     "verify_cycletrim_navgrid_source_contract.py": "requires the pinned online ONI 744825 decompilation source",
     "verify_restart_packaging.py": "requires an OniMcp Debug build and distribution archive",
 }
+SYNTHETIC_PERFORMANCE_PROJECT = (
+    ROOT / "tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj"
+)
+
+
+def build_project_command(
+    path: Path,
+    dotnet: str,
+    skip_synthetic_performance: bool,
+) -> list[str]:
+    command = [
+        dotnet,
+        "run",
+        "--project",
+        str(path),
+        "--configuration",
+        "Release",
+        "-p:ImportDirectoryBuildProps=false",
+        "-p:TreatWarningsAsErrors=true",
+    ]
+    if skip_synthetic_performance and path == SYNTHETIC_PERFORMANCE_PROJECT:
+        command.extend(["--", "--skip-synthetic-performance"])
+    return command
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--static-only", action="store_true", help="run only Python source contracts")
     parser.add_argument("--dotnet", default="dotnet", help=".NET 10 SDK executable name or path")
+    parser.add_argument(
+        "--skip-synthetic-performance",
+        action="store_true",
+        help="run host regressions but skip wall-clock synthetic performance assertions",
+    )
     args = parser.parse_args()
     checks = [
         (path.name, [sys.executable, str(path)])
@@ -37,10 +65,10 @@ def main() -> int:
             parser.error("no Mod regression projects found under tests/")
         projects.append(ROOT / "benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj")
         checks.extend(
-            (str(path.relative_to(ROOT)), [dotnet, "run", "--project", str(path),
-                                         "--configuration", "Release",
-                                         "-p:ImportDirectoryBuildProps=false",
-                                         "-p:TreatWarningsAsErrors=true"])
+            (
+                str(path.relative_to(ROOT)),
+                build_project_command(path, dotnet, args.skip_synthetic_performance),
+            )
             for path in projects
         )
 
@@ -60,6 +88,8 @@ def main() -> int:
         print(f"NOT RUN {name}: {reason}")
     if args.static_only:
         print("NOT RUN executable C# regressions (--static-only)")
+    if args.skip_synthetic_performance and not args.static_only:
+        print("NOT RUN CycleTrim synthetic wall-clock performance gate: reported separately by CI")
     print(f"\n{len(checks) - len(failures)}/{len(checks)} checks passed")
     for name in failures:
         print(f"FAIL {name}", file=sys.stderr)

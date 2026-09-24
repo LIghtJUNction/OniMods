@@ -4,17 +4,50 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <StartupObject>MalformedModernTaskShapeAdmissionRegressionEntry</StartupObject>
+    <StartupObject>ModernEmptyExtensionIdentifierRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="LegacyPingRegression.cs" />
+    <Compile Include="LegacySessionLifecycleRegression.cs" />
+    <Compile Include="LegacySseDisconnectActivityRegression.cs" />
+    <Compile Include="LegacySessionCapacityAdmissionRegression.cs" />
+    <Compile Include="LegacyExpiredSessionTaskCleanupRegression.cs" />
+    <Compile Include="LegacyOutboundExpiredSessionRegression.cs" />
+    <Compile Include="LegacyDiagnosticsExpiredSessionRegression.cs" />
+    <Compile Include="LegacyAcceptNegotiationRegression.cs" />
+    <Compile Include="LegacyRequestIdRegression.cs" />
     <Compile Include="HttpAdmissionRegression.cs" />
+    <Compile Include="HttpFrontDoorAdmissionRegression.cs" />
     <Compile Include="UnknownModernMethodAdmissionRegression.cs" />
+    <Compile Include="UnknownModernResourceRouteAdmissionRegression.cs" />
+    <Compile Include="ModernFiniteProgressTokenRegression.cs" />
     <Compile Include="MalformedModernToolAdmissionRegression.cs" />
     <Compile Include="ForeignModernResourceAdmissionRegression.cs" />
     <Compile Include="CoordinateModernToolAdmissionRegression.cs" />
     <Compile Include="MalformedModernTaskShapeAdmissionRegression.cs" />
+    <Compile Include="ModernBenchmarkSchemaAdmissionRegression.cs" />
+    <Compile Include="ModernListCursorRegression.cs" />
+    <Compile Include="ModernCancellationRejectionRegression.cs" />
+    <Compile Include="ModernClientCapabilitiesRegression.cs" />
+    <Compile Include="ModernNotificationMetadataRegression.cs" />
+    <Compile Include="ModernTraceContextRegression.cs" />
+    <Compile Include="ModernBaggageRegression.cs" />
+    <Compile Include="ModernMetaKeyRegression.cs" />
+    <Compile Include="ModernMrtrEnvelopeRegression.cs" />
+    <Compile Include="ModernResourceUriShapeRegression.cs" />
+    <Compile Include="ModernToolNameShapeRegression.cs" />
+    <Compile Include="ModernMrtrRootsResultRegression.cs" />
+    <Compile Include="ModernMrtrToolUsePayloadRegression.cs" />
+    <Compile Include="ModernMrtrStopReasonRegression.cs" />
+    <Compile Include="ModernMrtrContentMetadataRegression.cs" />
+    <Compile Include="ModernMrtrUriRegression.cs" />
+    <Compile Include="ModernMrtrBase64Regression.cs" />
+    <Compile Include="ModernMrtrElicitActionRegression.cs" />
+    <Compile Include="ModernClientInfoIconSafetyRegression.cs" />
+    <Compile Include="ModernMrtrToolResultCompositionRegression.cs" />
+    <Compile Include="ModernMrtrListAdmissionRegression.cs" />
+    <Compile Include="ModernEmptyExtensionIdentifierRegression.cs" />
     <Compile Include="GameStubs.cs" />
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Core/*.cs" Link="Core/%(Filename)%(Extension)" />

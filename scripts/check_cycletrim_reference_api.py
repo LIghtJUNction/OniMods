@@ -148,6 +148,16 @@ def main() -> int:
             (r"\bprivate\s+Thread\[\]\s+agents\s*;", "AsyncPathProber.Manager.agents"),
             (r"\bprivate\s+Dictionary<Navigator,\s*int>\s+navigators\b", "AsyncPathProber.Manager.navigators"),
             (r"\bprivate\s+ushort\s+activeSerialNo\s*;", "AsyncPathProber.Manager.activeSerialNo"),
+            (
+                method(
+                    r"public\s+void",
+                    "Execute",
+                    r"PathFinder\.PotentialList\s+\w+\s*,\s*"
+                    r"PathFinder\.PotentialScratchPad\s+\w+\s*,\s*"
+                    r"ref\s+(?:AsyncPathProber\.)?WorkResult\s+\w+",
+                ),
+                "AsyncPathProber.WorkOrder.Execute(PotentialList,PotentialScratchPad,ref WorkResult)",
+            ),
         ):
             expect("AsyncPathProber", pattern, label)
 

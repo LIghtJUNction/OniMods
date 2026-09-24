@@ -56,6 +56,7 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 
 - 工具清单入口: `oni://tools/manifest` / `server_control domain=catalog action=manifest`
 - 常用公开工具:
+  - `benchmark`：只读工具链路基准与诊断
   - `world_editor`：虚拟文件化世界读写（`cd`、`ls`、`read`、`search`、`edit`）
   - `game_control`：游戏控制与状态管理
   - `navigation_control`：视图、覆盖层和截图
