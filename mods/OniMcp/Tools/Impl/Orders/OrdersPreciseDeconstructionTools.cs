@@ -177,33 +177,38 @@ namespace OniMcp.Tools
             }
         }
 
+        private static DeconstructionEligibility EvaluateDeconstructionEligibility(GameObject go)
+        {
+            var deconstructable = go.GetComponent<Deconstructable>();
+            return DeconstructionEligibilityPolicy.Evaluate(
+                deconstructable != null,
+                deconstructable != null && deconstructable.allowDeconstruction,
+                DebugHandler.InstantBuildMode,
+                IsUtilityDeconstructTarget(go));
+        }
+
         private static bool TryQueueObjectDeconstruction(GameObject go, JObject args, out string error)
         {
+            DeconstructionEligibility eligibility = EvaluateDeconstructionEligibility(go);
+            if (!eligibility.CanQueue)
+            {
+                error = eligibility.Error;
+                return false;
+            }
+
             var deconstructable = go.GetComponent<Deconstructable>();
             if (deconstructable != null)
             {
-                if (!deconstructable.allowDeconstruction && !DebugHandler.InstantBuildMode)
-                {
-                    error = "Target does not allow deconstruction";
-                    return false;
-                }
-
                 deconstructable.QueueDeconstruction(userTriggered: true);
                 ApplyPriority(go, args);
                 error = null;
                 return true;
             }
 
-            if (IsUtilityDeconstructTarget(go))
-            {
-                go.Trigger((int)GameHashes.MarkForDeconstruct);
-                ApplyPriority(go, args);
-                error = null;
-                return true;
-            }
-
-            error = "Target is not deconstructable";
-            return false;
+            go.Trigger((int)GameHashes.MarkForDeconstruct);
+            ApplyPriority(go, args);
+            error = null;
+            return true;
         }
 
         private static bool IsUtilityDeconstructTarget(GameObject go)
