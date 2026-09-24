@@ -63,8 +63,7 @@ namespace OniMcp.Tools
                     return false;
                 }
 
-                target = selected[0];
-                return true;
+                return TryAcceptPriorityWriteTarget(selected[0], out target, out error);
             }
 
             var matches = candidates.Where(go => MatchesQuery(go, query)).ToList();
@@ -79,7 +78,21 @@ namespace OniMcp.Tools
                 return false;
             }
 
-            target = matches[0];
+            return TryAcceptPriorityWriteTarget(matches[0], out target, out error);
+        }
+
+        private static bool TryAcceptPriorityWriteTarget(GameObject candidate, out GameObject target, out string error)
+        {
+            target = null;
+            error = null;
+            var prioritizable = candidate.GetComponent<Prioritizable>();
+            if (prioritizable != null
+                && !PriorityWriteEligibilityPolicy.TryValidate(prioritizable.IsPrioritizable(), out error))
+            {
+                return false;
+            }
+
+            target = candidate;
             return true;
         }
 
