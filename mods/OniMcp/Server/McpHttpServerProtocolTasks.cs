@@ -67,6 +67,8 @@ namespace OniMcp.Server
 
         private const string LegacyProtocolVersion = "2025-06-18";
 
+        private const int LegacyResourceNotFoundErrorCode = -32002;
+
         private static readonly string[] SupportedProtocolVersions = { CurrentProtocolVersion, LegacyProtocolVersion };
 
         private static bool IsSupportedProtocolVersion(string protocolVersion)
@@ -133,7 +135,7 @@ namespace OniMcp.Server
                 ServerInfo = new Implementation
                 {
                     Name = "OniMcp",
-                    Version = "0.2.0"
+                    Version = ServerVersion
                 }
             };
         }
@@ -146,7 +148,8 @@ namespace OniMcp.Server
 
             var result = OniResourceRegistry.ReadResource(@params.Uri);
             if (result == null)
-                return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, $"Resource not found: {@params.Uri}");
+                return JsonRpcResponse.MakeError(request.Id, LegacyResourceNotFoundErrorCode,
+                    $"Resource not found: {@params.Uri}");
 
             return result;
         }
@@ -268,6 +271,7 @@ namespace OniMcp.Server
 
         private void ExecuteToolTask(string taskId, string toolName, JObject arguments, string sessionId)
         {
+            int contextGeneration = GameContextLifecycle.CaptureGeneration();
             MainThreadBridge.EnqueueDeferred(new System.Action(() =>
             {
                 if (!_running || !IsSessionActive(sessionId))
@@ -284,6 +288,22 @@ namespace OniMcp.Server
 
                 try
                 {
+                    string contextError = GameContextLifecycle.RejectionReason(contextGeneration);
+                    if (contextError != null)
+                    {
+                        lock (_taskLock)
+                        {
+                            if (!task.CancelRequested)
+                            {
+                                task.Status = "failed";
+                                task.StatusMessage = "Game context changed; retry tool call";
+                                task.Error = contextError + " (retryable)";
+                                task.LastUpdatedAt = System.DateTime.UtcNow;
+                            }
+                        }
+                        return;
+                    }
+
                     CallToolResult result;
                     using (PushSessionContext(sessionId))
                     {

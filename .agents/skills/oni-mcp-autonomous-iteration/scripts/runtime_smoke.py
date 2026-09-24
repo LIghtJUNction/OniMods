@@ -13,6 +13,7 @@ PROTOCOL = "2025-11-25"
 MODERN_PROTOCOL = "2026-07-28"
 MODERN_SAFE_TOOLS = {"benchmark"}
 DEFAULT_PUBLIC_TOOLS = {
+    "benchmark",
     "building_control",
     "navigation_control",
     "game_control",
@@ -177,8 +178,8 @@ def run_modern_smoke(url):
     client = ModernMcpClient(url)
     discover = client.request("server/discover")
     supported = set(discover.get("supportedVersions", []))
-    assert_true(MODERN_PROTOCOL in supported and PROTOCOL in supported,
-                f"modern discovery versions incomplete: {sorted(supported)}")
+    assert_true(supported == {MODERN_PROTOCOL},
+                f"modern discovery advertised unexpected versions: {sorted(supported)}")
     capabilities = discover.get("capabilities") or {}
     assert_true("resources" in capabilities, "modern discovery omitted resources capability")
     assert_true("tools" in capabilities, "modern discovery omitted tools capability")

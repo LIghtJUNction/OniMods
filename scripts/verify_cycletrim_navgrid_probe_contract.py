@@ -23,9 +23,14 @@ GATE_BENCHMARK = (
 )
 
 
-def expect_capture_failure(text: str, expected: str, failures: list[str]) -> None:
+def expect_capture_failure(
+    text: str,
+    expected: str,
+    failures: list[str],
+    after_calls: int | None = None,
+) -> None:
     try:
-        analyze_log(text)
+        analyze_log(text, after_calls=after_calls)
     except CaptureError as error:
         if expected not in str(error):
             failures.append(
@@ -82,6 +87,10 @@ def main() -> int:
         '"eligibleCallsLowerBound": lower_bound',
         '"eligibleCallsUpperBound": upper_bound',
         '"ambiguousCalls": ambiguous',
+        "subtract_capture",
+        '"baselineCalls": baseline["calls"]',
+        '"cumulativeCalls": current["calls"]',
+        '"windowed": True',
     )
     for fragment in required_analyzer_fragments:
         if fragment not in analyzer:
@@ -169,6 +178,55 @@ def main() -> int:
     except CaptureError as error:
         failures.append(f"capture analyzer rejected ambiguous valid fixture: {error}")
 
+    window_capture = "\n".join(
+        (
+            "prefix " +
+            "[CycleTrim][NavGridProbe] requested; NavGrid.UpdateGraph() resolved. " +
+            "Valid evidence requires a later 'target reached' message with calls > 0.",
+            "prefix [CycleTrim][NavGridProbe] target reached; aggregate sampling started.",
+            "prefix [CycleTrim][NavGridProbeCapture] " +
+            "calls=2, empty=0, nonzeroBuckets=1, " +
+            "top=[dirty=8-15,rx=2,ry=4,density=<=1/4:2]",
+            "prefix [CycleTrim][NavGridProbeCapture] " +
+            "calls=5, empty=0, nonzeroBuckets=2, " +
+            "top=[dirty=8-15,rx=2,ry=4,density=<=1/4:3; " +
+            "dirty=24-31,rx=2,ry=4,density=>1/2:2]",
+        )
+    )
+    try:
+        parsed = analyze_log(window_capture, after_calls=2)
+        if not parsed.get("windowed"):
+            failures.append("anchored capture did not identify itself as a workload window")
+        if parsed["baselineCalls"] != 2 or parsed["cumulativeCalls"] != 5:
+            failures.append("anchored capture lost cumulative baseline/final calls")
+        if parsed["calls"] != 3 or parsed["bucketCallTotal"] != 3:
+            failures.append("anchored capture did not subtract baseline calls/buckets")
+        if len(parsed["buckets"]) != 2:
+            failures.append("anchored capture should preserve both fresh workload buckets")
+        gate = parsed["candidateGate"]
+        if gate["eligibleCallsLowerBound"] != 2 or gate["eligibleCallsUpperBound"] != 2:
+            failures.append("anchored candidate-gate coverage must use fresh bucket deltas only")
+    except CaptureError as error:
+        failures.append(f"capture analyzer rejected valid anchored window: {error}")
+
+    regressed_bucket_capture = (
+        window_capture
+        .replace(
+            "dirty=8-15,rx=2,ry=4,density=<=1/4:3; ",
+            "dirty=8-15,rx=2,ry=4,density=<=1/4:1; ",
+        )
+        .replace(
+            "dirty=24-31,rx=2,ry=4,density=>1/2:2]",
+            "dirty=24-31,rx=2,ry=4,density=>1/2:4]",
+        )
+    )
+    expect_capture_failure(
+        regressed_bucket_capture,
+        "bucket count moved backwards",
+        failures,
+        after_calls=2,
+    )
+
     truncated_capture = valid_capture.replace(
         "; dirty=8-15,rx=4,ry=2,density=>1/2:1", ""
     )
@@ -187,8 +245,8 @@ def main() -> int:
         return 1
 
     print(
-        "PASS CycleTrim NavGrid workload probe remains opt-in, observational, "
-        "pause-safe, and complete-capture evidence is validated with candidate-gate bounds"
+        "PASS CycleTrim NavGrid workload probe remains opt-in, observational, pause-safe, "
+        "and anchored complete captures are analyzed as exact histogram deltas"
     )
     return 0
 

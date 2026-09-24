@@ -74,8 +74,10 @@ namespace CycleTrim.BrainBenchmarks
             NavGridDirtyExpansionBenchmark.Run();
             NavGridAdaptiveBoundaryBenchmark.Run();
             NavGridAdaptiveGateBenchmark.Run();
+            SuppressedInvalidationObservationBenchmark.Run();
             FetchCandidatePoolBenchmark.Run();
             PathProbeQueueQuotaBenchmark.Run();
+            PathProbeUntrackedDequeueBenchmark.Run();
         }
 
         private static void MeasurePaired(out Sample baseline, out Sample candidate)

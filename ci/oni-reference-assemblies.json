@@ -2,11 +2,17 @@
   "schema": 1,
   "official_oni_build": 744825,
   "official_oni_release_date": "2026-07-28",
+  "official_tracking": {
+    "steam_app_id": 457140,
+    "release_news_gid": "1839041357039119",
+    "release_url": "https://store.steampowered.com/news/app/457140/view/719037282029407479"
+  },
   "reference_source": {
     "repository": "Sgt-Imalas/Sgt_Imalas-Oni-Mods",
     "commit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
     "declared_oni_build": 737790,
     "license_path": "Lib/LICENSE.txt",
+    "license_blob_sha": "9e04873a678423771b5a47de1c04465815710545",
     "version_marker": {
       "path": "Directory.Build.props",
       "blob_sha": "cda8097ccf5d0033f68253faa1ad373305394ea8",
@@ -18,7 +24,15 @@
       "files": [
         {"path":"Lib/0Harmony.dll","pinned_blob_sha":"62cc4174fe6eecfa7e3ce556e69e4c79415e2e5f"},
         {"path":"Lib/Assembly-CSharp.dll","pinned_blob_sha":"edcc29584194c60aab9e65ce9ac89029373222c7"},
-        {"path":"Lib/Assembly-CSharp-firstpass.dll","pinned_blob_sha":"f15b51ffd825ab532268774647d602d17efbf730"}
+        {"path":"Lib/Assembly-CSharp-firstpass.dll","pinned_blob_sha":"f15b51ffd825ab532268774647d602d17efbf730"},
+        {"path":"Lib/Newtonsoft.Json.dll","pinned_blob_sha":"e023edf1badcec2c131f7baaeedd924c556a65eb"},
+        {"path":"Lib/Unity.TextMeshPro.dll","pinned_blob_sha":"f55a43d8867f1dec3747d357d5c364edc99cd11e"},
+        {"path":"Lib/UnityEngine.dll","pinned_blob_sha":"149a152de2df4cee616865df16dddad660856aa0"},
+        {"path":"Lib/UnityEngine.CoreModule.dll","pinned_blob_sha":"1ffea27aa23f6e2ca1aed15dc2b6d19ca8ef29f0"},
+        {"path":"Lib/UnityEngine.UI.dll","pinned_blob_sha":"5a5a457a01f5deae69633185e686522f005288d1"},
+        {"path":"Lib/UnityEngine.UIModule.dll","pinned_blob_sha":"1e5722ad4f3446b31bcfcb9757a7e9ee60ad1459"},
+        {"path":"Lib/UnityEngine.TextRenderingModule.dll","pinned_blob_sha":"8b71c5d64f99afb037fa0430861c07fcc31a6b2b"},
+        {"path":"Lib/UnityEngine.InputLegacyModule.dll","pinned_blob_sha":"c0c31e011e938cc78d7e2b4c0f01fa03365c3ddd"}
       ]
     },
     "note": "Compile/API-surface reference assemblies only. At this pinned commit, Directory.Build.props resolves TargetGameVersion to BeachedDlcHotfix1=737790, which lags official ONI 744825. Compile/API-surface success must not be reported as 744825 binary compatibility; 744825 method-body evidence is tracked separately."
@@ -27,10 +41,16 @@
     "repository": "Kupie/ONI_Decomp",
     "commit": "8d4ace10c2b6a84cee394653a91b990a5122e636",
     "official_oni_build": 744825,
+    "upstream_tracking": {
+      "branch": "main",
+      "version_marker": "KleiVersion.cs",
+      "contract_files": ["NavGrid.cs", "FetchManager.cs", "Research.cs"]
+    },
     "note": "Transient source-only method-body evidence. KleiVersion.cs declares release ChangeList 744825. The mirror has no declared license, so CI verifies provenance and semantics without vendoring or redistributing the decompiled source.",
     "files": [
       {"name":"NavGrid.cs","path":"Assembly-CSharp/NavGrid.cs","blob_sha":"8db6d7f2e84fda45504d06844722a693e5338f0c"},
       {"name":"FetchManager.cs","path":"Assembly-CSharp/FetchManager.cs","blob_sha":"85ac7fedf30f9c337b2759a15490974d856fadf5"},
+      {"name":"Research.cs","path":"Assembly-CSharp/Research.cs","blob_sha":"d92cec77f8593c92fdedf7aba2bf435d3eff4857"},
       {"name":"KleiVersion.cs","path":"Assembly-CSharp/KleiVersion.cs","blob_sha":"2f5b3266033b2868e9b475a55ac208f70eca647a"}
     ]
   },

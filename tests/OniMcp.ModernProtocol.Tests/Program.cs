@@ -116,6 +116,38 @@ internal static class Program
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Version-header mismatch allocated legacy session state");
 
+                string modernToolsListNotification = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{" + modernMeta + "}}";
+                using (var response = Post(client, modernToolsListNotification, null, "2026-07-28", "tools/list"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern request method sent as a notification did not use an HTTP error status");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(json["id"]?.Type == JTokenType.Null,
+                        "Modern request-shaped notification error did not preserve a null response id");
+                    Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                        "Modern request-shaped notification did not use -32600 Invalid Request");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern request-shaped notification allocated a legacy session header");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Rejected modern request-shaped notification allocated legacy session state");
+
+                const string modernClientResponse = "{\"jsonrpc\":\"2.0\",\"id\":2204,\"result\":{}}";
+                using (var response = Post(client, modernClientResponse, null, "2026-07-28"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern transport accepted a client JSON-RPC response with HTTP 200");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["id"] == 2204,
+                        "Rejected modern client response changed the request id");
+                    Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                        "Rejected modern client response did not use -32600 Invalid Request");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern client response allocated a legacy session header");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Rejected modern client response allocated legacy session state");
+
                 string modernToolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":2301,\"params\":{" + modernMeta + "}}";
                 using (var response = Post(client, modernToolsList, null, "2026-07-28", "tools/list"))
                 {
@@ -187,6 +219,15 @@ internal static class Program
                     Assert(JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"] != null,
                         "Legacy initialize returned no result");
                     sessionId = response.Headers.GetValues("Mcp-Session-Id").Single();
+                }
+
+                const string legacyInitializedNotification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{}}";
+                using (var response = Post(client, legacyInitializedNotification, sessionId, "2025-11-25"))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Legacy initialized notification no longer returns 202 Accepted");
+                    Assert(response.Headers.GetValues("Mcp-Session-Id").Single() == sessionId,
+                        "Legacy initialized notification lost its session identity");
                 }
 
                 const string futureMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{\"sampling\":{}},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"mixed-era-regression\",\"version\":\"1.0\"}}";
@@ -299,8 +340,8 @@ internal static class Program
         Assert((string)json["error"]["data"]["requested"] == requested,
             context + ": requested version was not echoed");
         var supported = ((JArray)json["error"]["data"]["supported"]).Values<string>().ToArray();
-        Assert(supported.Contains("2026-07-28") && supported.Contains("2025-11-25")
-            && supported.Contains("2025-06-18"), context + ": supported versions were incomplete");
+        Assert(supported.SequenceEqual(new[] { "2026-07-28" }),
+            context + ": modern retry list leaked legacy initialize-era versions");
     }
 
     private static HttpResponseMessage Post(HttpClient client, string json, string sessionId = null,
@@ -309,6 +350,8 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            if (string.Equals(protocolVersion, "2026-07-28", StringComparison.Ordinal))
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             if (sessionId != null)
                 request.Headers.Add("Mcp-Session-Id", sessionId);
             if (protocolVersion != null)

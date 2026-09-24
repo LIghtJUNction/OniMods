@@ -28,6 +28,7 @@ def method_body(source: str, marker: str) -> str:
 
 def main() -> int:
     options = (ROOT / "mods/OniMcp/Config/OniMcpOptions.cs").read_text(encoding="utf-8")
+    masked_token = (ROOT / "mods/OniMcp/Config/MaskedTokenOptionsEntry.cs").read_text(encoding="utf-8")
     transport = (ROOT / "mods/OniMcp/Server/McpHttpServerPostTransport.cs").read_text(encoding="utf-8")
     settings = (ROOT / "mods/OniMcp/Server/McpHttpServerSettingsPage.cs").read_text(encoding="utf-8")
     server = (ROOT / "mods/OniMcp/Server/McpHttpServer.cs").read_text(encoding="utf-8")
@@ -61,21 +62,33 @@ def main() -> int:
         "Host": "Server",
         "PortInput": "Server",
         "AuthEnabled": "Security",
-        "AuthToken": "Security",
         "ScreenshotCleanupEnabled": "Screenshots",
         "ScreenshotRetentionMinutesInput": "Screenshots",
         "ScreenshotMaxFilesInput": "Screenshots",
     }
     for property_name, category in expected_options.items():
-        pattern = rf'\[Option\([^\n]+"{category}"\)\][\s\S]{{0,160}}public [^\n]+ {property_name}\b'
-        # pi-lens-ignore: python-unsafe-regex
+        pattern = (
+            rf'\[Option\([^\n]+"{re.escape(category)}"\)\]'
+            rf'\s*(?:\[[^\]\n]+\]\s*)*public [^\n]+ {re.escape(property_name)}\b'
+        )
         assert re.search(pattern, options), f"{property_name} missing from {category}"
+    assert re.search(
+        r'\[DynamicOption\(typeof\(MaskedTokenOptionsEntry\)\)\]\s*public string AuthToken\b',
+        options,
+    ), "AuthToken must use the masked option handler"
+    assert "class MaskedTokenOptionsEntry : StringOptionsEntry" in masked_token
+    assert "input.contentType = TMP_InputField.ContentType.Password" in masked_token
+    assert "input.ForceLabelUpdate()" in masked_token
+    assert "input == null" in masked_token
     create_options = method_body(options, "public IEnumerable<IOptionsEntry> CreateOptions")
-    for entry in ("OniMcpStatus", "OpenBrowser", "RestartMcpServer", "OpenConfigFolder"):
+    for entry in ("OniMcpStatus", "OpenBrowser", "RestartMcpServer", "OpenConfigFolder", "OpenProjectSupport"):
         assert entry in create_options
+    assert "MaxDisplayedEndpointLength" in create_options
+    assert "Config: OniMcpConfig.json" in create_options
+    assert "Application.OpenURL(ProjectSupportUrl)" in create_options
+    assert 'ProjectSupportUrl = "https://api.lmm.best"' in options
 
     assert '<PackageReference Include="PLib" Version="4.24.0"' in project
-    assert "PLib scrolls the dialog when needed" in options
     assert "Disabled by default" in settings
     dispatch = method_body(server, "private void ProcessRequest")
     assert dispatch.find("TryHandleSettingsRequest") < dispatch.find("ValidateAuth")
@@ -95,7 +108,7 @@ def main() -> int:
     assert "only after" in readme and "manually enabled" in readme
 
     print("auth/options contract passed")
-    print("manual UI check: open OniMcp Options; resize vertically; scroll and expand Status, Server, Security, and Screenshots; verify every listed control is reachable")
+    print("manual UI check: open OniMcp Options; verify controls fit, token is masked, and the optional Support link opens api.lmm.best")
     return 0
 
 

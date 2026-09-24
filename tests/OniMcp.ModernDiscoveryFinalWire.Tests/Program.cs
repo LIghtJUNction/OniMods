@@ -73,6 +73,11 @@ internal static class Program
 
                     var result = (JObject)ReadJson(response)["result"];
                     Assert(result != null, "Modern discovery returned no result");
+                    var supportedVersions = result["supportedVersions"] as JArray;
+                    Assert(supportedVersions != null
+                        && supportedVersions.Count == 1
+                        && (string)supportedVersions[0] == "2026-07-28",
+                        "Modern discovery advertised handshake-era protocol versions");
                     Assert(result["serverInfo"] == null,
                         "DiscoverResult regressed to the pre-final body-level serverInfo shape");
                     var serverInfo = result["_meta"]?["io.modelcontextprotocol/serverInfo"] as JObject;
@@ -111,11 +116,37 @@ internal static class Program
                 const string wrongTypeClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":123,\"version\":\"1.0\"}}";
                 AssertClientInfoRejected(client, wrongTypeClientInfo,
                     "clientInfo with non-string name was accepted");
+
+                AssertLegacyServerIdentityMatchesModern(client);
             }
             finally
             {
                 server.StopServer();
             }
+        }
+    }
+
+    private static void AssertLegacyServerIdentityMatchesModern(HttpClient client)
+    {
+        const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
+        string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3010,\"params\":{" + modernMeta + "}}";
+        string modernVersion;
+        using (var response = PostModern(client, discover, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK, "Modern discovery failed before identity comparison");
+            modernVersion = (string)ReadJson(response)["result"]?["_meta"]?["io.modelcontextprotocol/serverInfo"]?["version"];
+            Assert(!string.IsNullOrWhiteSpace(modernVersion), "Modern server identity did not expose a version");
+        }
+
+        const string initialize = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":3011,\"params\":{\"protocolVersion\":\"2025-11-25\"}}";
+        using (var response = PostRaw(client, initialize, "2025-11-25"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK, "Legacy initialize failed before identity comparison");
+            var result = ReadJson(response)["result"] as JObject;
+            Assert(result != null, "Legacy initialize returned no result");
+            Assert((string)result["serverInfo"]?["name"] == "OniMcp", "Legacy initialize returned the wrong server identity");
+            Assert((string)result["serverInfo"]?["version"] == modernVersion,
+                "Legacy and modern protocol eras report different OniMcp versions");
         }
     }
 
@@ -138,8 +169,8 @@ internal static class Program
     {
         using (var response = PostRaw(client, "[{\"jsonrpc\":\"2.0\"", "2026-07-28"))
         {
-            Assert(response.StatusCode == HttpStatusCode.OK,
-                "Malformed JSON changed its existing transport status");
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "Malformed modern JSON did not use HTTP 400");
             Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
                 "Malformed JSON no longer returns ParseError");
         }
@@ -212,6 +243,7 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", method);
             var work = client.SendAsync(request);

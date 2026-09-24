@@ -2,6 +2,29 @@
 
 [b]为缺氧提供安全 MCP 访问的服务端 Mod[/b]
 
+[h2]v0.2.5 创意工坊安装更新[/h2]
+[list]
+[*] 将工坊文件重新打包为 ONI 模组加载器需要的单文件旧版 ZIP。此前 Steam 已下载完整目录，游戏却将其报为“下载失败”。
+[*] 存档切换后拒绝切换前排队的 MCP 操作，避免对新世界执行旧请求。
+[*] 明确标注可选支持按钮为购买 AI Token 的入口；它与 OniMcp 本地鉴权 Token 无关。
+[/list]
+
+[h2]v0.2.4 协议与稳定性更新[/h2]
+[list]
+[*] 支持现代 MCP 发现与协议协商，同时保留旧版客户端兼容路径。
+[*] 在请求进入游戏操作前拒绝格式错误的 HTTP/MCP 内容，并限制会话与任务的生命周期。
+[*] 现代与旧版客户端都能读到当前安装的 Mod 版本。
+[*] 缩短设置窗口状态文字、编辑时遮挡 Token，并加入可选的项目支持按钮。
+[/list]
+[b]验证说明：[/b] 自动检查与 PLib 设置界面的调用链已通过；尚未完成游戏内设置窗口的逐项点击验收。
+
+[h2]v0.2.3 稳定性更新[/h2]
+[list]
+[*] 修复资源分发与 JSON-RPC 空响应，并保护工具元数据不受调用方修改。
+[*] 取消超时后仍排队的游戏主线程调用，限制任务只能由所属会话访问。
+[*] 原子保存设置；重新加载失败时保留上一次有效配置。
+[/list]
+
 [h2]v0.2.2 维护更新[/h2]
 [list]
 [*] 移除 680 条未使用 `using`，清除代码检查噪声。
@@ -37,8 +60,11 @@
 [/list]
 
 [h2]文档[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md]查看中文说明[/url]
-[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md]View English documentation[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README.md]查看中文说明[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README_EN.md]View English documentation[/url]
+
+[h2]可选支持项目[/h2]
+[url=https://api.lmm.best]购买 AI Token（可选）[/url]，可用于支持 OniMods 后续开发。这与模组本地鉴权 Token 无关。使用本 Mod 不需要访问该网站或购买服务；你可以自行选择兼容的 MCP 客户端与模型。
 
 [h2]基准测试技能[/h2]
 [list]

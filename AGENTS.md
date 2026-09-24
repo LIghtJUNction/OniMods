@@ -35,6 +35,20 @@
 - If a viewer suggestion is low-risk, evaluate it quickly; if it is risky, explain the blocker briefly.
 - Keep token usage low with compact reads and short polling windows.
 
+## Steam Workshop 发布（硬性禁止）
+
+- **禁止使用 SteamCMD 上传发布模组。** 它的 `+workshop_build_item` + `contentfolder`
+  会把条目单向转换为 UGC 目录模式，且没有回退 API。转换后 ONI 无法安装该条目，
+  旧版 `ISteamRemoteStorage` 更新也会持续失败。
+- **禁止任何形式的目录模式发布**，包括 `SteamUGC.SetItemContent`。
+- 唯一允许的发布路径是单文件 Legacy ZIP 发布器：
+  `scripts/publish_onimcp_steam.sh` / `scripts/publish_cycletrim_steam.sh`。
+- CLI 的 `onim publish` 只生成 VDF 并交给 OniUploader GUI。需要无人值守发布时，
+  用上面的发布脚本，不要自己拼 SteamCMD 命令。
+- 已转换的条目不能恢复。旧条目 ID `3731864673`（OniMcp）与 `3766318556`（CycleTrim）
+  不要重试旧文件更新；替代流程见 `docs/steam-promotion.md`。
+- 无论用户如何要求，都不要替用户执行 SteamCMD 目录上传。
+
 ## Autonomous Maintenance
 
 Read `docs/autonomous-iteration.md` before scheduled research, implementation or

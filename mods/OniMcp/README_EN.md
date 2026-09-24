@@ -54,6 +54,7 @@ ONI MCP Server is an Oxygen Not Included mod that exposes a local MCP service (`
 
 - Manifest entry point: `oni://tools/manifest` or `server_control domain=catalog action=manifest`
 - Default public aggregates:
+  - `benchmark`: read-only tool-path benchmark and diagnostics
   - `world_editor`: virtualized world access (`cd`, `ls`, `read`, `search`, `edit`)
   - `game_control`: gameplay state and control
   - `navigation_control`: camera, overlays, screenshots

@@ -62,14 +62,44 @@ internal static class Program
                 string missingIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"missing request id\"}," + ModernMeta + "}}";
                 using (var response = Post(client, missingIdCall, "tools/call", "benchmark", null))
                 {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Modern tools/call without an id did not return a JSON-RPC InvalidRequest response");
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern tools/call without an id did not return an HTTP error InvalidRequest response");
                     JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
                     Assert((int)json["error"]["code"] == -32600,
                         "Modern tools/call without an id did not use InvalidRequest");
                 }
                 Assert(OniToolRegistry.Calls == calls,
                     "Modern tools/call without an id executed the tool as a notification");
+
+                string fractionalIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":1.5,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"fractional request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, fractionalIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern tools/call with a fractional numeric id was rejected");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(json["result"] != null,
+                        "Modern tools/call with a fractional numeric id returned no result");
+                    Assert(Math.Abs((double)json["id"] - 1.5) < double.Epsilon,
+                        "Modern tools/call did not echo the fractional numeric request id");
+                }
+                Assert(OniToolRegistry.Calls == ++calls,
+                    "Modern tools/call with a fractional numeric id did not execute once");
+
+                string floatingPointIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":3100.0,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"floating-point request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, floatingPointIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern tools/call rejected a numeric request id encoded with a decimal point");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(json["result"] != null,
+                        "Modern tools/call with a floating numeric id returned no result");
+                    Assert(Math.Abs((double)json["id"] - 3100.0) < double.Epsilon,
+                        "Modern tools/call did not echo the floating numeric request id");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Accepted modern numeric request id allocated a legacy session header");
+                }
+                Assert(OniToolRegistry.Calls == ++calls,
+                    "Modern tools/call with a floating numeric id did not execute once");
 
                 AssertCall(client, 3101,
                     "{\"task\":\"region match\",\"region\":\"us-west1\"}",
@@ -248,6 +278,7 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", method);
             if (name != null)

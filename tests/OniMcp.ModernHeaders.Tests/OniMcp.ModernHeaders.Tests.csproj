@@ -4,8 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <StartupObject>ModernNameEncodingRegression</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ModernNameEncodingRegression.cs" />
+    <Compile Include="ModernContentTypeRegression.cs" />
+    <Compile Include="ModernBase64CanonicalRegression.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="../OniMcp.Server.Tests/GameStubs.cs" Link="GameStubs.cs" />
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />

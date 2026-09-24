@@ -61,16 +61,56 @@ def _has_interval_schema(report: dict) -> bool:
     return "reportSequence" in report or "intervalDurationTicks" in report
 
 
+def _validate_ownership(
+    name: str,
+    target: dict,
+    reject_external: bool,
+) -> list[str]:
+    failures = []
+    has_external = "externalPatched" in target
+    has_owners = "patchOwners" in target
+    if has_external != has_owners:
+        return [f"{name} Harmony ownership metadata is incomplete"]
+    if not has_external:
+        if reject_external:
+            failures.append(
+                f"{name} lacks generic Harmony ownership metadata required for strict attribution"
+            )
+        return failures
+
+    external = target.get("externalPatched")
+    owners = target.get("patchOwners")
+    if not isinstance(external, bool):
+        failures.append(f"{name} externalPatched must be a boolean")
+    if not isinstance(owners, list) or any(
+        not isinstance(owner, str) or not owner for owner in owners
+    ):
+        failures.append(f"{name} patchOwners must be an array of non-empty strings")
+        return failures
+    if owners != sorted(set(owners)):
+        failures.append(f"{name} patchOwners must be sorted and unique")
+    if reject_external and external:
+        owner_text = ", ".join(owners) if owners else "unknown owner"
+        failures.append(f"{name} is patched by external Harmony owner(s): {owner_text}")
+    return failures
+
+
 def validate(
     report: dict,
     required: tuple[str, ...],
     require_intervals: bool = False,
     require_calls: bool = True,
     reject_fasttrack: bool = False,
+    reject_external: bool = False,
 ) -> list[str]:
     failures = []
     if not isinstance(report.get("stopwatchFrequency"), int) or report["stopwatchFrequency"] <= 0:
         failures.append("stopwatchFrequency must be a positive integer")
+
+    if "captureGeneration" in report:
+        generation = report.get("captureGeneration")
+        if not isinstance(generation, int) or generation <= 0:
+            failures.append("captureGeneration must be a positive integer")
 
     interval_schema = _has_interval_schema(report)
     if require_intervals or interval_schema:
@@ -106,6 +146,7 @@ def validate(
             failures.append(f"{name} fastTrackPatched must be a boolean")
         elif reject_fasttrack and fasttrack_patched:
             failures.append(f"{name} is patched by FastTrack")
+        failures.extend(_validate_ownership(name, target, reject_external))
         calls = target.get("calls")
         if not isinstance(calls, int) or calls < 0:
             failures.append(f"required target has invalid calls: {name}")
@@ -145,6 +186,7 @@ def validate_series(
     required: tuple[str, ...],
     reject_fasttrack: bool = False,
     require_fresh_calls: bool = False,
+    reject_external: bool = False,
 ) -> list[str]:
     failures = []
     if len(report_items) < 2:
@@ -158,12 +200,29 @@ def validate_series(
             require_intervals=True,
             require_calls=index == last_index,
             reject_fasttrack=reject_fasttrack,
+            reject_external=reject_external,
         ):
             failures.append(f"report[{index}]: {failure}")
 
     for index in range(1, len(report_items)):
         previous = report_items[index - 1]
         current = report_items[index]
+        previous_generation = previous.get("captureGeneration")
+        current_generation = current.get("captureGeneration")
+        if (previous_generation is None) != (current_generation is None):
+            failures.append(
+                f"report[{index}]: captureGeneration schema changed within one capture"
+            )
+        elif (
+            isinstance(previous_generation, int)
+            and isinstance(current_generation, int)
+            and current_generation != previous_generation
+        ):
+            failures.append(
+                f"report[{index}]: captureGeneration changed within one capture "
+                f"({previous_generation} -> {current_generation})"
+            )
+
         previous_sequence = previous.get("reportSequence")
         current_sequence = current.get("reportSequence")
         if isinstance(previous_sequence, int) and isinstance(current_sequence, int):
@@ -191,6 +250,21 @@ def validate_series(
                 failures.append(
                     f"report[{index}]: {name} fastTrackPatched changed within one capture"
                 )
+
+            before_has_ownership = "externalPatched" in before or "patchOwners" in before
+            after_has_ownership = "externalPatched" in after or "patchOwners" in after
+            if before_has_ownership != after_has_ownership:
+                failures.append(
+                    f"report[{index}]: {name} Harmony ownership schema changed within one capture"
+                )
+            elif before_has_ownership and (
+                before.get("externalPatched") != after.get("externalPatched")
+                or before.get("patchOwners") != after.get("patchOwners")
+            ):
+                failures.append(
+                    f"report[{index}]: {name} Harmony ownership changed within one capture"
+                )
+
             if not isinstance(before.get("calls"), int) or not isinstance(after.get("calls"), int):
                 continue
             if not isinstance(before.get("totalTicks"), int) or not isinstance(after.get("totalTicks"), int):
@@ -214,7 +288,7 @@ def validate_series(
                 )
 
     first = report_items[0]
-    if first.get("reportSequence") == 1:
+    if first.get("reportSequence") == 1 and "captureGeneration" not in first:
         first_targets, _ = _targets_by_name(first)
         for name in required:
             target = first_targets.get(name)
@@ -262,7 +336,7 @@ def select_series_after_sequence(report_items: list[dict], after_sequence: int) 
     if len(selected) < 2:
         raise ValueError(
             f"no fresh probe report after reportSequence {after_sequence}; "
-            "the deferred GameScheduler report may not have flushed"
+            "the deferred UIScheduler report may not have flushed"
         )
     return selected
 
@@ -300,6 +374,14 @@ def main() -> int:
             "baseline captures where external replacement would invalidate attribution"
         ),
     )
+    parser.add_argument(
+        "--reject-external-patches",
+        action="store_true",
+        help=(
+            "fail if any non-CycleTrim Harmony owner patches a required target; use this "
+            "for decision-grade vanilla/CycleTrim baseline attribution"
+        ),
+    )
     args = parser.parse_args()
 
     if not args.log.is_file():
@@ -322,6 +404,7 @@ def main() -> int:
             required,
             reject_fasttrack=args.reject_fasttrack,
             require_fresh_calls=args.after_sequence is not None,
+            reject_external=args.reject_external_patches,
         )
         report = report_items[-1]
     else:
@@ -330,6 +413,7 @@ def main() -> int:
             report,
             required,
             reject_fasttrack=args.reject_fasttrack,
+            reject_external=args.reject_external_patches,
         )
     if failures:
         for failure in failures:
@@ -339,6 +423,9 @@ def main() -> int:
     for target in report["targets"]:
         if target.get("fastTrackPatched"):
             print(f"INFO: FastTrack also patches {target['name']}")
+        if target.get("externalPatched"):
+            owners = ", ".join(target.get("patchOwners", [])) or "unknown owner"
+            print(f"INFO: external Harmony owner(s) patch {target['name']}: {owners}")
     if args.series:
         print(
             "PASS CycleTrim performance probe series is structurally valid "

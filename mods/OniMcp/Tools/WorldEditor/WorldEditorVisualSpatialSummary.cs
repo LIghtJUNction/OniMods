@@ -188,7 +188,7 @@ namespace OniMcp.Tools
             var cellsByBuilding = new Dictionary<GameObject, List<Vector2Int>>();
             ForEachCoordinate(xMin, xMax, yMin, yMax, (x, y, cell) =>
             {
-                var building = Grid.Objects[cell, (int)ObjectLayer.Building];
+                var building = CellBuildingObject(cell);
                 if (building == null) return;
                 if (!cellsByBuilding.TryGetValue(building, out var cells))
                     cellsByBuilding[building] = cells = new List<Vector2Int>();

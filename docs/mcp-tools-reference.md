@@ -6,7 +6,7 @@
 
 - MCP 地址: `http://localhost:8788/mcp/`
 - 协议兼容: `2026-07-28` 无会话兼容路径 + `2025-11-25` / `2025-06-18` legacy initialize/session 路径
-- Legacy/default public tools: 6 entrypoints: `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
+- Legacy/default public tools: 7 entrypoints: `benchmark`, `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
 - Modern `2026-07-28` `tools/list`: 当前只广告只读 `benchmark`
 - 旧聚合入口: 仅作为虚拟文件工作流的内部操作，不再注册为 MCP 工具
 - `coordinate_control` 不属于当前公开运行时；普通聚合工具拒绝 raw coordinates
@@ -48,18 +48,18 @@ a virtual folder and exposes map views as files:
 
 Search, planning, actions, building, orders, navigation, game actions, dupe
 actions, and coordinate fallback are routed through `world_editor`. The default
-public surface also keeps `game_control`, `navigation_control`, `building_control`,
-`orders_control`, and `server_control` available for direct focused calls. Other
-former aggregate entrypoints are internal-only virtual-file operations and are
-not callable as MCP tools.
+public surface also keeps `benchmark`, `game_control`, `navigation_control`,
+`building_control`, `orders_control`, and `server_control` available for direct
+focused calls. Other former aggregate entrypoints are internal-only virtual-file
+operations and are not callable as MCP tools.
 
 新工具面按搜索/动作优先设计:
 
 - 优先使用 `query`、`target`、`search`、`name`、`id`、`areaId`。
-- Use `search_control` for dedicated search. It returns `searchResult`, `nextActions`, and `searchActionPatch`, so selecting a result is structurally tied to the next action call like a search/replace edit.
+- For dedicated search, use `world_editor command=search` or the typed `/active/ops/search.md` workflow. The underlying `search_control` operation is internal and is not a direct MCP tool.
 - Public aggregate tools do not accept raw `x/y`, `x1/y1/x2/y2`, `dx/dy`, `points`, or `anchors`. For exact orders, read `/active/ops/tools.md` and edit `/active/ops/orders.md`; use only currently public typed files/tools and ignore hidden `coordinate_control` and `/active/ops/coordinate.md` compatibility entries.
 - 面向任务的返回应尽量包含 `reachable`、`executable`、失败原因、缺失条件和建议下一步。
-- 区域动作优先先用 `read_control domain=area action=define` 生成 `areaId`，再传给支持区域的工具。
+- 需要定义区域并取得 `areaId` 时，通过 `world_editor` 的 typed `/active/ops/read.md` 工作流完成；底层 `read_control` 是 internal operation，不应作为 MCP 工具直接调用。
 - 写入、执行和危险动作应支持 `dryRun` 或 `confirm`，并在执行后重新读取状态验证。
 - 危险或大范围精确操作必须保持 pause -> read/plan -> dry-run -> confirm -> verify。
 
@@ -67,15 +67,13 @@ not callable as MCP tools.
 
 | 工具 | 主要 domain/action | 风险 | 用途 |
 |------|--------------------|------|------|
+| `benchmark` | `cases`, `iterations`, `tool`, `includeDetails` | read | 固定工具链路基准与诊断，不修改游戏状态 |
+| `world_editor` | `cd`, `ls`, `read`, `search`, `edit`, `plan`, `connect` | read/write/execute | 虚拟文件化世界访问、搜索、规划与受控编辑 |
 | `server_control` | `catalog`, `batch`, `program` | read/execute | 健康检查、工具清单、工具搜索、目标指南、批量调用、agent program |
-| `read_control` | `world`, `area`, `resources`, `buildings`, `knowledge`, `infrastructure` | read | 世界地图、区域、资源、建筑、机制知识、电力和房间摘要 |
-| `search_control` | `tools`, `world`, `resources`, `buildings`, `dupes`, `knowledge` | read | Dedicated search with action-ready `nextActions` |
 | `game_control` | `speed`, `state`, `save`, `sandbox`, `ui` | read/execute/dangerous | 暂停、恢复、调速、存档、沙盒、UI 编辑标记 |
 | `navigation_control` | `camera` 或按已知相机 `action` 推断 | execute | 相机移动、世界切换、覆盖层、聚焦和截图 |
 | `building_control` | `planning`, `config`, `storage`, `filter`, `production`, `side_surface`, `rocket` | read/write/execute | 建造规划、材料检查、蓝图、建筑侧屏配置、储存过滤、生产队列、火箭 |
 | `orders_control` | `area`, `priority`, `designation`, `conduit` | execute/dangerous | 挖掘、清扫、拖地、拆除、优先级、区域订单、线路/管线剪断 |
-| `dupes_control` | `info`, `priority`, `command`, `skill`, `hat`, `assignable` | read/write/execute | 复制人状态、命令、优先级、改名、技能、帽子、可分配物 |
-| `colony_control` | `snapshot`, `read`, `report`, `diagnostic`, `notification`, `management`, `bio` | read/write | 殖民地快照、报告、诊断、通知、日程、饮食、研究、医疗、农牧 |
 
 ## 建造规划
 
