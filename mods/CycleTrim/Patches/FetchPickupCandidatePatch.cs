@@ -12,6 +12,8 @@ namespace CycleTrim.Patches
             "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
             CompareIncludingPriority;
+        private static bool installAttempted;
+        private static bool installRequested;
 
         private readonly struct PickupKey : IEquatable<PickupKey>
         {
@@ -44,29 +46,52 @@ namespace CycleTrim.Patches
             }
         }
 
+        internal static void InstallAfterAllModsLoaded(Harmony harmony)
+        {
+            if (harmony == null)
+            {
+                throw new ArgumentNullException(nameof(harmony));
+            }
+
+            if (installAttempted)
+            {
+                return;
+            }
+
+            installAttempted = true;
+            if (AccessTools.TypeByName(FastTrackPatchType) != null
+                || AccessTools.TypeByName(
+                    FetchPatchCompatibility
+                        .DeliveryTemperatureLimitSupercooledPickupGroupingType) != null)
+            {
+                return;
+            }
+
+            var target = ResolveTargetMethod();
+            if (HasDeliveryTemperatureLimitTranspiler(target))
+            {
+                return;
+            }
+
+            installRequested = true;
+            harmony.CreateClassProcessor(typeof(UpdatePickupsPatch)).Patch();
+        }
+
         [HarmonyPatch]
         private static class UpdatePickupsPatch
         {
-            private static MethodBase targetMethod;
-            private static bool compatibilityChecked;
-            private static bool runOriginalForCompatibility;
-
-            // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
+            // This patch is deliberately withheld from the initial PatchAll. The
+            // loaded-mod graph is complete in OnAllModsLoaded, allowing CycleTrim
+            // to avoid installing a skipping Prefix when a known fetch owner needs
+            // the original UpdatePickups body to remain authoritative.
             private static bool Prepare()
             {
-                return AccessTools.TypeByName(FastTrackPatchType) == null;
+                return installRequested;
             }
 
             private static MethodBase TargetMethod()
             {
-                var target = AccessTools.Method(
-                        typeof(FetchManager.FetchablesByPrefabId),
-                        "UpdatePickups",
-                        new[] { typeof(Navigator), typeof(int) })
-                    ?? throw new InvalidOperationException(
-                        "CycleTrim could not find FetchablesByPrefabId.UpdatePickups(Navigator, int).");
-                targetMethod = target;
-                return target;
+                return ResolveTargetMethod();
             }
 
             private static bool Prefix(
@@ -75,11 +100,6 @@ namespace CycleTrim.Patches
                 int worker,
                 Dictionary<int, int> ___cellCosts)
             {
-                if (ShouldRunOriginalForCompatibility())
-                {
-                    return true;
-                }
-
                 var candidates = ThreadLocalObjectPool<
                     Dictionary<PickupKey, FetchManager.Pickup>>.Rent();
 
@@ -140,42 +160,6 @@ namespace CycleTrim.Patches
                 }
             }
 
-            private static bool ShouldRunOriginalForCompatibility()
-            {
-                if (!compatibilityChecked)
-                {
-                    // UpdatePickups cannot execute until normal mod loading has completed. Inspect
-                    // the installed Harmony topology here, rather than Prepare(), so mod load order
-                    // cannot hide a transpiler that was installed after CycleTrim's own PatchAll.
-                    runOriginalForCompatibility = HasDeliveryTemperatureLimitTranspiler();
-                    compatibilityChecked = true;
-                }
-
-                return runOriginalForCompatibility;
-            }
-
-            private static bool HasDeliveryTemperatureLimitTranspiler()
-            {
-                var patchInfo = targetMethod == null ? null : Harmony.GetPatchInfo(targetMethod);
-                if (patchInfo == null)
-                {
-                    return false;
-                }
-
-                foreach (var patch in patchInfo.Transpilers)
-                {
-                    var patchMethod = patch.PatchMethod;
-                    var declaringType = patchMethod == null ? null : patchMethod.DeclaringType;
-                    if (FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
-                        declaringType == null ? null : declaringType.FullName))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-
             private static bool IsBetter(
                 FetchManager.Pickup candidate,
                 FetchManager.Pickup current)
@@ -192,6 +176,38 @@ namespace CycleTrim.Patches
 
                 return candidate.freshness > current.freshness;
             }
+        }
+
+        private static MethodBase ResolveTargetMethod()
+        {
+            return AccessTools.Method(
+                    typeof(FetchManager.FetchablesByPrefabId),
+                    "UpdatePickups",
+                    new[] { typeof(Navigator), typeof(int) })
+                ?? throw new InvalidOperationException(
+                    "CycleTrim could not find FetchablesByPrefabId.UpdatePickups(Navigator, int).");
+        }
+
+        private static bool HasDeliveryTemperatureLimitTranspiler(MethodBase target)
+        {
+            var patchInfo = Harmony.GetPatchInfo(target);
+            if (patchInfo == null)
+            {
+                return false;
+            }
+
+            foreach (var patch in patchInfo.Transpilers)
+            {
+                var patchMethod = patch.PatchMethod;
+                var declaringType = patchMethod == null ? null : patchMethod.DeclaringType;
+                if (FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
+                    declaringType == null ? null : declaringType.FullName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static int CompareIncludingPriority(
