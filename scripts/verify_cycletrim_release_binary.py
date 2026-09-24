@@ -64,6 +64,11 @@ def main() -> int:
     create_state_code = method_slice(
         busy_code,
         "private static State CreateState",
+        "private static object CreateNonDuplicantMarker",
+    )
+    nonduplicant_factory_code = method_slice(
+        busy_code,
+        "private static object CreateNonDuplicantMarker",
         "private static bool IsBusyChore",
     )
     duplicant_lookup_code = method_slice(
@@ -71,6 +76,13 @@ def main() -> int:
         "private static bool TryGetDuplicantConsumer",
         "private static RefreshStamp CaptureStamp",
     )
+    duplicant_state_try = duplicant_lookup_code.find("States.TryGetValue")
+    nonduplicant_try = duplicant_lookup_code.find("NonDuplicants.TryGetValue")
+    duplicant_identity_lookup = duplicant_lookup_code.find(
+        "GetComponent<MinionIdentity>()"
+    )
+    nonduplicant_create = duplicant_lookup_code.find("NonDuplicants.GetValue")
+    duplicant_state_create = duplicant_lookup_code.find("States.GetValue")
     prioritize_prefix_code = method_body(
         busy_code,
         "private static void Prefix(Brain brain)",
@@ -111,11 +123,19 @@ def main() -> int:
             and "Grid.PosToCell(navigator)" not in busy_code
         ),
         "release decompile exposes identity-cache methods": (
-            bool(create_state_code) and bool(duplicant_lookup_code)
+            bool(create_state_code)
+            and bool(nonduplicant_factory_code)
+            and bool(duplicant_lookup_code)
         ),
-        "pickup hot path caches duplicant identity classification": (
-            "GetComponent<MinionIdentity>()" in create_state_code
-            and "GetComponent<MinionIdentity>()" not in duplicant_lookup_code
+        "pickup hot path caches positive and negative identity classification": (
+            "GetComponent<MinionIdentity>()" not in create_state_code
+            and "NonDuplicantMarker" in nonduplicant_factory_code
+            and duplicant_lookup_code.count("GetComponent<MinionIdentity>()") == 1
+            and duplicant_state_try >= 0
+            and nonduplicant_try > duplicant_state_try
+            and duplicant_identity_lookup > nonduplicant_try
+            and nonduplicant_create > duplicant_identity_lookup
+            and duplicant_state_create > duplicant_identity_lookup
             and "IsDuplicant" in duplicant_lookup_code
         ),
         "priority invalidation does not materialize untracked throttle state": (
