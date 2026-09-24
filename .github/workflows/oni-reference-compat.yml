@@ -177,3 +177,24 @@ jobs:
             -property:BaseIntermediateOutputPath="$compat_root/obj/" \
             -property:OutputPath="$compat_root/bin/" \
             -property:TreatWarningsAsErrors=true
+      - name: Compile OniMcp against .NET Standard 2.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          compat_root="$RUNNER_TEMP/onimcp-netstandard21"
+          # Keep this compatibility compile isolated from the earlier shipping net48 build.
+          rm -rf mods/OniMcp/obj
+          dotnet restore mods/OniMcp/OniMcp.csproj \
+            -p:TargetFramework=netstandard2.1 \
+            -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -p:ImportDirectoryBuildProps=false \
+            -p:BaseIntermediateOutputPath="$compat_root/obj/"
+          dotnet msbuild mods/OniMcp/OniMcp.csproj \
+            -target:Compile \
+            -property:Configuration=Release \
+            -property:TargetFramework=netstandard2.1 \
+            -property:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -property:ImportDirectoryBuildProps=false \
+            -property:BaseIntermediateOutputPath="$compat_root/obj/" \
+            -property:OutputPath="$compat_root/bin/" \
+            -property:TreatWarningsAsErrors=true
