@@ -31,12 +31,14 @@ namespace CycleTrim.PerformanceProbe.Tests
                 }
 
                 RecognizesDeliveryTemperatureLimitTranspiler();
-                RejectsUnrelatedFetchTranspilers();
+                RecognizesMaintainedDeliveryTemperatureLimitType();
+                RejectsUnrelatedFetchCompatibilityTypes();
                 RecordsCountTotalMeanAndMax();
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();
                 AggregatesConcurrentWriters();
                 SnapshotsDoNotSplitConcurrentSamplesAcrossIntervals();
+                GenerationCounterRegression.Run();
                 if (!skipSynthetic)
                 {
                     MeasuresConsistentSnapshotOverhead();
@@ -61,22 +63,37 @@ namespace CycleTrim.PerformanceProbe.Tests
             AssertTrue(
                 FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
                     "DeliveryTemperatureLimit.FetchManager_FetchablesByPrefabId_Patch"),
-                "Delivery Temperature Limit UpdatePickups transpiler type");
+                "legacy Delivery Temperature Limit UpdatePickups transpiler type");
         }
 
-        private static void RejectsUnrelatedFetchTranspilers()
+        private static void RecognizesMaintainedDeliveryTemperatureLimitType()
+        {
+            AssertTrue(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitSupercooledType(
+                    "DeliveryTemperatureLimit.KleiPickupTemperatureGroupingPatches"),
+                "maintained Delivery Temperature Limit pickup grouping type");
+        }
+
+        private static void RejectsUnrelatedFetchCompatibilityTypes()
         {
             AssertFalse(
                 FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(null),
-                "null transpiler type");
+                "null legacy transpiler type");
             AssertFalse(
                 FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
                     "DeliveryTemperatureLimit.FetchManager_Patch"),
-                "different Delivery Temperature Limit patch type");
+                "different legacy Delivery Temperature Limit patch type");
             AssertFalse(
                 FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
                     "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate"),
-                "FastTrack fetch patch type");
+                "FastTrack fetch patch as legacy DTL transpiler");
+            AssertFalse(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitSupercooledType(null),
+                "null maintained DTL type");
+            AssertFalse(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitSupercooledType(
+                    "DeliveryTemperatureLimit.KleiPickupTemperatureGroupingPatch"),
+                "near-match maintained DTL type");
         }
 
         private static void RecordsCountTotalMeanAndMax()
@@ -106,7 +123,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             var interval = current.DeltaSince(previous);
 
             AssertEqual(2, interval.Calls, "interval call count");
-            AssertEqual(60, interval.TotalTicks, "interval total ticks");
+            AssertEqual(60, interval.TotalTicks, "interval total");
             AssertNear(30d, interval.MeanTicks, "interval mean ticks");
             AssertEqual(4, current.Calls, "cumulative count remains intact");
             AssertEqual(100, current.TotalTicks, "cumulative total remains intact");
