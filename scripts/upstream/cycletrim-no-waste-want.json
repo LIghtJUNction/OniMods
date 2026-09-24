@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "repository": "peterhaneve/ONIMods",
+  "commit": "30f4beb7b574c9f95801c3fa7dea8590737dd752",
+  "files": [
+    {
+      "path": "NoWasteWant/NoWasteWantPatches.cs",
+      "gitBlobSha1": "14d7b7562f9ef994604af6bfca10a31339553285"
+    }
+  ]
+}
