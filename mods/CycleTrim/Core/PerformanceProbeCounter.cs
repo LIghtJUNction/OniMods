@@ -22,6 +22,17 @@ namespace CycleTrim.Core
             }
         }
 
+        internal static bool TryRecord(PerformanceProbeCounter counter, long elapsedTicks)
+        {
+            if (counter == null)
+            {
+                return false;
+            }
+
+            counter.Record(elapsedTicks);
+            return true;
+        }
+
         internal void Record(long elapsedTicks)
         {
             if (elapsedTicks < 0)

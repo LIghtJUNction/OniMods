@@ -15,7 +15,7 @@ namespace OniMcp.Server
             if (rawMessage.Property("id") != null && !IsValidModernRequestId(rawMessage["id"]))
             {
                 error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                    "Modern request id must be a string or integer");
+                    "Modern request id must be a string or number");
                 return false;
             }
 
@@ -46,25 +46,82 @@ namespace OniMcp.Server
                 return false;
             }
 
-            if (meta?["io.modelcontextprotocol/clientCapabilities"]?.Type != JTokenType.Object)
+            string metaKeyError;
+            if (!ValidateModernMetaKeys(meta, out metaKeyError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, metaKeyError);
+                return false;
+            }
+
+            var clientCapabilities = meta?["io.modelcontextprotocol/clientCapabilities"] as JObject;
+            if (clientCapabilities == null)
             {
                 error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
                     "Modern requests require params._meta.io.modelcontextprotocol/clientCapabilities");
                 return false;
             }
 
-            var clientInfo = meta["io.modelcontextprotocol/clientInfo"];
-            if (clientInfo != null)
+            string capabilityError;
+            if (!ValidateModernClientCapabilities(clientCapabilities, out capabilityError))
             {
-                var clientInfoObject = clientInfo as JObject;
-                if (clientInfoObject == null
-                    || clientInfoObject["name"]?.Type != JTokenType.String
-                    || clientInfoObject["version"]?.Type != JTokenType.String)
-                {
-                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                        "params._meta.io.modelcontextprotocol/clientInfo must contain string name and version when provided");
-                    return false;
-                }
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, capabilityError);
+                return false;
+            }
+
+            var progressTokenProperty = meta.Property("progressToken");
+            if (progressTokenProperty != null && !IsValidModernProgressToken(progressTokenProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "params._meta.progressToken must be a string or number when provided");
+                return false;
+            }
+
+            var traceparentProperty = meta.Property("traceparent");
+            if (traceparentProperty != null && !IsValidModernTraceparent(traceparentProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "params._meta.traceparent must be a valid W3C Trace Context value when provided");
+                return false;
+            }
+
+            var tracestateProperty = meta.Property("tracestate");
+            if (tracestateProperty != null && !IsValidModernTracestate(tracestateProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "params._meta.tracestate must be a valid W3C Trace Context value when provided");
+                return false;
+            }
+
+            var baggageProperty = meta.Property("baggage");
+            if (baggageProperty != null && !IsValidModernBaggage(baggageProperty.Value))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "params._meta.baggage must be a valid W3C Baggage value when provided");
+                return false;
+            }
+
+            string clientInfoError;
+            if (!ValidateModernClientInfo(meta["io.modelcontextprotocol/clientInfo"], out clientInfoError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, clientInfoError);
+                return false;
+            }
+
+            var logLevel = meta["io.modelcontextprotocol/logLevel"];
+            if (logLevel != null && !IsValidModernLogLevel(logLevel))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    "params._meta.io.modelcontextprotocol/logLevel must be a valid MCP logging level when provided");
+                return false;
+            }
+
+            string inputResponseError;
+            if (!ValidateModernInputResponseRequestParams(method, rawMessage["params"] as JObject,
+                    out inputResponseError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                    inputResponseError);
+                return false;
             }
 
             string methodHeader = httpRequest.Headers["Mcp-Method"];
@@ -81,6 +138,25 @@ namespace OniMcp.Server
             if (nameHeaderRequired && string.IsNullOrEmpty(nameHeader))
             {
                 error = HeaderMismatch(rawMessage["id"], $"Mcp-Name header is required for method '{method}'");
+                return false;
+            }
+
+            if (string.Equals(method, "tools/call", StringComparison.Ordinal))
+            {
+                JToken nameToken = (rawMessage["params"] as JObject)?["name"];
+                if (nameToken?.Type != JTokenType.String)
+                {
+                    error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                        "params.name must be a string for tools/call");
+                    return false;
+                }
+            }
+
+            string resourceUriError;
+            if (string.Equals(method, "resources/read", StringComparison.Ordinal)
+                && !ValidateModernResourceReadUri(rawMessage["params"] as JObject, out resourceUriError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, resourceUriError);
                 return false;
             }
 
@@ -118,55 +194,215 @@ namespace OniMcp.Server
             return true;
         }
 
-        private static bool ValidateModernNotification(HttpListenerRequest httpRequest, JObject rawMessage,
-            string method, string protocolVersion, JObject meta, string metaVersion, out JsonRpcResponse error)
+        private static bool IsValidModernLogLevel(JToken logLevel)
         {
-            error = null;
-
-            var metaVersionToken = meta?["io.modelcontextprotocol/protocolVersion"];
-            if (metaVersionToken != null && metaVersionToken.Type != JTokenType.String)
-            {
-                error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidParams,
-                    "Notification protocol version claim must be a string when provided");
+            if (logLevel?.Type != JTokenType.String)
                 return false;
-            }
 
-            if (!string.IsNullOrEmpty(protocolVersion)
-                && !string.IsNullOrEmpty(metaVersion)
-                && !string.Equals(protocolVersion, metaVersion, StringComparison.Ordinal))
+            switch ((string)logLevel)
             {
-                error = HeaderMismatch(null,
-                    $"Mcp-Protocol-Version '{protocolVersion}' must match notification protocol version claim '{metaVersion}'");
+                case "debug":
+                case "info":
+                case "notice":
+                case "warning":
+                case "error":
+                case "critical":
+                case "alert":
+                case "emergency":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool ValidateModernClientCapabilities(JObject capabilities, out string errorMessage)
+        {
+            errorMessage = null;
+
+            if (!IsObjectCapabilityWhenPresent(capabilities, "roots", out errorMessage))
                 return false;
-            }
 
-            string methodHeader = httpRequest.Headers["Mcp-Method"];
-            if (!string.IsNullOrEmpty(methodHeader)
-                && !string.Equals(methodHeader, method, StringComparison.Ordinal))
+            JObject sampling;
+            if (!TryGetObjectCapability(capabilities, "sampling", out sampling, out errorMessage))
+                return false;
+            if (sampling != null
+                && (!IsObjectCapabilityWhenPresent(sampling, "context", out errorMessage)
+                    || !IsObjectCapabilityWhenPresent(sampling, "tools", out errorMessage)))
+                return false;
+
+            JObject elicitation;
+            if (!TryGetObjectCapability(capabilities, "elicitation", out elicitation, out errorMessage))
+                return false;
+            if (elicitation != null
+                && (!IsObjectCapabilityWhenPresent(elicitation, "form", out errorMessage)
+                    || !IsObjectCapabilityWhenPresent(elicitation, "url", out errorMessage)))
+                return false;
+
+            if (!ValidateObjectMapCapability(capabilities, "experimental", out errorMessage)
+                || !ValidateModernExtensionCapabilities(capabilities, out errorMessage))
+                return false;
+
+            return true;
+        }
+
+        private static bool IsObjectCapabilityWhenPresent(JObject parent, string name, out string errorMessage)
+        {
+            errorMessage = null;
+            JToken token = parent?[name];
+            if (token == null)
+                return true;
+            if (token.Type == JTokenType.Object)
+                return true;
+
+            errorMessage = $"params._meta.io.modelcontextprotocol/clientCapabilities.{name} must be an object when provided";
+            return false;
+        }
+
+        private static bool TryGetObjectCapability(JObject capabilities, string name, out JObject value,
+            out string errorMessage)
+        {
+            value = null;
+            errorMessage = null;
+            JToken token = capabilities?[name];
+            if (token == null)
+                return true;
+
+            value = token as JObject;
+            if (value != null)
+                return true;
+
+            errorMessage = $"params._meta.io.modelcontextprotocol/clientCapabilities.{name} must be an object when provided";
+            return false;
+        }
+
+        private static bool ValidateObjectMapCapability(JObject capabilities, string name, out string errorMessage)
+        {
+            errorMessage = null;
+            JObject map;
+            if (!TryGetObjectCapability(capabilities, name, out map, out errorMessage))
+                return false;
+            if (map == null)
+                return true;
+
+            foreach (var property in map.Properties())
             {
-                error = HeaderMismatch(null,
-                    $"Mcp-Method header must match JSON-RPC notification method '{method}'");
+                if (property.Value?.Type == JTokenType.Object)
+                    continue;
+
+                errorMessage = $"params._meta.io.modelcontextprotocol/clientCapabilities.{name}.{property.Name} must be an object";
                 return false;
             }
 
             return true;
         }
 
+        private static bool ValidateModernExtensionCapabilities(JObject capabilities, out string errorMessage)
+        {
+            errorMessage = null;
+            JObject extensions;
+            if (!TryGetObjectCapability(capabilities, "extensions", out extensions, out errorMessage))
+                return false;
+            if (extensions == null)
+                return true;
+
+            foreach (var property in extensions.Properties())
+            {
+                if (property.Value?.Type != JTokenType.Object)
+                {
+                    errorMessage =
+                        $"params._meta.io.modelcontextprotocol/clientCapabilities.extensions.{property.Name} must be an object";
+                    return false;
+                }
+
+                if (!IsValidModernExtensionIdentifier(property.Name))
+                {
+                    errorMessage =
+                        $"params._meta.io.modelcontextprotocol/clientCapabilities.extensions key '{property.Name}' must use a valid prefixed MCP metadata identifier";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsValidModernExtensionIdentifier(string identifier)
+        {
+            if (string.IsNullOrEmpty(identifier))
+                return false;
+
+            int slash = identifier.IndexOf('/');
+            if (slash <= 0 || slash != identifier.LastIndexOf('/'))
+                return false;
+
+            string prefix = identifier.Substring(0, slash);
+            string name = identifier.Substring(slash + 1);
+            string[] labels = prefix.Split('.');
+            if (labels.Length == 0)
+                return false;
+
+            foreach (string label in labels)
+            {
+                if (!IsValidModernMetadataPrefixLabel(label))
+                    return false;
+            }
+
+            return IsValidModernMetadataName(name);
+        }
+
+        private static bool IsValidModernMetadataPrefixLabel(string label)
+        {
+            if (string.IsNullOrEmpty(label) || !IsAsciiLetter(label[0])
+                || !IsAsciiAlphaNumeric(label[label.Length - 1]))
+                return false;
+
+            for (int i = 1; i < label.Length - 1; i++)
+            {
+                char value = label[i];
+                if (!IsAsciiAlphaNumeric(value) && value != '-')
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsValidModernMetadataName(string name)
+        {
+            if (name.Length == 0)
+                return true;
+            if (!IsAsciiAlphaNumeric(name[0]) || !IsAsciiAlphaNumeric(name[name.Length - 1]))
+                return false;
+
+            for (int i = 1; i < name.Length - 1; i++)
+            {
+                char value = name[i];
+                if (!IsAsciiAlphaNumeric(value) && value != '-' && value != '_' && value != '.')
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsAsciiLetter(char value)
+        {
+            return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+        }
+
+        private static bool IsAsciiAlphaNumeric(char value)
+        {
+            return IsAsciiLetter(value) || (value >= '0' && value <= '9');
+        }
+
         private static bool IsValidModernRequestId(JToken requestId)
         {
             if (requestId == null)
                 return false;
-
             if (requestId.Type == JTokenType.String || requestId.Type == JTokenType.Integer)
                 return true;
-
             if (requestId.Type != JTokenType.Float)
                 return false;
 
-            double numericId = requestId.Value<double>();
-            return !double.IsNaN(numericId)
-                && !double.IsInfinity(numericId)
-                && Math.Truncate(numericId) == numericId;
+            double numericValue = requestId.Value<double>();
+            return !double.IsNaN(numericValue) && !double.IsInfinity(numericValue);
         }
 
         private static bool RequiresModernNameHeader(string method)
@@ -207,7 +443,11 @@ namespace OniMcp.Server
             string payload = headerValue.Substring(Base64HeaderPrefix.Length, payloadLength);
             try
             {
-                decodedValue = StrictUtf8.GetString(Convert.FromBase64String(payload));
+                byte[] bytes = Convert.FromBase64String(payload);
+                if (!string.Equals(Convert.ToBase64String(bytes), payload, StringComparison.Ordinal))
+                    return false;
+
+                decodedValue = StrictUtf8.GetString(bytes);
                 return true;
             }
             catch (FormatException)

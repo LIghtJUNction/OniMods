@@ -18,8 +18,9 @@ namespace OniMcp.Server
         // external request backlog to the same finite width permits normal parallel
         // reads without allowing an arbitrary number of Unity-thread actions to pile up.
         internal const int MaxPendingMainThreadHttpRequests = 20;
-        // MCP 2026-07-28 reserves -32020..-32099 for protocol-defined errors.
-        internal const int MainThreadBusyErrorCode = -31950;
+        // MCP 2026-07-28 reserves -32000..-32019 for implementation-defined server errors.
+        internal const int MainThreadBusyErrorCode = -32000;
+        internal const int GameContextLifecycleErrorCode = -32001;
 
         private readonly object _httpFrontDoorAdmissionLock = new object();
         private int _httpFrontDoorAdmissionGeneration;
@@ -89,6 +90,19 @@ namespace OniMcp.Server
         private bool TryAcquireMainThreadHttpAdmission(HttpListenerResponse response, object requestId,
             string sessionId, bool modern, out MainThreadHttpAdmissionLease lease)
         {
+            // On the legacy POST path, sessionless requests can reach this point only
+            // for initialize: ping returns earlier and all other methods require a session.
+            // Capacity is therefore deterministic transport state and must not consume
+            // or be masked by a scarce Unity/main-thread admission slot.
+            if (!modern && string.IsNullOrEmpty(sessionId) && TryRejectNewLegacySessionAtCapacity(response))
+            {
+                lease = null;
+                return false;
+            }
+
+            if (!modern && !string.IsNullOrEmpty(sessionId))
+                PruneExpiredLegacySessionsBeforeMainThreadAdmission();
+
             lock (_mainThreadAdmissionLock)
             {
                 if (_running && _pendingMainThreadHttpRequests < MaxPendingMainThreadHttpRequests)
@@ -150,6 +164,65 @@ namespace OniMcp.Server
                 lease.Release();
                 throw;
             }
+        }
+
+        private static bool IsGameContextBoundLegacyRequest(string method, JObject parameters)
+        {
+            return string.Equals(method, "tools/call", StringComparison.Ordinal)
+                || (string.Equals(method, "resources/read", StringComparison.Ordinal)
+                    && IsGameContextBoundResourceRead(parameters));
+        }
+
+        private static bool IsGameContextBoundResourceRead(JObject parameters)
+        {
+            var uriToken = parameters?["uri"];
+            if (uriToken?.Type != JTokenType.String
+                || !Uri.TryCreate((string)uriToken, UriKind.Absolute, out var uri)
+                || !string.Equals(uri.Scheme, "oni", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            string path = uri.AbsolutePath.TrimEnd('/');
+            // These exact resource routes delegate only to server catalog/audit
+            // handlers. Unknown tools routes and /read/{name} remain game-bound.
+            if (string.Equals(uri.Host, "tools", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (path)
+                {
+                    case "/manifest":
+                    case "/search":
+                    case "/guide":
+                    case "/player-action-coverage":
+                    case "/static-audit":
+                    case "/side-screen-surfaces":
+                    case "/user-menu-surfaces":
+                    case "/management-surfaces":
+                    case "/tool-menu-surfaces":
+                    case "/ui-menu-surfaces":
+                    case "/global-control-surfaces":
+                    case "/notification-surfaces":
+                        return false;
+                }
+            }
+
+            return !(string.Equals(uri.Host, "mcp", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(path, "/sessions", StringComparison.Ordinal));
+        }
+
+        private static JsonRpcResponse GameContextError(object requestId, int capturedGeneration)
+        {
+            string reason = GameContextLifecycle.RejectionReason(capturedGeneration);
+            if (reason == null)
+                return null;
+
+            return JsonRpcResponse.MakeError(requestId, GameContextLifecycleErrorCode,
+                reason == "stale_game_context"
+                    ? "Game context changed before this request ran; retry in the current game"
+                    : "Game is loading; retry after the new game is ready",
+                new JObject
+                {
+                    ["reasonCode"] = reason,
+                    ["retryable"] = true
+                });
         }
 
         private void ResetMainThreadHttpAdmission()
@@ -222,10 +295,13 @@ namespace OniMcp.Server
             private McpHttpServer _owner;
             private readonly int _generation;
 
+            internal readonly int GameContextGeneration;
+
             internal MainThreadHttpAdmissionLease(McpHttpServer owner, int generation)
             {
                 _owner = owner;
                 _generation = generation;
+                GameContextGeneration = GameContextLifecycle.CaptureGeneration();
             }
 
             internal bool IsCurrentGeneration()

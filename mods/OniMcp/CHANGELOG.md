@@ -2,6 +2,21 @@
 
 Generated from `git log -- mods/OniMcp`.
 
+## 2026-09-23 — 0.2.5
+
+- Switch Workshop packaging to a single legacy ZIP. Steam downloaded the earlier directory package, but ONI's mod loader rejected it; the release gate requires Steam LegacyItem and in-game load verification.
+- Reject queued MCP work admitted before a save-load context change so it cannot run against the newly loaded world.
+- Clarify that the `购买 AI Token / 支持项目` link opens `https://api.lmm.best` for an optional purchase, unrelated to OniMcp's local authentication token.
+
+## 2026-09-23 — 0.2.4
+
+- Add the modern MCP protocol path and discovery while retaining legacy client compatibility.
+- Validate protocol versions, HTTP media types, JSON-RPC payloads, and modern request and result metadata before accepting work.
+- Bound legacy sessions and queued tasks, clean up expired work, and isolate tool-call state between requests.
+- Harden sandbox and world-editor routing, error reporting, and resource URI handling.
+- Report the package version consistently in legacy and modern `serverInfo` responses.
+- Keep the options dialog compact, mask the editable token field, and add an optional `https://api.lmm.best` project-support button. Automated checks and the PLib UI call chain were verified; full in-game click-through remains unverified.
+
 ## 2026-09-12 — 0.2.3
 
 - Fix resource dispatch and JSON-RPC null responses; preserve tool visibility and protect cached metadata from caller mutation.

@@ -102,6 +102,28 @@ fn generate_vdf(
     Ok(vdf_path)
 }
 
+fn reject_directory_upload_for_oni(vdf: &Path) -> Result<()> {
+    let content = fs::read_to_string(vdf)
+        .with_context(|| format!("读取 Workshop VDF 失败：{}", vdf.display()))?;
+    let app_id = content
+        .lines()
+        .find_map(|line| {
+            let mut fields = line.trim_start().split('"');
+            (fields.next() == Some("") && fields.next() == Some("appid"))
+                .then(|| fields.nth(1))
+                .flatten()
+        })
+        .context("Workshop VDF 缺少 appid，拒绝目录上传")?
+        .parse::<u32>()
+        .context("Workshop VDF 的 appid 无效，拒绝目录上传")?;
+    if app_id == 457140 {
+        anyhow::bail!(
+            "ONI SteamCMD/UGC 目录发布路径不兼容游戏；请使用 scripts/publish_cycletrim_steam.sh 或 scripts/publish_onimcp_steam.sh 的单 ZIP 发布器"
+        );
+    }
+    Ok(())
+}
+
 fn yaml_value(yaml: &str, key: &str) -> Option<String> {
     yaml.lines().find_map(|line| {
         let (candidate, value) = split_yaml_mapping(line)?;
@@ -462,9 +484,13 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
     println!("   VDF: {}", vdf.display());
 
     if dry_run {
-        println!("✅ dry-run 通过，未调用 SteamCMD");
+        println!("✅ 元数据 dry-run 通过；发布脚本会另行验证单文件 ZIP");
         return Ok(());
     }
+
+    // ONI passes the installed Workshop path to ZipFile. This applies to
+    // every ONI item, including future IDs, not just the two current mods.
+    reject_directory_upload_for_oni(&vdf)?;
 
     let Some(steamcmd_path) = resolve_steamcmd(steamcmd.as_deref()) else {
         if non_interactive {
@@ -733,6 +759,23 @@ mod tests {
         assert!(text.contains("line one\\nline two"));
         assert!(!content.join("workshop.vdf").exists());
 
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn oni_directory_upload_is_rejected_for_new_workshop_ids() -> TestResult {
+        let root = test_dir("new-workshop-id");
+        fs::create_dir_all(&root)?;
+        let vdf = root.join("new-item.workshop.vdf");
+        fs::write(
+            &vdf,
+            "\"workshopitem\"\n{\n\"appid\" \"457140\"\n\"publishedfileid\" \"9999999999\"\n}\n",
+        )?;
+
+        assert!(reject_directory_upload_for_oni(&vdf).is_err());
+        fs::write(&vdf, "\"workshopitem\"\n{\n\"appid\" \"12345\"\n}\n")?;
+        assert!(reject_directory_upload_for_oni(&vdf).is_ok());
         fs::remove_dir_all(root)?;
         Ok(())
     }

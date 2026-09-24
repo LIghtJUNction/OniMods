@@ -19,6 +19,25 @@ namespace OniMcp.Server
     {
         private void HandlePost(HttpListenerRequest request, HttpListenerResponse response, string sessionId, string protocolVersion)
         {
+            if (!string.IsNullOrEmpty(protocolVersion)
+                && !string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
+                && !IsSupportedProtocolVersion(protocolVersion))
+            {
+                SendJson(response, UnsupportedProtocolVersion(null, protocolVersion),
+                    (int)HttpStatusCode.BadRequest);
+                return;
+            }
+
+            if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
+                && !IsJsonRequestMediaType(request.ContentType))
+            {
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                    "MCP 2026-07-28 POST requests require Content-Type: application/json"),
+                    (int)HttpStatusCode.UnsupportedMediaType);
+                return;
+            }
+
             string body;
             try
             {
@@ -26,12 +45,16 @@ namespace OniMcp.Server
             }
             catch (RequestBodyTooLargeException ex)
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, ex.Message), 413);
                 return;
             }
 
             if (string.IsNullOrEmpty(body))
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Empty request body"), 400);
                 return;
             }
@@ -43,6 +66,8 @@ namespace OniMcp.Server
             }
             catch (JsonException ex)
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 int statusCode = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal) ? 400 : 200;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.ParseError, $"Parse error: {ex.Message}"), statusCode);
                 return;
@@ -51,6 +76,8 @@ namespace OniMcp.Server
             var rawMessage = parsedMessage as JObject;
             if (rawMessage == null)
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
                     "JSON-RPC request must be a single object"), 400);
                 return;
@@ -61,6 +88,8 @@ namespace OniMcp.Server
                 || (requestId != null && requestId.Type != JTokenType.Null && requestId.Type != JTokenType.String
                     && requestId.Type != JTokenType.Integer && requestId.Type != JTokenType.Float))
             {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
                 int statusCode = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal) ? 400 : 200;
                 SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest, "Invalid JSON-RPC request"), statusCode);
                 return;
@@ -71,7 +100,29 @@ namespace OniMcp.Server
             if (TryHandleModernPost(request, response, rawMessage, protocolVersion))
                 return;
 
-            if (rawMessage["method"] == null && (rawMessage["result"] != null || rawMessage["error"] != null))
+            // Legacy compatibility remains permissive for an absent Accept header and
+            // for JSON-only clients because this server's 2025 POST path returns JSON.
+            // If a response-bearing request explicitly excludes JSON, however, do not
+            // send a media type the client said it cannot consume. Notifications and
+            // client responses stay on their existing 202 no-body path.
+            bool isClientResponse = rawMessage["method"] == null
+                && (rawMessage["result"] != null || rawMessage["error"] != null);
+            bool expectsLegacyJsonResponse = rawMessage.Property("id") != null && !isClientResponse;
+            if (expectsLegacyJsonResponse && requestId?.Type == JTokenType.Float)
+            {
+                if (RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, null))
+                    return;
+                SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                    "Legacy MCP request id must be a string or integer"), 200);
+                return;
+            }
+            if (expectsLegacyJsonResponse
+                && RejectUnacceptableLegacyJsonResponse(request, response, protocolVersion, requestId))
+            {
+                return;
+            }
+
+            if (isClientResponse)
             {
                 if (!ValidateNonInitRequest(response, sessionId, protocolVersion))
                     return;
@@ -161,7 +212,11 @@ namespace OniMcp.Server
                 EnqueueAdmittedMainThread(admission, new System.Action(() =>
                 {
                     if (_running && IsSessionActive(sessionId))
-                        ProcessMethod(rpcRequest, sessionId);
+                    {
+                        if (!IsGameContextBoundLegacyRequest(rpcRequest.Method, rpcRequest.Params)
+                            || GameContextError(null, admission.GameContextGeneration) == null)
+                            ProcessMethod(rpcRequest, sessionId);
+                    }
                 }));
                 SetResponseSessionId(response, sessionId);
                 SetResponseProtocolVersion(response, sessionId);
@@ -172,6 +227,33 @@ namespace OniMcp.Server
             }
 
             DispatchPostResponse(response, rpcRequest, sessionId, admission);
+        }
+
+        private bool RejectUnacceptableLegacyJsonResponse(HttpListenerRequest request,
+            HttpListenerResponse response, string protocolVersion, object requestId)
+        {
+            if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
+                || AcceptsLegacyJsonResponse(request))
+            {
+                return false;
+            }
+
+            SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InvalidRequest,
+                "Legacy MCP request does not accept application/json responses"),
+                (int)HttpStatusCode.NotAcceptable);
+            return true;
+        }
+
+        private static bool IsJsonRequestMediaType(string contentType)
+        {
+            if (string.IsNullOrWhiteSpace(contentType))
+                return false;
+
+            int parameterSeparator = contentType.IndexOf(';');
+            string mediaType = parameterSeparator >= 0
+                ? contentType.Substring(0, parameterSeparator)
+                : contentType;
+            return string.Equals(mediaType.Trim(), "application/json", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool TryValidateCors(HttpListenerRequest request, out string origin)
@@ -271,9 +353,13 @@ namespace OniMcp.Server
                 Exception processEx = null;
                 try
                 {
-                    result = _running && IsSessionActive(sessionId)
-                        ? ProcessMethod(rpcRequest, sessionId)
-                        : JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidRequest, "Session not found or terminated");
+                    if (!_running || !IsSessionActive(sessionId))
+                        result = JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidRequest,
+                            "Session not found or terminated");
+                    else if (IsGameContextBoundLegacyRequest(rpcRequest.Method, rpcRequest.Params))
+                        result = GameContextError(rpcRequest.Id, admission.GameContextGeneration);
+                    if (result == null)
+                        result = ProcessMethod(rpcRequest, sessionId);
                 }
                 catch (Exception ex)
                 {
