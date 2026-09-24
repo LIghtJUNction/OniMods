@@ -391,6 +391,8 @@ namespace OniMcp.Tools
 
         private sealed class MaterialSelection
         {
+            private float requiredKg;
+
             public bool Valid;
             public string Mode;
             public string Requested;
@@ -398,8 +400,31 @@ namespace OniMcp.Tools
             public BuildMaterialInfo Selected;
             public List<BuildMaterialInfo> Available = new List<BuildMaterialInfo>();
             public List<BuildMaterialInfo> Candidates = new List<BuildMaterialInfo>();
-            public float RequiredKg;
+            public string ReasonCode;
             public string Error;
+
+            public float RequiredKg
+            {
+                get { return requiredKg; }
+                set
+                {
+                    requiredKg = Math.Max(0f, ToolUtil.SafeFloat(value));
+                    if (!Valid)
+                        return;
+
+                    float selectedAvailableKg = Selected != null ? ToolUtil.SafeFloat(Selected.AvailableKg) : 0f;
+                    if (BuildMaterialSufficiencyPolicy.IsSatisfied(
+                        selectedAvailableKg,
+                        requiredKg,
+                        IsFreeBuildContext()))
+                        return;
+
+                    Valid = false;
+                    ReasonCode = "insufficient_material";
+                    string selectedName = Selected != null ? Selected.Tag.Name : "selected material";
+                    Error = $"Insufficient build material: {selectedName} has {Math.Round(selectedAvailableKg, 3)} kg available but {Math.Round(requiredKg, 3)} kg is required.";
+                }
+            }
 
             public static MaterialSelection Success(List<Tag> elements, string mode, string requested, BuildMaterialInfo selected, List<BuildMaterialInfo> available)
             {
@@ -441,6 +466,7 @@ namespace OniMcp.Tools
                     ["valid"] = Valid,
                     ["mode"] = Mode,
                     ["requested"] = Requested,
+                    ["reasonCode"] = ReasonCode,
                     ["requirementKnown"] = hasRequiredKg,
                     ["requiredKg"] = hasRequiredKg ? (object)Math.Round(ToolUtil.SafeFloat(RequiredKg), 3) : null,
                     ["selectedAvailableKg"] = Selected != null ? (object)Math.Round(selectedAvailableKg, 3) : null,
