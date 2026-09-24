@@ -4,7 +4,7 @@ namespace CycleTrim.Core
     {
         internal static bool AllowsCycleTrimReplacement(
             bool efficientSupplyPresent,
-            bool bundledEfficientFetchPresent)
+            bool bundledEfficientFetchPresent = false)
         {
             return !efficientSupplyPresent && !bundledEfficientFetchPresent;
         }
