@@ -22,6 +22,10 @@ HOST_REGRESSION_COMMAND = "python3 scripts/check_mods.py --skip-synthetic-perfor
 SYNTHETIC_REPORT_COMMAND = "python3 scripts/run_cycletrim_synthetic_performance.py"
 SYNTHETIC_ONLY_ARGUMENT = "--synthetic-performance-only"
 SKIP_SYNTHETIC_ARGUMENT = "--skip-synthetic-performance"
+NETSTANDARD_COMPAT_PROJECTS = (
+    "mods/CycleTrim/CycleTrim.csproj",
+    "mods/OniMcp/OniMcp.csproj",
+)
 STEAM_PUBLISHER_TEST_INPUTS = (
     "tools/OniMods.SteamPublisher/CandidateCreationJournal.cs",
     "tools/OniMods.SteamPublisher/LegacyCandidatePlan.cs",
@@ -34,6 +38,18 @@ STEAM_PUBLISHER_TEST_INPUTS = (
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def verify_netstandard_compatibility_coverage(reference: str) -> None:
+    for project in NETSTANDARD_COMPAT_PROJECTS:
+        require(
+            project in reference,
+            f"reference CI must compile {project} in the .NET Standard 2.1 compatibility probe",
+        )
+    require(
+        reference.count("TargetFramework=netstandard2.1") >= len(NETSTANDARD_COMPAT_PROJECTS) * 2,
+        "reference CI must restore and compile both mods with TargetFramework=netstandard2.1",
+    )
 
 
 def verify_steam_publisher_trigger_coverage() -> None:
@@ -150,6 +166,7 @@ def main() -> int:
             SYNTHETIC_TIMING_REGRESSION_MARKER in performance_program,
             "the managed timing-only verdict must emit the reporter marker",
         )
+        verify_netstandard_compatibility_coverage(reference)
         verify_steam_publisher_trigger_coverage()
         verify_project_command_selection()
         verify_synthetic_reporter_policy()
@@ -157,7 +174,7 @@ def main() -> int:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
 
-    print("PASS: CI separates correctness evidence from synthetic wall-clock timing and covers publisher inputs")
+    print("PASS: CI separates correctness evidence from synthetic wall-clock timing and covers compatibility/publisher inputs")
     return 0
 
 
