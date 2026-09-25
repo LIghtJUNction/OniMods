@@ -341,6 +341,42 @@ def main() -> int:
     require(unchanged["head_declared_build"] == 737790, "declared build changed")
     require(unchanged["changed_files"] == [], "unchanged blobs reported as drift")
 
+    marker_only_text = MARKER_TEXT.replace(
+        "<TargetGameVersion>",
+        "<NoWarn>CS0618</NoWarn>\n<TargetGameVersion>",
+    )
+    marker_only = compare_upstream_state(
+        REFERENCE,
+        MARKER,
+        737790,
+        "e" * 40,
+        "1" * 40,
+        marker_only_text,
+        SAME_FILES,
+    )
+    require(marker_only["marker_changed"], "marker-only blob change was not recorded")
+    require(
+        marker_only["head_declared_build"] == 737790,
+        "marker-only change altered the resolved build",
+    )
+    require(
+        not marker_only["has_reference_drift"],
+        "marker-only metadata change must not be classified as reference drift",
+    )
+    require(marker_only["changed_files"] == [], "marker-only change reported DLL drift")
+    output = StringIO()
+    with redirect_stdout(output):
+        report_upstream_state(REFERENCE, marker_only)
+    marker_only_report = output.getvalue()
+    require(
+        "UPSTREAM_REFERENCE_STATUS status=ok " in marker_only_report,
+        "marker-only metadata change must remain status=ok",
+    )
+    require(
+        "marker_changed=true" in marker_only_report,
+        "marker-only metadata change must remain visible in the report",
+    )
+
     changed_files = dict(SAME_FILES)
     changed_files["Lib/UnityEngine.dll"] = {"sha": "f" * 40}
     binary_drift = compare_upstream_state(
