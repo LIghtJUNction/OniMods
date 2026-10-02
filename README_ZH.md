@@ -50,6 +50,10 @@
 
 [ONI MCP Server 文档](mods/OniMcp/README.md)
 
+支持 OniMcp 的开发与测试：[捐赠](https://donate.lmm.best/?project=onimcp)。
+
+[![OniMcp 捐赠进度](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=zh-CN&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
+
 <details>
 <summary>展开 Mod 介绍</summary>
 
