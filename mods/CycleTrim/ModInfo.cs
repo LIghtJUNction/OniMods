@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CycleTrim.Patches;
 using HarmonyLib;
 
@@ -10,6 +11,14 @@ namespace CycleTrim
             base.OnLoad(harmony);
             PerformanceProbePatch.SetHarmonyId(harmony.Id);
             harmony.PatchAll();
+        }
+
+        public override void OnAllModsLoaded(
+            Harmony harmony,
+            IReadOnlyList<KMod.Mod> mods)
+        {
+            base.OnAllModsLoaded(harmony, mods);
+            FetchPickupCandidatePatch.InstallAfterAllModsLoaded(harmony);
         }
     }
 }
