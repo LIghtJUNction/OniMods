@@ -61,6 +61,12 @@ def main() -> int:
     stationary_code = decompile(
         "CycleTrim.Patches.StationaryCritterNavigationThrottlePatch"
     )
+    classes = subprocess.run(
+        [shutil.which("ilspycmd") or "ilspycmd", "-l", "c", str(ASSEMBLY)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
     create_state_code = method_slice(
         busy_code,
         "private static State CreateState",
@@ -87,6 +93,9 @@ def main() -> int:
         "States.GetValue(__instance, StateFactory)"
     )
     checks = {
+        "SmartReservoir Harmony interception is absent": (
+            "CycleTrim.Patches.SmartReservoirSignalPatch" not in classes
+        ),
         "async mismatch logs a skip": (
             "Skipping AsyncPathProber.Manager.TickFrame optimization" in async_code
         ),
