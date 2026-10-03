@@ -6,21 +6,25 @@ namespace CycleTrim.BrainBenchmarks
     {
         private readonly VersionedRefreshGate pickupGate;
         private readonly VersionedRefreshGate choreGate;
+        private readonly bool isDuplicant;
 
-        internal BusyRefreshPolicySimulator(int maxSkippedRefreshes)
+        internal BusyRefreshPolicySimulator(
+            int maxSkippedRefreshes,
+            bool isDuplicant = true)
         {
             pickupGate = new VersionedRefreshGate(maxSkippedRefreshes);
             choreGate = new VersionedRefreshGate(maxSkippedRefreshes);
+            this.isDuplicant = isDuplicant;
         }
 
         internal bool ShouldRunPickup(RefreshStamp stamp)
         {
-            return pickupGate.ShouldRefresh(stamp);
+            return !isDuplicant || pickupGate.ShouldRefresh(stamp);
         }
 
         internal bool ShouldRunChore(RefreshStamp stamp)
         {
-            return choreGate.ShouldRefresh(stamp);
+            return !isDuplicant || choreGate.ShouldRefresh(stamp);
         }
 
         internal void Invalidate()
