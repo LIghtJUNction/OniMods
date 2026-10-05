@@ -23,5 +23,8 @@
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorQueryTools.cs" Link="Source/WorldEditorQueryTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditTokenParsing.cs" Link="Source/WorldEditorMapEditTokenParsing.cs" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorCellObjectPolicy.cs" Link="Source/WorldEditorCellObjectPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningErrors.cs" Link="Source/BuildPlanningErrors.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanTextAliases.cs" Link="Source/BuildPlanTextAliases.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPrefabResolver.cs" Link="Source/BuildPlanningPrefabResolver.cs" />
   </ItemGroup>
 </Project>

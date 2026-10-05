@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 
 namespace OniMcp.Tools
 {
@@ -106,19 +107,66 @@ namespace OniMcp.Tools
             if (details != null && details.TryGetValue("reasonCode", out object explicitReasonCode)
                 && !string.IsNullOrWhiteSpace(explicitReasonCode?.ToString()))
                 return explicitReasonCode.ToString();
-            string text = (error ?? "") + " " + (details != null ? JsonConvert.SerializeObject(details, Formatting.None) : "");
+            string text = error ?? string.Empty;
             if (text.IndexOf("Unsupported", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "unsupported";
-            if (text.IndexOf("Obstructed", StringComparison.OrdinalIgnoreCase) >= 0
-                || text.IndexOf("obstructions", StringComparison.OrdinalIgnoreCase) >= 0)
+
+            // Placement diagnostics can carry an empty `obstructions` key, so searching the serialized blob for "obstructions" matched the field
+            // name rather than any actual obstruction and labelled every failure obstructed --
+            // including research locks, which then sent callers hunting through terrain.
+            if (HasNonEmptyDetail(details, "obstructions"))
+                return "obstructed";
+            if (IsExplicitlyFalse(details, "unlocked"))
+                return "locked";
+
+            // Keyword fallback runs over the error message only, never the serialized details.
+            if (text.IndexOf("Obstructed", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "obstructed";
             if (text.IndexOf("Invalid footprint", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "invalidFloor";
+            // "locked" is a substring of "unlocked", so match the phrases actually used.
+            if (text.IndexOf("not researched", StringComparison.OrdinalIgnoreCase) >= 0
+                || text.IndexOf("tech locked", StringComparison.OrdinalIgnoreCase) >= 0
+                || text.IndexOf("未解锁", StringComparison.Ordinal) >= 0
+                || Regex.IsMatch(text, @"\blocked\b", RegexOptions.IgnoreCase))
+                return "locked";
             if (text.IndexOf("material", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "unavailableMaterial";
-            if (text.IndexOf("locked", StringComparison.OrdinalIgnoreCase) >= 0)
-                return "locked";
             return "failed";
+        }
+
+        private static bool HasNonEmptyDetail(Dictionary<string, object> details, string key)
+        {
+            object value;
+            if (details == null || !details.TryGetValue(key, out value) || value == null)
+                return false;
+
+            JToken token = value as JToken;
+            if (token != null)
+            {
+                JArray array = token as JArray;
+                if (array != null)
+                    return array.Count > 0;
+                return token.Type == JTokenType.String && !string.IsNullOrWhiteSpace(token.ToString());
+            }
+
+            System.Collections.ICollection collection = value as System.Collections.ICollection;
+            if (collection != null)
+                return collection.Count > 0;
+
+            string description = value as string;
+            return !string.IsNullOrWhiteSpace(description);
+        }
+
+        private static bool IsExplicitlyFalse(Dictionary<string, object> details, string key)
+        {
+            object value;
+            if (details == null || !details.TryGetValue(key, out value) || value == null)
+                return false;
+            if (value is bool flag)
+                return !flag;
+            bool parsed;
+            return bool.TryParse(value.ToString(), out parsed) && !parsed;
         }
 
         private static bool EqualsIgnoreCase(string value, string query)
