@@ -399,15 +399,17 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> ThresholdInfo(IThresholdSwitch threshold)
         {
+            float? current = ThresholdReading.Current(threshold);
             return new Dictionary<string, object>
             {
                 ["component"] = threshold.GetType().Name,
                 ["title"] = threshold.Title.ToString(),
                 ["valueName"] = threshold.ThresholdValueName.ToString(),
                 ["threshold"] = ToolUtil.SafeFloat(threshold.Threshold),
-                ["currentValue"] = ToolUtil.SafeFloat(threshold.CurrentValue),
+                ["currentValue"] = current,
+                ["samplePending"] = !current.HasValue,
                 ["formattedThreshold"] = threshold.Format(threshold.Threshold, true),
-                ["formattedCurrentValue"] = threshold.Format(threshold.CurrentValue, true),
+                ["formattedCurrentValue"] = current.HasValue ? threshold.Format(current.Value, true) : null,
                 ["activateAbove"] = threshold.ActivateAboveThreshold,
                 ["rangeMin"] = ToolUtil.SafeFloat(threshold.RangeMin),
                 ["rangeMax"] = ToolUtil.SafeFloat(threshold.RangeMax),

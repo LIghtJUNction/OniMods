@@ -26,5 +26,8 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningErrors.cs" Link="Source/BuildPlanningErrors.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanTextAliases.cs" Link="Source/BuildPlanTextAliases.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPrefabResolver.cs" Link="Source/BuildPlanningPrefabResolver.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/PowerConnectionReadiness.cs" Link="Source/PowerConnectionReadiness.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/TemperatureSampleReadiness.cs" Link="Source/TemperatureSampleReadiness.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ThresholdReading.cs" Link="Source/ThresholdReading.cs" />
   </ItemGroup>
 </Project>
