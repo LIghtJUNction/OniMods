@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using OniMcp.Support;
 using OniMcp.Tools;
 
 internal static class ObservationReadinessRegression
@@ -8,6 +12,30 @@ internal static class ObservationReadinessRegression
 
     internal static void Run()
     {
+        Check(JObject.Parse(JsonConvert.SerializeObject(new NullablePropertyFixture(), McpJsonUtil.Settings))["Value"] == null,
+            "production settings still omit null object properties");
+        // Json.NET ignores null object properties, but preserves null dictionary
+        // entries, including dictionaries nested in the public response arrays.
+        var pending = new Dictionary<string, object>
+        {
+            ["connected"] = null,
+            ["circuitId"] = null,
+            ["currentValue"] = null,
+            ["formattedCurrentValue"] = null,
+            ["networkPending"] = true,
+            ["samplePending"] = true
+        };
+        var response = new Dictionary<string, object>
+        {
+            ["items"] = new[] { pending }
+        };
+        var wire = JObject.Parse(JsonConvert.SerializeObject(response, McpJsonUtil.Settings));
+        foreach (string field in new[] { "connected", "circuitId", "currentValue", "formattedCurrentValue" })
+            Check(wire["items"][0][field]?.Type == JTokenType.Null,
+                "pending dictionary field survives production serialization: " + field);
+        Check((bool)wire["items"][0]["networkPending"] && (bool)wire["items"][0]["samplePending"],
+            "pending markers remain visible on the wire");
+
         var sensor = new LogicTemperatureSensor();
         Check(!ThresholdReading.Current(sensor).HasValue, "new sensor must not report zero Kelvin");
         sensor.SetSamples(new[] { 290f, 291, 0, 0, 0, 0, 0, 0 }, 290);
@@ -66,6 +94,11 @@ internal static class ObservationReadinessRegression
     {
         checks++;
         if (!condition) throw new InvalidOperationException(description);
+    }
+
+    private sealed class NullablePropertyFixture
+    {
+        public string Value { get; set; }
     }
 }
 
