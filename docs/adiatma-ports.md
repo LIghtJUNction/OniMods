@@ -21,7 +21,8 @@ adapted to OniMods main rather than importing the fork's squashed upstream sync.
 The fork's research-keyword fallback did not cover the current upstream
 `Building is locked by research` message. This port also recognizes a whole
 `locked` word, while excluding `unlocked` and `blocked`. Unsupported errors
-retain their existing precedence. JSON objects and boolean values do not by
+retain their existing precedence. Invalid-footprint failures retain the primary
+reason selected by placement validation even when obstruction entries coexist. JSON objects and boolean values do not by
 themselves establish an obstruction.
 
 Ambiguous aliases such as `花盆` (a decoration rather than a PlanterBox),

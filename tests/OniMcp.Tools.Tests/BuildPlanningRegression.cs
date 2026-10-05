@@ -11,6 +11,8 @@ internal static class BuildPlanningRegression
         Expect("locked", "Building is not researched", new List<object>());
         Expect("unavailableMaterial", "No material available", new JArray());
         Expect("invalidFloor", "Invalid footprint", new List<object>());
+        Expect("invalidFloor", "Invalid footprint: outside selected world", new List<object> { new { cell = 42 } });
+        Expect("invalidFloor", "Invalid footprint: occupied cell is invalid", new JArray(new JObject { ["cell"] = 42 }));
         Expect("failed", "TryPlace failed", new JArray());
         Expect("failed", "Building is unlocked; placement failed", null);
         Expect("failed", "TryPlace failed", new JObject());

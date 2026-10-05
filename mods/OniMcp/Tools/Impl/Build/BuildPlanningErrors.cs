@@ -111,7 +111,12 @@ namespace OniMcp.Tools
             if (text.IndexOf("Unsupported", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "unsupported";
 
-            // Placement diagnostics can carry an empty `obstructions` key, so searching the serialized blob for "obstructions" matched the field
+            // Match ValidateFootprint: invalid cells take precedence over overlapping obstructions.
+            if (text.IndexOf("Invalid footprint", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "invalidFloor";
+
+            // Placement diagnostics can carry an empty `obstructions` key. Searching
+            // the serialized blob for "obstructions" matched the field
             // name rather than any actual obstruction and labelled every failure obstructed --
             // including research locks, which then sent callers hunting through terrain.
             if (HasNonEmptyDetail(details, "obstructions"))
@@ -122,8 +127,6 @@ namespace OniMcp.Tools
             // Keyword fallback runs over the error message only, never the serialized details.
             if (text.IndexOf("Obstructed", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "obstructed";
-            if (text.IndexOf("Invalid footprint", StringComparison.OrdinalIgnoreCase) >= 0)
-                return "invalidFloor";
             // "locked" is a substring of "unlocked", so match the phrases actually used.
             if (text.IndexOf("not researched", StringComparison.OrdinalIgnoreCase) >= 0
                 || text.IndexOf("tech locked", StringComparison.OrdinalIgnoreCase) >= 0
