@@ -160,6 +160,12 @@ This directly creates a continuous line, with no separate follow-up connection s
 
 建造和任务操作应直接使用 `building_control` 与 `orders_control`。每次工具调用必填的 `task` 文本会自动显示在玩家鼠标附近，无需额外定位流程。
 
+## 尚未就绪的读数
+
+电力端口的 `networkPending=true` 表示电网正在重建、组件电路 ID 与网络不一致，或网络尚不可读。此时 `connected` 和 `circuitId` 为 `null`，不能推断为断电；网络稳定后，`circuitId` 仍使用字符串，`"-1"` 表示没有连接。
+
+建筑配置中的温度传感器需要填满原生八次采样缓冲区并发布平均值。就绪前 `samplePending=true`，`currentValue` 和 `formattedCurrentValue` 为 `null`；不要把初始零值当成零开尔文。其他阈值组件的有限零值仍有效。读取后等待短暂模拟，再重新查询；这两个标记不会自动恢复游戏。
+
 ## 常用资源
 
 | URI | 说明 |
