@@ -44,6 +44,16 @@ internal static class ObservationReadinessRegression
         Check(!ThresholdReading.Current(sensor).HasValue, "unpublished average remains unknown");
         sensor.SetSamples(Enumerable.Repeat(290f, 8).ToArray(), 290);
         Check(ThresholdReading.Current(sensor) == 290, "ready sensor retains native Kelvin reading");
+        sensor.SetSamples(new[] { 290f, 290, 0, 0, 0, 0, 0, 0 }, 72.5f);
+        Check(!ThresholdReading.Current(sensor).HasValue, "threshold change during warm-up publishes an incomplete average");
+        sensor.SetSamples(Enumerable.Repeat(290f, 8).ToArray(), 72.5f, 8);
+        Check(!ThresholdReading.Current(sensor).HasValue, "filled buffer cannot validate an older partial average");
+        sensor.SetSamples(Enumerable.Repeat(290f, 8).ToArray(), 290, 0);
+        Check(ThresholdReading.Current(sensor) == 290, "next native publication clears warm-up pending state");
+        sensor.SetSamples(Enumerable.Repeat(291f, 8).ToArray(), 290, 3);
+        Check(ThresholdReading.Current(sensor) == 290, "later partial rounds retain the published average");
+        sensor.SetSamples(Enumerable.Repeat(290f, 8).ToArray(), 290, -1);
+        Check(!ThresholdReading.Current(sensor).HasValue, "invalid native sample counter fails closed");
         sensor.SetSamples(null, 290);
         Check(!ThresholdReading.Current(sensor).HasValue, "missing sample buffer fails closed");
         sensor.SetSamples(new[] { 290f }, 290);
@@ -65,11 +75,20 @@ internal static class ObservationReadinessRegression
             var connection = new TestCircuitConnection();
             Game.Instance = null;
             Check(PowerConnectionReadiness.Pending(connection, 1), "missing game graph is unknown");
+            Check(!PowerConnectionReadiness.ReadCircuitId(() => { throw new InvalidOperationException("unsafe getter"); }).HasValue,
+                "missing game does not evaluate native circuit getter");
             Game.Instance = new Game();
             Check(PowerConnectionReadiness.Pending(connection, 1), "missing manager is unknown");
+            Check(!PowerConnectionReadiness.ReadCircuitId(() => { throw new InvalidOperationException("unsafe getter"); }).HasValue,
+                "missing manager does not evaluate native circuit getter");
             Game.Instance.circuitManager = new CircuitManager { Circuit = 1 };
             Check(PowerConnectionReadiness.Pending(connection, 1), "missing electrical system is unknown");
+            Check(!PowerConnectionReadiness.ReadCircuitId(() => { throw new InvalidOperationException("unsafe getter"); }).HasValue,
+                "missing electrical system does not evaluate native circuit getter");
             Game.Instance.electricalConduitSystem = new TestElectricalSystem();
+            int getterCalls = 0;
+            Check(PowerConnectionReadiness.ReadCircuitId(() => { getterCalls++; return 1; }) == 1 && getterCalls == 1,
+                "available graph evaluates the native getter exactly once");
             Check(!PowerConnectionReadiness.Pending(connection, 1), "settled matching graph is known");
             Game.Instance.electricalConduitSystem.IsDirty = true;
             Check(PowerConnectionReadiness.Pending(connection, 1), "dirty conduit graph is pending");
@@ -108,12 +127,15 @@ internal class TestThreshold : IThresholdSwitch { public float CurrentValue { ge
 internal sealed class LogicTemperatureSensor : TestThreshold
 {
     private float[] temperatures = new float[8];
-    internal void SetSamples(float[] samples, float average)
+    private int simUpdateCounter;
+    internal void SetSamples(float[] samples, float average, int collected = 0)
     {
         temperatures = samples;
         CurrentValue = average;
+        simUpdateCounter = collected;
     }
     internal float[] SamplesForFixture => temperatures;
+    internal int CounterForFixture => simUpdateCounter;
 }
 
 internal interface ICircuitConnected { }

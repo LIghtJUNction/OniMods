@@ -262,13 +262,13 @@ namespace OniMcp.Tools
             ICircuitConnected connection = role == "output" || role == "generator"
                 ? (ICircuitConnected)generator ?? battery ?? (ICircuitConnected)consumer
                 : (ICircuitConnected)consumer ?? generator ?? (ICircuitConnected)battery;
-            ushort circuit = connection is EnergyConsumer c ? c.CircuitID
-                : connection is Generator g ? g.CircuitID : connection is Battery b ? b.CircuitID : ushort.MaxValue;
-            bool pending = PowerConnectionReadiness.Pending(connection, circuit);
+            ushort? circuit = PowerConnectionReadiness.ReadCircuitId(() => connection is EnergyConsumer c ? c.CircuitID
+                : connection is Generator g ? g.CircuitID : connection is Battery b ? b.CircuitID : ushort.MaxValue);
+            bool pending = !circuit.HasValue || PowerConnectionReadiness.Pending(connection, circuit.Value);
             return new Dictionary<string, object>
             {
-                ["connected"] = pending ? (bool?)null : circuit != ushort.MaxValue,
-                ["circuitId"] = pending ? null : circuit == ushort.MaxValue ? "-1" : circuit.ToString(),
+                ["connected"] = pending ? (bool?)null : circuit.Value != ushort.MaxValue,
+                ["circuitId"] = pending ? null : circuit.Value == ushort.MaxValue ? "-1" : circuit.Value.ToString(),
                 ["networkPending"] = pending,
                 ["loadW"] = consumer != null ? (object)Math.Round(ToolUtil.SafeFloat(consumer.WattsNeededWhenActive), 1) : null,
                 ["generatorW"] = generator != null ? (object)Math.Round(ToolUtil.SafeFloat(generator.WattageRating), 1) : null,
