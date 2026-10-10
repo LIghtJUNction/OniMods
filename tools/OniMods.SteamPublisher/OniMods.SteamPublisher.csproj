@@ -18,5 +18,6 @@
           Link="libsteam_api.so"
           CopyToOutputDirectory="PreserveNewest" />
     <None Include="steam_appid.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="consumer/steam_appid.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -122,39 +122,35 @@ Default public surface: compact aggregate tools:
 
 | Tool | Purpose |
 |------|---------|
-| `world_editor` | Filesystem-style world editor. Supports read/search and SEARCH/REPLACE edits over virtual save/world files, including typed operation files under `/active/ops/`. |
-| `colony_control` | Colony-wide snapshots, diagnostics, survival plans, notifications, reports, and management. |
+| `benchmark` | Read-only protocol benchmark. The modern `2026-07-28` path currently exposes this as its only tool. |
+| `building_control` | Building planning, materials, configuration, storage, filters, production, side screens, and rockets. |
+| `game_control` | Pause, speed, saves, sandbox, and UI operations. |
+| `navigation_control` | Camera movement, world switching, overlays, focus, and screenshots. |
+| `orders_control` | Area orders, priorities, designation changes, and conduit/wire cuts. |
 | `server_control` | MCP diagnostics, catalog, batch calls, resources, and server operations. |
+| `world_editor` | Filesystem-style world editor. Supports read/search and SEARCH/REPLACE edits over virtual save/world files, including typed operation files under `/active/ops/`. |
 
-The `read_control`, `building_control`, `orders_control`, `dupes_control`, `game_control`, `navigation_control`, and `search_control` are aggregate entrypoints for normal play. `coordinate_control` is not part of the current public runtime; ordinary aggregate tools reject raw coordinates.
+Internal virtual-file operations are not direct MCP tools:
 
-Legacy public surface before `world_editor` consolidation:
+- `colony_control`, `coordinate_control`, `dupes_control`, `read_control`, and `search_control` are registered only for validated `world_editor` virtual-file routing.
+- Do not send those names as `tools/call params.name`. Use `world_editor`, structured resources, or one of the public aggregate tools above.
+- Exact orders read `/active/ops/tools.md` and edit the matching typed operation file. Raw-coordinate compatibility entries remain internal and are not a public client surface.
 
-| 工具 | 用途 |
-|------|------|
-| `server_control` | 服务、目录、工具搜索、批量、agent program |
-| `read_control` | 世界、区域、资源、建筑、机制知识、基础设施摘要 |
-| `search_control` | Dedicated search for tools, world objects, resources, buildings, dupes, and knowledge with action-ready `nextActions` |
-| `game_control` | 暂停、调速、存档、沙盒、UI |
-| `navigation_control` | 相机移动、世界切换、覆盖层、聚焦和截图 |
-| `building_control` | 建造规划、材料、配置、储存、过滤、生产、侧屏、火箭 |
-| `orders_control` | 区域订单、优先级、指定/取消、剪断 |
-| `dupes_control` | 复制人状态、命令、优先级、改名、技能、分配 |
-| `colony_control` | 快照、报告、诊断、通知、管理、农牧 |
-
-Legacy fine-grained implementations are internal compatibility only. New integrations should prefer the public aggregate entrypoints from `tools/list`.
+New integrations should discover the public aggregate entrypoints from `tools/list` instead of hard-coding historical internal operation names.
 
 ## 参数设计约定
 
 新工具面采用搜索/动作优先:
 
-- Prefer `search_control` for discovery. It returns `searchResult`, `nextActions`, and `searchActionPatch`, so selected results can be passed directly into action tools like a search/replace edit.
+- Use `world_editor command=search` for world/building discovery and `server_control domain=catalog action=search` for tool discovery. Internal `search_control` is a virtual-file implementation detail, not a direct client tool.
 - 优先传 `query`、`target`、`search`、`name`、`id`、`areaId`。
 - Public tools do not accept raw `x/y`, `x1/y1/x2/y2`, `dx/dy`, `points`, or `anchors`. Exact orders read `/active/ops/tools.md` and edit `/active/ops/orders.md`; select only current public typed files/tools and ignore hidden `coordinate_control` and `/active/ops/coordinate.md` compatibility entries.
 - 写入和执行动作应支持 `dryRun` 或 `confirm`。
 - 危险或大范围精确操作必须保持 pause -> read/plan -> dry-run -> confirm -> verify。
 - 面向任务的结果应返回 `reachable`、`executable`、失败原因、缺失条件和建议下一步。
 - 建造相关结果应返回材料可行性，至少说明需要材料、可用材料和缺口。
+
+当前 legacy 公开工具的 `tools/call` 都要求 `arguments.task` 是非空字符串，用来描述这次调用的用户任务；缺失或空值会在工具分派前被拒绝。
 
 ## 调用示例
 
@@ -185,6 +181,7 @@ curl -sS -X POST http://localhost:8788/mcp/ \
   "params": {
     "name": "server_control",
     "arguments": {
+      "task": "Find the public tool for wiring and build materials",
       "domain": "catalog",
       "action": "search",
       "query": "wire build material",
@@ -207,7 +204,7 @@ curl -sS -X POST http://localhost:8788/mcp/ \
 }
 ```
 
-### 定义区域
+### 查看可用的 typed operations
 
 ```json
 {
@@ -215,19 +212,17 @@ curl -sS -X POST http://localhost:8788/mcp/ \
   "id": 5,
   "method": "tools/call",
   "params": {
-    "name": "read_control",
+    "name": "world_editor",
     "arguments": {
-      "domain": "area",
-      "action": "define",
-      "x1": 10,
-      "y1": 20,
-      "x2": 20,
-      "y2": 30,
-      "label": "starter-dig"
+      "task": "Inspect the typed operation files before planning an exact order",
+      "command": "read",
+      "path": "/active/ops/tools.md"
     }
   }
 }
 ```
+
+需要区域或精确位置时，以 `world_editor` 暴露的地图和 typed operation files 为准；不要直接调用内部 `read_control` / `coordinate_control`。
 
 ### 预览蓝图和材料
 
@@ -239,6 +234,7 @@ curl -sS -X POST http://localhost:8788/mcp/ \
   "params": {
     "name": "building_control",
     "arguments": {
+      "task": "Preview a Manual Generator near the Printing Pod",
       "domain": "planning",
       "action": "preview",
       "prefabId": "ManualGenerator",
@@ -284,6 +280,7 @@ curl -sS -X POST http://localhost:8788/mcp/ \
   "params": {
     "name": "orders_control",
     "arguments": {
+      "task": "Cut conduits in the starter-wire area",
       "domain": "conduit",
       "action": "cut_conduits",
       "areaId": "starter-wire",

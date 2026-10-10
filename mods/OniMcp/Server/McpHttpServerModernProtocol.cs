@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Tools;
@@ -92,6 +91,15 @@ namespace OniMcp.Server
             }
 
             bool isNotification = rawMessage.Property("id") == null;
+            if (!isNotification && !AcceptsModernResponseMediaTypes(httpRequest))
+            {
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
+                    "Modern requests require Accept to list both application/json and text/event-stream"),
+                    (int)HttpStatusCode.NotAcceptable);
+                return true;
+            }
+
             if (isNotification)
             {
                 if (IsModernRequestMethod(method))
@@ -150,7 +158,7 @@ namespace OniMcp.Server
             var requestId = parameters["requestId"];
             if (!IsValidModernRequestId(requestId))
             {
-                errorMessage = "Modern cancellation notification requires a string or integer requestId";
+                errorMessage = "Modern cancellation notification requires a string or number requestId";
                 return false;
             }
 
@@ -447,7 +455,7 @@ namespace OniMcp.Server
                 ["io.modelcontextprotocol/serverInfo"] = new JObject
                 {
                     ["name"] = "OniMcp",
-                    ["version"] = "0.2.3"
+                    ["version"] = ServerVersion
                 }
             };
         }

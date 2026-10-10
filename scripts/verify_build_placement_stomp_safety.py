@@ -60,6 +60,8 @@ def main() -> int:
     build_area = read("BuildPlanningActionBuildArea.cs")
     native_path = read("BuildPlanningNativeUtilityPath.cs")
     placement = read("BuildPlanningActionPlacement.cs")
+    geometry = read("BuildPlanningPlacementGeometry.cs")
+    backwall_policy = read("BuildPlanningBackwallSupportPolicy.cs")
     overlay = (ROOT / "mods/OniMcp/Tools/Impl/World/WorldOverlayObjectSerialization.cs").read_text(encoding="utf-8")
 
     # Logic control buildings must remain physical buildings. The old broad
@@ -105,6 +107,43 @@ def main() -> int:
     require(native_path, "ValidateUtilityPathSafety", "native path preflight", failures)
     require(native_path, "RequiresCellFallback", "native idempotent fallback", failures)
     require(placement, 'CallToolResult.Error(JsonConvert.SerializeObject(nativePath', "native conflict error contract", failures)
+
+    # Backwall support must use the game's orientation-aware full-foundation
+    # helper before ValidateFootprint can allow either a dry-run or write path.
+    validate_footprint_body = method_body(
+        geometry,
+        "private static FootprintValidation ValidateFootprint(",
+        "placement footprint validation",
+        failures,
+    )
+    require_order(
+        validate_footprint_body,
+        ("FindFootprintObstructions", "AddBackwallFoundationFailure", "if (invalid.Count == 0 && obstructions.Count == 0)"),
+        "backwall guard before footprint success",
+        failures,
+    )
+    backwall_body = method_body(
+        geometry,
+        "private static void AddBackwallFoundationFailure(",
+        "backwall foundation guard",
+        failures,
+    )
+    require_order(
+        backwall_body,
+        (
+            '"OnBackWall"',
+            "BuildingDef.CheckFoundation(",
+            "placement.Orientation",
+            "def.WidthInCells",
+            "def.HeightInCells",
+            "BuildPlanningBackwallSupportPolicy.Evaluate",
+            '["reasonCode"] = decision.ReasonCode',
+        ),
+        "native orientation-aware backwall foundation guard",
+        failures,
+    )
+    forbid(backwall_body, "Orientation.Neutral", "backwall guard must use requested orientation", failures)
+    require(backwall_policy, '"backwall_required"', "stable backwall reason propagation", failures)
 
     # Control-flow contract: every path receives a full-path guard before a
     # free-build fallback or per-cell loop, and native drag rechecks immediately

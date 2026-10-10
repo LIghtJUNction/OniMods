@@ -19,6 +19,7 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
     {
         RunFrontDoorAdmissionRegression();
         RunLegacySseIsolationRegression();
+        RunModernAcceptNegotiationRegression();
 
         var existing = typeof(ModernCancellationRejectionRegressionEntry).GetMethod("Main",
             BindingFlags.NonPublic | BindingFlags.Static);
@@ -87,6 +88,96 @@ internal static class HttpFrontDoorAdmissionRegressionEntry
         {
             CloseAll(sseClients);
             server.StopServer();
+        }
+    }
+
+    private static void RunModernAcceptNegotiationRegression()
+    {
+        int port = ReservePort();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            const string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":19001,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"accept-regression\",\"version\":\"1.0\"}}}}";
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json, text/event-stream", HttpStatusCode.OK,
+                "A conformant modern Accept header was rejected");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json;q=0.5, text/event-stream;q=0.5", HttpStatusCode.OK,
+                "Weighted exact modern media ranges were rejected");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json;q=0.123, text/event-stream;q=0.123", HttpStatusCode.OK,
+                "Valid three-digit modern qvalues were rejected");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json;q=0.1234, text/event-stream", HttpStatusCode.NotAcceptable,
+                "Modern request treated a malformed four-digit JSON qvalue as acceptable");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json, text/event-stream;q=0.1234", HttpStatusCode.NotAcceptable,
+                "Modern request treated a malformed four-digit SSE qvalue as acceptable");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json", HttpStatusCode.NotAcceptable,
+                "Modern request accepted a client that cannot consume SSE responses");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json, text/event-stream;q=0", HttpStatusCode.NotAcceptable,
+                "Modern request treated q=0 text/event-stream as acceptable");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json;profile=fixture, text/event-stream", HttpStatusCode.NotAcceptable,
+                "Modern request treated parameterized JSON as accepting the bare JSON response");
+            AssertModernPostStatus(port, discover, "server/discover",
+                "application/json, text/event-stream;profile=fixture", HttpStatusCode.NotAcceptable,
+                "Modern request treated parameterized event-stream as accepting the bare SSE response");
+            AssertModernPostStatus(port, discover, "server/discover",
+                null, HttpStatusCode.NotAcceptable,
+                "Modern request accepted a missing Accept header");
+
+            const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{\"progressToken\":\"accept-regression\",\"progress\":1}}";
+            AssertModernPostStatus(port, notification, null, null, HttpStatusCode.Accepted,
+                "Modern notification header compatibility was tightened with request-only Accept validation");
+        }
+        finally
+        {
+            server.StopServer();
+        }
+    }
+
+    private static void AssertModernPostStatus(int port, string body, string method, string accept,
+        HttpStatusCode expected, string message)
+    {
+        using (var client = new TcpClient
+        {
+            NoDelay = true,
+            SendTimeout = 2000,
+            ReceiveTimeout = 2000
+        })
+        {
+            client.Connect(IPAddress.Loopback, port);
+            NetworkStream stream = client.GetStream();
+            byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
+            var request = new StringBuilder()
+                .Append("POST /mcp/ HTTP/1.1\r\n")
+                .Append("Host: 127.0.0.1:").Append(port).Append("\r\n")
+                .Append("Content-Type: application/json\r\n")
+                .Append("Mcp-Protocol-Version: 2026-07-28\r\n");
+            if (!string.IsNullOrEmpty(method))
+                request.Append("Mcp-Method: ").Append(method).Append("\r\n");
+            if (accept != null)
+                request.Append("Accept: ").Append(accept).Append("\r\n");
+            request.Append("Content-Length: ").Append(bodyBytes.Length).Append("\r\n")
+                .Append("Connection: close\r\n\r\n");
+
+            byte[] headerBytes = Encoding.ASCII.GetBytes(request.ToString());
+            stream.Write(headerBytes, 0, headerBytes.Length);
+            stream.Write(bodyBytes, 0, bodyBytes.Length);
+            stream.Flush();
+
+            string statusLine = ReadStatusLineAndHeaders(stream);
+            string[] parts = statusLine.Split(' ');
+            int actual;
+            if (parts.Length < 2 || !int.TryParse(parts[1], out actual))
+                throw new InvalidOperationException(message + "; malformed status: " + statusLine);
+            Assert(actual == (int)expected,
+                message + "; expected HTTP " + (int)expected + ", got " + actual);
         }
     }
 

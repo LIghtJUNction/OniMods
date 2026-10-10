@@ -1,6 +1,6 @@
 using Steamworks;
 
-internal static class SteamWorkshopPublisher
+internal static partial class SteamWorkshopPublisher
 {
     private static readonly TimeSpan QueryTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan UploadTimeout = TimeSpan.FromMinutes(20);
@@ -19,10 +19,17 @@ internal static class SteamWorkshopPublisher
         }
     }
 
-    internal static SteamUGCDetails_t QueryTarget()
+    internal static SteamUGCDetails_t QueryTarget() =>
+        QueryItem(WorkshopTarget.WorkshopId, WorkshopTarget.TitleContains,
+            requirePrivate: false);
+
+    internal static SteamUGCDetails_t QueryItem(
+        ulong workshopId, string titleContains, bool requirePrivate,
+        bool requirePublic = false)
     {
-        var fileId = new PublishedFileId_t(WorkshopTarget.WorkshopId);
+        var fileId = new PublishedFileId_t(workshopId);
         var query = SteamUGC.CreateQueryUGCDetailsRequest([fileId], 1);
+        Require(SteamUGC.SetLanguage(query, "english"), "SetLanguage");
         SteamUGC.SetAllowCachedResponse(query, 0);
         try
         {
@@ -38,7 +45,8 @@ internal static class SteamWorkshopPublisher
             {
                 throw new InvalidOperationException("SteamUGC.GetQueryUGCResult failed");
             }
-            ValidateTarget(details);
+            ValidateItem(details, workshopId, titleContains,
+                requirePrivate, requirePublic);
             return details;
         }
         finally
@@ -47,27 +55,238 @@ internal static class SteamWorkshopPublisher
         }
     }
 
-    internal static void SubmitUpdate(
-        WorkshopMetadata metadata, SteamUGCDetails_t current, bool updatePreview)
+    internal static void SubmitLegacyUpdate(
+        WorkshopMetadata metadata, LegacyPackage package, SteamUGCDetails_t current,
+        bool updatePreview)
     {
-        var handle = StartUpdate();
-        Require(SteamUGC.SetItemUpdateLanguage(handle, "english"), "SetItemUpdateLanguage");
-        if (!string.Equals(metadata.Title, current.m_rgchTitle, StringComparison.Ordinal))
+        if (current.m_hFile.m_UGCHandle == ulong.MaxValue)
         {
-            Require(SteamUGC.SetItemTitle(handle, metadata.Title), "SetItemTitle");
+            throw new InvalidOperationException(
+                "Existing Workshop item has no legacy file handle; refusing another "
+                + "old-ID update attempt. Prepare a separate Private Legacy candidate.");
+        }
+        // ONI's installed-mod path expects a legacy Workshop file containing a ZIP.
+        // SteamUGC.SetItemContent always uploads a directory, even if it holds one ZIP.
+        Require(
+            SteamRemoteStorage.FileWrite(
+                package.CloudFileName, package.Bytes, package.Bytes.Length),
+            "FileWrite");
+        var shared = WaitForCall<RemoteStorageFileShareResult_t>(
+            SteamRemoteStorage.FileShare(package.CloudFileName),
+            QueryTimeout, "Workshop file share");
+        if (shared.m_eResult != EResult.k_EResultOK)
+        {
+            throw new InvalidOperationException(
+                $"Workshop file share failed: {shared.m_eResult}");
+        }
+
+        var handle = SteamRemoteStorage.CreatePublishedFileUpdateRequest(
+            new PublishedFileId_t(WorkshopTarget.WorkshopId));
+        if (handle.m_PublishedFileUpdateHandle == ulong.MaxValue)
+        {
+            throw new InvalidOperationException("Legacy Workshop update handle is invalid");
         }
         Require(
-            SteamUGC.SetItemDescription(handle, metadata.EnglishDescription),
-            "SetItemDescription");
-        Require(SteamUGC.SetItemContent(handle, metadata.ContentFolder), "SetItemContent");
+            SteamRemoteStorage.UpdatePublishedFileFile(handle, package.CloudFileName),
+            "UpdatePublishedFileFile");
+        if (!string.Equals(metadata.Title, current.m_rgchTitle, StringComparison.Ordinal))
+        {
+            Require(
+                SteamRemoteStorage.UpdatePublishedFileTitle(handle, metadata.Title),
+                "UpdatePublishedFileTitle");
+        }
+        Require(
+            SteamRemoteStorage.UpdatePublishedFileDescription(
+                handle, metadata.EnglishDescription),
+            "UpdatePublishedFileDescription");
         if (updatePreview)
         {
-            Require(SteamUGC.SetItemPreview(handle, metadata.PreviewFile), "SetItemPreview");
+            // PreviewFile is a local file. The RemoteStorage update API requires
+            // a Steam Cloud filename; stage and share it before updating.
+            var previewBytes = File.ReadAllBytes(metadata.PreviewFile);
+            var previewName = $"onim_{WorkshopTarget.WorkshopId}_preview.png";
+            Require(SteamRemoteStorage.FileWrite(
+                previewName, previewBytes, previewBytes.Length), "Preview FileWrite");
+            var previewShare = WaitForCall<RemoteStorageFileShareResult_t>(
+                SteamRemoteStorage.FileShare(previewName),
+                QueryTimeout, "Workshop preview share");
+            if (previewShare.m_eResult != EResult.k_EResultOK)
+            {
+                throw new InvalidOperationException(
+                    $"Workshop preview share failed: {previewShare.m_eResult}");
+            }
+            Require(SteamRemoteStorage.UpdatePublishedFilePreviewFile(handle, previewName),
+                "UpdatePublishedFilePreviewFile");
         }
 
         Console.WriteLine($"updatePreview={updatePreview}");
-        ValidateUploadResult(WaitForUpload(handle, metadata.ChangeNote));
+        if (!string.IsNullOrWhiteSpace(metadata.ChangeNote))
+        {
+            Require(SteamRemoteStorage.UpdatePublishedFileSetChangeDescription(
+                handle, metadata.ChangeNote), "UpdatePublishedFileSetChangeDescription");
+        }
+        var result = WaitForCall<RemoteStorageUpdatePublishedFileResult_t>(
+            SteamRemoteStorage.CommitPublishedFileUpdate(handle),
+            UploadTimeout, "Legacy Workshop update");
+        if (result.m_eResult != EResult.k_EResultOK
+            || result.m_nPublishedFileId.m_PublishedFileId != WorkshopTarget.WorkshopId
+            || result.m_bUserNeedsToAcceptWorkshopLegalAgreement)
+        {
+            throw new InvalidOperationException(
+                $"Legacy Workshop update failed: result={result.m_eResult}, "
+                + $"id={result.m_nPublishedFileId.m_PublishedFileId}, "
+                + $"legalAgreement={result.m_bUserNeedsToAcceptWorkshopLegalAgreement}");
+        }
+        SubmitLanguageUpdate("english", metadata.EnglishDescription);
         SubmitLanguageUpdate("schinese", metadata.ChineseDescription);
+    }
+
+    internal static void VerifyInstalledLegacy(
+        LegacyPackage package, SteamUGCDetails_t current, uint previousServerUpdated,
+        ulong? candidateId = null, string? expectedCandidateTitle = null,
+        bool expectPublic = false)
+    {
+        var workshopId = candidateId ?? WorkshopTarget.WorkshopId;
+        var titleContains = candidateId.HasValue
+            ? expectedCandidateTitle
+                ?? LegacyCandidatePlan.ResolveFixedTarget().CandidateTitle
+            : WorkshopTarget.TitleContains;
+        var fileId = new PublishedFileId_t(workshopId);
+        var expectedHash = System.Security.Cryptography.SHA256.HashData(package.Bytes);
+        var started = DateTime.UtcNow;
+        var deadline = started.AddMinutes(5);
+        var nextRemoteQuery = started;
+        var lastDownload = DateTime.MinValue;
+        var remote = current;
+        var remoteQueryError = "none";
+        var localState = EItemState.k_EItemStateNone;
+        var localPath = "<not installed>";
+        var localKind = "missing";
+        var localBytes = 0L;
+        var localZipError = "none";
+        var downloadAttempts = 0;
+        var downloadPending = false;
+        var downloadCallbackReceived = false;
+        var downloadResult = EResult.k_EResultOK;
+        using var callback = Callback<DownloadItemResult_t>.Create(result =>
+        {
+            if (result.m_unAppID.m_AppId == WorkshopTarget.ConsumerAppId
+                && result.m_nPublishedFileId.m_PublishedFileId == workshopId)
+            {
+                downloadResult = result.m_eResult;
+                downloadCallbackReceived = true;
+            }
+        });
+
+        // A successful commit can precede propagation to the client's UGC
+        // cache. Wait for the server file size, then wait for DownloadItem's
+        // callback before touching the installed path, as Steam requires.
+        while (DateTime.UtcNow < deadline)
+        {
+            SteamAPI.RunCallbacks();
+            var now = DateTime.UtcNow;
+            if (now >= nextRemoteQuery)
+            {
+                try
+                {
+                    remote = QueryItem(workshopId, titleContains,
+                        requirePrivate: candidateId.HasValue && !expectPublic,
+                        requirePublic: candidateId.HasValue && expectPublic);
+                    remoteQueryError = "none";
+                }
+                catch (Exception error) when (
+                    error is InvalidOperationException or TimeoutException)
+                {
+                    remoteQueryError = error.Message;
+                }
+                nextRemoteQuery = DateTime.UtcNow.AddSeconds(5);
+            }
+
+            if (downloadPending && downloadCallbackReceived)
+            {
+                downloadPending = false;
+                if (downloadResult != EResult.k_EResultOK)
+                {
+                    throw new InvalidOperationException(
+                        $"Workshop verification download failed: {downloadResult}; "
+                        + $"serverSize={remote.m_nFileSize}, "
+                        + $"serverUpdated={remote.m_rtimeUpdated}");
+                }
+            }
+
+            var serverHasPackageSize = remote.m_nFileSize == package.Bytes.Length;
+            localState = (EItemState)SteamUGC.GetItemState(fileId);
+            var needsUpdate = (localState & EItemState.k_EItemStateNeedsUpdate) != 0;
+            var shouldDownload = !downloadPending
+                && (downloadAttempts == 0
+                    ? serverHasPackageSize || now - started >= TimeSpan.FromSeconds(30)
+                    : downloadAttempts < 2 && needsUpdate
+                        && now - lastDownload >= TimeSpan.FromSeconds(10));
+            if (shouldDownload)
+            {
+                if (!SteamUGC.DownloadItem(fileId, true))
+                {
+                    throw new InvalidOperationException(
+                        $"Steam refused verification download: state={localState}, "
+                        + $"serverSize={remote.m_nFileSize}");
+                }
+                downloadAttempts++;
+                lastDownload = now;
+                downloadPending = true;
+                downloadCallbackReceived = false;
+            }
+
+            if (!downloadPending && downloadAttempts > 0
+                && (localState & EItemState.k_EItemStateInstalled) != 0
+                && SteamUGC.GetItemInstallInfo(
+                    fileId, out _, out var installedPath, 4096, out _))
+            {
+                localPath = installedPath;
+                localKind = File.Exists(installedPath) ? "file"
+                    : Directory.Exists(installedPath) ? "directory" : "missing";
+                if (localKind == "file")
+                {
+                    try
+                    {
+                        localBytes = new FileInfo(installedPath).Length;
+                        if ((localState & EItemState.k_EItemStateLegacyItem) != 0)
+                        {
+                            LegacyPackage.ValidateArchive(installedPath);
+                            var installedHash =
+                                System.Security.Cryptography.SHA256.HashData(
+                                    File.ReadAllBytes(installedPath));
+                            if (expectedHash.SequenceEqual(installedHash))
+                            {
+                                Console.WriteLine($"installedLegacyZip={installedPath}");
+                                Console.WriteLine($"installedState={localState}");
+                                Console.WriteLine($"serverFileSize={remote.m_nFileSize}");
+                                return;
+                            }
+                            localZipError = "ZIP bytes differ from uploaded package";
+                        }
+                    }
+                    catch (Exception error) when (
+                        error is IOException or InvalidDataException
+                            or InvalidOperationException)
+                    {
+                        localZipError = error.Message;
+                    }
+                }
+            }
+            Thread.Sleep(500);
+        }
+        throw new InvalidOperationException(
+            "Steam accepted the upload, but ONI-compatible installation is still unverified. "
+            + $"serverFileSize={remote.m_nFileSize}, "
+            + $"expectedFileSize={package.Bytes.Length}, "
+            + $"serverUpdated={remote.m_rtimeUpdated}, "
+            + $"previousServerUpdated={previousServerUpdated}, "
+            + $"serverQueryError={remoteQueryError}; "
+            + $"localState={localState}, localPathKind={localKind}, "
+            + $"localPath={localPath}, localBytes={localBytes}, "
+            + $"localZipError={localZipError}, downloadAttempts={downloadAttempts}, "
+            + $"downloadPending={downloadPending}. The client cache may be stale; "
+            + "no second upload was attempted.");
     }
 
     internal static void SubmitLocalizedMetadata(WorkshopMetadata metadata)
@@ -88,7 +307,7 @@ internal static class SteamWorkshopPublisher
     private static UGCUpdateHandle_t StartUpdate()
     {
         return SteamUGC.StartItemUpdate(
-            new AppId_t(WorkshopTarget.AppId),
+            new AppId_t(WorkshopTarget.ConsumerAppId),
             new PublishedFileId_t(WorkshopTarget.WorkshopId));
     }
 
@@ -180,20 +399,31 @@ internal static class SteamWorkshopPublisher
         return result;
     }
 
-    private static void ValidateTarget(SteamUGCDetails_t details)
+    private static void ValidateItem(
+        SteamUGCDetails_t details, ulong workshopId,
+        string titleContains, bool requirePrivate, bool requirePublic)
     {
-        if (details.m_nPublishedFileId.m_PublishedFileId != WorkshopTarget.WorkshopId
-            || details.m_nConsumerAppID.m_AppId != WorkshopTarget.AppId
+        if (details.m_nPublishedFileId.m_PublishedFileId != workshopId
+            || details.m_nCreatorAppID.m_AppId != WorkshopTarget.CreatorAppId
+            || details.m_nConsumerAppID.m_AppId != WorkshopTarget.ConsumerAppId
             || details.m_ulSteamIDOwner != WorkshopTarget.ExpectedOwner
-            || (!string.IsNullOrEmpty(details.m_rgchTitle)
-                && !details.m_rgchTitle.Contains(
-                    WorkshopTarget.TitleContains, StringComparison.OrdinalIgnoreCase)))
+            || string.IsNullOrWhiteSpace(details.m_rgchTitle)
+            || !details.m_rgchTitle.Contains(
+                titleContains, StringComparison.OrdinalIgnoreCase)
+            || (requirePrivate
+                && details.m_eVisibility
+                    != ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPrivate)
+            || (requirePublic
+                && details.m_eVisibility
+                    != ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPublic))
         {
             throw new InvalidOperationException(
-                $"Workshop target identity check failed for {WorkshopTarget.DisplayName}: "
+                $"Workshop item identity check failed for {WorkshopTarget.DisplayName}: "
                 + $"id={details.m_nPublishedFileId.m_PublishedFileId}, "
+                + $"creatorApp={details.m_nCreatorAppID.m_AppId}, "
                 + $"consumerApp={details.m_nConsumerAppID.m_AppId}, "
-                + $"owner={details.m_ulSteamIDOwner}, title={details.m_rgchTitle}");
+                + $"owner={details.m_ulSteamIDOwner}, "
+                + $"visibility={details.m_eVisibility}, title={details.m_rgchTitle}");
         }
     }
 
@@ -201,13 +431,14 @@ internal static class SteamWorkshopPublisher
     {
         if (!condition)
         {
-            throw new InvalidOperationException($"SteamUGC.{operation} failed");
+            throw new InvalidOperationException($"Steam {operation} failed");
         }
     }
 
     internal static void PrintTarget(SteamUGCDetails_t details)
     {
         Console.WriteLine($"workshopId={details.m_nPublishedFileId.m_PublishedFileId}");
+        Console.WriteLine($"creatorApp={details.m_nCreatorAppID.m_AppId}");
         Console.WriteLine($"consumerApp={details.m_nConsumerAppID.m_AppId}");
         Console.WriteLine($"owner={details.m_ulSteamIDOwner}");
         Console.WriteLine($"title={details.m_rgchTitle}");

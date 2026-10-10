@@ -1,0 +1,200 @@
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
+using System.Reflection;
+using System.Text;
+using Newtonsoft.Json.Linq;
+using OniMcp.Config;
+using OniMcp.Server;
+using OniMcp.Tools;
+
+internal static class ModernMrtrUriRegressionEntry
+{
+    private static MainThreadBridge _bridge;
+
+    private static void Main()
+    {
+        RunModernMrtrUriRegression();
+
+        var existing = typeof(ModernMrtrContentMetadataRegressionEntry).GetMethod("Main",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        if (existing == null)
+            throw new InvalidOperationException("Existing server regression entrypoint was not found");
+        existing.Invoke(null, null);
+    }
+
+    private static void RunModernMrtrUriRegression()
+    {
+        _bridge = new MainThreadBridge();
+        Invoke(_bridge, "Awake");
+        int port = ReservePort();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port });
+        OniToolRegistry.ModernToolsEnabled = true;
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                int callsBeforeInvalidUris = OniToolRegistry.Calls;
+                AssertModernRejected(client, BuildBenchmarkCall(34801,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-link\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"not a uri\"}]}"),
+                    "resource link with malformed URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34802,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-embedded\",\"content\":["
+                    + "{\"type\":\"resource\",\"resource\":{\"uri\":\"not a uri\","
+                    + "\"text\":\"fixture\"}}]}"),
+                    "embedded resource with malformed URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34803,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"not a uri\"}]}]}"),
+                    "resource link icon with malformed src URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34806,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-unsafe-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"file:///tmp/icon.png\"}]}]}"),
+                    "resource link icon with unsafe file src URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34811,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-data-html-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"data:text/html;base64,PHNjcmlwdD4=\"}]}]}"),
+                    "resource link icon with non-image data URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34812,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-invalid-base64-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"data:image/png;base64,%%%\"}]}]}"),
+                    "resource link icon with invalid Base64 data URI");
+                AssertModernRejected(client, BuildBenchmarkCall(34808,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-fractional-size\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"size\":1.5}]}"),
+                    "resource link with fractional byte size");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidUris,
+                    "Malformed or unsafe MRTR resource links reached tool dispatch");
+
+                AssertModernAccepted(client, BuildBenchmarkCall(34804,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-link\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"data:image/png;base64,AA==\"}]}]}"),
+                    "resource link with valid file resource and data icon URIs");
+                AssertModernAccepted(client, BuildBenchmarkCall(34805,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-embedded\",\"content\":["
+                    + "{\"type\":\"resource\",\"resource\":{\"uri\":\"https://example.invalid/fixture\","
+                    + "\"text\":\"fixture\"}}]}"),
+                    "embedded resource with valid https URI");
+                AssertModernAccepted(client, BuildBenchmarkCall(34807,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-https-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"https://example.invalid/icon.png\"}]}]}"),
+                    "resource link with valid https icon URI");
+                AssertModernAccepted(client, BuildBenchmarkCall(34810,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-http-icon\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"icons\":[{\"src\":\"http://example.invalid/icon.png\"}]}]}"),
+                    "resource link with valid http icon URI");
+                AssertModernAccepted(client, BuildBenchmarkCall(34809,
+                    "{\"type\":\"tool_result\",\"toolUseId\":\"call-valid-size\",\"content\":["
+                    + "{\"type\":\"resource_link\",\"name\":\"fixture\",\"uri\":\"file:///tmp/link\","
+                    + "\"size\":123}]}"),
+                    "resource link with integer byte size");
+                Assert(OniToolRegistry.Calls == callsBeforeInvalidUris + 5,
+                    "Schema-valid MRTR resource links did not dispatch exactly five times");
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Modern URI validation allocated legacy session state");
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            Invoke(_bridge, "OnDestroy");
+        }
+    }
+
+    private static string BuildBenchmarkCall(int id, string contentBlock)
+    {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":" + id
+            + ",\"params\":{\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":"
+            + contentBlock + ",\"model\":\"fixture\"}},"
+            + "\"name\":\"benchmark\",\"arguments\":{\"task\":\"URI regression\",\"iterations\":1},"
+            + ModernMeta() + "}}";
+    }
+
+    private static string ModernMeta()
+    {
+        return "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+            + "\"io.modelcontextprotocol/clientCapabilities\":{},"
+            + "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"mrtr-uri-regression\",\"version\":\"1.0\"}}";
+    }
+
+    private static void AssertModernRejected(HttpClient client, string json, string scenario)
+    {
+        using (var response = SendModern(client, json))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "Modern server accepted " + scenario + " with HTTP " + (int)response.StatusCode);
+            JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            Assert((int?)body["error"]?["code"] == -32602,
+                scenario + " did not return InvalidParams");
+            Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                scenario + " returned a legacy session id");
+        }
+    }
+
+    private static void AssertModernAccepted(HttpClient client, string json, string scenario)
+    {
+        using (var response = SendModern(client, json))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK,
+                scenario + " was rejected with HTTP " + (int)response.StatusCode);
+            JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            Assert(body["result"] != null && body["error"] == null,
+                scenario + " did not reach modern tool dispatch");
+            Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                scenario + " returned a legacy session id");
+        }
+    }
+
+    private static HttpResponseMessage SendModern(HttpClient client, string json)
+    {
+        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+        {
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+            request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+            request.Headers.Add("Mcp-Method", "tools/call");
+            request.Headers.Add("Mcp-Name", "benchmark");
+            return client.SendAsync(request).GetAwaiter().GetResult();
+        }
+    }
+
+    private static void Invoke(object target, string methodName)
+    {
+        var method = target.GetType().GetMethod(methodName,
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        if (method == null)
+            throw new InvalidOperationException(methodName + " method not found");
+        method.Invoke(target, null);
+    }
+
+    private static int ReservePort()
+    {
+        var probe = new TcpListener(IPAddress.Loopback, 0);
+        probe.Start();
+        int port = ((IPEndPoint)probe.LocalEndpoint).Port;
+        probe.Stop();
+        return port;
+    }
+
+    private static void Assert(bool condition, string message)
+    {
+        if (!condition)
+            throw new InvalidOperationException(message);
+    }
+}

@@ -39,6 +39,7 @@ internal static class Program
                     "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":1,\"params\":{\"uri\":\"oni://test\",\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"resource-read-conformance\",\"version\":\"1.0\"}}}}",
                     Encoding.UTF8,
                     "application/json");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                 request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                 request.Headers.Add("Mcp-Method", "resources/read");
                 request.Headers.Add("Mcp-Name", "oni://test");
@@ -85,6 +86,7 @@ internal static class Program
                     "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":2,\"params\":{\"uri\":\"oni://template/123/data\",\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"resource-template-conformance\",\"version\":\"1.0\"}}}}",
                     Encoding.UTF8,
                     "application/json");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                 request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                 request.Headers.Add("Mcp-Method", "resources/read");
                 request.Headers.Add("Mcp-Name", uri);
@@ -134,6 +136,7 @@ internal static class Program
                         "{\"jsonrpc\":\"2.0\",\"method\":\"resources/list\",\"id\":3,\"params\":{" + meta + "}}",
                         Encoding.UTF8,
                         "application/json");
+                    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                     request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                     request.Headers.Add("Mcp-Method", "resources/list");
                     var work = client.SendAsync(request);
@@ -153,6 +156,7 @@ internal static class Program
                         "{\"jsonrpc\":\"2.0\",\"method\":\"resources/templates/list\",\"id\":4,\"params\":{" + meta + "}}",
                         Encoding.UTF8,
                         "application/json");
+                    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                     request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                     request.Headers.Add("Mcp-Method", "resources/templates/list");
                     var work = client.SendAsync(request);
@@ -172,6 +176,7 @@ internal static class Program
                         "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":5,\"params\":{\"uri\":\"" + unsafeUri + "\"," + meta + "}}",
                         Encoding.UTF8,
                         "application/json");
+                    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                     request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                     request.Headers.Add("Mcp-Method", "resources/read");
                     request.Headers.Add("Mcp-Name", unsafeUri);
@@ -196,6 +201,7 @@ internal static class Program
                         "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":6,\"params\":{\"uri\":\"" + unsafeAliasUri + "\"," + meta + "}}",
                         Encoding.UTF8,
                         "application/json");
+                    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                     request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                     request.Headers.Add("Mcp-Method", "resources/read");
                     request.Headers.Add("Mcp-Name", unsafeAliasUri);

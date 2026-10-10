@@ -139,6 +139,15 @@ namespace OniMcp.Server
                             new JObject { ["uri"] = uri }), (int)HttpStatusCode.OK);
                         return;
                     }
+
+                    if (!IsKnownModernResourceAuthority(parsedUri))
+                    {
+                        response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                        SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
+                            $"Resource not found: {uri}", new JObject { ["uri"] = uri }),
+                            (int)HttpStatusCode.OK);
+                        return;
+                    }
                 }
             }
 
@@ -171,9 +180,14 @@ namespace OniMcp.Server
                 Exception processEx = null;
                 try
                 {
-                    result = _running
-                        ? ProcessModernMethod(rpcRequest)
-                        : JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InternalError, "MCP server is stopping");
+                    if (!_running)
+                        result = JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InternalError,
+                            "MCP server is stopping");
+                    else if (string.Equals(rpcRequest.Method, "resources/read", StringComparison.Ordinal)
+                        && IsGameContextBoundResourceRead(rpcRequest.Params))
+                        result = GameContextError(rpcRequest.Id, admission.GameContextGeneration);
+                    if (result == null)
+                        result = ProcessModernMethod(rpcRequest);
                 }
                 catch (Exception ex)
                 {

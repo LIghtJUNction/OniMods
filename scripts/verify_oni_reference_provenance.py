@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -48,15 +49,23 @@ def download_text(url: str) -> bytes:
         return response.read()
 
 
+def github_api_headers(token: str | None = None) -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "OniMods-reference-ci/1",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 def download_json(url: str) -> dict:
     if not url.startswith(API_PREFIX):
         raise ValueError(f"refusing unexpected GitHub API host: {url}")
     request = urllib.request.Request(
         url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "OniMods-reference-ci/1",
-        },
+        headers=github_api_headers(os.environ.get("ONIMODS_GITHUB_API_TOKEN")),
     )
     with urllib.request.urlopen(request, timeout=60) as response:
         return json.loads(response.read().decode("utf-8"))
@@ -503,7 +512,7 @@ def compare_upstream_state(
         "marker_changed": marker_changed,
         "changed_files": changed_files,
         "has_reference_drift": (
-            head_declared_build != declared_build or marker_changed or bool(changed_files)
+            head_declared_build != declared_build or bool(changed_files)
         ),
     }
 
@@ -571,12 +580,20 @@ def report_upstream_state(reference: dict, state: dict) -> None:
             f"tracked reference files changed={changed_files}. Review provenance/API "
             "differences before changing the immutable pin."
         )
+    elif state["marker_changed"]:
+        print(
+            "::notice title=ONI upstream marker changed without reference drift::"
+            f"{reference['repository']} {tracking['branch']} is {state['head_sha']}; "
+            f"the marker file changed, but it still declares ONI "
+            f"{state['head_declared_build']} and all tracked reference assembly Git blobs "
+            "still match the pinned baseline."
+        )
     elif state["head_advanced"]:
         print(
             "::notice title=ONI upstream advanced without tracked reference drift::"
             f"{reference['repository']} {tracking['branch']} advanced to "
-            f"{state['head_sha']}, but the tracked version marker and all pinned "
-            "source-repo reference assembly Git blobs still match the pinned baseline."
+            f"{state['head_sha']}; the version marker and all tracked reference assembly "
+            "Git blobs still match the pinned baseline."
         )
 
 

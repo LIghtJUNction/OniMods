@@ -51,6 +51,7 @@ internal static class RegressionEntry
                     "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":91,\"params\":{\"uri\":\"" + genericReadUri + "\"," + meta + "}}",
                     Encoding.UTF8,
                     "application/json");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                 request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                 request.Headers.Add("Mcp-Method", "resources/read");
                 request.Headers.Add("Mcp-Name", genericReadUri);
@@ -83,6 +84,7 @@ internal static class RegressionEntry
                     "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":92,\"params\":{\"uri\":\"" + legacySessionUri + "\"," + meta + "}}",
                     Encoding.UTF8,
                     "application/json");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                 request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                 request.Headers.Add("Mcp-Method", "resources/read");
                 request.Headers.Add("Mcp-Name", legacySessionUri);
@@ -115,6 +117,7 @@ internal static class RegressionEntry
                     "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":93,\"params\":{\"uri\":\"" + saveListingUri + "\"," + meta + "}}",
                     Encoding.UTF8,
                     "application/json");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                 request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                 request.Headers.Add("Mcp-Method", "resources/read");
                 request.Headers.Add("Mcp-Name", saveListingUri);

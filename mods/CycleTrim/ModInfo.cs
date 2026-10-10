@@ -1,3 +1,4 @@
+using CycleTrim.Patches;
 using HarmonyLib;
 
 namespace CycleTrim
@@ -7,6 +8,7 @@ namespace CycleTrim
         public override void OnLoad(Harmony harmony)
         {
             base.OnLoad(harmony);
+            PerformanceProbePatch.SetHarmonyId(harmony.Id);
             harmony.PatchAll();
         }
     }

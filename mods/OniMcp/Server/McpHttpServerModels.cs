@@ -21,6 +21,7 @@ namespace OniMcp.Server
 
         public string Id { get; set; }
         public System.DateTime CreatedAt { get; set; }
+        public System.DateTime LastActivityAt { get; set; }
         public string ProtocolVersion { get; set; }
         public Implementation ClientInfo { get; set; }
         public ClientCapabilities Capabilities { get; set; }

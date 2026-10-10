@@ -90,6 +90,7 @@ internal static class ModernResourceListCacheRegression
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.TryAddWithoutValidation("Mcp-Method", method);
             Task<HttpResponseMessage> work = client.SendAsync(request);

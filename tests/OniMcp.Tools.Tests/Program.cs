@@ -40,6 +40,8 @@ internal static class Program
         TestWorldEditorCellObjectPolicy();
         TestFloodFillPreviewCells();
         TestSandboxDryRunRoutingPolicy();
+        TestBackwallSupportPolicy();
+        TestExistingMaterialPolicy();
         TestSweepEligibilityPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
@@ -206,6 +208,47 @@ internal static class Program
             Check(error != null && error.Contains("refusing to execute"),
                 "unsupported sandbox dry-run explains that mutation was refused");
         }
+    }
+
+    private static void TestBackwallSupportPolicy()
+    {
+        var missing = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", false);
+        Check(!missing.Valid && missing.ReasonCode == "backwall_required",
+            "OnBackWall placement without native foundation must be rejected with a stable reason");
+        Check(missing.Error != null && missing.Error.Contains("complete backwall foundation"),
+            "backwall rejection must explain the full-footprint requirement");
+
+        var supported = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", true);
+        Check(supported.Valid && supported.ReasonCode == null,
+            "OnBackWall placement with native foundation remains valid");
+
+        var floor = BuildPlanningBackwallSupportPolicy.Evaluate("OnFloor", false);
+        Check(floor.Valid,
+            "non-backwall rules remain outside this narrow policy so OnFloor planned-support semantics are unchanged");
+    }
+
+    private static void TestExistingMaterialPolicy()
+    {
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting(null, null, null, false),
+            "omitted material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("auto", null, null, false),
+            "auto material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("default", null, null, false),
+            "default material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("IgneousRock", "IgneousRock", "Igneous Rock", false),
+            "explicit canonical material must match the existing construction material");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Igneous Rock", "IgneousRock", "Igneous Rock", false),
+            "explicit proper material name must match the existing construction material");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("BuildableRaw", "IgneousRock", "Igneous Rock", true),
+            "explicit material category must accept an existing material in that category");
+        Check(!BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Granite", "IgneousRock", "Igneous Rock", false),
+            "different explicit material must not be treated as already satisfied");
+        Check(!BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Granite", null, null, false),
+            "unknown existing material must fail closed for an explicit request");
+        Check(BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "Granite"),
+            "resolved explicit material must match the existing tag exactly");
+        Check(!BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "IgneousRock"),
+            "resolved different material must be rejected");
     }
 
     private static void TestSweepEligibilityPolicy()

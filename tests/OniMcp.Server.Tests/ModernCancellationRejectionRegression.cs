@@ -70,6 +70,18 @@ internal static class ModernCancellationRejectionRegressionEntry
                     AssertAcceptedWithoutSession(response, "Unsupported modern notification");
                 }
 
+                using (var request = BuildUnsupportedNotificationRequest("notifications/progress", new JValue("invalid-meta")))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern notification with scalar _meta returned HTTP " + (int)response.StatusCode);
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int?)json["error"]?["code"] == McpErrorCode.InvalidParams,
+                        "Modern notification with scalar _meta used the wrong JSON-RPC error");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Rejected modern notification returned a legacy session id");
+                }
+
                 using (var request = BuildCancellationRequest(new JValue(18004), includeRequestEnvelope: false,
                     includeProtocolHeader: true, includeMethodHeader: true,
                     methodHeader: "notifications/progress"))
@@ -90,13 +102,14 @@ internal static class ModernCancellationRejectionRegressionEntry
                     includeProtocolHeader: true, includeMethodHeader: true))
                 using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                 {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Fractional modern cancellation request id returned HTTP " + (int)response.StatusCode);
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int?)json["error"]?["code"] == McpErrorCode.InvalidRequest,
-                        "Fractional modern cancellation used the wrong JSON-RPC error");
-                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Rejected modern cancellation returned a legacy session id");
+                    AssertAcceptedWithoutSession(response, "Fractional numeric modern cancellation request id");
+                }
+
+                using (var request = BuildCancellationRequest(new JValue(18001.0), includeRequestEnvelope: true,
+                    includeProtocolHeader: true, includeMethodHeader: true))
+                using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+                {
+                    AssertAcceptedWithoutSession(response, "Floating numeric modern cancellation request id");
                 }
             }
 
@@ -156,17 +169,21 @@ internal static class ModernCancellationRejectionRegressionEntry
         return request;
     }
 
-    private static HttpRequestMessage BuildUnsupportedNotificationRequest(string method)
+    private static HttpRequestMessage BuildUnsupportedNotificationRequest(string method, JToken meta = null)
     {
+        var parameters = new JObject
+        {
+            ["progressToken"] = "modern-notification-regression",
+            ["progress"] = 1
+        };
+        if (meta != null)
+            parameters["_meta"] = meta;
+
         var body = new JObject
         {
             ["jsonrpc"] = "2.0",
             ["method"] = method,
-            ["params"] = new JObject
-            {
-                ["progressToken"] = "modern-notification-regression",
-                ["progress"] = 1
-            }
+            ["params"] = parameters
         };
         var request = new HttpRequestMessage(HttpMethod.Post, "");
         request.Content = new StringContent(body.ToString(Newtonsoft.Json.Formatting.None), Encoding.UTF8,

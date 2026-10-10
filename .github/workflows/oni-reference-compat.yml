@@ -7,6 +7,7 @@ on:
       - 'tests/**'
       - 'benchmarks/CycleTrim.BrainBenchmarks/**'
       - 'scripts/**'
+      - 'tools/OniMods.SteamPublisher/**'
       - 'ci/oni-reference-assemblies.json'
       - 'ci/oni-harmony-api-surface-baseline/**'
       - 'AGENTS.md'
@@ -27,6 +28,7 @@ on:
       - 'tests/**'
       - 'benchmarks/CycleTrim.BrainBenchmarks/**'
       - 'scripts/**'
+      - 'tools/OniMods.SteamPublisher/**'
       - 'ci/oni-reference-assemblies.json'
       - 'ci/oni-harmony-api-surface-baseline/**'
       - 'AGENTS.md'
@@ -61,6 +63,8 @@ jobs:
         with:
           dotnet-version: '10.0.401'
       - name: Verify reference provenance and lag status
+        env:
+          ONIMODS_GITHUB_API_TOKEN: ${{ github.event_name == 'push' && github.token || '' }}
         run: >-
           python3 scripts/verify_oni_reference_provenance.py
           --manifest ci/oni-reference-assemblies.json
@@ -78,6 +82,10 @@ jobs:
       - name: Verify pinned ONI 744825 fetch method-body contract
         run: >-
           python3 scripts/verify_cycletrim_fetch_source_contract.py
+          --manifest ci/oni-reference-assemblies.json
+      - name: Verify pinned ONI 744825 research queue method-body contract
+        run: >-
+          python3 scripts/verify_onimcp_research_source_contract.py
           --manifest ci/oni-reference-assemblies.json
       - name: Install pinned ILSpy command line tool
         run: dotnet tool install --global ilspycmd --version 11.0.0.9375
@@ -161,6 +169,27 @@ jobs:
             -p:ImportDirectoryBuildProps=false \
             -p:BaseIntermediateOutputPath="$compat_root/obj/"
           dotnet msbuild mods/CycleTrim/CycleTrim.csproj \
+            -target:Compile \
+            -property:Configuration=Release \
+            -property:TargetFramework=netstandard2.1 \
+            -property:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -property:ImportDirectoryBuildProps=false \
+            -property:BaseIntermediateOutputPath="$compat_root/obj/" \
+            -property:OutputPath="$compat_root/bin/" \
+            -property:TreatWarningsAsErrors=true
+      - name: Compile OniMcp against .NET Standard 2.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          compat_root="$RUNNER_TEMP/onimcp-netstandard21"
+          # Keep this compatibility compile isolated from the earlier shipping net48 build.
+          rm -rf mods/OniMcp/obj
+          dotnet restore mods/OniMcp/OniMcp.csproj \
+            -p:TargetFramework=netstandard2.1 \
+            -p:OniManagedPath="$GITHUB_WORKSPACE/.oni-managed" \
+            -p:ImportDirectoryBuildProps=false \
+            -p:BaseIntermediateOutputPath="$compat_root/obj/"
+          dotnet msbuild mods/OniMcp/OniMcp.csproj \
             -target:Compile \
             -property:Configuration=Release \
             -property:TargetFramework=netstandard2.1 \

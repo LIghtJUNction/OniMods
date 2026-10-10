@@ -120,6 +120,7 @@ namespace OniMcp.Tools
                     ["kind"] = "building",
                     ["prefabId"] = existingPrefabId,
                     ["id"] = go.GetComponent<KPrefabID>()?.InstanceID ?? -1,
+                    ["material"] = ExistingConstructionMaterialTag(go),
                     ["actualPlacement"] = actual,
                     ["placementCheck"] = check
                 };
@@ -135,6 +136,7 @@ namespace OniMcp.Tools
                 ["kind"] = "blueprint",
                 ["prefabId"] = blueprintBuilding?.Def?.PrefabID ?? blueprint.GetComponent<KPrefabID>()?.PrefabTag.Name ?? blueprint.name,
                 ["id"] = blueprint.GetComponent<KPrefabID>()?.InstanceID ?? -1,
+                ["material"] = ExistingConstructionMaterialTag(blueprint),
                 ["actualPlacement"] = ActualPlacementDetails(blueprint, def, placement.AnchorX, placement.AnchorY),
                 ["placementCheck"] = ComparePlacement(placement, ActualPlacementDetails(blueprint, def, placement.AnchorX, placement.AnchorY))
             };

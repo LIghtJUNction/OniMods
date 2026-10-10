@@ -252,22 +252,6 @@ internal static class UnknownModernMethodAdmissionRegressionEntry
                 AssertBlockedModernResourceRejectedWithoutAdmission(client, server,
                     "oni://tools/read/not-available", 16003);
 
-                using (var request = BuildModernResourceReadRequest("oni://allowed/nonexistent", 16004))
-                {
-                    Task<HttpResponseMessage> work = client.SendAsync(request);
-                    bool completedWithoutMainThread = SpinWait.SpinUntil(() => work.IsCompleted, 250);
-                    Assert(!completedWithoutMainThread,
-                        "Allowed modern resource unexpectedly bypassed main-thread admission");
-                    Assert(QueuedActions() > 0,
-                        "Allowed modern resource did not enter the main-thread queue");
-                    Invoke(_bridge, "Update");
-                    using (var response = work.GetAwaiter().GetResult())
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.OK,
-                            "Allowed modern resource returned HTTP " + (int)response.StatusCode);
-                    }
-                }
-
                 Assert(QueuedActions() == 0,
                     "Modern resource admission regression left work in the main-thread queue");
                 Assert(server.GetSessionSummaries().Count == 0,

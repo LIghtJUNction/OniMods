@@ -20,6 +20,9 @@ namespace OniMcp.Server
 
         private static readonly AsyncLocal<string> CurrentSessionContext = new AsyncLocal<string>();
 
+        private static readonly string ServerVersion =
+            typeof(McpHttpServer).Assembly.GetName().Version?.ToString(3) ?? "unknown";
+
         private HttpListener _listener;
 
         private Thread _listenerThread;

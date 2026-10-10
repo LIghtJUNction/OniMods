@@ -74,28 +74,32 @@ internal static class Program
                 string fractionalIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":1.5,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"fractional request id\"}," + ModernMeta + "}}";
                 using (var response = Post(client, fractionalIdCall, "tools/call", "benchmark", null))
                 {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Modern tools/call with a fractional id was not rejected at the modern validation boundary");
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int)json["error"]["code"] == -32600,
-                        "Modern tools/call with a fractional id did not use InvalidRequest");
-                    Assert(json["id"]?.Type == JTokenType.Null,
-                        "Invalid fractional modern request id was echoed in the error response");
-                }
-                Assert(OniToolRegistry.Calls == calls,
-                    "Modern tools/call with a fractional id executed the tool");
-
-                string integralNumericIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":3100.0,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"integral numeric request id\"}," + ModernMeta + "}}";
-                using (var response = Post(client, integralNumericIdCall, "tools/call", "benchmark", null))
-                {
                     Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Modern tools/call rejected a numeric id whose value is an integer");
+                        "Modern tools/call with a fractional numeric id was rejected");
                     JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
                     Assert(json["result"] != null,
-                        "Modern tools/call with an integral numeric id returned no result");
+                        "Modern tools/call with a fractional numeric id returned no result");
+                    Assert(Math.Abs((double)json["id"] - 1.5) < double.Epsilon,
+                        "Modern tools/call did not echo the fractional numeric request id");
                 }
                 Assert(OniToolRegistry.Calls == ++calls,
-                    "Modern tools/call with an integral numeric id did not execute exactly once");
+                    "Modern tools/call with a fractional numeric id did not execute once");
+
+                string floatingPointIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":3100.0,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"floating-point request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, floatingPointIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern tools/call rejected a numeric request id encoded with a decimal point");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(json["result"] != null,
+                        "Modern tools/call with a floating numeric id returned no result");
+                    Assert(Math.Abs((double)json["id"] - 3100.0) < double.Epsilon,
+                        "Modern tools/call did not echo the floating numeric request id");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Accepted modern numeric request id allocated a legacy session header");
+                }
+                Assert(OniToolRegistry.Calls == ++calls,
+                    "Modern tools/call with a floating numeric id did not execute once");
 
                 AssertCall(client, 3101,
                     "{\"task\":\"region match\",\"region\":\"us-west1\"}",
@@ -274,6 +278,7 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", method);
             if (name != null)

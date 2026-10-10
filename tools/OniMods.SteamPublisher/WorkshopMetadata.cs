@@ -23,7 +23,7 @@ internal static partial class WorkshopMetadataReader
         RequireValue(
             values,
             "appid",
-            WorkshopTarget.AppId.ToString(CultureInfo.InvariantCulture));
+            WorkshopTarget.ConsumerAppId.ToString(CultureInfo.InvariantCulture));
         RequireValue(
             values,
             "publishedfileid",

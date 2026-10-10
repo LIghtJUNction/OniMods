@@ -64,10 +64,15 @@ namespace OniMcp.Server
             }
             finally
             {
+                System.DateTime disconnectedAt = _legacySessionPolicy.UtcNow();
                 lock (_sessionLock)
                 {
                     if (session.SseConnections > 0)
                         session.SseConnections--;
+
+                    McpSession retainedSession;
+                    if (_sessions.TryGetValue(sessionId, out retainedSession) && ReferenceEquals(retainedSession, session))
+                        session.LastActivityAt = disconnectedAt;
                 }
                 try { response.Close(); } catch { }
             }
