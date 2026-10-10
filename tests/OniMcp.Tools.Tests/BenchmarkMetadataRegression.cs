@@ -11,6 +11,7 @@ internal static class BenchmarkMetadataRegressionEntry
     {
         BuildPlanningRegression.Run();
         ObservationReadinessRegression.Run();
+        FarmingUprootRegression.Run();
         RunBenchmarkMetadataRegression();
 
         var existing = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
