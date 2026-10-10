@@ -151,8 +151,8 @@ def main() -> int:
     native_body = method_body(native_path, "TryPlaceUtilityPathNative(", "native path method", failures)
     require_order(
         native_body,
-        ("var safety = ValidateUtilityPathSafety", "if (!safety.Valid)", "if (IsFreeBuildContext())"),
-        "native guard before free-build fallback",
+        ("var safety = ValidateUtilityPathSafety", "if (!safety.Valid)", "SelectElements"),
+        "native guard before material selection",
         failures,
     )
     require_order(

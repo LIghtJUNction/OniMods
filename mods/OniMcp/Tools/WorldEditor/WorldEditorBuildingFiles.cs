@@ -340,7 +340,7 @@ namespace OniMcp.Tools
         private static void AppendBuildingParameterReferences(StringBuilder sb, int xMin, int xMax, int yMin, int yMax)
         {
             var buildings = LiveCompletedBuildings().Select(go => new { Go = go, Cell = Grid.PosToCell(go) })
-                .Where(item => Grid.IsValidCell(item.Cell))
+                .Where(item => IsReadableMapCell(item.Cell))
                 .Where(item => Grid.CellColumn(item.Cell) >= xMin && Grid.CellColumn(item.Cell) <= xMax
                     && Grid.CellRow(item.Cell) >= yMin && Grid.CellRow(item.Cell) <= yMax)
                 .OrderBy(item => item.Go.GetComponent<KPrefabID>()?.InstanceID ?? item.Go.GetInstanceID()).ToList();

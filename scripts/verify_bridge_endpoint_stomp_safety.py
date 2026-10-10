@@ -36,7 +36,6 @@ def main() -> None:
     geometry = (BUILD / "BuildPlanningPlacementGeometry.cs").read_text(encoding="utf-8")
     models = (BUILD / "BuildPlanningTools.cs").read_text(encoding="utf-8")
     plan_one = (BUILD / "BuildPlanningPlanOne.cs").read_text(encoding="utf-8")
-    completion = (BUILD / "BuildPlanningInstantCompletion.cs").read_text(encoding="utf-8")
 
     classifier = body(safety, "private static bool UsesNativeBridgeEndpointRegistration")
     for rule in ("Conduit", "WireBridge", "LogicBridge"):
@@ -103,29 +102,10 @@ def main() -> None:
     assert planning.count("ValidateFootprint(") >= 2
     ordered(planning, "var executionFootprintResult = ValidateFootprint(placement)",
             "HasUnsafeExecutionConflict(executionFootprintResult)",
-            "TryBuildVirtualFileInstantBuild", "def.TryPlace(")
+            "def.TryPlace(")
 
-    retry = body(completion, "private static Dictionary<string, object> TryCompleteExistingVirtualFileBlueprint")
-    ordered(retry, "Orientation orientation = rotatable == null ? Orientation.Neutral : rotatable.GetOrientation()",
-            "var completionPlacement = BuildPlacementDetails(def, placement.AnchorX, placement.AnchorY, placement.WorldId, orientation)",
-            "ExistingBlueprintCompletionSafetyFailure(def, completionPlacement, blueprint)",
-            "if (safetyFailure != null) return safetyFailure", "blueprint.DeleteObject()",
-            "TryBuildVirtualFileInstantBuild(def, completionPlacement", "ComparePlacement(completionPlacement, actual)")
-    assert "ExistingBlueprintCompletionSafetyFailure(def, placement, blueprint)" not in retry
-    assert "TryBuildVirtualFileInstantBuild(def, placement" not in retry
-    retry_guard = body(safety, "private static Dictionary<string, object> ExistingBlueprintCompletionSafetyFailure")
-    ordered(retry_guard, "ValidateFootprint(placement, blueprint)", "HasUnsafeExecutionConflict",
-            '["mutationAttempted"] = false', '"existing_blueprint_pre_completion_recheck"')
-
-    # Request orientation omitted/Neutral and actual existing blueprint rotated:
-    # only the actual orientation reaches the occupied endpoint in this model.
-    def endpoints(orientation: str) -> set[tuple[int, int]]:
-        return {(-1, 0), (1, 0)} if orientation == "Neutral" else {(0, -1), (0, 1)}
-
-    occupied = {(0, 1)}
-    assert endpoints("Neutral").isdisjoint(occupied)
-    assert not endpoints("R90").isdisjoint(occupied)
-    assert retry.find("GetOrientation()") < retry.find("ExistingBlueprintCompletionSafetyFailure") < retry.find("blueprint.DeleteObject()")
+    assert "TryBuildVirtualFileInstantBuild" not in planning
+    assert "blueprint.DeleteObject()" not in planning
     print("bridge endpoint stomp safety contract passed")
 
 

@@ -120,31 +120,6 @@ namespace OniMcp.Tools
                                     return ReadToolResource(uri, "game_control", query, "application/json");
                                 }
 
-            if (parsed.Host == "sandbox" && parsed.AbsolutePath == "/story-traits")
-                                {
-                                    var query = ParseQuery(parsed.Query);
-                                    query["domain"] = "sandbox";
-                                    query["kind"] = "read";
-                                    query["action"] = "list_story_traits";
-                                    return ReadToolResource(uri, "game_control", query, "application/json");
-                                }
-
-            if (parsed.Host == "sandbox" && parsed.AbsolutePath.StartsWith("/cell/"))
-                                {
-                                    var parts = parsed.AbsolutePath.Trim('/').Split('/');
-                                    if (parts.Length == 3)
-                                    {
-                                        return ReadToolResource(uri, "game_control", new JObject
-                                        {
-                                            ["domain"] = "sandbox",
-                                            ["kind"] = "read",
-                                            ["action"] = "sample_cell",
-                                            ["x"] = parts[1],
-                                            ["y"] = parts[2]
-                                        }, "application/json");
-                                    }
-                                }
-
             return null;
         }
     }

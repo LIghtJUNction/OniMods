@@ -38,7 +38,7 @@ def main() -> None:
     world = (TOOLS / "Impl/World/WorldCellUtilityConnectionSummary.cs").read_text(encoding="utf-8")
     ports = (TOOLS / "WorldEditor" / "WorldEditorPortDetails.cs").read_text(encoding="utf-8")
     infrastructure = (TOOLS / "Impl/Build/InfrastructurePortReadTools.cs").read_text(encoding="utf-8")
-    completion = (TOOLS / "Impl/Build/BuildPlanningInstantCompletion.cs").read_text(encoding="utf-8")
+    completion = (TOOLS / "Impl/Build/BuildPlanningCompletedBuildingReadiness.cs").read_text(encoding="utf-8")
 
     actual = body(semantics, "internal static int ActualCell")
     for required in ("GetOrientation()", "port.cellOffset", "Rotatable.GetRotatedCellOffset",

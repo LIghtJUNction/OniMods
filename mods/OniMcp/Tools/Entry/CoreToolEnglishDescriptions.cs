@@ -28,7 +28,7 @@ namespace OniMcp.Tools
                     Describe(tool, DupesDescriptions());
                     break;
                 case "game_control":
-                    tool.Description = "Unified game entrypoint for speed, pause/resume, game state, saves, DLC activation, sandbox operations, and UI actions. Use semantic actions and named targets; coordinate input is not accepted here.";
+                    tool.Description = "Unified game entrypoint for speed, pause/resume, game state, saves, DLC activation, and safe UI actions. Use semantic actions and named targets; coordinate input is not accepted here.";
                     Describe(tool, GameDescriptions());
                     break;
                 case "navigation_control":
@@ -214,9 +214,9 @@ namespace OniMcp.Tools
         private static Dictionary<string, string> GameDescriptions()
         {
             var d = CommonDescriptions();
-            d["domain"] = "Game subsystem: launch, speed, state, save, dlc, sandbox, or ui.";
+            d["domain"] = "Game subsystem: launch, speed, state, save, dlc, or ui.";
             d["action"] = "Game action for the selected subsystem. UI feedback actions include notification, popup, speech_bubble, and marker.";
-            d["kind"] = "Sandbox or UI subtype.";
+            d["kind"] = "UI list subtype.";
             d["uiDomain"] = "UI subsystem: action, feedback.";
             d["name"] = "Save name, or duplicant name for ui/feedback speech_bubble.";
             d["id"] = "Target object id, or duplicant instance id for ui/feedback speech_bubble.";
@@ -224,18 +224,6 @@ namespace OniMcp.Tools
             d["duration"] = "Speech-bubble display duration in seconds; defaults to 5 and is clamped to 0.5-30.";
             d["speed"] = "Game speed level.";
             d["redAlert"] = "Red alert enabled state.";
-            d["sandboxEnabled"] = "Sandbox mode enabled state.";
-            d["pattern"] = "Search pattern for map-designate actions.";
-            d["designate"] = "Designation token for map-designate actions.";
-            d["replace"] = "Legacy alias for designate.";
-            d["element"] = "Element id used by sandbox painting actions.";
-            d["prefabId"] = "Prefab id used by sandbox entity spawn actions.";
-            d["storyId"] = "Story trait id.";
-            d["massKg"] = "Mass in kilograms.";
-            d["temperatureC"] = "Temperature in Celsius.";
-            d["matchMode"] = "Search match mode.";
-            d["matchIndex"] = "Zero-based match index.";
-            d["visibleOnly"] = "Treat unrevealed cells as unknown while searching.";
             d["saveName"] = "Save file name.";
             d["overwrite"] = "Overwrite an existing save file.";
             d["path"] = "Full save path.";

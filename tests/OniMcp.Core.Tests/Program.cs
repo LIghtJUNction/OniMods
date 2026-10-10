@@ -23,7 +23,7 @@ internal static class Program
         Run("tool cache respects visibility after all-tools access", CacheVisibility);
         Run("metadata list callers cannot corrupt cached tool count", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);
-        Run("dynamic resource routes preserve their read action", DynamicResources);
+        Run("dynamic resource routes preserve read actions and reject sandbox routes", DynamicResources);
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
         Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
@@ -212,8 +212,14 @@ internal static class Program
         Require((string)summary["arguments"]["query"] == "ore pile", "Query decoding failed.");
         var cell = Read("oni://world/cell/4/5");
         Require((string)cell["arguments"]["action"] == "cell_info" && (int)cell["arguments"]["x"] == 4, "World cell route failed.");
-        var sandbox = Read("oni://sandbox/cell/6/7");
-        Require((string)sandbox["arguments"]["kind"] == "read" && (string)sandbox["arguments"]["action"] == "sample_cell", "Sandbox sampling route changed operation.");
+        Require(OniResourceRegistry.ReadResource("oni://sandbox/cell/6/7") == null,
+            "Removed sandbox cell route remained available.");
+        Require(!OniResourceRegistry.GetResourceInfos().Any(resource =>
+            resource.Uri.StartsWith("oni://sandbox/", StringComparison.OrdinalIgnoreCase)),
+            "Removed sandbox resource remained advertised.");
+        Require(!OniResourceRegistry.GetResourceTemplateInfos().Any(template =>
+            template.UriTemplate.StartsWith("oni://sandbox/", StringComparison.OrdinalIgnoreCase)),
+            "Removed sandbox resource template remained advertised.");
     }
 
     private static void ResourceErrors()

@@ -6,6 +6,7 @@ namespace OniMcp.Tools
     {
         private static char TemperatureSymbol(string elemId, float tempC)
         {
+            if (float.IsNaN(tempC) || float.IsInfinity(tempC)) return '?';
             if (elemId == "Vacuum") return '.';
             if (tempC < -260f) return '零';
             if (tempC < -18f) return '寒';
@@ -19,10 +20,12 @@ namespace OniMcp.Tools
 
         private static char OxygenSymbol(int cell)
         {
-            if (!Grid.IsValidCell(cell)) return '?';
+            if (!IsReadableMapCell(cell) || Grid.Element[cell] == null) return '?';
             if (Grid.Element[cell].IsSolid) return '■';
+            if (Grid.Element[cell].id == SimHashes.Vacuum) return '.';
             if (!Grid.Element[cell].IsGas) return '液';
             float mass = Grid.Mass[cell];
+            if (float.IsNaN(mass) || float.IsInfinity(mass) || mass < 0) return '?';
             string id = Grid.Element[cell].id.ToString();
             bool breathable = id == "Oxygen" || id == "ContaminatedOxygen" || id == "PollutedOxygen";
             if (!breathable) return '不';
@@ -33,7 +36,7 @@ namespace OniMcp.Tools
 
         private static char LightSymbol(int cell)
         {
-            if (!Grid.IsValidCell(cell)) return '?';
+            if (!IsReadableMapCell(cell) || Grid.Element[cell] == null) return '?';
             if (Grid.Element[cell].IsSolid) return '■';
             int lux = Grid.LightIntensity[cell];
             if (lux >= 72500) return '晒';
@@ -45,8 +48,10 @@ namespace OniMcp.Tools
 
         private static char DecorSymbol(int cell)
         {
-            if (!Grid.IsValidCell(cell) || Grid.Element[cell].IsSolid) return '.';
+            if (!IsReadableMapCell(cell) || Grid.Element[cell] == null) return '?';
+            if (Grid.Element[cell].IsSolid) return '.';
             float decor = GameUtil.GetDecorAtCell(cell);
+            if (float.IsNaN(decor) || float.IsInfinity(decor)) return '?';
             if (decor >= 50f) return '美';
             if (decor > 0f) return '好';
             if (decor == 0f) return '平';
@@ -56,7 +61,8 @@ namespace OniMcp.Tools
 
         private static char DiseaseSymbol(int cell)
         {
-            if (!Grid.IsValidCell(cell) || Grid.DiseaseCount[cell] <= 0) return '.';
+            if (!IsReadableMapCell(cell)) return '?';
+            if (Grid.DiseaseCount[cell] <= 0) return '.';
             int count = Grid.DiseaseCount[cell];
             if (count < 100) return '微';
             if (count < 10000) return '菌';
@@ -65,8 +71,10 @@ namespace OniMcp.Tools
 
         private static char RadiationSymbol(int cell)
         {
-            if (!Grid.IsValidCell(cell) || Grid.Element[cell].IsSolid) return '.';
+            if (!IsReadableMapCell(cell) || Grid.Element[cell] == null) return '?';
+            if (Grid.Element[cell].IsSolid) return '.';
             float rads = Grid.Radiation[cell];
+            if (float.IsNaN(rads) || float.IsInfinity(rads)) return '?';
             if (rads <= 0) return '.';
             if (rads < 100) return '低';
             if (rads < 1000) return '辐';
@@ -90,11 +98,13 @@ namespace OniMcp.Tools
 
         private static char RoomSymbol(int cell)
         {
-            if (!Grid.IsValidCell(cell) || Grid.Element[cell].IsSolid) return '.';
+            if (!IsReadableMapCell(cell) || Grid.Element[cell] == null) return '?';
+            if (Grid.Element[cell].IsSolid) return '.';
             try
             {
                 var prober = Game.Instance != null ? Game.Instance.roomProber : null;
-                var cavity = prober != null ? prober.GetCavityForCell(cell) : null;
+                if (prober == null) return '?';
+                var cavity = prober.GetCavityForCell(cell);
                 var room = cavity != null ? cavity.room : null;
                 if (room == null || room.roomType == null) return '.';
                 return GetUniqueChar(room.roomType.Id, room.roomType.Name);
@@ -104,6 +114,7 @@ namespace OniMcp.Tools
 
         private static string SymbolLegend(HashedString mode, char symbol)
         {
+            if (symbol == '?') return "Unknown: do not treat as empty or disconnected.";
             if (IsConnectionGlyph(symbol)) return ConnectionLegend(symbol);
             if (symbol == '.') return "空/无该视图内容";
             if (mode == OverlayModes.Light.ID) return "光照等级";

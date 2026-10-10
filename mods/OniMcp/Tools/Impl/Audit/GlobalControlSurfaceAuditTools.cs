@@ -85,7 +85,6 @@ namespace OniMcp.Tools
             yield return Covered("SpeedControlScreen", "main_menu_widget", "Escape", "Open/close pause menu and resume game", new[] { "game_control domain=ui uiDomain=action", "game_control domain=speed" }, new[] { "game_control domain=ui uiDomain=action" });
 
             yield return Covered("TopLeftControlScreen", "base_name_display", "", "Read current colony/base name", new[] { "colony_status" }, new[] { "colony_status" });
-            yield return Covered("TopLeftControlScreen", "sandbox_toggle", "ToggleSandboxTools", "Enable/disable active sandbox mode when the save permits sandbox", new[] { "game_control", "game_control domain=state" }, new[] { "game_control" });
             yield return NoAction("TopLeftControlScreen", "klei_item_drop_button", "Klei item drop / external account cosmetic flow; not an in-colony player action surface");
 
             yield return Covered("PauseScreen", "resume", "Escape", "Close pause screen and resume menu flow", new[] { "game_control domain=ui uiDomain=action", "game_control domain=speed" }, new[] { "game_control domain=ui uiDomain=action", "game_control domain=speed action=time" });

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static regression contract for native utility-bridge instant-build registration."""
+"""Static regression contract for native utility-bridge readiness registration."""
 
 from pathlib import Path
 
@@ -24,8 +24,8 @@ def body(source: str, marker: str) -> str:
 
 
 def main() -> None:
-    completion = (BUILD / "BuildPlanningInstantCompletion.cs").read_text(encoding="utf-8")
-    refresh = (BUILD / "BuildPlanningUtilityNetworkRefresh.cs").read_text(encoding="utf-8")
+    completion = (BUILD / "BuildPlanningCompletedBuildingReadiness.cs").read_text(encoding="utf-8")
+    refresh = (BUILD / "BuildPlanningUtilityPathReadiness.cs").read_text(encoding="utf-8")
 
     verification = body(completion, "private static bool IsCompletedBuildFullyRegistered")
     assert "IsCompletedBuildGridRegistered(def, cell, orientation, completed" in verification
@@ -54,7 +54,7 @@ def main() -> None:
 
     exact_linear = body(refresh, "private static bool IsExactConnectionUtilityPrefab")
     assert "Bridge" not in exact_linear
-    print("utility bridge instant-build contract passed")
+    print("utility bridge readiness contract passed")
 
 
 if __name__ == "__main__":

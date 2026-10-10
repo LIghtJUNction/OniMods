@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify that free-build utility paths retain blueprint placement semantics."""
+"""Verify that normal utility paths retain blueprint placement semantics."""
 
 from __future__ import annotations
 
@@ -49,6 +49,7 @@ def verify_existing_material_reuse(plan_one: str) -> None:
     # unrelated call and cannot prove that both paths reject before completion.
     for target in ("existingBuild", "executionExistingBuild"):
         branch = extract_block(plan_one, f"if ({target} != null)")
+        reuse = "RegisterSupportBlueprint" if target == "existingBuild" else "return ExistingPlacementResult"
         require_order(
             branch,
             (
@@ -56,7 +57,7 @@ def verify_existing_material_reuse(plan_one: str) -> None:
                 f'prefabId, x, y, {target}, materialResult, args["material"]?.ToString());',
                 "if (materialMismatch != null)",
                 "return materialMismatch;",
-                "var instantRetry = TryCompleteExistingVirtualFileBlueprint(",
+                reuse,
             ),
             f"{target} must reject its own material mismatch before reuse or completion",
         )
@@ -72,8 +73,9 @@ def verify_existing_material_reuse_regressions(plan_one: str) -> None:
     mutations = [("missing early guard", plan_one.replace(early_test, "", 1))]
     for target in ("existingBuild", "executionExistingBuild"):
         branch = extract_block(plan_one, f"if ({target} != null)")
+        reuse = "RegisterSupportBlueprint" if target == "existingBuild" else "return ExistingPlacementResult"
         guard_start = branch.index("                var materialMismatch")
-        completion_start = branch.index("                var instantRetry")
+        completion_start = branch.rfind("\n", 0, branch.index(reuse)) + 1
         guard = branch[guard_start:completion_start]
         completion_end = branch.index("\n", completion_start) + 1
         late_guard = (
@@ -125,22 +127,10 @@ def verify_building_blueprint_safety(
         selected[paths["native"]],
         "private static Dictionary<string, object> TryPlaceUtilityPathNative",
     )
-    free_build_marker = "if (IsFreeBuildContext())"
-    require_order(
-        native_method,
-        (free_build_marker, "SelectElements", "SelectUtilityBuildTool"),
-        "free-build fallback must precede material selection and native utility tools",
-    )
-    free_build_branch = extract_block(native_method, free_build_marker)
-    for token in (
-        'result["attempted"] = false;',
-        'result["placementMode"] = "blueprint_cell_fallback";',
-        'result["shouldFallback"] = true;',
-    ):
-        if token not in free_build_branch:
-            fail(f"free-build utility fallback missing: {token}")
-    if 'result["reason"]' not in free_build_branch:
-        fail("free-build utility fallback must explain why native placement was skipped")
+    require_order(native_method, ("ValidateUtilityPathSafety", "SelectElements", "SelectUtilityBuildTool"),
+                  "native path safety and materials must precede tool execution")
+    if "IsFreeBuildContext" in native_method:
+        fail("native utility paths cannot bypass material rules")
 
     auto_connect = extract_block(
         selected[paths["placement"]],
@@ -165,22 +155,12 @@ def verify_building_blueprint_safety(
         selected[paths["plan_one"]],
         "private static Dictionary<string, object> TryPlanOne",
     )
-    require_order(
-        plan_one,
-        (
-            "bool completedImmediately = IsAuthorizedVirtualFileInstantBuild(args);",
-            "if (completedImmediately)",
-            "TryBuildVirtualFileInstantBuild",
-            "return InstantCompletionFailureResult",
-            "else",
-            "def.TryPlace(",
-            'return ErrorResult(prefabId, x, y, "Placement failed"',
-            "return new Dictionary<string, object>",
-            '["blueprintPlaced"] = !completedImmediately,',
-            '["buildingCompleted"] = completedImmediately,',
-        ),
-        "TryPlanOne must distinguish successful blueprints from successful instant completion",
-    )
+    require_order(plan_one, ("ValidateFootprint", "def.TryPlace(", 'return ErrorResult(prefabId, x, y, "Placement failed"',
+                              '["blueprintPlaced"] = true,', '["buildingCompleted"] = false,'),
+                  "native placement must report blueprints, not completed work")
+    for forbidden in ("TryBuildVirtualFileInstantBuild", "InstantCompletionFailureResult", "completedImmediately"):
+        if forbidden in plan_one:
+            fail("removed completion path: " + forbidden)
 
     materials = selected[paths["materials"]]
     select_elements = extract_block(
@@ -188,24 +168,14 @@ def verify_building_blueprint_safety(
         "private static MaterialSelection SelectElements",
     )
     auto_selection = extract_block(select_elements, "if (auto)")
-    require_order(
-        auto_selection,
-        (
-            "var defaults = DefaultBuildElements(def);",
-            "if (IsFreeBuildContext())",
-            "return ValidatedMaterialSelection(defaults",
-            "available.FirstOrDefault()",
-        ),
-        "free-build auto material selection must prefer ordered building defaults",
-    )
-    defaults_index = auto_selection.find("var defaults = DefaultBuildElements(def);")
-    free_build_index = auto_selection.find("if (IsFreeBuildContext())", defaults_index)
-    if "defaults.Count" in auto_selection[defaults_index:free_build_index]:
-        fail("free-build defaults must reach validation even when the ordered list is empty")
+    if "IsFreeBuildContext" in materials:
+        fail("material selection must never bypass inventory")
+    if "available.FirstOrDefault()" not in auto_selection:
+        fail("automatic selection must use available inventory")
     if "MaterialSelection.Success(" in select_elements:
         fail("SelectElements success exits must use the unified validation helper")
-    if select_elements.count("return ValidatedMaterialSelection(") != 4:
-        fail("all four SelectElements success exits must use the unified validation helper")
+    if select_elements.count("return ValidatedMaterialSelection(") != 3:
+        fail("all three SelectElements success exits must use the unified validation helper")
 
     validated_success = extract_block(
         materials,
@@ -242,7 +212,7 @@ def main() -> None:
         "private static Dictionary<string, object> TryPlanOne",
     )
     verify_existing_material_reuse_regressions(plan_one)
-    print("OK: free-build utility paths fall back to per-cell blueprint placement")
+    print("OK: normal utility paths use native placement and preserve material identity")
 
 
 if __name__ == "__main__":

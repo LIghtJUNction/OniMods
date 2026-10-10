@@ -38,11 +38,10 @@ internal static class Program
         TestNumbers();
         TestRegexBoundaries();
         TestWorldEditorCellObjectPolicy();
-        TestFloodFillPreviewCells();
-        TestSandboxDryRunRoutingPolicy();
-        TestBackwallSupportPolicy();
+        GameControlRoutingRegression.Run();
         TestExistingMaterialPolicy();
         TestSweepEligibilityPolicy();
+        TestBackwallSupportPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -171,45 +170,6 @@ internal static class Program
             "empty cells must remain empty");
     }
 
-    private static void TestFloodFillPreviewCells()
-    {
-        int[] cells = { 11, 12, 13 };
-        var visited = new System.Collections.Generic.List<int>();
-        SandboxFloodFillExecution.VisitPreviewCells(cells, cell => visited.Add(cell));
-        Check(visited.Count == cells.Length, "flood-fill preview must visit every planned cell exactly once");
-        for (int i = 0; i < cells.Length; i++)
-            Check(visited[i] == cells[i], "flood-fill preview must preserve the production plan order");
-    }
-
-    private static void TestSandboxDryRunRoutingPolicy()
-    {
-        string error;
-        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("area", "flood_fill", true, out error),
-            "flood-fill dry-run remains supported");
-        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("map_designate", "replace", true, out error),
-            "map-designate dry-run remains supported");
-        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("read", "sample_cell", true, out error),
-            "read-only sandbox calls may ignore dryRun safely");
-        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("area", "paint", false, out error),
-            "normal writes are not changed by the dry-run policy");
-
-        foreach (var route in new[]
-        {
-            new[] { "area", "paint" },
-            new[] { "area", "temperature" },
-            new[] { "area", "destroy" },
-            new[] { "entity", "spawn_entity" },
-            new[] { "entities", "auto_plumb_building" },
-            new[] { "", "set_sandbox_mode" }
-        })
-        {
-            Check(SandboxDryRunRoutingPolicy.TryRejectUnsupported(route[0], route[1], true, out error),
-                "unsupported sandbox dry-run must fail closed: " + route[0] + "/" + route[1]);
-            Check(error != null && error.Contains("refusing to execute"),
-                "unsupported sandbox dry-run explains that mutation was refused");
-        }
-    }
-
     private static void TestBackwallSupportPolicy()
     {
         var missing = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", false);
@@ -251,6 +211,7 @@ internal static class Program
             "resolved different material must be rejected");
     }
 
+
     private static void TestSweepEligibilityPolicy()
     {
         SweepHandlerRegression.Run();
@@ -261,6 +222,7 @@ internal static class Program
         Check(SweepEligibilityPolicy.RejectionReason(true, true) == null,
             "clearable pickupables remain eligible for the existing sweep path");
     }
+
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
     private static JObject Body(CallToolResult result) => JObject.Parse(result.Content[0].Text);

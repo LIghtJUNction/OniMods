@@ -102,12 +102,6 @@ private static bool IsTechUnlocked(BuildingDef def)
 {
 if (def == null)
 return false;
-try
-{
-if (DebugHandler.InstantBuildMode || (Game.Instance != null && Game.Instance.SandboxModeActive))
-return true;
-}
-catch { }
 if (Db.Get() == null || Db.Get().Techs == null)
 return false;
 try
@@ -124,7 +118,7 @@ private static string BuildAvailabilityError(BuildingDef def, JObject args = nul
 {
 if (def == null)
 return "Building def is missing";
-if (!IsTechUnlocked(def) && !CanBypassUtilityResearch(def, args))
+if (!IsTechUnlocked(def))
 return "Building is locked by research: " + def.PrefabID;
 try
 {
@@ -136,16 +130,6 @@ catch
 return "Building availability check failed: " + def.PrefabID;
 }
 return null;
-}
-
-private static bool CanBypassUtilityResearch(BuildingDef def, JObject args)
-{
-return def != null
-&& IsExactConnectionUtilityPrefab(def.PrefabID)
-&& BuildingControlTools.IsVirtualFileEditContext
-&& args != null
-&& ToolUtil.GetBool(args, "instantBuild", false)
-&& ToolUtil.GetBool(args, "allowSandbox", false);
 }
 
 private static object AutoMaterialValue(BuildingDef def, int worldId)

@@ -20,6 +20,9 @@ namespace OniMcp.Tools
                     return ActiveGameNotLoaded(path);
 
                 string relative = SaveRelativePath(path);
+                if ((relative.StartsWith("map/", StringComparison.Ordinal) || IsInfrastructureMapMarkdown(relative))
+                    && args["worldId"] != null && ToolUtil.GetInt(args, "worldId") != ClusterManager.Instance.activeWorldId)
+                    return CallToolResult.Error("Text maps describe the active world. Switch the active world before reading another world's map.");
                 if (TryReadExactPatchRectangle(args, path, relative, out CallToolResult patchResult))
                     return patchResult;
                 if (relative == "index.md")

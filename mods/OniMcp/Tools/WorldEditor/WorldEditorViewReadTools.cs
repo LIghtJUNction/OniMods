@@ -42,6 +42,16 @@ namespace OniMcp.Tools
             if (!TryGetCameraBounds(out int xMin, out int xMax, out int yMin, out int yMax))
                 return "# " + path + "\n\nCamera not initialized.";
 
+            if (TryReadMapFocusBounds(args, out int focusXMin, out int focusYMin, out int focusXMax, out int focusYMax, out string boundsError))
+            {
+                if (!string.IsNullOrWhiteSpace(boundsError))
+                    return "# " + path + "\n\n" + boundsError;
+                xMin = focusXMin;
+                xMax = focusXMax;
+                yMin = focusYMin;
+                yMax = focusYMax;
+            }
+
             bool compact = ShouldCompactMap(args);
             string map = GetMapMd("[视图: " + view.Name + "] Camera Viewport Map (X: "
                 + xMin + "~" + xMax + ", Y: " + yMin + "~" + yMax + ")",

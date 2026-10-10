@@ -1,0 +1,59 @@
+name: OniMcp source review workspace
+
+on:
+  push:
+    branches: ['fix/onimcp-map-contract-and-survival-tools']
+    paths: ['.github/workflows/onimcp-source-review.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    if: github.repository == 'LIghtJUNction/OniMods'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Export tracked text sources only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          import zipfile
+          from pathlib import Path
+
+          output = Path('source-review')
+          output.mkdir()
+          allowed = {'.cs', '.csproj', '.props', '.targets', '.md', '.py', '.yml', '.yaml', '.sh', '.ps1', '.toml', '.config', '.txt', '.sln', '.ini', '.xml', '.json'}
+          metadata = {}
+          for label, ref in [('head', 'HEAD'), ('main', 'origin/main')]:
+              sha = subprocess.check_output(['git', 'rev-parse', ref], text=True).strip()
+              metadata[label] = sha
+              paths = subprocess.check_output(['git', 'ls-tree', '-r', '--name-only', ref], text=True).splitlines()
+              count = 0
+              with zipfile.ZipFile(output / (label + '-source.zip'), 'w', zipfile.ZIP_DEFLATED) as archive:
+                  for name in paths:
+                      path = Path(name)
+                      if path.suffix.lower() not in allowed and path.name not in {'.gitignore', '.editorconfig', 'LICENSE'}:
+                          continue
+                      data = subprocess.check_output(['git', 'show', ref + ':' + name])
+                      if len(data) > 2000000:
+                          continue
+                      data.decode('utf-8')
+                      archive.writestr(name, data)
+                      count += 1
+              print(label, sha, count, 'tracked text files; no game assemblies or saves')
+          (output / 'revisions.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: onimcp-source-review
+          path: source-review
+          if-no-files-found: error
+          retention-days: 1

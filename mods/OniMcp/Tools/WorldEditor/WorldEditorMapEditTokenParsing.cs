@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
@@ -11,37 +12,27 @@ namespace OniMcp.Tools
         private static bool SearchTokenMatches(string actual, string pattern)
         {
             pattern = (pattern ?? string.Empty).Trim();
-            if (pattern == "?" || pattern == "*" || pattern == ".*")
+            // '?' is unknown data and '*' is a disconnected utility segment.
+            // Only the explicit wildcard may match a different map token.
+            if (pattern == ".*")
                 return true;
             if (pattern.Length >= 2 && pattern[0] == '/' && pattern[pattern.Length - 1] == '/')
                 return Regex.IsMatch(actual ?? string.Empty, pattern.Substring(1, pattern.Length - 2), RegexOptions.None, RegexMatchTimeout);
             if (pattern.StartsWith("~", StringComparison.Ordinal) && pattern.Length > 1)
                 return Regex.IsMatch(actual ?? string.Empty, pattern.Substring(1), RegexOptions.None, RegexMatchTimeout);
-            // Map rendering appends @(x,y) on the first cell of a building run.
-            // Agents often strip that suffix when copying SEARCH tokens; treat both forms equal.
-            string normalizedActual = NormalizeMapCompareToken(actual);
-            string normalizedPattern = NormalizeMapCompareToken(pattern);
-            return string.Equals(normalizedActual, normalizedPattern, StringComparison.Ordinal)
-                || string.Equals(actual, pattern, StringComparison.Ordinal);
+            return MapTokensEquivalent(actual, pattern);
         }
 
-        /// <summary>
-        /// Strip trailing map coordinate annotations like <c>建筑:7#壹@(114,138)</c> so SEARCH/REPLACE
-        /// matching is stable across re-reads and agent-normalized tokens.
-        /// </summary>
         private static string NormalizeMapCompareToken(string token)
         {
             token = (token ?? string.Empty).Trim();
-            if (token.Length == 0)
+            Match annotation = Regex.Match(token, @"@\((-?[0-9]+),(-?[0-9]+)\)$",
+                RegexOptions.CultureInvariant, RegexMatchTimeout);
+            if (!annotation.Success
+                || !int.TryParse(annotation.Groups[1].Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out _)
+                || !int.TryParse(annotation.Groups[2].Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out _))
                 return token;
-            int at = token.IndexOf("@(", StringComparison.Ordinal);
-            if (at < 0)
-            {
-                // Also strip bare @Name dupe/critter forms when comparing pure build tokens is not needed;
-                // only @(x,y) is stripped here because agents rewrite that suffix most often.
-                return token;
-            }
-            return token.Substring(0, at).TrimEnd();
+            return token.Substring(0, annotation.Index).TrimEnd();
         }
 
         private static bool MapTokensEquivalent(string left, string right)
@@ -62,44 +53,57 @@ namespace OniMcp.Tools
             prefabId = null;
             foreach (var def in Assets.BuildingDefs)
             {
-                if (def == null || string.IsNullOrEmpty(def.PrefabID))
+                if (def == null || string.IsNullOrEmpty(def.PrefabID)
+                    || GetUniqueChar(def.PrefabID, def.Name) != symbol)
                     continue;
-                if (GetUniqueChar(def.PrefabID, def.Name) == symbol)
+                if (prefabId != null && !string.Equals(prefabId, def.PrefabID, StringComparison.OrdinalIgnoreCase))
                 {
-                    prefabId = def.PrefabID;
-                    return true;
+                    prefabId = null;
+                    return false;
                 }
+                prefabId = def.PrefabID;
             }
-            return false;
+            return prefabId != null;
         }
 
         private static bool TryResolveBuildPrefabFromToken(string token, char symbol, out string prefabId)
         {
             prefabId = null;
             string name = ExtractBuildTokenName(token);
-            if (!string.IsNullOrWhiteSpace(name) && name.Length > 1)
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+
+            // Stable IDs take precedence over localized names and generated glyphs.
+            foreach (var def in Assets.BuildingDefs)
             {
-                foreach (var def in Assets.BuildingDefs)
+                if (def != null && !string.IsNullOrEmpty(def.PrefabID)
+                    && string.Equals(def.PrefabID, name, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (def == null || string.IsNullOrEmpty(def.PrefabID))
-                        continue;
-                    string id = MapTokenPart(def.PrefabID);
-                    string proper = MapTokenPart(def.Name);
-                    if (string.Equals(id, name, StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(proper, name, StringComparison.OrdinalIgnoreCase)
-                        || id.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        prefabId = def.PrefabID;
-                        return true;
-                    }
+                    prefabId = def.PrefabID;
+                    return true;
                 }
             }
-            return TryResolveBuildPrefabFromSymbol(symbol, out prefabId);
+
+            foreach (var def in Assets.BuildingDefs)
+            {
+                if (def == null || string.IsNullOrEmpty(def.PrefabID)
+                    || !string.Equals(MapTokenPart(def.Name), name, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (prefabId != null && !string.Equals(prefabId, def.PrefabID, StringComparison.OrdinalIgnoreCase))
+                {
+                    prefabId = null;
+                    return false;
+                }
+                prefabId = def.PrefabID;
+            }
+            if (prefabId != null)
+                return true;
+            return name.Length == 1 && TryResolveBuildPrefabFromSymbol(symbol, out prefabId);
         }
 
         private static string ExtractBuildTokenName(string token)
         {
-            token = (token ?? string.Empty).Trim();
+            token = NormalizeMapCompareToken(token);
             int end = token.Length;
             int at = token.IndexOf('@');
             int colon = token.IndexOf(':');
@@ -115,51 +119,77 @@ namespace OniMcp.Tools
 
         private static bool ParseBuildToken(string token, out char buildSymbol, out int? priority, out string material)
         {
-            // Drop map annotations like @(x,y) before parsing priority/material.
             token = NormalizeMapCompareToken(token);
             buildSymbol = token.Length > 0 ? token[0] : '?';
-            priority = ParsePriority(token);
+            priority = null;
             material = null;
+            if (token.Length == 0 || token.IndexOf('@') >= 0 || string.IsNullOrWhiteSpace(ExtractBuildTokenName(token)))
+                return false;
+
+            int colon = token.IndexOf(':');
             int hash = token.IndexOf('#');
-            if (hash >= 0 && hash + 1 < token.Length)
+            if ((colon >= 0 && token.IndexOf(':', colon + 1) >= 0)
+                || (hash >= 0 && token.IndexOf('#', hash + 1) >= 0)
+                || (colon >= 0 && hash >= 0 && hash < colon))
+                return false;
+            if (colon >= 0)
             {
-                char materialSymbol = token[hash + 1];
-                string elementId;
-                material = TryResolveElementFromSymbol(materialSymbol, out elementId) ? elementId : materialSymbol.ToString();
+                priority = ParsePriority(token);
+                if (!priority.HasValue)
+                    return false;
             }
-            return !string.IsNullOrWhiteSpace(token);
+            if (hash >= 0)
+            {
+                string requested = token.Substring(hash + 1).Trim();
+                if (requested.Length == 0)
+                    return false;
+                if (requested.Length == 1)
+                {
+                    if (!TryResolveElementFromSymbol(requested[0], out material))
+                        return false;
+                }
+                else
+                {
+                    // Preserve the complete ID/category for the native material planner.
+                    material = requested;
+                }
+            }
+            return true;
         }
 
         private static int? ParsePriority(string token)
         {
             token = NormalizeMapCompareToken(token);
-            int colon = (token ?? string.Empty).IndexOf(':');
+            int colon = token.IndexOf(':');
             if (colon < 0)
                 return null;
             int end = token.IndexOf('#', colon + 1);
             if (end < 0)
                 end = token.Length;
             int parsed;
-            return int.TryParse(token.Substring(colon + 1, end - colon - 1), out parsed)
-                ? Math.Max(1, Math.Min(parsed, 9))
-                : (int?)null;
+            return int.TryParse(token.Substring(colon + 1, end - colon - 1), NumberStyles.None,
+                    CultureInfo.InvariantCulture, out parsed) && parsed >= 1 && parsed <= 9
+                ? parsed : (int?)null;
         }
 
         private static bool TryResolveElementFromSymbol(char symbol, out string elementId)
         {
+            elementId = null;
             foreach (var item in UniqueCharMap)
             {
                 if (item.Value != symbol)
                     continue;
                 SimHashes hash;
-                if (Enum.TryParse(item.Key, out hash))
+                if (!Enum.TryParse(item.Key, out hash) || !Enum.IsDefined(typeof(SimHashes), hash))
+                    continue;
+                if (elementId != null && !string.Equals(elementId, item.Key, StringComparison.Ordinal))
                 {
-                    elementId = item.Key;
-                    return true;
+                    elementId = null;
+                    return false;
                 }
+                elementId = item.Key;
             }
-            elementId = null;
-            return false;
+            return elementId != null;
         }
 
         private static Tuple<int, int, int, int> Bounds(IEnumerable<MapEditCell> cells)

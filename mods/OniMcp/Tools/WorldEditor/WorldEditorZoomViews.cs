@@ -330,7 +330,7 @@ namespace OniMcp.Tools
             {
                 ZoomView view;
                 if (!TryResolveZoomView(raw, out view))
-                    continue;
+                    throw new ArgumentException("Unsupported text map view: " + raw);
                 if (seen.Add(view.Name))
                     yield return view;
             }
