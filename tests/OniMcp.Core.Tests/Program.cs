@@ -26,7 +26,8 @@ internal static class Program
         Run("dynamic resource routes preserve their read action", DynamicResources);
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
-        Console.WriteLine(failures == 0 ? "All 12 core regression groups passed." : failures + " regression groups failed.");
+        Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
+        Console.WriteLine(failures == 0 ? "All 13 core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 

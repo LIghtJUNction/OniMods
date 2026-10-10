@@ -35,14 +35,31 @@ namespace OniMcp.Tools
             sb.AppendLine("- Duplicants: " + dupes);
             sb.AppendLine();
 
-            AppendProgressiveOptions(sb);
-            AppendNextCalls(sb);
-            AppendEditableFiles(sb);
+            string format = FirstZoomText(args, "format", "profile", "detail");
+            if (format.Equals("progress", StringComparison.OrdinalIgnoreCase))
+                sb.AppendLine(ReadConstructionProgressMarkdown(args));
+            else if (format.Equals("help", StringComparison.OrdinalIgnoreCase)
+                || format.Equals("full", StringComparison.OrdinalIgnoreCase))
+            {
+                AppendProgressiveOptions(sb);
+                AppendNextCalls(sb);
+                AppendEditableFiles(sb);
+            }
+            else
+                AppendCompactNextCalls(sb);
 
             if (ShouldIncludeExpandedState(args))
                 AppendExpandedCurrentState(sb, args);
 
             return sb.ToString();
+        }
+
+        private static void AppendCompactNextCalls(StringBuilder sb)
+        {
+            sb.AppendLine("Read options: format=progress for unfinished construction; format=help for file and command help; includeState=true for colony state.");
+            sb.AppendLine("Keep the game paused while reading, planning and issuing orders. Run briefly, pause, then verify actual progress.");
+            sb.AppendLine("An accepted order is not a completed building. For blocked work, inspect /active/map/cell_X_Y.md and /active/dupes/reachability.md.");
+            sb.AppendLine();
         }
 
         private static void AppendProgressiveOptions(StringBuilder sb)
