@@ -1,7 +1,8 @@
 name: OniMcp source review workspace
 
 on:
-  pull_request:
+  push:
+    branches: ['fix/onimcp-map-contract-and-survival-tools']
     paths: ['.github/workflows/onimcp-source-review.yml']
 
 permissions:
@@ -9,13 +10,13 @@ permissions:
 
 jobs:
   source:
-    if: github.event.pull_request.number == 512 && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.repository == 'LIghtJUNction/OniMods'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
           fetch-depth: 0
       - name: Export tracked text sources only
@@ -47,7 +48,7 @@ jobs:
                       data.decode('utf-8')
                       archive.writestr(name, data)
                       count += 1
-              print(label, sha, count, 'tracked text files; no game assemblies, saves, or credentials')
+              print(label, sha, count, 'tracked text files; no game assemblies or saves')
           (output / 'revisions.json').write_text(json.dumps(metadata, indent=2) + '\n')
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
