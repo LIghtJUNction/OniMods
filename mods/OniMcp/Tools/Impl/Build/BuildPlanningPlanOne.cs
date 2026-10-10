@@ -254,7 +254,7 @@ int cell = Grid.XYToCell(x, y);
             var orientation = ParseOrientation(args["orientation"]?.ToString());
             var earlyPlacement = BuildPlacementDetails(def, x, y, worldId, orientation);
             var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);
-            if (earlyExistingBuild != null)
+            if (earlyExistingBuild != null && ExistingMaterialRequestSatisfied(def, earlyExistingBuild, args["material"]?.ToString()))
             {
                 var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, earlyPlacement, args, earlyExistingBuild);
                 if (instantRetry != null)
@@ -297,6 +297,10 @@ int cell = Grid.XYToCell(x, y);
             var existingBuild = ExistingMatchingBuildAtPlacement(def, placement);
             if (existingBuild != null)
             {
+                var materialMismatch = ExistingMaterialMismatchResult(
+                    prefabId, x, y, existingBuild, materialResult, args["material"]?.ToString());
+                if (materialMismatch != null)
+                    return materialMismatch;
                 var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, placement, args, existingBuild);
                 if (instantRetry != null)
                     return instantRetry;
@@ -376,6 +380,10 @@ int cell = Grid.XYToCell(x, y);
             var executionExistingBuild = ExistingMatchingBuildAtPlacement(def, placement);
             if (executionExistingBuild != null)
             {
+                var materialMismatch = ExistingMaterialMismatchResult(
+                    prefabId, x, y, executionExistingBuild, materialResult, args["material"]?.ToString());
+                if (materialMismatch != null)
+                    return materialMismatch;
                 var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, placement, args, executionExistingBuild);
                 if (instantRetry != null)
                     return instantRetry;
