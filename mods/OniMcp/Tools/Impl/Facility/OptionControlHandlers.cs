@@ -126,15 +126,30 @@ namespace OniMcp.Tools
 
         private static CallToolResult SetRadboltDirectionControl(GameObject go, JObject args)
         {
-            var control = go.GetComponent<IHighEnergyParticleDirection>();
-            if (control == null)
-                return CallToolResult.Error("Target does not expose IHighEnergyParticleDirection");
+            IHighEnergyParticleDirection control;
+            string eligibilityError;
+            if (!TryGetRadboltDirectionControl(go, out control, out eligibilityError))
+                return CallToolResult.Error(eligibilityError);
 
             EightDirection direction;
             if (!Enum.TryParse(args["direction"]?.ToString() ?? "", true, out direction))
                 return CallToolResult.Error("direction must be one of the eight EightDirection values");
 
             var before = control.Direction;
+            if (ToolUtil.GetBool(args, "dryRun", false))
+            {
+                return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                {
+                    ["target"] = TargetInfo(go),
+                    ["kind"] = "radbolt_direction",
+                    ["dryRun"] = true,
+                    ["before"] = before.ToString(),
+                    ["direction"] = direction.ToString(),
+                    ["wouldChange"] = before != direction,
+                    ["changed"] = false
+                }, McpJsonUtil.Settings));
+            }
+
             control.Direction = direction;
             if (Game.Instance != null)
                 Game.Instance.ForceOverlayUpdate(clearLastMode: true);
@@ -147,6 +162,32 @@ namespace OniMcp.Tools
                 ["direction"] = control.Direction.ToString(),
                 ["changed"] = before != control.Direction
             }, McpJsonUtil.Settings));
+        }
+
+        private static bool TryGetRadboltDirectionControl(
+            GameObject go,
+            out IHighEnergyParticleDirection control,
+            out string error)
+        {
+            control = go?.GetComponent<IHighEnergyParticleDirection>();
+            if (control == null)
+            {
+                error = "Target does not expose IHighEnergyParticleDirection";
+                return false;
+            }
+
+            var redirector = go.GetComponent<HighEnergyParticleRedirector>();
+            if (!RadboltDirectionEligibilityPolicy.CanControl(
+                hasDirectionControl: true,
+                hasRedirector: redirector != null,
+                redirectorDirectionControllable: redirector != null && redirector.directionControllable))
+            {
+                error = "Target radbolt direction is fixed by the game and cannot be changed";
+                return false;
+            }
+
+            error = null;
+            return true;
         }
 
         private static Dictionary<string, object> ControlInfo(GameObject go, bool includeOptions)
@@ -191,8 +232,9 @@ namespace OniMcp.Tools
                 result["broadcastReceiver"] = info;
             }
 
-            var radbolt = go.GetComponent<IHighEnergyParticleDirection>();
-            if (radbolt != null)
+            IHighEnergyParticleDirection radbolt;
+            string radboltError;
+            if (TryGetRadboltDirectionControl(go, out radbolt, out radboltError))
             {
                 kinds.Add("radbolt_direction");
                 result["radboltDirection"] = new Dictionary<string, object>
