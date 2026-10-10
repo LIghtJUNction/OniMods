@@ -14,6 +14,11 @@ namespace CycleTrim.Patches
             new ConditionalWeakTable<ChoreConsumer, State>();
         private static readonly ConditionalWeakTable<ChoreConsumer, State>.CreateValueCallback
             StateFactory = CreateState;
+        private static readonly ConditionalWeakTable<ChoreConsumer, object> NonDuplicants =
+            new ConditionalWeakTable<ChoreConsumer, object>();
+        private static readonly object NonDuplicantMarker = new object();
+        private static readonly ConditionalWeakTable<ChoreConsumer, object>.CreateValueCallback
+            NonDuplicantFactory = CreateNonDuplicantMarker;
         private static readonly AccessTools.FieldRef<Brain, ChoreConsumer> BrainChoreConsumer =
             AccessTools.FieldRefAccess<Brain, ChoreConsumer>("choreConsumer");
 
@@ -51,7 +56,12 @@ namespace CycleTrim.Patches
 
         private static State CreateState(ChoreConsumer consumer)
         {
-            return new State(consumer.GetComponent<MinionIdentity>() != null);
+            return new State(true);
+        }
+
+        private static object CreateNonDuplicantMarker(ChoreConsumer consumer)
+        {
+            return NonDuplicantMarker;
         }
 
         private static bool IsBusyChore(Chore currentChore)
@@ -70,6 +80,24 @@ namespace CycleTrim.Patches
             consumer = sensor.GetComponent<ChoreConsumer>();
             if (consumer == null || navigator == null)
             {
+                state = null;
+                return false;
+            }
+
+            if (States.TryGetValue(consumer, out state))
+            {
+                return state.IsDuplicant;
+            }
+
+            if (NonDuplicants.TryGetValue(consumer, out _))
+            {
+                state = null;
+                return false;
+            }
+
+            if (consumer.GetComponent<MinionIdentity>() == null)
+            {
+                NonDuplicants.GetValue(consumer, NonDuplicantFactory);
                 state = null;
                 return false;
             }
@@ -177,7 +205,8 @@ namespace CycleTrim.Patches
                 ref Chore.Precondition.Context out_context,
                 ref bool __result)
             {
-                if (!States.TryGetValue(__instance, out var state))
+                if (!States.TryGetValue(__instance, out var state)
+                    || !state.IsDuplicant)
                 {
                     return true;
                 }
