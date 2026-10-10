@@ -56,6 +56,8 @@ namespace OniMcp.Tools
                 },
                 Handler = args =>
                 {
+                    if (!GameplayRequestPolicy.Validate(args, out string policyError))
+                        return CallToolResult.Error(policyError);
                     string domain = (args?["domain"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
                     switch (domain)
                     {

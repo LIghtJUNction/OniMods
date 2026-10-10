@@ -227,6 +227,8 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args, HashSet<int> plannedSupportCells = null, AutoDigContext autoDigContext = null)
         {
+            if (!ToolUtil.GetBool(args, "dryRun", false) && Game.Instance != null && Game.Instance.SandboxModeActive)
+                return ErrorResult(prefabId, x, y, "Exit sandbox mode before issuing normal gameplay build orders.");
             string resolvedPrefabId;
             string resolveError;
             var def = ResolveBuildingDef(prefabId, out resolvedPrefabId, out resolveError);
@@ -254,11 +256,8 @@ int cell = Grid.XYToCell(x, y);
             var orientation = ParseOrientation(args["orientation"]?.ToString());
             var earlyPlacement = BuildPlacementDetails(def, x, y, worldId, orientation);
             var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);
-            if (earlyExistingBuild != null)
+            if (earlyExistingBuild != null && ExistingMaterialRequestSatisfied(def, earlyExistingBuild, args["material"]?.ToString()))
             {
-                var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, earlyPlacement, args, earlyExistingBuild);
-                if (instantRetry != null)
-                    return instantRetry;
                 RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
                 return new Dictionary<string, object>
                 {
@@ -297,9 +296,10 @@ int cell = Grid.XYToCell(x, y);
             var existingBuild = ExistingMatchingBuildAtPlacement(def, placement);
             if (existingBuild != null)
             {
-                var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, placement, args, existingBuild);
-                if (instantRetry != null)
-                    return instantRetry;
+                var materialMismatch = ExistingMaterialMismatchResult(
+                    prefabId, x, y, existingBuild, materialResult, args["material"]?.ToString());
+                if (materialMismatch != null)
+                    return materialMismatch;
                 RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
                 return new Dictionary<string, object>
                 {
@@ -376,9 +376,10 @@ int cell = Grid.XYToCell(x, y);
             var executionExistingBuild = ExistingMatchingBuildAtPlacement(def, placement);
             if (executionExistingBuild != null)
             {
-                var instantRetry = TryCompleteExistingVirtualFileBlueprint(def, placement, args, executionExistingBuild);
-                if (instantRetry != null)
-                    return instantRetry;
+                var materialMismatch = ExistingMaterialMismatchResult(
+                    prefabId, x, y, executionExistingBuild, materialResult, args["material"]?.ToString());
+                if (materialMismatch != null)
+                    return materialMismatch;
                 return ExistingPlacementResult(def, placement, executionExistingBuild, utility: false);
             }
 
@@ -400,41 +401,29 @@ int cell = Grid.XYToCell(x, y);
             }
 
             Dictionary<string, object> fallbackPlacement = null;
-            Dictionary<string, object> instantCompletion = null;
-            bool completedImmediately = IsAuthorizedVirtualFileInstantBuild(args);
-            GameObject go;
-            if (completedImmediately)
+            var pos = BuildPlacementPosition(cell, def);
+            var go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
+            if (go == null && autoDig != null)
+                go = TryPlaceWithBuildTool(def, cell, orientation, materialResult.Elements,
+                    facadeResult.ResponseId, placement, args, out fallbackPlacement);
+            if (go == null)
             {
-                if (!TryBuildVirtualFileInstantBuild(def, placement, args, cell, orientation,
-                    materialResult.Elements, facadeResult.ResponseId, out go, out instantCompletion))
-                    return InstantCompletionFailureResult(def, placement, null, instantCompletion, placedByThisRequest: false);
+                var failureDetails = BuildPlacementFailureDetails(placement, materialResult);
+                if (autoDig != null)
+                    failureDetails["autoDig"] = autoDig;
+                if (fallbackPlacement != null)
+                    failureDetails["fallbackPlacement"] = fallbackPlacement;
+                return ErrorResult(prefabId, x, y, "Placement failed", failureDetails);
             }
-            else
-            {
-                var pos = BuildPlacementPosition(cell, def);
-                go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
-                if (go == null && autoDig != null)
-                    go = TryPlaceWithBuildTool(def, cell, orientation, materialResult.Elements,
-                        facadeResult.ResponseId, placement, args, out fallbackPlacement);
-                if (go == null)
-                {
-                    var failureDetails = BuildPlacementFailureDetails(placement, materialResult);
-                    if (autoDig != null)
-                        failureDetails["autoDig"] = autoDig;
-                    if (fallbackPlacement != null)
-                        failureDetails["fallbackPlacement"] = fallbackPlacement;
-                    return ErrorResult(prefabId, x, y, "Placement failed", failureDetails);
-                }
-                SetPriority(go, ToolUtil.GetInt(args, "priority") ?? 5);
-            }
+            SetPriority(go, ToolUtil.GetInt(args, "priority") ?? 5);
             RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
             var actualPlacement = ActualPlacementDetails(go, def, x, y);
             var placedPowerAutoConnect = TryAutoConnectPower(def, x, y, orientation, args, plannedSupportCells, autoDigContext);
             return new Dictionary<string, object>
             {
                 ["planned"] = true,
-                ["blueprintPlaced"] = !completedImmediately,
-                ["buildingCompleted"] = completedImmediately,
+                ["blueprintPlaced"] = true,
+                ["buildingCompleted"] = false,
                 ["valid"] = true,
                 ["prefabId"] = prefabId,
                 ["name"] = ToolUtil.CleanName(def.Name),
@@ -455,7 +444,6 @@ int cell = Grid.XYToCell(x, y);
                 ["facade"] = facadeResult.ResponseId,
                 ["powerAutoConnect"] = placedPowerAutoConnect,
                 ["autoDig"] = autoDig,
-                ["instantCompletion"] = instantCompletion,
                 ["id"] = go.GetComponent<KPrefabID>()?.InstanceID ?? -1
             };
         }

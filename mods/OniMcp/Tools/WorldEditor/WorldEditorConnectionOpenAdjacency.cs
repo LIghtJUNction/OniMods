@@ -28,7 +28,7 @@ namespace OniMcp.Tools
                 return;
 
             int neighbor = NeighborCell(cell, dx, dy);
-            if (Grid.IsValidCell(neighbor) && HasLayer(neighbor, layers))
+            if (IsReadableMapCell(neighbor) && HasLayer(neighbor, layers))
                 open.Add(new ConnectionNeighbor(dir, neighbor));
         }
     }

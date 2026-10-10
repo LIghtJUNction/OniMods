@@ -65,14 +65,7 @@ namespace OniMcp.Tools
                                         Description = "按区域读取医疗床/诊所状态和阈值；等价于 colony_control domain=management kind=medical action=clinics。",
                                         MimeType = "application/json"
                                     },
-                new McpResourceTemplateInfo
-                                    {
-                                        UriTemplate = "oni://sandbox/story-traits{?query}",
-                                        Name = "game_control",
-                                        Title = "沙盒故事特质",
-                                        Description = "读取可由沙盒 Story Trait Tool 放置的故事特质模板；等价于 game_control domain=sandbox kind=read action=list_story_traits。",
-                                        MimeType = "application/json"
-                                    },
+
                 new McpResourceTemplateInfo
                                     {
                                         UriTemplate = "oni://medical/patients{?worldId,includeHealthy,query,limit}",
@@ -151,14 +144,6 @@ namespace OniMcp.Tools
                                         Name = "game_control",
                                         Title = "UI Action 白名单",
                                         Description = "按类型读取可安全触发的 UI Action；等价于 game_control domain=ui uiDomain=action action=list。",
-                                        MimeType = "application/json"
-                                    },
-                new McpResourceTemplateInfo
-                                    {
-                                        UriTemplate = "oni://sandbox/cell/{x}/{y}",
-                                        Name = "game_control",
-                                        Title = "沙盒格子取样",
-                                        Description = "读取指定格子的沙盒刷子参数；等价于 game_control domain=sandbox kind=read action=sample_cell。",
                                         MimeType = "application/json"
                                     }
             });

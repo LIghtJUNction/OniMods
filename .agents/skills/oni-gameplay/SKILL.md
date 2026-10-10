@@ -51,7 +51,7 @@ Use the compact aggregate surface:
 - `read_control`: resources, buildings, infrastructure, world maps, reusable areas.
 - `building_control`: planning, materials, configuration, storage, automation, special buildings.
 - `orders_control`: dig, mop, sweep, disinfect, cancel, harvest, deconstruct, capture, conduit cuts.
-- `game_control`: pause, speed, save, DLC, state, supported sandbox actions.
+- `game_control`: pause, speed, save, DLC, state, normal gameplay actions only.
 - `navigation_control`: camera, overlays, and screenshots only.
 - `search_control`: semantic world/object search and discovery execution.
 - `server_control`: discovery, diagnostics, and batching.
@@ -140,15 +140,21 @@ For dig, sweep, mop, disinfect, cancel, harvest, capture, deconstruct, and utili
 
 Use sweep only for debris/pickupables. Use mop for liquid cells and spills.
 
-## Sandbox and instant-build behavior
+## Normal gameplay only
 
-Every `world_editor` call runs with `instantBuild=false` by default, even when global debug instant-build is enabled. This default creates ordinary blueprints and uses normal materials. Never request instant build implicitly.
+OniMcp creates ordinary blueprints and chores. Research, materials, support, visibility,
+and native eligibility checks still apply. Sandbox routes, forced completion, spawning,
+and direct terrain mutation are removed. Nested payloads cannot enable them.
+The editor suppresses global debug instant-build during each request and restores its
+previous state afterward. Builds refuse an active sandbox save rather than using its
+free construction rules.
 
-- Read completed building parameters through `/active/buildings/index.md`, then open the stable `/active/buildings/instances/<prefab>-<InstanceID>.md` file. Edit only its canonical lines.
-- `instantBuild=true` requires `allowSandbox=true confirm=true` and applies only to that call.
-- Sandbox writes use `world_editor command=sandbox allowSandbox=true confirm=true` plus the narrow capability: `allowTerrainMutation`, `allowEntitySpawn`, `allowDestroy`, or `allowForce`.
-- Keep `sandboxMaxCells` small; it defaults to 100 and cannot exceed 1000.
-- Never widen these permissions inside a batch child.
+Read completed building parameters through `/active/buildings/index.md`, then open the
+stable `/active/buildings/instances/<prefab>-<InstanceID>.md` file. Edit only canonical lines.
+
+For gameplay, pause, read a small relevant region, preview one change, and submit native
+orders. Let the game run briefly, pause again, and verify the same region. A blueprint,
+chore, or `phase=orders_queued` is not a completed building or functioning network.
 
 ## Execution gates
 
@@ -157,7 +163,7 @@ Every `world_editor` call runs with `instantBuild=false` by default, even when g
 - `server_control domain=batch action=call_many` supports up to 20 items. Use `requireAllValid=true` and `stopOnError=true` for coordinated writes.
 - Do not batch dependent reads whose later arguments require an earlier result.
 - Keep response payloads compact: `responseMode=summary` normally, `errors` for retry loops, `full` only for child details.
-- A successful request can still be partial. Inspect `changedCells`, `applied`, `failed`, `partial`, `remainingCells`, and per-item results.
+- A successful request can still be partial. Inspect `changedCells`, `applied`, `failed`, `partial`, `submittedCells`, `unsubmittedCells`, `phase`, and per-item results. Counts reported by child tools are actions, not necessarily map cells.
 
 ## Verification patterns
 

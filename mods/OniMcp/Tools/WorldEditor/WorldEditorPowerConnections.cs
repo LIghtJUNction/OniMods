@@ -14,11 +14,7 @@ namespace OniMcp.Tools
             if (TryGetUtilityConnectionGlyph(cell, PowerLayers, out char glyph))
                 return glyph;
 
-            ushort circuitId = GetPowerCircuitId(cell);
-            if (circuitId != ushort.MaxValue)
-                return GetConnectionGlyph(neighbor => PowerCellsShareCircuit(circuitId, neighbor), cell);
-
-            return GetConnectionGlyph(neighbor => Grid.IsValidCell(neighbor) && HasLayer(neighbor, PowerLayers), cell);
+            return '?';
         }
 
         private static char ResolveUtilityConnectionSymbol(int cell, ObjectLayer[] layers)
@@ -29,7 +25,7 @@ namespace OniMcp.Tools
             if (TryGetUtilityConnectionGlyph(cell, layers, out char glyph))
                 return glyph;
 
-            return GetConnectionGlyph(neighbor => Grid.IsValidCell(neighbor) && HasLayer(neighbor, layers), cell);
+            return '?';
         }
 
         private static bool TryGetUtilityConnectionGlyph(int cell, ObjectLayer[] layers, out char glyph)
@@ -49,6 +45,8 @@ namespace OniMcp.Tools
         private static bool TryGetUtilityConnections(int cell, ObjectLayer[] layers, out UtilityConnections connections)
         {
             connections = (UtilityConnections)0;
+            if (!IsReadableMapCell(cell))
+                return false;
             foreach (var layer in layers)
             {
                 var go = Grid.Objects[cell, (int)layer];
@@ -63,7 +61,7 @@ namespace OniMcp.Tools
                 if (manager == null)
                     continue;
 
-                connections = manager.GetConnections(cell, is_physical_building: false);
+                connections = manager.GetConnections(cell, is_physical_building: true);
                 return true;
             }
 
@@ -72,22 +70,13 @@ namespace OniMcp.Tools
 
         private static IHaveUtilityNetworkMgr UtilityNetworkProvider(GameObject go)
         {
-            var provider = go.GetComponent<IHaveUtilityNetworkMgr>();
-            if (provider != null)
-                return provider;
-
-            var building = go.GetComponent<Building>();
-            if (building != null && building.Def != null && building.Def.BuildingComplete != null)
-                return building.Def.BuildingComplete.GetComponent<IHaveUtilityNetworkMgr>();
-
-            return null;
-        }
-
-        private static bool PowerCellsShareCircuit(ushort circuitId, int neighbor)
-        {
-            return Grid.IsValidCell(neighbor)
-                && HasLayer(neighbor, PowerLayers)
-                && GetPowerCircuitId(neighbor) == circuitId;
+            if (go == null)
+                return null;
+            var visualizer = go.GetComponent<KAnimGraphTileVisualizer>();
+            if (go.GetComponent<BuildingComplete>() == null
+                && (visualizer == null || !visualizer.isPhysicalBuilding))
+                return null;
+            return go.GetComponent<IHaveUtilityNetworkMgr>();
         }
 
         private static ushort GetPowerCircuitId(int cell)
@@ -147,7 +136,7 @@ namespace OniMcp.Tools
 
 string displayName = !string.IsNullOrEmpty(buildingName) ? StripLinkTags(buildingName) : buildingId;
 string safeName = MapTokenPart(displayName);
-runKey = "power-building:" + buildingId + ":" + safeName;
+runKey = "power-building:" + buildingId + ":" + building.GetInstanceID();
 char glyph = GetUniqueChar(buildingId, displayName);
 string portPrefix = PowerPortPrefix(building, cell);
 if (!IsBuildingAnchorCell(building, cell) && portPrefix.Length == 0)
@@ -183,8 +172,9 @@ private static bool IsNearPowerWire(int cell)
                     if (dx == 0 && dy == 0)
                         continue;
 
-                    int neighbor = Grid.XYToCell(x + dx, y + dy);
-                    if (Grid.IsValidCell(neighbor) && HasLayer(neighbor, PowerLayers))
+                    int neighbor = MapTextReadPolicy.Inside(x + dx, y + dy, Grid.WidthInCells, Grid.HeightInCells)
+                        ? Grid.XYToCell(x + dx, y + dy) : Grid.InvalidCell;
+                    if (IsReadableMapCell(neighbor) && HasLayer(neighbor, PowerLayers))
                         return true;
                 }
             }

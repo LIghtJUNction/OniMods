@@ -120,7 +120,7 @@ namespace OniMcp.Tools
         private static List<Dictionary<string, object>> GetGeneticSeedOptions(GeneticAnalysisStation.StatesInstance station)
         {
             var options = new List<Dictionary<string, object>>();
-            if (PlantSubSpeciesCatalog.Instance == null)
+            if (PlantSubSpeciesCatalog.Instance == null || DiscoveredResources.Instance == null)
                 return options;
             foreach (Tag species in PlantSubSpeciesCatalog.Instance.GetAllDiscoveredSpecies())
             {

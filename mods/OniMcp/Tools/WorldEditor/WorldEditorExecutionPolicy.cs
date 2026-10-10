@@ -30,7 +30,7 @@ namespace OniMcp.Tools
                 && !ToolUtil.GetBool(result, "confirm", false);
             result["dryRun"] = parentDryRun || childDryRun;
             result["confirm"] = parentConfirm && !childExplicitlyRejectedConfirm;
-            return InheritWorldEditorSandboxPolicy(parent, result);
+            return result;
         }
 
         private static CallToolResult WorldEditorPreview(string route, string path, JToken details)

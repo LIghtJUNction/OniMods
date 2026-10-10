@@ -213,7 +213,7 @@ def verify_map_safety() -> None:
         "component.Count == 1 && actualWidth == 1 && actualHeight == 1",
         "single-cell lower-left multi-cell anchor shorthand",
     )
-    require(preflight, "ValidateExplicitMapChangesAgainstSource", "explicit viewport validation")
+    require(preflight, "IsReadableMapCell", "compiled map edits require visible native cells")
     require(preflight, "Connection glyph edits are refused", "connection touched-cell fail-closed policy")
     require(search, "TryReadVirtualFileText(JObject request", "request-aware virtual snapshot read")
     require(search, "var readArgs = request == null ? new JObject() : (JObject)request.DeepClone()", "same-request snapshot parameters")
@@ -286,7 +286,7 @@ def verify_map_safety() -> None:
     require(edits, "if (!ValidateVirtualFileSearch(args, path, relative, search", "current SEARCH validation")
     require(edits, 'edits.Count > 1 && !ToolUtil.GetBool(args, "allowPartial", false)', "multi-block partial opt-in")
     forbid(edits, "!pinnedMapPatch", "pinned SEARCH bypass")
-    require(map_tools, "Re-read the map, then submit a fresh patch", "accurate partial guidance")
+    require(map_tools, "run briefly, pause, and verify before another edit", "accurate partial guidance")
 
 
 def verify_virtual_file_symmetry() -> None:

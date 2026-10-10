@@ -18,16 +18,20 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Bio/FarmingUprootTools.cs" Link="Source/FarmingUprootTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningBackwallSupportPolicy.cs" Link="Source/BuildPlanningBackwallSupportPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameControlTools.cs" Link="Source/GameControlTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameplayRequestPolicy.cs" Link="Source/GameplayRequestPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/AgentProgram*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/ToolBatch*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorQueryTools.cs" Link="Source/WorldEditorQueryTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorMapEditTokenParsing.cs" Link="Source/WorldEditorMapEditTokenParsing.cs" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorCellObjectPolicy.cs" Link="Source/WorldEditorCellObjectPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/WorldEditor/MapTextReadPolicy.cs" Link="Source/MapTextReadPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningErrors.cs" Link="Source/BuildPlanningErrors.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanTextAliases.cs" Link="Source/BuildPlanTextAliases.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPrefabResolver.cs" Link="Source/BuildPlanningPrefabResolver.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/PowerConnectionReadiness.cs" Link="Source/PowerConnectionReadiness.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/TemperatureSampleReadiness.cs" Link="Source/TemperatureSampleReadiness.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ThresholdReading.cs" Link="Source/ThresholdReading.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialPolicy.cs" Link="Source/BuildPlanningExistingMaterialPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialReader.cs" Link="Source/BuildPlanningExistingMaterialReader.cs" />
   </ItemGroup>
 </Project>

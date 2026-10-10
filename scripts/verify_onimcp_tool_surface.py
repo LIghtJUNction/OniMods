@@ -11,7 +11,6 @@ from onimcp_verify_parsing import fail, matching_delimiter
 from verify_building_blueprint_safety import verify_building_blueprint_safety
 from verify_glyph_lookup_contract import verify_glyph_lookup_contract
 from verify_world_editor_building_files import verify_world_editor_building_files
-from verify_world_editor_sandbox_policy import verify_world_editor_sandbox_policy
 
 
 EXPECTED_DEFAULT_PUBLIC = {
@@ -304,19 +303,12 @@ def main() -> None:
     sources = {path: path.read_text(encoding="utf-8") for path in tools_root.rglob("*.cs")}
     verify_glyph_lookup_contract(root, sources)
     verify_world_editor_building_files(root)
-    verify_world_editor_sandbox_policy(root)
     registry = sources[registry_path]
     catalog = sources[tools_root / "Impl" / "Build" / "BuildPlanningCatalog.cs"]
     materials = sources[tools_root / "Impl" / "Build" / "BuildPlanningMaterials.cs"]
-    free_build_guard = re.sub(
-        r"\s+",
-        "",
-        "DebugHandler.InstantBuildMode || (Game.Instance != null && Game.Instance.SandboxModeActive)",
-    )
     catalog_unlock = re.sub(r"\s+", "", extract_block(catalog, "private static bool IsTechUnlocked"))
-    materials_context = re.sub(r"\s+", "", extract_block(materials, "private static bool IsFreeBuildContext"))
-    if free_build_guard not in catalog_unlock or free_build_guard not in materials_context:
-        fail("catalog and material availability must share the instant-build/sandbox bypass")
+    if "IsFreeBuildContext" in materials or "CanBypassUtilityResearch" in catalog:
+        fail("normal material and research rules must not contain bypass branches")
     if "Db.Get().Techs.IsTechItemComplete(def.PrefabID)" not in catalog_unlock:
         fail("normal catalog availability must retain the tech completion check")
     verify_building_blueprint_safety(root, sources)

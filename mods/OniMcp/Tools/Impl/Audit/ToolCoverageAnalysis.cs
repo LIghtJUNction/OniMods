@@ -10,7 +10,7 @@ namespace OniMcp.Tools
         {
             return new List<CoverageRow>
             {
-                Row("game", "pause_resume_speed_sandbox_save_load_quit_dlc", "暂停、继续、调速、沙盒模式开关、列出存档、保存/另存为、确认载入存档、退出到主菜单或桌面、读取并激活当前存档可编辑 DLC", "covered", "game_control domain=speed", "game_control domain=speed action=time", "game_control domain=state", "game_control", "game_control domain=save", "game_control domain=dlc"),
+                Row("game", "pause_resume_speed_save_load_quit_dlc", "暂停、继续、调速、列出存档、保存/另存为、确认载入存档、退出到主菜单或桌面、读取并激活当前存档可编辑 DLC", "covered", "game_control domain=speed", "game_control domain=speed action=time", "game_control domain=state", "game_control", "game_control domain=save", "game_control domain=dlc"),
                 Row("camera", "camera_navigation", "移动/聚焦/切换世界/切换视图/截图", "covered", "navigation_control"),
                 Row("world", "inspect_world_cells", "检查格子、元素统计、文本地图", "covered", "read_control domain=world action=cell_info", "read_control domain=world action=element_summary", "read_control domain=world action=text_map"),
                 Row("areas", "area_handles", "定义、读取、列出、分块、拼接和遗忘地图区域句柄", "covered", "read_control domain=area"),
@@ -70,8 +70,7 @@ namespace OniMcp.Tools
                 Row("story", "artifact_analysis_display", "ArtifactAnalysisSideScreen 已分析 artifact 列表、分析站状态、场上 artifact 和 reveal/lore 弹窗", "covered", "building_control domain=side_surface surface=facility"),
                 Row("story", "warp_portal_side_screen", "WarpPortalSideScreen 等待复制人后开始传送、取消分配/传送准备和冷却状态读取", "covered", "building_control domain=space_story"),
                 Row("story", "temporal_tear_side_screen", "TemporalTearSideScreen 查看裂隙开启/消耗状态并在双重确认后消耗当前位置火箭", "covered", "building_control domain=space_story"),
-                Row("diagnostics", "generic_process_conditions", "ConditionListSideScreen / IProcessConditionSet 通用条件状态读取，包括火箭发射/储存/飞行条件", "covered", "building_control domain=space_story"),
-                Row("sandbox", "sandbox_tools", "沙盒刷子、桶填充、取样、生成、清地面、清小动物、揭示、温度、压力、故事特质盖章和 Debug AutoPlumber/InstantBuild 操作", "covered", "game_control", "game_control", "game_control")
+                Row("diagnostics", "generic_process_conditions", "ConditionListSideScreen / IProcessConditionSet 通用条件状态读取，包括火箭发射/储存/飞行条件", "covered", "building_control domain=space_story")
             };
         }
 

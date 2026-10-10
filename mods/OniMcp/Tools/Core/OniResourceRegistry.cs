@@ -403,8 +403,6 @@ namespace OniMcp.Tools
                     Resource("oni://medical/patients", "colony_control", "医疗患者", "需要医疗关注的复制人、疾病、生命值和医疗床分配。", new JObject { ["domain"] = "management", ["kind"] = "medical", ["action"] = "patients" }),
                     Resource("oni://medical/clinics", "colony_control", "医疗床和诊所", "医疗床/诊所治疗阈值、分配对象和优先级。", new JObject { ["domain"] = "management", ["kind"] = "medical", ["action"] = "clinics" }),
                     Resource("oni://medical/doctor-stations", "colony_control", "医生站", "医生站药品库存和可治疗患者。", new JObject { ["domain"] = "management", ["kind"] = "medical", ["action"] = "doctor_stations" }),
-                    Resource("oni://sandbox/actions", "game_control", "沙盒操作", "MCP 暴露的沙盒/Debug 操作、风险和当前沙盒状态。", new JObject { ["domain"] = "sandbox", ["kind"] = "read", ["action"] = "list_actions" }),
-                    Resource("oni://sandbox/story-traits", "game_control", "沙盒故事特质", "可由沙盒 Story Trait Tool 放置的故事特质模板。", new JObject { ["domain"] = "sandbox", ["kind"] = "read", ["action"] = "list_story_traits" }),
                     Resource("oni://game/time", "game_control", "游戏时间和速度", "当前周期、时间百分比、暂停状态和速度。", new JObject { ["domain"] = "speed", ["action"] = "time" }),
                     Resource("oni://game/red-alert", "game_control", "红色警戒", "当前/全部世界红色警戒（紧急模式）状态。", new JObject { ["domain"] = "state", ["action"] = "red_alert_status" }),
                     Resource("oni://game/saves", "game_control", "存档文件", "本地/云端存档文件、当前 active save 和保存根目录。", new JObject { ["domain"] = "save", ["action"] = "list" }),

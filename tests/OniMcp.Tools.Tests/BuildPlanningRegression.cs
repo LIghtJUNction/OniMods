@@ -7,6 +7,7 @@ internal static class BuildPlanningRegression
 {
     internal static void Run()
     {
+        ExistingMaterialReaderRegression.Run();
         Expect("locked", "Building is locked by research: FlushToilet", new JArray());
         Expect("locked", "Building is not researched", new List<object>());
         Expect("unavailableMaterial", "No material available", new JArray());

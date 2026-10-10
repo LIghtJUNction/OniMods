@@ -19,6 +19,11 @@ def main() -> int:
         "SandboxDryRunRoutingPolicy",
         "game_sandbox_mode_set",
         "SandboxModeActive =",
+        "TryBuildVirtualFileInstantBuild",
+        "TryCompleteExistingVirtualFileBlueprint",
+        "CanBypassUtilityResearch",
+        "IsFreeBuildContext",
+        "def.Build(",
     )
     for path in MOD.rglob("*.cs"):
         text = path.read_text(encoding="utf-8")

@@ -94,18 +94,6 @@ namespace OniMcp.Tools
             yield return Covered(order++, "basic", "EmptyPipeTool", "EmptyPipe", "Empty pipe/duct/conveyor contents over an area", new[] { "read_control domain=world action=text_map", "orders_control domain=designation action=empty_conduits" }, new[] { "read_control domain=world action=text_map" });
             yield return Covered(order++, "basic", "DisconnectTool", "Disconnect", "Cut wire/pipe/duct/conveyor/travel tube connections over an area", new[] { "read_control domain=world action=text_map", "orders_control domain=designation action=cut_conduits" }, new[] { "read_control domain=world action=text_map" });
             order = 0;
-            yield return Covered(order++, "sandbox", "SandboxBrushTool", "SandboxBrush", "Replace cells with selected element, mass, temperature and disease", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxSprinkleTool", "SandboxSprinkle", "Noise-scattered replace cells with selected element settings", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxFloodTool", "SandboxFlood", "Flood-fill connected cells with selected element settings", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxSampleTool", "SandboxSample", "Sample a cell for element/mass/temperature/disease settings", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxHeatTool", "SandboxHeatGun", "Set or add temperature over an area", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxStressTool", "SandboxStressTool", "Add or remove stress from duplicants in an area", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxSpawnerTool", "SandboxSpawnEntity", "Spawn entities, items, critters, duplicants or completed buildings", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxClearFloorTool", "SandboxClearFloor", "Remove floor pickupables over an area", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxDestroyerTool", "SandboxDestroy", "Destroy cell contents over an area", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxFOWTool", "SandboxReveal", "Reveal fog of war over an area", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxCritterTool", "SandboxCritterTool", "Remove critters over an area", new[] { "game_control" }, new[] { "game_control" });
-            yield return Covered(order++, "sandbox", "SandboxStoryTraitTool", "SandboxStoryTraitTool", "Stamp story trait retrofit templates", new[] { "game_control" }, new[] { "game_control" });
         }
 
         private static ToolMenuSurfaceRow Covered(int order, string toolbar, string toolName, string action, string playerSurface, string[] tools, string[] resources)

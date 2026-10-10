@@ -60,6 +60,13 @@ namespace OniMcp.Tools
             int xMax = Mathf.Clamp(Mathf.RoundToInt(pos.x + size * aspect), 0, Grid.WidthInCells - 1);
             int yMin = Mathf.Clamp(Mathf.RoundToInt(pos.y - size), 0, Grid.HeightInCells - 1);
             int yMax = Mathf.Clamp(Mathf.RoundToInt(pos.y + size), 0, Grid.HeightInCells - 1);
+            if (TryReadMapFocusBounds(args, out focusXMin, out focusYMin, out focusXMax, out focusYMax, out focusError))
+            {
+                xMin = focusXMin;
+                xMax = focusXMax;
+                yMin = focusYMin;
+                yMax = focusYMax;
+            }
             string map = GetMapMd("[视图: " + GetOverlayViewName(mode) + "] " + path, xMin, xMax, yMin, yMax, mode, ShouldCompactMap(args));
             return map + "\n## View Sync\n- 直播视角: " + syncNote + "\n";
         }
@@ -86,33 +93,10 @@ namespace OniMcp.Tools
             return false;
         }
 
-        private static char GetConnectionGlyph(Func<int, bool> isNode, int cell)
-        {
-            return GetConnectionGlyph(
-                isNode(Grid.CellAbove(cell)),
-                isNode(Grid.CellBelow(cell)),
-                isNode(Grid.CellLeft(cell)),
-                isNode(Grid.CellRight(cell)));
-        }
-
         private static char GetConnectionGlyph(bool up, bool down, bool left, bool right)
         {
-            int val = (up ? 8 : 0) | (down ? 4 : 0) | (left ? 2 : 0) | (right ? 1 : 0);
-            switch (val)
-            {
-case 3: return '─';
-                case 5: return '┌';
-                case 6: return '┐';
-                case 7: return '┬';
-                case 9: return '└';
-                case 10: return '┘';
-                case 11: return '┴';
-case 12: return '│';
-                case 13: return '├';
-                case 14: return '┤';
-case 15: return '┼';
-                default: return '*';
-            }
+            return MapTextReadPolicy.ConnectionGlyph(true,
+                (up ? 8 : 0) | (down ? 4 : 0) | (left ? 2 : 0) | (right ? 1 : 0));
         }
 
         private static bool IsConnectionGlyph(char symbol)
@@ -131,7 +115,7 @@ if (symbol == '─' || symbol == '一') return "左右连接";
 if (symbol == '│' || symbol == '|') return "上下连接";
 if (symbol == '┼' || symbol == '十') return "上下左右交叉";
 if (symbol == '*') return "断点/端点/孤立段";
-if (symbol == '●') return "实心焊点/强制交叉接点";
+if (symbol == '●') return "接点符号；读取格子详情确认实际连接";
 if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') return "单侧端点方向";
             if (symbol == '┌' || symbol == '┐' || symbol == '└' || symbol == '┘') return "拐角连接";
             return "丁字连接";
@@ -148,13 +132,20 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             var sb = new StringBuilder();
             sb.AppendFormat("# {0}\n", title);
             AppendMapMetadata(sb, xMin, xMax, yMin, yMax, activeMode);
-            AppendVisualSpatialSummary(sb, xMin, xMax, yMin, yMax, activeMode);
+            if (!MapTextReadPolicy.Inside(xMin, yMin, Grid.WidthInCells, Grid.HeightInCells)
+                || !MapTextReadPolicy.Inside(xMax, yMax, Grid.WidthInCells, Grid.HeightInCells)
+                || xMin > xMax || yMin > yMax)
+                return sb.AppendLine("Map bounds are invalid; no cells were read.").ToString();
+            if (!IsSupportedTextMapView(activeMode))
+                return sb.AppendLine("This overlay has no text-map renderer; no default-view data was substituted.").ToString();
+            sb.AppendLine("- Scope: visible cells in the active world only. ? = unknown/hidden; annotations identify cells, not building anchors.");
+            if (!compact)
+                AppendVisualSpatialSummary(sb, xMin, xMax, yMin, yMax, activeMode);
 
             var gridLines = new List<string>();
             var details = new List<string>();
             var legend = new Dictionary<char, string>();
             var critterCells = BuildCritterCellMap();
-            bool defaultView = activeMode == OverlayModes.None.ID;
 
             for (int y = yMax; y >= yMin; y--)
             {
@@ -163,6 +154,13 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                 for (int x = xMin; x <= xMax; x++)
                 {
                     int cell = Grid.XYToCell(x, y);
+                    if (!IsReadableMapCell(cell) || Grid.Element[cell] == null)
+                    {
+                        line.Append("? ");
+                        previousRunKey = null;
+                        legend['?'] = "Unknown, hidden, or outside the active world; never infer an empty cell.";
+                        continue;
+                    }
                     string elemId = "Vacuum";
                     string elemName = "Vacuum";
                     string buildingId = string.Empty;
@@ -183,7 +181,8 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                         if (building != null)
                         {
                             var complete = building.GetComponent<BuildingComplete>();
-                            buildingId = complete != null ? complete.name : building.name;
+                            buildingId = building.GetComponent<Building>()?.Def?.PrefabID
+                                ?? complete?.Def?.PrefabID ?? building.GetComponent<KPrefabID>()?.PrefabTag.Name ?? string.Empty;
                             buildingName = building.GetProperName();
                         }
                         minion = Grid.Objects[cell, (int)ObjectLayer.Minion];
@@ -200,22 +199,29 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                     previousRunKey = runKey;
                     line.Append(token).Append(' ');
 
-                    AppendCellDetails(details, activeMode, x, y, cell, elemName, tempC, building, buildingId, buildingName, minion, critter);
+                    if (!compact)
+                        AppendCellDetails(details, activeMode, x, y, cell, elemName, tempC, building, buildingId, buildingName, minion, critter);
                 }
                 gridLines.Add("Y=" + y.ToString("D3") + ": " + line.ToString().Trim());
             }
 
             AppendGrid(sb, xMin, xMax, gridLines, compact);
             AppendLegend(sb, legend, activeMode);
-            AppendConnectionDetails(sb, activeMode, xMin, xMax, yMin, yMax);
+            if (!compact)
+                AppendConnectionDetails(sb, activeMode, xMin, xMax, yMin, yMax);
             if (details.Count > 0)
             {
                 sb.AppendLine("## Cell Details (Buildings / Overlaps / Entities)");
                 foreach (string detail in details.Distinct())
                     sb.AppendLine(detail);
             }
-            AppendBuildingParameterReferences(sb, xMin, xMax, yMin, yMax);
-            AppendMapFileIndex(sb);
+            if (!compact)
+            {
+                AppendBuildingParameterReferences(sb, xMin, xMax, yMin, yMax);
+                AppendMapFileIndex(sb);
+            }
+            else
+                sb.AppendLine("Detail: read map/cell_X_Y.md. Edit: re-read this rectangle with format=edit; use exact SEARCH/REPLACE.");
             return sb.ToString();
         }
 
@@ -325,7 +331,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             foreach (var item in legend.OrderBy(kv => kv.Key))
                 sb.AppendLine(IsConnectionGlyph(item.Key) ? "- `" + item.Key + "` : 连接 (Connection) | " + item.Value : FormatLegendLine(item.Key, item.Value));
             AppendInfrastructureLegend(sb, activeMode);
-            AppendInfrastructureReadHints(sb, activeMode);
+            // Detailed virtual-file help is available on demand, not repeated per map.
             sb.AppendLine();
         }
 
@@ -369,7 +375,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                 var logicGate = building.GetComponent<LogicGate>();
                 if (logicGate != null && !IsBuildingAnchorCell(building, cell))
                     return symbol.ToString();
-                string token = MapTokenPart(!string.IsNullOrEmpty(buildingName) ? StripLinkTags(buildingName) : buildingId);
+                string token = MapTokenPart(buildingId);
                 string suffix = string.Empty;
                 if (IsBlueprintToken(building))
                 {
@@ -377,8 +383,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                     string material = GetMapMaterialSymbol(building);
                     if (!string.IsNullOrEmpty(material)) suffix += "#" + material;
                 }
-                string identity = logicGate == null ? string.Empty
-                    : ":" + (building.GetComponent<KPrefabID>()?.InstanceID ?? building.GetInstanceID());
+                string identity = ":" + (building.GetComponent<KPrefabID>()?.InstanceID ?? building.GetInstanceID());
                 runKey = "building:" + buildingId + identity + suffix;
                 return previousRunKey == runKey ? symbol.ToString() : token + suffix + "@(" + x + "," + y + ")";
             }
@@ -460,8 +465,11 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
 
         private static string GetMapMaterialSymbol(GameObject go)
         {
-            var primary = go != null ? go.GetComponent<PrimaryElement>() : null;
-            return primary == null ? string.Empty : GetUniqueChar(primary.ElementID.ToString(), string.Empty).ToString();
+            // Blueprint PrimaryElement is not its selected construction recipe.
+            var selected = go?.GetComponent<Constructable>()?.SelectedElementsTags;
+            if (selected != null && selected.Count > 0)
+                return string.Join(",", selected.Select(tag => tag.Name).ToArray());
+            return "?";
         }
 
         private static string StripLinkTags(string text)
