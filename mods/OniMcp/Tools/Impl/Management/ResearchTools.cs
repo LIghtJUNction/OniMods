@@ -188,7 +188,7 @@ namespace OniMcp.Tools
                     var queue = Research.Instance.GetResearchQueue();
                     var queueBefore = queue.Select(item => TechToDictionary(item.tech, includeDetails: false)).ToList();
 
-                    queue.Clear();
+                    Research.Instance.SetActiveResearch(null, false);
 
                     var activeAfter = Research.Instance.GetActiveResearch();
                     var targetAfter = Research.Instance.GetTargetResearch();
