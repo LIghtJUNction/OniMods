@@ -253,6 +253,7 @@ internal static class Program
 
     private static void TestSweepEligibilityPolicy()
     {
+        SweepHandlerRegression.Run();
         Check(SweepEligibilityPolicy.RejectionReason(false, false) == "no_clearable",
             "pickupables without Clearable remain rejected");
         Check(SweepEligibilityPolicy.RejectionReason(true, false) == "not_clearable",
