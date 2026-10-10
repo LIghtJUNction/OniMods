@@ -33,5 +33,7 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ThresholdReading.cs" Link="Source/ThresholdReading.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialPolicy.cs" Link="Source/BuildPlanningExistingMaterialPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialReader.cs" Link="Source/BuildPlanningExistingMaterialReader.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
   </ItemGroup>
 </Project>

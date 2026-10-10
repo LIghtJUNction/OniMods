@@ -55,7 +55,7 @@ internal sealed class UprootTestComponent
     }
 }
 
-internal static class Components
+internal static partial class Components
 {
     internal static class Uprootables
     {
@@ -63,7 +63,7 @@ internal static class Components
     }
 }
 
-internal static class Grid
+internal static partial class Grid
 {
     internal static int PosToCell(UprootTestObject target) => target.X + 1000 * target.Y;
 }
