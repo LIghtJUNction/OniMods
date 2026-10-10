@@ -26,49 +26,8 @@ namespace OniMcp.Tools
 
         private static string ReadInfrastructureMapMarkdown(JObject args, string path, string relative)
         {
-            if (Camera.main == null)
-                return "# " + path + "\n\nCamera not initialized.";
-
             HashedString mode = ModeForInfrastructurePath(relative);
-            string syncNote = string.Empty;
-            if (TryReadMapFocusBounds(args, out int focusXMin, out int focusYMin, out int focusXMax, out int focusYMax, out string focusError))
-            {
-                if (!string.IsNullOrWhiteSpace(focusError))
-                    return "# " + path + "\n\n" + focusError;
-
-                string viewName = GetOverlayViewName(mode);
-                syncNote = SyncZoomCameraAndView(args, focusXMin, focusYMin, focusXMax, focusYMax, new List<ZoomView>
-                {
-                    new ZoomView { Name = viewName, Mode = mode }
-                });
-            }
-            else if (ToolUtil.GetBool(args, "syncView", true))
-            {
-                ApplyZoomOverlayMode(mode, ToolUtil.GetBool(args, "allowSound", false));
-                syncNote = "覆盖层=" + GetOverlayViewName(mode);
-            }
-            else
-            {
-                syncNote = "未同步(syncView=false)";
-            }
-
-            var cam = Camera.main;
-            var pos = cam.transform.position;
-            float size = cam.orthographicSize;
-            float aspect = cam.aspect;
-            int xMin = Mathf.Clamp(Mathf.RoundToInt(pos.x - size * aspect), 0, Grid.WidthInCells - 1);
-            int xMax = Mathf.Clamp(Mathf.RoundToInt(pos.x + size * aspect), 0, Grid.WidthInCells - 1);
-            int yMin = Mathf.Clamp(Mathf.RoundToInt(pos.y - size), 0, Grid.HeightInCells - 1);
-            int yMax = Mathf.Clamp(Mathf.RoundToInt(pos.y + size), 0, Grid.HeightInCells - 1);
-            if (TryReadMapFocusBounds(args, out focusXMin, out focusYMin, out focusXMax, out focusYMax, out focusError))
-            {
-                xMin = focusXMin;
-                xMax = focusXMax;
-                yMin = focusYMin;
-                yMax = focusYMax;
-            }
-            string map = GetMapMd("[视图: " + GetOverlayViewName(mode) + "] " + path, xMin, xMax, yMin, yMax, mode, ShouldCompactMap(args));
-            return map + "\n## View Sync\n- 直播视角: " + syncNote + "\n";
+            return ReadMapRectangle(args, path, new ZoomView { Name = GetOverlayViewName(mode), Mode = mode });
         }
 
         private static HashedString ModeForInfrastructurePath(string relative)
@@ -129,6 +88,12 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
 
         private static string GetMapMd(string title, int xMin, int xMax, int yMin, int yMax, HashedString activeMode, bool compact = true)
         {
+            if (xMin < 0 || yMin < 0 || xMax < xMin || yMax < yMin
+                || xMax >= Grid.WidthInCells || yMax >= Grid.HeightInCells)
+                throw new ArgumentException("Map bounds are outside the loaded grid.");
+            if (xMax >= 1000)
+                throw new ArgumentException("This map format supports X=0..999 only; refusing to return wrapped X coordinates.");
+
             var sb = new StringBuilder();
             sb.AppendFormat("# {0}\n", title);
             AppendMapMetadata(sb, xMin, xMax, yMin, yMax, activeMode);
@@ -195,7 +160,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                         legend[symbol] = SymbolLegend(activeMode, symbol);
 
                     string runKey;
-                string token = FormatMapCellToken(activeMode, symbol, x, y, cell, building, minion, critter, buildingId, buildingName, previousRunKey, out runKey);
+                    string token = FormatMapCellToken(activeMode, symbol, x, y, cell, building, minion, critter, buildingId, buildingName, previousRunKey, out runKey);
                     previousRunKey = runKey;
                     line.Append(token).Append(' ');
 
@@ -248,6 +213,7 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             sb.AppendLine("- 时间: " + time);
             sb.AppendLine("- 当前游戏状态: " + state);
             sb.AppendLine("- 视图: " + GetOverlayViewName(mode));
+            sb.AppendLine("- worldId: " + (ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : -1));
             sb.AppendLine("- 范围: X=" + xMin + "~" + xMax + ", Y=" + yMin + "~" + yMax + " (" + (xMax - xMin + 1) + "x" + (yMax - yMin + 1) + ")");
             sb.AppendLine();
         }
@@ -285,6 +251,8 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             if (mode == OverlayModes.Crop.ID || mode == OverlayModes.Harvest.ID) return CropSymbol(building);
 
             if (mode == OverlayModes.Rooms.ID) return RoomSymbol(cell);
+            if (mode != OverlayModes.None.ID)
+                throw new ArgumentException("This overlay has no text renderer. Select an explicit supported map view.");
             if (minion != null) return '人';
             if (critter != null) return '物';
             return !string.IsNullOrEmpty(buildingId) ? GetUniqueChar(buildingId, buildingName) : MaterialSymbol(elemId, elemName);
@@ -361,13 +329,13 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             if (minion != null)
             {
                 string name = MapTokenPart(StripLinkTags(minion.GetProperName()));
-                runKey = "dupe:" + name;
+                runKey = "dupe:" + minion.GetInstanceID();
                 return previousRunKey == runKey ? "人" : "人@" + name;
             }
             if (critter != null)
             {
                 string name = MapTokenPart(StripLinkTags(critter.GetProperName()));
-                runKey = "critter:" + name;
+                runKey = "critter:" + critter.GetInstanceID();
                 return previousRunKey == runKey ? "物" : "物@" + name;
             }
             if (building != null && !string.IsNullOrEmpty(buildingId))

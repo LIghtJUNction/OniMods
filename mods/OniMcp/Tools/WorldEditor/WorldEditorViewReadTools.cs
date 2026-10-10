@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -9,51 +10,87 @@ namespace OniMcp.Tools
     {
         private static string ReadMapFileWithArgs(JObject args, string path)
         {
-            string requestedView = FirstZoomText(args, "view", "activeView", "displayView");
             if (!path.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
                 return ReadFileDirectly(path);
+
+            return ReadMapRectangle(args, path, ResolveReadMapView(args));
+        }
+
+        private static string ReadMapLayerWithArgs(JObject args, string path)
+        {
+            const string prefix = "layer_";
+            string name = Path.GetFileNameWithoutExtension(path);
+            if (!name.StartsWith(prefix, StringComparison.Ordinal))
+                throw new ArgumentException("Invalid map layer path: " + path);
+            string[] parts = name.Substring(prefix.Length).Split('_');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out int lower)
+                || !int.TryParse(parts[1], out int upper))
+                throw new ArgumentException("Invalid map layer path: " + path);
+
+            int worldId = ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : -1;
+            var world = ClusterManager.Instance != null ? ClusterManager.Instance.GetWorld(worldId) : null;
+            if (world == null)
+                throw new ArgumentException("No active world is loaded.");
+            if (lower < 0 || upper < lower || upper >= world.WorldSize.y
+                || lower % VirtualMapLayerSize != 0
+                || upper != Math.Min(lower + VirtualMapLayerSize - 1, world.WorldSize.y - 1))
+                throw new ArgumentException("Map layer must match a listed 32-cell layer in the active world.");
+
+            ZoomView view = ResolveReadMapView(args);
+            if (ToolUtil.GetBool(args, "syncView", false))
+                ApplyZoomOverlayMode(view.Mode, ToolUtil.GetBool(args, "allowSound", false));
+            return GetMapMd("[视图: " + view.Name + "] " + path,
+                world.WorldOffset.x, world.WorldOffset.x + world.WorldSize.x - 1,
+                world.WorldOffset.y + lower, world.WorldOffset.y + upper,
+                view.Mode, ShouldCompactMap(args));
+        }
+
+        private static ZoomView ResolveReadMapView(JObject args)
+        {
+            // Output format must not change the meaning of the map.
+            string requestedView = FirstZoomText(args, "view", "activeView", "displayView");
+            ZoomView view;
             if (string.IsNullOrWhiteSpace(requestedView))
             {
-                if (!HasMapFormatArgs(args))
-                    return ReadFileDirectly(path);
-                requestedView = "default";
+                HashedString mode = OverlayScreen.Instance != null ? OverlayScreen.Instance.mode : OverlayModes.None.ID;
+                view = new ZoomView { Name = GetOverlayViewName(mode), Mode = mode };
+            }
+            else if (!TryResolveZoomView(requestedView, out view))
+            {
+                throw new ArgumentException("Unknown map view: " + requestedView);
             }
 
-            ZoomView view;
-            if (!TryResolveZoomView(requestedView, out view))
-                return "# " + path + "\n\nUnknown view: " + requestedView;
+            return view;
+        }
+
+        private static string ReadMapRectangle(JObject args, string path, ZoomView view)
+        {
+            // Resolve the read rectangle before any optional camera changes.
+            bool explicitBounds = TryReadMapFocusBounds(args, out int xMin, out int yMin,
+                out int xMax, out int yMax, out string focusError);
+            if (!string.IsNullOrWhiteSpace(focusError))
+                throw new ArgumentException(focusError);
+            if (!explicitBounds && !TryGetCameraBounds(out xMin, out xMax, out yMin, out yMax))
+                throw new ArgumentException("Camera not initialized; supply explicit map bounds.");
 
             string syncNote = string.Empty;
-            if (ToolUtil.GetBool(args, "syncView", true))
+            if (ToolUtil.GetBool(args, "syncView", false))
             {
-                if (TryReadMapFocusBounds(args, out int fxMin, out int fyMin, out int fxMax, out int fyMax, out string focusError))
+                if (explicitBounds)
                 {
-                    if (!string.IsNullOrWhiteSpace(focusError))
-                        return "# " + path + "\n\n" + focusError;
-
-                    syncNote = SyncZoomCameraAndView(args, fxMin, fyMin, fxMax, fyMax, new List<ZoomView> { view });
+                    // The rendered view is authoritative, including infrastructure files.
+                    var syncArgs = (JObject)args.DeepClone();
+                    syncArgs.Remove("view");
+                    syncArgs.Remove("activeView");
+                    syncArgs.Remove("displayView");
+                    syncNote = SyncZoomCameraAndView(syncArgs, xMin, yMin, xMax, yMax, new List<ZoomView> { view });
                 }
                 else
-                {
                     ApplyZoomOverlayMode(view.Mode, ToolUtil.GetBool(args, "allowSound", false));
-                }
-            }
-
-            if (!TryGetCameraBounds(out int xMin, out int xMax, out int yMin, out int yMax))
-                return "# " + path + "\n\nCamera not initialized.";
-
-            if (TryReadMapFocusBounds(args, out int focusXMin, out int focusYMin, out int focusXMax, out int focusYMax, out string boundsError))
-            {
-                if (!string.IsNullOrWhiteSpace(boundsError))
-                    return "# " + path + "\n\n" + boundsError;
-                xMin = focusXMin;
-                xMax = focusXMax;
-                yMin = focusYMin;
-                yMax = focusYMax;
             }
 
             bool compact = ShouldCompactMap(args);
-            string map = GetMapMd("[视图: " + view.Name + "] Camera Viewport Map (X: "
+            string map = GetMapMd("[视图: " + view.Name + "] " + path + " (X: "
                 + xMin + "~" + xMax + ", Y: " + yMin + "~" + yMax + ")",
                 xMin, xMax, yMin, yMax, view.Mode, compact);
             if (string.IsNullOrWhiteSpace(syncNote))
@@ -73,27 +110,9 @@ namespace OniMcp.Tools
             return ToolUtil.GetBool(args, "compact", true);
         }
 
-        private static bool HasMapFormatArgs(JObject args)
-        {
-            return args["compact"] != null
-                || args["format"] != null
-                || args["profile"] != null
-                || args["view"] != null
-                || args["activeView"] != null
-                || args["displayView"] != null
-                || args["x"] != null
-                || args["y"] != null
-                || args["x1"] != null
-                || args["y1"] != null
-                || args["x2"] != null
-                || args["y2"] != null;
-        }
-
         private static bool TryGetCameraBounds(out int xMin, out int xMax, out int yMin, out int yMax)
         {
             xMin = xMax = yMin = yMax = 0;
-            if (TryGetSynchronizedViewportBounds(out xMin, out yMin, out xMax, out yMax))
-                return true;
             if (Camera.main == null)
                 return false;
 
