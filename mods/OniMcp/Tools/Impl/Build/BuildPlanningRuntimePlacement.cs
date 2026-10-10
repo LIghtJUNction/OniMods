@@ -89,26 +89,6 @@ namespace OniMcp.Tools
             return null;
         }
 
-        private static string ExistingConstructionMaterialTag(GameObject go)
-        {
-            if (go == null)
-                return null;
-
-            var constructable = go.GetComponent<Constructable>();
-            var selected = constructable?.SelectedElementsTags;
-            if (selected != null)
-            {
-                foreach (var tag in selected)
-                {
-                    if (tag.IsValid)
-                        return tag.Name;
-                }
-            }
-
-            var primary = go.GetComponent<PrimaryElement>();
-            return primary == null ? null : primary.ElementID.ToString();
-        }
-
         private static Dictionary<string, object> ExistingMatchingBuildAtPlacement(BuildingDef def, PlacementDetails placement)
         {
             if (def == null || placement == null)

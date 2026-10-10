@@ -22,7 +22,7 @@ namespace OniMcp.Config
         private static volatile OniMcpOptions _current;
         private const int CurrentSecurityMigrationVersion = 1;
         private const int MaxDisplayedEndpointLength = 48;
-        private const string ProjectSupportUrl = "https://api.lmm.best";
+        private const string ProjectSupportUrl = "https://donate.lmm.best/?project=onimcp";
 
         public int SecurityMigrationVersion { get; set; } = CurrentSecurityMigrationVersion;
 
@@ -222,9 +222,9 @@ namespace OniMcp.Config
             var supportButton = new ButtonOptionsEntry(
                 "OpenProjectSupport",
                 new OptionAttribute(
-                    "购买 AI Token / 支持项目",
-                    ProjectSupportUrl + "\n可购买 AI Token（完全可选），与模组访问令牌无关。"
-                        + "\nBuy AI tokens there (optional); OniMcp requires no purchase.",
+                    "捐赠 / Donate",
+                    ProjectSupportUrl + "\n可选捐赠，支持 OniMcp 开发。"
+                        + "\nOptional donation for OniMcp development.",
                     "Support"));
             supportButton.Value = (Action<object>)(_ => Application.OpenURL(ProjectSupportUrl));
             yield return supportButton;

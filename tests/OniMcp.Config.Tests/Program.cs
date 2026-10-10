@@ -234,15 +234,14 @@ internal static class Program
             "The token no longer uses the masked input handler.");
 
         var support = entries.OfType<ButtonOptionsEntry>().Single(entry => entry.Name == "OpenProjectSupport");
-        Check(support.Option.Category == "Support" && support.Option.Title == "购买 AI Token / 支持项目",
-            "The support button does not clearly name the optional AI token purchase.");
-        Check(support.Option.Tooltip.Contains("https://api.lmm.best")
-            && support.Option.Tooltip.Contains("完全可选")
-            && support.Option.Tooltip.Contains("optional")
-            && support.Option.Tooltip.Contains("与模组访问令牌无关"),
-            "The support tooltip must distinguish optional AI tokens from OniMcp access tokens in both languages.");
+        Check(support.Option.Category == "Support" && support.Option.Title == "捐赠 / Donate",
+            "The support button does not name the donation action in both languages.");
+        Check(support.Option.Tooltip.Contains("https://donate.lmm.best/?project=onimcp")
+            && support.Option.Tooltip.Contains("可选捐赠")
+            && support.Option.Tooltip.Contains("Optional donation"),
+            "The support tooltip must identify optional donations for the OniMcp project in both languages.");
         ((Action<object>)support.Value)(null);
-        Check(UnityEngine.Application.LastOpenedUrl == "https://api.lmm.best", "The support button opened the wrong URL.");
+        Check(UnityEngine.Application.LastOpenedUrl == "https://donate.lmm.best/?project=onimcp", "The support button opened the wrong project URL.");
     }
 
     private static void ExpectFailure(Action action)

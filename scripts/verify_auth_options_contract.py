@@ -86,7 +86,7 @@ def main() -> int:
     assert "MaxDisplayedEndpointLength" in create_options
     assert "Config: OniMcpConfig.json" in create_options
     assert "Application.OpenURL(ProjectSupportUrl)" in create_options
-    assert 'ProjectSupportUrl = "https://api.lmm.best"' in options
+    assert 'ProjectSupportUrl = "https://donate.lmm.best/?project=onimcp"' in options
 
     assert '<PackageReference Include="PLib" Version="4.24.0"' in project
     assert "Disabled by default" in settings
@@ -108,7 +108,7 @@ def main() -> int:
     assert "only after" in readme and "manually enabled" in readme
 
     print("auth/options contract passed")
-    print("manual UI check: open OniMcp Options; verify controls fit, token is masked, and the optional Support link opens api.lmm.best")
+    print("manual UI check: open OniMcp Options; verify controls fit, token is masked, and the optional Donate link opens the OniMcp project at donate.lmm.best")
     return 0
 
 

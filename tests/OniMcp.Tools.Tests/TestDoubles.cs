@@ -15,6 +15,7 @@ namespace OniMcp.Tools
         public string Mode { get; set; }
         public string Risk { get; set; }
         public string Description { get; set; }
+        public bool Hidden { get; set; }
         public List<string> Aliases { get; set; }
         public List<string> Tags { get; set; }
         public Dictionary<string, McpToolParameter> Parameters { get; set; }
@@ -50,8 +51,9 @@ namespace OniMcp.Tools
             .ToList();
     }
 
-    public static class ToolUtil
+    public static partial class ToolUtil
     {
+        public static string CleanName(string name) => name;
         public static bool GetBool(JObject args, string name, bool fallback)
         {
             bool value;
@@ -98,8 +100,10 @@ internal enum SimHashes { TestElement }
 internal static class Assets
 {
     internal static readonly List<TestBuildingDef> BuildingDefs = new List<TestBuildingDef>();
+    internal static BuildingDef GetBuildingDef(string id) => BuildingDefs.Find(def => def.PrefabID == id);
 }
-internal sealed class TestBuildingDef
+internal sealed class TestBuildingDef : BuildingDef { }
+internal class BuildingDef
 {
     public string PrefabID { get; set; }
     public string Name { get; set; }
