@@ -10,6 +10,12 @@ namespace CycleTrim.Patches
     {
         private const string FastTrackPatchType =
             "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate";
+        private const string EfficientSupplyType =
+            "PeterHan.EfficientFetch.EfficientFetchManager";
+        // QualityOfLifeONI@3709f6c985fc2a73836679da7a924a873c320d67 bundled
+        // the same Efficient Fetch semantics under its own namespace.
+        private const string BundledEfficientFetchType =
+            "QualityOfLifeONI.EfficientFetchManager";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
             CompareIncludingPriority;
 
@@ -50,6 +56,13 @@ namespace CycleTrim.Patches
             // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
             private static bool Prepare()
             {
+                if (!FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
+                        AccessTools.TypeByName(EfficientSupplyType) != null,
+                        AccessTools.TypeByName(BundledEfficientFetchType) != null))
+                {
+                    return false;
+                }
+
                 return AccessTools.TypeByName(FastTrackPatchType) == null;
             }
 
