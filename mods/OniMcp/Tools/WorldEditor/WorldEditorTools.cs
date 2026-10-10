@@ -244,7 +244,8 @@ namespace OniMcp.Tools
         {
             bool failed = WorldEditorResultFailed(result, args);
             int childActual = ResultAppliedCount(result);
-            return new JObject
+            string text = result?.Content?.FirstOrDefault()?.Text ?? string.Empty;
+            var summary = new JObject
             {
                 ["index"] = index,
                 ["tool"] = tool,
@@ -253,8 +254,14 @@ namespace OniMcp.Tools
                 ["isError"] = failed,
                 ["partial"] = BatchStepReportsPartial(result, failed, childActual),
                 ["applied"] = BatchStepAppliedCount(childActual, mutating, failed),
-                ["text"] = TrimText(result?.Content?.FirstOrDefault()?.Text ?? string.Empty, 900)
+                ["text"] = TrimText(text, 900)
             };
+            if (text.Length > 900)
+            {
+                summary["truncated"] = true;
+                summary["totalChars"] = text.Length;
+            }
+            return summary;
         }
 
         private static int BatchStepAppliedCount(int childActual, bool mutating, bool failed)
@@ -313,7 +320,7 @@ namespace OniMcp.Tools
                 ["includeLogs"] = new McpToolParameter { Type = "boolean", Description = "/active/index.md and read_control state/current: append compact Player.log suspicious tail.", Required = false },
                 ["infrastructureKind"] = new McpToolParameter { Type = "string", Description = "Infrastructure filter for expanded state: all, power, liquid, gas, logic, rail.", Required = false },
                 ["logLimit"] = new McpToolParameter { Type = "integer", Description = "Player.log tail lines scanned when includeLogs=true.", Required = false },
-                ["views"] = new McpToolParameter { Type = "array", Description = "zoom command view list, e.g. [default,power,oxygen,temperature] or comma-separated string.", Required = false }, ["activeView"] = new McpToolParameter { Type = "string", Description = "zoom/read display overlay to synchronize in the live game view; defaults to first requested view.", Required = false }, ["syncView"] = new McpToolParameter { Type = "boolean", Description = "read/zoom: synchronize game camera/overlay with requested map view, default true for tool calls.", Required = false }, ["focusCamera"] = new McpToolParameter { Type = "boolean", Description = "zoom: center camera on requested bounds when syncView=true, default true.", Required = false }, ["x1"] = new McpToolParameter { Type = "integer", Description = "zoom bounds left/lower X.", Required = false }, ["y1"] = new McpToolParameter { Type = "integer", Description = "zoom bounds lower Y.", Required = false }, ["x2"] = new McpToolParameter { Type = "integer", Description = "zoom bounds right/upper X.", Required = false }, ["y2"] = new McpToolParameter { Type = "integer", Description = "zoom bounds upper Y.", Required = false }, ["maxCells"] = new McpToolParameter { Type = "integer", Description = "zoom/read/edit safety cell limit depending on command.", Required = false },
+                ["views"] = new McpToolParameter { Type = "array", Description = "zoom view list. Default [default]; request additional views explicitly.", Required = false }, ["activeView"] = new McpToolParameter { Type = "string", Description = "zoom/read display overlay to synchronize in the live game view; defaults to first requested view.", Required = false }, ["syncView"] = new McpToolParameter { Type = "boolean", Description = "read/zoom: synchronize game camera/overlay with requested map view, default false. Reading does not move the camera unless requested.", Required = false }, ["focusCamera"] = new McpToolParameter { Type = "boolean", Description = "zoom: center camera on requested bounds when syncView=true, default true.", Required = false }, ["x1"] = new McpToolParameter { Type = "integer", Description = "zoom bounds left/lower X.", Required = false }, ["y1"] = new McpToolParameter { Type = "integer", Description = "zoom bounds lower Y.", Required = false }, ["x2"] = new McpToolParameter { Type = "integer", Description = "zoom bounds right/upper X.", Required = false }, ["y2"] = new McpToolParameter { Type = "integer", Description = "zoom bounds upper Y.", Required = false }, ["maxCells"] = new McpToolParameter { Type = "integer", Description = "zoom/read/edit safety cell limit depending on command.", Required = false },
                 ["speed"] = new McpToolParameter { Type = "integer", Description = "speed command level: 0 pause, 1 normal, 2 fast, 3 fastest.", Required = false },
                 ["x"] = new McpToolParameter { Type = "number", Description = "Camera target X when forwarding camera control.", Required = false },
                 ["y"] = new McpToolParameter { Type = "number", Description = "Camera target Y when forwarding camera control.", Required = false },

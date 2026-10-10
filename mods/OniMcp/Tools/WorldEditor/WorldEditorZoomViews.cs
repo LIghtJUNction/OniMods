@@ -10,12 +10,6 @@ namespace OniMcp.Tools
 {
     public static partial class WorldEditorTools
     {
-        private static bool _hasSynchronizedViewportBounds;
-        private static int _synchronizedViewportXMin;
-        private static int _synchronizedViewportYMin;
-        private static int _synchronizedViewportXMax;
-        private static int _synchronizedViewportYMax;
-
         private static CallToolResult Zoom(JObject args)
         {
             if (!TryReadZoomBounds(args, out int xMin, out int yMin, out int xMax, out int yMax, out string error))
@@ -26,9 +20,8 @@ namespace OniMcp.Tools
                 views = ResolveZoomViews(DefaultZoomViews()).ToList();
 
             string syncNote = SyncZoomCameraAndView(args, xMin, yMin, xMax, yMax, views);
-            bool syncEachView = ToolUtil.GetBool(args, "syncView", true);
             string text = ReadZoomMarkdown(xMin, yMin, xMax, yMax, views.Select(view => view.Name), syncNote,
-                ShouldCompactMap(args), syncEachView, ToolUtil.GetBool(args, "allowSound", false));
+                ShouldCompactMap(args));
             return CallToolResult.Text(text);
         }
 
@@ -56,7 +49,7 @@ namespace OniMcp.Tools
         }
 
         private static string ReadZoomMarkdown(int xMin, int yMin, int xMax, int yMax, IEnumerable<string> views,
-            string syncNote = null, bool compact = true, bool syncEachView = false, bool allowSound = false)
+            string syncNote = null, bool compact = true)
         {
             NormalizeZoomBounds(ref xMin, ref yMin, ref xMax, ref yMax);
             var resolved = ResolveZoomViews(views).ToList();
@@ -76,31 +69,28 @@ namespace OniMcp.Tools
 
             foreach (var view in resolved)
             {
-                if (syncEachView)
-                    ApplyZoomOverlayMode(view.Mode, allowSound);
                 sb.AppendLine(GetMapMd("局部放大 - " + view.Name, xMin, xMax, yMin, yMax, view.Mode, compact));
-                if (syncEachView)
-                    sb.AppendLine("- 游戏覆盖层同步: 已切换到 " + view.Name + "；该视图已在游戏中展示。");
                 sb.AppendLine();
             }
-
-            if (syncEachView && resolved.Count > 0)
-                sb.AppendLine("- 最终游戏覆盖层: " + resolved[resolved.Count - 1].Name + "（与最后读取的文本视图一致）");
 
             return sb.ToString();
         }
 
         private static string SyncZoomCameraAndView(JObject args, int xMin, int yMin, int xMax, int yMax, List<ZoomView> views)
         {
-            if (!ToolUtil.GetBool(args, "syncView", true))
-                return "未同步(syncView=false)";
+            if (!ToolUtil.GetBool(args, "syncView", false))
+                return string.Empty;
 
             string viewName = FirstZoomText(args, "activeView", "displayView", "view");
             ZoomView activeView;
-            if (string.IsNullOrWhiteSpace(viewName) || !TryResolveZoomView(viewName, out activeView))
+            if (string.IsNullOrWhiteSpace(viewName))
                 activeView = views.Count > 0 ? views[0] : new ZoomView { Name = "default", Mode = OverlayModes.None.ID };
+            else if (!TryResolveZoomView(viewName, out activeView))
+                throw new ArgumentException("Unknown display view: " + viewName);
 
             bool focusCamera = ToolUtil.GetBool(args, "focusCamera", true);
+            if (OverlayScreen.Instance == null || (focusCamera && CameraController.Instance == null))
+                throw new ArgumentException("View synchronization is unavailable; no camera or overlay was changed.");
             float zoom = 0f;
             if (focusCamera)
                 zoom = SyncZoomCamera(args, xMin, yMin, xMax, yMax);
@@ -117,7 +107,7 @@ namespace OniMcp.Tools
         {
             var camera = CameraController.Instance;
             if (camera == null)
-                return 0f;
+                throw new ArgumentException("Camera controller is not initialized; no view was synchronized.");
 
             float centerX = (xMin + xMax) * 0.5f;
             float centerY = (yMin + yMax) * 0.5f;
@@ -125,25 +115,7 @@ namespace OniMcp.Tools
                 ?? ToolUtil.GetFloat(args, "zoom")
                 ?? CalculateZoomForBounds(args, xMin, yMin, xMax, yMax);
             camera.SnapTo(new Vector3(centerX, centerY, -100f), zoom);
-            _hasSynchronizedViewportBounds = true;
-            _synchronizedViewportXMin = xMin;
-            _synchronizedViewportYMin = yMin;
-            _synchronizedViewportXMax = xMax;
-            _synchronizedViewportYMax = yMax;
             return zoom;
-        }
-
-        private static bool TryGetSynchronizedViewportBounds(out int xMin, out int yMin, out int xMax, out int yMax)
-        {
-            xMin = yMin = xMax = yMax = 0;
-            if (!_hasSynchronizedViewportBounds)
-                return false;
-
-            xMin = _synchronizedViewportXMin;
-            yMin = _synchronizedViewportYMin;
-            xMax = _synchronizedViewportXMax;
-            yMax = _synchronizedViewportYMax;
-            return true;
         }
 
         private static float CalculateZoomForBounds(JObject args, int xMin, int yMin, int xMax, int yMax)
@@ -239,9 +211,10 @@ namespace OniMcp.Tools
         {
             var overlay = OverlayScreen.Instance;
             if (overlay == null)
-                return;
+                throw new ArgumentException("Overlay screen is not initialized; no view was synchronized.");
 
-            overlay.ToggleOverlay(mode, allowSound);
+            if (overlay.mode != mode)
+                overlay.ToggleOverlay(mode, allowSound);
             if (Game.Instance != null)
                 Game.Instance.ForceOverlayUpdate(true);
         }
@@ -272,16 +245,26 @@ namespace OniMcp.Tools
             }
 
             NormalizeZoomBounds(ref xMin, ref yMin, ref xMax, ref yMax);
-            int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 900, 2500));
-            int cells = (xMax - xMin + 1) * (yMax - yMin + 1);
-            if (cells > maxCells)
+            try
             {
-                error = "zoom range too large: " + cells + " cells, maxCells=" + maxCells
-                    + ". Narrow the range or pass a higher maxCells up to 2500.";
+                ValidateMapCellBudget(args, xMin, xMax, yMin, yMax);
+            }
+            catch (ArgumentException ex)
+            {
+                error = ex.Message;
                 return false;
             }
 
             return true;
+        }
+
+        private static void ValidateMapCellBudget(JObject args, int xMin, int xMax, int yMin, int yMax)
+        {
+            int maxCells = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCells") ?? 900, 2500));
+            long cells = ((long)xMax - xMin + 1) * ((long)yMax - yMin + 1);
+            if (cells > maxCells)
+                throw new ArgumentException("zoom range too large: " + cells + " cells, maxCells=" + maxCells
+                    + ". Narrow the range or pass a higher maxCells up to 2500.");
         }
 
         private static void NormalizeZoomBounds(ref int xMin, ref int yMin, ref int xMax, ref int yMax)
@@ -309,7 +292,13 @@ namespace OniMcp.Tools
         {
             JToken token = args?["views"] ?? args?["viewList"] ?? args?["view"];
             if (token is JArray array)
+            {
+                if (array.Count == 0 || array.Any(item => item.Type != JTokenType.String || string.IsNullOrWhiteSpace(item.ToString())))
+                    throw new ArgumentException("views must contain at least one non-empty view name.");
                 return array.Select(item => item.ToString());
+            }
+            if (token != null && token.Type != JTokenType.Null && token.Type != JTokenType.String)
+                throw new ArgumentException("views must be an array or a comma-separated string.");
 
             string text = token?.ToString();
             if (string.IsNullOrWhiteSpace(text))
@@ -320,7 +309,7 @@ namespace OniMcp.Tools
 
         private static IEnumerable<string> DefaultZoomViews()
         {
-            return new[] { "default", "power", "oxygen", "temperature" };
+            return new[] { "default" };
         }
 
         private static IEnumerable<ZoomView> ResolveZoomViews(IEnumerable<string> views)
