@@ -27,6 +27,7 @@ namespace CycleTrim.BrainBenchmarks
             RunTest(
                 nameof(PathProbeBackpressureHandlesMaximumCounters),
                 PathProbeBackpressureHandlesMaximumCounters);
+            RunBusyRefreshRegressionTests();
         }
 
         private static void DiscardedFallbackCannotReusePreviousCompletion()
