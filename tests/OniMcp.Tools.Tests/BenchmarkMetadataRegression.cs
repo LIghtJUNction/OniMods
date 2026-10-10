@@ -9,6 +9,7 @@ internal static class BenchmarkMetadataRegressionEntry
 {
     private static void Main()
     {
+        WorldEditorTools.RunMapContractRegressions();
         BuildPlanningRegression.Run();
         ObservationReadinessRegression.Run();
         FarmingUprootRegression.Run();
