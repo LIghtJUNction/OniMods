@@ -41,6 +41,7 @@ internal sealed class Constructable
 internal sealed class PrimaryElement
 {
     internal SimHashes ElementID { get; set; }
+    internal float Mass { get; set; }
 }
 
 internal sealed class Reconstructable

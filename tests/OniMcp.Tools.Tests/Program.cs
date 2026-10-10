@@ -42,6 +42,7 @@ internal static class Program
         TestSandboxDryRunRoutingPolicy();
         TestBackwallSupportPolicy();
         TestExistingMaterialPolicy();
+        TestSweepEligibilityPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -248,6 +249,17 @@ internal static class Program
             "resolved explicit material must match the existing tag exactly");
         Check(!BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "IgneousRock"),
             "resolved different material must be rejected");
+    }
+
+    private static void TestSweepEligibilityPolicy()
+    {
+        SweepHandlerRegression.Run();
+        Check(SweepEligibilityPolicy.RejectionReason(false, false) == "no_clearable",
+            "pickupables without Clearable remain rejected");
+        Check(SweepEligibilityPolicy.RejectionReason(true, false) == "not_clearable",
+            "non-clearable pickupables must be rejected before sweep designation or priority changes");
+        Check(SweepEligibilityPolicy.RejectionReason(true, true) == null,
+            "clearable pickupables remain eligible for the existing sweep path");
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
