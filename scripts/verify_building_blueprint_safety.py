@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
 
 from onimcp_verify_parsing import fail, matching_delimiter
@@ -26,6 +28,77 @@ def require_order(text: str, markers: tuple[str, ...], label: str) -> None:
         if position < 0:
             fail(f"{label}: expected ordered markers {markers}")
         cursor = position + len(marker)
+
+
+def verify_existing_material_reuse(plan_one: str) -> None:
+    early_guard = (
+        'if (earlyExistingBuild != null && ExistingMaterialRequestSatisfied('
+        'def, earlyExistingBuild, args["material"]?.ToString()))'
+    )
+    require_order(
+        plan_one,
+        (
+            "var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);",
+            early_guard,
+            'var materialResult = SelectElements(def, args["material"]?.ToString(), worldId);',
+        ),
+        "early reuse must test the explicit material in the branch condition",
+    )
+
+    # Check each actual reuse block. A global count can be satisfied by an
+    # unrelated call and cannot prove that both paths reject before completion.
+    for target in ("existingBuild", "executionExistingBuild"):
+        branch = extract_block(plan_one, f"if ({target} != null)")
+        require_order(
+            branch,
+            (
+                "var materialMismatch = ExistingMaterialMismatchResult(",
+                f'prefabId, x, y, {target}, materialResult, args["material"]?.ToString());',
+                "if (materialMismatch != null)",
+                "return materialMismatch;",
+                "var instantRetry = TryCompleteExistingVirtualFileBlueprint(",
+            ),
+            f"{target} must reject its own material mismatch before reuse or completion",
+        )
+
+
+def verify_existing_material_reuse_regressions(plan_one: str) -> None:
+    """Mutation checks for the source guard, not ONI runtime acceptance."""
+    verify_existing_material_reuse(plan_one)
+    early_test = (
+        ' && ExistingMaterialRequestSatisfied('
+        'def, earlyExistingBuild, args["material"]?.ToString())'
+    )
+    mutations = [("missing early guard", plan_one.replace(early_test, "", 1))]
+    for target in ("existingBuild", "executionExistingBuild"):
+        branch = extract_block(plan_one, f"if ({target} != null)")
+        guard_start = branch.index("                var materialMismatch")
+        completion_start = branch.index("                var instantRetry")
+        guard = branch[guard_start:completion_start]
+        completion_end = branch.index("\n", completion_start) + 1
+        late_guard = (
+            branch[:guard_start]
+            + branch[completion_start:completion_end]
+            + guard
+            + branch[completion_end:]
+        )
+        for label, broken in (
+            ("missing guard", branch.replace(guard, "", 1)),
+            ("wrong target", branch.replace(f"{target}, materialResult,", "otherBuild, materialResult,", 1)),
+            ("late guard", late_guard),
+        ):
+            mutations.append((f"{target}: {label}", plan_one.replace(branch, broken, 1)))
+
+    for label, mutated in mutations:
+        if mutated == plan_one:
+            fail(f"material guard regression did not change its fixture: {label}")
+        with redirect_stderr(StringIO()):
+            try:
+                verify_existing_material_reuse(mutated)
+            except SystemExit:
+                continue
+        fail(f"material guard verifier accepted broken source: {label}")
+    print(f"OK: {len(mutations)} material reuse guard mutations were rejected")
 
 
 def verify_building_blueprint_safety(
@@ -150,17 +223,7 @@ def verify_building_blueprint_safety(
     if validated_success.count("return MaterialSelection.Invalid(") < 2:
         fail("material success validation must reject empty and invalid primary elements")
 
-    require_order(
-        plan_one,
-        (
-            "var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);",
-            "ExistingMaterialRequestSatisfied(def, earlyExistingBuild, args[\"material\"]?.ToString())",
-            "var materialResult = SelectElements(def, args[\"material\"]?.ToString(), worldId);",
-        ),
-        "explicit material requests must not bypass material resolution through early existing-placement reuse",
-    )
-    if plan_one.count("ExistingMaterialMismatchResult(") < 3:
-        fail("resolved existing-building checks must reject material mismatches before preview or execution reuse")
+    verify_existing_material_reuse(plan_one)
 
     runtime_existing = extract_block(
         selected[paths["runtime"]],
@@ -173,6 +236,12 @@ def verify_building_blueprint_safety(
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     verify_building_blueprint_safety(root)
+    plan_path = root / "mods/OniMcp/Tools/Impl/Build/BuildPlanningPlanOne.cs"
+    plan_one = extract_block(
+        plan_path.read_text(encoding="utf-8"),
+        "private static Dictionary<string, object> TryPlanOne",
+    )
+    verify_existing_material_reuse_regressions(plan_one)
     print("OK: free-build utility paths fall back to per-cell blueprint placement")
 
 
