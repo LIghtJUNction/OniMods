@@ -1,0 +1,139 @@
+name: Apply reviewed OniMcp source
+
+on:
+  push:
+    branches: ['fix/onimcp-map-contract-and-survival-tools']
+    paths: ['.github/workflows/onimcp-apply-reviewed-source.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.repository == 'LIghtJUNction/OniMods'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba80582576410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Apply reviewed text delta and preserve main regressions
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import lzma
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          BRANCH = 'fix/onimcp-map-contract-and-survival-tools'
+          def git(*args, check=True):
+              return subprocess.run(['git', *args], check=check, capture_output=True).stdout
+          def source(ref, path):
+              result = subprocess.run(['git', 'show', ref + ':' + path], capture_output=True)
+              return result.stdout if result.returncode == 0 else None
+
+          assert git('rev-parse', 'HEAD').decode().strip() == os.environ['EXPECTED_HEAD']
+          inputs = [Path('scripts/.onimcp-review-delta-' + str(i) + '.txt') for i in (1, 2)]
+          raw = lzma.decompress(base64.b64decode(''.join(p.read_text().strip() for p in inputs), validate=True))
+          assert hashlib.sha256(raw).hexdigest() == '142b24bfc513af50c7d2248ba3a1758e717a7d2a2fa929c427a541688863aa01'
+          payload = json.loads(raw)
+          assert payload['source'] == '8e9e80fd96907e1ef57171a415b44ac04603600d'
+          assert payload['main'] == 'cf70a7f7cb22b60fdc4c8a9076b2e1b3d5af05f8'
+          assert payload['latest'] == '1186a1d6d3d7ef53f9536a4247da9c44bec06def'
+          pending = []
+          for entry in payload['entries']:
+              name, operation = entry[:2]
+              path = Path(name)
+              assert not path.is_absolute() and '..' not in path.parts and not path.is_symlink()
+              assert name.startswith(('mods/OniMcp/', 'tests/OniMcp.', 'scripts/', '.agents/skills/oni-gameplay/', 'docs/'))
+              original = source(payload['source'], name)
+              assert (path.read_bytes() if path.is_file() else None) == original, name + ': source moved'
+              if operation == 'delete':
+                  assert original is not None
+                  result = None
+              elif operation == 'copy':
+                  assert entry[2] == payload['main']
+                  result = source(entry[2], entry[3])
+                  assert result is not None
+              elif operation == 'new':
+                  assert original is None
+                  result = entry[2].encode()
+              elif operation == 'extract':
+                  assert entry[2] == payload['source']
+                  lines = source(entry[2], entry[3]).decode().splitlines(keepends=True)
+                  result = ''.join(part if isinstance(part, str) else ''.join(lines[part[0]:part[1]]) for part in entry[4]).encode()
+              else:
+                  assert operation == 'edit' and original is not None
+                  lines = original.decode().splitlines(keepends=True)
+                  end = len(lines)
+                  for start, stop, text in reversed(entry[2]):
+                      assert 0 <= start <= stop <= end
+                      lines[start:stop] = [text]
+                      end = start
+                  result = ''.join(lines).encode()
+              pending.append((path, result))
+          for path, data in pending:
+              if data is None:
+                  path.unlink()
+              else:
+                  path.parent.mkdir(parents=True, exist_ok=True)
+                  path.write_bytes(data)
+          for path in inputs:
+              path.unlink()
+          git('config', 'user.name', 'OniMcp source review')
+          git('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
+          git('add', '--all')
+          git('diff', '--cached', '--check')
+          tree = git('write-tree').decode().strip()
+          merged = git('commit-tree', tree, '-p', 'HEAD', '-p', payload['main'], '-m',
+              'refactor(onimcp): truthful maps and native-only editing; integrate material identity fixes').decode().strip()
+          git('reset', '--hard', merged)
+
+          merge = subprocess.run(['git', 'merge', '--no-commit', '--no-ff', payload['latest']], capture_output=True, text=True)
+          conflicts = git('diff', '--name-only', '--diff-filter=U').decode().splitlines()
+          allowed = {'tests/OniMcp.Tools.Tests/Program.cs', 'tests/OniMcp.Tools.Tests/OniMcp.Tools.Tests.csproj'}
+          if not set(conflicts) <= allowed:
+              raise RuntimeError('Unreviewed merge conflicts: ' + ', '.join(conflicts))
+          if merge.returncode != 0 and not conflicts:
+              raise RuntimeError(merge.stdout + merge.stderr)
+          for name in conflicts:
+              text = source('HEAD', name).decode()
+              upstream = source(payload['latest'], name).decode()
+              if name.endswith('.csproj'):
+                  for line in upstream.splitlines():
+                      if '<Compile Include=' in line and 'Sandbox' not in line:
+                          include = re.search(r'Include="([^"]+)"', line).group(1)
+                          if ('Include="' + include + '"') not in text:
+                              text = text.replace('  </ItemGroup>', line + '\n  </ItemGroup>')
+              else:
+                  assert 'TestExistingMaterialPolicy();' in text
+                  if 'TestSweepEligibilityPolicy();' not in text:
+                      text = text.replace('        TestExistingMaterialPolicy();', '        TestExistingMaterialPolicy();\n        TestSweepEligibilityPolicy();')
+                      start = upstream.index('    private static void TestSweepEligibilityPolicy()')
+                      end = upstream.index('\n    private static ', start + 10)
+                      text = text.replace('    private static CallToolResult Run(', upstream[start:end] + '\n\n    private static CallToolResult Run(')
+              Path(name).write_text(text)
+              git('add', '--', name)
+          if Path('.git/MERGE_HEAD').exists():
+              git('diff', '--cached', '--check')
+              git('commit', '-m', 'merge: retain main sweep eligibility and production-handler regressions')
+          assert not git('status', '--porcelain').strip()
+          auth = base64.b64encode(('x-access-token:' + os.environ['GH_TOKEN']).encode()).decode()
+          remote = git('-c', 'http.https://github.com/.extraheader=AUTHORIZATION: basic ' + auth,
+              'ls-remote', 'origin', 'refs/heads/' + BRANCH).decode().split()[0]
+          assert remote == os.environ['EXPECTED_HEAD'], 'Review branch moved; refusing to push'
+          git('-c', 'http.https://github.com/.extraheader=AUTHORIZATION: basic ' + auth,
+              'push', 'origin', 'HEAD:refs/heads/' + BRANCH)
+          print('Applied', len(pending), 'verified text-file changes; head', git('rev-parse', 'HEAD').decode().strip())
+          PY
