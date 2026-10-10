@@ -63,8 +63,9 @@ namespace OniMcp.Tools
                         {
                             if (!uprootable.IsMarkedForUproot)
                                 continue;
+                            // This cancels only uproot. Generic Cancel also reaches
+                            // Harvestable and can clear its chore and harvest settings.
                             uprootable.ForceCancelUproot();
-                            go.Trigger(CancelEvent);
                             results.Add(TargetInfo(go, "cancelled"));
                         }
                         changed++;
