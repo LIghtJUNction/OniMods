@@ -54,3 +54,13 @@
 Read `docs/autonomous-iteration.md` before scheduled research, implementation or
 CI work. Park runtime-blocked PRs instead of repeatedly rebasing them; report
 reference builds, source contracts, host tests and actual ONI runs separately.
+
+## AUL contribution duties
+
+This repository has adopted [AUL 1.0-draft.1](LICENSE) for original material whose rights holders authorize that license. Keep inherited third-party and contributor terms as stated in [LICENSING.md](LICENSING.md), including historical MIT grants. Read `UPSTREAM.toml` before modifying the project.
+
+This is the original OniMods project with itself as upstream. **Do not create issues or PRs addressed to OniMods itself merely to satisfy the AUL feedback condition.** New downstream forks follow their direct source by default and must make their own authorized decision before electing independence; a copied upstream file is not sufficient.
+
+For an authorized fork following an external upstream, report confirmed upstream defects supported by evidence and submit retained improvements as PRs or accepted equivalent patches, after checking for existing adequate reports. Submit during the task only with safe and verified destinations, granted account access, and publication authorization. Otherwise report pending work and its precise blocker. Never disclose private gameplay credentials, tokens, workshop secrets, confidential code, or protected material. Never bypass upstream policies or spam repeated submissions. Do not elect independence on behalf of a maintainer to avoid a contribution.
+
+The Steam Workshop publishing prohibitions and gameplay-safety rules above take priority over any optional delivery method. AUL does not require unsafe or unauthorized publication.
