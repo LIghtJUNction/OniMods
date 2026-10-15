@@ -13,7 +13,7 @@ from verify_glyph_lookup_contract import verify_glyph_lookup_contract
 from verify_world_editor_building_files import verify_world_editor_building_files
 
 
-EXPECTED_DEFAULT_PUBLIC = {
+EXPECTED_REGISTERED = {
     "benchmark",
     "building_control",
     "game_control",
@@ -22,8 +22,6 @@ EXPECTED_DEFAULT_PUBLIC = {
     "server_control",
     "world_editor",
 }
-
-EXPECTED_REGISTERED = EXPECTED_DEFAULT_PUBLIC
 
 EXPECTED_INTERNAL = {
     "colony_control",
@@ -321,14 +319,8 @@ def main() -> None:
     for path, source in sources.items():
         if path != navigation_path and dead_pointer_symbols.search(source):
             fail(f"{path.relative_to(root)} still references a removed pointer symbol")
-
-    public_block = extract_block(registry, "DefaultPublicToolNames")
-    default_public = set(re.findall(r'"([a-z0-9_]+)"', public_block))
-    if default_public != EXPECTED_DEFAULT_PUBLIC:
-        fail(
-            "DefaultPublicToolNames mismatch: "
-            f"expected {sorted(EXPECTED_DEFAULT_PUBLIC)}, got {sorted(default_public)}"
-        )
+        if re.search(r"\bServerControlEntryTools\b", source):
+            fail(f"{path.relative_to(root)} still references the retired server forwarding layer")
 
     initialize = extract_block(registry, "public static void Initialize()")
     expressions = extract_calls(initialize, "Register")
@@ -346,6 +338,8 @@ def main() -> None:
                 break
         if factory is None:
             fail(f"cannot resolve registered expression: {expression.strip()}")
+        if factory["hidden"]:
+            fail(f"public tool is hidden: {factory['canonical']}")
         factories.append(factory)
 
     internal_expressions = extract_calls(initialize, "RegisterInternal")
@@ -371,8 +365,6 @@ def main() -> None:
             f"missing={sorted(EXPECTED_REGISTERED - registered)}, "
             f"unexpected={sorted(registered - EXPECTED_REGISTERED)}"
         )
-    if not default_public <= registered:
-        fail(f"default-public tools are not registered: {sorted(default_public - registered)}")
 
     alias_owner: dict[str, str] = {}
     actual_aliases = {
@@ -408,15 +400,11 @@ def main() -> None:
     if re.search(r"\.Where\(t\s*=>\s*!t\.Hidden\)", visible_tools) is None:
         fail("GetVisibleTools must filter Hidden tools")
 
-    normalized_registry = re.sub(r"\s+", "", registry)
-    expected_filter = (
-        ".Where(tool=>!tool.Hidden&&(includeAll||"
-        "DefaultPublicToolNames.Contains(tool.Name)))"
-    )
-    if expected_filter not in normalized_registry:
-        fail("BuildToolInfos must expose defaults unless includeAll is true")
-    if "_cachedAllToolInfos=BuildToolInfos(includeAll:true);" not in normalized_registry:
-        fail("includeAll cache must include every visible registered tool")
+    build_infos = extract_block(registry, "private static List<McpToolInfo> BuildToolInfos()")
+    if "GetVisibleTools()" not in build_infos or "_internalOperations" in build_infos:
+        fail("BuildToolInfos must use the public visible registry, not internal operations")
+    if re.search(r"\b(?:DefaultPublicToolNames|_cachedCoreToolInfos|_cachedAllToolInfos|includeAll)\b", registry):
+        fail("retired core/all catalog split must not return")
 
     operation_block = extract_block(sources[operation_path], "OperationFileTools =")
     operation_files = dict(
@@ -480,7 +468,6 @@ def main() -> None:
         f"{len(alias_owner)}, operation-files={len(operation_files)}, "
         f"resource-controls={len(resource_controls)}"
     )
-    print("Default public: " + ", ".join(sorted(default_public)))
     print("Registered: " + ", ".join(sorted(registered)))
     print("Internal: " + ", ".join(sorted(internal)))
 
