@@ -12,20 +12,8 @@ namespace OniMcp.Tools
             switch (tool.Name)
             {
                 case "building_control":
-                    tool.Description = "Unified building entrypoint. Use action plus query, target, search, id, plan, or areaId for locating targets. Coordinate input is not accepted here; use coordinate_control only as a last-resort auxiliary gateway.";
+                    tool.Description = "Unified building entrypoint. Use action plus query, target, search, id, plan, or areaId for locating targets. Coordinate input is not accepted here; use validated world_editor virtual files for exact spatial operations.";
                     Describe(tool, BuildingDescriptions());
-                    break;
-                case "colony_control":
-                    tool.Description = "Unified colony entrypoint: snapshots, diagnostics, survival planning (domain=survival action=plan), notifications, management, bio.";
-                    Describe(tool, ColonyDescriptions());
-                    break;
-                case "coordinate_control":
-                    tool.Description = "Coordinate auxiliary gateway. This is the only registered compatibility tool that accepts x/y, x1/y1/x2/y2, dx/dy, coordinate point lists, or coordinate anchors; use it only when semantic targets, search, areaId, or virtual-file operations cannot express the operation.";
-                    Describe(tool, CoordinateDescriptions());
-                    break;
-                case "dupes_control":
-                    tool.Description = "Unified duplicant entrypoint. Use action plus name, dupeName, query, target, search, or id for locating duplicants and targets. Coordinate input is not accepted here.";
-                    Describe(tool, DupesDescriptions());
                     break;
                 case "game_control":
                     tool.Description = "Unified game entrypoint for speed, pause/resume, game state, saves, DLC activation, and safe UI actions. Use semantic actions and named targets; coordinate input is not accepted here.";
@@ -36,16 +24,8 @@ namespace OniMcp.Tools
                     Describe(tool, NavigationDescriptions());
                     break;
                 case "orders_control":
-                    tool.Description = "Unified orders entrypoint. Use action plus query, target, search, id, or areaId for locating targets. Coordinate input is not accepted here; route exact coordinate operations through coordinate_control.";
+                    tool.Description = "Unified orders entrypoint. Use action plus query, target, search, id, or areaId for locating targets. Coordinate input is not accepted here; use validated world_editor virtual files for exact spatial operations.";
                     Describe(tool, OrdersDescriptions());
-                    break;
-                case "read_control":
-                    tool.Description = "Unified read/query entrypoint for world data, reusable areas, buildings, resources, infrastructure, and knowledge. Use query, areaId, ids, and semantic filters; coordinate input is isolated in coordinate_control.";
-                    Describe(tool, ReadDescriptions());
-                    break;
-                case "search_control":
-                    tool.Description = "Dedicated search entrypoint. Searches tools, world objects, resources, buildings, dupes, or knowledge and returns action-ready nextActions so selected results can flow directly into action tools without coordinates.";
-                    Describe(tool, SearchDescriptions());
                     break;
                 case "server_control":
                     tool.Description = "Unified server and MCP entrypoint for diagnostics, client requests, catalog search, coverage audits, batched tool calls, and restricted agent-program execution.";
@@ -123,94 +103,6 @@ namespace OniMcp.Tools
             return d;
         }
 
-        private static Dictionary<string, string> CoordinateDescriptions()
-        {
-            var d = CommonDescriptions();
-            d["targetTool"] = "Underlying tool to invoke through the coordinate gateway.";
-            d["payload"] = "Argument object forwarded to targetTool; top-level coordinate_control fields override matching payload fields.";
-            d["x"] = "Coordinate X.";
-            d["y"] = "Coordinate Y.";
-            d["x1"] = "Rectangle start X.";
-            d["y1"] = "Rectangle start Y.";
-            d["x2"] = "Rectangle end X.";
-            d["y2"] = "Rectangle end Y.";
-            d["dx"] = "Relative X offset.";
-            d["dy"] = "Relative Y offset.";
-            return d;
-        }
-
-        private static Dictionary<string, string> ColonyDescriptions()
-        {
-            var d = CommonDescriptions();
-            d["domain"] = "Colony subsystem: snapshot, read, report, diagnostic, notification, management, or bio. Defaults to read.";
-            d["kind"] = "Management or bio subtype, such as schedule, diet, research, medical, farming, or ranching.";
-            d["action"] = "Colony action for the selected domain.";
-            d["detail"] = "Detail level for snapshot or report output.";
-            d["dupeLimit"] = "Maximum number of duplicant details in snapshot output.";
-            d["foodLimit"] = "Maximum number of food entries in snapshot output.";
-            d["delta"] = "Return changes relative to the previous call for the same deltaKey.";
-            d["deltaKey"] = "Delta cache slot name.";
-            d["resetDelta"] = "Reset the delta baseline.";
-            d["watch"] = "Metric list to watch.";
-            d["watchOnly"] = "Return only watched metrics, alert level, and summary.";
-            d["thresholds"] = "Watched metric thresholds.";
-            d["includePending"] = "Include pending notifications.";
-            d["index"] = "Notification index.";
-            d["title"] = "Notification title filter.";
-            d["settingId"] = "Diagnostic setting id.";
-            d["enabled"] = "Enable or disable the selected setting.";
-            d["applyNow"] = "Apply the setting immediately where supported.";
-            return d;
-        }
-
-        private static Dictionary<string, string> SearchDescriptions()
-        {
-            var d = CommonDescriptions();
-            d["domain"] = "Search domain: tools, world, resources, buildings, dupes, or knowledge.";
-            d["query"] = "Search text.";
-            d["target"] = "Alias for query when searching for an action target.";
-            d["search"] = "Alias for query.";
-            d["intent"] = "Optional intended follow-up action, used to shape nextActions.";
-            d["actionTool"] = "Optional preferred follow-up tool for the returned action template.";
-            d["actionDomain"] = "Optional preferred follow-up domain for the returned action template.";
-            d["action"] = "Optional preferred follow-up action for the returned action template.";
-            d["kind"] = "Optional search subtype.";
-            d["kinds"] = "Optional search subtype list.";
-            d["category"] = "Building category filter.";
-            d["group"] = "Tool group filter.";
-            d["mode"] = "Tool mode filter.";
-            d["risk"] = "Tool risk filter.";
-            d["includeStored"] = "Include stored resource items.";
-            d["looseOnly"] = "Only return loose pickupable items.";
-            d["includeUnavailable"] = "Include unavailable or locked building definitions.";
-            return d;
-        }
-
-        private static Dictionary<string, string> DupesDescriptions()
-        {
-            var d = CommonDescriptions();
-            d["domain"] = "Duplicant subsystem: info, priority, hat, command, side_screen, skill, or assignable.";
-            d["action"] = "Duplicant action for the selected subsystem.";
-            d["name"] = "Duplicant or target object name.";
-            d["dupeId"] = "Duplicant instance id.";
-            d["dupeName"] = "Duplicant name.";
-            d["targetId"] = "Target object instance id.";
-            d["targetName"] = "Target object name.";
-            d["priority"] = "Personal priority value.";
-            d["skillId"] = "Skill id to learn.";
-            d["hatId"] = "Hat id to set.";
-            d["newName"] = "New duplicant name.";
-            d["style"] = "Auto-renaming style.";
-            d["commandAction"] = "Command subtype for force_action.";
-            d["includeDetails"] = "Include detailed diagnostic information.";
-            d["includeBlocked"] = "Include blocked errands or tasks.";
-            d["includeAvailable"] = "Include available assignables or equipment.";
-            d["includePotentialOnly"] = "Return only potentially successful blocked tasks.";
-            d["taskLimit"] = "Maximum number of tasks per duplicant.";
-            d["slotId"] = "Assignable or equipment slot id.";
-            return d;
-        }
-
         private static Dictionary<string, string> GameDescriptions()
         {
             var d = CommonDescriptions();
@@ -284,35 +176,6 @@ namespace OniMcp.Tools
             d["minimumMassKg"] = "Minimum mass per delivery in kilograms.";
             d["requestNow"] = "Request a delivery immediately.";
             d["detail"] = "Return per-target diagnostics.";
-            return d;
-        }
-
-        private static Dictionary<string, string> ReadDescriptions()
-        {
-            var d = CommonDescriptions();
-            d["domain"] = "Read domain: world, area, buildings, resources, infrastructure, or knowledge.";
-            d["action"] = "Read action for the selected domain.";
-            d["kind"] = "Knowledge kind: database or guide.";
-            d["category"] = "Knowledge or object category.";
-            d["detail"] = "Result detail level.";
-            d["summary"] = "Return summary output where supported.";
-            d["areaIds"] = "Area handles to merge.";
-            d["label"] = "Area label.";
-            d["blockWidth"] = "Generated area block width.";
-            d["blockHeight"] = "Generated area block height.";
-            d["maxCells"] = "Maximum number of cells to scan or include.";
-            d["includeInactive"] = "Include inactive objects.";
-            d["includeZero"] = "Include zero-amount resources.";
-            d["state"] = "Element state filter.";
-            d["solid"] = "Solid-cell filter.";
-            d["minMassKg"] = "Minimum cell mass in kilograms.";
-            d["maxMassKg"] = "Maximum cell mass in kilograms.";
-            d["minTempC"] = "Minimum temperature in Celsius.";
-            d["maxTempC"] = "Maximum temperature in Celsius.";
-            d["nearX"] = "Nearest-sort reference X.";
-            d["nearY"] = "Nearest-sort reference Y.";
-            d["sort"] = "Sort mode.";
-            d["returnMode"] = "Return shape, such as hits, clusters, or summary.";
             return d;
         }
 
