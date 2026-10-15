@@ -46,7 +46,7 @@ namespace OniMcp.Tools
 
         public static CallToolResult CallTool(string name, JObject arguments) => Tools[name].Handler(arguments);
         public static List<McpTool> GetTools() => Tools.Values.OrderBy(tool => tool.Name, StringComparer.Ordinal).ToList();
-        public static List<McpToolInfo> GetToolInfos(bool includeAll = false) => GetTools()
+        public static List<McpToolInfo> GetToolInfos() => GetTools()
             .Select(tool => new McpToolInfo { Name = tool.Name })
             .ToList();
     }
