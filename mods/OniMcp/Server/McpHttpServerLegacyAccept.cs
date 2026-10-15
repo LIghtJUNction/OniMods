@@ -15,40 +15,13 @@ namespace OniMcp.Server
             decimal bestQuality = 0m;
             foreach (string rawEntry in accept.Split(','))
             {
-                string entry = rawEntry.Trim();
-                if (entry.Length == 0)
-                    continue;
-
-                string[] parts = entry.Split(';');
+                string[] parts = rawEntry.Split(';');
                 int specificity = GetJsonMediaRangeSpecificity(parts[0].Trim());
                 if (specificity < 0)
                     continue;
 
-                decimal quality = 1m;
-                bool qualitySeen = false;
-                bool validQuality = true;
-                bool mediaParametersMatch = true;
-                for (int i = 1; i < parts.Length; i++)
-                {
-                    string parameter = parts[i].Trim();
-                    int separator = parameter.IndexOf('=');
-                    if (separator <= 0
-                        || !string.Equals(parameter.Substring(0, separator).Trim(), "q", StringComparison.OrdinalIgnoreCase))
-                    {
-                        mediaParametersMatch = false;
-                        continue;
-                    }
-
-                    if (qualitySeen
-                        || !TryParseHttpQualityValue(parameter.Substring(separator + 1), out quality))
-                    {
-                        validQuality = false;
-                        break;
-                    }
-                    qualitySeen = true;
-                }
-
-                if (!validQuality || !mediaParametersMatch)
+                decimal quality;
+                if (!TryParseAcceptParameters(parts, out quality))
                     continue;
 
                 if (specificity > bestSpecificity)

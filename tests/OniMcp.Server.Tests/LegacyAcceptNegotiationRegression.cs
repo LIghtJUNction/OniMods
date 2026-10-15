@@ -107,86 +107,51 @@ internal static class LegacyAcceptNegotiationRegressionEntry
                 Assert(server.GetSessionSummaries().Count == 1,
                     "Rejected malformed request changed legacy session ownership");
 
-                using (var response = Post(client, PingRequest(51005), null, sessionId, "2025-11-25"))
+                var cases = new (int Id, string Accept, bool LegacyAccepted, bool ModernAccepted, string Scenario)[]
                 {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Headerless legacy request lost backwards-compatible JSON handling");
-                }
-
-                using (var response = Post(client, PingRequest(51006), "application/*", sessionId, "2025-11-25"))
+                    (51005, null, true, false, "Missing Accept header"),
+                    (51006, "application/*", true, false, "Application wildcard"),
+                    (51007, "application/json, text/event-stream", true, true, "Explicit media types"),
+                    (51008, "application/json;q=0, */*;q=1", false, false, "Exact rejection overrides wildcard"),
+                    (51009, "application/*;q=0, */*;q=1", false, false, "Application rejection overrides wildcard"),
+                    (51010, "application/json;q=0.1, */*;q=0", true, true, "Exact acceptance overrides wildcard"),
+                    (51012, "application/json;profile=fixture, */*;q=0", false, false, "Unmatched JSON parameter"),
+                    (51013, "application/*;version=2, */*;q=0", false, false, "Unmatched wildcard parameter"),
+                    (51014, "application/json;profile=fixture;q=1, application/json;q=0.5", true, true,
+                        "Unmatched range does not mask a matching range"),
+                    (51015, "application/json;q=0.1234", false, false, "Four-digit qvalue"),
+                    (51016, "application/json;q=0.123", true, true, "Three-digit qvalue"),
+                    (51017, "application/json;q=0;q=1", false, false, "Duplicate increasing q weights"),
+                    (51018, "application/json;q=1;q=0", false, false, "Duplicate decreasing q weights"),
+                    (51019, "application/json;q=1;profile=fixture", false, false, "Unmatched parameter after q"),
+                    (51020, "application/json;q=0.5;", false, false, "Empty trailing parameter"),
+                    (51021, "application/json;Q = 0.500", true, true, "Case-insensitive q with whitespace"),
+                    (51022, "application/json;q=0, application/json;q=0.5", true, true, "Matching range alternatives"),
+                    (51023, "application/json;profile=fixture;q=bogus, application/json;q=0.2", true, true,
+                        "Invalid range does not mask a matching range"),
+                    (51024, ",,application/json;q=1,,", true, true, "Empty list entries")
+                };
+                var modernAccept = typeof(McpHttpServer).GetMethod("AcceptsModernMediaType",
+                    BindingFlags.NonPublic | BindingFlags.Static);
+                Assert(modernAccept != null, "Modern Accept parser was not found");
+                foreach (var test in cases)
                 {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Legacy application wildcard did not accept a JSON response");
+                    using (var response = Post(client, PingRequest(test.Id), test.Accept, sessionId, "2025-11-25"))
+                    {
+                        var expected = test.LegacyAccepted ? HttpStatusCode.OK : HttpStatusCode.NotAcceptable;
+                        Assert(response.StatusCode == expected,
+                            test.Scenario + ": expected legacy HTTP " + (int)expected + ", got " + (int)response.StatusCode);
+                    }
+                    foreach (string mediaType in new[] { "application/json", "text/event-stream" })
+                    {
+                        string accept = test.Accept?.Replace("application/json", mediaType);
+                        bool accepted = (bool)modernAccept.Invoke(null, new object[] { accept, mediaType });
+                        Assert(accepted == test.ModernAccepted,
+                            test.Scenario + ": unexpected modern acceptance for " + mediaType);
+                    }
                 }
-
-                using (var response = Post(client, PingRequest(51007), "application/json, text/event-stream", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Conforming legacy Accept header stopped working");
-                }
-
-                using (var response = Post(client, PingRequest(51008),
-                    "application/json;q=0, */*;q=1", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
-                        "Exact JSON q=0 did not override the less-specific wildcard");
-                }
-
-                using (var response = Post(client, PingRequest(51009),
-                    "application/*;q=0, */*;q=1", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
-                        "Application wildcard q=0 did not override the global wildcard");
-                }
-
-                using (var response = Post(client, PingRequest(51010),
-                    "application/json;q=0.1, */*;q=0", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Exact JSON media range did not override a rejecting global wildcard");
-                }
-
-                using (var response = Post(client, PingRequest(51012),
-                    "application/json;profile=fixture, */*;q=0", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
-                        "Parameterized JSON media range matched an unparameterized JSON response");
-                }
-
-                using (var response = Post(client, PingRequest(51013),
-                    "application/*;version=2, */*;q=0", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
-                        "Parameterized application wildcard matched an unparameterized JSON response");
-                }
-
-                using (var response = Post(client, PingRequest(51014),
-                    "application/json;profile=fixture;q=1, application/json;q=0.5", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Nonmatching parameterized range masked a separate matching JSON range");
-                }
-
-                using (var response = Post(client, PingRequest(51015),
-                    "application/json;q=0.1234", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
-                        "Malformed four-digit legacy qvalue was treated as acceptable");
-                }
-
-                using (var response = Post(client, PingRequest(51016),
-                    "application/json;q=0.123", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Valid three-digit legacy qvalue was rejected");
-                }
-
-                using (var response = Post(client, PingRequest(51017),
-                    "application/json;q=0;q=1", sessionId, "2025-11-25"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.NotAcceptable,
-                        "Legacy Accept range with duplicate q weights was treated as acceptable");
-                }
+                Console.WriteLine("PASS " + cases.Length + " legacy HTTP Accept cases and "
+                    + (cases.Length * 2) + " production modern media-range assertions");
 
                 using (var response = Post(client, InitializedNotification(), "text/event-stream", sessionId, "2025-11-25"))
                 {
