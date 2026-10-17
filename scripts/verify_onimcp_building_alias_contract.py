@@ -58,16 +58,16 @@ def main() -> int:
         fail("generated ONI glyph data no longer identifies WashSink as 洗手池")
 
     alias_score = re.search(
-        r"aliasPrefab.*?string\.Equals\(aliasPrefab,\s*def\.PrefabID.*?"
-        r"bestScore\s*=\s*Math\.Max\(bestScore,\s*950\s*\+\s*orderBoost\).*?"
-        r'bestKind\s*=\s*"alias"',
+        r"ResolveBuildingAlias\(term,\s*aliases,\s*out exactAlias\).*?"
+        r"aliasScore\s*=\s*\(exactAlias\s*\?\s*950\s*:\s*SuffixBuildingAliasScore\)\s*\+\s*orderBoost.*?"
+        r'bestKind\s*=\s*exactAlias\s*\?\s*"alias"\s*:\s*"alias_suffix"',
         parser_source,
         re.DOTALL,
     )
     if not alias_score:
-        fail("building aliases no longer receive the high-confidence alias score")
+        fail("building aliases no longer distinguish exact high-confidence matches from suffix discovery matches")
 
-    print("OK: build planning keeps 洗手盆/WashBasin distinct from 洗手池/WashSink")
+    print("OK: build planning keeps 洗手盆/WashBasin distinct from 洗手池/WashSink and exact aliases high-confidence")
     return 0
 
 

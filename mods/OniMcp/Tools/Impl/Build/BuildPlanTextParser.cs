@@ -219,15 +219,19 @@ namespace OniMcp.Tools
                     string term = terms[termIndex];
                     if (string.IsNullOrWhiteSpace(term))
                         continue;
-                    int orderBoost = Math.Max(0, 50 - termIndex);
+                    int orderBoost = Math.Max(0, MaximumPlanTermOrderBoost - termIndex);
 
-                    string aliasPrefab = ResolveBuildingAlias(term, aliases);
-                    if (!string.IsNullOrWhiteSpace(aliasPrefab)
-                        && string.Equals(aliasPrefab, def.PrefabID, StringComparison.OrdinalIgnoreCase))
+                    bool exactAlias;
+                    string aliasPrefab = ResolveBuildingAlias(term, aliases, out exactAlias);
+                    int aliasScore = (exactAlias ? 950 : SuffixBuildingAliasScore) + orderBoost;
+                    if (string.IsNullOrWhiteSpace(aliasPrefab)
+                        || !string.Equals(aliasPrefab, def.PrefabID, StringComparison.OrdinalIgnoreCase))
+                        aliasScore = 0;
+                    if (aliasScore > bestScore)
                     {
-                        bestScore = Math.Max(bestScore, 950 + orderBoost);
+                        bestScore = aliasScore;
                         bestTerm = term;
-                        bestKind = "alias";
+                        bestKind = exactAlias ? "alias" : "alias_suffix";
                     }
 
                     int score = ScorePlanBuilding(def, term);
@@ -428,8 +432,6 @@ namespace OniMcp.Tools
             return 0;
         }
 
-
-
         private static string ExtractAnchorQuery(string text)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -477,19 +479,16 @@ namespace OniMcp.Tools
             return best < 0 ? text : text.Substring(0, best);
         }
 
-        private static string ResolveBuildingAlias(string term, Dictionary<string, string> aliases)
+        private static string ResolveBuildingAlias(string term, Dictionary<string, string> aliases, out bool exact)
         {
+            exact = false;
             string normalized = NormalizePlanText(term);
             string prefabId;
-            if (aliases.TryGetValue(normalized, out prefabId))
-                return prefabId;
+            if (aliases.TryGetValue(normalized, out prefabId)) { exact = true; return prefabId; }
 
             foreach (var item in aliases.OrderByDescending(item => item.Key.Length))
-            {
-                if (normalized.EndsWith(item.Key, StringComparison.Ordinal)
-                    && normalized.Length > item.Key.Length)
+                if (normalized.EndsWith(item.Key, StringComparison.Ordinal) && normalized.Length > item.Key.Length)
                     return item.Value;
-            }
             return null;
         }
     }
