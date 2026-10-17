@@ -1,0 +1,4 @@
+interface:
+  display_name: "缺氧阶段策略与模块选型"
+  short_description: "按殖民地阶段选择开局、制氧、养殖、控温和太空方案，附原文链接"
+  default_prompt: "使用 $oni-mcp-colony-strategy 为当前殖民地选择下一项可实施的改进，并引用对应原文。"

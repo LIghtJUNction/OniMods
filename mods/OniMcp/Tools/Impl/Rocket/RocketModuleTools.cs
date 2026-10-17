@@ -328,8 +328,6 @@ namespace OniMcp.Tools
             var reorderable = def.BuildingComplete.GetComponent<ReorderableBuilding>();
             foreach (var condition in reorderable.buildConditions)
             {
-                if (condition.IgnoreInSanboxMode() && (DebugHandler.InstantBuildMode || Game.Instance.SandboxModeActive))
-                    continue;
                 if (!condition.EvaluateCondition(module.gameObject, def, context))
                     return condition.GetStatusTooltip(ready: false, module.gameObject, def);
             }

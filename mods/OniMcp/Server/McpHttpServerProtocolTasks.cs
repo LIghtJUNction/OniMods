@@ -135,7 +135,7 @@ namespace OniMcp.Server
                 ServerInfo = new Implementation
                 {
                     Name = "OniMcp",
-                    Version = "0.2.3"
+                    Version = ServerVersion
                 }
             };
         }
@@ -271,6 +271,7 @@ namespace OniMcp.Server
 
         private void ExecuteToolTask(string taskId, string toolName, JObject arguments, string sessionId)
         {
+            int contextGeneration = GameContextLifecycle.CaptureGeneration();
             MainThreadBridge.EnqueueDeferred(new System.Action(() =>
             {
                 if (!_running || !IsSessionActive(sessionId))
@@ -287,6 +288,22 @@ namespace OniMcp.Server
 
                 try
                 {
+                    string contextError = GameContextLifecycle.RejectionReason(contextGeneration);
+                    if (contextError != null)
+                    {
+                        lock (_taskLock)
+                        {
+                            if (!task.CancelRequested)
+                            {
+                                task.Status = "failed";
+                                task.StatusMessage = "Game context changed; retry tool call";
+                                task.Error = contextError + " (retryable)";
+                                task.LastUpdatedAt = System.DateTime.UtcNow;
+                            }
+                        }
+                        return;
+                    }
+
                     CallToolResult result;
                     using (PushSessionContext(sessionId))
                     {
