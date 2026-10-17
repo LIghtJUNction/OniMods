@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 from onimcp_verify_parsing import fail
-from verify_onimcp_tool_surface import EXPECTED_DEFAULT_PUBLIC, EXPECTED_INTERNAL
+from verify_onimcp_tool_surface import EXPECTED_REGISTERED, EXPECTED_INTERNAL
 
 
 def extract_nested_tool_list(text: str, marker: str, source: str) -> set[str]:
@@ -75,10 +75,10 @@ def extract_python_string_set(text: str, name: str, source: str) -> set[str]:
 
 
 def assert_exact_public(actual: set[str], source: str) -> None:
-    if actual != EXPECTED_DEFAULT_PUBLIC:
+    if actual != EXPECTED_REGISTERED:
         fail(
             f"{source}: documented public tools mismatch: "
-            f"expected {sorted(EXPECTED_DEFAULT_PUBLIC)}, got {sorted(actual)}"
+            f"expected {sorted(EXPECTED_REGISTERED)}, got {sorted(actual)}"
         )
 
 
@@ -151,7 +151,7 @@ def main() -> None:
 
     print(
         "OK: OniMcp READMEs, tool reference, and runtime smoke exactly "
-        f"{len(EXPECTED_DEFAULT_PUBLIC)} registered public tools"
+        f"{len(EXPECTED_REGISTERED)} registered public tools"
     )
 
 

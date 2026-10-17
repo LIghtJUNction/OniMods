@@ -14,8 +14,8 @@ namespace OniMcp.Tools
         public string Group { get; set; }
         public string Mode { get; set; }
         public string Risk { get; set; }
-        public bool Hidden { get; set; }
         public string Description { get; set; }
+        public bool Hidden { get; set; }
         public List<string> Aliases { get; set; }
         public List<string> Tags { get; set; }
         public Dictionary<string, McpToolParameter> Parameters { get; set; }
@@ -46,13 +46,14 @@ namespace OniMcp.Tools
 
         public static CallToolResult CallTool(string name, JObject arguments) => Tools[name].Handler(arguments);
         public static List<McpTool> GetTools() => Tools.Values.OrderBy(tool => tool.Name, StringComparer.Ordinal).ToList();
-        public static List<McpToolInfo> GetToolInfos(bool includeAll = false) => GetTools()
+        public static List<McpToolInfo> GetToolInfos() => GetTools()
             .Select(tool => new McpToolInfo { Name = tool.Name })
             .ToList();
     }
 
-    public static class ToolUtil
+    public static partial class ToolUtil
     {
+        public static string CleanName(string name) => name;
         public static bool GetBool(JObject args, string name, bool fallback)
         {
             bool value;
@@ -93,11 +94,6 @@ namespace OniMcp.Tools
             public int Y { get; set; }
         }
     }
-}
-
-internal sealed class Game
-{
-    internal static Game Instance { get; set; }
 }
 
 internal static class GameUtil
@@ -165,8 +161,10 @@ internal enum SimHashes { TestElement }
 internal static class Assets
 {
     internal static readonly List<TestBuildingDef> BuildingDefs = new List<TestBuildingDef>();
+    internal static BuildingDef GetBuildingDef(string id) => BuildingDefs.Find(def => def.PrefabID == id);
 }
-internal sealed class TestBuildingDef
+internal sealed class TestBuildingDef : BuildingDef { }
+internal class BuildingDef
 {
     public string PrefabID { get; set; }
     public string Name { get; set; }

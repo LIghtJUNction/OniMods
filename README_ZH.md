@@ -10,7 +10,7 @@
 <div align="center">
   <p>
     <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust-2024-f46623?logo=rust&logoColor=white" /></a>
-    <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-green.svg" /></a>
+    <a href="LICENSE"><img alt="AUL License" src="https://img.shields.io/badge/License-AUL--draft-green.svg" /></a>
     <a href="mods/OniMcp/README.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-docs-2f80ed" /></a>
     <a href="docs/mcp-tools-reference.md"><img alt="Tools reference" src="https://img.shields.io/badge/Tools-reference-8b5cf6" /></a>
   </p>
@@ -49,6 +49,10 @@
 ## ONI MCP Server
 
 [ONI MCP Server 文档](mods/OniMcp/README.md)
+
+支持 OniMcp 的开发与测试：[捐赠](https://donate.lmm.best/?project=onimcp)。
+
+[![OniMcp 捐赠进度](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=zh-CN&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
 
 <details>
 <summary>展开 Mod 介绍</summary>
@@ -184,3 +188,7 @@ cp Directory.Build.props.example Directory.Build.props
 - `tar`：打包源码
 
 `onim setup` 会自动检查依赖并提示安装方式。
+
+## 许可证
+
+本仓库中 LIghtJUNction 有权授权的原创材料采用 [Agent Upstream License（AUL）1.0-draft.1](LICENSE)。旧版 MIT 授权仍有效，原文见 [LICENSE.MIT](LICENSE.MIT)。第三方材料及来自其他贡献者的改动保持各自授权，具体见 [LICENSING.md](LICENSING.md)。AUL 是自定义草案，不是 OSI 已批准的开源许可证。Agent 需阅读 [AGENTS.md](AGENTS.md) 与 [UPSTREAM.toml](UPSTREAM.toml)。

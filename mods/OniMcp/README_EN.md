@@ -4,6 +4,10 @@
 
 ONI MCP Server is an Oxygen Not Included mod that exposes a local MCP service (`http://localhost:8788/mcp/`) with `oni://` resources for colony introspection and controlled actions, designed for safe AI/client interaction.
 
+Support OniMcp development and testing: [Donate](https://donate.lmm.best/?project=onimcp).
+
+[![OniMcp donation progress](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=en&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
+
 ## Index
 
 - [What It Is](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md#what-it-is)

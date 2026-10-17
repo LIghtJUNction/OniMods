@@ -21,12 +21,13 @@ internal static class Program
         Run("invalid tool names return errors", InvalidNames);
         Run("tool calls still enforce coordinate and task constraints", ToolConstraints);
         Run("tool cache respects visibility after all-tools access", CacheVisibility);
-        Run("metadata list callers cannot corrupt cached tool count", MetadataIsolation);
+        Run("public catalog preserves schemas and internal operation isolation", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);
-        Run("dynamic resource routes preserve their read action", DynamicResources);
+        Run("dynamic resource routes preserve read actions and reject sandbox routes", DynamicResources);
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
-        Console.WriteLine(failures == 0 ? "All 12 core regression groups passed." : failures + " regression groups failed.");
+        Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
+        Console.WriteLine(failures == 0 ? "All 13 core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 
@@ -172,9 +173,40 @@ internal static class Program
 
     private static void MetadataIsolation()
     {
-        int count = OniToolRegistry.GetToolInfos().Count;
-        OniToolRegistry.GetToolInfos().Clear();
-        Require(count > 0 && OniToolRegistry.GetToolInfos().Count == count, "Caller removed cached metadata entries.");
+        var infos = OniToolRegistry.GetToolInfos();
+        var expected = new[] { "benchmark", "building_control", "game_control", "navigation_control", "orders_control", "server_control", "world_editor" };
+        Require(infos.Select(info => info.Name).OrderBy(name => name, StringComparer.Ordinal).SequenceEqual(expected),
+            "Public catalog membership changed.");
+        Require(infos.Select(info => info.Name).SequenceEqual(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name)),
+            "Catalog order differs from visible registry order.");
+        foreach (var info in infos)
+        {
+            Require(info.InputSchema.Required.Count(name => name == "task") == 1
+                && info.InputSchema.Required.Contains("action"), "Required schema fields changed: " + info.Name);
+            Require(info.InputSchema.Properties.ContainsKey("x") == (info.Name == "world_editor"),
+                "Coordinate schema boundary changed: " + info.Name);
+            Require(info.Execution.TaskSupport == "optional", "Task support changed: " + info.Name);
+            if (info.Name != "benchmark" && info.Name != "world_editor")
+            {
+                Require(info.Description.Contains("Unified "), "Production description was not applied: " + info.Name);
+                Require(info.InputSchema.Properties["query"].Description == "Search or filter text.",
+                    "Production parameter description was not applied: " + info.Name);
+            }
+        }
+        foreach (var name in new[] { "colony_control", "coordinate_control", "dupes_control", "read_control", "search_control" })
+        {
+            Require(OniToolRegistry.TryGetOperation(name, out _), "Internal operation was removed: " + name);
+            Require(!OniToolRegistry.TryGetTool(name, out _), "Internal operation became public: " + name);
+            var args = new JObject { ["task"] = "inspect", ["action"] = "status" };
+            int calls = GameStubs.HandlerCalls;
+            Require(OniToolRegistry.CallTool(name, args).IsError && GameStubs.HandlerCalls == calls,
+                "Public dispatch executed an internal operation: " + name);
+            Require(!OniToolRegistry.CallToolFromWorldEditor(name, args, false).IsError
+                && GameStubs.HandlerCalls == calls + 1, "World-editor dispatch lost an internal operation: " + name);
+        }
+        infos.Clear();
+        Require(OniToolRegistry.GetToolInfos().Count == expected.Length
+            && OniToolRegistry.GetDefaultToolInfoCount() == expected.Length, "Caller removed cached metadata entries.");
     }
 
     private static JObject Read(string uri)
@@ -211,8 +243,14 @@ internal static class Program
         Require((string)summary["arguments"]["query"] == "ore pile", "Query decoding failed.");
         var cell = Read("oni://world/cell/4/5");
         Require((string)cell["arguments"]["action"] == "cell_info" && (int)cell["arguments"]["x"] == 4, "World cell route failed.");
-        var sandbox = Read("oni://sandbox/cell/6/7");
-        Require((string)sandbox["arguments"]["kind"] == "read" && (string)sandbox["arguments"]["action"] == "sample_cell", "Sandbox sampling route changed operation.");
+        Require(OniResourceRegistry.ReadResource("oni://sandbox/cell/6/7") == null,
+            "Removed sandbox cell route remained available.");
+        Require(!OniResourceRegistry.GetResourceInfos().Any(resource =>
+            resource.Uri.StartsWith("oni://sandbox/", StringComparison.OrdinalIgnoreCase)),
+            "Removed sandbox resource remained advertised.");
+        Require(!OniResourceRegistry.GetResourceTemplateInfos().Any(template =>
+            template.UriTemplate.StartsWith("oni://sandbox/", StringComparison.OrdinalIgnoreCase)),
+            "Removed sandbox resource template remained advertised.");
     }
 
     private static void ResourceErrors()

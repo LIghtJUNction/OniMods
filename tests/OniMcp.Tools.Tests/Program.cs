@@ -38,8 +38,10 @@ internal static class Program
         TestNumbers();
         TestRegexBoundaries();
         TestWorldEditorCellObjectPolicy();
-        TestFloodFillPreviewCells();
-        TestSandboxDryRunRoutingPolicy();
+        GameControlRoutingRegression.Run();
+        TestExistingMaterialPolicy();
+        TestSweepEligibilityPolicy();
+        TestBackwallSupportPolicy();
         TestGameSpeedPauseOwnership();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
@@ -169,44 +171,59 @@ internal static class Program
             "empty cells must remain empty");
     }
 
-    private static void TestFloodFillPreviewCells()
+    private static void TestBackwallSupportPolicy()
     {
-        int[] cells = { 11, 12, 13 };
-        var visited = new System.Collections.Generic.List<int>();
-        SandboxFloodFillExecution.VisitPreviewCells(cells, cell => visited.Add(cell));
-        Check(visited.Count == cells.Length, "flood-fill preview must visit every planned cell exactly once");
-        for (int i = 0; i < cells.Length; i++)
-            Check(visited[i] == cells[i], "flood-fill preview must preserve the production plan order");
+        var missing = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", false);
+        Check(!missing.Valid && missing.ReasonCode == "backwall_required",
+            "OnBackWall placement without native foundation must be rejected with a stable reason");
+        Check(missing.Error != null && missing.Error.Contains("complete backwall foundation"),
+            "backwall rejection must explain the full-footprint requirement");
+
+        var supported = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", true);
+        Check(supported.Valid && supported.ReasonCode == null,
+            "OnBackWall placement with native foundation remains valid");
+
+        var floor = BuildPlanningBackwallSupportPolicy.Evaluate("OnFloor", false);
+        Check(floor.Valid,
+            "non-backwall rules remain outside this narrow policy so OnFloor planned-support semantics are unchanged");
     }
 
-    private static void TestSandboxDryRunRoutingPolicy()
+    private static void TestExistingMaterialPolicy()
     {
-        string error;
-        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("area", "flood_fill", true, out error),
-            "flood-fill dry-run remains supported");
-        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("map_designate", "replace", true, out error),
-            "map-designate dry-run remains supported");
-        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("read", "sample_cell", true, out error),
-            "read-only sandbox calls may ignore dryRun safely");
-        Check(!SandboxDryRunRoutingPolicy.TryRejectUnsupported("area", "paint", false, out error),
-            "normal writes are not changed by the dry-run policy");
-
-        foreach (var route in new[]
-        {
-            new[] { "area", "paint" },
-            new[] { "area", "temperature" },
-            new[] { "area", "destroy" },
-            new[] { "entity", "spawn_entity" },
-            new[] { "entities", "auto_plumb_building" },
-            new[] { "", "set_sandbox_mode" }
-        })
-        {
-            Check(SandboxDryRunRoutingPolicy.TryRejectUnsupported(route[0], route[1], true, out error),
-                "unsupported sandbox dry-run must fail closed: " + route[0] + "/" + route[1]);
-            Check(error != null && error.Contains("refusing to execute"),
-                "unsupported sandbox dry-run explains that mutation was refused");
-        }
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting(null, null, null, false),
+            "omitted material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("auto", null, null, false),
+            "auto material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("default", null, null, false),
+            "default material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("IgneousRock", "IgneousRock", "Igneous Rock", false),
+            "explicit canonical material must match the existing construction material");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Igneous Rock", "IgneousRock", "Igneous Rock", false),
+            "explicit proper material name must match the existing construction material");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("BuildableRaw", "IgneousRock", "Igneous Rock", true),
+            "explicit material category must accept an existing material in that category");
+        Check(!BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Granite", "IgneousRock", "Igneous Rock", false),
+            "different explicit material must not be treated as already satisfied");
+        Check(!BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Granite", null, null, false),
+            "unknown existing material must fail closed for an explicit request");
+        Check(BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "Granite"),
+            "resolved explicit material must match the existing tag exactly");
+        Check(!BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "IgneousRock"),
+            "resolved different material must be rejected");
     }
+
+
+    private static void TestSweepEligibilityPolicy()
+    {
+        SweepHandlerRegression.Run();
+        Check(SweepEligibilityPolicy.RejectionReason(false, false) == "no_clearable",
+            "pickupables without Clearable remain rejected");
+        Check(SweepEligibilityPolicy.RejectionReason(true, false) == "not_clearable",
+            "non-clearable pickupables must be rejected before sweep designation or priority changes");
+        Check(SweepEligibilityPolicy.RejectionReason(true, true) == null,
+            "clearable pickupables remain eligible for the existing sweep path");
+    }
+
 
     private static void TestGameSpeedPauseOwnership()
     {
@@ -239,6 +256,33 @@ internal static class Program
         Check(speedChange.PauseCount == 1 && speedChange.IsPaused,
             "set_speed must not drain an unrelated ONI pause reference");
         Check((bool)Body(changed)["isPaused"], "set_speed result must report the remaining external pause");
+
+        var externalOnly = new SpeedControlScreen();
+        SpeedControlScreen.Instance = externalOnly;
+        externalOnly.Pause();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(externalOnly.PauseCount == 1, "resume without an MCP lease must preserve an external pause");
+
+        var previousScreen = new SpeedControlScreen();
+        SpeedControlScreen.Instance = previousScreen;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        var replacementScreen = new SpeedControlScreen();
+        SpeedControlScreen.Instance = replacementScreen;
+        replacementScreen.Pause();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(replacementScreen.PauseCount == 1, "a stale screen lease must not release a replacement screen's pause");
+
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Game.Instance = new Game();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(replacementScreen.PauseCount == 2, "a stale Game lease must not release references from the new game");
+
+        var zeroSpeed = new SpeedControlScreen();
+        SpeedControlScreen.Instance = zeroSpeed;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'set_speed',speed:0}"));
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(zeroSpeed.PauseCount == 1, "speed zero followed by pause must own only one reference");
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
