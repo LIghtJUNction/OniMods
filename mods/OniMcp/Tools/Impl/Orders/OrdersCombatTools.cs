@@ -55,6 +55,15 @@ namespace OniMcp.Tools
                                 if (go == null)
                                     continue;
 
+                                if (mark && !AttackDesignationPolicy.CanAttemptMark(
+                                    target.canBePlayerTargeted,
+                                    target.IsAlignmentActive()))
+                                {
+                                    skipped++;
+                                    results.Add(TargetResult(go, target, AttackDesignationPolicy.NotTargetableStatus));
+                                    continue;
+                                }
+
                                 if (mark && !force && FactionManager.Instance.GetDisposition(FactionManager.FactionID.Duplicant, target.Alignment) == FactionManager.Disposition.Assist)
                                 {
                                     skipped++;
@@ -63,6 +72,13 @@ namespace OniMcp.Tools
                                 }
 
                                 target.SetPlayerTargeted(mark);
+                                if (mark && !AttackDesignationPolicy.MarkAccepted(target.IsPlayerTargeted()))
+                                {
+                                    target.SetPlayerTargeted(false);
+                                    skipped++;
+                                    results.Add(TargetResult(go, target, AttackDesignationPolicy.GameRejectedStatus));
+                                    continue;
+                                }
                                 if (mark)
                                     ApplyPriority(go, args);
 
