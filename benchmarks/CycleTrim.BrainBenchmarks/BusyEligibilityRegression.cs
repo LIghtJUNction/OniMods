@@ -5,7 +5,7 @@ namespace CycleTrim.BrainBenchmarks
 {
     internal static partial class Program
     {
-        static Program()
+        private static void BusyConsumersKeepIdentityEligibility()
         {
             var stamp = new RefreshStamp(10, 20, 30, 40, 50);
             var nonDuplicant = new BusyRefreshPolicySimulator(
@@ -24,7 +24,9 @@ namespace CycleTrim.BrainBenchmarks
             var duplicant = new BusyRefreshPolicySimulator(
                 maxSkippedRefreshes: 4,
                 isDuplicant: true);
-            if (!duplicant.ShouldRunChore(stamp)
+            if (!duplicant.ShouldRunPickup(stamp)
+                || !duplicant.ShouldRunChore(stamp)
+                || duplicant.ShouldRunPickup(stamp)
                 || duplicant.ShouldRunChore(stamp))
             {
                 throw new InvalidOperationException(

@@ -103,6 +103,7 @@ namespace CycleTrim.BrainBenchmarks
                 RunTest(
                     nameof(PathProbeWorkOrderAdapterUsesExactRefreshAndCloneCounts),
                     PathProbeWorkOrderAdapterUsesExactRefreshAndCloneCounts);
+                RunTest(nameof(BusyConsumersKeepIdentityEligibility), BusyConsumersKeepIdentityEligibility);
                 RunPathProbeRegressionTests();
                 return 0;
             }
