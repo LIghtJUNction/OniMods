@@ -38,7 +38,7 @@ namespace OniMcp.Tools
                     var controls = Components.BuildingCompletes.Items
                         .Select(item => item?.gameObject)
                         .Where(go => MatchesTarget(go, rect, worldId))
-                        .Where(go => go.GetComponent<Automatable>() != null)
+                        .Where(go => AutomatableControlPolicy.RejectionReason(go.GetComponent<Automatable>()) == null)
                         .Select(AutomatableInfo)
                         .Where(info => MatchesQuery(info, query))
                         .OrderBy(info => info["name"].ToString())
@@ -83,6 +83,9 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("Target Automatable not found");
 
                     var automatable = go.GetComponent<Automatable>();
+                    string rejection = AutomatableControlPolicy.RejectionReason(automatable);
+                    if (rejection != null)
+                        return CallToolResult.Error(rejection);
                     var before = AutomatableInfo(go);
                     ApplyAutomatable(automatable, args);
 
@@ -143,8 +146,19 @@ namespace OniMcp.Tools
                             continue;
                         }
 
+                        var automatable = go.GetComponent<Automatable>();
+                        string rejection = AutomatableControlPolicy.RejectionReason(automatable);
+                        if (rejection != null)
+                        {
+                            results.Add(new Dictionary<string, object>
+                            {
+                                ["ok"] = false, ["error"] = rejection,
+                                ["reasonCode"] = rejection, ["input"] = item
+                            });
+                            continue;
+                        }
                         var before = AutomatableInfo(go);
-                        ApplyAutomatable(go.GetComponent<Automatable>(), item);
+                        ApplyAutomatable(automatable, item);
                         results.Add(new Dictionary<string, object>
                         {
                             ["ok"] = true,

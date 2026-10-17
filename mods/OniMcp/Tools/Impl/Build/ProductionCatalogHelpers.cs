@@ -43,7 +43,7 @@ namespace OniMcp.Tools
             result["timeSeconds"] = ToolUtil.SafeFloat(recipe.time);
             result["requiredTech"] = recipe.requiredTech;
             result["requiresTechUnlock"] = recipe.RequiresTechUnlock();
-            result["techUnlocked"] = recipe.IsRequiredTechUnlocked();
+            result["techUnlocked"] = recipe.IsRequiredTechOrPOIUnlocked();
             result["requiresAllIngredientsDiscovered"] = recipe.RequiresAllIngredientsDiscovered;
             result["consumedHEP"] = recipe.consumedHEP;
             result["producedHEP"] = recipe.producedHEP;
@@ -124,35 +124,6 @@ namespace OniMcp.Tools
             if (count == ComplexFabricator.QUEUE_INFINITE)
                 return "infinite";
             return count;
-        }
-
-        private static bool TryComputeQueueCount(int before, string mode, int requested, out int next)
-        {
-            switch (mode)
-            {
-                case "clear":
-                    next = 0;
-                    return true;
-                case "infinite":
-                    next = ComplexFabricator.QUEUE_INFINITE;
-                    return true;
-                case "add":
-                    next = before == ComplexFabricator.QUEUE_INFINITE
-                        ? ComplexFabricator.QUEUE_INFINITE
-                        : Mathf.Clamp(before + Math.Max(1, requested), 0, ComplexFabricator.MAX_QUEUE_SIZE);
-                    return true;
-                case "remove":
-                    next = before == ComplexFabricator.QUEUE_INFINITE
-                        ? Mathf.Max(0, ComplexFabricator.MAX_QUEUE_SIZE - Math.Max(1, requested))
-                        : Mathf.Clamp(before - Math.Max(1, requested), 0, ComplexFabricator.MAX_QUEUE_SIZE);
-                    return true;
-                case "set":
-                    next = Mathf.Clamp(requested, 0, ComplexFabricator.MAX_QUEUE_SIZE);
-                    return true;
-                default:
-                    next = before;
-                    return false;
-            }
         }
 
         private static bool RecipeMatches(ComplexRecipe recipe, string query)

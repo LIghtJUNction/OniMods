@@ -52,6 +52,7 @@ namespace OniMcp.Tools
                     var seen = new HashSet<GameObject>();
                     var results = new List<Dictionary<string, object>>();
                     int marked = 0;
+                    int skippedEmpty = 0;
                     for (int y = rect["y1"]; y <= rect["y2"]; y++)
                     {
                         for (int x = rect["x1"]; x <= rect["x2"]; x++)
@@ -71,6 +72,12 @@ namespace OniMcp.Tools
                                 if (workable == null)
                                     continue;
 
+                                if (!ConduitEmptyingPolicy.HasContents(go))
+                                {
+                                    skippedEmpty++;
+                                    results.Add(ObjectResult(go, "skipped_empty"));
+                                    continue;
+                                }
                                 workable.MarkForEmptying();
                                 ApplyPriority(go, args);
                                 marked++;
@@ -82,6 +89,7 @@ namespace OniMcp.Tools
                     return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                     {
                         ["marked"] = marked,
+                        ["skippedEmpty"] = skippedEmpty,
                         ["worldId"] = worldId,
                         ["rect"] = rect,
                         ["type"] = string.IsNullOrWhiteSpace(args["type"]?.ToString()) ? "all" : args["type"].ToString(),

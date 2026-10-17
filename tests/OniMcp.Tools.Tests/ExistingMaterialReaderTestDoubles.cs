@@ -1,29 +1,31 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 // Only component lookup and game data are substituted. The material reader is
 // compiled from production source; these tests are not Unity/ONI acceptance.
 namespace UnityEngine
 {
-    internal sealed class GameObject
+    internal sealed partial class GameObject
     {
         private readonly Dictionary<Type, object> components = new Dictionary<Type, object>();
 
         internal GameObject Add<T>(T component) where T : class
         {
             components[typeof(T)] = component;
+            if (component is KMonoBehaviour behaviour)
+                behaviour.gameObject = this;
             return this;
         }
 
         internal T GetComponent<T>() where T : class
         {
-            object value;
-            return components.TryGetValue(typeof(T), out value) ? (T)value : null;
+            return components.Values.OfType<T>().FirstOrDefault();
         }
     }
 }
 
-internal struct Tag
+internal partial struct Tag
 {
     internal Tag(string name) { Name = name; }
     internal string Name { get; }

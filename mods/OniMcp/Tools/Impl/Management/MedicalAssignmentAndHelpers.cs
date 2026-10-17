@@ -86,7 +86,7 @@ namespace OniMcp.Tools
                     ["dupeId"] = new McpToolParameter { Type = "integer", Description = "要分配的复制人 InstanceID；action=assign 时与 dupeName 二选一", Required = false },
                     ["dupeName"] = new McpToolParameter { Type = "string", Description = "要分配的复制人名称；action=assign 时与 dupeId 二选一", Required = false },
                     ["action"] = new McpToolParameter { Type = "string", Description = "assign 或 unassign，默认 assign", Required = false, EnumValues = new List<string> { "assign", "unassign" } },
-                    ["thresholdPercent"] = new McpToolParameter { Type = "number", Description = "可选：同时设置治疗阈值百分比 0-100", Required = false },
+                    ["thresholdPercent"] = new McpToolParameter { Type = "number", Description = "可选：分配成功后设置治疗阈值百分比 0-100；若阈值影响患者资格，请先单独修改阈值再分配", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认修改医疗床分配，必须为 true", Required = true }
                 }),
                 Handler = args =>
@@ -99,10 +99,6 @@ namespace OniMcp.Tools
                     var assignable = clinic.GetComponent<Assignable>();
                     if (assignable == null)
                         return CallToolResult.Error("Clinic target is not assignable");
-
-                    float? threshold = ToolUtil.GetFloat(args, "thresholdPercent");
-                    if (threshold.HasValue)
-                        SetClinicThresholdValue(clinic, threshold.Value);
 
                     string action = (args["action"]?.ToString() ?? "assign").Trim().ToLowerInvariant();
                     if (action == "unassign")
@@ -119,12 +115,22 @@ namespace OniMcp.Tools
                         var dupe = ToolUtil.FindDupe(dupeArgs);
                         if (dupe == null)
                             return CallToolResult.Error("Duplicant not found");
-                        assignable.Assign(dupe);
+                        MinionAssignablesProxy proxy;
+                        string error = AssignmentEligibility.Resolve(assignable, dupe, out proxy);
+                        if (error != null)
+                            return CallToolResult.Error(error);
+                        assignable.Assign(proxy);
                     }
                     else
                     {
                         return CallToolResult.Error("action must be assign or unassign");
                     }
+
+                    // Validate against the current native rules before any write.
+                    // Change the threshold separately first if it must permit this patient.
+                    float? threshold = ToolUtil.GetFloat(args, "thresholdPercent");
+                    if (threshold.HasValue)
+                        SetClinicThresholdValue(clinic, threshold.Value);
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(ClinicInfo(clinic), McpJsonUtil.Settings));
                 }

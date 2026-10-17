@@ -103,20 +103,10 @@ namespace OniMcp.Tools
                     if (tags.Count == 0)
                         return CallToolResult.Error("tags must contain at least one resource tag");
 
-                    string mode = (args["mode"]?.ToString() ?? "replace").ToLowerInvariant();
-                    var next = new HashSet<Tag>(filterable.GetTags());
-                    if (mode == "replace")
-                        next.Clear();
-
-                    foreach (var tag in tags)
-                    {
-                        if (mode == "remove")
-                            next.Remove(tag);
-                        else
-                            next.Add(tag);
-                    }
-
-                    filterable.UpdateFilters(next);
+                    string mode = (args["mode"]?.ToString() ?? "replace").Trim().ToLowerInvariant();
+                    if (!TreeFilterSelection.TryApply(filterable, tags, mode, out error))
+                        return CallToolResult.Error(error);
+                    target.AcceptedTags = filterable.GetTags().Select(tag => tag.Name).OrderBy(tag => tag).ToList();
                     return CallToolResult.Text(JsonConvert.SerializeObject(target.ToDictionary(includeItems: false), McpJsonUtil.Settings));
                 }
             };

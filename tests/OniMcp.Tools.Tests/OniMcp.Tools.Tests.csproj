@@ -35,5 +35,18 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialReader.cs" Link="Source/BuildPlanningExistingMaterialReader.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/AutomatableControlPolicy.cs" Link="Source/AutomatableControlPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ProductionQueuePolicy.cs" Link="Source/ProductionQueuePolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Rocket/RocketModuleMaterialPolicy.cs" Link="Source/RocketModuleMaterialPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/DuplicantTools.cs" Link="Source/DuplicantTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/DuplicantCommandTools.cs" Link="Source/DuplicantCommandTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/DuplicantAssignableTools.cs" Link="Source/DuplicantAssignableTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/DuplicantAssignableResolution.cs" Link="Source/DuplicantAssignableResolution.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/AssignmentEligibility.cs" Link="Source/AssignmentEligibility.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Management/MedicalAssignmentAndHelpers.cs" Link="Source/MedicalAssignmentAndHelpers.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/FilterTools.cs" Link="Source/FilterTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/TreeFilterSelection.cs" Link="Source/TreeFilterSelection.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/StorageTools.cs" Link="Source/StorageTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/StorageTargetResolver.cs" Link="Source/StorageTargetResolver.cs" />
   </ItemGroup>
 </Project>

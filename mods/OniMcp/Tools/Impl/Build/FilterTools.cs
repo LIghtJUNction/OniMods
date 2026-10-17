@@ -240,27 +240,12 @@ namespace OniMcp.Tools
 
             string mode = (args["mode"]?.ToString() ?? "replace").Trim().ToLowerInvariant();
             var before = tree.GetTags().Select(TagInfo).ToList();
-            var next = new HashSet<Tag>(tree.GetTags());
             var requested = ParseTags(args["tags"]);
-
-            if (mode == "clear" || mode == "replace")
-                next.Clear();
-            if (mode != "clear" && requested.Count == 0)
-                return CallToolResult.Error("tags must contain at least one tag unless mode=clear");
-
-            foreach (var tag in requested)
-            {
-                if (mode == "remove")
-                    next.Remove(tag);
-                else
-                    next.Add(tag);
-            }
+            string error;
+            if (!TreeFilterSelection.TryApply(tree, requested, mode, out error))
+                return CallToolResult.Error(error);
 
             var flat = go.GetComponent<FlatTagFilterable>();
-            if (flat != null)
-                ApplyFlatTags(flat, next);
-            else
-                tree.UpdateFilters(next);
 
             return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
             {
@@ -301,6 +286,8 @@ namespace OniMcp.Tools
                     ["dropIncorrectOnFilterChange"] = tree.dropIncorrectOnFilterChange,
                     ["storageCategories"] = tree.GetFilterStorage()?.storageFilters.Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList()
                 };
+                if (includeOptions)
+                    treeInfo["options"] = TreeFilterSelection.GetOptions(tree).Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList();
                 result["tree"] = treeInfo;
             }
 
@@ -329,18 +316,6 @@ namespace OniMcp.Tools
                 .SelectMany(group => group.Value)
                 .Distinct()
                 .ToList();
-        }
-
-        private static void ApplyFlatTags(FlatTagFilterable flat, HashSet<Tag> next)
-        {
-            foreach (var tag in flat.selectedTags.ToList())
-                flat.SelectTag(tag, false);
-            foreach (var tag in next)
-            {
-                if (flat.tagOptions.Contains(tag))
-                    flat.SelectTag(tag, true);
-            }
-            flat.GetComponent<TreeFilterable>().UpdateFilters(new HashSet<Tag>(flat.selectedTags));
         }
 
         private static bool MatchesTarget(GameObject go, Dictionary<string, int> rect, int worldId)

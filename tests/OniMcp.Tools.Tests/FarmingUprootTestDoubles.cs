@@ -72,9 +72,13 @@ namespace OniMcp.Tools
 {
     public static partial class ToolUtil
     {
-        internal static Tuple<int, int, int, int> GetRect(JObject args)
+        internal static Dictionary<string, int> GetRect(JObject args)
         {
-            return Tuple.Create((int)args["x1"], (int)args["y1"], (int)args["x2"], (int)args["y2"]);
+            return new Dictionary<string, int>
+            {
+                ["x1"] = (int)args["x1"], ["y1"] = (int)args["y1"],
+                ["x2"] = (int)args["x2"], ["y2"] = (int)args["y2"]
+            };
         }
 
         internal static int ResolveWorldId(JObject args) => (int?)args["worldId"] ?? 0;
@@ -97,16 +101,16 @@ namespace OniMcp.Tools
             return args["x1"] != null && args["y1"] != null && args["x2"] != null && args["y2"] != null;
         }
 
-        private static int RectCellCount(Tuple<int, int, int, int> rect)
+        private static int RectCellCount(Dictionary<string, int> rect)
         {
-            return (rect.Item3 - rect.Item1 + 1) * (rect.Item4 - rect.Item2 + 1);
+            return (rect["x2"] - rect["x1"] + 1) * (rect["y2"] - rect["y1"] + 1);
         }
 
-        private static bool CellInRect(int cell, Tuple<int, int, int, int> rect, int worldId)
+        private static bool CellInRect(int cell, Dictionary<string, int> rect, int worldId)
         {
             int x = cell % 1000;
             int y = cell / 1000;
-            return x >= rect.Item1 && x <= rect.Item3 && y >= rect.Item2 && y <= rect.Item4;
+            return x >= rect["x1"] && x <= rect["x2"] && y >= rect["y1"] && y <= rect["y2"];
         }
 
         private static void ApplyPriority(UprootTestObject target, JObject args)

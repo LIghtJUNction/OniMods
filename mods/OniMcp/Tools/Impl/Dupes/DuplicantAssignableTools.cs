@@ -140,7 +140,11 @@ namespace OniMcp.Tools
                         var dupe = ToolUtil.FindDupe(dupeArgs);
                         if (dupe == null)
                             return CallToolResult.Error("Duplicant not found");
-                        assignable.Assign(dupe);
+                        MinionAssignablesProxy proxy;
+                        string error = AssignmentEligibility.Resolve(assignable, dupe, out proxy);
+                        if (error != null)
+                            return CallToolResult.Error(error);
+                        assignable.Assign(proxy);
                     }
 
                     return CallToolResult.Text(JsonConvert.SerializeObject(AssignableToDictionary(assignable), McpJsonUtil.Settings));
@@ -204,6 +208,10 @@ namespace OniMcp.Tools
                     }
                     else
                     {
+                        string eligibilityError = AssignmentEligibility.ValidateSlot(dupe, slot);
+                        if (eligibilityError != null)
+                            return CallToolResult.Error(eligibilityError);
+
                         string itemError;
                         var item = FindAssignableForSlot(slot, ownerIdentity, args, out itemError);
                         if (item == null)
