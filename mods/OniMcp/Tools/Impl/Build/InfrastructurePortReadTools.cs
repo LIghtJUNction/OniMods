@@ -256,40 +256,25 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> PowerStatus(GameObject go, string role, EnergyConsumer consumer = null, Generator generator = null)
         {
+            consumer = consumer ?? go.GetComponent<EnergyConsumer>();
+            generator = generator ?? go.GetComponent<Generator>();
             var battery = go.GetComponent<Battery>();
+            ICircuitConnected connection = role == "output" || role == "generator"
+                ? (ICircuitConnected)generator ?? battery ?? (ICircuitConnected)consumer
+                : (ICircuitConnected)consumer ?? generator ?? (ICircuitConnected)battery;
+            ushort? circuit = PowerConnectionReadiness.ReadCircuitId(() => connection is EnergyConsumer c ? c.CircuitID
+                : connection is Generator g ? g.CircuitID : connection is Battery b ? b.CircuitID : ushort.MaxValue);
+            bool pending = !circuit.HasValue || PowerConnectionReadiness.Pending(connection, circuit.Value);
             return new Dictionary<string, object>
             {
-                ["connected"] = HasPowerConnection(go),
-                ["circuitId"] = PowerCircuit(go),
+                ["connected"] = pending ? (bool?)null : circuit.Value != ushort.MaxValue,
+                ["circuitId"] = pending ? null : circuit.Value == ushort.MaxValue ? "-1" : circuit.Value.ToString(),
+                ["networkPending"] = pending,
                 ["loadW"] = consumer != null ? (object)Math.Round(ToolUtil.SafeFloat(consumer.WattsNeededWhenActive), 1) : null,
                 ["generatorW"] = generator != null ? (object)Math.Round(ToolUtil.SafeFloat(generator.WattageRating), 1) : null,
                 ["batteryJ"] = battery != null ? (object)Math.Round(ToolUtil.SafeFloat(battery.JoulesAvailable), 1) : null,
                 ["roleHint"] = role
             };
-        }
-
-        private static bool HasPowerConnection(GameObject go)
-        {
-            var consumer = go.GetComponent<EnergyConsumer>();
-            if (consumer != null)
-                return consumer.CircuitID != ushort.MaxValue;
-            var generator = go.GetComponent<Generator>();
-            if (generator != null)
-                return generator.CircuitID != ushort.MaxValue;
-            var battery = go.GetComponent<Battery>();
-            return battery != null && battery.CircuitID != ushort.MaxValue;
-        }
-
-        private static object PowerCircuit(GameObject go)
-        {
-            var consumer = go.GetComponent<EnergyConsumer>();
-            if (consumer != null)
-                return consumer.CircuitID == ushort.MaxValue ? "-1" : consumer.CircuitID.ToString();
-            var generator = go.GetComponent<Generator>();
-            if (generator != null)
-                return generator.CircuitID == ushort.MaxValue ? "-1" : generator.CircuitID.ToString();
-            var battery = go.GetComponent<Battery>();
-            return battery == null || battery.CircuitID == ushort.MaxValue ? "-1" : battery.CircuitID.ToString();
         }
 
         private static bool Wants(string kind, string layer)

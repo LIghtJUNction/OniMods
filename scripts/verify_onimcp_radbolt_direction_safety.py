@@ -47,6 +47,12 @@ def main() -> None:
             "radbolt setter must provide mutation-free dry-run")
     require_before(setter, shared_gate, "control.Direction = direction;",
                    "radbolt eligibility must be checked before Direction mutation")
+    parser = "RadboltDirectionEligibilityPolicy.TryParseDirection"
+    require(setter, parser, "radbolt setter must reject undefined or combined enum inputs")
+    require_before(setter, parser, 'ToolUtil.GetBool(args, "dryRun", false)',
+                   "invalid direction must be rejected before preview")
+    require_before(setter, parser, "control.Direction = direction;",
+                   "invalid direction must be rejected before mutation")
     require_before(setter, 'ToolUtil.GetBool(args, "dryRun", false)', "control.Direction = direction;",
                    "radbolt dry-run must return before Direction mutation")
     require(router, 'return OptionControlTools.ControlSideOption().Handler(args);',

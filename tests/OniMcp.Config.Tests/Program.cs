@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Support;
+using PeterHan.PLib;
+using PeterHan.PLib.Options;
 
 internal static class Program
 {
@@ -26,7 +28,8 @@ internal static class Program
         Run("concurrent first access publishes a single configuration", ConcurrentInitialization);
         Run("concurrent saves expose complete JSON to readers", AtomicSaves);
         Run("failed save retains current configuration and cleans temporary files", FailedSave);
-        Console.WriteLine("PASS: 11 OniMcp config regression tests");
+        Run("options status stays compact, token stays masked, and support link opens", OptionsSurface);
+        Console.WriteLine("PASS: 12 OniMcp config regression tests");
     }
 
     private static void Run(string name, Action test)
@@ -213,6 +216,32 @@ internal static class Program
         Check(ReferenceEquals(options, OniMcpOptions.Current), "A failed save replaced the active settings.");
         Check(File.ReadAllText(originalPath) == original, "A failed save changed the previous file.");
         Check(!Directory.GetFiles(OniMcpPaths.ModPath, "*.tmp").Any(), "A failed replacement left a temporary file.");
+    }
+
+    private static void OptionsSurface()
+    {
+        OniMcpPaths.ConfigPath = Path.Combine(OniMcpPaths.ModPath, new string('x', 240), "OniMcpConfig.json");
+        var options = new OniMcpOptions { Host = new string('h', 100), AuthToken = "never-show-this-token" };
+        var entries = options.CreateOptions().ToArray();
+        var status = entries.OfType<TextBlockOptionsEntry>().Single();
+        Check(status.Option.Title.Split('\n').All(line => line.Length <= 60), "Long paths or hosts widened the options dialog.");
+        Check(!status.Option.Title.Contains(OniMcpPaths.ConfigPath), "The full config path appeared in the dialog.");
+        Check(status.Option.Tooltip.Contains(OniMcpPaths.ConfigPath), "The full config path is not available in the status tooltip.");
+        Check(entries.OfType<TextBlockOptionsEntry>().All(entry => !entry.Option.Title.Contains(options.AuthToken)),
+            "The token appeared in visible status text.");
+        Check(typeof(OniMcpOptions).GetProperty(nameof(OniMcpOptions.AuthToken))
+            .GetCustomAttributes(typeof(DynamicOptionAttribute), false).Length == 1,
+            "The token no longer uses the masked input handler.");
+
+        var support = entries.OfType<ButtonOptionsEntry>().Single(entry => entry.Name == "OpenProjectSupport");
+        Check(support.Option.Category == "Support" && support.Option.Title == "捐赠 / Donate",
+            "The support button does not name the donation action in both languages.");
+        Check(support.Option.Tooltip.Contains("https://donate.lmm.best/?project=onimcp")
+            && support.Option.Tooltip.Contains("可选捐赠")
+            && support.Option.Tooltip.Contains("Optional donation"),
+            "The support tooltip must identify optional donations for the OniMcp project in both languages.");
+        ((Action<object>)support.Value)(null);
+        Check(UnityEngine.Application.LastOpenedUrl == "https://donate.lmm.best/?project=onimcp", "The support button opened the wrong project URL.");
     }
 
     private static void ExpectFailure(Action action)

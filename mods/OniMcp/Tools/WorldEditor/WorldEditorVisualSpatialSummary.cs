@@ -67,17 +67,17 @@ namespace OniMcp.Tools
                 var element = Grid.Element[cell];
                 bool oxygen = element != null && (element.id == SimHashes.Oxygen || element.id == SimHashes.ContaminatedOxygen);
                 float mass = Grid.Mass[cell];
-                if (oxygen && mass >= 0.5f) breathable++;
-                else if (oxygen && mass > 0.05f) thin++;
+                if (oxygen && mass >= 0.6f) breathable++;
+                else if (oxygen && mass >= 0.1f) thin++;
                 else if (!Grid.Solid[cell]) unbreathable++;
             });
-            sb.AppendLine("- Breathability: breathable oxygen(>=0.5kg)=" + breathable
+            sb.AppendLine("- Breathability: breathable oxygen(>=0.6kg)=" + breathable
                 + ", thin oxygen=" + thin + ", open unbreathable cells=" + unbreathable + ".");
             AppendRunLines(sb, "Unbreathable pocket", FindHorizontalRuns(xMin, xMax, yMin, yMax, cell =>
             {
                 var element = Grid.Element[cell];
                 bool oxygen = element != null && (element.id == SimHashes.Oxygen || element.id == SimHashes.ContaminatedOxygen);
-                return !Grid.Solid[cell] && (!oxygen || Grid.Mass[cell] <= 0.05f);
+                return !Grid.Solid[cell] && (!oxygen || Grid.Mass[cell] < 0.1f);
             }), 8);
         }
 
@@ -91,7 +91,7 @@ namespace OniMcp.Tools
                 for (int x = xMin; x <= xMax; x++)
                 {
                     int start = Grid.XYToCell(x, y);
-                    if (!Grid.IsValidCell(start) || visited.Contains(start) || !predicate(start))
+                    if (!IsReadableMapCell(start) || visited.Contains(start) || !predicate(start))
                         continue;
 
                     var region = new SpatialRegion(x, y);
@@ -106,7 +106,7 @@ namespace OniMcp.Tools
                         region.Add(cell, cx, cy, xMin, xMax, yMin, yMax);
                         foreach (int next in CardinalCells(cell))
                         {
-                            if (!Grid.IsValidCell(next) || visited.Contains(next))
+                            if (!IsReadableMapCell(next) || visited.Contains(next))
                                 continue;
                             int nx = Grid.CellColumn(next);
                             int ny = Grid.CellRow(next);
@@ -131,7 +131,7 @@ namespace OniMcp.Tools
                 int start = -1;
                 for (int x = xMin; x <= xMax + 1; x++)
                 {
-                    bool match = x <= xMax && Grid.IsValidCell(Grid.XYToCell(x, y)) && predicate(Grid.XYToCell(x, y));
+                    bool match = x <= xMax && IsReadableMapCell(Grid.XYToCell(x, y)) && predicate(Grid.XYToCell(x, y));
                     if (match && start < 0) start = x;
                     if (!match && start >= 0)
                     {
@@ -261,7 +261,7 @@ namespace OniMcp.Tools
                 for (int x = xMin; x <= xMax; x++)
                 {
                     int cell = Grid.XYToCell(x, y);
-                    if (Grid.IsValidCell(cell)) action(x, y, cell);
+                    if (IsReadableMapCell(cell)) action(x, y, cell);
                 }
         }
 

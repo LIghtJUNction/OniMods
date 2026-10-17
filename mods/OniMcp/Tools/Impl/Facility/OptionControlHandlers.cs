@@ -132,7 +132,7 @@ namespace OniMcp.Tools
                 return CallToolResult.Error(eligibilityError);
 
             EightDirection direction;
-            if (!Enum.TryParse(args["direction"]?.ToString() ?? "", true, out direction))
+            if (!RadboltDirectionEligibilityPolicy.TryParseDirection(args["direction"]?.ToString(), out direction))
                 return CallToolResult.Error("direction must be one of the eight EightDirection values");
 
             var before = control.Direction;

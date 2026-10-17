@@ -91,10 +91,7 @@ namespace OniMcp.Server
 
         private static bool IsValidModernSubscriptionId(JToken subscriptionId)
         {
-            return subscriptionId != null
-                && (subscriptionId.Type == JTokenType.String
-                    || subscriptionId.Type == JTokenType.Integer
-                    || subscriptionId.Type == JTokenType.Float);
+            return IsValidModernRequestId(subscriptionId);
         }
     }
 }
