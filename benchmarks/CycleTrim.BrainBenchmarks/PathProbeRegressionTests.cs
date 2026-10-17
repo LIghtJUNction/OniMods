@@ -22,6 +22,9 @@ namespace CycleTrim.BrainBenchmarks
                 nameof(QueuedProbeUsesTheFinalWorkOrderSnapshot),
                 QueuedProbeUsesTheFinalWorkOrderSnapshot);
             RunTest(
+                nameof(PathProbeAbilityFingerprintUsesRefreshedPrefabIdentity),
+                PathProbeAbilityFingerprintUsesRefreshedPrefabIdentity);
+            RunTest(
                 nameof(PathProbeBackpressureHandlesMaximumCounters),
                 PathProbeBackpressureHandlesMaximumCounters);
         }
@@ -105,6 +108,25 @@ namespace CycleTrim.BrainBenchmarks
             state.MarkApplied();
             AssertFalse(state.TryAdmit(queued, true), "work order snapshot was completed");
             AssertTrue(state.TryAdmit(captured, true), "initial snapshot was never applied");
+        }
+
+        private static void PathProbeAbilityFingerprintUsesRefreshedPrefabIdentity()
+        {
+            const int prefabInstanceId = 123456789;
+            var expectedDry = unchecked(prefabInstanceId * 397);
+            var expectedSubmerged = expectedDry ^ 1;
+
+            AssertEqual(
+                expectedDry,
+                PathProbeAbilityFingerprint.Create(prefabInstanceId, false),
+                "dry ability fingerprint");
+            AssertEqual(
+                expectedSubmerged,
+                PathProbeAbilityFingerprint.Create(prefabInstanceId, true),
+                "submerged ability fingerprint");
+            AssertFalse(
+                PathProbeAbilityFingerprint.Create(prefabInstanceId + 1, false) == expectedDry,
+                "prefab identity participates in fingerprint");
         }
 
         private static void PathProbeBackpressureHandlesMaximumCounters()

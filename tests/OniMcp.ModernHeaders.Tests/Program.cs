@@ -42,8 +42,65 @@ internal static class Program
             {
                 AssertCorsHeaders(client);
                 AssertAdvertisedHeaderSchema(client);
+                AssertRequiredNameHeader(client, 3098, "tools/call",
+                    "{\"arguments\":{\"task\":\"missing tool name\"}," + ModernMeta + "}");
+                AssertRequiredNameHeader(client, 3099, "resources/read", "{" + ModernMeta + "}");
 
                 int calls = OniToolRegistry.Calls;
+                string nullIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":null,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"null request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, nullIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern tools/call with a null id was not rejected at the modern validation boundary");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["error"]["code"] == -32600,
+                        "Modern tools/call with a null id did not use InvalidRequest");
+                }
+                Assert(OniToolRegistry.Calls == calls,
+                    "Modern tools/call with a null id executed the tool");
+
+                string missingIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"missing request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, missingIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern tools/call without an id did not return an HTTP error InvalidRequest response");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int)json["error"]["code"] == -32600,
+                        "Modern tools/call without an id did not use InvalidRequest");
+                }
+                Assert(OniToolRegistry.Calls == calls,
+                    "Modern tools/call without an id executed the tool as a notification");
+
+                string fractionalIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":1.5,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"fractional request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, fractionalIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern tools/call with a fractional numeric id was rejected");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(json["result"] != null,
+                        "Modern tools/call with a fractional numeric id returned no result");
+                    Assert(Math.Abs((double)json["id"] - 1.5) < double.Epsilon,
+                        "Modern tools/call did not echo the fractional numeric request id");
+                }
+                Assert(OniToolRegistry.Calls == ++calls,
+                    "Modern tools/call with a fractional numeric id did not execute once");
+
+                string floatingPointIdCall = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":3100.0,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"floating-point request id\"}," + ModernMeta + "}}";
+                using (var response = Post(client, floatingPointIdCall, "tools/call", "benchmark", null))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.OK,
+                        "Modern tools/call rejected a numeric request id encoded with a decimal point");
+                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert(json["result"] != null,
+                        "Modern tools/call with a floating numeric id returned no result");
+                    Assert(Math.Abs((double)json["id"] - 3100.0) < double.Epsilon,
+                        "Modern tools/call did not echo the floating numeric request id");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Accepted modern numeric request id allocated a legacy session header");
+                }
+                Assert(OniToolRegistry.Calls == ++calls,
+                    "Modern tools/call with a floating numeric id did not execute once");
+
                 AssertCall(client, 3101,
                     "{\"task\":\"region match\",\"region\":\"us-west1\"}",
                     new Dictionary<string, string> { ["Mcp-Param-Region"] = "us-west1" },
@@ -147,7 +204,7 @@ internal static class Program
             Invoke(_bridge, "OnDestroy");
         }
 
-        Console.WriteLine("PASS modern x-mcp-header schema, CORS, Base64, and Mcp-Param wire regressions");
+        Console.WriteLine("PASS modern request-id, required-name, x-mcp-header schema, CORS, Base64, and Mcp-Param wire regressions");
     }
 
     private static void AssertCorsHeaders(HttpClient client)
@@ -185,6 +242,20 @@ internal static class Program
         }
     }
 
+    private static void AssertRequiredNameHeader(HttpClient client, int id, string method, string paramsJson)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id
+            + ",\"params\":" + paramsJson + "}";
+        using (var response = Post(client, body, method, null, null))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "Missing required Mcp-Name did not return HTTP 400 for " + method);
+            JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            Assert((int)json["error"]["code"] == -32020,
+                "Missing required Mcp-Name did not return HeaderMismatch for " + method);
+        }
+    }
+
     private static void AssertCall(HttpClient client, int id, string argumentsJson,
         Dictionary<string, string> headers, HttpStatusCode expectedStatus, int? expectedError)
     {
@@ -207,6 +278,7 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", method);
             if (name != null)

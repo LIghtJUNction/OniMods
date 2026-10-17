@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace CycleTrim.Core
 {
@@ -7,29 +6,34 @@ namespace CycleTrim.Core
         where T : class, new()
     {
         [ThreadStatic]
-        private static Stack<T> items;
+        private static T item;
 
         internal static T Rent()
         {
-            var pool = items;
-            return pool != null && pool.Count != 0 ? pool.Pop() : new T();
+            var pooled = item;
+            if (pooled != null)
+            {
+                item = null;
+                return pooled;
+            }
+
+            return new T();
         }
 
-        internal static void Return(T item)
+        internal static void Return(T value)
         {
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            // One retained object is enough for the normal non-reentrant hot path.
+            // If a call is nested, let the extra object become collectible rather
+            // than permanently growing per-thread retained capacity.
             if (item == null)
             {
-                throw new ArgumentNullException(nameof(item));
+                item = value;
             }
-
-            var pool = items;
-            if (pool == null)
-            {
-                pool = new Stack<T>(1);
-                items = pool;
-            }
-
-            pool.Push(item);
         }
     }
 }

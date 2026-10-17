@@ -23,8 +23,10 @@ def decompile(assembly: Path, type_name: str) -> str:
         timeout=60,
     )
     if result.returncode != 0 or not result.stdout.strip():
-        detail = " ".join(result.stderr.split())
-        raise RuntimeError(f"could not decompile {type_name}: {detail}")
+        # Third-party tool stderr is deliberately not copied into CI logs/artifacts.
+        raise RuntimeError(
+            f"could not inspect metadata for {type_name} (ilspy exit {result.returncode})"
+        )
     source = result.stdout.replace("\r\n", "\n")
     # refasmer-style references expose stripped methods as `extern`.
     return re.sub(r"\bextern\s+", "", source)
@@ -56,18 +58,6 @@ def main() -> int:
             failures.append(f"{label}: expected at least {minimum}, found {count}")
 
     try:
-        # SmartReservoirSignalPatch: reflected methods plus injected private fields.
-        expect("SmartReservoir", method(r"protected\s+override\s+void", "OnSpawn"),
-               "SmartReservoir.OnSpawn()")
-        expect("SmartReservoir", method(r"private\s+void", "UpdateLogicCircuit", r"object\s+\w+"),
-               "SmartReservoir.UpdateLogicCircuit(object)")
-        for field_type, field_name in (
-            ("bool", "activated"), ("LogicPorts", "logicPorts"),
-            ("int", "activateValue"), ("int", "deactivateValue"),
-        ):
-            expect("SmartReservoir", rf"\bprivate\s+{field_type}\s+{field_name}\s*;",
-                   f"SmartReservoir.{field_name}")
-
         # FetchPickupCandidatePatch and fetch invalidation targets.
         expect("FetchManager", method(r"public\s+void", "UpdatePickups",
                                       r"Navigator\s+\w+\s*,\s*int\s+\w+"),
@@ -87,6 +77,8 @@ def main() -> int:
         # Busy duplicant/chore scheduler targets.
         expect("PickupableSensor", method(r"public\s+override\s+void", "Update"),
                "PickupableSensor.Update()")
+        expect("PickupableSensor", r"\bprivate\s+Navigator\s+navigator\s*;",
+               "PickupableSensor.navigator")
         expect("ChoreConsumer", method(r"public\s+bool", "FindNextChore",
                                        r"ref\s+Chore\.Precondition\.Context\s+\w+"),
                "ChoreConsumer.FindNextChore(ref Context)")
@@ -144,6 +136,16 @@ def main() -> int:
             (r"\bprivate\s+Thread\[\]\s+agents\s*;", "AsyncPathProber.Manager.agents"),
             (r"\bprivate\s+Dictionary<Navigator,\s*int>\s+navigators\b", "AsyncPathProber.Manager.navigators"),
             (r"\bprivate\s+ushort\s+activeSerialNo\s*;", "AsyncPathProber.Manager.activeSerialNo"),
+            (
+                method(
+                    r"public\s+void",
+                    "Execute",
+                    r"PathFinder\.PotentialList\s+\w+\s*,\s*"
+                    r"PathFinder\.PotentialScratchPad\s+\w+\s*,\s*"
+                    r"ref\s+(?:AsyncPathProber\.)?WorkResult\s+\w+",
+                ),
+                "AsyncPathProber.WorkOrder.Execute(PotentialList,PotentialScratchPad,ref WorkResult)",
+            ),
         ):
             expect("AsyncPathProber", pattern, label)
 

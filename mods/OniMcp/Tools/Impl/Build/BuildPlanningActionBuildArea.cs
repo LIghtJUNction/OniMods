@@ -48,7 +48,9 @@ namespace OniMcp.Tools
                     bool dryRun = IsDryRun(args);
                     bool hadExplicitPrefabId = args["prefabId"] != null
                         && !string.IsNullOrWhiteSpace(args["prefabId"]?.ToString());
-                    var planResolution = ResolveBuildPlan(args);
+                    var resolutionArgs = !dryRun && !hadExplicitPrefabId
+                        ? BuildWriteResolutionArgs(args) : args;
+                    var planResolution = ResolveBuildPlan(resolutionArgs);
                     if (!hadExplicitPrefabId && !string.IsNullOrWhiteSpace(planResolution.PrefabId))
                     {
                         var writeCandidates = planResolution.BuildingCandidates;

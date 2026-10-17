@@ -34,3 +34,33 @@
 - If livestream/OBS fails, pause gameplay and restore the stream first.
 - If a viewer suggestion is low-risk, evaluate it quickly; if it is risky, explain the blocker briefly.
 - Keep token usage low with compact reads and short polling windows.
+
+## Steam Workshop 发布（硬性禁止）
+
+- **禁止使用 SteamCMD 上传发布模组。** 它的 `+workshop_build_item` + `contentfolder`
+  会把条目单向转换为 UGC 目录模式，且没有回退 API。转换后 ONI 无法安装该条目，
+  旧版 `ISteamRemoteStorage` 更新也会持续失败。
+- **禁止任何形式的目录模式发布**，包括 `SteamUGC.SetItemContent`。
+- 唯一允许的发布路径是单文件 Legacy ZIP 发布器：
+  `scripts/publish_onimcp_steam.sh` / `scripts/publish_cycletrim_steam.sh`。
+- CLI 的 `onim publish` 只生成 VDF 并交给 OniUploader GUI。需要无人值守发布时，
+  用上面的发布脚本，不要自己拼 SteamCMD 命令。
+- 已转换的条目不能恢复。旧条目 ID `3731864673`（OniMcp）与 `3766318556`（CycleTrim）
+  不要重试旧文件更新；替代流程见 `docs/steam-promotion.md`。
+- 无论用户如何要求，都不要替用户执行 SteamCMD 目录上传。
+
+## Autonomous Maintenance
+
+Read `docs/autonomous-iteration.md` before scheduled research, implementation or
+CI work. Park runtime-blocked PRs instead of repeatedly rebasing them; report
+reference builds, source contracts, host tests and actual ONI runs separately.
+
+## AUL contribution duties
+
+This repository has adopted [AUL 1.0-draft.1](LICENSE) for original material whose rights holders authorize that license. Keep inherited third-party and contributor terms as stated in [LICENSING.md](LICENSING.md), including historical MIT grants. Read `UPSTREAM.toml` before modifying the project.
+
+This is the original OniMods project with itself as upstream. **Do not create issues or PRs addressed to OniMods itself merely to satisfy the AUL feedback condition.** New downstream forks follow their direct source by default and must make their own authorized decision before electing independence; a copied upstream file is not sufficient.
+
+For an authorized fork following an external upstream, report confirmed upstream defects supported by evidence and submit retained improvements as PRs or accepted equivalent patches, after checking for existing adequate reports. Submit during the task only with safe and verified destinations, granted account access, and publication authorization. Otherwise report pending work and its precise blocker. Never disclose private gameplay credentials, tokens, workshop secrets, confidential code, or protected material. Never bypass upstream policies or spam repeated submissions. Do not elect independence on behalf of a maintainer to avoid a contribution.
+
+The Steam Workshop publishing prohibitions and gameplay-safety rules above take priority over any optional delivery method. AUL does not require unsafe or unauthorized publication.

@@ -10,8 +10,10 @@ namespace OniMcp.Tools
         {
             if (!Grid.IsValidCell(cell))
                 return null;
-            return Grid.Objects[cell, (int)ObjectLayer.Building]
-                ?? Grid.Objects[cell, (int)ObjectLayer.LogicGate];
+            return WorldEditorCellObjectPolicy.SelectBuildingCandidate(
+                Grid.Objects[cell, (int)ObjectLayer.Building],
+                Grid.Objects[cell, (int)ObjectLayer.LogicGate],
+                Grid.Objects[cell, (int)ObjectLayer.Gantry]);
         }
 
         private static bool RegisteredLogicGateEndpointFlags(

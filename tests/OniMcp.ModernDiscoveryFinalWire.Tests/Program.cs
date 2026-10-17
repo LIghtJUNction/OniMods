@@ -51,6 +51,15 @@ internal static class Program
         {
             try
             {
+                AssertBatchEnvelopeRejected(client, "2026-07-28");
+                AssertBatchEnvelopeRejected(client, "2025-11-25");
+                AssertMalformedJsonStillParseError(client);
+                AssertInvalidRequestIdRejected(client, "true",
+                    "Boolean modern request id did not use HTTP 400");
+                AssertInvalidRequestIdRejected(client, "{}",
+                    "Object modern request id did not use HTTP 400");
+                AssertLegacyInvalidRequestIdStatusPreserved(client, "true");
+
                 const string metaWithoutClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
                 string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3002,\"params\":{" + metaWithoutClientInfo + "}}";
                 using (var response = PostModern(client, discover, "server/discover"))
@@ -64,6 +73,11 @@ internal static class Program
 
                     var result = (JObject)ReadJson(response)["result"];
                     Assert(result != null, "Modern discovery returned no result");
+                    var supportedVersions = result["supportedVersions"] as JArray;
+                    Assert(supportedVersions != null
+                        && supportedVersions.Count == 1
+                        && (string)supportedVersions[0] == "2026-07-28",
+                        "Modern discovery advertised handshake-era protocol versions");
                     Assert(result["serverInfo"] == null,
                         "DiscoverResult regressed to the pre-final body-level serverInfo shape");
                     var serverInfo = result["_meta"]?["io.modelcontextprotocol/serverInfo"] as JObject;
@@ -76,15 +90,34 @@ internal static class Program
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern discovery allocated legacy session state");
 
-                const string malformedClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":\"invalid\"}";
-                string malformed = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3003,\"params\":{" + malformedClientInfo + "}}";
-                using (var response = PostModern(client, malformed, "server/discover"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Malformed present clientInfo was accepted");
-                    Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
-                        "Malformed clientInfo used the wrong JSON-RPC error code");
-                }
+                AssertParamsShapeRejected(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3005,\"params\":[]}",
+                    "Array params caused a modern request to escape normal InvalidParams handling");
+                AssertParamsShapeRejected(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3006,\"params\":\"invalid\"}",
+                    "Scalar params caused a modern request to escape normal InvalidParams handling");
+
+                const string validClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"wire-test\",\"version\":\"1.0\"}}";
+                AssertClientInfoAccepted(client, validClientInfo,
+                    "A conforming present clientInfo object was rejected");
+
+                const string scalarClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":\"invalid\"}";
+                AssertClientInfoRejected(client, scalarClientInfo,
+                    "Scalar clientInfo was accepted");
+
+                const string emptyClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{}}";
+                AssertClientInfoRejected(client, emptyClientInfo,
+                    "clientInfo without required name/version was accepted");
+
+                const string missingVersionClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"wire-test\"}}";
+                AssertClientInfoRejected(client, missingVersionClientInfo,
+                    "clientInfo without required version was accepted");
+
+                const string wrongTypeClientInfo = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":123,\"version\":\"1.0\"}}";
+                AssertClientInfoRejected(client, wrongTypeClientInfo,
+                    "clientInfo with non-string name was accepted");
+
+                AssertLegacyServerIdentityMatchesModern(client);
             }
             finally
             {
@@ -93,13 +126,138 @@ internal static class Program
         }
     }
 
+    private static void AssertLegacyServerIdentityMatchesModern(HttpClient client)
+    {
+        const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
+        string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3010,\"params\":{" + modernMeta + "}}";
+        string modernVersion;
+        using (var response = PostModern(client, discover, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK, "Modern discovery failed before identity comparison");
+            modernVersion = (string)ReadJson(response)["result"]?["_meta"]?["io.modelcontextprotocol/serverInfo"]?["version"];
+            Assert(!string.IsNullOrWhiteSpace(modernVersion), "Modern server identity did not expose a version");
+        }
+
+        const string initialize = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":3011,\"params\":{\"protocolVersion\":\"2025-11-25\"}}";
+        using (var response = PostRaw(client, initialize, "2025-11-25"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK, "Legacy initialize failed before identity comparison");
+            var result = ReadJson(response)["result"] as JObject;
+            Assert(result != null, "Legacy initialize returned no result");
+            Assert((string)result["serverInfo"]?["name"] == "OniMcp", "Legacy initialize returned the wrong server identity");
+            Assert((string)result["serverInfo"]?["version"] == modernVersion,
+                "Legacy and modern protocol eras report different OniMcp versions");
+        }
+    }
+
+    private static void AssertBatchEnvelopeRejected(HttpClient client, string protocolVersion)
+    {
+        const string batch = "[{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}},{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"ping\",\"params\":{}}]";
+        using (var response = PostRaw(client, batch, protocolVersion))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "JSON-RPC batch was not rejected with HTTP 400 for " + protocolVersion);
+            JObject json = ReadJson(response);
+            Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                "JSON-RPC batch was misclassified instead of InvalidRequest for " + protocolVersion);
+            Assert(json["id"]?.Type == JTokenType.Null,
+                "Batch rejection unexpectedly attached a request id for " + protocolVersion);
+        }
+    }
+
+    private static void AssertMalformedJsonStillParseError(HttpClient client)
+    {
+        using (var response = PostRaw(client, "[{\"jsonrpc\":\"2.0\"", "2026-07-28"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                "Malformed modern JSON did not use HTTP 400");
+            Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
+                "Malformed JSON no longer returns ParseError");
+        }
+    }
+
+    private static void AssertInvalidRequestIdRejected(HttpClient client, string rawId, string message)
+    {
+        const string meta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":" + rawId
+            + ",\"params\":{" + meta + "}}";
+        using (var response = PostModern(client, body, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest, message);
+            JObject json = ReadJson(response);
+            Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                "Invalid modern request id used the wrong JSON-RPC error code");
+            Assert(json["id"]?.Type == JTokenType.Null,
+                "Invalid modern request id was echoed in the error response");
+        }
+    }
+
+    private static void AssertLegacyInvalidRequestIdStatusPreserved(HttpClient client, string rawId)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":" + rawId + ",\"params\":{}}";
+        using (var response = PostRaw(client, body, "2025-11-25"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK,
+                "Legacy invalid request-id transport status changed");
+            JObject json = ReadJson(response);
+            Assert((int)json["error"]["code"] == McpErrorCode.InvalidRequest,
+                "Legacy invalid request id changed JSON-RPC classification");
+            Assert(json["id"]?.Type == JTokenType.Null,
+                "Legacy invalid request id unexpectedly appeared in the error response");
+        }
+    }
+
+    private static void AssertParamsShapeRejected(HttpClient client, string body, string message)
+    {
+        using (var response = PostModern(client, body, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest, message);
+            Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                "Malformed modern params used the wrong JSON-RPC error code");
+        }
+    }
+
+    private static void AssertClientInfoAccepted(HttpClient client, string meta, string message)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3003,\"params\":{" + meta + "}}";
+        using (var response = PostModern(client, body, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.OK, message);
+            Assert(ReadJson(response)["result"] != null, message);
+        }
+    }
+
+    private static void AssertClientInfoRejected(HttpClient client, string meta, string message)
+    {
+        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":3004,\"params\":{" + meta + "}}";
+        using (var response = PostModern(client, body, "server/discover"))
+        {
+            Assert(response.StatusCode == HttpStatusCode.BadRequest, message);
+            Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.InvalidParams,
+                "Malformed clientInfo used the wrong JSON-RPC error code");
+        }
+    }
+
     private static HttpResponseMessage PostModern(HttpClient client, string json, string method)
     {
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", method);
+            var work = client.SendAsync(request);
+            PumpUntil(work);
+            return work.GetAwaiter().GetResult();
+        }
+    }
+
+    private static HttpResponseMessage PostRaw(HttpClient client, string json, string protocolVersion)
+    {
+        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+        {
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.Add("Mcp-Protocol-Version", protocolVersion);
             var work = client.SendAsync(request);
             PumpUntil(work);
             return work.GetAwaiter().GetResult();

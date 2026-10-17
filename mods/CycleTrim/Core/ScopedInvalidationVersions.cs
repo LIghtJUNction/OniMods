@@ -24,7 +24,10 @@ namespace CycleTrim.Core
                 return 0;
             }
 
-            return Interlocked.Read(ref counters.GetValue(scope, CounterFactory).Value);
+            Counter counter;
+            return counters.TryGetValue(scope, out counter)
+                ? Interlocked.Read(ref counter.Value)
+                : 0;
         }
 
         public long Bump(T scope)

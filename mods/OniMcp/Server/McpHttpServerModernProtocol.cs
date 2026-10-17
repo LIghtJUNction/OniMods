@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Tools;
@@ -28,11 +27,6 @@ namespace OniMcp.Server
         private bool TryHandleModernPost(HttpListenerRequest httpRequest, HttpListenerResponse response,
             JObject rawMessage, string protocolVersion)
         {
-            var meta = rawMessage["params"]?["_meta"] as JObject;
-            string metaVersion = meta?["io.modelcontextprotocol/protocolVersion"]?.Type == JTokenType.String
-                ? (string)meta["io.modelcontextprotocol/protocolVersion"]
-                : null;
-
             bool explicitModern = string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal);
             if (IsSupportedProtocolVersion(protocolVersion))
                 return false;
@@ -46,6 +40,25 @@ namespace OniMcp.Server
             string sessionId = httpRequest.Headers["Mcp-Session-Id"];
             if (!explicitModern && IsSessionActive(sessionId))
                 return false;
+
+            var paramsToken = rawMessage["params"];
+            var paramsObject = paramsToken as JObject;
+            if (paramsToken != null && paramsObject == null)
+            {
+                if (explicitModern)
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
+                        "Modern request params must be an object"), 400);
+                    return true;
+                }
+
+                return false;
+            }
+
+            var meta = paramsObject?["_meta"] as JObject;
+            string metaVersion = meta?["io.modelcontextprotocol/protocolVersion"]?.Type == JTokenType.String
+                ? (string)meta["io.modelcontextprotocol/protocolVersion"]
+                : null;
 
             if (!string.IsNullOrEmpty(metaVersion)
                 && !string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal)
@@ -64,7 +77,7 @@ namespace OniMcp.Server
             if (methodToken?.Type != JTokenType.String)
             {
                 SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
-                    "Missing or invalid JSON-RPC method"), 200);
+                    "Missing or invalid JSON-RPC method"), 400);
                 return true;
             }
 
@@ -74,6 +87,46 @@ namespace OniMcp.Server
                     out validationError))
             {
                 SendJson(response, validationError, 400);
+                return true;
+            }
+
+            bool isNotification = rawMessage.Property("id") == null;
+            if (!isNotification && !AcceptsModernResponseMediaTypes(httpRequest))
+            {
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                SendJson(response, JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidRequest,
+                    "Modern requests require Accept to list both application/json and text/event-stream"),
+                    (int)HttpStatusCode.NotAcceptable);
+                return true;
+            }
+
+            if (isNotification)
+            {
+                if (IsModernRequestMethod(method))
+                {
+                    SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                        $"Modern request method '{method}' requires a request id"), 400);
+                    return true;
+                }
+
+                if (string.Equals(method, "notifications/cancelled", StringComparison.Ordinal))
+                {
+                    string cancellationError;
+                    if (!ValidateModernCancellationNotification(rawMessage["params"], out cancellationError))
+                    {
+                        SendJson(response, JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
+                            cancellationError), 400);
+                        return true;
+                    }
+                }
+
+                // The 2026 core defines no actionable client-to-server notifications over HTTP.
+                // Current official SDKs acknowledge and drop id-less notification POSTs so
+                // fire-and-forget clients do not receive an unusable MethodNotFound response.
+                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
+                response.StatusCode = (int)HttpStatusCode.Accepted;
+                response.ContentLength64 = 0;
+                response.Close();
                 return true;
             }
 
@@ -89,175 +142,57 @@ namespace OniMcp.Server
                 return true;
             }
 
-            bool isNotification = rawMessage.Property("id") == null;
-            if (isNotification)
-            {
-                MainThreadBridge.Enqueue(new System.Action(() =>
-                {
-                    if (_running)
-                        ProcessModernMethod(rpcRequest);
-                }));
-                response.StatusCode = 202;
-                response.ContentLength64 = 0;
-                response.Close();
-                return true;
-            }
-
             DispatchModernPostResponse(response, rpcRequest);
             return true;
         }
 
-        private static bool ValidateModernRequest(HttpListenerRequest httpRequest, JObject rawMessage, string method,
-            string protocolVersion, JObject meta, string metaVersion, out JsonRpcResponse error)
+        private static bool ValidateModernCancellationNotification(JToken paramsToken, out string errorMessage)
         {
-            error = null;
-            if (!string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal))
+            var parameters = paramsToken as JObject;
+            if (parameters == null)
             {
-                error = HeaderMismatch(rawMessage["id"],
-                    $"Mcp-Protocol-Version must be {ModernProtocolVersion} for a modern request");
+                errorMessage = "Modern cancellation notification requires object params";
                 return false;
             }
 
-            if (string.IsNullOrEmpty(metaVersion))
+            var requestId = parameters["requestId"];
+            if (!IsValidModernRequestId(requestId))
             {
-                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                    "Modern requests require params._meta.io.modelcontextprotocol/protocolVersion");
+                errorMessage = "Modern cancellation notification requires a string or number requestId";
                 return false;
             }
 
-            if (!string.Equals(metaVersion, ModernProtocolVersion, StringComparison.Ordinal))
+            var reason = parameters["reason"];
+            if (reason != null && reason.Type != JTokenType.String)
             {
-                error = UnsupportedProtocolVersion(rawMessage["id"], metaVersion);
+                errorMessage = "Modern cancellation notification reason must be a string when provided";
                 return false;
             }
 
-            if (meta?["io.modelcontextprotocol/clientCapabilities"]?.Type != JTokenType.Object)
+            var meta = parameters["_meta"];
+            if (meta != null && meta.Type != JTokenType.Object)
             {
-                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                    "Modern requests require params._meta.io.modelcontextprotocol/clientCapabilities");
+                errorMessage = "Modern cancellation notification _meta must be an object when provided";
                 return false;
             }
 
-            var clientInfo = meta["io.modelcontextprotocol/clientInfo"];
-            if (clientInfo != null && clientInfo.Type != JTokenType.Object)
-            {
-                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                    "params._meta.io.modelcontextprotocol/clientInfo must be an object when provided");
-                return false;
-            }
-
-            string methodHeader = httpRequest.Headers["Mcp-Method"];
-            if (string.IsNullOrEmpty(methodHeader) || !string.Equals(methodHeader, method, StringComparison.Ordinal))
-            {
-                error = HeaderMismatch(rawMessage["id"],
-                    $"Mcp-Method header must match JSON-RPC method '{method}'");
-                return false;
-            }
-
-            string expectedName = ModernPrincipalName(method, rawMessage["params"] as JObject);
-            string nameHeader = httpRequest.Headers["Mcp-Name"];
-            if (expectedName != null)
-            {
-                if (string.IsNullOrEmpty(nameHeader))
-                {
-                    error = HeaderMismatch(rawMessage["id"],
-                        $"Mcp-Name header must match request principal '{expectedName}'");
-                    return false;
-                }
-
-                string decodedNameHeader;
-                if (!TryDecodeModernHeaderValue(nameHeader, out decodedNameHeader))
-                {
-                    error = HeaderMismatch(rawMessage["id"], "Mcp-Name contains invalid Base64 or UTF-8 encoding");
-                    return false;
-                }
-
-                if (!string.Equals(decodedNameHeader, expectedName, StringComparison.Ordinal))
-                {
-                    error = HeaderMismatch(rawMessage["id"],
-                        $"Mcp-Name header must match request principal '{expectedName}'");
-                    return false;
-                }
-            }
-            else if (!string.IsNullOrEmpty(nameHeader))
-            {
-                error = HeaderMismatch(rawMessage["id"],
-                    $"Mcp-Name is not valid for method '{method}'");
-                return false;
-            }
-
-            if (string.Equals(method, "tools/call", StringComparison.Ordinal)
-                && !ValidateModernToolParameterHeaders(httpRequest, rawMessage, out error))
-            {
-                return false;
-            }
-
+            errorMessage = null;
             return true;
         }
 
-        private static bool TryDecodeModernHeaderValue(string headerValue, out string decodedValue)
+        private static bool IsModernRequestMethod(string method)
         {
-            decodedValue = headerValue;
-            if (string.IsNullOrEmpty(headerValue)
-                || !headerValue.StartsWith(Base64HeaderPrefix, StringComparison.Ordinal)
-                || !headerValue.EndsWith(Base64HeaderSuffix, StringComparison.Ordinal))
-            {
-                return true;
-            }
-
-            int payloadLength = headerValue.Length - Base64HeaderPrefix.Length - Base64HeaderSuffix.Length;
-            if (payloadLength < 0)
-                return false;
-
-            string payload = headerValue.Substring(Base64HeaderPrefix.Length, payloadLength);
-            try
-            {
-                decodedValue = StrictUtf8.GetString(Convert.FromBase64String(payload));
-                return true;
-            }
-            catch (FormatException)
-            {
-                return false;
-            }
-            catch (DecoderFallbackException)
-            {
-                return false;
-            }
-        }
-
-        private static JsonRpcResponse HeaderMismatch(object id, string message)
-        {
-            return JsonRpcResponse.MakeError(id, HeaderMismatchErrorCode, message);
-        }
-
-        private static JsonRpcResponse UnsupportedProtocolVersion(object id, string requestedVersion)
-        {
-            return JsonRpcResponse.MakeError(id, UnsupportedProtocolVersionErrorCode,
-                $"Unsupported protocol version: {requestedVersion}", new JObject
-                {
-                    ["requested"] = requestedVersion,
-                    ["supported"] = BuildSupportedProtocolVersions()
-                });
-        }
-
-        private static JArray BuildSupportedProtocolVersions()
-        {
-            return new JArray(ModernProtocolVersion, CurrentProtocolVersion, LegacyProtocolVersion);
-        }
-
-        private static string ModernPrincipalName(string method, JObject @params)
-        {
-            if (@params == null)
-                return null;
             switch (method)
             {
-                case "resources/read":
-                    return @params["uri"]?.Type == JTokenType.String ? (string)@params["uri"] : null;
+                case "server/discover":
+                case "tools/list":
                 case "tools/call":
-                case "prompts/get":
-                    return @params["name"]?.Type == JTokenType.String ? (string)@params["name"] : null;
+                case "resources/list":
+                case "resources/templates/list":
+                case "resources/read":
+                    return true;
                 default:
-                    return null;
+                    return false;
             }
         }
 
@@ -282,16 +217,18 @@ namespace OniMcp.Server
                     return CallModernReadOnlyTool(request);
 
                 case "resources/list":
-                    return CompleteModernResult(new JObject
+                    return CompleteModernListResult(new JObject
                     {
                         ["resources"] = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
+                            .Where(item => IsModernReadOnlyResourceUri(item.Uri))
                             .OrderBy(item => item.Uri, StringComparer.Ordinal))
                     });
 
                 case "resources/templates/list":
-                    return CompleteModernResult(new JObject
+                    return CompleteModernListResult(new JObject
                     {
                         ["resourceTemplates"] = JArray.FromObject(OniResourceRegistry.GetResourceTemplateInfos()
+                            .Where(item => IsModernReadOnlyResourceTemplate(item.UriTemplate))
                             .OrderBy(item => item.UriTemplate, StringComparer.Ordinal))
                     });
 
@@ -299,6 +236,12 @@ namespace OniMcp.Server
                     var @params = request.Params?.ToObject<ReadResourceParams>();
                     if (@params == null || string.IsNullOrEmpty(@params.Uri))
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, "Missing resource uri");
+                    if (!IsModernReadOnlyResourceUri(@params.Uri))
+                    {
+                        return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
+                            $"Resource is not available on the {ModernProtocolVersion} read-only path: {@params.Uri}",
+                            new JObject { ["uri"] = @params.Uri });
+                    }
                     var readResult = OniResourceRegistry.ReadResource(@params.Uri);
                     if (readResult == null)
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
@@ -311,6 +254,45 @@ namespace OniMcp.Server
             }
         }
 
+        private static bool IsModernReadOnlyResourceUri(string uri)
+        {
+            if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
+                return true;
+
+            string canonicalPath = parsed.AbsolutePath.TrimEnd('/');
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "tools", StringComparison.OrdinalIgnoreCase)
+                && canonicalPath.StartsWith("/read/", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "mcp", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(canonicalPath, "/sessions", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parsed.Host, "game", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(canonicalPath, "/saves", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return !string.Equals(parsed.Scheme, "oni", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(parsed.Host, "world", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(canonicalPath, "/coordinate-screenshot", StringComparison.Ordinal);
+        }
+
+        private static bool IsModernReadOnlyResourceTemplate(string uriTemplate)
+        {
+            return string.IsNullOrEmpty(uriTemplate)
+                || (!uriTemplate.StartsWith("oni://world/coordinate-screenshot", StringComparison.Ordinal)
+                    && !uriTemplate.StartsWith("oni://tools/read/", StringComparison.Ordinal)
+                    && !uriTemplate.StartsWith("oni://game/saves{", StringComparison.Ordinal));
+        }
         private static JsonRpcResponse ModernToolMethodUnavailable(JsonRpcRequest request)
         {
             return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
@@ -336,12 +318,29 @@ namespace OniMcp.Server
             // `execution.taskSupport` belonged to the 2025 core task model. Tasks moved
             // out of core in 2026, so do not advertise that legacy field here.
             modernToolInfo.Remove("execution");
+
+            var inputSchema = modernToolInfo["inputSchema"] as JObject;
+            var properties = inputSchema?["properties"] as JObject;
+            var taskProperty = properties?[ToolCallMiddleware.TaskDescriptionParameter] as JObject;
+            if (taskProperty != null)
+            {
+                taskProperty["description"] =
+                    "Required for this benchmark call: briefly describe what you are doing. The stateless 2026 path does not display this text in ONI.";
+            }
+
             result.Add(modernToolInfo);
             return result;
         }
 
         private static object CallModernReadOnlyTool(JsonRpcRequest request)
         {
+            var argumentsToken = request.Params?["arguments"];
+            if (argumentsToken != null && argumentsToken.Type != JTokenType.Object)
+            {
+                return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
+                    "Tool arguments must be an object when provided");
+            }
+
             var @params = request.Params?.ToObject<CallToolParams>();
             if (@params == null || string.IsNullOrEmpty(@params.Name))
                 return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, "Missing tool name");
@@ -359,7 +358,36 @@ namespace OniMcp.Server
                     "2025 task-augmented tool calls are not supported on the stateless 2026 path");
             }
 
-            var toolResult = OniToolRegistry.CallTool(@params.Name, @params.Arguments);
+            if (!ToolCallMiddleware.TryGetTaskDescription(@params.Arguments, out _))
+            {
+                return CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
+                    "task is required: describe what you are doing before every tool call.")));
+            }
+
+            if (!OniToolRegistry.IsCoordinateTool(ModernReadOnlyToolName)
+                && OniToolRegistry.HasCoordinateArguments(@params.Arguments))
+            {
+                return CompleteModernToolResult(JObject.FromObject(CallToolResult.Error(
+                    "Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool.")));
+            }
+
+            McpTool tool;
+            if (!OniToolRegistry.TryGetTool(ModernReadOnlyToolName, out tool)
+                || tool == null || tool.Handler == null
+                || !string.Equals(tool.Name, ModernReadOnlyToolName, StringComparison.Ordinal))
+            {
+                return ModernToolMethodUnavailable(request);
+            }
+
+            CallToolResult toolResult;
+            try
+            {
+                toolResult = tool.Handler(@params.Arguments ?? new JObject());
+            }
+            catch (Exception ex)
+            {
+                toolResult = CallToolResult.Error($"Tool execution error: {ex.Message}");
+            }
             return CompleteModernToolResult(JObject.FromObject(toolResult));
         }
 
@@ -427,63 +455,9 @@ namespace OniMcp.Server
                 ["io.modelcontextprotocol/serverInfo"] = new JObject
                 {
                     ["name"] = "OniMcp",
-                    ["version"] = "0.2.3"
+                    ["version"] = ServerVersion
                 }
             };
-        }
-
-        private void DispatchModernPostResponse(HttpListenerResponse response, JsonRpcRequest rpcRequest)
-        {
-            MainThreadBridge.Enqueue(new System.Action(() =>
-            {
-                object result = null;
-                Exception processEx = null;
-                try
-                {
-                    result = _running
-                        ? ProcessModernMethod(rpcRequest)
-                        : JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InternalError, "MCP server is stopping");
-                }
-                catch (Exception ex)
-                {
-                    processEx = ex;
-                }
-
-                ThreadPool.QueueUserWorkItem(_ => SendModernPostResponse(response, rpcRequest.Id, result, processEx));
-            }));
-        }
-
-        private void SendModernPostResponse(HttpListenerResponse response, object requestId, object result,
-            Exception processEx)
-        {
-            try
-            {
-                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
-                if (processEx != null)
-                {
-                    SendJson(response, JsonRpcResponse.MakeError(requestId, McpErrorCode.InternalError,
-                        processEx.Message), 200);
-                    return;
-                }
-
-                if (result is JsonRpcResponse rpcResponse)
-                {
-                    int status = rpcResponse.Error?.Code == McpErrorCode.MethodNotFound ? 404 : 200;
-                    SendJson(response, rpcResponse, status);
-                }
-                else
-                    SendJson(response, JsonRpcResponse.Success(requestId, result), 200);
-            }
-            catch (Exception ex)
-            {
-                OniMcp.Support.OniMcpLog.Warning($"[OniMcp] Failed to send modern MCP response: {ex.GetType().Name}: {ex.Message}");
-                try
-                {
-                    response.StatusCode = 500;
-                    response.Close();
-                }
-                catch { }
-            }
         }
     }
 }

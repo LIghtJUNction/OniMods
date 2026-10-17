@@ -68,7 +68,7 @@ namespace OniMcp.Tools
 
         private static bool AppendPortDecisionHint(StringBuilder sb, int x, int y, int cell)
         {
-            GameObject go = Grid.Objects[cell, (int)ObjectLayer.Building];
+            GameObject go = CellBuildingObject(cell);
             Building building = go != null ? go.GetComponent<Building>() : null;
             if (go == null || building == null || building.Def == null)
                 return false;

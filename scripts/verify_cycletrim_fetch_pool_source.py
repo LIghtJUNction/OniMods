@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep FetchPickupCandidatePatch's temporary dictionary reuse allocation-free."""
+"""Keep FetchPickupCandidatePatch's temporary dictionary reuse allocation-free and bounded."""
 
 from pathlib import Path
 import re
@@ -34,12 +34,14 @@ def main() -> int:
 
     if "[ThreadStatic]" not in pool:
         failures.append("ThreadLocalObjectPool storage must remain thread-local")
-    if "Stack<T>" not in pool:
-        failures.append("ThreadLocalObjectPool must use reusable Stack<T> storage")
-    if "ConcurrentStack" in pool:
-        failures.append("ThreadLocalObjectPool must not reintroduce ConcurrentStack node allocation")
-    if "pool.Pop()" not in pool or "pool.Push(item)" not in pool:
-        failures.append("ThreadLocalObjectPool must reuse returned objects through pop/push")
+    if "private static T item;" not in pool:
+        failures.append("ThreadLocalObjectPool must retain a single object per thread")
+    if "Stack<T>" in pool or "ConcurrentStack" in pool:
+        failures.append("ThreadLocalObjectPool must not retain an unbounded collection per thread")
+    if "item = null;" not in pool:
+        failures.append("Rent must clear the retained slot before returning an object")
+    if not re.search(r"if\s*\(item\s*==\s*null\)\s*\{\s*item\s*=\s*value;\s*\}", pool, re.DOTALL):
+        failures.append("Return must keep at most one object in the thread-local slot")
 
     if failures:
         for failure in failures:

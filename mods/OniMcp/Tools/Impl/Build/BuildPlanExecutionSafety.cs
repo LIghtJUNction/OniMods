@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 
 namespace OniMcp.Tools
 {
@@ -8,6 +9,13 @@ namespace OniMcp.Tools
         internal const int MinimumAutoWriteBuildingGap = 80;
         internal const int MaximumPlanTermOrderBoost = 50;
         internal const int SuffixBuildingAliasScore = 600;
+
+        internal static JObject BuildWriteResolutionArgs(JObject args)
+        {
+            var result = (JObject)args.DeepClone();
+            result["limit"] = Math.Max(2, ToolUtil.GetInt(args, "limit") ?? 5);
+            return result;
+        }
 
         internal static bool IsAutoWriteBuildingResolutionSafe(
             string matchKind,

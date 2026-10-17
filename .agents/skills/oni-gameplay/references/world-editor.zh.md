@@ -50,7 +50,7 @@ world_editor command=pwd|cd|ls|read|zoom|grep|symbols|search|edit|blueprint|batc
 
 仅 `/active/` 可变更。其余存档槽为历史或未加载视图。
 
-普通 world-editor 建造固定使用 `instantBuild=false`，即使全局 Debug 瞬间建造已开启，也只创建正常蓝图并遵守材料规则。单次瞬间建造必须显式传 `instantBuild=true allowSandbox=true confirm=true`。沙盒写入还必须使用 `world_editor command=sandbox allowSandbox=true confirm=true`，并按动作增加 `allowTerrainMutation`、`allowEntitySpawn`、`allowDestroy` 或 `allowForce`。batch 子步骤不能扩大父级权限。
+仅支持正常游戏操作。沙盒、瞬间完工、直接改写地形和 force 参数已移除，嵌套请求也不能启用。原生蓝图仍受研究、材料和支撑限制。调用期间关闭全局瞬间建造，结束后恢复先前状态；沙盒存档中的建造请求会被拒绝。
 
 ## 强制字码查询
 
@@ -151,18 +151,18 @@ world_editor command=zoom path=/active/map/viewport.md
 
 Token 形式：
 
-- 建筑命令：`建筑名:优先级`，可选 `#材料字`，如 `梯子:7#粉`。
+- 建筑命令：`PrefabID:优先级#MaterialID`，如 `Ladder:7#SandStone`。也支持完全一致且唯一的显示名称和已知材料字。优先级必须为 1–9。未知、重复或格式错误的值会报错，不会猜测。
 - 裸建筑名表示已存在对象，不是建造命令。
 - 指令：`挖`、`拆`、`擦`、`扫`、`毒`、`杀`、`收`、`消`、`捕`，可附 `:优先级`。
 - 地图层与基础设施 Markdown 上不接受连接符号编辑，因为 `auto_connect` 可能改写到验证快照外部的格子。要改 utility 请用显式 `/active/infrastructure/*.oni` plan 或 `/active/ops/build.md` 的 `auto_connect` 命令。
-- SEARCH 通配 `?` 或 `*` 匹配单 token；`/regex/` 或 `~regex` 匹配单 token 的正则。REPLACE 中的 `?`、`*`、`.*` 保留原始 token。
+- SEARCH 中的 `?` 和 `*` 按字面匹配，分别表示未知和未连接；只有 `.*` 是通配符。支持 `/regex/` 或 `~regex`。REPLACE 中的 `?`、`*`、`.*` 保留原始格子。
 - SEARCH 匹配会忽略地图渲染附加的 `@(x,y)` 坐标后缀；`建筑:7#壹` 与 `建筑:7#壹@(114,138)` 视为同一 token。
 
 多格建筑可用两种写法：
 1. **左下角锚点简写**（推荐 agent）：只改占格左下角一格为 `建筑名:优先级`。
 2. **完整占格**：同一替换块内填满 WxH 所有格。部分占格（不是单格、也不是完整矩形）会被拒绝。
 
-默认写入预算为 512 个变更格；`maxWriteCells`/`maxCells` 可配置但硬上限 2500。开启 `partial=true` 时，重读并仅对 `remainingCells` 生成新补丁。
+默认写入上限为 512 个变更格；`maxWriteCells`/`maxCells` 最大为 2500。超限补丁整体拒绝，不会截断建筑占格。原生操作部分执行后，必须重读并生成新补丁。`reportedActions` 不是格数；`submittedCells` 不代表游戏已完成。
 
 ## typed operation 文件
 
@@ -292,3 +292,19 @@ rename name="Dig" newName="矿工"
 | `partial=true` | 重读后仅对剩余格子重补丁 |
 | 相机意外移动 | 使用 `syncView=false focusCamera=false` 的离屏 zoom；不要仅为编辑而聚焦 |
 | 沙盒报告研究锁定 | 已加载 DLL 可能过期；不要为测试队列中加研究任务 |
+
+## 读取与结果核对
+
+文本地图只包含当前世界已发现的格子。`?` 表示未知，不是空地。不支持的视图会报错，
+不会返回其他视图。地图边缘坐标不能绕到下一行。`@(x,y)` 是格子坐标，不是建筑锚点。
+`syncView=false` 时仍使用请求中的范围，不需要移动镜头。
+
+紧凑读取保留范围、格子和图例，省去逐格详情、连线详情和建筑文件清单。
+编辑时使用 `format=edit compact=false`，SEARCH 和 REPLACE 必须有相同表头与 Y 行集，
+重复行会被拒绝。蓝图材料来自完整建造配方，不再使用地形材料代替。
+管线使用原生实际连接数据：`?` 是数据未知，`*` 是确认没有连接，箭头表示单端连接。
+仅有管线蓝图不代表网络已经连通。
+
+操作循环：暂停 → 小范围读取 → 预览 → 提交一次原生操作 → 短时间正常运行 → 暂停 → 重读。
+检查 `phase`、`partial`、`reportedActions` 和 `requiresVerification`。
+`orders_queued` 或工具调用成功都不等于目标完成。出错后先重读，不能直接重放旧补丁。
