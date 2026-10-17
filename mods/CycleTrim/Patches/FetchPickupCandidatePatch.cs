@@ -14,6 +14,8 @@ namespace CycleTrim.Patches
             "PeterHan.NoWasteWant.NoWasteWantPatches";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
             CompareIncludingPriority;
+        private static bool installAttempted;
+        private static bool installRequested;
 
         private readonly struct PickupKey : IEquatable<PickupKey>
         {
@@ -46,12 +48,56 @@ namespace CycleTrim.Patches
             }
         }
 
+        internal static void InstallAfterAllModsLoaded(Harmony harmony)
+        {
+            if (harmony == null)
+            {
+                throw new ArgumentNullException(nameof(harmony));
+            }
+
+            if (installAttempted)
+            {
+                return;
+            }
+
+            installAttempted = true;
+            if (!IsFastTrackAbsent()
+                || AccessTools.TypeByName(
+                    FetchPatchCompatibility
+                        .DeliveryTemperatureLimitSupercooledPickupGroupingType) != null)
+            {
+                return;
+            }
+
+            var target = ResolveTargetMethod();
+            if (HasDeliveryTemperatureLimitTranspiler(target))
+            {
+                return;
+            }
+
+            installRequested = true;
+            harmony.CreateClassProcessor(typeof(UpdatePickupsPatch)).Patch();
+        }
+
+        private static bool IsFastTrackAbsent()
+        {
+            return AccessTools.TypeByName(FastTrackPatchType) == null;
+        }
+
         [HarmonyPatch]
         private static class UpdatePickupsPatch
         {
-            // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
+            // This patch is deliberately withheld from the initial PatchAll. The
+            // loaded-mod graph is complete in OnAllModsLoaded, allowing CycleTrim
+            // to avoid installing a skipping Prefix when a known fetch owner needs
+            // the original UpdatePickups body to remain authoritative.
             private static bool Prepare()
             {
+                if (!installRequested)
+                {
+                    return false;
+                }
+
                 // Waste Not, Want Not reverses the vanilla freshness comparator. This replacement
                 // cannot preserve that transpiler safely, so leave the original method in control.
                 if (AccessTools.TypeByName(NoWasteWantPatchType) != null)
@@ -64,12 +110,7 @@ namespace CycleTrim.Patches
 
             private static MethodBase TargetMethod()
             {
-                return AccessTools.Method(
-                        typeof(FetchManager.FetchablesByPrefabId),
-                        "UpdatePickups",
-                        new[] { typeof(Navigator), typeof(int) })
-                    ?? throw new InvalidOperationException(
-                        "CycleTrim could not find FetchablesByPrefabId.UpdatePickups(Navigator, int).");
+                return ResolveTargetMethod();
             }
 
             private static bool Prefix(
@@ -154,6 +195,38 @@ namespace CycleTrim.Patches
 
                 return candidate.freshness > current.freshness;
             }
+        }
+
+        private static MethodBase ResolveTargetMethod()
+        {
+            return AccessTools.Method(
+                    typeof(FetchManager.FetchablesByPrefabId),
+                    "UpdatePickups",
+                    new[] { typeof(Navigator), typeof(int) })
+                ?? throw new InvalidOperationException(
+                    "CycleTrim could not find FetchablesByPrefabId.UpdatePickups(Navigator, int).");
+        }
+
+        private static bool HasDeliveryTemperatureLimitTranspiler(MethodBase target)
+        {
+            var patchInfo = Harmony.GetPatchInfo(target);
+            if (patchInfo == null)
+            {
+                return false;
+            }
+
+            foreach (var patch in patchInfo.Transpilers)
+            {
+                var patchMethod = patch.PatchMethod;
+                var declaringType = patchMethod == null ? null : patchMethod.DeclaringType;
+                if (FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
+                    declaringType == null ? null : declaringType.FullName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static int CompareIncludingPriority(
