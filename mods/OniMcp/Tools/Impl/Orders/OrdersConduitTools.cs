@@ -71,13 +71,10 @@ namespace OniMcp.Tools
                                 if (workable == null)
                                     continue;
 
-                                if (DebugHandler.InstantBuildMode)
-                                    workable.EmptyContents();
-                                else
-                                    workable.MarkForEmptying();
+                                workable.MarkForEmptying();
                                 ApplyPriority(go, args);
                                 marked++;
-                                results.Add(ObjectResult(go, DebugHandler.InstantBuildMode ? "instant_emptied" : "marked"));
+                                results.Add(ObjectResult(go, "marked"));
                             }
                         }
                     }

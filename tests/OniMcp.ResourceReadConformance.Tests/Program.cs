@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Server;
+using OniMcp.Tools;
 
 internal static class Program
 {
@@ -38,6 +39,7 @@ internal static class Program
                     "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":1,\"params\":{\"uri\":\"oni://test\",\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"resource-read-conformance\",\"version\":\"1.0\"}}}}",
                     Encoding.UTF8,
                     "application/json");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                 request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                 request.Headers.Add("Mcp-Method", "resources/read");
                 request.Headers.Add("Mcp-Name", "oni://test");
@@ -84,6 +86,7 @@ internal static class Program
                     "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":2,\"params\":{\"uri\":\"oni://template/123/data\",\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"resource-template-conformance\",\"version\":\"1.0\"}}}}",
                     Encoding.UTF8,
                     "application/json");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                 request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
                 request.Headers.Add("Mcp-Method", "resources/read");
                 request.Headers.Add("Mcp-Name", uri);
@@ -118,7 +121,142 @@ internal static class Program
                     "Modern template resource read allocated legacy session state");
             }
 
-            Console.WriteLine("PASS: MCP 2026-07-28 text and template resource read wire evidence.");
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                const string meta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"resource-side-effect-regression\",\"version\":\"1.0\"}}";
+                const string unsafeUri = "oni://world/coordinate-screenshot";
+
+                using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+                {
+                    request.Content = new StringContent(
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"resources/list\",\"id\":3,\"params\":{" + meta + "}}",
+                        Encoding.UTF8,
+                        "application/json");
+                    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+                    request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                    request.Headers.Add("Mcp-Method", "resources/list");
+                    var work = client.SendAsync(request);
+                    PumpUntil(work);
+                    using (var response = work.GetAwaiter().GetResult())
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Modern resources/list failed");
+                        var resources = (JArray)JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"]["resources"];
+                        Assert(resources.All(item => (string)item["uri"] != unsafeUri),
+                            "Modern resources/list advertised a side-effectful screenshot resource");
+                    }
+                }
+
+                using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+                {
+                    request.Content = new StringContent(
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"resources/templates/list\",\"id\":4,\"params\":{" + meta + "}}",
+                        Encoding.UTF8,
+                        "application/json");
+                    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+                    request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                    request.Headers.Add("Mcp-Method", "resources/templates/list");
+                    var work = client.SendAsync(request);
+                    PumpUntil(work);
+                    using (var response = work.GetAwaiter().GetResult())
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Modern resources/templates/list failed");
+                        var templates = (JArray)JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())["result"]["resourceTemplates"];
+                        Assert(templates.All(item => !((string)item["uriTemplate"]).StartsWith(unsafeUri, StringComparison.Ordinal)),
+                            "Modern resources/templates/list advertised a side-effectful screenshot resource");
+                    }
+                }
+
+                using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+                {
+                    request.Content = new StringContent(
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":5,\"params\":{\"uri\":\"" + unsafeUri + "\"," + meta + "}}",
+                        Encoding.UTF8,
+                        "application/json");
+                    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+                    request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                    request.Headers.Add("Mcp-Method", "resources/read");
+                    request.Headers.Add("Mcp-Name", unsafeUri);
+                    var work = client.SendAsync(request);
+                    PumpUntil(work);
+                    using (var response = work.GetAwaiter().GetResult())
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK,
+                            "Rejected modern side-effect resource changed JSON-RPC application status");
+                        var json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                        Assert((int)json["error"]["code"] == -32602,
+                            "Rejected modern side-effect resource did not use Invalid Params");
+                        Assert((string)json["error"]["data"]["uri"] == unsafeUri,
+                            "Rejected modern side-effect resource omitted error.data.uri");
+                    }
+                }
+
+                const string unsafeAliasUri = "oni://world/coordinate-screenshot/";
+                using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+                {
+                    request.Content = new StringContent(
+                        "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":6,\"params\":{\"uri\":\"" + unsafeAliasUri + "\"," + meta + "}}",
+                        Encoding.UTF8,
+                        "application/json");
+                    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+                    request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                    request.Headers.Add("Mcp-Method", "resources/read");
+                    request.Headers.Add("Mcp-Name", unsafeAliasUri);
+                    var work = client.SendAsync(request);
+                    PumpUntil(work);
+                    using (var response = work.GetAwaiter().GetResult())
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK,
+                            "Rejected modern side-effect resource alias changed JSON-RPC application status");
+                        var json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                        Assert((int)json["error"]["code"] == -32602,
+                            "Rejected modern side-effect resource alias did not use Invalid Params");
+                        Assert((string)json["error"]["data"]["uri"] == unsafeAliasUri,
+                            "Rejected modern side-effect resource alias omitted error.data.uri");
+                        Assert(((string)json["error"]["message"]).Contains("not available"),
+                            "Trailing-slash screenshot alias bypassed the modern side-effect guard");
+                    }
+                }
+
+                Assert(OniResourceRegistry.ResourceReads == 0,
+                    "Modern resources/read dispatched the side-effectful screenshot resource before rejecting it");
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Modern side-effect resource rejection allocated legacy session state");
+            }
+
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl),
+                Timeout = TimeSpan.FromSeconds(5)
+            })
+            using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+            {
+                request.Content = new StringContent(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"notification-regression\",\"version\":\"1.0\"}}}}",
+                    Encoding.UTF8,
+                    "application/json");
+                request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+                request.Headers.Add("Mcp-Method", "notifications/initialized");
+
+                var work = client.SendAsync(request);
+                PumpUntil(work);
+                using (var response = work.GetAwaiter().GetResult())
+                {
+                    Assert(response.StatusCode == HttpStatusCode.Accepted,
+                        "Modern notification was not acknowledged with 202");
+                    Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                        "Acknowledged modern notification returned a response body");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Acknowledged modern notification allocated a legacy session header");
+                }
+                Assert(server.GetSessionSummaries().Count == 0,
+                    "Acknowledged modern notification allocated legacy session state");
+            }
+
+            Console.WriteLine("PASS: MCP 2026-07-28 resource reads stay stateless and side-effect-free.");
         }
         finally
         {

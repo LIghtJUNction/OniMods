@@ -38,6 +38,11 @@ internal static class Program
         TestNumbers();
         TestBuildPlacementIdentity();
         TestRegexBoundaries();
+        TestWorldEditorCellObjectPolicy();
+        GameControlRoutingRegression.Run();
+        TestExistingMaterialPolicy();
+        TestSweepEligibilityPolicy();
+        TestBackwallSupportPolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -170,6 +175,76 @@ internal static class Program
             Check(timedOut, "map regex propagates its timeout");
         }
     }
+
+    private static void TestWorldEditorCellObjectPolicy()
+    {
+        object building = new object();
+        object logicGate = new object();
+        object gantry = new object();
+
+        Check(ReferenceEquals(WorldEditorCellObjectPolicy.SelectBuildingCandidate(building, logicGate, gantry), building),
+            "ordinary building must retain lookup precedence");
+        Check(ReferenceEquals(WorldEditorCellObjectPolicy.SelectBuildingCandidate<object>(null, logicGate, gantry), logicGate),
+            "logic gate must retain fallback precedence");
+        Check(ReferenceEquals(WorldEditorCellObjectPolicy.SelectBuildingCandidate<object>(null, null, gantry), gantry),
+            "gantry-layer building must be visible to world-editor reads");
+        Check(WorldEditorCellObjectPolicy.SelectBuildingCandidate<object>(null, null, null) == null,
+            "empty cells must remain empty");
+    }
+
+    private static void TestBackwallSupportPolicy()
+    {
+        var missing = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", false);
+        Check(!missing.Valid && missing.ReasonCode == "backwall_required",
+            "OnBackWall placement without native foundation must be rejected with a stable reason");
+        Check(missing.Error != null && missing.Error.Contains("complete backwall foundation"),
+            "backwall rejection must explain the full-footprint requirement");
+
+        var supported = BuildPlanningBackwallSupportPolicy.Evaluate("OnBackWall", true);
+        Check(supported.Valid && supported.ReasonCode == null,
+            "OnBackWall placement with native foundation remains valid");
+
+        var floor = BuildPlanningBackwallSupportPolicy.Evaluate("OnFloor", false);
+        Check(floor.Valid,
+            "non-backwall rules remain outside this narrow policy so OnFloor planned-support semantics are unchanged");
+    }
+
+    private static void TestExistingMaterialPolicy()
+    {
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting(null, null, null, false),
+            "omitted material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("auto", null, null, false),
+            "auto material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("default", null, null, false),
+            "default material must preserve existing-placement idempotency");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("IgneousRock", "IgneousRock", "Igneous Rock", false),
+            "explicit canonical material must match the existing construction material");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Igneous Rock", "IgneousRock", "Igneous Rock", false),
+            "explicit proper material name must match the existing construction material");
+        Check(BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("BuildableRaw", "IgneousRock", "Igneous Rock", true),
+            "explicit material category must accept an existing material in that category");
+        Check(!BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Granite", "IgneousRock", "Igneous Rock", false),
+            "different explicit material must not be treated as already satisfied");
+        Check(!BuildPlanningExistingMaterialPolicy.RequestMatchesExisting("Granite", null, null, false),
+            "unknown existing material must fail closed for an explicit request");
+        Check(BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "Granite"),
+            "resolved explicit material must match the existing tag exactly");
+        Check(!BuildPlanningExistingMaterialPolicy.SelectedMaterialMatchesExisting("Granite", "IgneousRock"),
+            "resolved different material must be rejected");
+    }
+
+
+    private static void TestSweepEligibilityPolicy()
+    {
+        SweepHandlerRegression.Run();
+        Check(SweepEligibilityPolicy.RejectionReason(false, false) == "no_clearable",
+            "pickupables without Clearable remain rejected");
+        Check(SweepEligibilityPolicy.RejectionReason(true, false) == "not_clearable",
+            "non-clearable pickupables must be rejected before sweep designation or priority changes");
+        Check(SweepEligibilityPolicy.RejectionReason(true, true) == null,
+            "clearable pickupables remain eligible for the existing sweep path");
+    }
+
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
     private static JObject Body(CallToolResult result) => JObject.Parse(result.Content[0].Text);

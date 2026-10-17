@@ -234,11 +234,18 @@ namespace CycleTrim.Patches
                 byte[] ___DirtyBitFlags,
                 out DirtyCellState __state)
             {
+                var suppressed = InvalidationSuppression.IsSuppressed;
+                if (suppressed)
+                {
+                    __state = new DirtyCellState { Suppressed = true };
+                    return;
+                }
+
                 var valid = Grid.IsValidCell(__0);
                 __state = new DirtyCellState
                 {
                     Valid = valid,
-                    Suppressed = InvalidationSuppression.IsSuppressed,
+                    Suppressed = false,
                     WasDirty = valid && IsDirty(___DirtyBitFlags, __0)
                 };
             }
@@ -249,9 +256,14 @@ namespace CycleTrim.Patches
                 byte[] ___DirtyBitFlags,
                 DirtyCellState __state)
             {
+                if (__state.Suppressed)
+                {
+                    return;
+                }
+
                 if (DirtyInvalidationPolicy.ShouldBumpCell(
                     __state.Valid,
-                    __state.Suppressed,
+                    false,
                     __state.WasDirty,
                     __state.Valid && IsDirty(___DirtyBitFlags, __0)))
                 {
@@ -284,6 +296,12 @@ namespace CycleTrim.Patches
 
             private static void Prefix(List<int> __0, out bool __state)
             {
+                if (InvalidationSuppression.IsSuppressed)
+                {
+                    __state = false;
+                    return;
+                }
+
                 var hasValidCell = false;
                 if (__0 != null)
                 {
@@ -298,7 +316,7 @@ namespace CycleTrim.Patches
                 }
 
                 __state = DirtyInvalidationPolicy.ShouldBumpBatch(
-                    InvalidationSuppression.IsSuppressed,
+                    false,
                     hasValidCell);
             }
 

@@ -176,6 +176,43 @@ internal static class Program
             {
                 const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"regression\",\"version\":\"1.0\"}}";
                 string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":100,\"params\":{" + modernMeta + "}}";
+                Check("HTTP modern parse errors use bad-request status without changing legacy", () =>
+                {
+                    const string malformed = "{\"jsonrpc\":\"2.0\",\"method\":";
+                    using (var response = PostModern(client, malformed, "server/discover"))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                            "Modern parse error returned HTTP " + (int)response.StatusCode);
+                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
+                            "Modern parse error used wrong JSON-RPC code");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                            "Modern parse error returned a legacy session id");
+                    }
+                    using (var response = Post(client, malformed))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Legacy parse-error HTTP status changed");
+                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
+                            "Legacy parse error used wrong JSON-RPC code");
+                    }
+                    Assert(server.GetSessionSummaries().Count == 0, "Rejected parse error allocated legacy session state");
+                });
+                Check("HTTP modern cancellation notifications are acknowledged without dispatch or session state", () =>
+                {
+                    const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":100}}";
+                    int calls = OniToolRegistry.Calls;
+                    using (var response = PostModern(client, notification, null))
+                    {
+                        Assert(response.StatusCode == HttpStatusCode.Accepted,
+                            "Header-routed modern cancellation was not acknowledged");
+                        Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
+                            "Modern cancellation acknowledgement returned a response body");
+                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                            "Modern cancellation returned a legacy session id");
+                    }
+                    Invoke(_bridge, "Update");
+                    Assert(OniToolRegistry.Calls == calls, "Modern cancellation was dispatched as a tool call");
+                    Assert(server.GetSessionSummaries().Count == 0, "Modern cancellation allocated legacy session state");
+                });
                 Check("HTTP modern discovery is stateless and advertises only implemented capabilities", () =>
                 {
                     using (var response = PostModern(client, discover, "server/discover"))
@@ -207,7 +244,7 @@ internal static class Program
                     {
                         var result = (JObject)ReadJson(response)["result"];
                         Assert((string)result["resultType"] == "complete", "Modern resource list omitted resultType");
-                        Assert((string)result["cacheScope"] == "private" && (int)result["ttlMs"] == 0, "Modern resource list cache hints incorrect");
+                        Assert((string)result["cacheScope"] == "public" && (int)result["ttlMs"] > 0, "Modern resource list cache hints incorrect");
                         var resources = result["resources"] as JArray;
                         Assert(resources != null && resources.Count > 0, "Modern resource list lost resources");
                         foreach (JObject resource in resources)
@@ -353,6 +390,7 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             if (method != null)
                 request.Headers.Add("Mcp-Method", method);

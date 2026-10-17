@@ -145,7 +145,9 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("Target GeneticAnalysisStation not found");
                     var station = go.GetSMI<GeneticAnalysisStation.StatesInstance>();
                     Tag seed = ResolveSeedTag(args);
-                    if (!seed.IsValid)
+                    // Use the same current options as the read path, including species resolution.
+                    if (!seed.IsValid || !GetGeneticSeedOptions(station).Exists(
+                            option => new Tag((string)option["seedId"]) == seed))
                         return CallToolResult.Error("seedId or speciesId must resolve to a valid discovered seed option");
                     bool allowed = ToolUtil.GetBool(args, "allowed", true);
                     var before = GeneticStationInfo(station);

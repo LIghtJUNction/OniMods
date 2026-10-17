@@ -28,6 +28,8 @@ namespace CycleTrim.Patches
                 "navigators");
         private static readonly AccessTools.FieldRef<Navigator, PathFinderAbilities> Abilities =
             AccessTools.FieldRefAccess<Navigator, PathFinderAbilities>("abilities");
+        private static readonly AccessTools.FieldRef<PathFinderAbilities, int> PrefabInstanceId =
+            AccessTools.FieldRefAccess<PathFinderAbilities, int>("prefabInstanceID");
         private static readonly AccessTools.FieldRef<AsyncPathProber.Manager, ushort> ActiveSerialNo =
             AccessTools.FieldRefAccess<AsyncPathProber.Manager, ushort>("activeSerialNo");
         private static bool? sentinelRecycleIsSafe;
@@ -79,12 +81,10 @@ namespace CycleTrim.Patches
             return new ManagerState();
         }
 
-        private static NavigatorState GetNavigatorState(
-            AsyncPathProber.Manager manager,
-            Navigator navigator)
+        private static void SynchronizeNavigatorTick(
+            ManagerState managerState,
+            NavigatorState state)
         {
-            var managerState = States.GetValue(manager, StateFactory);
-            var state = managerState.Navigators.GetOrCreateValue(navigator);
             lock (state.Admission)
             {
                 if (state.LastTick != managerState.Tick)
@@ -93,7 +93,33 @@ namespace CycleTrim.Patches
                     state.LastTick = managerState.Tick;
                 }
             }
+        }
+
+        private static NavigatorState GetNavigatorState(
+            AsyncPathProber.Manager manager,
+            Navigator navigator)
+        {
+            var managerState = States.GetValue(manager, StateFactory);
+            var state = managerState.Navigators.GetOrCreateValue(navigator);
+            SynchronizeNavigatorTick(managerState, state);
             return state;
+        }
+
+        private static bool TryGetNavigatorState(
+            AsyncPathProber.Manager manager,
+            Navigator navigator,
+            out NavigatorState state)
+        {
+            state = null;
+            ManagerState managerState;
+            if (!States.TryGetValue(manager, out managerState)
+                || !managerState.Navigators.TryGetValue(navigator, out state))
+            {
+                return false;
+            }
+
+            SynchronizeNavigatorTick(managerState, state);
+            return true;
         }
 
         private static void ResetNavigatorState(
@@ -114,12 +140,12 @@ namespace CycleTrim.Patches
 
         private static PathProbeStamp CreateStamp(
             Navigator navigator,
-            CreaturePathFinderAbilities creature)
+            CreaturePathFinderAbilities creature,
+            int prefabInstanceId)
         {
-            var prefab = navigator.GetComponent<KPrefabID>();
-            var fingerprint = unchecked(
-                (prefab == null ? 0 : prefab.InstanceID) * 397
-                ^ (creature.canTraverseSubmered ? 1 : 0));
+            var fingerprint = PathProbeAbilityFingerprint.Create(
+                prefabInstanceId,
+                creature.canTraverseSubmered);
             return new PathProbeStamp(
                 NavigationInvalidationVersions.Get(navigator.NavGrid),
                 navigator.cachedCell,
@@ -131,13 +157,14 @@ namespace CycleTrim.Patches
                 fingerprint);
         }
 
-        private static PathProbeStamp StampFromOrder(AsyncPathProber.WorkOrder order)
+        private static PathProbeStamp StampFromOrder(
+            AsyncPathProber.WorkOrder order,
+            int prefabInstanceId)
         {
             var creature = (CreaturePathFinderAbilities)order.abilities;
-            var prefab = order.navigator.GetComponent<KPrefabID>();
-            var fingerprint = unchecked(
-                (prefab == null ? 0 : prefab.InstanceID) * 397
-                ^ (creature.canTraverseSubmered ? 1 : 0));
+            var fingerprint = PathProbeAbilityFingerprint.Create(
+                prefabInstanceId,
+                creature.canTraverseSubmered);
             return new PathProbeStamp(
                 NavigationInvalidationVersions.Get(order.navGrid),
                 order.originCell,
@@ -253,7 +280,8 @@ namespace CycleTrim.Patches
                 }
 
                 var abilities = (CreaturePathFinderAbilities)nav.GetCurrentAbilities();
-                var stamp = CreateStamp(nav, abilities);
+                var prefabInstanceId = PrefabInstanceId(abilities);
+                var stamp = CreateStamp(nav, abilities, prefabInstanceId);
                 var state = GetNavigatorState(__instance, nav);
                 var admitted = false;
                 lock (state.Admission)
@@ -283,7 +311,8 @@ namespace CycleTrim.Patches
                     };
                     lock (state.Admission)
                     {
-                        state.Admission.ReplaceQueuedStamp(StampFromOrder(__result));
+                        state.Admission.ReplaceQueuedStamp(
+                            StampFromOrder(__result, prefabInstanceId));
                     }
                 }
                 else
@@ -320,9 +349,12 @@ namespace CycleTrim.Patches
                 bool __result,
                 AsyncPathProber.WorkOrder order)
             {
-                if (__result && order.navigator != null)
+                NavigatorState state;
+                if (__result
+                    && order.navigator != null
+                    && TryGetNavigatorState(__instance, order.navigator, out state))
                 {
-                    var admission = GetNavigatorState(__instance, order.navigator).Admission;
+                    var admission = state.Admission;
                     lock (admission)
                     {
                         admission.MarkDequeued();

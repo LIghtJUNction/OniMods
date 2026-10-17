@@ -18,10 +18,6 @@ namespace OniMcp.Tools
             var available = AvailableMaterials(def, worldId, includeUnavailable: false).ToList();
             if (auto)
             {
-                var defaults = DefaultBuildElements(def);
-                if (IsFreeBuildContext())
-                    return ValidatedMaterialSelection(defaults, "default_no_inventory_in_debug", requested, null, available);
-
                 var selected = available.FirstOrDefault();
                 if (selected != null)
                     return ValidatedMaterialSelection(new List<Tag> { selected.Tag }, "auto", requested, selected, available);
@@ -47,8 +43,7 @@ namespace OniMcp.Tools
             var match = AvailableMaterials(def, worldId, includeUnavailable: true)
                 .FirstOrDefault(item => EqualsIgnoreCase(item.Tag.Name, requested)
                     || EqualsIgnoreCase(item.Name, requested)
-                    || Contains(item.Tag.Name, requested)
-                    || Contains(item.Name, requested));
+);
             var candidates = AvailableMaterials(def, worldId, includeUnavailable: true).Take(20).ToList();
             if (match == null || !match.ValidForBuilding)
             {
@@ -59,7 +54,7 @@ namespace OniMcp.Tools
                     candidates);
             }
 
-            if (match.AvailableKg <= 0f && !IsFreeBuildContext())
+            if (match.AvailableKg <= 0f)
             {
                 return MaterialSelection.Invalid(
                     $"Material '{match.Tag.Name}' is valid for {def.PrefabID}, but none is currently available",
@@ -111,7 +106,7 @@ namespace OniMcp.Tools
                     };
                 })
                 .Where(item => item.ValidForBuilding)
-                .Where(item => includeUnavailable || item.AvailableKg > 0f || IsFreeBuildContext())
+                .Where(item => includeUnavailable || item.AvailableKg > 0f)
                 .OrderByDescending(item => item.AvailableKg)
                 .ThenBy(item => item.Tag.Name)
                 .ToList();
@@ -309,13 +304,6 @@ namespace OniMcp.Tools
             return amount;
         }
 
-        private static bool IsFreeBuildContext()
-        {
-            if (WorldEditorTools.EnforceNormalMaterialRules)
-                return false;
-            return DebugHandler.InstantBuildMode || (Game.Instance != null && Game.Instance.SandboxModeActive);
-        }
-
         private static FacadeSelection ResolveFacade(BuildingDef def, string facade)
         {
             if (string.IsNullOrWhiteSpace(facade))
@@ -433,7 +421,7 @@ namespace OniMcp.Tools
             {
                 float selectedAvailableKg = Selected != null ? ToolUtil.SafeFloat(Selected.AvailableKg) : 0f;
                 bool hasRequiredKg = RequiredKg > 0f;
-                object satisfied = hasRequiredKg ? (object)(IsFreeBuildContext() || selectedAvailableKg >= RequiredKg) : null;
+                object satisfied = hasRequiredKg ? (object)(selectedAvailableKg >= RequiredKg) : null;
                 float shortageKg = hasRequiredKg ? Math.Max(0f, RequiredKg - selectedAvailableKg) : 0f;
 
                 return new Dictionary<string, object>

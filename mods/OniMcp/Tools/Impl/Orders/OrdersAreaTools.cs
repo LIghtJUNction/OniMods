@@ -9,7 +9,7 @@ using OniMcp.Support;
 namespace OniMcp.Tools
 {
     public static partial class OrdersTools
-{
+    {
         public static McpTool SweepArea()
         {
             return new McpTool
@@ -67,6 +67,7 @@ namespace OniMcp.Tools
                     int skippedEquipped = 0;
                     int skippedNoCell = 0;
                     int skippedNoClearable = 0;
+                    int skippedNotClearable = 0;
                     var liquidScan = ScanLiquidCells(rect, worldId, 12);
                     var targets = new List<Dictionary<string, object>>();
                     var targetCells = new List<int>();
@@ -107,11 +108,17 @@ namespace OniMcp.Tools
                         }
 
                         var clearable = pickupable.GetComponent<Clearable>();
-                        if (clearable == null)
+                        string eligibilityRejection = SweepEligibilityPolicy.RejectionReason(
+                            clearable != null,
+                            clearable != null && clearable.isClearable);
+                        if (eligibilityRejection != null)
                         {
-                            skippedNoClearable++;
-                            IncrementSkip(executionSkipped, "no_clearable");
-                            AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_no_clearable");
+                            if (eligibilityRejection == "no_clearable")
+                                skippedNoClearable++;
+                            else
+                                skippedNotClearable++;
+                            IncrementSkip(executionSkipped, eligibilityRejection);
+                            AddSweepTarget(targets, detail, limit, pickupable, cell, "skipped_" + eligibilityRejection);
                             continue;
                         }
 
@@ -140,7 +147,8 @@ namespace OniMcp.Tools
                             ["invalidCell"] = skippedNoCell,
                             ["stored"] = skippedStored,
                             ["equipped"] = skippedEquipped,
-                            ["noClearable"] = skippedNoClearable
+                            ["noClearable"] = skippedNoClearable,
+                            ["notClearable"] = skippedNotClearable
                         },
                         ["execution"] = CellExecutionMetadata("sweep", worldId, targetCells, executionSkipped, detail, limit),
                         ["worldId"] = worldId,
