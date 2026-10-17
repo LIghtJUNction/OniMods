@@ -10,6 +10,12 @@ namespace CycleTrim.Patches
     {
         private const string FastTrackPatchType =
             "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate";
+        private const string EfficientSupplyType =
+            "PeterHan.EfficientFetch.EfficientFetchManager";
+        // QualityOfLifeONI@3709f6c985fc2a73836679da7a924a873c320d67 bundled
+        // the same Efficient Fetch semantics under its own namespace.
+        private const string BundledEfficientFetchType =
+            "QualityOfLifeONI.EfficientFetchManager";
         private const string NoWasteWantPatchType =
             "PeterHan.NoWasteWant.NoWasteWantPatches";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
@@ -52,6 +58,13 @@ namespace CycleTrim.Patches
             // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
             private static bool Prepare()
             {
+                if (!FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
+                        AccessTools.TypeByName(EfficientSupplyType) != null,
+                        AccessTools.TypeByName(BundledEfficientFetchType) != null))
+                {
+                    return false;
+                }
+
                 // Waste Not, Want Not reverses the vanilla freshness comparator. This replacement
                 // cannot preserve that transpiler safely, so leave the original method in control.
                 if (AccessTools.TypeByName(NoWasteWantPatchType) != null)
