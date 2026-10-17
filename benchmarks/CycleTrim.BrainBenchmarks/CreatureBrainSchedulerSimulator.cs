@@ -139,25 +139,25 @@ namespace CycleTrim.BrainBenchmarks
             }
 
             rateCap.BeginFrame(elapsedSeconds);
-            var normalAllowance = 0;
-            while (normalAllowance < vanillaBudget
+            var runningAllowance = 0;
+            while (runningAllowance < vanillaBudget
                 && rateCap.TryAcquireNormal(BrainGroup.Creature))
             {
-                normalAllowance++;
+                runningAllowance++;
             }
 
-            return Run(normalAllowance, usedVanilla: false, onUpdate);
+            return Run(runningAllowance, usedVanilla: false, onUpdate);
         }
 
         private CreatureSchedulerFrame Run(
-            int normalAllowance,
+            int runningAllowance,
             bool usedVanilla,
             Action onUpdate)
         {
             var frameNormalCalls = 0;
             var framePriorityCalls = 0;
             var normalBrainIndices = new List<int>();
-            var cursor = new CreatureBrainScheduleCursor(normalAllowance);
+            var cursor = new CreatureBrainScheduleCursor(runningAllowance);
             CreatureBrainSelection selection;
             while (cursor.TrySelect(
                 running.Count,
