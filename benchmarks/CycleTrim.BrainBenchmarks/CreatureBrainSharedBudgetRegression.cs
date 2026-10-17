@@ -1,20 +1,7 @@
-using System.Collections.Generic;
-using CycleTrim.Core;
-
 namespace CycleTrim.BrainBenchmarks
 {
     internal static partial class Program
     {
-        static Program()
-        {
-            RunTest(
-                nameof(CreatureSchedulerSharesRunningBudgetAcrossPriorityAndNormal),
-                CreatureSchedulerSharesRunningBudgetAcrossPriorityAndNormal);
-            RunTest(
-                nameof(CreatureSchedulerDoesNotChargeStoppedPriorityEntries),
-                CreatureSchedulerDoesNotChargeStoppedPriorityEntries);
-        }
-
         private static void CreatureSchedulerSharesRunningBudgetAcrossPriorityAndNormal()
         {
             var onePriority = RunMixedSchedule(
@@ -23,7 +10,8 @@ namespace CycleTrim.BrainBenchmarks
                 allowance: 5);
             AssertEqual(1L, onePriority.PriorityCalls, "one-priority calls");
             AssertEqual(4L, onePriority.NormalCalls, "one-priority normal calls");
-            AssertEqual(5L, onePriority.TotalCalls, "one-priority shared running budget");
+            AssertEqual(5L, onePriority.NormalCalls + onePriority.PriorityCalls,
+                "one-priority shared running budget");
 
             var severalPriorities = RunMixedSchedule(
                 new[] { true, true, true, true, true, true },
@@ -31,13 +19,15 @@ namespace CycleTrim.BrainBenchmarks
                 allowance: 5);
             AssertEqual(3L, severalPriorities.PriorityCalls, "multi-priority calls");
             AssertEqual(2L, severalPriorities.NormalCalls, "multi-priority normal calls");
-            AssertEqual(5L, severalPriorities.TotalCalls, "multi-priority shared running budget");
+            AssertEqual(5L, severalPriorities.NormalCalls + severalPriorities.PriorityCalls,
+                "multi-priority shared running budget");
 
             var zeroAllowance = RunMixedSchedule(
                 new[] { true },
                 new[] { 0 },
                 allowance: 0);
-            AssertEqual(0L, zeroAllowance.TotalCalls, "zero allowance blocks priority work");
+            AssertEqual(0L, zeroAllowance.NormalCalls + zeroAllowance.PriorityCalls,
+                "zero allowance blocks priority work");
         }
 
         private static void CreatureSchedulerDoesNotChargeStoppedPriorityEntries()
@@ -48,67 +38,34 @@ namespace CycleTrim.BrainBenchmarks
                 allowance: 1);
             AssertEqual(0L, result.PriorityCalls, "stopped priority calls");
             AssertEqual(1L, result.NormalCalls, "stopped priority preserves running budget");
-            AssertEqual(1L, result.TotalCalls, "stopped priority total calls");
+            AssertEqual(1L, result.NormalCalls + result.PriorityCalls, "stopped priority total calls");
         }
 
-        private static MixedScheduleResult RunMixedSchedule(
+        private static void CreatureSchedulerPreservesPriorityUntilAllowanceArrives()
+        {
+            var scheduler = new CreatureBrainSchedulerSimulator(new[] { true });
+            scheduler.Prioritize(0);
+            var blocked = scheduler.RunFrame(1.0 / 1000.0, true, 1);
+            AssertEqual(0L, blocked.PriorityCalls, "zero allowance keeps priority work queued");
+            AssertEqual(0L, blocked.NormalCalls, "zero allowance blocks normal work");
+            AssertEqual(0L, scheduler.NextNormalBrain, "zero allowance preserves normal position");
+
+            var allowed = scheduler.RunFrame(1.0 / 60.0, true, 1);
+            AssertEqual(1L, allowed.PriorityCalls, "queued priority runs when allowance arrives");
+            AssertEqual(0L, allowed.NormalCalls, "priority consumes the shared allowance");
+        }
+
+        private static CreatureSchedulerFrame RunMixedSchedule(
             bool[] running,
             int[] priorities,
             int allowance)
         {
-            var priorityBrains = new Queue<int>(priorities);
-            var nextNormalBrain = 0;
-            var cursor = new CreatureBrainScheduleCursor(allowance);
-            var runningBudget = new CreatureBrainRunningBudget(allowance);
-            var normalCalls = 0;
-            var priorityCalls = 0;
-            CreatureBrainSelection selection;
-            while (runningBudget.HasRemaining
-                && cursor.TrySelect(
-                    running.Length,
-                    allowPriority: true,
-                    priorityBrains.Count,
-                    ref nextNormalBrain,
-                    out selection))
+            var scheduler = new CreatureBrainSchedulerSimulator(running);
+            foreach (var priority in priorities)
             {
-                var brainIndex = selection.Kind == CreatureBrainSelectionKind.Priority
-                    ? priorityBrains.Dequeue()
-                    : selection.NormalBrainIndex;
-                var isRunning = running[brainIndex];
-                if (isRunning)
-                {
-                    if (selection.Kind == CreatureBrainSelectionKind.Priority)
-                    {
-                        priorityCalls++;
-                    }
-                    else
-                    {
-                        normalCalls++;
-                    }
-                }
-                runningBudget.Complete(isRunning);
-                cursor.Complete(selection, isRunning);
+                scheduler.Prioritize(priority);
             }
-
-            return new MixedScheduleResult(normalCalls, priorityCalls);
-        }
-
-        private readonly struct MixedScheduleResult
-        {
-            internal MixedScheduleResult(int normalCalls, int priorityCalls)
-            {
-                NormalCalls = normalCalls;
-                PriorityCalls = priorityCalls;
-            }
-
-            internal int NormalCalls { get; }
-
-            internal int PriorityCalls { get; }
-
-            internal int TotalCalls
-            {
-                get { return NormalCalls + PriorityCalls; }
-            }
+            return scheduler.RunFrame(1.0 / 60.0, true, allowance);
         }
     }
 }

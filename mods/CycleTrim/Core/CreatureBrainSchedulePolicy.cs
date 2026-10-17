@@ -30,58 +30,25 @@ namespace CycleTrim.Core
         public int NormalBrainIndex { get; }
     }
 
-    public struct CreatureBrainRunningBudget
-    {
-        private int remaining;
-
-        public CreatureBrainRunningBudget(int allowance)
-        {
-            if (allowance < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(allowance));
-            }
-
-            remaining = allowance;
-        }
-
-        public bool HasRemaining
-        {
-            get { return remaining > 0; }
-        }
-
-        public int Remaining
-        {
-            get { return remaining; }
-        }
-
-        public void Complete(bool isRunning)
-        {
-            if (isRunning)
-            {
-                remaining--;
-            }
-        }
-    }
-
     public struct CreatureBrainScheduleCursor
     {
         private int scanned;
-        private int normalAllowance;
+        private int remainingAllowance;
 
-        public CreatureBrainScheduleCursor(int normalAllowance)
+        public CreatureBrainScheduleCursor(int runningAllowance)
         {
-            if (normalAllowance < 0)
+            if (runningAllowance < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(normalAllowance));
+                throw new ArgumentOutOfRangeException(nameof(runningAllowance));
             }
 
             scanned = 0;
-            this.normalAllowance = normalAllowance;
+            remainingAllowance = runningAllowance;
         }
 
-        public int NormalAllowance
+        public int RemainingAllowance
         {
-            get { return normalAllowance; }
+            get { return remainingAllowance; }
         }
 
         public bool TrySelect(
@@ -105,7 +72,7 @@ namespace CycleTrim.Core
             // preserves dynamic additions, while >= deliberately guarantees
             // termination if an update shrinks the list below scanned.
             if (scanned >= currentBrainCount
-                || (!usePriority && normalAllowance == 0))
+                || remainingAllowance == 0)
             {
                 selection = default(CreatureBrainSelection);
                 return false;
@@ -135,9 +102,9 @@ namespace CycleTrim.Core
 
         public void Complete(CreatureBrainSelection selection, bool isRunning)
         {
-            if (isRunning && selection.Kind == CreatureBrainSelectionKind.Normal)
+            if (isRunning && selection.Kind != CreatureBrainSelectionKind.None)
             {
-                normalAllowance--;
+                remainingAllowance--;
             }
         }
 

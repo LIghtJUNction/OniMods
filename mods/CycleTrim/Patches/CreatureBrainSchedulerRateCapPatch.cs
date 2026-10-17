@@ -120,21 +120,19 @@ namespace CycleTrim.Patches
                 var vanillaBudget = initialProbeCount(__instance);
                 var state = states.GetValue(__instance, StateFactory);
                 state.RateCap.BeginFrame(dt);
-                var normalAllowance = 0;
-                while (normalAllowance < vanillaBudget
+                var runningAllowance = 0;
+                while (runningAllowance < vanillaBudget
                     && state.RateCap.TryAcquireNormal(Core.BrainGroup.Creature))
                 {
-                    normalAllowance++;
+                    runningAllowance++;
                 }
 
                 try
                 {
                     __instance.BeginBrainGroupUpdate();
-                    var cursor = new CreatureBrainScheduleCursor(normalAllowance);
-                    var runningBudget = new CreatureBrainRunningBudget(normalAllowance);
+                    var cursor = new CreatureBrainScheduleCursor(runningAllowance);
                     CreatureBrainSelection selection;
-                    while (runningBudget.HasRemaining
-                        && cursor.TrySelect(
+                    while (cursor.TrySelect(
                             ___brains.Count,
                             __instance.AllowPriorityBrains(),
                             ___priorityBrains.Count,
@@ -163,7 +161,6 @@ namespace CycleTrim.Patches
                         }
 
                         brain.UpdateBrain();
-                        runningBudget.Complete(isRunning: true);
                         cursor.Complete(selection, isRunning: true);
                     }
                 }
