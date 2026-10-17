@@ -64,6 +64,7 @@ namespace OniMcp.Tools
             materialResult.RequiredKg = RequiredMaterialKg(def) * path.Count;
             if (!materialResult.Valid)
             {
+                result["shouldFallback"] = false;
                 result["reason"] = "material selection failed";
                 result["materialSelection"] = materialResult.ToDictionary();
                 return result;

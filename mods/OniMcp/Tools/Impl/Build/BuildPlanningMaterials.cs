@@ -116,24 +116,7 @@ namespace OniMcp.Tools
 
         private static float RequiredMaterialKg(BuildingDef def)
         {
-            if (def == null)
-                return 0f;
-
-            try
-            {
-                var buildingsType = typeof(BuildingDef).Assembly.GetType("TUNING+BUILDINGS") ?? Type.GetType("TUNING+BUILDINGS");
-                var massField = buildingsType?.GetField("CONSTRUCTION_MASS_KG", BindingFlags.Public | BindingFlags.Static);
-                var masses = massField?.GetValue(null) as float[];
-                int tier = Mathf.RoundToInt(ToolUtil.SafeFloat(def.MassTier));
-                if (masses != null && tier >= 0 && tier < masses.Length)
-                    return Math.Max(0f, masses[tier]);
-            }
-            catch
-            {
-                // Keep material diagnostics best-effort across ONI builds.
-            }
-
-            return 0f;
+            return BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(def);
         }
 
         private static IEnumerable<Tag> CandidateMaterialTags(BuildingDef def, int worldId)
@@ -379,6 +362,8 @@ namespace OniMcp.Tools
 
         private sealed class MaterialSelection
         {
+            private float requiredKg;
+
             public bool Valid;
             public string Mode;
             public string Requested;
@@ -386,8 +371,30 @@ namespace OniMcp.Tools
             public BuildMaterialInfo Selected;
             public List<BuildMaterialInfo> Available = new List<BuildMaterialInfo>();
             public List<BuildMaterialInfo> Candidates = new List<BuildMaterialInfo>();
-            public float RequiredKg;
+            public string ReasonCode;
             public string Error;
+
+            public float RequiredKg
+            {
+                get { return requiredKg; }
+                set
+                {
+                    requiredKg = value;
+                    if (!Valid)
+                        return;
+
+                    float selectedAvailableKg = Selected != null ? Selected.AvailableKg : 0f;
+                    if (BuildMaterialSufficiencyPolicy.IsSatisfied(
+                        selectedAvailableKg,
+                        requiredKg))
+                        return;
+
+                    Valid = false;
+                    ReasonCode = "insufficient_material";
+                    string selectedName = Selected != null ? Selected.Tag.Name : "selected material";
+                    Error = $"Insufficient build material: {selectedName} has {Math.Round(selectedAvailableKg, 3)} kg available but {Math.Round(requiredKg, 3)} kg is required.";
+                }
+            }
 
             public static MaterialSelection Success(List<Tag> elements, string mode, string requested, BuildMaterialInfo selected, List<BuildMaterialInfo> available)
             {
@@ -429,6 +436,7 @@ namespace OniMcp.Tools
                     ["valid"] = Valid,
                     ["mode"] = Mode,
                     ["requested"] = Requested,
+                    ["reasonCode"] = ReasonCode,
                     ["requirementKnown"] = hasRequiredKg,
                     ["requiredKg"] = hasRequiredKg ? (object)Math.Round(ToolUtil.SafeFloat(RequiredKg), 3) : null,
                     ["selectedAvailableKg"] = Selected != null ? (object)Math.Round(selectedAvailableKg, 3) : null,

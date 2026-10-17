@@ -107,4 +107,5 @@ internal class BuildingDef
 {
     public string PrefabID { get; set; }
     public string Name { get; set; }
+    public float[] Mass { get; set; }
 }

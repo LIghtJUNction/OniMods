@@ -259,7 +259,18 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                     if (!pathSafety.Valid)
                         return CallToolResult.Error(JsonConvert.SerializeObject(
                             UtilityPathConflictResult(def, path, pathSafety, "path_preflight"), McpJsonUtil.Settings));
-if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
+                    // Budget all new cells before either placement path can write.
+                    int newPathCells = path.Select(point => Grid.XYToCell(point.x, point.y)).Distinct().Count()
+                        - pathSafety.ExistingSamePrefabCells;
+                    if (newPathCells > 0)
+                    {
+                        var pathMaterial = SelectElements(def, args["material"]?.ToString(), worldId);
+                        pathMaterial.RequiredKg = RequiredMaterialKg(def) * newPathCells;
+                        if (!pathMaterial.Valid)
+                            return CallToolResult.Error(JsonConvert.SerializeObject(pathMaterial.ToDictionary(), McpJsonUtil.Settings));
+                    }
+
+                    if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                     {
                         var nativePath = TryPlaceUtilityPathNative(def, path, args);
                         if (EqualsIgnoreCase(nativePath.TryGetValue("reasonCode", out object reasonCode) ? reasonCode?.ToString() : null, "utility_path_conflict"))

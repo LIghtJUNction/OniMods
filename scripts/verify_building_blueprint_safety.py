@@ -132,6 +132,16 @@ def verify_building_blueprint_safety(
     if "IsFreeBuildContext" in native_method:
         fail("native utility paths cannot bypass material rules")
 
+    require_order(
+        native_method,
+        ("materialResult.RequiredKg = RequiredMaterialKg(def) * path.Count;",
+         "if (!materialResult.Valid)", "SelectUtilityBuildTool"),
+        "native utility path must reject aggregate shortfall before activating the tool",
+    )
+    native_material_failure = extract_block(native_method, "if (!materialResult.Valid)")
+    require_order(native_material_failure, ('result["shouldFallback"] = false;', "return result;"),
+                  "native material failure must prohibit per-cell fallback")
+
     auto_connect = extract_block(
         selected[paths["placement"]],
         "public static McpTool AutoConnectUtility()",
@@ -147,6 +157,16 @@ def verify_building_blueprint_safety(
         ),
         "utility auto-connect must continue from native fallback into per-cell planning",
     )
+    require_order(
+        auto_connect,
+        ("int newPathCells", "pathSafety.ExistingSamePrefabCells", "if (newPathCells > 0)",
+         "pathMaterial.RequiredKg = RequiredMaterialKg(def) * newPathCells;",
+         "if (!pathMaterial.Valid)", "return CallToolResult.Error", "TryPlaceUtilityPathNative"),
+        "new-cell aggregate material gate must precede both native and fallback placement",
+    )
+    if "Distinct().Count()" not in auto_connect:
+        fail("aggregate material budgeting must count repeated path cells only once")
+
     path_loop = extract_block(auto_connect, "foreach (var point in path)")
     if "TryPlanOne(def.PrefabID, point.x, point.y" not in path_loop:
         fail("utility fallback path loop must call TryPlanOne for each cell")
@@ -154,6 +174,11 @@ def verify_building_blueprint_safety(
     plan_one = extract_block(
         selected[paths["plan_one"]],
         "private static Dictionary<string, object> TryPlanOne",
+    )
+    require_order(
+        plan_one,
+        ("materialResult.RequiredKg = RequiredMaterialKg(def);", "if (!materialResult.Valid)", "def.TryPlace("),
+        "per-building material shortfall must be rejected before placement",
     )
     require_order(plan_one, ("ValidateFootprint", "def.TryPlace(", 'return ErrorResult(prefabId, x, y, "Placement failed"',
                               '["blueprintPlaced"] = true,', '["buildingCompleted"] = false,'),
@@ -192,6 +217,15 @@ def verify_building_blueprint_safety(
     )
     if validated_success.count("return MaterialSelection.Invalid(") < 2:
         fail("material success validation must reject empty and invalid primary elements")
+
+    required_reader = extract_block(materials, "private static float RequiredMaterialKg")
+    if "BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(def)" not in required_reader:
+        fail("material demand must read the actual BuildingDef.Mass recipe")
+    material_selection = extract_block(materials, "private sealed class MaterialSelection")
+    for token in ("requiredKg = value;", "Selected.AvailableKg : 0f", "BuildMaterialSufficiencyPolicy.IsSatisfied(",
+                  'ReasonCode = "insufficient_material";', '["reasonCode"] = ReasonCode,'):
+        if token not in material_selection:
+            fail("material sufficiency wiring missing: " + token)
 
     verify_existing_material_reuse(plan_one)
 
