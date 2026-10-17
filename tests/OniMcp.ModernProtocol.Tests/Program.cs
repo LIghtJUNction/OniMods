@@ -350,6 +350,8 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            if (string.Equals(protocolVersion, "2026-07-28", StringComparison.Ordinal))
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             if (sessionId != null)
                 request.Headers.Add("Mcp-Session-Id", sessionId);
             if (protocolVersion != null)

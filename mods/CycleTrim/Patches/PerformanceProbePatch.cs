@@ -20,13 +20,13 @@ namespace CycleTrim.Patches
         private const string FastTrackNamespacePrefix = "PeterHan.FastTrack.";
         private const string ReportName = "CycleTrim.PerformanceProbe";
 
-        private static PerformanceProbeCounter asyncTickCounter;
-        private static PerformanceProbeCounter asyncWorkCounter;
-        private static PerformanceProbeCounter navigatorProbeCounter;
-        private static PerformanceProbeCounter fetchCounter;
-        private static PerformanceProbeCounter choreCounter;
-        private static PerformanceProbeCounter brainSchedulerCounter;
-        private static PerformanceProbeCounter roomProberCounter;
+        private static PerformanceProbeGenerationCounter asyncTickCounter;
+        private static PerformanceProbeGenerationCounter asyncWorkCounter;
+        private static PerformanceProbeGenerationCounter navigatorProbeCounter;
+        private static PerformanceProbeGenerationCounter fetchCounter;
+        private static PerformanceProbeGenerationCounter choreCounter;
+        private static PerformanceProbeGenerationCounter brainSchedulerCounter;
+        private static PerformanceProbeGenerationCounter roomProberCounter;
         private static MethodBase asyncTickTarget;
         private static MethodBase asyncWorkTarget;
         private static MethodBase navigatorProbeTarget;
@@ -57,6 +57,12 @@ namespace CycleTrim.Patches
         private static PerformanceProbeSnapshot lastChoreSnapshot;
         private static PerformanceProbeSnapshot lastBrainSchedulerSnapshot;
         private static PerformanceProbeSnapshot lastRoomProberSnapshot;
+        private static string cycleTrimHarmonyId = string.Empty;
+
+        internal static void SetHarmonyId(string harmonyId)
+        {
+            cycleTrimHarmonyId = harmonyId ?? string.Empty;
+        }
 
         private static bool IsRequested()
         {
@@ -73,13 +79,13 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            asyncTickCounter = new PerformanceProbeCounter();
-            asyncWorkCounter = new PerformanceProbeCounter(consistentSnapshots: true);
-            navigatorProbeCounter = new PerformanceProbeCounter();
-            fetchCounter = new PerformanceProbeCounter();
-            choreCounter = new PerformanceProbeCounter();
-            brainSchedulerCounter = new PerformanceProbeCounter();
-            roomProberCounter = new PerformanceProbeCounter();
+            asyncTickCounter = new PerformanceProbeGenerationCounter();
+            asyncWorkCounter = new PerformanceProbeGenerationCounter(consistentSnapshots: true);
+            navigatorProbeCounter = new PerformanceProbeGenerationCounter();
+            fetchCounter = new PerformanceProbeGenerationCounter();
+            choreCounter = new PerformanceProbeGenerationCounter();
+            brainSchedulerCounter = new PerformanceProbeGenerationCounter();
+            roomProberCounter = new PerformanceProbeGenerationCounter();
             reportCallback = ReportDeferred;
             captureGame = new WeakReference(null);
             reportScheduler = new WeakReference(null);
@@ -114,6 +120,15 @@ namespace CycleTrim.Patches
             return Stopwatch.GetTimestamp();
         }
 
+        private static TimingState BeginMainTiming(
+            PerformanceProbeGenerationCounter counter)
+        {
+            // Rotate the capture before a measured main-thread target can publish work to
+            // a worker. Boundary bookkeeping stays outside the target's measured duration.
+            ObserveGameBoundary();
+            return new TimingState(counter.CaptureCurrent(), BeginTiming());
+        }
+
         private static void ObserveGameBoundary()
         {
             var game = Game.Instance;
@@ -122,11 +137,18 @@ namespace CycleTrim.Patches
                 return;
             }
 
-            // Do not reset cumulative counters while an AsyncPathProber worker can still be
-            // completing an old work order. Instead, mark the next deferred report as the
-            // zero-delta baseline for this game instance.
+            // Every target owns a generation-local counter. Capturing the counter in each
+            // Prefix lets an old/re-entrant invocation finish without contaminating the
+            // new game's cumulative calls, totals, or maxima.
             captureGame.Target = game;
             captureGeneration++;
+            asyncTickCounter.AdvanceGeneration();
+            asyncWorkCounter.AdvanceGeneration();
+            navigatorProbeCounter.AdvanceGeneration();
+            fetchCounter.AdvanceGeneration();
+            choreCounter.AdvanceGeneration();
+            brainSchedulerCounter.AdvanceGeneration();
+            roomProberCounter.AdvanceGeneration();
             captureBoundaryPending = true;
             reportObservationCount = 0;
             nextReportAt = 1;
@@ -135,12 +157,15 @@ namespace CycleTrim.Patches
             reportScheduler.Target = null;
         }
 
-        private static void RecordMain(PerformanceProbeCounter counter, long startedAt)
+        private static void RecordMain(TimingState state)
         {
-            // Record the measured target before any lifecycle bookkeeping so the boundary
-            // check itself is never charged to the target's timing.
-            counter.Record(Stopwatch.GetTimestamp() - startedAt);
-            ObserveGameBoundary();
+            if (!PerformanceProbeCounter.TryRecord(
+                state.Counter,
+                Stopwatch.GetTimestamp() - state.StartedAt))
+            {
+                return;
+            }
+
             var observations = Interlocked.Increment(ref reportObservationCount);
             if (observations >= nextReportAt)
             {
@@ -161,9 +186,23 @@ namespace CycleTrim.Patches
             TryScheduleReport();
         }
 
-        private static void RecordWorker(PerformanceProbeCounter counter, long startedAt)
+        private static void RecordWorker(TimingState state)
         {
-            counter.Record(Stopwatch.GetTimestamp() - startedAt);
+            PerformanceProbeCounter.TryRecord(
+                state.Counter,
+                Stopwatch.GetTimestamp() - state.StartedAt);
+        }
+
+        private readonly struct TimingState
+        {
+            internal TimingState(PerformanceProbeCounter counter, long startedAt)
+            {
+                Counter = counter;
+                StartedAt = startedAt;
+            }
+
+            internal PerformanceProbeCounter Counter { get; }
+            internal long StartedAt { get; }
         }
 
         private static void TryScheduleReport()
@@ -231,15 +270,15 @@ namespace CycleTrim.Patches
             var gc1 = GC.CollectionCount(1);
             var gc2 = GC.CollectionCount(2);
             var heapBytes = GC.GetTotalMemory(false);
-            var asyncTickSnapshot = asyncTickCounter.Snapshot();
-            var asyncWorkSnapshot = asyncWorkCounter.Snapshot();
-            var navigatorProbeSnapshot = navigatorProbeCounter.Snapshot();
-            var fetchSnapshot = fetchCounter.Snapshot();
-            var choreSnapshot = choreCounter.Snapshot();
-            var brainSchedulerSnapshot = brainSchedulerCounter.Snapshot();
-            var roomProberSnapshot = roomProberCounter.Snapshot();
+            var asyncTickSnapshot = asyncTickCounter.SnapshotCurrent();
+            var asyncWorkSnapshot = asyncWorkCounter.SnapshotCurrent();
+            var navigatorProbeSnapshot = navigatorProbeCounter.SnapshotCurrent();
+            var fetchSnapshot = fetchCounter.SnapshotCurrent();
+            var choreSnapshot = choreCounter.SnapshotCurrent();
+            var brainSchedulerSnapshot = brainSchedulerCounter.SnapshotCurrent();
+            var roomProberSnapshot = roomProberCounter.SnapshotCurrent();
             var sequence = ++reportSequence;
-            var summary = new StringBuilder(1280);
+            var summary = new StringBuilder(1536);
             summary.Append('{');
             summary.Append("\"stopwatchFrequency\":").Append(Stopwatch.Frequency);
             summary.Append(",\"captureGeneration\":").Append(captureGeneration);
@@ -259,7 +298,7 @@ namespace CycleTrim.Patches
                 "main",
                 asyncTickTarget,
                 asyncTickSnapshot,
-                startedNewCapture ? asyncTickSnapshot : lastAsyncTickSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastAsyncTickSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -267,7 +306,7 @@ namespace CycleTrim.Patches
                 "worker",
                 asyncWorkTarget,
                 asyncWorkSnapshot,
-                startedNewCapture ? asyncWorkSnapshot : lastAsyncWorkSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastAsyncWorkSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -275,7 +314,7 @@ namespace CycleTrim.Patches
                 "main",
                 navigatorProbeTarget,
                 navigatorProbeSnapshot,
-                startedNewCapture ? navigatorProbeSnapshot : lastNavigatorProbeSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastNavigatorProbeSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -283,7 +322,7 @@ namespace CycleTrim.Patches
                 "main",
                 fetchTarget,
                 fetchSnapshot,
-                startedNewCapture ? fetchSnapshot : lastFetchSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastFetchSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -291,7 +330,7 @@ namespace CycleTrim.Patches
                 "main",
                 choreTarget,
                 choreSnapshot,
-                startedNewCapture ? choreSnapshot : lastChoreSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastChoreSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -299,7 +338,7 @@ namespace CycleTrim.Patches
                 "main",
                 brainSchedulerTarget,
                 brainSchedulerSnapshot,
-                startedNewCapture ? brainSchedulerSnapshot : lastBrainSchedulerSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastBrainSchedulerSnapshot);
             summary.Append(',');
             AppendTarget(
                 summary,
@@ -307,7 +346,7 @@ namespace CycleTrim.Patches
                 "main",
                 roomProberTarget,
                 roomProberSnapshot,
-                startedNewCapture ? roomProberSnapshot : lastRoomProberSnapshot);
+                startedNewCapture ? default(PerformanceProbeSnapshot) : lastRoomProberSnapshot);
             summary.Append("]}");
 
             lastGc0 = gc0;
@@ -334,12 +373,25 @@ namespace CycleTrim.Patches
             PerformanceProbeSnapshot previousSnapshot)
         {
             var interval = snapshot.DeltaSince(previousSnapshot);
+            var ownership = GetHarmonyOwnership(target);
             summary.Append('{');
             summary.Append("\"name\":\"").Append(name).Append("\"");
             summary.Append(",\"thread\":\"").Append(thread).Append("\"");
             summary.Append(",\"resolved\":").Append(target == null ? "false" : "true");
             summary.Append(",\"fastTrackPatched\":")
-                .Append(HasFastTrackPatch(target) ? "true" : "false");
+                .Append(ownership.FastTrackPatched ? "true" : "false");
+            summary.Append(",\"externalPatched\":")
+                .Append(ownership.ExternalPatched ? "true" : "false");
+            summary.Append(",\"patchOwners\":[");
+            for (var index = 0; index < ownership.Owners.Length; index++)
+            {
+                if (index > 0)
+                {
+                    summary.Append(',');
+                }
+                AppendJsonString(summary, ownership.Owners[index]);
+            }
+            summary.Append(']');
             summary.Append(",\"calls\":").Append(snapshot.Calls);
             summary.Append(",\"totalTicks\":").Append(snapshot.TotalTicks);
             summary.Append(",\"meanTicks\":").Append(
@@ -352,37 +404,138 @@ namespace CycleTrim.Patches
             summary.Append('}');
         }
 
-        private static bool HasFastTrackPatch(MethodBase target)
+        private readonly struct HarmonyOwnership
+        {
+            internal HarmonyOwnership(bool fastTrackPatched, bool externalPatched, string[] owners)
+            {
+                FastTrackPatched = fastTrackPatched;
+                ExternalPatched = externalPatched;
+                Owners = owners;
+            }
+
+            internal bool FastTrackPatched { get; }
+            internal bool ExternalPatched { get; }
+            internal string[] Owners { get; }
+        }
+
+        private static HarmonyOwnership GetHarmonyOwnership(MethodBase target)
         {
             if (target == null)
             {
-                return false;
+                return new HarmonyOwnership(false, false, Array.Empty<string>());
             }
 
             var patchInfo = Harmony.GetPatchInfo(target);
-            return patchInfo != null
-                && (ContainsFastTrackPatch(patchInfo.Prefixes)
-                    || ContainsFastTrackPatch(patchInfo.Postfixes)
-                    || ContainsFastTrackPatch(patchInfo.Transpilers)
-                    || ContainsFastTrackPatch(patchInfo.Finalizers));
+            if (patchInfo == null)
+            {
+                return new HarmonyOwnership(false, false, Array.Empty<string>());
+            }
+
+            var owners = new SortedSet<string>(StringComparer.Ordinal);
+            var fastTrackPatched = false;
+            var externalPatched = false;
+            CollectPatchOwnership(
+                patchInfo.Prefixes,
+                owners,
+                ref fastTrackPatched,
+                ref externalPatched);
+            CollectPatchOwnership(
+                patchInfo.Postfixes,
+                owners,
+                ref fastTrackPatched,
+                ref externalPatched);
+            CollectPatchOwnership(
+                patchInfo.Transpilers,
+                owners,
+                ref fastTrackPatched,
+                ref externalPatched);
+            CollectPatchOwnership(
+                patchInfo.Finalizers,
+                owners,
+                ref fastTrackPatched,
+                ref externalPatched);
+
+            var ownerArray = new string[owners.Count];
+            owners.CopyTo(ownerArray);
+            return new HarmonyOwnership(fastTrackPatched, externalPatched, ownerArray);
         }
 
-        private static bool ContainsFastTrackPatch(IEnumerable<Patch> patches)
+        private static void CollectPatchOwnership(
+            IEnumerable<Patch> patches,
+            SortedSet<string> owners,
+            ref bool fastTrackPatched,
+            ref bool externalPatched)
         {
             foreach (var patch in patches)
             {
+                if (string.IsNullOrEmpty(patch.owner))
+                {
+                    // Harmony normally supplies an owner ID. If it does not, fail closed:
+                    // an unattributed patch cannot be proven to belong to CycleTrim.
+                    externalPatched = true;
+                }
+                else
+                {
+                    owners.Add(patch.owner);
+                    if (!string.Equals(patch.owner, cycleTrimHarmonyId, StringComparison.Ordinal))
+                    {
+                        externalPatched = true;
+                    }
+                }
+
                 var patchMethod = patch.PatchMethod;
                 var declaringType = patchMethod == null ? null : patchMethod.DeclaringType;
                 var fullName = declaringType == null ? null : declaringType.FullName;
                 if (fullName != null
-                    && fullName.StartsWith(
-                        FastTrackNamespacePrefix,
-                        StringComparison.Ordinal))
+                    && fullName.StartsWith(FastTrackNamespacePrefix, StringComparison.Ordinal))
                 {
-                    return true;
+                    fastTrackPatched = true;
                 }
             }
-            return false;
+        }
+
+        private static void AppendJsonString(StringBuilder builder, string value)
+        {
+            builder.Append('"');
+            foreach (var character in value)
+            {
+                switch (character)
+                {
+                    case '"':
+                        builder.Append("\\\"");
+                        break;
+                    case '\\':
+                        builder.Append("\\\\");
+                        break;
+                    case '\b':
+                        builder.Append("\\b");
+                        break;
+                    case '\f':
+                        builder.Append("\\f");
+                        break;
+                    case '\n':
+                        builder.Append("\\n");
+                        break;
+                    case '\r':
+                        builder.Append("\\r");
+                        break;
+                    case '\t':
+                        builder.Append("\\t");
+                        break;
+                    default:
+                        if (character < ' ')
+                        {
+                            builder.Append("\\u")
+                                .Append(((int)character).ToString("X4", CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            builder.Append(character);
+                        }
+                        break;
+                }
+            }
+            builder.Append('"');
         }
 
         [HarmonyPatch]
@@ -407,14 +560,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming(asyncTickCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(asyncTickCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -446,14 +599,18 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginTiming();
+                __state = new TimingState(
+                    asyncWorkCounter.CaptureCurrent(),
+                    BeginTiming());
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(
+                Exception __exception,
+                TimingState __state)
             {
-                RecordWorker(asyncWorkCounter, __state);
+                RecordWorker(__state);
                 return __exception;
             }
         }
@@ -480,14 +637,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming(navigatorProbeCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(navigatorProbeCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -514,14 +671,13 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming(fetchCounter);
             }
-
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(fetchCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -548,14 +704,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming(choreCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(choreCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -582,14 +738,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming(brainSchedulerCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(brainSchedulerCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }
@@ -616,14 +772,14 @@ namespace CycleTrim.Patches
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out long __state)
+            private static void Prefix(out TimingState __state)
             {
-                __state = BeginTiming();
+                __state = BeginMainTiming(roomProberCounter);
             }
 
-            private static Exception Finalizer(Exception __exception, long __state)
+            private static Exception Finalizer(Exception __exception, TimingState __state)
             {
-                RecordMain(roomProberCounter, __state);
+                RecordMain(__state);
                 return __exception;
             }
         }

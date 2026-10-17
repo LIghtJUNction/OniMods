@@ -158,7 +158,7 @@ namespace OniMcp.Tools
             {
                 for (int i = 0; i < iterations; i++)
                 {
-                    var info = OniToolRegistry.GetToolInfos(true);
+                    var info = OniToolRegistry.GetToolInfos();
                     if (info == null || info.Count != baseline)
                     {
                         failed = true;

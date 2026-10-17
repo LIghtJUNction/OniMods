@@ -243,6 +243,7 @@ internal static class Program
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.Add("Mcp-Method", method);
             var work = client.SendAsync(request);

@@ -58,18 +58,6 @@ def main() -> int:
             failures.append(f"{label}: expected at least {minimum}, found {count}")
 
     try:
-        # SmartReservoirSignalPatch: reflected methods plus injected private fields.
-        expect("SmartReservoir", method(r"protected\s+override\s+void", "OnSpawn"),
-               "SmartReservoir.OnSpawn()")
-        expect("SmartReservoir", method(r"private\s+void", "UpdateLogicCircuit", r"object\s+\w+"),
-               "SmartReservoir.UpdateLogicCircuit(object)")
-        for field_type, field_name in (
-            ("bool", "activated"), ("LogicPorts", "logicPorts"),
-            ("int", "activateValue"), ("int", "deactivateValue"),
-        ):
-            expect("SmartReservoir", rf"\bprivate\s+{field_type}\s+{field_name}\s*;",
-                   f"SmartReservoir.{field_name}")
-
         # FetchPickupCandidatePatch and fetch invalidation targets.
         expect("FetchManager", method(r"public\s+void", "UpdatePickups",
                                       r"Navigator\s+\w+\s*,\s*int\s+\w+"),

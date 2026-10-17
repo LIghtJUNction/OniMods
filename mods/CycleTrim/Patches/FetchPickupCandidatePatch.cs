@@ -16,6 +16,8 @@ namespace CycleTrim.Patches
         // the same Efficient Fetch semantics under its own namespace.
         private const string BundledEfficientFetchType =
             "QualityOfLifeONI.EfficientFetchManager";
+        private const string NoWasteWantPatchType =
+            "PeterHan.NoWasteWant.NoWasteWantPatches";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
             CompareIncludingPriority;
 
@@ -59,6 +61,13 @@ namespace CycleTrim.Patches
                 if (!FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
                         AccessTools.TypeByName(EfficientSupplyType) != null,
                         AccessTools.TypeByName(BundledEfficientFetchType) != null))
+                {
+                    return false;
+                }
+
+                // Waste Not, Want Not reverses the vanilla freshness comparator. This replacement
+                // cannot preserve that transpiler safely, so leave the original method in control.
+                if (AccessTools.TypeByName(NoWasteWantPatchType) != null)
                 {
                     return false;
                 }

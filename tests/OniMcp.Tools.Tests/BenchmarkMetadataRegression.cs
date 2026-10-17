@@ -9,6 +9,11 @@ internal static class BenchmarkMetadataRegressionEntry
 {
     private static void Main()
     {
+        WorldEditorTools.RunMapContractRegressions();
+        MapReadPolicyRegression.Run();
+        BuildPlanningRegression.Run();
+        ObservationReadinessRegression.Run();
+        FarmingUprootRegression.Run();
         RunBenchmarkMetadataRegression();
 
         var existing = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
@@ -19,6 +24,15 @@ internal static class BenchmarkMetadataRegressionEntry
 
     private static void RunBenchmarkMetadataRegression()
     {
+        if (!HarvestMarkPolicy.ShouldMarkNow(true, true)
+            || !HarvestMarkPolicy.ShouldMarkNow(true, false)
+            || HarvestMarkPolicy.ShouldMarkNow(false, true)
+            || HarvestMarkPolicy.ShouldMarkNow(false, false))
+        {
+            throw new InvalidOperationException(
+                "harvest mark policy must reject unready targets regardless of readyOnly compatibility input");
+        }
+
         OniToolRegistry.Tools["world_editor"] = new McpTool
         {
             Name = "world_editor",

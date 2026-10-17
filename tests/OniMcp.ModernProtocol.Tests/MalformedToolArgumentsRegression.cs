@@ -173,6 +173,7 @@ internal static class RegressionEntry
             {
                 const string body = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":2403,\"params\":{\"name\":\"benchmark\",\"arguments\":{\"task\":\"reject invalid iterations\",\"iterations\":\"200\"},\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"benchmark-iterations-regression\",\"version\":\"1.0\"}}}}";
                 request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
                 request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
                 request.Headers.TryAddWithoutValidation("Mcp-Method", "tools/call");
                 request.Headers.TryAddWithoutValidation("Mcp-Name", "benchmark");
@@ -212,6 +213,7 @@ internal static class RegressionEntry
         using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
         {
             request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
             request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
             request.Headers.TryAddWithoutValidation("Mcp-Method", "tools/call");
             request.Headers.TryAddWithoutValidation("Mcp-Name", "benchmark");

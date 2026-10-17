@@ -103,6 +103,7 @@ namespace CycleTrim.BrainBenchmarks
                 RunTest(
                     nameof(PathProbeWorkOrderAdapterUsesExactRefreshAndCloneCounts),
                     PathProbeWorkOrderAdapterUsesExactRefreshAndCloneCounts);
+                RunTest(nameof(VerifyFetchPatchActivationPolicy), VerifyFetchPatchActivationPolicy);
                 RunPathProbeRegressionTests();
                 return 0;
             }

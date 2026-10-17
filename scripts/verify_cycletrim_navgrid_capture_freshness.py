@@ -48,10 +48,13 @@ def main() -> int:
     analyzer = ANALYZER.read_text(encoding="utf-8")
     for fragment in (
         "def select_capture(",
+        "def subtract_capture(",
         '"--after-calls"',
         "baseline calls=",
         "no fresh NavGrid capture was emitted",
-        "deferred GameScheduler report may not have flushed yet",
+        "deferred UIScheduler report may not have flushed yet",
+        '"baselineCalls": baseline["calls"]',
+        '"cumulativeCalls": current["calls"]',
     ):
         if fragment not in analyzer:
             failures.append(f"NavGrid capture freshness contract missing: {fragment}")
@@ -59,8 +62,12 @@ def main() -> int:
     fresh_log = "\n".join((RESOLVED, TARGET, capture(64), capture(256)))
     try:
         parsed = analyze_log(fresh_log, after_calls=64)
-        if parsed["calls"] != 256:
-            failures.append("fresh capture selector did not return the post-baseline report")
+        if parsed["calls"] != 192 or parsed["bucketCallTotal"] != 192:
+            failures.append("fresh capture selector did not isolate post-baseline calls")
+        if parsed["baselineCalls"] != 64 or parsed["cumulativeCalls"] != 256:
+            failures.append("fresh capture selector lost cumulative window endpoints")
+        if not parsed.get("windowed"):
+            failures.append("fresh capture selector did not mark an anchored workload window")
         if parsed["captureLines"] != 2:
             failures.append("fresh capture selector lost capture-line accounting")
     except CaptureError as error:
@@ -108,8 +115,8 @@ def main() -> int:
         return 1
 
     print(
-        "PASS CycleTrim NavGrid capture freshness requires a same-run baseline "
-        "and a newer deferred report"
+        "PASS CycleTrim NavGrid capture freshness requires a same-run baseline, "
+        "a newer deferred report, and an exact post-baseline histogram delta"
     )
     return 0
 

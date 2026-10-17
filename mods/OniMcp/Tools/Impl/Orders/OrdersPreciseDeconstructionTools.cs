@@ -182,7 +182,7 @@ namespace OniMcp.Tools
             var deconstructable = go.GetComponent<Deconstructable>();
             if (deconstructable != null)
             {
-                if (!deconstructable.allowDeconstruction && !DebugHandler.InstantBuildMode)
+                if (!deconstructable.allowDeconstruction)
                 {
                     error = "Target does not allow deconstruction";
                     return false;
