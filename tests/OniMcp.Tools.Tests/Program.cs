@@ -42,6 +42,7 @@ internal static class Program
         TestExistingMaterialPolicy();
         TestSweepEligibilityPolicy();
         TestBackwallSupportPolicy();
+        TestThresholdValuePolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -223,6 +224,34 @@ internal static class Program
             "clearable pickupables remain eligible for the existing sweep path");
     }
 
+
+    private static void TestThresholdValuePolicy()
+    {
+        const float celsiusInput = 9600f;
+        const float nativeMin = 0f;
+        const float nativeMax = 9999f;
+        float processedKelvin = celsiusInput + 273.15f;
+
+        float retained = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            processedKelvin, nativeMin, nativeMax);
+        Check(Math.Abs(retained - processedKelvin) < 0.01f,
+            "converted threshold must remain in the native unit domain after processing");
+
+        float high = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            11000f, nativeMin, nativeMax);
+        Check(Math.Abs(high - nativeMax) < 0.01f,
+            "processed threshold above the native range must clamp to native max");
+
+        float low = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            -10f, nativeMin, nativeMax);
+        Check(Math.Abs(low - nativeMin) < 0.01f,
+            "processed threshold below the native range must clamp to native min");
+
+        float identity = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            42f, 0f, 100f);
+        Check(Math.Abs(identity - 42f) < 0.01f,
+            "identity threshold conversions must remain unchanged");
+    }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
     private static JObject Body(CallToolResult result) => JObject.Parse(result.Content[0].Text);
