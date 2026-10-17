@@ -30,6 +30,30 @@ namespace OniMcp.Tools
         private static bool ValidateCompiledMapChanges(JObject args, List<MapEditCell> changes, out string error)
         {
             error = null;
+            if (args["priority"] != null
+                && (!int.TryParse(args["priority"].ToString(), out int requestedPriority)
+                    || requestedPriority < 1 || requestedPriority > 9))
+            {
+                error = "priority must be an integer from 1 through 9.";
+                return false;
+            }
+            foreach (var change in changes)
+            {
+                if (!MapTextReadPolicy.Inside(change.X, change.Y, Grid.WidthInCells, Grid.HeightInCells)
+                    || !IsReadableMapCell(Grid.XYToCell(change.X, change.Y))
+                    || change.FromToken == "?")
+                {
+                    error = "Map edit targets an unknown, hidden, or out-of-world cell; no order was issued.";
+                    return false;
+                }
+                string kind = ChangeKind(change);
+                if (IsOrderAction(kind) && (!ParseBuildToken(change.ToToken, out _, out _, out string material)
+                    || material != null))
+                {
+                    error = "Invalid order token: " + change.ToToken + ". Priority must be 1 through 9; orders do not take materials.";
+                    return false;
+                }
+            }
             foreach (var group in changes.GroupBy(ChangeKind))
             {
                 if (group.Key == "wire")
@@ -61,46 +85,6 @@ namespace OniMcp.Tools
                     if (!TryBuildAnchorsForPrefabFootprints(args, prefabId, tokenGroup, out JArray _, out error))
                         return false;
                 }
-            }
-            return true;
-        }
-
-        private static bool ValidateExplicitMapChangesAgainstSource(JObject args, string path, List<MapEditCell> changes, out string error)
-        {
-            if (!TryReadVirtualFileText(args, path, out string current, out string readError))
-            {
-                error = "Cannot read current map before applying explicit edit: " + readError;
-                return false;
-            }
-            var rows = ParseMapRows(current, out int[] hundreds, out int[] tens, out int[] ones, out error);
-            if (rows == null || !TryBuildAxisCoordinates(hundreds, tens, ones, out int[] coordinates, out error))
-                return false;
-            var offsets = coordinates.Select((x, index) => new { x, index }).ToDictionary(item => item.x, item => item.index);
-
-            for (int i = changes.Count - 1; i >= 0; i--)
-            {
-                MapEditCell change = changes[i];
-                if (!rows.TryGetValue(change.Y, out string[] row)
-                    || !offsets.TryGetValue(change.X, out int offset)
-                    || offset >= row.Length)
-                {
-                    error = "Explicit edit cell (" + change.X + "," + change.Y + ") is outside the source viewport/layer.";
-                    return false;
-                }
-                string actual = row[offset];
-                if (!string.IsNullOrWhiteSpace(change.FromToken) && !SearchTokenMatches(actual, change.FromToken))
-                {
-                    error = "Stale explicit edit at (" + change.X + "," + change.Y + "): expected `" + change.FromToken + "`, current `" + actual + "`.";
-                    return false;
-                }
-                change.FromToken = actual;
-                if (MapTokensEquivalent(actual, change.ToToken))
-                    changes.RemoveAt(i);
-            }
-            if (changes.Count == 0)
-            {
-                error = "Explicit map edit contains no differences from current state.";
-                return false;
             }
             return true;
         }

@@ -3,12 +3,12 @@
 [简体中文](README_ZH.md)
 
 <p align="center">
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/LIghtJUNction/OniMods?style=for-the-badge&logo=opensourceinitiative&logoColor=white" /></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AUL%201.0--draft.1-5663a8?style=for-the-badge" /></a>
   <a href="https://github.com/LIghtJUNction/OniMods/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/LIghtJUNction/OniMods?style=for-the-badge&logo=github" /></a>
   <a href="https://github.com/LIghtJUNction/OniMods/forks"><img alt="Forks" src="https://img.shields.io/github/forks/LIghtJUNction/OniMods?style=for-the-badge" /></a>
   <a href="https://github.com/LIghtJUNction/OniMods/issues"><img alt="Issues" src="https://img.shields.io/github/issues/LIghtJUNction/OniMods?style=for-the-badge&logo=github" /></a>
   <a href="https://github.com/LIghtJUNction/OniMods/commits/main"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/LIghtJUNction/OniMods?style=for-the-badge" /></a>
-  <a href="https://github.com/LIghtJUNction/OniMods/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" /></a>
+  <a href="https://github.com/LIghtJUNction/OniMods/blob/main/LICENSE"><img alt="AUL License" src="https://img.shields.io/badge/license-AUL-blue?style=for-the-badge" /></a>
   <a href="mods/OniMcp/README_EN.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-Server%20Docs-4f46e5?style=for-the-badge" /></a>
 </p>
 
@@ -93,6 +93,10 @@ onim dev -m MyMod
 - ONI ecosystem patching: [Harmony](https://github.com/pardeike/Harmony), [FastTrack](https://github.com/peterhaneve/FastTrack)
 
 ## ONI MCP Server
+
+Support OniMcp development and testing: [Donate](https://donate.lmm.best/?project=onimcp).
+
+[![OniMcp donation progress](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=en&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
 
 `OniMcp` is designed as a **safe, MCP-native operations layer** for Oxygen Not Included:
 
@@ -244,4 +248,4 @@ additional checks that require an installed game.
 
 ## License
 
-This repository is licensed under the MIT License. See [LICENSE](LICENSE).
+Original materials that LIghtJUNction has the rights to license are offered under [Agent Upstream License 1.0-draft.1](LICENSE). Historical MIT releases retain their original permissions; the former MIT grant is archived as [LICENSE.MIT](LICENSE.MIT). Separately licensed third-party material and adapted upstream contributions keep their own terms; see [LICENSING.md](LICENSING.md). This custom draft is **not** an OSI-approved license. Agent contributors must read [AGENTS.md](AGENTS.md) and [UPSTREAM.toml](UPSTREAM.toml).

@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Net;
 
 namespace OniMcp.Server
@@ -21,38 +20,11 @@ namespace OniMcp.Server
             foreach (string rawEntry in acceptHeader.Split(','))
             {
                 string[] segments = rawEntry.Split(';');
-                if (segments.Length == 0
-                    || !string.Equals(segments[0].Trim(), mediaType, StringComparison.OrdinalIgnoreCase))
-                {
+                if (!string.Equals(segments[0].Trim(), mediaType, StringComparison.OrdinalIgnoreCase))
                     continue;
-                }
 
-                decimal quality = 1m;
-                bool qualitySeen = false;
-                bool valid = true;
-                for (int index = 1; index < segments.Length; index++)
-                {
-                    string parameter = segments[index].Trim();
-                    int equals = parameter.IndexOf('=');
-                    if (equals <= 0
-                        || !string.Equals(parameter.Substring(0, equals).Trim(), "q",
-                            StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    if (qualitySeen
-                        || !decimal.TryParse(parameter.Substring(equals + 1).Trim(), NumberStyles.AllowDecimalPoint,
-                            CultureInfo.InvariantCulture, out quality)
-                        || quality < 0m || quality > 1m)
-                    {
-                        valid = false;
-                        break;
-                    }
-                    qualitySeen = true;
-                }
-
-                if (valid && quality > 0m)
+                decimal quality;
+                if (TryParseAcceptParameters(segments, out quality) && quality > 0m)
                     return true;
             }
 

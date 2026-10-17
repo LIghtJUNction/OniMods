@@ -91,12 +91,8 @@ def main() -> int:
         "timing state does not retain generation-owned counter identity",
         failures,
     )
-    require(
-        patch,
-        "state.Counter.Record(Stopwatch.GetTimestamp() - state.StartedAt)",
-        "timing completion does not record through the captured counter owner",
-        failures,
-    )
+    if patch.count("PerformanceProbeCounter.TryRecord(") != 2:
+        failures.append("main and worker timing completion must use the skipped-Prefix-safe recorder")
     require(
         patch,
         "asyncWorkCounter = new PerformanceProbeGenerationCounter(consistentSnapshots: true)",
@@ -181,6 +177,13 @@ def main() -> int:
     )[0]
     if "ObserveGameBoundary();" in record_main:
         failures.append("game boundary must rotate before main target execution, not from RecordMain")
+    if "if (!PerformanceProbeCounter.TryRecord(" not in record_main:
+        failures.append("main timing completion must fail open when its Prefix state was skipped")
+    record_worker = patch.split("private static void RecordWorker", 1)[1].split(
+        "private readonly struct TimingState", 1
+    )[0]
+    if "PerformanceProbeCounter.TryRecord(" not in record_worker:
+        failures.append("worker timing completion must fail open when its Prefix state was skipped")
     if "GameScheduler.Instance" in patch:
         failures.append("deferred performance reporting must not depend on the paused game clock")
     require(patch, "intervalDurationTicks", "report interval duration is missing", failures)
@@ -194,6 +197,8 @@ def main() -> int:
 
     for needle, message in (
         ("PerformanceProbeCounter(bool consistentSnapshots = false)", "counter snapshot-coordination mode is missing"),
+        ("internal static bool TryRecord(PerformanceProbeCounter counter, long elapsedTicks)", "skipped-Prefix-safe recorder is missing"),
+        ("if (counter == null)", "skipped-Prefix-safe recorder does not fail open on a missing owner"),
         ("lock (snapshotLock)", "coordinated counter does not group record/snapshot state"),
         ("Interlocked.Increment(ref callCount)", "counter call count is not atomic"),
         ("Interlocked.Add(ref totalTicks", "counter total is not atomic"),
@@ -201,6 +206,13 @@ def main() -> int:
         ("DeltaSince(PerformanceProbeSnapshot previous)", "counter snapshots cannot derive reporting intervals"),
     ):
         require(core, needle, message, failures)
+    try_record = core.split(
+        "internal static bool TryRecord(PerformanceProbeCounter counter, long elapsedTicks)", 1
+    )[1].split("internal void Record(long elapsedTicks)", 1)[0]
+    if "new " in try_record:
+        failures.append("skipped-Prefix-safe recording path must not allocate managed objects")
+    if "counter.Record(elapsedTicks);" not in try_record:
+        failures.append("valid timing owners must preserve normal counter recording")
     if "new " in core.split("internal void Record(long elapsedTicks)", 1)[1].split(
         "internal PerformanceProbeSnapshot Snapshot()", 1
     )[0]:

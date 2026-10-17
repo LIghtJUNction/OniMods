@@ -50,7 +50,7 @@ Convenience forwards also support game speed, camera/view/overlay, and screensho
 
 Only `/active/` is mutable. Other save slots are historical or unloaded views.
 
-Normal world-editor construction always uses `instantBuild=false`, creating ordinary blueprints with normal material rules even if global debug instant build is enabled. Scoped instant build requires `instantBuild=true allowSandbox=true confirm=true`. Sandbox writes additionally require `world_editor command=sandbox allowSandbox=true confirm=true` and the matching granular permission (`allowTerrainMutation`, `allowEntitySpawn`, `allowDestroy`, or `allowForce`). Batch children cannot widen the parent policy.
+Only normal gameplay is supported. Sandbox, instant-build, direct terrain writes, and force options are removed, including nested requests. Native blueprints require normal research, materials, and support. The editor suppresses global debug instant-build during a call and restores its previous state afterward; builds refuse active sandbox saves.
 
 ## Mandatory glyph lookup
 
@@ -151,17 +151,17 @@ Workflow:
 
 Token forms:
 
-- Build order: `建筑名:优先级`, optionally `#材料字`, such as `梯子:7#粉`.
+- Build order: `PrefabID:priority#MaterialID`, for example `Ladder:7#SandStone`. Exact unique display names and known material glyphs remain supported. Priority must be 1–9; unknown, ambiguous, or malformed values are errors, not guesses.
 - Bare building names represent existing objects, not construction orders.
 - Orders: `挖`, `拆`, `擦`, `扫`, `毒`, `杀`, `收`, `消`, `捕`, optionally `:优先级`.
 - Connection-glyph edits on map layers and infrastructure Markdown are refused because `auto_connect` may modify cells outside the validated snapshot. Make utility changes with an explicit `/active/infrastructure/*.oni` plan or an `/active/ops/build.md` `auto_connect` command.
 - SEARCH matching ignores rendered `@(x,y)` coordinate suffixes; `建筑:7#壹` matches `建筑:7#壹@(114,138)`.
 - Multi-cell buildings accept either the full WxH footprint in one REPLACE block, or a single lower-left anchor cell. Partial non-rectangular footprints are refused.
-- SEARCH wildcards `?` or `*` match one token; `/regex/` or `~regex` match one token by regex. REPLACE `?`, `*`, or `.*` keeps the original token.
+- In SEARCH, `?` and `*` are literal map tokens: unknown and disconnected. Only `.*` is a wildcard; `/regex/` and `~regex` remain supported. In REPLACE, `?`, `*`, and `.*` keep the original token.
 
 Multi-cell buildings must include the complete footprint in one replacement block. Include support cells and enough neighboring context to keep the match unique.
 
-Default write budget is 512 changed cells; configurable `maxWriteCells`/`maxCells` has a hard cap of 2500. On `partial=true`, reread and create a fresh patch for `remainingCells`.
+The default write budget is 512 changed cells; `maxWriteCells`/`maxCells` cannot exceed 2500. An oversized patch is rejected in full, never sliced through a building footprint. After a partial native action, reread and generate a fresh patch. `reportedActions` is not a cell count; `submittedCells` is not proof of completion.
 
 ## Typed operation files
 
@@ -291,3 +291,23 @@ rename name="Dig" newName="矿工"
 | `partial=true` | Reread and patch only remaining cells |
 | Camera moved unexpectedly | Use off-screen zoom with `syncView=false focusCamera=false`; never focus solely for editing |
 | Sandbox reports research lock | Loaded DLL is stale; do not queue research for the test |
+
+## Read and verification contract
+
+Text maps contain only revealed cells in the active world. `?` is unknown, not empty.
+Unsupported views return an error instead of a map for a different view. Coordinates
+at map edges cannot wrap to another row. `@(x,y)` labels a cell, not a building anchor.
+Requested read bounds also apply with `syncView=false`; the camera need not move.
+
+Compact reads keep bounds, tokens and their legend, while omitting verbose per-cell,
+connection and building-file tables. For edits use `format=edit compact=false` and
+include identical headers and Y-row sets on both sides. Duplicate rows are rejected.
+Blueprint material annotations use the full construction recipe, not terrain material.
+Utility glyphs come from native physical connections: `?` is unavailable data, `*` is
+confirmed no connections, and arrows are single-ended connections. Planned utility
+segments do not establish a working network.
+
+Use the loop: pause → small read → preview → submit one native change → short normal
+run → pause → reread. Inspect `phase`, `partial`, `reportedActions`, and
+`requiresVerification`. `orders_queued` and a successful tool call do not mean a game
+objective is complete. On an error, do not repeat the old patch without a fresh read.
