@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Tools;
@@ -159,7 +158,7 @@ namespace OniMcp.Server
             var requestId = parameters["requestId"];
             if (!IsValidModernRequestId(requestId))
             {
-                errorMessage = "Modern cancellation notification requires a string or integer requestId";
+                errorMessage = "Modern cancellation notification requires a string or number requestId";
                 return false;
             }
 
@@ -456,7 +455,7 @@ namespace OniMcp.Server
                 ["io.modelcontextprotocol/serverInfo"] = new JObject
                 {
                     ["name"] = "OniMcp",
-                    ["version"] = "0.2.3"
+                    ["version"] = ServerVersion
                 }
             };
         }

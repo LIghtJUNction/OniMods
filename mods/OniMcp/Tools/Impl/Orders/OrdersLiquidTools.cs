@@ -73,15 +73,6 @@ namespace OniMcp.Tools
                             continue;
                         }
 
-                            if (DebugHandler.InstantBuildMode)
-                            {
-                            Moppable.MopCell(cell, 1000000f, null);
-                            marked++;
-                            targetCells.Add(cell);
-                            results.Add(CellResult(cell, "instant_mopped"));
-                            continue;
-                        }
-
                             var placer = Util.KInstantiate(prefab);
                             Grid.Objects[cell, (int)ObjectLayer.MopPlacer] = placer;
                             var position = Grid.CellToPosCBC(cell, Grid.SceneLayer.Move);

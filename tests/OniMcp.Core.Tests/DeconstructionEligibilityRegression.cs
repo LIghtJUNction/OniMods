@@ -17,24 +17,21 @@ internal static class DeconstructionEligibilityRegressionEntry
     private static void RunRegression()
     {
         AssertAllowed(
-            DeconstructionEligibilityPolicy.Evaluate(true, true, false, false),
+            DeconstructionEligibilityPolicy.Evaluate(true, true, false),
             "ordinary allowed Deconstructable must remain eligible");
         AssertRejected(
-            DeconstructionEligibilityPolicy.Evaluate(true, false, false, false),
+            DeconstructionEligibilityPolicy.Evaluate(true, false, false),
             "deconstruction_disabled",
-            "protected Deconstructable must be rejected in normal mode");
+            "protected Deconstructable must always be rejected");
         AssertAllowed(
-            DeconstructionEligibilityPolicy.Evaluate(true, false, true, false),
-            "InstantBuild must preserve the existing protected-target bypass");
-        AssertAllowed(
-            DeconstructionEligibilityPolicy.Evaluate(false, false, false, true),
+            DeconstructionEligibilityPolicy.Evaluate(false, false, true),
             "supported utility target must remain eligible");
         AssertRejected(
-            DeconstructionEligibilityPolicy.Evaluate(false, false, false, false),
+            DeconstructionEligibilityPolicy.Evaluate(false, false, false),
             "not_deconstructable",
             "unrelated explicit-id target must not be previewed as queueable");
         AssertRejected(
-            DeconstructionEligibilityPolicy.Evaluate(true, false, false, true),
+            DeconstructionEligibilityPolicy.Evaluate(true, false, true),
             "deconstruction_disabled",
             "Deconstructable eligibility must keep precedence over utility fallback");
     }

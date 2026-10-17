@@ -102,26 +102,14 @@ internal static class ModernCancellationRejectionRegressionEntry
                     includeProtocolHeader: true, includeMethodHeader: true))
                 using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                 {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Fractional modern cancellation request id returned HTTP " + (int)response.StatusCode);
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int?)json["error"]?["code"] == McpErrorCode.InvalidRequest,
-                        "Fractional modern cancellation used the wrong JSON-RPC error");
-                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Rejected modern cancellation returned a legacy session id");
+                    AssertAcceptedWithoutSession(response, "Fractional numeric modern cancellation request id");
                 }
 
                 using (var request = BuildCancellationRequest(new JValue(18001.0), includeRequestEnvelope: true,
                     includeProtocolHeader: true, includeMethodHeader: true))
                 using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                 {
-                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                        "Floating-point modern cancellation request id returned HTTP " + (int)response.StatusCode);
-                    JObject json = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                    Assert((int?)json["error"]?["code"] == McpErrorCode.InvalidRequest,
-                        "Floating-point modern cancellation used the wrong JSON-RPC error");
-                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                        "Rejected floating-point modern cancellation returned a legacy session id");
+                    AssertAcceptedWithoutSession(response, "Floating numeric modern cancellation request id");
                 }
             }
 

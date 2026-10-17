@@ -183,7 +183,6 @@ namespace OniMcp.Tools
             return DeconstructionEligibilityPolicy.Evaluate(
                 deconstructable != null,
                 deconstructable != null && deconstructable.allowDeconstruction,
-                DebugHandler.InstantBuildMode,
                 IsUtilityDeconstructTarget(go));
         }
 

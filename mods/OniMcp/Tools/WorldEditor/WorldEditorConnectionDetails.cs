@@ -34,7 +34,7 @@ namespace OniMcp.Tools
                 for (int x = xMin; x <= xMax; x++)
                 {
                     int cell = Grid.XYToCell(x, y);
-                    if (!Grid.IsValidCell(cell))
+                    if (!IsReadableMapCell(cell))
                         continue;
 
                     if (HasLayer(cell, layers))
@@ -154,6 +154,7 @@ namespace OniMcp.Tools
             string layerName,
             ObjectLayer[] layers)
         {
+            bool connectionsKnown = TryGetUtilityConnections(cell, layers, out _);
             var dirs = ConnectionDirections(cell, layers, mode == OverlayModes.Power.ID);
             char glyph = mode == OverlayModes.Power.ID
                 ? ResolvePowerConnectionSymbol(cell)
@@ -166,10 +167,10 @@ namespace OniMcp.Tools
             return "- " + CellCoord(cell)
                 + ": layer=" + layerName
                 + " glyph=" + glyph
-                + " dirs=" + (dirs.Count == 0 ? "." : string.Join("", dirs.Select(d => d.Dir).ToArray()))
-                + " links=" + ConnectionLinkText(dirs)
-                 + " open=" + OpenAdjacentConnectionText(cell, layers, dirs)
-            + " to=" + (dirs.Count == 0 ? "." : string.Join(",", dirs.Select(d => CellCoord(d.Cell)).ToArray()))
+                + " dirs=" + (!connectionsKnown ? "?" : dirs.Count == 0 ? "." : string.Join("", dirs.Select(d => d.Dir).ToArray()))
+                + " links=" + (connectionsKnown ? ConnectionLinkText(dirs) : "?")
+                 + " open=" + (connectionsKnown ? OpenAdjacentConnectionText(cell, layers, dirs) : "?")
+            + " to=" + (!connectionsKnown ? "?" : dirs.Count == 0 ? "." : string.Join(",", dirs.Select(d => CellCoord(d.Cell)).ToArray()))
                 + (string.IsNullOrEmpty(extra) ? string.Empty : " " + extra);
         }
 
@@ -195,11 +196,6 @@ int cell,
                 return result;
             }
 
-            ushort circuitId = power ? GetPowerCircuitId(cell) : ushort.MaxValue;
-            AddFallbackConnection(result, cell, "U", 0, 1, layers, power, circuitId);
-            AddFallbackConnection(result, cell, "D", 0, -1, layers, power, circuitId);
-            AddFallbackConnection(result, cell, "L", -1, 0, layers, power, circuitId);
-            AddFallbackConnection(result, cell, "R", 1, 0, layers, power, circuitId);
             return result;
         }
 
@@ -214,33 +210,18 @@ int cell,
             if (!connected)
                 return;
             int neighbor = NeighborCell(cell, dx, dy);
-            if (Grid.IsValidCell(neighbor))
+            if (IsReadableMapCell(neighbor))
                 result.Add(new ConnectionNeighbor(dir, neighbor));
-        }
-
-        private static void AddFallbackConnection(
-            List<ConnectionNeighbor> result,
-            int cell,
-            string dir,
-            int dx,
-            int dy,
-            ObjectLayer[] layers,
-            bool power,
-            ushort circuitId)
-        {
-            int neighbor = NeighborCell(cell, dx, dy);
-            if (!Grid.IsValidCell(neighbor) || !HasLayer(neighbor, layers))
-                return;
-            if (power && circuitId != ushort.MaxValue && GetPowerCircuitId(neighbor) != circuitId)
-                return;
-            result.Add(new ConnectionNeighbor(dir, neighbor));
         }
 
         private static int NeighborCell(int cell, int dx, int dy)
         {
+            if (!Grid.IsValidCell(cell))
+                return Grid.InvalidCell;
             int x = Grid.CellColumn(cell) + dx;
             int y = Grid.CellRow(cell) + dy;
-            return Grid.XYToCell(x, y);
+            return MapTextReadPolicy.Inside(x, y, Grid.WidthInCells, Grid.HeightInCells)
+                ? Grid.XYToCell(x, y) : Grid.InvalidCell;
         }
 
         private static string BridgeDetailLine(HashedString mode, int cell)

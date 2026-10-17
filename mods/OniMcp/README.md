@@ -4,6 +4,10 @@
 
 ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:8788/mcp/`），提供 `oni://` 资源读取与受控写入入口，面向 AI 客户端做安全联动。
 
+支持 OniMcp 的开发与测试：[捐赠](https://donate.lmm.best/?project=onimcp)。
+
+[![OniMcp 捐赠进度](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=zh-CN&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
+
 ## 快速索引
 
 - [用途与边界](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#用途与边界)
@@ -56,6 +60,7 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 
 - 工具清单入口: `oni://tools/manifest` / `server_control domain=catalog action=manifest`
 - 常用公开工具:
+  - `benchmark`：只读工具链路基准与诊断
   - `world_editor`：虚拟文件化世界读写（`cd`、`ls`、`read`、`search`、`edit`）
   - `game_control`：游戏控制与状态管理
   - `navigation_control`：视图、覆盖层和截图

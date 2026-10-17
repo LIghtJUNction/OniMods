@@ -71,9 +71,11 @@ def main() -> int:
     ):
         require(token in policy, f"deconstruction eligibility policy lost {token}")
     require(
-        "if (!allowDeconstruction && !instantBuildMode)" in policy,
-        "protected Deconstructable targets must fail closed outside InstantBuild",
+        "if (!allowDeconstruction)" in policy,
+        "protected Deconstructable targets must always fail closed",
     )
+    require("instantBuildMode" not in policy and "DebugHandler.InstantBuildMode" not in execution,
+            "deconstruction eligibility must not restore the removed cheat bypass")
     require(
         "if (isUtilityTarget)" in policy,
         "supported utility deconstruction must remain eligible",

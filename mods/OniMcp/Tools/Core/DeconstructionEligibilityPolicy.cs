@@ -19,12 +19,11 @@ namespace OniMcp.Tools
         internal static DeconstructionEligibility Evaluate(
             bool hasDeconstructable,
             bool allowDeconstruction,
-            bool instantBuildMode,
             bool isUtilityTarget)
         {
             if (hasDeconstructable)
             {
-                if (!allowDeconstruction && !instantBuildMode)
+                if (!allowDeconstruction)
                 {
                     return new DeconstructionEligibility(
                         false,
