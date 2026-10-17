@@ -598,9 +598,9 @@ namespace CycleTrim.BrainBenchmarks
             var dirty = new RefreshStamp(11, 20, 30, 40, 50);
             AssertTrue(policy.ShouldRunPickup(dirty), "fetch generation refreshes pickup");
             AssertTrue(policy.ShouldRunChore(dirty), "fetch generation refreshes chore");
-            AssertFalse(policy.ShouldRunPickup(dirty), "pickup gate advances independently");
-            AssertFalse(policy.ShouldRunPickup(dirty), "pickup gate second independent skip");
-            AssertFalse(policy.ShouldRunChore(dirty), "chore gate retains its own count");
+            AssertFalse(policy.ShouldRunPickup(dirty), "stable pickup pair can skip");
+            AssertTrue(policy.ShouldRunPickup(dirty), "unpaired pickup forces the next pair to refresh");
+            AssertTrue(policy.ShouldRunChore(dirty), "chore shares the recovered pickup refresh");
 
             var scheduleChanged = new RefreshStamp(11, 20, 30, 40, 50, 61, 70);
             AssertTrue(policy.ShouldRunPickup(scheduleChanged), "schedule identity refreshes pickup");
