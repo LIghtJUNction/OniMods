@@ -29,8 +29,12 @@ internal static class GameControlRoutingRegression
         Require(tool.Handler(null).IsError, "missing domain must return an error");
 
         GameControlRouteTestDoubles.Calls = 0;
+        Game.Instance = new Game();
+        SpeedControlScreen.Instance = new SpeedControlScreen();
         Require(!tool.Handler(new JObject { ["domain"] = "speed", ["action"] = "pause" }).IsError
-            && GameControlRouteTestDoubles.Calls == 1, "normal pause routing must remain available");
+            && SpeedControlScreen.Instance.PauseCount == 1, "normal pause routing must reach the production speed handler");
+        Require(!tool.Handler(new JObject { ["domain"] = "speed", ["action"] = "resume" }).IsError
+            && SpeedControlScreen.Instance.PauseCount == 0, "normal resume routing must release the MCP pause lease");
         Console.WriteLine("PASS: survival-only game control routing and compact schema");
     }
 
@@ -41,7 +45,8 @@ internal static class GameControlRoutingRegression
     }
 }
 
-// Exercise the production public router, replacing only the downstream game boundary.
+// Exercise the public router and production speed handler; unrelated domains
+// retain lightweight boundaries for the removed-route checks.
 namespace OniMcp.Tools
 {
     internal static class GameControlRouteTestDoubles
@@ -55,7 +60,6 @@ namespace OniMcp.Tools
 
     public static partial class GameControlTools
     {
-        public static McpTool ControlGameSpeed() => GameControlRouteTestDoubles.Tool();
         public static McpTool ControlGameState() => GameControlRouteTestDoubles.Tool();
         public static McpTool ControlGameSave() => GameControlRouteTestDoubles.Tool();
         public static McpTool ControlDlcActivation() => GameControlRouteTestDoubles.Tool();

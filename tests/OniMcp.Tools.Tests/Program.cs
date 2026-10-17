@@ -42,6 +42,7 @@ internal static class Program
         TestExistingMaterialPolicy();
         TestSweepEligibilityPolicy();
         TestBackwallSupportPolicy();
+        TestGameSpeedPauseOwnership();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -223,6 +224,66 @@ internal static class Program
             "clearable pickupables remain eligible for the existing sweep path");
     }
 
+
+    private static void TestGameSpeedPauseOwnership()
+    {
+        Game.Instance = new Game();
+
+        var nested = new SpeedControlScreen();
+        SpeedControlScreen.Instance = nested;
+        nested.Pause(playSound: false);
+        var pause = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(!pause.IsError && nested.PauseCount == 2, "MCP pause must add exactly one owned pause beside an external pause");
+        var resume = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(!resume.IsError && nested.PauseCount == 1 && nested.IsPaused,
+            "MCP resume must not drain an unrelated ONI pause reference");
+        Check((bool)Body(resume)["isPaused"], "resume result must report the remaining external pause");
+
+        var repeated = new SpeedControlScreen();
+        SpeedControlScreen.Instance = repeated;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(repeated.PauseCount == 1, "repeated MCP pause must not leak extra pause references");
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(repeated.PauseCount == 0, "one MCP resume must release the one MCP-owned pause");
+
+        var speedChange = new SpeedControlScreen();
+        SpeedControlScreen.Instance = speedChange;
+        speedChange.Pause(playSound: false);
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        var changed = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'set_speed',speed:2}"));
+        Check(!changed.IsError && speedChange.GetSpeed() == 1, "set_speed must still select the requested speed");
+        Check(speedChange.PauseCount == 1 && speedChange.IsPaused,
+            "set_speed must not drain an unrelated ONI pause reference");
+        Check((bool)Body(changed)["isPaused"], "set_speed result must report the remaining external pause");
+
+        var externalOnly = new SpeedControlScreen();
+        SpeedControlScreen.Instance = externalOnly;
+        externalOnly.Pause();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(externalOnly.PauseCount == 1, "resume without an MCP lease must preserve an external pause");
+
+        var previousScreen = new SpeedControlScreen();
+        SpeedControlScreen.Instance = previousScreen;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        var replacementScreen = new SpeedControlScreen();
+        SpeedControlScreen.Instance = replacementScreen;
+        replacementScreen.Pause();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(replacementScreen.PauseCount == 1, "a stale screen lease must not release a replacement screen's pause");
+
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Game.Instance = new Game();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(replacementScreen.PauseCount == 2, "a stale Game lease must not release references from the new game");
+
+        var zeroSpeed = new SpeedControlScreen();
+        SpeedControlScreen.Instance = zeroSpeed;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'set_speed',speed:0}"));
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(zeroSpeed.PauseCount == 1, "speed zero followed by pause must own only one reference");
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+    }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
     private static JObject Body(CallToolResult result) => JObject.Parse(result.Content[0].Text);
