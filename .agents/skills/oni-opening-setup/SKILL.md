@@ -5,6 +5,11 @@ description: 当开始新的 Oxygen Not Included 殖民地，或用户要求开�
 
 # ONI MCP 开局设置
 
+## 生存目标与参考
+
+完整开局规划先读 [开局与基地](../oni-mcp-colony-strategy/references/opening-and-base.md) 和 [阶段判断](../oni-mcp-colony-strategy/references/stages.md)。先确认氧气、可达食物、厕所/睡眠和安全通行，再扩研究与电力；第一间实验室的建造不能挤掉已出现的生存需求。大型成品基地只作后续选型参考，不是Cycle 1必须复刻的目标。引用具体原文，配置快路径不额外加载整套攻略。
+
+
 ## 触发
 
 新游戏或早期周期设置使用本技能：

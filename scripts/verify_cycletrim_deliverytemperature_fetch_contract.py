@@ -149,7 +149,8 @@ def verify_local(manifest: dict, failures: list[str]) -> None:
     )
     require_regex(
         fetch_patch,
-        r"private\s+static\s+bool\s+Prepare\(\)\s*\{\s*return\s+installRequested\s*;\s*\}",
+        r"private\s+static\s+bool\s+Prepare\(\)\s*\{\s*"
+        r"if\s*\(\s*!installRequested\s*\)\s*\{\s*return\s+false\s*;\s*\}",
         "CycleTrim Fetch must stay withheld from initial PatchAll",
         failures,
     )

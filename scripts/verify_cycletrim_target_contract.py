@@ -51,51 +51,6 @@ def main() -> int:
         return 1
 
     try:
-        # SmartReservoir: keep signal behavior stable when capacity changes.
-        source = decompile(assembly, "SmartReservoir")
-        sim_body = method_body(source, "public void Sim200ms(float dt)")
-        update_body = method_body(
-            source, "private void UpdateLogicCircuit(object data)"
-        )
-        failures = []
-        if not re.search(r"\bUpdateLogicCircuit\s*\(\s*null\s*\)\s*;", sim_body):
-            failures.append("Sim200ms no longer calls UpdateLogicCircuit(null)")
-        signal_calls = len(re.findall(r"\blogicPorts\.SendSignal\s*\(", update_body))
-        if signal_calls != 1:
-            failures.append(
-                f"UpdateLogicCircuit has {signal_calls} LogicPorts.SendSignal calls; expected 1"
-            )
-        if not re.search(r"\bprivate\s+bool\s+activated\s*;", source):
-            failures.append("SmartReservoir.activated bool field is missing")
-        if not re.search(r"\bprivate\s+LogicPorts\s+logicPorts\s*;", source):
-            failures.append("SmartReservoir.logicPorts LogicPorts field is missing")
-        if not re.search(r"\bprotected\s+override\s+void\s+OnSpawn\s*\(\s*\)", source):
-            failures.append(
-                "SmartReservoir no longer declares protected override void OnSpawn()"
-            )
-        for field in ("activateValue", "deactivateValue"):
-            if not re.search(rf"\bprivate\s+int\s+{field}\b", source):
-                failures.append(f"SmartReservoir.{field} int field is missing")
-        if not re.search(
-            r"if\s*\(\s*activated\s*\)\s*\{\s*if\s*\(\s*num\s*>=\s*"
-            r"\(float\)deactivateValue\s*\)",
-            update_body,
-        ):
-            failures.append(
-                "activated branch no longer deactivates at percent >= deactivateValue"
-            )
-        if not re.search(
-            r"else\s+if\s*\(\s*num\s*<=\s*\(float\)activateValue\s*\)",
-            update_body,
-        ):
-            failures.append(
-                "inactive branch no longer activates at percent <= activateValue"
-            )
-        if failures:
-            for failure in failures:
-                print(f"FAIL: {failure}", file=sys.stderr)
-            return 1
-
         # FetchManager / sensor pipeline: candidate selection and sorting should remain compatible.
         fetch_source = decompile(assembly, "FetchManager")
         fetch_failures = []

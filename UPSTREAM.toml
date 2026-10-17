@@ -1,0 +1,7 @@
+# Maintainer-authorized upstream choice for the original OniMods repository.
+# A new fork does not become independent merely by copying this declaration.
+schema_version = 1
+license = "LicenseRef-AUL-1.0-draft.1"
+repository = "https://github.com/LIghtJUNction/OniMods"
+mode = "independent"
+upstream = "https://github.com/LIghtJUNction/OniMods"

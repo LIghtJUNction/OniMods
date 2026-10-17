@@ -3,7 +3,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use crate::build;
 use crate::config::{Config, SelectedMod};
@@ -14,8 +14,6 @@ pub struct PublishOptions {
     pub auto_note: bool,
     pub non_interactive: bool,
     pub dry_run: bool,
-    pub steamcmd: Option<PathBuf>,
-    pub steam_user: Option<String>,
 }
 
 fn uploader_path() -> Option<PathBuf> {
@@ -38,27 +36,6 @@ fn uploader_path() -> Option<PathBuf> {
     }
 
     None
-}
-
-fn executable_on_path(name: &str) -> Option<PathBuf> {
-    let path = env::var_os("PATH")?;
-    env::split_paths(&path)
-        .map(|dir| dir.join(name))
-        .find(|candidate| candidate.is_file())
-}
-
-fn resolve_steamcmd(explicit: Option<&Path>) -> Option<PathBuf> {
-    if let Some(path) = explicit {
-        return path.is_file().then(|| path.to_path_buf());
-    }
-    if let Some(path) = env::var_os("STEAMCMD").map(PathBuf::from) {
-        return path.is_file().then_some(path);
-    }
-    executable_on_path(if cfg!(target_os = "windows") {
-        "steamcmd.exe"
-    } else {
-        "steamcmd"
-    })
 }
 
 fn generate_vdf(
@@ -116,9 +93,10 @@ fn reject_directory_upload_for_oni(vdf: &Path) -> Result<()> {
         .context("Workshop VDF 缺少 appid，拒绝目录上传")?
         .parse::<u32>()
         .context("Workshop VDF 的 appid 无效，拒绝目录上传")?;
-    if app_id == 457140 {
+    if app_id != 457140 {
         anyhow::bail!(
-            "ONI SteamCMD/UGC 目录发布路径不兼容游戏；请使用 scripts/publish_cycletrim_steam.sh 或 scripts/publish_onimcp_steam.sh 的单 ZIP 发布器"
+            "Workshop VDF 的 appid 是 {}，不是 ONI 的 457140；拒绝发布",
+            app_id
         );
     }
     Ok(())
@@ -375,27 +353,12 @@ fn prompt(question: &str, default: Option<&str>) -> Result<String> {
     }
 }
 
-fn steamcmd_error_summary(output: &str) -> String {
-    if output.contains("Cached credentials not found") || output.contains("Invalid Password") {
-        return "SteamCMD 没有有效的缓存登录。先运行 scripts/publish_cycletrim_steam.sh --login。"
-            .to_string();
-    }
-
-    let lines: Vec<&str> = output
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .collect();
-    lines[lines.len().saturating_sub(20)..].join("\n")
-}
-
 pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Result<()> {
     let PublishOptions {
         use_gui,
         auto_note,
         non_interactive,
         dry_run,
-        steamcmd,
-        steam_user,
     } = options;
     let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
         Some(path) => PathBuf::from(path),
@@ -488,131 +451,29 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         return Ok(());
     }
 
-    // ONI passes the installed Workshop path to ZipFile. This applies to
-    // every ONI item, including future IDs, not just the two current mods.
     reject_directory_upload_for_oni(&vdf)?;
 
-    let Some(steamcmd_path) = resolve_steamcmd(steamcmd.as_deref()) else {
-        if non_interactive {
-            anyhow::bail!(
-                "找不到 SteamCMD；运行 scripts/publish_cycletrim_steam.sh 可安装用户级副本"
-            );
-        }
-        launch_uploader(&dist_mod, &preview);
-        return Ok(());
-    };
-
-    let steam_user = steam_user
-        .or_else(|| env::var("STEAM_USERNAME").ok())
-        .or_else(|| env::var("STEAM_USER").ok())
-        .filter(|value| !value.trim().is_empty());
-    let steam_user = match steam_user {
-        Some(user) => user,
-        None if non_interactive => {
-            anyhow::bail!("无人值守发布要求 --steam-user 或 STEAM_USERNAME")
-        }
-        None => prompt("Steam 用户名: ", None)?,
-    };
-
-    println!("📤 上传 Steam Workshop...");
-    let mut command = Command::new(&steamcmd_path);
-    command
-        .arg("+login")
-        .arg(&steam_user)
-        .arg("+workshop_build_item")
-        .arg(&vdf)
-        .arg("+quit");
     if non_interactive {
-        command.stdin(Stdio::null());
-    }
-    let output = command
-        .output()
-        .with_context(|| format!("启动 SteamCMD 失败: {}", steamcmd_path.display()))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let full_output = format!("{}\n{}", stdout, stderr);
-    let steamcmd_reported_error = full_output
-        .lines()
-        .any(|line| line.to_ascii_lowercase().contains("error!"));
-    if !output.status.success() || steamcmd_reported_error {
-        let summary = steamcmd_error_summary(&full_output);
-        if non_interactive {
-            anyhow::bail!("SteamCMD 上传失败：{}", summary);
-        }
-        eprintln!("SteamCMD 上传失败：{}", summary);
-        launch_uploader(&dist_mod, &preview);
-        return Ok(());
+        anyhow::bail!(
+            "无人值守发布请改用单 ZIP 发布器：scripts/publish_onimcp_steam.sh 或 scripts/publish_cycletrim_steam.sh"
+        );
     }
 
-    let workshop_id = extract_workshop_id(&full_output)
-        .or_else(|| read_publishedfileid_from_vdf(&vdf))
-        .unwrap_or(publishedfileid);
-    println!("✅ Steam Workshop 更新完成");
-    println!(
-        "   https://steamcommunity.com/sharedfiles/filedetails/?id={}",
-        workshop_id
-    );
-    if workshop_id == "0" {
-        println!("   首次发布后请把 SteamCMD 返回的 ID 写入 onim.toml");
-    }
+    launch_uploader(&dist_mod, &preview);
     Ok(())
-}
-
-fn extract_workshop_id(output: &str) -> Option<String> {
-    // SteamCMD 输出中可能包含 "PublishedFileId" 或数字 ID
-    // 常见格式："PublishedFileId" "123456789" 或 Success. ID: 123456789
-    for line in output.lines() {
-        // 尝试匹配 "PublishedFileId" "12345"
-        if let Some(pos) = line.find("PublishedFileId") {
-            let rest = &line[pos..];
-            if let Some(start) = rest.find('"').and_then(|s| rest[s + 1..].find('"')) {
-                let after_first = &rest[start + 2..];
-                if let Some(end) = after_first.find('"') {
-                    let id = after_first[..end].trim();
-                    if !id.is_empty() && id.chars().all(|c| c.is_ascii_digit()) {
-                        return Some(id.to_string());
-                    }
-                }
-            }
-        }
-        // 尝试匹配简单的数字 ID（8-12 位数字）
-        for word in line.split_whitespace() {
-            let clean = word.trim_matches(|c: char| !c.is_ascii_digit());
-            if clean.len() >= 8 && clean.len() <= 12 && clean.chars().all(|c| c.is_ascii_digit()) {
-                return Some(clean.to_string());
-            }
-        }
-    }
-    None
-}
-
-fn read_publishedfileid_from_vdf(vdf: &Path) -> Option<String> {
-    let content = fs::read_to_string(vdf).ok()?;
-    for line in content.lines() {
-        if line.contains("publishedfileid")
-            && let Some(id) = line.split('"').nth(3).map(str::trim)
-            && !id.is_empty()
-            && id != "0"
-            && id.chars().all(|c| c.is_ascii_digit())
-        {
-            return Some(id.to_string());
-        }
-    }
-    None
 }
 
 fn launch_uploader(dist_mod: &Path, preview: &Path) {
     let uploader = match uploader_path() {
         Some(p) => p,
         None => {
-            println!("\n❌ 找不到上传工具！");
-            println!("方案一（推荐）：安装 steamcmd 实现全自动上传");
-            println!("  Arch:    paru -S steamcmd");
-            println!("  Ubuntu:  sudo apt install steamcmd");
-            println!("  其他:    https://developer.valvesoftware.com/wiki/SteamCMD");
+            println!("\n❌ 找不到 OniUploader！");
+            println!("从 Steam 库 → 工具 → 安装 'Oxygen Not Included Uploader'");
             println!();
-            println!("方案二：从 Steam 库 → 工具 → 安装 'Oxygen Not Included Uploader'");
+            println!("不要改用 SteamCMD：它的 contentfolder 目录上传会把条目");
+            println!("单向转换为 UGC 目录模式，ONI 无法安装，且没有回退 API。");
+            println!("无人值守发布请用 scripts/publish_onimcp_steam.sh 或");
+            println!("scripts/publish_cycletrim_steam.sh 的单 ZIP 发布器。");
             return;
         }
     };
@@ -764,18 +625,22 @@ mod tests {
     }
 
     #[test]
-    fn oni_directory_upload_is_rejected_for_new_workshop_ids() -> TestResult {
-        let root = test_dir("new-workshop-id");
+    fn publish_guard_accepts_oni_appid_for_any_workshop_id() -> TestResult {
+        let root = test_dir("publish-guard");
         fs::create_dir_all(&root)?;
         let vdf = root.join("new-item.workshop.vdf");
         fs::write(
             &vdf,
             "\"workshopitem\"\n{\n\"appid\" \"457140\"\n\"publishedfileid\" \"9999999999\"\n}\n",
         )?;
-
-        assert!(reject_directory_upload_for_oni(&vdf).is_err());
-        fs::write(&vdf, "\"workshopitem\"\n{\n\"appid\" \"12345\"\n}\n")?;
         assert!(reject_directory_upload_for_oni(&vdf).is_ok());
+
+        fs::write(&vdf, "\"workshopitem\"\n{\n\"appid\" \"12345\"\n}\n")?;
+        assert!(reject_directory_upload_for_oni(&vdf).is_err());
+
+        fs::write(&vdf, "\"workshopitem\"\n{\n\"publishedfileid\" \"457140\"\n}\n")?;
+        assert!(reject_directory_upload_for_oni(&vdf).is_err());
+
         fs::remove_dir_all(root)?;
         Ok(())
     }

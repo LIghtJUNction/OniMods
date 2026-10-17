@@ -32,20 +32,21 @@ namespace OniMcp.Tools
                 return WorldEditorPreview("map", args["sourcePath"]?.ToString(), new JObject { ["changedCells"] = changes.Count });
 
             int writeBudget = MapEditWriteBudget(args);
-            bool partial = changes.Count > writeBudget;
-            var executableChanges = partial ? changes.Take(writeBudget).ToList() : changes;
+            if (changes.Count > writeBudget)
+                return CallToolResult.Error("Patch exceeds maxWriteCells=" + writeBudget
+                    + "; split it into complete building footprints. No orders were issued.");
+            var executableChanges = changes;
 
             var results = new JArray();
             bool anyError = false;
             bool childPartial = false;
-            int appliedCells = 0;
+            int appliedActions = 0;
+            int submittedCells = 0;
             foreach (var group in executableChanges.GroupBy(ChangeKind))
             {
                 CallToolResult result;
                 if (group.Key == "build")
                     result = ApplyBuildMapEdit(args, group);
-                else if (group.Key == "wire")
-                    result = ApplyConnectionMapEdit(args, group);
                 else if (IsOrderAction(group.Key))
                     result = ApplyOrderMapEdit(args, group.Key, group);
                 else
@@ -54,13 +55,13 @@ namespace OniMcp.Tools
                 bool failed = WorldEditorResultFailed(result, args);
                 anyError = anyError || failed;
                 childPartial = childPartial || ResultReportsPartial(result);
-                if (!failed)
-                    appliedCells += ResultAppliedCount(result);
+                appliedActions += ResultAppliedCount(result);
+                submittedCells += group.Count();
                 results.Add(new JObject
                 {
                     ["kind"] = group.Key,
                     ["ok"] = !failed,
-                    ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
+                    ["result"] = MapEditResultValue(result)
                 });
                 if (failed)
                     break;
@@ -71,10 +72,15 @@ namespace OniMcp.Tools
                 ["ok"] = !anyError,
                 ["sourcePath"] = args["sourcePath"]?.ToString(),
                 ["changedCells"] = changes.Count,
-                ["executedCells"] = appliedCells,
-                ["remainingCells"] = Math.Max(0, changes.Count - appliedCells),
-                ["partial"] = partial || childPartial || (anyError && appliedCells > 0),
-                ["next"] = partial ? "Re-read the map, then submit a fresh patch for the remaining cells." : "complete",
+                ["applied"] = appliedActions,
+                ["reportedActions"] = appliedActions,
+                ["submittedCells"] = submittedCells,
+                ["unsubmittedCells"] = changes.Count - submittedCells,
+                ["partial"] = childPartial || (anyError && appliedActions > 0),
+                ["phase"] = anyError ? "failed" : childPartial ? "partial" : "orders_queued",
+                ["gameCompleted"] = false,
+                ["requiresVerification"] = true,
+                ["next"] = "Re-read this rectangle. Orders and blueprints are not completed work; run briefly, pause, and verify before another edit.",
                 ["results"] = results
             };
             return anyError ? CallToolResult.Error(JsonResultText(summary)) : JsonResult(summary);
@@ -88,7 +94,7 @@ namespace OniMcp.Tools
             int applied = 0;
             foreach (var group in byToken)
             {
-                int priority = Math.Max(1, Math.Min(ParsePriority(group.Key) ?? ToolUtil.GetInt(parentArgs, "priority") ?? 5, 9));
+                int priority = ParsePriority(group.Key) ?? ToolUtil.GetInt(parentArgs, "priority") ?? 5;
                 foreach (var bounds in ContiguousRuns(group))
                 {
                     var orderArgs = CopyPayload(parentArgs);
@@ -117,8 +123,7 @@ namespace OniMcp.Tools
                     var result = OrdersControlEntryTools.ControlOrders().Handler(orderArgs);
                     bool failed = WorldEditorResultFailed(result, parentArgs);
                     anyError = anyError || failed;
-                    if (!failed)
-                        applied += ResultAppliedCount(result);
+                    applied += ResultAppliedCount(result);
                     results.Add(new JObject
                     {
                         ["token"] = group.Key,
@@ -128,7 +133,7 @@ namespace OniMcp.Tools
                         ["cells"] = RectCellCount(bounds),
                         ["ok"] = !failed,
                         ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
-                        ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
+                        ["result"] = MapEditResultValue(result)
                     });
                 }
             }
@@ -229,7 +234,7 @@ namespace OniMcp.Tools
                     ["cells"] = groupCells,
                     ["ok"] = !failed,
                     ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
-                    ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty
+                    ["result"] = MapEditResultValue(result)
                 });
             }
 
@@ -348,6 +353,11 @@ namespace OniMcp.Tools
                     int y;
                     string[] symbols;
                     if (TryParseYRow(line, out y, out symbols))
+                        if (rows.ContainsKey(y))
+                        {
+                            error = "Duplicate Y row: " + y;
+                            return null;
+                        }
                         rows[y] = symbols;
                 }
             }

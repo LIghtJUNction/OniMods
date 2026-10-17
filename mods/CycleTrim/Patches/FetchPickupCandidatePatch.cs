@@ -10,6 +10,8 @@ namespace CycleTrim.Patches
     {
         private const string FastTrackPatchType =
             "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate";
+        private const string NoWasteWantPatchType =
+            "PeterHan.NoWasteWant.NoWasteWantPatches";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
             CompareIncludingPriority;
         private static bool installAttempted;
@@ -91,7 +93,19 @@ namespace CycleTrim.Patches
             // the original UpdatePickups body to remain authoritative.
             private static bool Prepare()
             {
-                return installRequested;
+                if (!installRequested)
+                {
+                    return false;
+                }
+
+                // Waste Not, Want Not reverses the vanilla freshness comparator. This replacement
+                // cannot preserve that transpiler safely, so leave the original method in control.
+                if (AccessTools.TypeByName(NoWasteWantPatchType) != null)
+                {
+                    return false;
+                }
+
+                return AccessTools.TypeByName(FastTrackPatchType) == null;
             }
 
             private static MethodBase TargetMethod()

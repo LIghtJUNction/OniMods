@@ -17,7 +17,14 @@ namespace OniMcp.Tools
             ["Battery"] = "Battery",
             ["ManualGenerator"] = "ManualGenerator",
             ["Outhouse"] = "Outhouse",
+            ["FlushToilet"] = "FlushToilet",
             ["WashBasin"] = "WashBasin",
+            ["Basin"] = "WashBasin",
+            ["WashSink"] = "WashSink",
+            ["Sink"] = "WashSink",
+            ["PlanterBox"] = "PlanterBox",
+            ["FarmTile"] = "FarmTile",
+            ["HydroponicFarm"] = "HydroponicFarm",
             ["ResearchStation"] = "ResearchCenter"
         };
 

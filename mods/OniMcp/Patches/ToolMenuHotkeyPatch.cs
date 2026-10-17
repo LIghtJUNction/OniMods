@@ -20,6 +20,9 @@ namespace OniMcp
 
             if (__instance == null)
                 return true;
+            // The game's own sandbox toggle is not an MCP operation or a copied mutation path.
+            if (KButtonEventSafety.SafeIsAction(e, Action.ToggleSandboxTools))
+                return true;
 
             try
             {
@@ -47,21 +50,6 @@ namespace OniMcp
         {
             if (!e.Consumed)
             {
-                if (KButtonEventSafety.SafeIsAction(e, Action.ToggleSandboxTools))
-                {
-                    if (Application.isEditor)
-                    {
-                        DebugUtil.LogArgs("Force-enabling sandbox mode because we're in editor.");
-                        SaveGame.Instance.sandboxEnabled = true;
-                    }
-
-                    if (SaveGame.Instance.sandboxEnabled)
-                    {
-                        Game.Instance.SandboxModeActive = !Game.Instance.SandboxModeActive;
-                        KMonoBehaviour.PlaySound(Game.Instance.SandboxModeActive ? GlobalAssets.GetSound("SandboxTool_Toggle_On") : GlobalAssets.GetSound("SandboxTool_Toggle_Off"));
-                    }
-                }
-
                 foreach (var row in rows)
                 {
                     if (row == instance.sandboxTools && !Game.Instance.SandboxModeActive)

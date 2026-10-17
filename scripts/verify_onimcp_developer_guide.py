@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 from onimcp_verify_parsing import fail
-from verify_onimcp_tool_surface import EXPECTED_DEFAULT_PUBLIC, EXPECTED_INTERNAL
+from verify_onimcp_tool_surface import EXPECTED_REGISTERED, EXPECTED_INTERNAL
 
 
 PUBLIC_SURFACE_MARKER = "Default public surface: compact aggregate tools:"
@@ -58,10 +58,10 @@ def main() -> None:
 
     guide = guide_path.read_text(encoding="utf-8")
     public_surface = extract_public_surface(guide)
-    if public_surface != EXPECTED_DEFAULT_PUBLIC:
+    if public_surface != EXPECTED_REGISTERED:
         fail(
             "developer-guide default-public surface mismatch: "
-            f"expected {sorted(EXPECTED_DEFAULT_PUBLIC)}, got {sorted(public_surface)}"
+            f"expected {sorted(EXPECTED_REGISTERED)}, got {sorted(public_surface)}"
         )
 
     tool_call_count = 0
@@ -80,7 +80,7 @@ def main() -> None:
                 f"docs/api-developer-guide.md:{line}: internal operation {name!r} "
                 "must not be shown as a direct tools/call target"
             )
-        if name not in EXPECTED_DEFAULT_PUBLIC:
+        if name not in EXPECTED_REGISTERED:
             fail(
                 f"docs/api-developer-guide.md:{line}: tools/call target {name!r} "
                 "is not in the default public surface"

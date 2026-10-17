@@ -215,7 +215,10 @@ namespace OniMcp.Tools
         private static bool IsValidLoreBearer(GameObject go)
         {
             var lore = go?.GetComponent<LoreBearer>();
-            return lore != null;
+            // Match the native LoreBearer side-screen target rule, even for force presses.
+            return lore != null
+                   && !lore.hideLore
+                   && (lore.useDefaultLore || !string.IsNullOrWhiteSpace(lore.poiOverrideLoreUnlockId));
         }
 
         private static Dictionary<string, object> LoreBearerInfo(GameObject go)

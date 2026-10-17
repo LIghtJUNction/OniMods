@@ -28,7 +28,12 @@ namespace OniMcp.Tools
             int[] ones;
             var searchRows = ParseMapRows(search, out hundreds, out tens, out ones, out error, false);
             if (hundreds == null || tens == null || ones == null)
-                return false;
+            {
+                bool attempted = hundreds != null || tens != null || ones != null;
+                if (attempted)
+                    error = "SEARCH has incomplete X headers; copy all three axis rows from format=edit.";
+                return attempted;
+            }
 
             int[] replacementHundreds;
             int[] replacementTens;
@@ -60,6 +65,11 @@ namespace OniMcp.Tools
             if (!searchX.SequenceEqual(replacementX))
             {
                 error = "REPLACE X coordinate headers differ from SEARCH.";
+                return true;
+            }
+            if (!new HashSet<int>(searchRows.Keys).SetEquals(replacementRows.Keys))
+            {
+                error = "SEARCH and REPLACE must contain exactly the same Y rows.";
                 return true;
             }
             var currentIndex = currentX.Select((x, index) => new { x, index }).ToDictionary(item => item.x, item => item.index);

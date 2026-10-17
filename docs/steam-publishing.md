@@ -1,5 +1,29 @@
 # Steam Workshop 发布
 
+## 禁止事项（不可协商）
+
+SteamCMD 的 `contentfolder` 目录上传与 `SteamUGC.SetItemContent` 都会把条目**单向转换**
+为 UGC 目录模式。ONI 把 `ISteamUGC.GetItemInstallInfo` 的返回值当 ZIP 文件打开，
+目录路径会让玩家报“下载失败”。转换**没有回退 API**：一旦条目被 ISteamUGC 更新，
+`ISteamRemoteStorage` 对该条目永久失效。唯一出路是新建条目，见
+[steam-promotion.md](steam-promotion.md)。
+
+因此：
+
+- 不得运行 `steamcmd +workshop_build_item`
+- 不得把 VDF 交给 SteamCMD 上传
+- 不得调用 `SteamUGC.SetItemContent`（Directory 模式）
+- 不得对已转换的旧条目重试旧文件更新
+
+`contentfolder` **字段本身不是禁用标志**：C# 发布器
+(`tools/OniMods.SteamPublisher/`)**要求**该字段，它据此读取目录并打包成单文件
+Legacy ZIP。决定是否转换的是消费该字段的 API，不是字段存在与否。
+
+## 唯一合法发布路径
+
+单文件 Legacy ZIP 发布器，即下面的两个脚本。`onim publish` CLI 只生成 VDF 并交给
+OniUploader GUI，不自行上传；它的 `--steamcmd` / `--steam-user` 参数已移除。
+
 仓库提供两个固定目标的发布入口：
 
 | Mod | 上传器 App ID | ONI App ID | Workshop ID | 命令 |
