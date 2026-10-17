@@ -52,12 +52,11 @@ namespace OniMcp.Tools
                 return result;
             }
 
-            if (IsFreeBuildContext())
+            if (Game.Instance != null && Game.Instance.SandboxModeActive)
             {
                 result["attempted"] = false;
-                result["placementMode"] = "blueprint_cell_fallback";
-                result["shouldFallback"] = true;
-                result["reason"] = "free-build uses blueprint cell fallback after full-path safety preflight";
+                result["shouldFallback"] = false;
+                result["reason"] = "Exit sandbox mode before issuing normal gameplay build orders.";
                 return result;
             }
 
@@ -65,6 +64,7 @@ namespace OniMcp.Tools
             materialResult.RequiredKg = RequiredMaterialKg(def) * path.Count;
             if (!materialResult.Valid)
             {
+                result["shouldFallback"] = false;
                 result["reason"] = "material selection failed";
                 result["materialSelection"] = materialResult.ToDictionary();
                 return result;
@@ -129,8 +129,12 @@ namespace OniMcp.Tools
 
                 string networkError = null;
                 bool networkConnected = !IsCompletedUtilityPath(def, path)
-                    || RefreshAndValidateUtilityPathNetwork(def, path, out networkError);
-                result["networkConnected"] = networkConnected;
+                    || ValidateCompletedUtilityPathNetwork(def, path, out networkError);
+                bool physicallyComplete = IsCompletedUtilityPath(def, path);
+                result["networkConnected"] = physicallyComplete ? (object)networkConnected : null;
+                result["buildingCompleted"] = physicallyComplete;
+                result["phase"] = physicallyComplete ? "observed" : "orders_queued";
+                result["requiresVerification"] = true;
                 result["networkError"] = networkError;
                 bool allConnected = after >= path.Count && networkConnected;
                 result["success"] = allConnected;

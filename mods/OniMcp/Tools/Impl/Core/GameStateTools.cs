@@ -7,9 +7,6 @@ using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
-    /// <summary>
-    /// 游戏控制相关 MCP Tools
-    /// </summary>
     public static partial class GameControlTools
     {
         public static McpTool GetRedAlertStatus()
@@ -60,13 +57,13 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "red_alert_set", "emergency_set", "game_emergency_set" },
                 Tags = new List<string> { "game", "red-alert", "emergency", "priority", "紧急", "红色警戒" },
-                Description = "兼容入口：请优先使用 game_control domain=state action=set_red_alert。默认只修改当前世界；allWorlds=true 可同步全部已加载世界。需 confirm=true",
+                Description = "兼容入口：game_control domain=state action=set_red_alert。默认只修改当前世界；allWorlds=true 可同步全部已加载世界。需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "true 开启红色警戒/紧急模式，false 关闭", Required = true },
-                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前激活世界；allWorlds=true 时忽略", Required = false },
-                    ["allWorlds"] = new McpToolParameter { Type = "boolean", Description = "是否应用到全部已加载世界，默认 false", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认切换紧急模式，必须为 true", Required = true }
+                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "true 开启红色警戒，false 关闭", Required = true },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前世界；allWorlds=true 时忽略", Required = false },
+                    ["allWorlds"] = new McpToolParameter { Type = "boolean", Description = "应用到全部已加载世界；默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认切换紧急模式", Required = true }
                 },
                 Handler = args =>
                 {
@@ -106,47 +103,6 @@ namespace OniMcp.Tools
             };
         }
 
-        public static McpTool SetSandboxMode()
-        {
-            return new McpTool
-            {
-                Name = "game_sandbox_mode_set",
-                Hidden = true,
-                Group = "game",
-                Mode = "execute",
-                Risk = "dangerous",
-                Aliases = new List<string> { "sandbox_mode_set", "sandbox_toggle" },
-                Tags = new List<string> { "game", "sandbox", "debug", "toggle", "top-left" },
-                Description = "兼容入口：请优先使用 game_control domain=state action=set_sandbox_mode。设置游戏沙盒模式开关，等价于顶部左侧 Sandbox Toggle。需要存档已启用 sandbox，并要求 confirm=true",
-                Parameters = new Dictionary<string, McpToolParameter>
-                {
-                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "true 开启沙盒模式，false 关闭", Required = true },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "危险操作确认，必须为 true", Required = true }
-                },
-                Handler = args =>
-                {
-                    if (Game.Instance == null || global::SaveGame.Instance == null)
-                        return CallToolResult.Error("Game not initialized");
-                    if (!ToolUtil.GetBool(args, "confirm", false))
-                        return CallToolResult.Error("confirm=true is required");
-                    if (!global::SaveGame.Instance.sandboxEnabled)
-                        return CallToolResult.Error("Sandbox mode is locked for this save");
-
-                    bool enabled = ToolUtil.GetBool(args, "enabled", false);
-                    bool before = Game.Instance.SandboxModeActive;
-                    Game.Instance.SandboxModeActive = enabled;
-                    TopLeftControlScreen.Instance?.UpdateSandboxToggleState();
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-                    {
-                        ["before"] = before,
-                        ["after"] = Game.Instance.SandboxModeActive,
-                        ["sandboxEnabledForSave"] = global::SaveGame.Instance.sandboxEnabled
-                    }, McpJsonUtil.Settings));
-                }
-            };
-        }
-
         public static McpTool ControlGameState()
         {
             return new McpTool
@@ -154,17 +110,17 @@ namespace OniMcp.Tools
                 Name = "game_state_control",
                 Group = "game",
                 Mode = "execute",
-                Risk = "dangerous",
-                Aliases = new List<string> { "game_emergency_control", "game_sandbox_control" },
-                Tags = new List<string> { "game", "red-alert", "sandbox", "emergency", "state" },
-                Description = "游戏状态聚合工具：action=red_alert_status/set_red_alert/set_sandbox_mode；高风险动作需 confirm=true。",
+                Risk = "medium",
+                Aliases = new List<string> { "game_emergency_control" },
+                Tags = new List<string> { "game", "red-alert", "emergency", "state" },
+                Description = "游戏状态：red_alert_status/set_red_alert。写动作需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "red_alert_status、set_red_alert 或 set_sandbox_mode", Required = true, EnumValues = new List<string> { "red_alert_status", "set_red_alert", "set_sandbox_mode" } },
-                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "set_red_alert/set_sandbox_mode 时 true=开启，false=关闭", Required = false },
-                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "red alert 世界 ID，默认当前激活世界", Required = false },
-                    ["allWorlds"] = new McpToolParameter { Type = "boolean", Description = "red alert 是否应用/读取全部已加载世界，默认 false", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "set_red_alert/set_sandbox_mode 必须为 true", Required = false }
+                    ["action"] = new McpToolParameter { Type = "string", Description = "red_alert_status 或 set_red_alert", Required = true, EnumValues = new List<string> { "red_alert_status", "set_red_alert" } },
+                    ["enabled"] = new McpToolParameter { Type = "boolean", Description = "set_red_alert：true 开启，false 关闭", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "世界 ID，默认当前世界", Required = false },
+                    ["allWorlds"] = new McpToolParameter { Type = "boolean", Description = "全部已加载世界；默认 false", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "set_red_alert 必须为 true", Required = false }
                 },
                 Handler = args =>
                 {
@@ -173,9 +129,7 @@ namespace OniMcp.Tools
                         return GetRedAlertStatus().Handler(args);
                     if (action == "set_red_alert" || action == "red_alert")
                         return SetRedAlert().Handler(args);
-                    if (action == "set_sandbox_mode" || action == "sandbox")
-                        return SetSandboxMode().Handler(args);
-                    return CallToolResult.Error("action must be red_alert_status, set_red_alert, or set_sandbox_mode");
+                    return CallToolResult.Error("action must be red_alert_status or set_red_alert");
                 }
             };
         }
@@ -211,6 +165,5 @@ namespace OniMcp.Tools
                 ["isOn"] = alert != null && alert.IsOn()
             };
         }
-
     }
 }

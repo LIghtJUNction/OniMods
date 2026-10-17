@@ -2,7 +2,10 @@ using System.Globalization;
 
 internal static class WorkshopTarget
 {
-    internal static uint AppId => checked((uint)ReadId("ONIM_PUBLISH_APP_ID", 457140));
+    internal static uint CreatorAppId =>
+        checked((uint)ReadId("ONIM_PUBLISH_CREATOR_APP_ID", 636750));
+    internal static uint ConsumerAppId =>
+        checked((uint)ReadId("ONIM_PUBLISH_CONSUMER_APP_ID", 457140));
     internal static ulong WorkshopId =>
         ReadId("ONIM_PUBLISH_WORKSHOP_ID", 3766318556);
     internal static ulong ExpectedOwner =>

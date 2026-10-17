@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 
 // Only game tool factories and the Unity overlay are replaced. Tests execute the
-// production registries, route tables, middleware and JSON-RPC serialization.
+// production registries, descriptions, route tables, middleware and serialization.
 namespace OniMcp.Tools
 {
     internal static class GameStubs
@@ -27,7 +27,9 @@ namespace OniMcp.Tools
                 Aliases = new List<string> { "legacy_" + name },
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["query"] = new McpToolParameter { Type = "string" }
+                    ["query"] = new McpToolParameter { Type = "string" },
+                    ["action"] = new McpToolParameter { Type = "string", Required = true },
+                    ["x"] = new McpToolParameter { Type = "integer" }
                 },
                 Handler = arguments =>
                 {
@@ -55,8 +57,7 @@ namespace OniMcp.Tools
         internal static void NotifyMissingDescription(string toolName) { }
     }
 
-    internal static class CoreToolEnglishDescriptions { internal static McpTool Apply(McpTool tool) => tool; }
-    internal static class ServerControlEntryTools { internal static McpTool ControlServer() => GameStubs.Tool("server_control"); }
+    internal static class ServerTools { internal static McpTool ControlServer() => GameStubs.Tool("server_control"); }
     internal static class WorldEditorTools { internal static McpTool ControlWorldEditor() => GameStubs.Tool("world_editor"); }
     internal static class NavigationControlTools { internal static McpTool ControlNavigation() => GameStubs.Tool("navigation_control"); }
     internal static class BuildingControlTools { internal static McpTool ControlBuilding() => GameStubs.Tool("building_control"); }

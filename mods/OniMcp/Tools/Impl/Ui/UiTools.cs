@@ -244,7 +244,7 @@ namespace OniMcp.Tools
             if (action == global::Action.ManageResearch)
                 return menu.CheckHasResearchCenter();
             if (action == global::Action.ManageSkills)
-                return Components.RoleStations.Count > 0 || DebugHandler.InstantBuildMode || (Game.Instance != null && Game.Instance.SandboxModeActive);
+                return Components.RoleStations.Count > 0;
             if (action == global::Action.ManageStarmap)
                 return ManagementMenu.StarmapAvailable() || DlcManager.FeatureClusterSpaceEnabled();
             return true;

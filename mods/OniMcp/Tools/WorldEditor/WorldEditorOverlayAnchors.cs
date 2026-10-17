@@ -229,8 +229,8 @@ namespace OniMcp.Tools
                 {
                     if (dx == 0 && dy == 0)
                         continue;
-                    int neighbor = Grid.XYToCell(x + dx, y + dy);
-                    if (Grid.IsValidCell(neighbor) && HasLayer(neighbor, layers))
+                    int neighbor = NeighborCell(cell, dx, dy);
+                    if (IsReadableMapCell(neighbor) && HasLayer(neighbor, layers))
                         return true;
                 }
             }
