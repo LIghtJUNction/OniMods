@@ -217,8 +217,9 @@ namespace OniMcp.Tools
                     else
                     {
                         bool readyOnly = ToolUtil.GetBool(args, "readyOnly", true);
-                        if (readyOnly && !harvestable.CanBeHarvested())
-                            return CallToolResult.Error("Target is not ready to harvest; pass readyOnly=false or use action=when_ready");
+                        bool canHarvest = harvestable.CanBeHarvested();
+                        if (!HarvestMarkPolicy.ShouldMarkNow(canHarvest, readyOnly))
+                            return CallToolResult.Error("Target is not ready to harvest; use action=when_ready for future harvest");
                         harvestable.MarkForHarvest();
                     }
 

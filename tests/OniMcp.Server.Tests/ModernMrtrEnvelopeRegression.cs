@@ -64,22 +64,88 @@ internal static class ModernMrtrEnvelopeRegressionEntry
                 AssertModernRejected(client,
                     BuildResourceRead(33209, "\"inputResponses\":{\"probe\":[]},"),
                     "resources/read", "oni://missing-mrtr-regression", "array inputResponses entry");
+                AssertModernRejected(client,
+                    BuildResourceRead(33211, "\"inputResponses\":{\"probe\":{}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "empty inputResponses entry");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33212, "\"inputResponses\":{\"probe\":{\"action\":\"retry\"}},"),
+                    "tools/call", "benchmark", "invalid elicitation action");
+                AssertModernRejected(client,
+                    BuildResourceRead(33213, "\"inputResponses\":{\"probe\":{\"roots\":\"bad\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "non-array roots result");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33214,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling result without content");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33215,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":7}},"),
+                    "tools/call", "benchmark", "numeric elicitation content");
+                AssertModernRejected(client,
+                    BuildResourceRead(33216,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"nested\":{\"value\":true}}}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "nested elicitation content value");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33217,
+                        "\"inputResponses\":{\"probe\":{\"action\":\"accept\",\"content\":{\"choices\":[\"a\",2]}}},"),
+                    "tools/call", "benchmark", "non-string elicitation array item");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33218,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling content without a block discriminator");
+                AssertModernRejected(client,
+                    BuildResourceRead(33219,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":[7],\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "sampling content array with a primitive item");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33220,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"video\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "sampling content with an unknown block discriminator");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33221,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "text sampling block without text");
+                AssertModernRejected(client,
+                    BuildResourceRead(33222,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":7},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "text sampling block with non-string text");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33223,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"image\",\"mimeType\":\"image/png\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "image sampling block without data");
+                AssertModernRejected(client,
+                    BuildResourceRead(33224,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":7},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "image sampling block with non-string mimeType");
+                AssertModernRejected(client,
+                    BuildBenchmarkCall(33225,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"audio\",\"data\":\"AA==\"},\"model\":\"fixture\"}},"),
+                    "tools/call", "benchmark", "audio sampling block without mimeType");
+                AssertModernRejected(client,
+                    BuildResourceRead(33226,
+                        "\"inputResponses\":{\"probe\":{\"role\":\"assistant\",\"content\":{\"type\":\"audio\",\"data\":7,\"mimeType\":\"audio/wav\"},\"model\":\"fixture\"}},"),
+                    "resources/read", "oni://missing-mrtr-regression", "audio sampling block with non-string data");
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes,
                     "Malformed MRTR envelopes reached tool dispatch");
 
                 using (var response = SendModern(client,
                     BuildBenchmarkCall(33205,
-                        "\"requestState\":\"opaque-state\",\"inputResponses\":{\"probe\":{\"action\":\"decline\"}},"),
+                        "\"requestState\":\"opaque-state\",\"inputResponses\":{"
+                        + "\"elicitation\":{\"action\":\"accept\",\"content\":{\"text\":\"ok\",\"count\":2,\"ratio\":1.5,\"enabled\":true,\"choices\":[\"a\",\"b\"]},\"x-extension\":true},"
+                        + "\"urlElicitation\":{\"action\":\"accept\"},"
+                        + "\"roots\":{\"roots\":[]},"
+                        + "\"sampling\":{\"role\":\"assistant\",\"content\":{\"type\":\"text\",\"text\":\"ok\"},\"model\":\"fixture\"},"
+                        + "\"samplingArray\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"one\"},{\"type\":\"image\",\"data\":\"AA==\",\"mimeType\":\"image/png\"},{\"type\":\"audio\",\"data\":\"AA==\",\"mimeType\":\"audio/wav\"}],\"model\":\"fixture\"}},"),
                     "tools/call", "benchmark"))
                 {
                     Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Valid MRTR envelope shape was rejected with HTTP " + (int)response.StatusCode);
+                        "Schema-valid MRTR input responses were rejected with HTTP " + (int)response.StatusCode);
                     JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
                     Assert(body["result"] != null && body["error"] == null,
-                        "Valid MRTR envelope shape did not reach the modern tool path");
+                        "Schema-valid MRTR input responses did not reach the modern tool path");
                 }
                 Assert(OniToolRegistry.Calls == callsBeforeInvalidEnvelopes + 1,
-                    "Valid MRTR envelope did not dispatch exactly once");
+                    "Schema-valid MRTR input responses did not dispatch exactly once");
 
                 Assert(server.GetSessionSummaries().Count == 0,
                     "Modern MRTR envelope validation allocated legacy session state");

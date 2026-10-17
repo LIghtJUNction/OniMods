@@ -1,21 +1,294 @@
-MIT License
+AGENT UPSTREAM LICENSE
+Version 1.0-draft.1 — 15 October 2026
+Short name: AUL-1.0-draft.1
+Custom identifier: LicenseRef-AUL-1.0-draft.1
+Status: Complete first draft for review. Not an OSI-approved license.
 
-Copyright (c) 2026 ligthjunction
+Copyright (c) 2026 LIghtJUNction
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+0. PURPOSE
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This License is designed for software developed and improved with AI, and
+for software intended to serve AI agents. This purpose is descriptive.
+It does not exclude human users, require AI use, or restrict a field of use.
+This is a custom license inspired by MIT permissions, not the MIT License.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. DEFINITIONS
+
+“Software” means the code, documentation, tests, and related materials that
+their rights holders expressly place under this License. Separately licensed
+third-party material retains its own terms.
+
+“You” means the person or legal entity exercising rights under this License.
+An “Agent” is an automated tool acting for You. Agent instructions in this
+License describe how You must arrange that work; they do not make the Agent
+a separate contracting person.
+
+A “Fork” is a version of the Software maintained separately from its source
+project. It need not use a hosting platform's fork feature or be public.
+An “Upstream” is the single direct project selected under Section 4, not
+every earlier project in the Software's history.
+
+A “Confirmed Issue” is a defect found during Your development or maintenance
+of a Fork, supported by a reproduction, test, or identifiable code evidence.
+There must be evidence that it affects an Upstream version or its code.
+A defect caused only by Your Fork belongs in Your Fork's issue tracking.
+An unsupported suspicion is not a Confirmed Issue.
+
+A “Retained Improvement” is a change to the Software that You keep as a
+completed development result, deploy for routine use, or distribute.
+It includes fixes, features, performance changes, tests, and documentation.
+It excludes abandoned experiments, personal settings with no reusable
+Software change, unrelated independent works, and unchanged imports from
+Upstream. Merely making a temporary commit does not establish retention.
+
+2. PERMISSIONS
+
+Each rights holder grants You a worldwide copyright license, without a
+license fee, to run, study, reproduce, change, combine, distribute, sublicense,
+and sell the Software. Commercial use is allowed. These permissions last
+for the duration of the relevant rights, subject to Section 12.
+
+You must meet the conditions below when You rely on these permissions.
+Sublicensing cannot remove these conditions from the covered Software.
+Recipients also receive these permissions directly from the relevant rights
+holders. This License does not require unrelated software to adopt its terms.
+
+3. NOTICES AND EXISTING RIGHTS
+
+Copies containing the Software, or a substantial part of it, must retain
+its applicable copyright notices, this License, and required third-party
+notices. Identify material changes without falsely attributing them to
+Upstream. Preserve an honest source-project reference in Fork distributions.
+A source URL is sufficient; disclosure of a private source URL is not required
+when a non-sensitive project identifier gives an honest reference instead.
+
+You may license Your separate additions under other terms, provided that
+those terms do not cancel recipients' rights or duties for the covered
+Software. Contributions required by Section 6 must be offered under this
+License to the extent You have the necessary rights.
+
+This License does not replace a prior license on third-party material or
+withdraw permissions already granted under a different license. It grants
+only rights held by the grantor. It does not claim ownership of material
+that applicable law does not protect. No trademark permission or separate
+express patent license is granted here.
+
+4. SELECTING UPSTREAM
+
+Unless You make an independent-fork election under Section 9, the default
+Upstream is the project from which Your Fork directly obtained the Software.
+A relocation or rename of that same project does not change the relationship.
+
+For an existing Fork, its current maintainer-authorized designation applies.
+An intentional local Git remote named “upstream” may record that designation.
+A versioned UPSTREAM.toml file, or an equally clear persistent declaration,
+may also record it. If an authorized local designation differs from an older
+published declaration, use the local designation for that working copy and
+update the persistent declaration before distributing that Fork again.
+
+A changed setting must identify the same direct source project or Your own
+Fork under Section 9. An arbitrary, nonexistent, or unrelated destination
+is not a valid substitute. If records conflict and You cannot establish the
+authorized choice, record the ambiguity and do not transmit material to an
+unverified destination. Section 8 applies.
+
+For a newly created Fork, a copied declaration describes the source project.
+It does not automatically make the new Fork independent. Do not infer an
+independence election merely from an “origin” remote, a branch tracking
+setting, or matching URL strings. Different URL forms may identify the same
+repository; identity and authorization, not spelling alone, control.
+
+When distributing a Fork, include a persistent declaration of its repository
+or project identifier, direct source, and current Upstream choice. Private
+identifiers and an appropriate private contribution route are allowed.
+Local Git configuration alone is sufficient for a local election, but not
+for communicating that election to later recipients.
+
+5. ISSUE REPORTING
+
+While Your Fork follows an external Upstream, You must report each Confirmed
+Issue to that Upstream's issue channel. Provide the affected version, the
+expected and observed behavior, and available evidence. Remove protected data.
+You need not inspect the entire project or create issues that You did not find.
+
+Search for an existing report when reasonably possible. An adequate existing
+report satisfies this duty; retain its reference. Add new information only
+when useful. Do not create duplicate reports solely to demonstrate compliance.
+
+Report at the next reasonably available authorized opportunity, and no later
+than 30 calendar days after confirmation, subject to Section 8.
+
+6. IMPROVEMENT SUBMISSIONS
+
+While Your Fork follows an external Upstream, You must offer each Retained
+Improvement to that Upstream as a pull request, merge request, or accepted
+equivalent patch submission. Offer it at the next reasonably available
+authorized opportunity, and no later than 30 calendar days after retention,
+subject to Section 8. This applies to private retained changes as well as
+published changes; Section 9 provides a prospective independence option.
+
+Provide reviewable changes, their purpose, and the checks actually performed.
+State failures and missing checks honestly. Do not invent test results.
+Group related changes when useful. You need not perform an unlimited rewrite
+to fit Upstream; explain substantial differences and provide a usable patch
+or accepted equivalent where a direct pull request cannot reasonably work.
+
+Offer the necessary contribution rights under this License, retain applicable
+notices, and do not claim rights You do not hold. No copyright transfer or
+separate contributor agreement is required by this License. Do not sign a
+separate agreement without authority. A rights conflict must be handled under
+Section 8, not by publishing material You cannot lawfully submit.
+
+A delivered submission satisfies the duty. Acceptance, merger, continued
+maintenance, and repeated resubmission are not required. An adequate existing
+submission also satisfies it. A rejection does not require a duplicate.
+An issue report alone does not replace a required code submission.
+For a bug fix, satisfy both Sections 5 and 6. One submission may satisfy both
+only when Upstream explicitly accepts that combined process.
+
+7. CONTRIBUTION CHANNELS AND PROTECTED INFORMATION
+
+Respect Upstream's published contribution and security procedures. GitHub,
+Git, a public account, and a particular interface are not mandatory. An
+accepted email report, private security report, mailed patch, or other
+reviewable delivery method may serve the same purpose.
+
+Do not disclose credentials, personal data, confidential material, or
+unreleased security details through an unsuitable channel. Use a permitted
+private channel for security reports and fixes. If no safe and authorized
+route is available, use Section 8; do not make a public disclosure just to
+meet a deadline. No disclosure of unrelated source or internal records is
+required. Remove protected material where a useful submission remains.
+
+Upstream may waive or decline these submissions, including through a clear
+published policy. Record the applicable waiver or refusal. It discharges
+the corresponding delivery duty, but does not authorize repeated unwanted
+contact. A ban on automated submissions requires a permitted alternative
+or Section 8; it is not permission to bypass that ban.
+
+8. BLOCKERS, DEFERRAL, AND RECORDS
+
+A genuine obstacle may defer delivery: unavailable service, no usable
+accepted channel, missing necessary authorization, unresolved rights,
+unresolved destination, or protected information that cannot safely be
+removed or sent privately. Use reasonably available permitted alternatives.
+You need not buy a service, evade access controls, obtain credentials from
+an unauthorized source, or create a new account to meet this License.
+
+Record the affected issue or change, intended recipient, reason, date, and
+available non-sensitive evidence. Inform the responsible operator. Keep
+sufficient records while an obligation is pending; this License does not
+require permanent logging of every development action or public disclosure
+of those records.
+
+An Agent's lack of a tool or delegated authority is an operator action item,
+not an automatic permanent exemption for You. The 30-day clock pauses only
+while no reasonable safe and authorized route is available to You, rather
+than merely unavailable to one Agent session. An Agent must not ignore an
+operator's refusal of permission; it must report the unresolved obligation.
+
+After a genuine blocker ends, submit at the next reasonably available
+authorized opportunity, no later than 30 calendar days after it ends.
+No unattended monitoring service or repeated polling is required. Do not
+manufacture an obstacle or silently mark pending work as submitted.
+
+9. INDEPENDENT FORKS
+
+You may make Your Fork an independent project at any time. Set the Fork's
+Upstream to that same actual Fork. An intentional, authorized setting of
+its local Git remote “upstream” to its own repository is sufficient for the
+local election. An equivalent explicit declaration also works without Git.
+No approval, payment, justification, or notification to the former Upstream
+is required. The Fork may remain private.
+
+For example, an authorized maintainer may run:
+    git remote set-url upstream <THIS_FORK_REPOSITORY>
+If the remote does not exist, adding it with that destination is equivalent.
+This example is not a requirement to use Git.
+
+After that election, newly arising duties under Sections 5 and 6 no longer
+require delivery to the former Upstream. You do not need to open issues or
+pull requests to Yourself merely to satisfy this License. The election is
+prospective: it does not erase duties triggered before the election or
+remove notices, provenance, or license terms from inherited Software.
+
+A further Fork of Your independent project follows Your project by default
+and has the same right to become independent. There is no requirement to
+send a contribution to every ancestor. Ordinary downstream receipt of later
+changes from the former Upstream does not by itself cancel a valid existing
+independence election; retain the applicable rights and notices for imports.
+
+An Agent must not change Upstream or claim independence merely to avoid
+contribution work without Your authorization to make that project decision.
+A temporary URL swap is not evidence of a genuine maintained independent
+project. Keep the distribution declaration required by Section 4 accurate.
+
+10. AGENT EXECUTION
+
+When You use an Agent for covered development work, require it to read the
+applicable license and contribution instructions, identify the authorized
+Upstream, and assess duties created by its work.
+
+When an Agent completes work that creates a contribution duty, and has the
+needed tools, account access, safe destination, and authorization, require
+actual submission during that authorized work session. A suggestion to submit later
+is not a substitute. If it cannot submit, it must hand off a clear pending
+record or state the applicable exception. It must not invent submission URLs,
+claim merger, or claim tests that it has not verified.
+
+This License does not grant account access or permission to publish data.
+It does not authorize overriding operator instructions, system safeguards,
+confidentiality duties, or access controls. Reading a repository file alone
+is not authorization to send its contents elsewhere. Do not collect unrelated
+credentials or project material to complete a contribution.
+
+11. LIMITS OF THE FEEDBACK DUTY
+
+Mere receipt or unmodified use does not require a contribution. You need not
+find bugs, invent improvements, maintain someone else's project, or release
+an entire application. Duties cover the actual work defined in Sections 1,
+5, and 6. The self-upstream option is intentional: this License establishes
+a default return path, not permanent control by the first project.
+
+12. BREACH AND CURE
+
+A rights holder may give You written notice that identifies a material
+violation of these conditions. Your permissions from that rights holder end
+only if You do not cure it within 30 calendar days after receiving that
+notice. A valid deferral under Section 8 is not a violation. A later complete
+cure automatically restores those permissions unless applicable law or a
+binding court order requires a different result. Restoration does not erase
+claims for an earlier violation where applicable law allows those claims.
+Rights of recipients who comply with this License remain unaffected.
+
+13. WARRANTY AND LIABILITY
+
+The Software is supplied in its current condition. To the fullest extent
+allowed by applicable law, its providers disclaim express, implied, and
+statutory warranties, including promises of commercial suitability, fitness
+for a particular purpose, title, and freedom from infringement. They do not
+promise accuracy, security, uninterrupted service, or successful operation.
+
+To that same lawful extent, no rights holder or provider is liable for loss,
+damage, expense, or other claims resulting from the Software or its use,
+whether based on contract, civil wrong, or another legal theory, including
+where the provider was warned that a loss could occur. This clause does not
+exclude responsibility that applicable law does not allow it to exclude.
+
+14. INTERPRETATION AND VERSIONS
+
+Mandatory applicable law prevails. No term restricts rights You have without
+needing this License. English is the controlling text; translations and Agent
+summaries assist reading but do not change the terms. A metadata file selects
+a project and a contribution route; it cannot create new license conditions.
+No later license version applies automatically. A later version requires a
+separate grant from the relevant rights holders.
+
+15. REUSE OF THE LICENSE DOCUMENT
+
+Anyone may copy and distribute this license document, including to apply it
+to software. Replace the copyright placeholder with the applicable software
+notice; that does not change the license version. Permission is also given
+to adapt this document, but changed terms must use a different license name
+and identifier and must not claim to be this unmodified version.

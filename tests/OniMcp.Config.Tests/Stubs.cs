@@ -30,7 +30,16 @@ namespace UnityEngine
 {
     public static class Application
     {
-        public static void OpenURL(string url) { }
+        public static string LastOpenedUrl { get; private set; }
+        public static void OpenURL(string url) { LastOpenedUrl = url; }
+    }
+}
+
+namespace PeterHan.PLib
+{
+    public sealed class DynamicOptionAttribute : Attribute
+    {
+        public DynamicOptionAttribute(Type handler) { }
     }
 }
 
@@ -56,17 +65,38 @@ namespace PeterHan.PLib.Options
 
     public sealed class OptionAttribute : Attribute
     {
-        public OptionAttribute(string title, string tooltip, string category) { }
+        public string Title { get; }
+        public string Tooltip { get; }
+        public string Category { get; }
+
+        public OptionAttribute(string title, string tooltip, string category)
+        {
+            Title = title;
+            Tooltip = tooltip;
+            Category = category;
+        }
     }
 
     public sealed class TextBlockOptionsEntry : IOptionsEntry
     {
-        public TextBlockOptionsEntry(string name, OptionAttribute option) { }
+        public OptionAttribute Option { get; }
+        public TextBlockOptionsEntry(string name, OptionAttribute option) { Option = option; }
     }
 
     public sealed class ButtonOptionsEntry : IOptionsEntry
     {
+        public string Name { get; }
+        public OptionAttribute Option { get; }
         public object Value { get; set; }
-        public ButtonOptionsEntry(string name, OptionAttribute option) { }
+        public ButtonOptionsEntry(string name, OptionAttribute option)
+        {
+            Name = name;
+            Option = option;
+        }
     }
+}
+
+namespace OniMcp.Config
+{
+    public sealed class MaskedTokenOptionsEntry : PeterHan.PLib.Options.IOptionsEntry { }
 }

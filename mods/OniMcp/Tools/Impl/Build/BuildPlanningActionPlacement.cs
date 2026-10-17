@@ -306,7 +306,7 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                     bool placementConflict = errors.Any(item =>
                         EqualsIgnoreCase(item.TryGetValue("reasonCode", out object itemReason) ? itemReason?.ToString() : null, "utility_path_conflict")
                         || EqualsIgnoreCase(item.TryGetValue("reasonCode", out itemReason) ? itemReason?.ToString() : null, "placement_conflict"));
-                    string networkError = null; bool networkConnected = dryRun || !IsCompletedUtilityPath(def, path) || RefreshAndValidateUtilityPathNetwork(def, path, out networkError);
+                    string networkError = null; bool networkConnected = dryRun || !IsCompletedUtilityPath(def, path) || ValidateCompletedUtilityPathNetwork(def, path, out networkError);
                     if (!networkConnected) errors.Add(new Dictionary<string, object> { ["reasonCode"] = "utility_network_incomplete", ["error"] = networkError });
                     int connectedCells = dryRun ? valid : CountUtilityPathCells(def, path, worldId);
                     bool complete = dryRun ? errors.Count == 0 && valid == path.Count : connectedCells >= path.Count && networkConnected;
@@ -324,6 +324,9 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                 ["autoMarkedObstructions"] = autoMarked,
                 ["failed"] = errors.Count,
                 ["connectedCells"] = connectedCells,
+                        ["networkConnected"] = !dryRun && IsCompletedUtilityPath(def, path) ? (object)networkConnected : null,
+                        ["phase"] = dryRun ? "preview" : "orders_queued",
+                        ["requiresVerification"] = !dryRun,
                 ["complete"] = complete,
                 ["success"] = complete,
                 ["autoDigLimitReached"] = autoDigContext.LimitReached,

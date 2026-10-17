@@ -73,12 +73,10 @@ namespace OniMcp.Server
                 }
 
                 var src = icon["src"];
-                Uri parsedSrc;
-                if (src?.Type != JTokenType.String
-                    || !Uri.TryCreate((string)src, UriKind.Absolute, out parsedSrc))
+                if (src?.Type != JTokenType.String || !IsModernSafeIconUri((string)src))
                 {
                     errorMessage =
-                        $"params._meta.io.modelcontextprotocol/clientInfo.icons[{i}].src must be an absolute URI string";
+                        $"params._meta.io.modelcontextprotocol/clientInfo.icons[{i}].src must be an HTTP, HTTPS, or Base64 image data URI";
                     return false;
                 }
 
