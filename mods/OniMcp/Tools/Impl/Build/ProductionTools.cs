@@ -104,7 +104,7 @@ namespace OniMcp.Tools
                                 continue;
                             if (queuedOnly && fabricator.GetRecipeQueueCount(recipe) == 0)
                                 continue;
-                            if (!includeLocked && !recipe.IsRequiredTechUnlocked())
+                            if (!includeLocked && !recipe.IsRequiredTechOrPOIUnlocked())
                                 continue;
                             if (!RecipeMatches(recipe, query))
                                 continue;
@@ -168,8 +168,9 @@ namespace OniMcp.Tools
                     string mode = (args["mode"]?.ToString() ?? "set").Trim().ToLowerInvariant();
                     int requested = Math.Max(0, ToolUtil.GetInt(args, "count") ?? 1);
                     int next;
-                    if (!TryComputeQueueCount(before, mode, requested, out next))
-                        return CallToolResult.Error("mode must be set, add, remove, infinite or clear");
+                    string error;
+                    if (!ProductionQueuePolicy.TryCompute(recipe, before, mode, requested, out next, out error))
+                        return CallToolResult.Error(error);
 
                     fabricator.SetRecipeQueueCount(recipe, next);
 

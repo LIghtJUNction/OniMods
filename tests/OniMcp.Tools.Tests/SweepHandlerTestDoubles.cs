@@ -37,13 +37,13 @@ internal sealed class SweepTestPriority
     internal int Value { get; set; } = 3;
 }
 
-internal sealed class KPrefabID
+internal sealed partial class KPrefabID
 {
     internal HashSet<string> Tags { get; } = new HashSet<string>();
     internal bool HasTag(string tag) => Tags.Contains(tag);
 }
 
-internal static class GameTags
+internal static partial class GameTags
 {
     internal const string Equipped = "Equipped";
     internal const string Stored = "Stored";
@@ -96,24 +96,18 @@ namespace OniMcp.Tools
             return parameters;
         }
 
-        // Share the existing Tools fixture's rectangle representation.
-        private static int RectCellCount(Tuple<int, int, int, int> rect)
-        {
-            return (rect.Item3 - rect.Item1 + 1) * (rect.Item4 - rect.Item2 + 1);
-        }
-
         private static int SweepCell(SweepTestPickupable pickupable) => pickupable.Cell;
 
-        private static bool CellInRect(int cell, Tuple<int, int, int, int> rect, int worldId)
+        private static bool CellInRect(int cell, Dictionary<string, int> rect, int worldId)
         {
             int x = cell % 1000;
             int y = cell / 1000;
-            return x >= rect.Item1 && x <= rect.Item3 && y >= rect.Item2 && y <= rect.Item4
+            return x >= rect["x1"] && x <= rect["x2"] && y >= rect["y1"] && y <= rect["y2"]
                 && Components.Pickupables.Items.Any(item => item.Cell == cell
                     && (worldId < 0 || item.WorldId == worldId));
         }
 
-        private static Dictionary<string, object> ScanLiquidCells(Tuple<int, int, int, int> rect, int worldId, int limit)
+        private static Dictionary<string, object> ScanLiquidCells(Dictionary<string, int> rect, int worldId, int limit)
         {
             return new Dictionary<string, object>
             {

@@ -187,7 +187,15 @@ namespace OniMcp.Tools
                     if (!string.IsNullOrEmpty(error))
                         return CallToolResult.Error(error);
                 }
-                var materials = ParseMaterials(args["materials"]?.ToString(), def);
+                var world = ClusterManager.Instance?.GetWorld(module.GetMyWorldId());
+                if (world?.worldInventory == null)
+                    return CallToolResult.Error("Target world inventory is not available");
+                IList<Tag> materials;
+                var materialError = RocketModuleMaterialPolicy.Resolve(def, args["materials"]?.ToString(),
+                    tag => world.worldInventory.GetAmount(tag, true),
+                    MaterialSelector.AllowInsufficientMaterialBuild(), out materials);
+                if (materialError != null)
+                    return CallToolResult.Error(JsonConvert.SerializeObject(materialError, McpJsonUtil.Settings));
                 created = action == "add" ? module.AddModule(def, materials) : module.ConvertModule(def, materials);
                 if (created == null)
                     return CallToolResult.Error("Game rejected module add/replace request");
@@ -332,17 +340,6 @@ namespace OniMcp.Tools
                     return condition.GetStatusTooltip(ready: false, module.gameObject, def);
             }
             return null;
-        }
-
-        private static IList<Tag> ParseMaterials(string materials, BuildingDef def)
-        {
-            if (string.IsNullOrWhiteSpace(materials))
-                return def.DefaultElements();
-            return materials.Split(',')
-                .Select(item => item.Trim())
-                .Where(item => !string.IsNullOrEmpty(item))
-                .Select(item => new Tag(item))
-                .ToList();
         }
 
         private static ReorderableBuilding FindModule(JObject args)
