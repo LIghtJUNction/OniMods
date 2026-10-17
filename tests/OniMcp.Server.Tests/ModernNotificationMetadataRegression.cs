@@ -36,7 +36,7 @@ internal static class ModernNotificationMetadataRegressionEntry
                 Timeout = TimeSpan.FromSeconds(5)
             })
             {
-                string[] malformedSubscriptionIds = { "{}", "[]", "true", "null", "18001.5" };
+                string[] malformedSubscriptionIds = { "{}", "[]", "true", "null" };
                 for (int i = 0; i < malformedSubscriptionIds.Length; i++)
                 {
                     string notification = ProgressNotification(malformedSubscriptionIds[i]);
@@ -53,7 +53,7 @@ internal static class ModernNotificationMetadataRegressionEntry
                     }
                 }
 
-                string[] validSubscriptionIds = { "\"stream-18001\"", "18001" };
+                string[] validSubscriptionIds = { "\"stream-18001\"", "18001", "18001.5" };
                 for (int i = 0; i < validSubscriptionIds.Length; i++)
                 {
                     using (var response = PostModernNotification(client,

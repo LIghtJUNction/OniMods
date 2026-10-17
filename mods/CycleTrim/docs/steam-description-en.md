@@ -10,11 +10,10 @@ v0.3.1 excludes `IdleChore`. Idle duplicants use the vanilla immediate refresh p
 If a current ONI build or another mod rewrites `Manager.TickFrame()`, CycleTrim now skips the async path-probe quota patch instead of throwing and disabling the whole mod.
 
 [h2]What this mod changes[/h2]
-CycleTrim removes repeated work from six high-frequency simulation paths. It does not change duplicant priorities, schedules, path rules, or chore conditions.
+CycleTrim removes repeated work from five high-frequency simulation paths. It does not change duplicant priorities, schedules, path rules, or chore conditions.
 
 [h2]Key optimizations[/h2]
 [list]
-[*] Smart reservoirs: reduce repeated automation signal emissions.
 [*] Pickup candidate lookup: cache candidate cost computation and candidate ranking prep.
 [*] Busy duplicants: throttle heavy refresh work for active workers; `IdleChore` explicitly bypasses throttling so idle workers retain vanilla responsiveness.
 [*] Stationary critters: reduce repeated `Navigator` probe work and navigation hotspot pressure.
@@ -23,7 +22,7 @@ CycleTrim removes repeated work from six high-frequency simulation paths. It doe
 [/list]
 
 [h2]Compatibility[/h2]
-Supports the base game and DLC. Duplicants, robots, custom Brain groups, and priority paths use vanilla code whenever a patch does not apply.
+Supports the base game and DLC. Duplicants, robots, custom Brain groups, and priority paths use vanilla code whenever a patch does not apply. CycleTrim no longer intercepts `SmartReservoir` automation signaling, preserving vanilla repeated notifications for stock reservoirs and third-party buildings that reuse the component.
 
 [h2]Performance[/h2]
 [list]

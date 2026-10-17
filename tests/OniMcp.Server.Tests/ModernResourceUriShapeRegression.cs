@@ -60,9 +60,26 @@ internal static class ModernResourceUriShapeRegressionEntry
                         "Non-string modern resources/read uri allocated a legacy session");
                 }
 
-                const string missingUri = "oni://missing-uri-shape-regression";
+                const string relativeUri = "relative/resource";
                 using (var response = SendModern(client,
                     "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":33602,\"params\":{"
+                    + "\"uri\":\"" + relativeUri + "\"," + ModernMeta() + "}}",
+                    "resources/read", relativeUri))
+                {
+                    Assert(response.StatusCode == HttpStatusCode.BadRequest,
+                        "Modern resources/read accepted a relative uri with HTTP " + (int)response.StatusCode);
+                    JObject body = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Assert((int?)body["error"]?["code"] == -32602,
+                        "Relative modern resources/read uri was not classified as InvalidParams");
+                    Assert((int?)body["id"] == 33602,
+                        "Relative modern resources/read uri changed the request id");
+                    Assert(!response.Headers.Contains("Mcp-Session-Id"),
+                        "Relative modern resources/read uri allocated a legacy session");
+                }
+
+                const string missingUri = "oni://missing-uri-shape-regression";
+                using (var response = SendModern(client,
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":33603,\"params\":{"
                     + "\"uri\":\"" + missingUri + "\"," + ModernMeta() + "}}",
                     "resources/read", missingUri))
                 {

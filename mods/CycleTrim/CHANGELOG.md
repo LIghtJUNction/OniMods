@@ -2,6 +2,11 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
+## 2026-09-19 — compatibility correction
+
+- Stop patching `SmartReservoir.OnSpawn` and `SmartReservoir.UpdateLogicCircuit(object)`. Pinned 744825 source shows repeated equal-value `SendSignal` calls remain observable through `LogicEventSender.SetValue` / `LogicValueChanged`, so suppressing them is not behavior-equivalent.
+- Restore vanilla `SmartReservoir` signal/event behavior for stock reservoirs and third-party buildings that reuse the component. This is a correctness/compatibility correction, not a performance gain; real ONI runtime acceptance is still required before merge.
+
 ## 2026-09-12 — 0.3.2
 
 - Invalidate path-probe results when replacement work is queued, discarded, unsupported, or fails; invalidate cached navigation state when the `NavGrid` object changes.

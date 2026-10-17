@@ -136,23 +136,6 @@ namespace OniMcp.Tools
             return conflicts;
         }
 
-        private static Dictionary<string, object> ExistingBlueprintCompletionSafetyFailure(
-            BuildingDef def, PlacementDetails placement, GameObject blueprint)
-        {
-            var validation = ValidateFootprint(placement, blueprint);
-            if (!HasUnsafeExecutionConflict(validation))
-                return null;
-            return InstantCompletionFailureResult(def, placement, blueprint,
-                new Dictionary<string, object>
-                {
-                    ["requested"] = true,
-                    ["mutationAttempted"] = false,
-                    ["error"] = "existing blueprint completion safety changed; refusing to delete the blueprint or overwrite a bridge endpoint",
-                    ["safety"] = "existing_blueprint_pre_completion_recheck",
-                    ["obstructions"] = validation.Obstructions
-                }, placedByThisRequest: false);
-        }
-
         private static IEnumerable<BridgeEndpointTarget> NativeBridgeEndpointTargets(
             BuildingDef def, PlacementDetails placement)
         {

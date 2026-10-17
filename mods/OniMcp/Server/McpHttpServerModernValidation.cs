@@ -15,7 +15,7 @@ namespace OniMcp.Server
             if (rawMessage.Property("id") != null && !IsValidModernRequestId(rawMessage["id"]))
             {
                 error = JsonRpcResponse.MakeError(null, McpErrorCode.InvalidRequest,
-                    "Modern request id must be a string or integer");
+                    "Modern request id must be a string or number");
                 return false;
             }
 
@@ -141,15 +141,23 @@ namespace OniMcp.Server
                 return false;
             }
 
-            if (string.Equals(method, "resources/read", StringComparison.Ordinal))
+            if (string.Equals(method, "tools/call", StringComparison.Ordinal))
             {
-                JToken uriToken = (rawMessage["params"] as JObject)?["uri"];
-                if (uriToken?.Type != JTokenType.String || string.IsNullOrEmpty((string)uriToken))
+                JToken nameToken = (rawMessage["params"] as JObject)?["name"];
+                if (nameToken?.Type != JTokenType.String)
                 {
                     error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams,
-                        "params.uri must be a non-empty string for resources/read");
+                        "params.name must be a string for tools/call");
                     return false;
                 }
+            }
+
+            string resourceUriError;
+            if (string.Equals(method, "resources/read", StringComparison.Ordinal)
+                && !ValidateModernResourceReadUri(rawMessage["params"] as JObject, out resourceUriError))
+            {
+                error = JsonRpcResponse.MakeError(rawMessage["id"], McpErrorCode.InvalidParams, resourceUriError);
+                return false;
             }
 
             if (expectedName != null)
@@ -184,14 +192,6 @@ namespace OniMcp.Server
             }
 
             return true;
-        }
-
-        private static bool IsValidModernProgressToken(JToken progressToken)
-        {
-            return progressToken != null
-                && (progressToken.Type == JTokenType.String
-                    || progressToken.Type == JTokenType.Integer
-                    || progressToken.Type == JTokenType.Float);
         }
 
         private static bool IsValidModernLogLevel(JToken logLevel)
@@ -394,8 +394,15 @@ namespace OniMcp.Server
 
         private static bool IsValidModernRequestId(JToken requestId)
         {
-            return requestId != null
-                && (requestId.Type == JTokenType.String || requestId.Type == JTokenType.Integer);
+            if (requestId == null)
+                return false;
+            if (requestId.Type == JTokenType.String || requestId.Type == JTokenType.Integer)
+                return true;
+            if (requestId.Type != JTokenType.Float)
+                return false;
+
+            double numericValue = requestId.Value<double>();
+            return !double.IsNaN(numericValue) && !double.IsInfinity(numericValue);
         }
 
         private static bool RequiresModernNameHeader(string method)
@@ -436,7 +443,11 @@ namespace OniMcp.Server
             string payload = headerValue.Substring(Base64HeaderPrefix.Length, payloadLength);
             try
             {
-                decodedValue = StrictUtf8.GetString(Convert.FromBase64String(payload));
+                byte[] bytes = Convert.FromBase64String(payload);
+                if (!string.Equals(Convert.ToBase64String(bytes), payload, StringComparison.Ordinal))
+                    return false;
+
+                decodedValue = StrictUtf8.GetString(bytes);
                 return true;
             }
             catch (FormatException)

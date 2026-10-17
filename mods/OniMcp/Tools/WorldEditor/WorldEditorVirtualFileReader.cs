@@ -13,44 +13,25 @@ namespace OniMcp.Tools
 
         public static string ReadFileDirectly(string path)
         {
-            bool isMd = path.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
+            if (path == "/active/map/viewport.md" || path == "/active/map/index.md")
+                return ReadMapFileWithArgs(new JObject(), path);
+            if (path.StartsWith("/active/map/layers/", StringComparison.Ordinal)
+                && path.EndsWith(".md", StringComparison.Ordinal))
+                return ReadMapLayerWithArgs(new JObject(), path);
             HashedString activeMode = OverlayScreen.Instance != null ? OverlayScreen.Instance.mode : OverlayModes.None.ID;
             string viewName = GetOverlayViewName(activeMode);
-            bool isTempView = activeMode == OverlayModes.Temperature.ID;
 
             if (path == "/active/screenshots/index.md")
                 return ReadScreenshotsIndexMarkdown();
 
-            if (path == "/active/map/viewport.html" || path == "/active/map/viewport.md" || path == "/active/map/index.html" || path == "/active/map/index.md")
+            if (path == "/active/map/viewport.html" || path == "/active/map/index.html")
             {
                 try
                 {
-                    if (Camera.main == null)
+                    if (!TryGetCameraBounds(out int xMin, out int xMax, out int yMin, out int yMax))
                         return "<h1>Error</h1><p>Camera not initialized or main camera is not available.</p>";
 
-                    var cam = Camera.main;
-                    var pos = cam.transform.position;
-                    float size = cam.orthographicSize;
-                    float aspect = cam.aspect;
-
-                    int xMin;
-                    int xMax;
-                    int yMin;
-                    int yMax;
-                    if (!TryGetSynchronizedViewportBounds(out xMin, out yMin, out xMax, out yMax))
-                    {
-                        xMin = Mathf.Clamp(Mathf.RoundToInt(pos.x - size * aspect), 0, Grid.WidthInCells - 1);
-                        xMax = Mathf.Clamp(Mathf.RoundToInt(pos.x + size * aspect), 0, Grid.WidthInCells - 1);
-                        yMin = Mathf.Clamp(Mathf.RoundToInt(pos.y - size), 0, Grid.HeightInCells - 1);
-                        yMax = Mathf.Clamp(Mathf.RoundToInt(pos.y + size), 0, Grid.HeightInCells - 1);
-                    }
-
                     int width = xMax - xMin + 1;
-
-                    if (isMd)
-                    {
-                        return GetMapMd($"[视图: {viewName}] Camera Viewport Map (X: {xMin}~{xMax}, Y: {yMin}~{yMax})", xMin, xMax, yMin, yMax);
-                    }
 
                     var sbCells = new StringBuilder();
                     for (int y = yMax; y >= yMin; y--)
@@ -181,7 +162,7 @@ namespace OniMcp.Tools
                 && TryParseZoomPath(SaveRelativePath(path), out int zoomX1, out int zoomY1, out int zoomX2, out int zoomY2))
                 return ReadZoomMarkdown(zoomX1, zoomY1, zoomX2, zoomY2, DefaultZoomViews());
 
-            if (path.StartsWith("/active/map/layers/layer_", StringComparison.Ordinal) && (path.EndsWith(".html", StringComparison.Ordinal) || path.EndsWith(".md", StringComparison.Ordinal)))
+            if (path.StartsWith("/active/map/layers/layer_", StringComparison.Ordinal) && path.EndsWith(".html", StringComparison.Ordinal))
             {
                 try
                 {
@@ -216,11 +197,6 @@ namespace OniMcp.Tools
                             int yMin = world.WorldOffset.y + relYMin;
                             int yMax = world.WorldOffset.y + relYMax;
                             int width = world.WorldSize.x;
-
-                            if (isMd)
-                            {
-                                return GetMapMd($"[视图: {viewName}] Map Layer Y = {relYMin} to {relYMax}", xMin, xMax, yMin, yMax);
-                            }
 
                             var sbCells = new StringBuilder();
                             for (int y = yMax; y >= yMin; y--)
