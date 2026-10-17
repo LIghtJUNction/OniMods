@@ -16,19 +16,9 @@ namespace OniMcp.Tools
         private static readonly Dictionary<string, McpTool> _tools = new Dictionary<string, McpTool>();
         private static readonly Dictionary<string, McpTool> _internalOperations = new Dictionary<string, McpTool>();
         private static readonly Dictionary<string, string> _aliases = new Dictionary<string, string>();
-        private static readonly HashSet<string> DefaultPublicToolNames = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "building_control",
-            "game_control",
-            "navigation_control",
-            "orders_control",
-            "benchmark",
-            "server_control",
-            "world_editor",
-        };
         private static bool _initialized;
         private static readonly OniToolRegistryCache ToolCache = new OniToolRegistryCache();
-        private static List<McpToolInfo> _cachedCoreToolInfos, _cachedAllToolInfos;
+        private static List<McpToolInfo> _cachedToolInfos;
 
         /// <summary>
         /// 初始化所有工具
@@ -37,7 +27,7 @@ namespace OniMcp.Tools
         {
             if (_initialized) return;
 
-            Register(CoreToolEnglishDescriptions.Apply(ServerControlEntryTools.ControlServer()));
+            Register(CoreToolEnglishDescriptions.Apply(ServerTools.ControlServer()));
             Register(CoreToolEnglishDescriptions.Apply(WorldEditorTools.ControlWorldEditor()));
             Register(CoreToolEnglishDescriptions.Apply(NavigationControlTools.ControlNavigation()));
             Register(CoreToolEnglishDescriptions.Apply(BuildingControlTools.ControlBuilding()));
@@ -49,7 +39,7 @@ namespace OniMcp.Tools
             RegisterInternal(ReadTools.ControlRead());
             RegisterInternal(SearchControlTools.ControlSearch());
             RegisterInternal(CoordinateControlTools.ControlCoordinate());
-            BuildToolInfoCache();
+            _cachedToolInfos = BuildToolInfos();
             _initialized = true;
         }
 
@@ -64,8 +54,7 @@ namespace OniMcp.Tools
             }
 
             ToolCache.Clear();
-            _cachedCoreToolInfos = null;
-            _cachedAllToolInfos = null;
+            _cachedToolInfos = null;
         }
 
         private static void RegisterInternal(McpTool operation)
@@ -106,35 +95,19 @@ namespace OniMcp.Tools
         }
 
         /// <summary>
-        /// 获取 Tool 元信息（默认供 tools/list 暴露低 token 公开入口）
+        /// 获取公开 Tool 元信息；内部操作不进入 tools/list。
         /// </summary>
-        public static List<McpToolInfo> GetToolInfos(bool includeAll = false)
+        public static List<McpToolInfo> GetToolInfos()
         {
-            var cached = includeAll ? _cachedAllToolInfos : _cachedCoreToolInfos;
-            if (cached != null)
-                return new List<McpToolInfo>(cached);
-
-            BuildToolInfoCache();
-            cached = includeAll ? _cachedAllToolInfos : _cachedCoreToolInfos;
-            if (cached != null)
-                return new List<McpToolInfo>(cached);
-
-            return BuildToolInfos(includeAll);
+            if (_cachedToolInfos == null)
+                _cachedToolInfos = BuildToolInfos();
+            return new List<McpToolInfo>(_cachedToolInfos);
         }
 
-        private static void BuildToolInfoCache()
-        {
-            ToolCache.Ensure(_tools.Values);
-            _cachedCoreToolInfos = BuildToolInfos(includeAll: false);
-            _cachedAllToolInfos = BuildToolInfos(includeAll: true);
-        }
-
-        private static List<McpToolInfo> BuildToolInfos(bool includeAll)
+        private static List<McpToolInfo> BuildToolInfos()
         {
             var infos = new List<McpToolInfo>();
-            ToolCache.Ensure(_tools.Values);
-            foreach (var tool in ToolCache.GetVisibleSnapshot()
-                .Where(tool => !tool.Hidden && (includeAll || DefaultPublicToolNames.Contains(tool.Name))))
+            foreach (var tool in GetVisibleTools())
             {
                 var properties = new Dictionary<string, SchemaProperty>();
                 var required = new List<string>();
@@ -185,7 +158,7 @@ namespace OniMcp.Tools
 
         public static int GetDefaultToolInfoCount()
         {
-            return _cachedCoreToolInfos?.Count ?? _tools.Values.Count(tool => DefaultPublicToolNames.Contains(tool.Name));
+            return _cachedToolInfos?.Count ?? _tools.Values.Count(tool => !tool.Hidden);
         }
 
         /// <summary>

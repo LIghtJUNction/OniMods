@@ -59,13 +59,17 @@ namespace OniMcp.Server
             if (request == null)
                 return 0;
 
+            List<McpSession> prunedSessions;
             List<McpSession> sessions;
+            System.DateTime now = _legacySessionPolicy.UtcNow();
             lock (_sessionLock)
             {
+                prunedSessions = PruneExpiredLegacySessionsLocked(now);
                 sessions = _sessions.Values
                     .Where(session => !requireSampling || session.Capabilities?.Sampling != null)
                     .ToList();
             }
+            ClosePrunedLegacySessions(prunedSessions);
 
             int queued = 0;
             foreach (var session in sessions)

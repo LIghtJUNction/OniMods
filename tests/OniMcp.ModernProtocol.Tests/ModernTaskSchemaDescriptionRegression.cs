@@ -18,6 +18,7 @@ internal static class ModernTaskSchemaDescriptionRegressionEntry
 
     private static void Main()
     {
+        UnsupportedProtocolVersionPreParseRegression.Run();
         RunModernTaskSchemaDescriptionRegression();
 
         var existing = typeof(RegressionEntry).GetMethod("Main",

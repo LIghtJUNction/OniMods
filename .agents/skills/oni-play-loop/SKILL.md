@@ -1,9 +1,14 @@
 ---
 name: oni-mcp-play-loop
-description: 当用户要求 agent 通过 MCP 循环游玩 Oxygen Not Included、自动玩一段时间、继续殖民地，或运行暂停-规划-恢复循环时使用。强制执行严格的 pause -> observe -> plan -> execute -> resume briefly -> pause -> verify 循环，读取 game_control domain=ui uiDomain=edit_mark action=list，限制运行窗口，并在风险或歧义决策前停下等待用户确认。
+description: 当用户要求 agent 通过 MCP 循环游玩 Oxygen Not Included、自动玩一段时间、继续殖民地，或运行暂停-规划-恢复循环时使用。强制执行暂停、观察、规划、执行、短暂恢复、再次暂停和验证的循环，读取 game_control domain=ui uiDomain=edit_mark action=list，限制运行窗口，并在风险或歧义决策前停下等待用户确认。
 ---
 
 # ONI MCP 游玩循环
+
+## 规划时按阶段选模块
+
+需要决定殖民地下一项工作时，读取 [阶段策略技能](../oni-mcp-colony-strategy/SKILL.md)，只加载当前瓶颈的参考。把短期补给和长期模块分开，先补前置缺口，保留旧设施直到新产出通过验证。报告相关建议时附原文链接；不以旧图纸替代当前精确地图预检。固定的已授权维护任务不需要每轮重读攻略。
+
 
 ## 目的
 

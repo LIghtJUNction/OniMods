@@ -15,6 +15,18 @@ namespace UnityEngine
     }
 }
 
+public sealed class Game
+{
+    public static Game Instance { get; set; }
+    public bool Loading { get; set; }
+    public bool IsLoading() { return Loading; }
+}
+
+public static class Grid
+{
+    public static int CellCount { get; set; } = 1;
+}
+
 namespace OniMcp.Support
 {
     public static class OniMcpLog
@@ -90,6 +102,7 @@ namespace OniMcp.Tools
     public static class OniToolRegistry
     {
         public static int Calls;
+        public static Action<string, JObject> OnCall;
         public static int MiddlewareCalls;
         public static string LastName;
         public static JObject LastArguments;
@@ -212,16 +225,20 @@ namespace OniMcp.Tools
             Calls++;
             LastName = name;
             LastArguments = arguments;
+            OnCall?.Invoke(name, arguments);
             return CallToolResult.Text("ok");
         }
     }
     public static class OniResourceRegistry
     {
         public static int ResourceReads;
+        public static int CatalogReads;
 
         public static List<McpResourceInfo> GetResourceInfos() => new List<McpResourceInfo>
         {
             new McpResourceInfo { Uri = "oni://test", Name = "test", MimeType = "text/plain" },
+            new McpResourceInfo { Uri = "oni://tools/manifest", Name = "server_control", MimeType = "application/json" },
+            new McpResourceInfo { Uri = "oni://mcp/sessions", Name = "server_control", MimeType = "application/json" },
             new McpResourceInfo { Uri = "oni://测试", Name = "unicode-test", MimeType = "text/plain" },
             new McpResourceInfo { Uri = "oni://world/coordinate-screenshot", Name = "navigation_control", MimeType = "application/json" }
         };
@@ -244,6 +261,19 @@ namespace OniMcp.Tools
 
         public static ReadResourceResult ReadResource(string uri)
         {
+            if (uri != null && (uri.StartsWith("oni://tools/manifest", StringComparison.Ordinal)
+                || uri == "oni://mcp/sessions"))
+            {
+                CatalogReads++;
+                return new ReadResourceResult
+                {
+                    Contents = new List<TextResourceContent>
+                    {
+                        new TextResourceContent { Uri = uri, MimeType = "application/json", Text = "{\"catalog\":true}" }
+                    }
+                };
+            }
+
             if (uri == "oni://world/coordinate-screenshot")
             {
                 ResourceReads++;
