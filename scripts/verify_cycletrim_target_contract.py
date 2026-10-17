@@ -451,7 +451,7 @@ def main() -> int:
             ('"OnPrefabInit"', "BrainScheduler lifecycle reset target missing"),
             ("ResetRateCaps();", "BrainScheduler lifecycle rate reset missing"),
             (
-                "new CreatureBrainScheduleCursor(normalAllowance)",
+                "new CreatureBrainScheduleCursor(runningAllowance)",
                 "shared scheduler cursor missing",
             ),
             ("cursor.TrySelect(", "shared scheduler selection missing"),
@@ -503,7 +503,7 @@ def main() -> int:
                 "production scheduler duplicated shared scan algorithm"
             )
         if (
-            "new CreatureBrainScheduleCursor(normalAllowance)"
+            "new CreatureBrainScheduleCursor(runningAllowance)"
             not in scheduler_simulator_source
         ):
             generation_failures.append(
