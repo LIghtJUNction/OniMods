@@ -78,6 +78,12 @@ Support OniMcp development and testing: [Donate](https://donate.lmm.best/?projec
 - [scripts/verify_onimcp_tool_surface.py](../../scripts/verify_onimcp_tool_surface.py)
 - [CHANGELOG.md](CHANGELOG.md)
 
+## Compact data reads
+
+The default oni://world/text-map response uses the scan profile (run-length encoded rows, coordinates, summary and a bounded object list) to reduce MCP context usage. Use profile=standard for annotated Markdown, detail=full for per-cell details, or set includeDupes, includeElements, objectLimit, and elementLimit as needed. profile=standard retains the previous default detail levels; format=json remains available for structured consumers.
+
+The default oni://resources/inventory response retains item identity, counts, mass, stored/loose counts and meaningful differences between mass and units. Pass includeDetails=true for the complete legacy item fields, including a sample coordinate. Use resource, worldId and limit to narrow a query further. Compact inventory data is aggregated and should not be used to locate individual items.
+
 ## Compatibility and Stability
 
 - Before `1.0.0`, tool names, parameters, and response fields can change.

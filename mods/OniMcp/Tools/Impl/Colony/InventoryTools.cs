@@ -143,6 +143,7 @@ namespace OniMcp.Tools
                         Description = "最多返回多少组资源，默认 100，最大 500",
                         Required = false
                     },
+                    ["includeDetails"] = new McpToolParameter { Type = "boolean", Description = "返回全部字段及样本坐标；默认 false（精简模式）", Required = false },
                     ["visibleOnly"] = new McpToolParameter
                     {
                         Type = "boolean",
@@ -225,10 +226,11 @@ namespace OniMcp.Tools
                         }
                     }
 
+                    bool includeDetails = TryGetBool(args, "includeDetails", false);
                     var items = groups.Values
                         .OrderByDescending(item => item.TotalMassKg)
                         .Take(limit)
-                        .Select(item => item.ToDictionary())
+                        .Select(item => includeDetails ? item.ToDictionary() : item.ToCompactDictionary())
                         .ToList();
 
                     var result = new Dictionary<string, object>

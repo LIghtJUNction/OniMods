@@ -15,6 +15,7 @@ internal static class BenchmarkMetadataRegressionEntry
         ObservationReadinessRegression.Run();
         FarmingUprootRegression.Run();
         RunBenchmarkMetadataRegression();
+        InventoryTools.RunCompactInventoryRegression();
 
         var existing = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (existing == null)

@@ -22,6 +22,27 @@ namespace OniMcp.Tools
             public int SampleY;
             public HashSet<int> WorldIds;
 
+            public Dictionary<string, object> ToCompactDictionary()
+            {
+                var result = new Dictionary<string, object>
+                {
+                    ["name"] = Name,
+                    ["prefabId"] = PrefabId,
+                    ["totalMassKg"] = Math.Round(TotalMassKg, 3),
+                    ["count"] = Count,
+                    ["storedCount"] = StoredCount,
+                    ["looseCount"] = LooseCount
+                };
+                if (ElementId != PrefabId)
+                    result["elementId"] = ElementId;
+                if (Math.Abs(TotalUnits - TotalMassKg) > 0.001f)
+                    result["totalUnits"] = Math.Round(TotalUnits, 3);
+                if (TotalCaloriesKcal > 0f)
+                    result["totalCaloriesKcal"] = Math.Round(TotalCaloriesKcal, 1);
+                if (WorldIds.Count != 1 || !WorldIds.Contains(0))
+                    result["worldIds"] = WorldIds.OrderBy(id => id).ToList();
+                return result;
+            }
             public Dictionary<string, object> ToDictionary()
             {
                 var result = new Dictionary<string, object>
