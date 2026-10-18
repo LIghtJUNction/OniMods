@@ -51,6 +51,14 @@
 
 ## Autonomous Maintenance
 
+### 源码改进与上游反馈（明确要求）
+
+- 在开发、测试和实际使用中主动发现问题，并改进源代码；对职责范围内可修复的问题，必须推进修复与验证，不能只记录问题或长期依赖临时绕过。
+- 发现依赖、工具或其他上游项目的问题时，及时向对应上游提交 **issue 或 PR**，两者均可。能够给出可靠修复并完成相关验证时优先提交 PR；暂时无法修复或验证时先提交 issue，不要等完整修复后才反馈。
+- 提交前确认问题归属并检查已有 issue / PR，避免重复提交；反馈应包含复现步骤、相关版本、预期与实际行为，以及必要的日志或验证结果，不得泄露凭据或私人数据。
+- 上游问题反馈属于正常工作流程，在用户授权的任务范围内应直接推进，无需逐次询问是否提交。用户明确要求停止编码时，遵守该要求，可先提交 issue；恢复编码仍需用户授权。
+- 汇报时给出已提交的 issue / PR 链接，并区分本地修复、验证结果和上游接受状态。无法提交时说明具体阻碍并保留可提交的材料，不得将草稿称为已提交。
+
 Read `docs/autonomous-iteration.md` before scheduled research, implementation or
 CI work. Park runtime-blocked PRs instead of repeatedly rebasing them; report
 reference builds, source contracts, host tests and actual ONI runs separately.

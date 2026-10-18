@@ -34,6 +34,7 @@ A large-scale modular repository for Oxygen Not Included mod development:
 
 ## Table of Contents
 
+- [Gameplay Demo](#gameplay-demo)
 - [Project Overview](#project-overview)
 - [Supported Modules](#supported-modules)
 - [Quick Start](#quick-start)
@@ -45,6 +46,18 @@ A large-scale modular repository for Oxygen Not Included mod development:
 - [Compatibility](#compatibility)
 - [Contributing](#contributing)
 - [Release Notes](#release-notes)
+
+## Gameplay Demo
+
+[我把《缺氧》交给 GPT，这三个小人能活下来吗？-哔哩哔哩](https://b23.tv/isOd72t)
+
+Watch GPT operate an Oxygen Not Included colony through OniMcp, including construction, farming, and the problems encountered along the way. The screenshots below are taken directly from the video.
+
+[![Colony overview from the GPT gameplay video at 03:05](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
+
+| Reading state and issuing operations · 00:18 | Construction in progress · 02:10 |
+| --- | --- |
+| ![OniMcp workflow illustrated in the video](docs/images/gpt-oni-demo/mcp-workflow.jpg) | ![Colony construction and dig orders in the video](docs/images/gpt-oni-demo/colony-building.jpg) |
 
 ## Project Overview
 

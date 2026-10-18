@@ -17,6 +17,8 @@
 </div>
 
 <p align="center">
+  <a href="#效果展示">效果展示</a>
+  ·
   <a href="#快速入口">快速入口</a>
   · <a href="#oni-mcp-server">ONI MCP</a>
   · <a href="#onim">onim</a>
@@ -34,6 +36,18 @@
 > **兼容性警告**：`OniMcp` 在 `1.0.0` 之前 API 仍可能发生不兼容变更。二创、插件、脚本或第三方客户端请锁定具体版本，并以运行时 `tools_manifest` / `oni://tools/manifest` 为准做兼容适配。
 
 > **开源激励计划**：可购买 token，也可以通过参与开源项目贡献赚取 token。服务地址：[api.lmm.best](https://api.lmm.best)；[项目源码](https://github.com/TokenNotIncluded/api.lmm.best)由 [TokenNotIncluded](https://github.com/TokenNotIncluded) 组织托管，欢迎使用与贡献。
+
+## 效果展示
+
+[我把《缺氧》交给 GPT，这三个小人能活下来吗？-哔哩哔哩](https://b23.tv/isOd72t)
+
+让 GPT 通过 OniMcp 操作缺氧殖民地，看看它如何建造、种植，以及过程中遇到的问题。以下截图均取自视频，展示这次实验的实际过程。
+
+[![视频 03:05：GPT 操作后的殖民地全景](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
+
+| 读取状态、下达操作 · 00:18 | 建造与挖掘过程 · 02:10 |
+| --- | --- |
+| ![视频中的 OniMcp 读取状态与下达操作示意](docs/images/gpt-oni-demo/mcp-workflow.jpg) | ![视频中的殖民地建造与挖掘任务](docs/images/gpt-oni-demo/colony-building.jpg) |
 
 ## 快速入口
 
