@@ -13,6 +13,11 @@ namespace OniMcp.Tools
 
             if (includeBuildings)
             {
+                int minX = rect["x1"] - 16;
+                int maxX = rect["x2"] + 16;
+                int minY = rect["y1"] - 16;
+                int maxY = rect["y2"] + 16;
+
                 var seen = new HashSet<string>();
                 foreach (var building in Components.BuildingCompletes.Items)
                 {
@@ -20,6 +25,10 @@ namespace OniMcp.Tools
                         continue;
                     int cell = Grid.PosToCell(building.gameObject);
                     if (!Grid.IsValidCell(cell))
+                        continue;
+                    int objX = Grid.CellColumn(cell);
+                    int objY = Grid.CellRow(cell);
+                    if (objX < minX || objX > maxX || objY < minY || objY > maxY)
                         continue;
                     var def = building.Def;
                     string id = def?.PrefabID ?? building.name;
@@ -41,6 +50,10 @@ namespace OniMcp.Tools
                         continue;
                     int cell = Grid.PosToCell(go);
                     if (!Grid.IsValidCell(cell))
+                        continue;
+                    int objX = Grid.CellColumn(cell);
+                    int objY = Grid.CellRow(cell);
+                    if (objX < minX || objX > maxX || objY < minY || objY > maxY)
                         continue;
                     var building = go.GetComponent<Building>();
                     var kpid = go.GetComponent<KPrefabID>();
@@ -72,23 +85,9 @@ namespace OniMcp.Tools
                         Kind = "duplicant",
                         Id = dupe.GetComponent<KPrefabID>()?.InstanceID.ToString() ?? "unknown",
                         Name = dupe.GetProperName(),
-                        X = x,
-                        Y = y,
-                        ObjectX = x,
-                        ObjectY = y,
-                        AnchorX = x,
-                        AnchorY = y,
-                        Width = 1,
-                        Height = 1,
-                        FootprintX1 = x,
-                        FootprintY1 = y,
-                        FootprintX2 = x,
-                        FootprintY2 = y,
-                        Symbol = 'D',
-                        ObjectSymbol = 'D',
-                        FootprintSymbol = 'D',
-                        AnchorSymbol = 'D',
-                        Priority = 80
+                        X = x, Y = y, ObjectX = x, ObjectY = y, AnchorX = x, AnchorY = y,
+                        Width = 1, Height = 1, FootprintX1 = x, FootprintY1 = y, FootprintX2 = x, FootprintY2 = y,
+                        Symbol = 'D', ObjectSymbol = 'D', FootprintSymbol = 'D', AnchorSymbol = 'D', Priority = 80
                     };
                 }
             }
@@ -115,23 +114,9 @@ namespace OniMcp.Tools
                         Kind = "item",
                         Id = kpid != null ? kpid.PrefabTag.Name : pickupable.name,
                         Name = ToolUtil.CleanName(pickupable.GetProperName()),
-                        X = x,
-                        Y = y,
-                        ObjectX = x,
-                        ObjectY = y,
-                        AnchorX = x,
-                        AnchorY = y,
-                        Width = 1,
-                        Height = 1,
-                        FootprintX1 = x,
-                        FootprintY1 = y,
-                        FootprintX2 = x,
-                        FootprintY2 = y,
-                        Symbol = 'i',
-                        ObjectSymbol = 'i',
-                        FootprintSymbol = 'i',
-                        AnchorSymbol = 'i',
-                        Priority = 10,
+                        X = x, Y = y, ObjectX = x, ObjectY = y, AnchorX = x, AnchorY = y,
+                        Width = 1, Height = 1, FootprintX1 = x, FootprintY1 = y, FootprintX2 = x, FootprintY2 = y,
+                        Symbol = 'i', ObjectSymbol = 'i', FootprintSymbol = 'i', AnchorSymbol = 'i', Priority = 10,
                         Extra = pe != null ? Math.Round(SafeFloat(pe.Mass), 2) + "kg" : null
                     };
                 }

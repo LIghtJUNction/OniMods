@@ -9,6 +9,12 @@ namespace OniMcp.Tools
 {
     public static partial class WorldEditorTools
     {
+        private struct MapBuildingInfo
+        {
+            public string Id;
+            public string Name;
+        }
+
         private static readonly ObjectLayer[] PowerLayers = { ObjectLayer.Wire, ObjectLayer.WireTile, ObjectLayer.ReplacementWire };
         private static readonly ObjectLayer[] LiquidLayers = { ObjectLayer.LiquidConduit, ObjectLayer.LiquidConduitTile, ObjectLayer.ReplacementLiquidConduit };
         private static readonly ObjectLayer[] GasLayers = { ObjectLayer.GasConduit, ObjectLayer.GasConduitTile, ObjectLayer.ReplacementGasConduit };
@@ -110,7 +116,8 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             var gridLines = new List<string>();
             var details = new List<string>();
             var legend = new Dictionary<char, string>();
-            var critterCells = BuildCritterCellMap();
+            var critterCells = BuildCritterCellMap(xMin, xMax, yMin, yMax);
+            var buildingCache = new Dictionary<GameObject, MapBuildingInfo>();
 
             for (int y = yMax; y >= yMin; y--)
             {
@@ -145,10 +152,21 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                         building = CellBuildingObject(cell);
                         if (building != null)
                         {
-                            var complete = building.GetComponent<BuildingComplete>();
-                            buildingId = building.GetComponent<Building>()?.Def?.PrefabID
-                                ?? complete?.Def?.PrefabID ?? building.GetComponent<KPrefabID>()?.PrefabTag.Name ?? string.Empty;
-                            buildingName = building.GetProperName();
+                            MapBuildingInfo cached;
+                            if (!buildingCache.TryGetValue(building, out cached))
+                            {
+                                var complete = building.GetComponent<BuildingComplete>();
+                                buildingId = building.GetComponent<Building>()?.Def?.PrefabID
+                                    ?? complete?.Def?.PrefabID ?? building.GetComponent<KPrefabID>()?.PrefabTag.Name ?? string.Empty;
+                                buildingName = building.GetProperName();
+                                cached = new MapBuildingInfo { Id = buildingId, Name = buildingName };
+                                buildingCache[building] = cached;
+                            }
+                            else
+                            {
+                                buildingId = cached.Id;
+                                buildingName = cached.Name;
+                            }
                         }
                         minion = Grid.Objects[cell, (int)ObjectLayer.Minion];
                         critterCells.TryGetValue(cell, out critter);
@@ -218,20 +236,38 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             sb.AppendLine();
         }
 
-        private static Dictionary<int, GameObject> BuildCritterCellMap()
+        private static Dictionary<int, GameObject> BuildCritterCellMap(int xMin = -1, int xMax = -1, int yMin = -1, int yMax = -1)
         {
             var result = new Dictionary<int, GameObject>();
             if (Components.Capturables == null || Components.Capturables.Items == null)
                 return result;
+            bool bounded = xMin >= 0 && yMin >= 0 && xMax >= xMin && yMax >= yMin;
             foreach (var cap in Components.Capturables.Items)
             {
-                if (cap == null || cap.gameObject == null)
-                    continue;
+                if (cap == null || cap.gameObject == null) continue;
                 int cell = Grid.PosToCell(cap.gameObject);
-                if (Grid.IsValidCell(cell))
-                    result[cell] = cap.gameObject;
+                if (!Grid.IsValidCell(cell)) continue;
+                if (bounded)
+                {
+                    int x = Grid.CellColumn(cell);
+                    int y = Grid.CellRow(cell);
+                    if (x < xMin || x > xMax || y < yMin || y > yMax) continue;
+                }
+                result[cell] = cap.gameObject;
             }
             return result;
+        }
+
+        private static GameObject FindCritterAtCell(int cell)
+        {
+            if (Components.Capturables == null || Components.Capturables.Items == null || !Grid.IsValidCell(cell))
+                return null;
+            foreach (var cap in Components.Capturables.Items)
+            {
+                if (cap != null && cap.gameObject != null && Grid.PosToCell(cap.gameObject) == cell)
+                    return cap.gameObject;
+            }
+            return null;
         }
 
         private static char ResolveMapSymbol(HashedString mode, int cell, string elemId, string elemName, string buildingId, string buildingName, GameObject building, GameObject minion, GameObject critter, float tempC)
