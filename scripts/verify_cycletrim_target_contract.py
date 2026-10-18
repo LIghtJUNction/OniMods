@@ -470,8 +470,8 @@ def main() -> int:
             ),
             ("scanned >= currentBrainCount", "bounded dynamic scheduler scan missing"),
             (
-                "selection.Kind == CreatureBrainSelectionKind.Normal",
-                "running normal allowance policy missing",
+                "selection.Kind != CreatureBrainSelectionKind.None",
+                "running allowance policy missing",
             ),
         ):
             if needle not in scheduler_core_source:

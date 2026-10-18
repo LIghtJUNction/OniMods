@@ -14,6 +14,10 @@ namespace CycleTrim.Patches
             new ConditionalWeakTable<ChoreConsumer, State>();
         private static readonly ConditionalWeakTable<ChoreConsumer, State>.CreateValueCallback
             StateFactory = CreateState;
+        private static readonly ConditionalWeakTable<PickupableSensor, State> SensorStates =
+            new ConditionalWeakTable<PickupableSensor, State>();
+        private static readonly ConditionalWeakTable<PickupableSensor, State>.CreateValueCallback
+            SensorStateFactory = CreateSensorState;
         private static readonly AccessTools.FieldRef<Brain, ChoreConsumer> BrainChoreConsumer =
             AccessTools.FieldRefAccess<Brain, ChoreConsumer>("choreConsumer");
 
@@ -21,12 +25,14 @@ namespace CycleTrim.Patches
         {
             internal readonly CoupledRefreshGate RefreshGate =
                 new CoupledRefreshGate(4);
+            internal readonly ChoreConsumer Consumer;
             internal readonly bool IsDuplicant;
             internal readonly KPrefabID PrefabId;
             internal NavGrid NavGrid;
 
-            internal State(bool isDuplicant, KPrefabID prefabId)
+            internal State(ChoreConsumer consumer, bool isDuplicant, KPrefabID prefabId)
             {
+                Consumer = consumer;
                 IsDuplicant = isDuplicant;
                 PrefabId = prefabId;
             }
@@ -47,9 +53,18 @@ namespace CycleTrim.Patches
             return AccessTools.TypeByName(FastTrackPatchType) == null;
         }
 
+        private static State CreateSensorState(PickupableSensor sensor)
+        {
+            var consumer = sensor.GetComponent<ChoreConsumer>();
+            return consumer == null
+                ? new State(null, isDuplicant: false, null)
+                : States.GetValue(consumer, StateFactory);
+        }
+
         private static State CreateState(ChoreConsumer consumer)
         {
             return new State(
+                consumer,
                 consumer.GetComponent<MinionIdentity>() != null,
                 consumer.GetComponent<KPrefabID>());
         }
@@ -67,15 +82,16 @@ namespace CycleTrim.Patches
             out ChoreConsumer consumer,
             out State state)
         {
-            consumer = sensor.GetComponent<ChoreConsumer>();
-            if (consumer == null || navigator == null)
+            if (sensor == null || navigator == null)
             {
+                consumer = null;
                 state = null;
                 return false;
             }
 
-            state = States.GetValue(consumer, StateFactory);
-            return state.IsDuplicant;
+            state = SensorStates.GetValue(sensor, SensorStateFactory);
+            consumer = state.Consumer;
+            return state.IsDuplicant && consumer != null;
         }
 
         private static RefreshStamp CaptureStamp(
