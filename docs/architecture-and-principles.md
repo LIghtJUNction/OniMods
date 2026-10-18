@@ -155,3 +155,45 @@ OniMcp 的 `world_editor` 将整个世界状态映射为一组虚拟 Markdown �
 | **优化目标** | **降低上下文 Token 消耗，消除 LLM 幻觉与歧义** | **降低 CPU 占用，消除掉帧与单帧卡顿（Stutter）** |
 | **安全准则** | 零作弊、沙盒隔离、必须经过 Preflight 验证 | 严格兼容原版关键行为，仅在确定性无影响路径下优化 |
 | **验证体系** | 静态契约检查、无头 MCP 协议套件、离线格式断言 | 合成微基准、ILSpy 反编译断言、目标 DLL 契约验证 |
+
+---
+
+## 五、 现代浏览器自动化驱动的高效控制范式 (Browser-Inspired & CodeMode)
+
+为了解决传统基于 LLM 的游戏控制中“频繁乒乓轮询、盲目休眠、进度缓慢、Token 开销巨大”的痛点，OniMcp 深度借鉴了现代浏览器自动化框架（**Playwright**、**Chrome DevTools Protocol**）的核心设计模式：
+
+### 1. 目标驱动条件推进 (`step_until`，对标 Playwright `waitForCondition`)
+- **淘汰盲目休眠**：严禁无目的的 `resume -> sleep(10s) -> pause`（复制人跑路需要十几秒，固定休眠导致 LLM 频繁空转轮询）。
+- **事件驱动快进**：通过 `game_control domain=speed action=step_until` 指定终止条件（`condition: "orders_complete" | "dupe_idle" | "cycle_end" | "alert"`），游戏以 **3x 快进倍速** 持续模拟。
+- **自动暂停与截断**：主线程在 Unity `Update()` 每帧监听目标达成或异常告警，一旦达成立即触发安全暂停，避免挂机空跑或灾难蔓延。
+
+### 2. 增量感知与执行报告 (`ExecutionDelta`，对标 DOM Mutation Diff)
+- **拒绝全量 Dump**：推进结束后不重新序列化数千 Token 的完整地图，而是直接返回仅百余 Token 的精炼差异摘要：
+  ```json
+  {
+    "stopReason": "orders_complete",
+    "elapsedGameSeconds": 42.1,
+    "elapsedWallSeconds": 14.0,
+    "remainingTargetOrders": 0,
+    "idleDuplicants": ["Harold"],
+    "alerts": "none",
+    "isPaused": true
+  }
+  ```
+- LLM 凭借增量即可确认工单达成，节省 **85%+ 上下文开销**。
+
+### 3. 原生 CodeMode 流程支持 (`domain=code` / `domain=program`)
+- **单回合闭环控制**：Agent 无需在聊天对话中反复来回发起单个工具调用，可直接以代码/流程形式将“工单下达 -> 目标快进 -> 结果返回”组合为原子脚本：
+  ```json
+  {
+    "domain": "code",
+    "action": "execute",
+    "code": [
+      { "tool": "orders_control", "args": { "domain": "dig", "action": "line", "x1": 20, "y1": 20, "x2": 25, "y2": 20 } },
+      { "tool": "game_control", "args": { "domain": "speed", "action": "step_until", "condition": "orders_complete", "speed": 3, "maxGameSeconds": 60 }, "saveAs": "delta" },
+      { "return": "$delta" }
+    ]
+  }
+  ```
+- 该架构实现了单回合内游戏时间推进数十秒、工单全量交付的极高自主游玩效率。
+

@@ -94,7 +94,7 @@ world_editor command=read path=/active/ops/orders.md
 绝不要用 `orders_control domain=designation action=attack` 做挖掘。如果任何工具搜索建议用 attack 处理地形工作，拒绝它并重新搜索/读取。
 普通 aggregate tools 拒绝 raw coordinates；精确 orders 走 `/active/ops/orders.md`，精确建造走可编辑 map tokens。读 `/active/ops/tools.md` 时只选当前公开 typed files/tools，忽略 hidden `coordinate_control` 和 `/active/ops/coordinate.md`。默认单 block；operation file 每个 replacement 恰好一条可执行命令。危险或大范围操作必须保持 pause -> read/plan -> dry-run -> confirm -> verify。
 
-### 4. 暂停中执行
+### 4. 暂停中执行（或使用 CodeMode 一站式执行）
 
 只执行本循环所需、已验证且范围明确的调用：
 
@@ -103,39 +103,55 @@ world_editor command=read path=/active/ops/orders.md
 - 安全配置修改
 - 与目标直接相关的收获或清扫
 
-独立动作优先用 `server_control domain=batch action=call_many responseMode=summary requireAllValid=true stopOnError=true`。批次保持小，避免错误假设伤害殖民地。
-
-### 5. 短暂恢复
-
-只为让复制人工作而恢复：
-
-```
-game_control domain=speed action=resume
-```
-
-默认观察窗口：
-
-- 普通建造/挖掘：真实时间 8-15 秒
-- 紧急救援/窒息：真实时间 3-6 秒
-- 长搬运/建造：最多真实时间 20 秒
-
-这个窗口内不要追加命令。
-
-### 6. 暂停并验证
-
-立刻暂停：
-
-```
-game_control domain=speed action=pause
+**最高效路径（CodeMode）**：使用 `server_control domain=code action=execute code=[...]` 将命令下达与 `step_until` 串联执行，单回合完成规划、快进与返回：
+```json
+{
+  "domain": "code",
+  "action": "execute",
+  "code": [
+    { "tool": "orders_control", "args": { "domain": "dig", "action": "line", "x1": 20, "y1": 20, "x2": 25, "y2": 20 } },
+    { "tool": "game_control", "args": { "domain": "speed", "action": "step_until", "condition": "orders_complete", "speed": 3, "maxGameSeconds": 60 }, "saveAs": "stepResult" },
+    { "return": "$stepResult" }
+  ]
+}
 ```
 
-然后用紧凑读取验证：
+独立调用优先用 `server_control domain=batch action=call_many responseMode=summary requireAllValid=true stopOnError=true`。批次保持小，避免错误假设伤害殖民地。
+
+### 5. 目标驱动快进推进（对标 Playwright waitForCondition）
+
+不要使用无目标的盲目恢复休眠！使用 `step_until` 以 3x 速自动推进至目标完成或异常捕获：
 
 ```
-colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
-dupes_control domain=info action=status_check radius=8
-read_control domain=world action=area_snapshot areaId=<area> preset=construction|utilities encoding=plain
+game_control domain=speed action=step_until condition=orders_complete speed=3 maxGameSeconds=60
 ```
+
+可选停止条件 `condition`：
+- `orders_complete`（默认）：当前重点工单全部完成。
+- `dupe_idle`：复制人变为空闲（说明手头活干完了或无路可走）。
+- `cycle_end`：周期结束/入夜。
+- `alert`：出现窒息、受困、红警等紧急情况（安全保底）。
+- `any`：上述任一条件触发即自动 Pause 并返回。
+
+引擎在每帧监测条件，达成后**自动 Pause 并返回增量差异报告（Execution Delta）**。
+
+### 6. 增量差异核对（零额外 Token 验证）
+
+`step_until` 返回时已自动处于暂停状态，并携带极精简的增量结果：
+```json
+{
+  "stopReason": "orders_complete",
+  "elapsedGameSeconds": 38.5,
+  "elapsedWallSeconds": 12.8,
+  "remainingTargetOrders": 0,
+  "idleDuplicants": ["Harold"],
+  "alerts": "none",
+  "isPaused": true
+}
+```
+
+- 若 `stopReason == "orders_complete"` 且无警报：**工单已全部达成**，无需重读大范围地图，可直接推进下一阶段！
+- 若因 `alert`、`dupe_idle` 或 `timeout` 停止：按需使用 `dupes_control domain=info action=status_check` 或局部 `read_control domain=world action=area_snapshot` 进行针对性排查。
 
 记录验证结果：说明目标是否推进、发现的问题、下一轮是否需要继续。
 
