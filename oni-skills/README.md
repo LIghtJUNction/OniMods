@@ -3,6 +3,8 @@
 > **声明：本项目为 OniMods 的可选子项目（Optional Subproject）。**
 > 核心 Mod（OniMcp、CycleTrim 等）在不依赖本子项目的情况下即可独立编译与运行。
 > 本仓库旨在为人类玩家、AI Agent 与自动化控制提供高质量、结构化、经验证的《缺氧》（Oxygen Not Included）游戏机制与高阶攻略，**欢迎社区共同维护与完善**。
+>
+> 独立 GitHub 仓库地址：[https://github.com/LIghtJUNction/oni-skills](https://github.com/LIghtJUNction/oni-skills)
 
 ---
 
