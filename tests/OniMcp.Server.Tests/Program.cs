@@ -34,6 +34,7 @@ internal static class Program
         Invoke(_bridge, "Awake");
         try
         {
+            Check("immutable Skills package matches manifest", ModernSkillCatalogRegression.Run);
             Check("main-thread invocation preserves result and exception", () =>
             {
                 Assert(MainThreadBridge.Invoke(() => 42) == 42, "Inline return value");

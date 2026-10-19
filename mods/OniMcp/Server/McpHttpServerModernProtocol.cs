@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
+using OniMcp.Config;
 using OniMcp.Tools;
 using UnityEngine;
 
@@ -190,6 +191,8 @@ namespace OniMcp.Server
                 case "resources/list":
                 case "resources/templates/list":
                 case "resources/read":
+                case "skills/list":
+                case "skills/get":
                     return true;
                 default:
                     return false;
@@ -217,12 +220,35 @@ namespace OniMcp.Server
                     return CallModernReadOnlyTool(request);
 
                 case "resources/list":
-                    return CompleteModernListResult(new JObject
-                    {
-                        ["resources"] = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
-                            .Where(item => IsModernReadOnlyResourceUri(item.Uri))
-                            .OrderBy(item => item.Uri, StringComparer.Ordinal))
-                    });
+                {
+                    var resources = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
+                        .Where(item => IsModernReadOnlyResourceUri(item.Uri))
+                        .OrderBy(item => item.Uri, StringComparer.Ordinal));
+                    if (OniMcpOptions.Current.SkillsExtensionEnabled)
+                        foreach (JToken file in OniMcpSkillCatalog.ListResources())
+                            resources.Add(file);
+                    return CompleteModernListResult(new JObject { ["resources"] = resources });
+                }
+
+                case "skills/list":
+                    return OniMcpOptions.Current.SkillsExtensionEnabled
+                        ? (object)CompleteModernListResult(new JObject
+                            { ["skills"] = new JArray(OniMcpSkillCatalog.GetSkill()) })
+                        : JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
+                            "Skills extension is disabled");
+
+                case "skills/get":
+                {
+                    if (!OniMcpOptions.Current.SkillsExtensionEnabled)
+                        return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
+                            "Skills extension is disabled");
+                    JToken uriToken = request.Params?["uri"];
+                    string uri = uriToken?.Type == JTokenType.String ? (string)uriToken : null;
+                    if (!string.Equals(uri, OniMcpSkillCatalog.SkillUri, StringComparison.Ordinal))
+                        return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
+                            "Unknown skill URI");
+                    return CompleteModernListResult(new JObject { ["skill"] = OniMcpSkillCatalog.GetSkill() });
+                }
 
                 case "resources/templates/list":
                     return CompleteModernListResult(new JObject
@@ -236,6 +262,12 @@ namespace OniMcp.Server
                     var @params = request.Params?.ToObject<ReadResourceParams>();
                     if (@params == null || string.IsNullOrEmpty(@params.Uri))
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, "Missing resource uri");
+                    if (OniMcpOptions.Current.SkillsExtensionEnabled)
+                    {
+                        JObject skillFile = OniMcpSkillCatalog.Read(@params.Uri);
+                        if (skillFile != null)
+                            return CompleteModernResult(skillFile);
+                    }
                     if (!IsModernReadOnlyResourceUri(@params.Uri))
                     {
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
@@ -401,6 +433,11 @@ namespace OniMcp.Server
                     ["listChanged"] = false
                 }
             };
+            if (OniMcpOptions.Current.SkillsExtensionEnabled)
+                capabilities["extensions"] = new JObject
+                {
+                    ["io.modelcontextprotocol/skills"] = new JObject()
+                };
             if (IsModernReadOnlyToolAvailable())
             {
                 capabilities["tools"] = new JObject

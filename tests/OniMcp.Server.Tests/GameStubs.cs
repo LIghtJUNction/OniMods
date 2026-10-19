@@ -47,6 +47,7 @@ namespace OniMcp.Config
         public string Host { get; set; } = "127.0.0.1";
         public int Port { get; set; }
         public bool AuthEnabled { get; set; }
+        public bool SkillsExtensionEnabled { get; set; }
         public string AuthToken { get; set; }
         public bool GlobalAutoDisinfectDisabled { get; set; }
         public bool ScreenshotCleanupEnabled { get; set; }

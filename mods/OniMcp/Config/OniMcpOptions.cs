@@ -42,6 +42,9 @@ namespace OniMcp.Config
         [Option("Require token", "Disabled by default for loopback-only access. Non-loopback hosts require authentication.", "Security")]
         public bool AuthEnabled { get; set; } = false;
 
+        [Option("Experimental Skills extension", "Expose a read-only Agent Skill package over modern MCP. Disabled by default until client interoperability is verified.", "Server")]
+        public bool SkillsExtensionEnabled { get; set; } = false;
+
         [DynamicOption(typeof(MaskedTokenOptionsEntry))]
         public string AuthToken { get; set; } = CreateAuthToken();
 
