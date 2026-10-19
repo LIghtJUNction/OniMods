@@ -7,9 +7,10 @@ namespace CycleTrim
     {
         public override void OnLoad(Harmony harmony)
         {
-            base.OnLoad(harmony);
             PerformanceProbePatch.SetHarmonyId(harmony.Id);
-            harmony.PatchAll();
+            // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
+            // Set the probe owner first, then let the native loader install once.
+            base.OnLoad(harmony);
         }
     }
 }

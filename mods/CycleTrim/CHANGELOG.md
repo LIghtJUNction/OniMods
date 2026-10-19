@@ -2,6 +2,15 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
+## Unreleased
+
+- Install Harmony patches once through the native mod loader. The previous extra
+  `PatchAll` duplicated callbacks, probe samples and invalidation work, and tried
+  to rewrite the already-rewritten path-probe queue limit.
+- Accept explicit `--cycletrim-perf-probe` for Steam-launched diagnostics, keeping
+  profiling off by default. Use OniHarness for bounded headless steps and inspect
+  native progress, CPU cost and paging separately from rendering/control latency.
+
 ## 2026-09-19 — compatibility correction
 
 - Stop patching `SmartReservoir.OnSpawn` and `SmartReservoir.UpdateLogicCircuit(object)`. Pinned 744825 source shows repeated equal-value `SendSignal` calls remain observable through `LogicEventSender.SetValue` / `LogicValueChanged`, so suppressing them is not behavior-equivalent.

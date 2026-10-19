@@ -55,17 +55,18 @@ data; `--gif` also renders images when Pillow is already installed.
 The skill and example are source-checkout additions after the v0.1.0 release.
 No full colony gameplay capability is implied by this physics experiment.
 
-## Real game, reduced rendering and optional text spectator
+## Real headless game and optional text spectator
 
 For actual colony/mod behavior, use the experimental [runtime workflow](https://github.com/LIghtJUNction/OniHarness/blob/main/docs/runtime.md).
 It starts ONI through Steam, keeps native simulation and offers an optional
-rendering companion with a configurable update cap and game-owned stop deadline.
-Normal mode restores original rendering settings. Compatibility and performance
+companion with a configurable update cap and game-owned stop deadline.
+Default launch requires batch mode, a Null graphics device and zero camera
+renders, with no graphical fallback. Normal/reduced are explicit graphical modes. Compatibility and performance
 must be checked per installed game, save and mod combination.
 
 ```sh
 cd tools/OniHarness
-python3 scripts/runtime.py launch --graphics reduced --interval 60 --update-rate 30
+python3 scripts/runtime.py launch
 # After a disposable save copy is loaded and paused:
 python3 scripts/runtime.py observe --view text
 python3 scripts/runtime.py serve
@@ -75,8 +76,24 @@ Install the companion and enable OniMcp as described in the runtime document
 before launching. The text spectator shows the same paused virtual-file map
 returned to the agent, with observation time, supplied intent and action result.
 It does not control the game or poll its state. `--view none` records without
-printing a terminal map. No-graphics startup is explicitly experimental; a
-successful process launch does not establish a working colony.
+printing a terminal map. Linux headless support is experimental; the public
+[native run receipt](https://github.com/LIghtJUNction/OniHarness/blob/main/docs/verification/headless.json)
+includes a loaded colony, native progression and a client-loss stop/recovery test.
+A successful startup alone does not establish a working colony.
+
+For a performance iteration, launch an installed CycleTrim with its opt-in probe:
+
+```sh
+python3 scripts/runtime.py launch --game-arg=--cycletrim-perf-probe
+# After loading the same disposable save and verifying pause:
+python3 scripts/measure_steps.py --label candidate --seconds 3 --samples 5 --warmup 1 \
+  --require-log-marker '[CycleTrim][PerfProbe] resolved target:'
+```
+
+Compare native advancement, CPU per native second, control phases and paging.
+The first iteration fixed duplicate CycleTrim patch installation; see
+[the evidence and limitations](cycletrim-headless-performance.md). Shorter
+control waits or lower resident memory alone do not establish faster simulation.
 
 Runtime files are source-checkout additions after v0.1.0. Existing CLI/Core
 release assets are unchanged. Keep actual game evidence distinct from native
