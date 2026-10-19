@@ -58,7 +58,6 @@ def main() -> int:
     obstructions = read("BuildPlanningObstructions.cs")
     plan_one = read("BuildPlanningPlanOne.cs")
     build_area = read("BuildPlanningActionBuildArea.cs")
-    native_path = read("BuildPlanningNativeUtilityPath.cs")
     placement = read("BuildPlanningActionPlacement.cs")
     geometry = read("BuildPlanningPlacementGeometry.cs")
     backwall_policy = read("BuildPlanningBackwallSupportPolicy.cs")
@@ -97,17 +96,13 @@ def main() -> int:
     require(obstructions, "FindLogicEndpointConflicts", "logic endpoint preflight", failures)
     require(obstructions, "utility && !endpointBridge", "bridge building-footprint protection", failures)
 
-    # Both dry-run/normal TryPlanOne and native path execution must share the
-    # safety contract, with a final check directly before BuildingDef.TryPlace.
+    # Both dry-run and execution share the safety contract, with a final
+    # per-cell check directly before BuildingDef.TryPlace.
     require(plan_one, "ExistingPlacementResult(def, placement, existingUtility, utility: true)", "dry-run idempotency", failures)
     require(plan_one, "execution_pre_place_recheck", "execution second guard", failures)
     require(plan_one, "HasUnsafeExecutionConflict", "execution conflict rejection", failures)
     require(build_area, "PlannedFootprintOverlap", "same-batch overlap preflight", failures)
     require(safety, "planned_footprint_overlap", "same-batch overlap rejection", failures)
-    require(native_path, "ValidateUtilityPathSafety", "native path preflight", failures)
-    require(native_path, "RequiresCellFallback", "native idempotent fallback", failures)
-    require(placement, 'CallToolResult.Error(JsonConvert.SerializeObject(nativePath', "native conflict error contract", failures)
-
     # Backwall support must use the game's orientation-aware full-foundation
     # helper before ValidateFootprint can allow either a dry-run or write path.
     validate_footprint_body = method_body(
@@ -145,30 +140,23 @@ def main() -> int:
     forbid(backwall_body, "Orientation.Neutral", "backwall guard must use requested orientation", failures)
     require(backwall_policy, '"backwall_required"', "stable backwall reason propagation", failures)
 
-    # Control-flow contract: every path receives a full-path guard before a
-    # free-build fallback or per-cell loop, and native drag rechecks immediately
-    # before its first cell-mutating click/drag call.
-    native_body = method_body(native_path, "TryPlaceUtilityPathNative(", "native path method", failures)
-    require_order(
-        native_body,
-        ("var safety = ValidateUtilityPathSafety", "if (!safety.Valid)", "SelectElements"),
-        "native guard before material selection",
-        failures,
-    )
-    require_order(
-        native_body,
-        ("var executionSafety = ValidateUtilityPathSafety", "if (!executionSafety.Valid)", 'InvokeBest(tool, "OnLeftClickDown"'),
-        "native execution-time guard before commit",
-        failures,
-    )
-    if native_body.count("ValidateUtilityPathSafety") < 2:
-        failures.append("native path method: requires preflight and pre-commit full-path guards")
+    # Every path receives full-path guards before the per-cell loop. Native
+    # drag simulation is forbidden: it takes over shared player input and needs
+    # a fully initialized PlanScreen even when called outside the build menu.
+    forbid(placement, "TryPlaceUtilityPathNative", "no shared player-tool path", failures)
+    forbid(placement, 'GetBool(args, "nativePathPlacement"', "legacy flag cannot activate mouse tools", failures)
+    require(placement, "Deprecated compatibility input", "legacy flag compatibility", failures)
+    require(plan_one, "go == null && autoDig != null && !IsLinearUtilityPrefab(prefabId)",
+            "utility cannot enter optional native BuildTool fallback", failures)
+    for path in BUILD.glob("BuildPlanning*UtilityPath*.cs"):
+        for mutation in ("ActivateTool", "OnLeftClick", "OnDragTool", "PlanScreen", "WireBuildTool", "UtilityBuildTool"):
+            forbid(path.read_text(), mutation, path.name + " has no player-input dependency", failures)
 
     auto_connect_body = method_body(placement, "public static McpTool AutoConnectUtility()", "auto-connect method", failures)
     require_order(
         auto_connect_body,
-        ("var pathSafety = ValidateUtilityPathSafety", "if (!pathSafety.Valid)", "TryPlaceUtilityPathNative", "var fallbackSafety = ValidateUtilityPathSafety", "if (!fallbackSafety.Valid)", "foreach (var point in path)"),
-        "atomic full-path guard before native and cell fallback",
+        ("var pathSafety = ValidateUtilityPathSafety", "if (!pathSafety.Valid)", "var fallbackSafety = ValidateUtilityPathSafety", "if (!fallbackSafety.Valid)", "foreach (var point in path)"),
+        "atomic full-path guards before cell placement",
         failures,
     )
     fallback_guard = auto_connect_body[
@@ -178,14 +166,8 @@ def main() -> int:
     for mutation in ("TryPlanOne(", "OnLeftClickDown", "def.TryPlace"):
         forbid(fallback_guard, mutation, "fallback guard contains no cell mutation", failures)
     require_order(
-        native_body,
-        ('result["complete"] = allConnected', 'result["partial"] = after > before && !allConnected', 'result["shouldFallback"] = !allConnected'),
-        "native partial result requires fallback",
-        failures,
-    )
-    require_order(
         auto_connect_body,
-        ("foreach (var point in path)", "CountUtilityPathCells(def, path, worldId)", "bool complete", 'response["reasonCode"] = "utility_path_incomplete"', "CallToolResult.Error"),
+        ("foreach (var point in path)", "FinalizeUtilityPathConnections(def, path, worldId, out networkError)", "CountUtilityPathCells(def, path, worldId)", "bool complete", 'response["reasonCode"] = "utility_path_incomplete"', "CallToolResult.Error"),
         "cell fallback final exact-prefab completeness verification",
         failures,
     )

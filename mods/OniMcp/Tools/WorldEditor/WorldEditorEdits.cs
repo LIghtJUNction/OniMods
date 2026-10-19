@@ -188,7 +188,6 @@ namespace OniMcp.Tools
             args["prefabId"] = PrefabForConnectionMap(relative);
             args["points"] = points;
             args["material"] = args["material"] ?? "auto";
-            args["nativePathPlacement"] = true;
             return true;
         }
 
