@@ -46,6 +46,7 @@ internal static class Program
         TestGameSpeedPauseOwnership();
         LoadScreenMigrationRegression.Run();
         StepConditionRegression.Run();
+        StepResearchCompletionRegression.Run();
         CameraNavigationRegression.Run();
         UtilityPathPlacementRegression.Run();
         ExistingFootprintRegression.Run();
