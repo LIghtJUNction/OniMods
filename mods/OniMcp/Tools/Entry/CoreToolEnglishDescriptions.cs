@@ -107,14 +107,21 @@ namespace OniMcp.Tools
         {
             var d = CommonDescriptions();
             d["domain"] = "Game subsystem: launch, speed, state, save, dlc, or ui.";
-            d["action"] = "Game action for the selected subsystem. launch: status, start, restart_load, restart_status, new_game, new_game_status, new_game_select. New-game menu writes support dryRun and require confirm. ui/action open_load_menu opens the native load list without loading a save; supports dryRun and requires confirm. UI feedback: notification, popup, speech_bubble, marker.";
+            d["action"] = "Game action for the selected subsystem. launch: status, start, restart_load, restart_status, new_game, new_game_status, new_game_select. New-game menu writes support dryRun and require confirm. speed: time, pause, resume, set_speed, step_facts, step_until, step_status, step_cancel. ui/action open_load_menu opens the native load list without loading a save; supports dryRun and requires confirm. UI feedback: notification, popup, speech_bubble, marker.";
             d["kind"] = "UI list subtype.";
             d["uiDomain"] = "UI subsystem: action, feedback.";
             d["name"] = "For launch/new_game_select: an advertised choice id from new_game_status. Otherwise a save name or ui/feedback speech_bubble duplicant name.";
             d["id"] = "Target object id, or duplicant instance id for ui/feedback speech_bubble.";
             d["text"] = "Displayed text for ui/feedback popup or speech_bubble; required for speech_bubble.";
             d["duration"] = "Speech-bubble display duration in seconds; defaults to 5 and is clamped to 0.5-30.";
-            d["speed"] = "Game speed level.";
+            d["speed"] = "Game speed level; step_until accepts 1-3 and defaults to 3.";
+            d["condition"] = "Legacy step_until condition; choose either condition or until. dupe_idle means any idle work-scheduled duplicant; all_dupes_idle means every live duplicant in the selected world.";
+            d["until"] = "Composable step_until predicate: {fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2}, or {all:[...]}/{any:[...]}. Facts: orders_complete, dupes_idle, cycle_end, alert, alarm, new_notification, notification, printing_pod_ready, research_complete. Depth <=4, nodes <=32; unknown fields rejected before resume.";
+            d["maxGameSeconds"] = "Step game-time cap, default 60, clamped to 1-600 seconds; must be finite.";
+            d["maxWallSeconds"] = "Step wall-time cap, default 15, clamped to 0.5-30 seconds; must be finite.";
+            d["wait"] = "Wait for step completion by default; false starts a watcher managed by step_status/step_cancel. step_facts observes native idle and pending dig/build facts without resuming.";
+            d["targetCells"] = "Optional cells selecting existing dig/build orders at step start. Omit to capture all dig/build orders in worldId. Pending-set removal includes completion and cancellation; new orders and other chore types are excluded.";
+            d["worldId"] = "World for state and step_until/step_facts population/order selection; defaults to active world. Severe threat pauses remain global.";
             d["redAlert"] = "Red alert enabled state.";
             d["saveName"] = "Save file name.";
             d["overwrite"] = "Overwrite an existing save file.";
