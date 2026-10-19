@@ -83,6 +83,8 @@ operations and are not callable as MCP tools.
 
 当前入口提供上述原生流程，不提供候选属性编辑或自定义难度设置。
 
+打开主菜单或暂停菜单中的加载列表：`game_control domain=ui uiDomain=action action=open_load_menu`。先 `dryRun=true`，再 `confirm=true`；这只打开原生列表，不选择或载入存档，游戏内打开时保持暂停。OniMcp 会忽略迁移时确认缺失的可选 PNG 预览图；存档本体及其他迁移错误仍由游戏原生检查。
+
 ## 建造规划
 
 `building_control domain=planning` 是新的建造入口。

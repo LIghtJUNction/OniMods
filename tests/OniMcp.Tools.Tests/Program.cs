@@ -44,6 +44,7 @@ internal static class Program
         TestSweepEligibilityPolicy();
         TestBackwallSupportPolicy();
         TestGameSpeedPauseOwnership();
+        LoadScreenMigrationRegression.Run();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
