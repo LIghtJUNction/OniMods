@@ -116,10 +116,10 @@ namespace OniMcp.Tools
             d["duration"] = "Speech-bubble display duration in seconds; defaults to 5 and is clamped to 0.5-30.";
             d["speed"] = "Game speed level; step_until accepts 1-3 and defaults to 3.";
             d["condition"] = "Legacy step_until condition; choose either condition or until. dupe_idle means any idle work-scheduled duplicant; all_dupes_idle means every live duplicant in the selected world.";
-            d["until"] = "Composable step_until predicate: {fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2}, or {all:[...]}/{any:[...]}. Facts: orders_complete, dupes_idle, cycle_end, alert, alarm, new_notification, notification, printing_pod_ready, research_complete. Depth <=4, nodes <=32; unknown fields rejected before resume.";
+            d["until"] = "Composable step_until predicate: {fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2}, or {all:[...]}/{any:[...]}. Facts: orders_complete, dupes_idle, cycle_end, alert, alarm, new_notification, notification, printing_pod_ready, research_complete. printing_pod_ready reads current native availability, including already-ready state before resume. Depth <=4, nodes <=32; unknown fields rejected before resume.";
             d["maxGameSeconds"] = "Step game-time cap, default 60, clamped to 1-600 seconds; must be finite.";
             d["maxWallSeconds"] = "Step wall-time cap, default 15, clamped to 0.5-30 seconds; must be finite.";
-            d["wait"] = "Wait for step completion by default; false starts a watcher managed by step_status/step_cancel. step_facts observes native idle and pending dig/build facts without resuming.";
+            d["wait"] = "Wait for step completion by default; false starts a watcher managed by step_status/step_cancel. step_facts observes native idle, pending dig/build facts and immigrantsAvailable without resuming.";
             d["targetCells"] = "Optional cells selecting existing dig/build orders at step start. Omit to capture all dig/build orders in worldId. Pending-set removal includes completion and cancellation; new orders and other chore types are excluded.";
             d["worldId"] = "World for state and step_until/step_facts population/order selection; defaults to active world. Severe threat pauses remain global.";
             d["redAlert"] = "Red alert enabled state.";

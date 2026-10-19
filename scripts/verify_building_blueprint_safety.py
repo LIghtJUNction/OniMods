@@ -112,6 +112,7 @@ def verify_building_blueprint_safety(
         "plan_one": build_root / "BuildPlanningPlanOne.cs",
         "materials": build_root / "BuildPlanningMaterials.cs",
         "runtime": build_root / "BuildPlanningRuntimePlacement.cs",
+        "coordinates": build_root / "BuildPlanningPlacementCoordinates.cs",
     }
     for path in paths.values():
         if not path.is_file():
@@ -145,9 +146,12 @@ def verify_building_blueprint_safety(
         selected[paths["plan_one"]],
         "private static Dictionary<string, object> TryPlanOne",
     )
-    require_order(plan_one, ("ValidateFootprint", "def.TryPlace(", 'return ErrorResult(prefabId, x, y, "Placement failed"',
+    require_order(plan_one, ("ValidateFootprint", "TryPlaceRequestedBuilding(def, placement,", 'return ErrorResult(prefabId, x, y, "Placement failed"',
                               '["blueprintPlaced"] = true,', '["buildingCompleted"] = false,'),
                   "native placement must report blueprints, not completed work")
+    native_place = extract_block(selected[paths["coordinates"]], "private static GameObject TryPlaceRequestedBuilding")
+    if "def.TryPlace(null, placement.PlacementPoint, placement.Orientation, elements, facadeId)" not in native_place:
+        fail("native placement must use the single converted preview point and requested orientation")
     for forbidden in ("TryBuildVirtualFileInstantBuild", "InstantCompletionFailureResult", "completedImmediately"):
         if forbidden in plan_one:
             fail("removed completion path: " + forbidden)

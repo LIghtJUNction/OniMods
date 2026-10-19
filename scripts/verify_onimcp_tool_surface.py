@@ -94,6 +94,8 @@ PUBLIC_CONTRACT_FILES = (
     "mods/OniMcp/Tools/Impl/Audit/UiMenuSurfaceAuditTools.cs",
     "mods/OniMcp/Tools/Impl/Build/BuildPlanningErrors.cs",
     "mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementGeometry.cs",
+    "mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementCoordinates.cs",
+    "mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementModels.cs",
     "mods/OniMcp/Tools/Impl/Build/BuildPlanningTools.cs",
     "mods/OniMcp/Tools/Impl/Server/AgentProgramTools.cs",
 )

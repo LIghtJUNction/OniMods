@@ -94,7 +94,8 @@ namespace OniMcp.Tools
                     foreach (var anchor in anchors)
                     {
                         int worldId = ToolUtil.ResolveWorldId(args);
-                        var batchOverlap = PlannedFootprintOverlap(def, anchor.x, anchor.y, worldId, preflightFootprints);
+                        var batchOverlap = PlannedFootprintOverlap(def, anchor.x, anchor.y, worldId, preflightFootprints,
+                            ParseOrientation(args["orientation"]?.ToString()));
                         if (batchOverlap != null)
                         {
                             previews.Add(ErrorResult(prefabId, anchor.x, anchor.y,
@@ -114,7 +115,8 @@ namespace OniMcp.Tools
                             actionableAnchors.Add(anchor);
                         }
                         if (valid || IsAutoDiggableFailure(preview))
-                            ReservePlannedFootprint(def, anchor.x, anchor.y, worldId, preflightFootprints);
+                            ReservePlannedFootprint(def, anchor.x, anchor.y, worldId, preflightFootprints,
+                                ParseOrientation(args["orientation"]?.ToString()));
                         previews.Add(preview);
                     }
 

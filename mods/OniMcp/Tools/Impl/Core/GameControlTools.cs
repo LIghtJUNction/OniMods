@@ -25,7 +25,7 @@ namespace OniMcp.Tools
                     ["uiDomain"] = new McpToolParameter { Type = "string", Description = "ui 子域：action、feedback", Required = false, EnumValues = new List<string> { "action", "feedback" } },
                     ["speed"] = new McpToolParameter { Type = "integer", Description = "set_speed：0=暂停，1=正常，2=快进，3=超快", Required = false },
                     ["condition"] = new McpToolParameter { Type = "string", Description = "speed step_until 兼容条件；dupe_idle 为任一工作时段复制人空闲，all_dupes_idle 为全部；与 until 二选一", Required = false },
-                    ["until"] = new McpToolParameter { Type = "object", Description = "speed step_until：fact 原子条件或 all/any 数组组合（深度≤4，节点≤32）。例 {fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2}；fact 还支持 orders_complete、cycle_end、alert、alarm、new_notification、notification、printing_pod_ready、research_complete", Required = false },
+                    ["until"] = new McpToolParameter { Type = "object", Description = "speed step_until：fact 原子条件或 all/any 数组组合（深度≤4，节点≤32）。例 {fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2}；fact 还支持 orders_complete、cycle_end、alert、alarm、new_notification、notification、printing_pod_ready、research_complete；printing_pod_ready 已就绪时默认恢复前返回", Required = false },
                     ["maxGameSeconds"] = new McpToolParameter { Type = "number", Description = "step_until 最大游戏秒数，默认 60，范围 1–600", Required = false },
                     ["maxWallSeconds"] = new McpToolParameter { Type = "number", Description = "step_until 最大真实秒数，默认 15，范围 0.5–30", Required = false },
                     ["wait"] = new McpToolParameter { Type = "boolean", Description = "step_until 默认 true 等待自动暂停；false 后台运行，通过 step_status/step_cancel 管理", Required = false },
