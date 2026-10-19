@@ -70,10 +70,18 @@ operations and are not callable as MCP tools.
 | `benchmark` | `cases`, `iterations`, `tool`, `includeDetails` | read | 固定工具链路基准与诊断，不修改游戏状态 |
 | `world_editor` | `cd`, `ls`, `read`, `search`, `edit`, `plan`, `connect` | read/write/execute | 虚拟文件化世界访问、搜索、规划与受控编辑 |
 | `server_control` | `catalog`, `batch`, `program` | read/execute | 健康检查、工具清单、工具搜索、目标指南、批量调用、agent program |
-| `game_control` | `speed`, `state`, `save`, `sandbox`, `ui` | read/execute/dangerous | 暂停、恢复、调速、存档、沙盒、UI 编辑标记 |
+| `game_control` | `launch`, `speed`, `state`, `save`, `dlc`, `ui` | read/execute/dangerous | 原生新开局、暂停、恢复、调速、存档、DLC、UI 编辑标记 |
 | `navigation_control` | `camera` 或按已知相机 `action` 推断 | execute | 相机移动、世界切换、覆盖层、聚焦和截图 |
 | `building_control` | `planning`, `config`, `storage`, `filter`, `production`, `side_surface`, `rocket` | read/write/execute | 建造规划、材料检查、蓝图、建筑侧屏配置、储存过滤、生产队列、火箭 |
 | `orders_control` | `area`, `priority`, `designation`, `conduit` | execute/dangerous | 挖掘、清扫、拖地、拆除、优先级、区域订单、线路/管线剪断 |
+
+## 原生新开局
+
+使用 `game_control domain=launch action=new_game_status` 读取当前菜单阶段与可选 `choices`。在主菜单调用 `action=new_game`，随后使用 `action=new_game_select name=<choice id>` 逐步选择；写操作先 `dryRun=true` 预览，再 `confirm=true` 执行。每次选择后重新读取状态，等待原生异步切换完成。
+
+生存模式经典泰拉星路径为 `survival` → `classic` → `generate_world` → 等待 `characters` → `embark`。只能选择当前状态广告的选项；生成世界与开始殖民地要求生存模式且沙盒关闭。`embark` 使用原生生成的三名初始候选，进场后自动暂停；验证 `baseAlreadyCreated=true`、`liveDuplicants=3`、`isPaused=true` 与 `pauseAfterStart=ready_paused` 后再开始游玩。已有殖民地内不会直接新开局，须先保存并退出到主菜单。
+
+当前入口提供上述原生流程，不提供候选属性编辑或自定义难度设置。
 
 ## 建造规划
 
