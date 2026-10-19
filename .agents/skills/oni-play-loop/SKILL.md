@@ -118,9 +118,9 @@ world_editor command=read path=/active/ops/orders.md
 
 独立调用优先用 `server_control domain=batch action=call_many responseMode=summary requireAllValid=true stopOnError=true`。批次保持小，避免错误假设伤害殖民地。
 
-### 5. 目标驱动快进推进（对标 Playwright waitForCondition）
+### 5. 目标驱动快进推进（对标 Playwright waitForCondition 与游戏自动化报警）
 
-不要使用无目标的盲目恢复休眠！使用 `step_until` 以 3x 速自动推进至目标完成或异常捕获：
+不要使用无目标的盲目恢复休眠！使用 `step_until` 以 3x 速自动推进至目标完成、自动化警报触发或异常捕获：
 
 ```
 game_control domain=speed action=step_until condition=orders_complete speed=3 maxGameSeconds=60
@@ -130,10 +130,14 @@ game_control domain=speed action=step_until condition=orders_complete speed=3 ma
 - `orders_complete`（默认）：当前重点工单全部完成。
 - `dupe_idle`：复制人变为空闲（说明手头活干完了或无路可走）。
 - `cycle_end`：周期结束/入夜。
-- `alert`：出现窒息、受困、红警等紧急情况（安全保底）。
+- `alarm` 或 `automation_alarm`：**游戏内自动化通知器（LogicAlarm）被绿灯信号触发**。
+- `alarm:<name>` 或 `<name>`（如 `alarm:WaterFull` 或 `WaterFull`）：匹配指定名称的自动化通知器。
+- `alert` 或 `threat`：出现窒息、受困、红警或严重低生命值等紧急危险（任何运行模式下出现致命危险均会自动紧急刹车）。
+- `notification:<keyword>`：匹配 HUD 上出现的指定关键字通知。
 - `any`：上述任一条件触发即自动 Pause 并返回。
 
-引擎在每帧监测条件，达成后**自动 Pause 并返回增量差异报告（Execution Delta）**。
+**缺氧原生硬件事件机制（终极省 Token 范式）**：
+在缺氧中，你可以利用温度/液位/气压/储量等逻辑传感器连接**自动化通知器（LogicAlarm）**，并命名为 `WaterFull` 或 `SafeTemp`。接着下达 `step_until condition="WaterFull"`。游戏以 3 倍速飞快模拟，一旦传感器触发绿信号，主线程每帧监听到报警后**毫秒级自动暂停并返回**，实现真正意义上的零轮询、零 Token 浪费！
 
 ### 6. 增量差异核对（零额外 Token 验证）
 

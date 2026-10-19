@@ -162,9 +162,11 @@ OniMcp 的 `world_editor` 将整个世界状态映射为一组虚拟 Markdown �
 
 为了解决传统基于 LLM 的游戏控制中“频繁乒乓轮询、盲目休眠、进度缓慢、Token 开销巨大”的痛点，OniMcp 深度借鉴了现代浏览器自动化框架（**Playwright**、**Chrome DevTools Protocol**）的核心设计模式：
 
-### 1. 目标驱动条件推进 (`step_until`，对标 Playwright `waitForCondition`)
+### 1. 目标驱动条件推进 (`step_until`，对标 Playwright `waitForCondition` 与游戏自动化硬件报警)
 - **淘汰盲目休眠**：严禁无目的的 `resume -> sleep(10s) -> pause`（复制人跑路需要十几秒，固定休眠导致 LLM 频繁空转轮询）。
-- **事件驱动快进**：通过 `game_control domain=speed action=step_until` 指定终止条件（`condition: "orders_complete" | "dupe_idle" | "cycle_end" | "alert"`），游戏以 **3x 快进倍速** 持续模拟。
+- **事件驱动快进**：通过 `game_control domain=speed action=step_until` 指定终止条件（`condition: "orders_complete" | "dupe_idle" | "cycle_end" | "alarm" | "alarm:<name>" | "alert"`），游戏以 **3x 快进倍速** 持续模拟。
+- **自动化告警触发（Hardware Alarm Hook）**：充分利用缺氧强大的自动化电路（传感器 + 自动化通知器 `LogicAlarm`）。Agent 只需建造自动化通知器并命名（如 `WaterFull` 或 `TempNormal`），即可直接运行 `step_until condition="WaterFull"`。游戏以 3 倍速运行，信号线变绿的瞬间，引擎主线程毫秒级捕获通知器事件并自动暂停返回，达到对标 Webhook / 硬件中断级别的超高效率。
+- **原生威胁自动拦截**：无论当前设置何种条件，只要出现复制人窒息、致命伤、受困红警或 `NotificationType.DuplicantThreatening`，引擎立即强制刹车暂停并返回威胁告警，杜绝挂机致死。
 - **自动暂停与截断**：主线程在 Unity `Update()` 每帧监听目标达成或异常告警，一旦达成立即触发安全暂停，避免挂机空跑或灾难蔓延。
 
 ### 2. 增量感知与执行报告 (`ExecutionDelta`，对标 DOM Mutation Diff)
