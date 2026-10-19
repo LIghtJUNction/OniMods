@@ -65,7 +65,7 @@ namespace OniMcp.Tools
                 {
                     JToken program;
                     string error;
-                    if (!TryReadProgram(args["program"], out program, out error))
+                    if (!TryReadProgram(args["program"] ?? args["code"] ?? args["script"] ?? args["steps"], out program, out error))
                         return CallToolResult.Error(error);
 
                     bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
@@ -88,7 +88,7 @@ namespace OniMcp.Tools
             error = null;
             if (token == null || token.Type == JTokenType.Null)
             {
-                error = "program is required";
+                error = "program/code is required";
                 return false;
             }
 

@@ -77,8 +77,8 @@ namespace CycleTrim.BrainBenchmarks
                     nameof(SharedCreatureScheduleDoesNotAdvanceNormalCursorWithoutAllowance),
                     SharedCreatureScheduleDoesNotAdvanceNormalCursorWithoutAllowance);
                 RunTest(
-                    nameof(SharedCreatureScheduleChargesOnlyRunningNormalBrains),
-                    SharedCreatureScheduleChargesOnlyRunningNormalBrains);
+                    nameof(SharedCreatureScheduleChargesOnlyRunningBrains),
+                    SharedCreatureScheduleChargesOnlyRunningBrains);
                 RunTest(
                     nameof(CreatureSchedulerIncludesBrainAddedDuringUpdateWithinDynamicBound),
                     CreatureSchedulerIncludesBrainAddedDuringUpdateWithinDynamicBound);
@@ -103,6 +103,15 @@ namespace CycleTrim.BrainBenchmarks
                 RunTest(
                     nameof(PathProbeWorkOrderAdapterUsesExactRefreshAndCloneCounts),
                     PathProbeWorkOrderAdapterUsesExactRefreshAndCloneCounts);
+                RunTest(
+                    nameof(CreatureSchedulerSharesRunningBudgetAcrossPriorityAndNormal),
+                    CreatureSchedulerSharesRunningBudgetAcrossPriorityAndNormal);
+                RunTest(
+                    nameof(CreatureSchedulerDoesNotChargeStoppedPriorityEntries),
+                    CreatureSchedulerDoesNotChargeStoppedPriorityEntries);
+                RunTest(
+                    nameof(CreatureSchedulerPreservesPriorityUntilAllowanceArrives),
+                    CreatureSchedulerPreservesPriorityUntilAllowanceArrives);
                 RunPathProbeRegressionTests();
                 return 0;
             }
@@ -115,7 +124,7 @@ namespace CycleTrim.BrainBenchmarks
 
         private static void SharedCreatureScheduleDoesNotAdvanceNormalCursorWithoutAllowance()
         {
-            var cursor = new CreatureBrainScheduleCursor(normalAllowance: 0);
+            var cursor = new CreatureBrainScheduleCursor(runningAllowance: 0);
             var nextNormalBrain = 1;
             CreatureBrainSelection selection;
 
@@ -129,24 +138,24 @@ namespace CycleTrim.BrainBenchmarks
                 "normal selection requires allowance");
             AssertEqual(1L, nextNormalBrain, "zero allowance preserves normal cursor");
 
-            AssertTrue(
+            AssertFalse(
                 cursor.TrySelect(
                     currentBrainCount: 2,
                     allowPriority: true,
                     priorityCount: 1,
                     ref nextNormalBrain,
                     out selection),
-                "priority selection bypasses normal allowance");
+                "priority selection also requires running allowance");
             AssertEqual(
-                (long)CreatureBrainSelectionKind.Priority,
+                (long)CreatureBrainSelectionKind.None,
                 (long)selection.Kind,
-                "priority selection kind");
+                "zero allowance produces no selection");
             AssertEqual(1L, nextNormalBrain, "priority preserves normal cursor");
         }
 
-        private static void SharedCreatureScheduleChargesOnlyRunningNormalBrains()
+        private static void SharedCreatureScheduleChargesOnlyRunningBrains()
         {
-            var cursor = new CreatureBrainScheduleCursor(normalAllowance: 1);
+            var cursor = new CreatureBrainScheduleCursor(runningAllowance: 1);
             var nextNormalBrain = 0;
             CreatureBrainSelection selection;
 
@@ -158,7 +167,7 @@ namespace CycleTrim.BrainBenchmarks
                 cursor.TrySelect(2, false, 0, ref nextNormalBrain, out selection),
                 "stopped normal brain preserves allowance");
             cursor.Complete(selection, isRunning: true);
-            AssertEqual(0L, cursor.NormalAllowance, "running normal brain consumes allowance");
+            AssertEqual(0L, cursor.RemainingAllowance, "running normal brain consumes allowance");
         }
 
         private static void CreatureSchedulerIncludesBrainAddedDuringUpdateWithinDynamicBound()
@@ -354,11 +363,11 @@ namespace CycleTrim.BrainBenchmarks
             prioritized.Prioritize(3);
             var priorityFrame = prioritized.RunFrame(1.0 / 240.0, true, 5);
             var controlFrame = control.RunFrame(1.0 / 240.0, true, 5);
-            AssertEqual(1L, priorityFrame.PriorityCalls, "priority bypass calls");
+            AssertEqual(1L, priorityFrame.PriorityCalls, "priority runs before normal work");
             AssertEqual(
                 controlFrame.NormalCalls,
-                priorityFrame.NormalCalls,
-                "priority does not consume normal allowance");
+                priorityFrame.NormalCalls + priorityFrame.PriorityCalls,
+                "priority shares the frame running allowance");
             for (var frame = 1; frame < 240; frame++)
             {
                 prioritized.RunFrame(1.0 / 240.0, true, 5);
@@ -366,8 +375,8 @@ namespace CycleTrim.BrainBenchmarks
             }
             AssertEqual(
                 control.NormalCalls,
-                prioritized.NormalCalls,
-                "priority leaves long-run normal tokens unchanged");
+                prioritized.NormalCalls + prioritized.PriorityCalls,
+                "priority and normal calls share the long-run token allowance");
 
             var stopped = new CreatureBrainSchedulerSimulator(
                 new[] { false, true, false, true });
@@ -598,9 +607,9 @@ namespace CycleTrim.BrainBenchmarks
             var dirty = new RefreshStamp(11, 20, 30, 40, 50);
             AssertTrue(policy.ShouldRunPickup(dirty), "fetch generation refreshes pickup");
             AssertTrue(policy.ShouldRunChore(dirty), "fetch generation refreshes chore");
-            AssertFalse(policy.ShouldRunPickup(dirty), "pickup gate advances independently");
-            AssertFalse(policy.ShouldRunPickup(dirty), "pickup gate second independent skip");
-            AssertFalse(policy.ShouldRunChore(dirty), "chore gate retains its own count");
+            AssertFalse(policy.ShouldRunPickup(dirty), "stable pickup pair can skip");
+            AssertTrue(policy.ShouldRunPickup(dirty), "unpaired pickup forces the next pair to refresh");
+            AssertTrue(policy.ShouldRunChore(dirty), "chore shares the recovered pickup refresh");
 
             var scheduleChanged = new RefreshStamp(11, 20, 30, 40, 50, 61, 70);
             AssertTrue(policy.ShouldRunPickup(scheduleChanged), "schedule identity refreshes pickup");

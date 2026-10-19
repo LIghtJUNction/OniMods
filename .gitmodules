@@ -1,0 +1,3 @@
+[submodule "tools/OniHarness"]
+	path = tools/OniHarness
+	url = https://github.com/LIghtJUNction/OniHarness.git

@@ -70,7 +70,7 @@ namespace OniMcp.Tools
             GameObject building = CellBuildingObject(cell);
             if (building != null)
                 sb.AppendLine("- 拆: `拆 建筑@(" + x + "," + y + "):7 dryRun=true`");
-            if (BuildCritterCellMap().ContainsKey(cell))
+            if (FindCritterAtCell(cell) != null)
             {
                 sb.AppendLine("- 捕: `捕 小动物@(" + x + "," + y + "):7 dryRun=true`");
                 sb.AppendLine("- 杀: `杀 小动物@(" + x + "," + y + "):7 dryRun=true`");
@@ -169,7 +169,7 @@ namespace OniMcp.Tools
             GameObject building = CellBuildingObject(cell);
             GameObject digPlacer = Grid.Objects[cell, (int)ObjectLayer.DigPlacer];
             GameObject minion = Grid.Objects[cell, (int)ObjectLayer.Minion];
-            BuildCritterCellMap().TryGetValue(cell, out var critter);
+            GameObject critter = FindCritterAtCell(cell);
             sb.AppendLine("- 建筑: " + FormatCellGameObject(building));
             sb.AppendLine("- 挖掘标记: " + FormatDigOrder(digPlacer));
             sb.AppendLine("- 复制人/仿生人: " + FormatCellDupe(minion));

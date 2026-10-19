@@ -11,6 +11,7 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 ## 快速索引
 
 - [用途与边界](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#用途与边界)
+- [架构与核心原理](../../docs/architecture-and-principles.md)
 - [安装与启动](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#安装与启动)
 - [运行端点与客户端](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#运行端点与客户端)
 - [配置与鉴权](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#配置与鉴权)

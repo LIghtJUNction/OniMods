@@ -17,6 +17,8 @@
 </div>
 
 <p align="center">
+  <a href="#效果展示">效果展示</a>
+  ·
   <a href="#快速入口">快速入口</a>
   · <a href="#oni-mcp-server">ONI MCP</a>
   · <a href="#onim">onim</a>
@@ -35,6 +37,18 @@
 
 > **开源激励计划**：可购买 token，也可以通过参与开源项目贡献赚取 token。服务地址：[api.lmm.best](https://api.lmm.best)；[项目源码](https://github.com/TokenNotIncluded/api.lmm.best)由 [TokenNotIncluded](https://github.com/TokenNotIncluded) 组织托管，欢迎使用与贡献。
 
+## 效果展示
+
+[我把《缺氧》交给 GPT，这三个小人能活下来吗？-哔哩哔哩](https://b23.tv/isOd72t)
+
+让 GPT 通过 OniMcp 操作缺氧殖民地，看看它如何建造、种植，以及过程中遇到的问题。以下截图均取自视频，展示这次实验的实际过程。
+
+[![视频 03:05：GPT 操作后的殖民地全景](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
+
+| 读取状态、下达操作 · 00:18 | 建造与挖掘过程 · 02:10 |
+| --- | --- |
+| ![视频中的 OniMcp 读取状态与下达操作示意](docs/images/gpt-oni-demo/mcp-workflow.jpg) | ![视频中的殖民地建造与挖掘任务](docs/images/gpt-oni-demo/colony-building.jpg) |
+
 ## 快速入口
 
 | 项目 | 路径 | 说明 |
@@ -42,6 +56,7 @@
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP Server Mod |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 针对实测模拟热点的轻量级性能优化 Mod |
+| 架构与核心原理 | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | OniMcp 与 CycleTrim 的底层实现机制、世界文本化与性能优化设计 |
 | `OniMcp` 中文文档 | [mods/OniMcp/README.md](mods/OniMcp/README.md) | 安装、连接和功能说明 |
 | `OniMcp` English docs | [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md) | English installation and usage guide |
 | 项目缘起与开源激励 | [写给所有对这个项目感兴趣的人](docs/open-source-letter-zh.md) | 了解 OniMods 的项目缘起与开源激励计划 |

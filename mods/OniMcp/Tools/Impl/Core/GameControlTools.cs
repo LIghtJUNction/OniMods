@@ -20,7 +20,7 @@ namespace OniMcp.Tools
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "launch、speed、state、save、dlc、ui", Required = true, EnumValues = new List<string> { "launch", "speed", "state", "save", "dlc", "ui" } },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "launch=status/start/restart_load/restart_status；speed=time/pause/resume/set_speed；state=red_alert_status/set_red_alert；save=list/save/load/quit；dlc=list/activate；ui 按 uiDomain 路由", Required = true },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "launch=status/start/restart_load/restart_status；speed=time/pause/resume/set_speed/step_until/step_status/step_cancel；state=red_alert_status/set_red_alert；save=list/save/load/quit；dlc=list/activate；ui 按 uiDomain 路由", Required = true },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "ui action=list 的类型过滤", Required = false, EnumValues = new List<string> { "all", "management", "overlay", "build", "navigation" } },
                     ["uiDomain"] = new McpToolParameter { Type = "string", Description = "ui 子域：action、feedback", Required = false, EnumValues = new List<string> { "action", "feedback" } },
                     ["speed"] = new McpToolParameter { Type = "integer", Description = "set_speed：0=暂停，1=正常，2=快进，3=超快", Required = false },

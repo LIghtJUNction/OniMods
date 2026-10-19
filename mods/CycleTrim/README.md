@@ -5,6 +5,7 @@ ONI 性能优化 Mod。该 Mod 针对缺氧的几个高频模拟路径做降频�
 ## 快速索引（本页为总览）
 
 - [核心优化](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#核心功能简要)
+- [架构与优化原理](../../docs/architecture-and-principles.md)
 - [安装与运行](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#使用方式)
 - [验证与兼容性](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#兼容与说明)
 - [性能实测摘要](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#性能实测摘要)
