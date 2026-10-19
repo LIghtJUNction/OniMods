@@ -193,62 +193,7 @@ namespace OniMcp.Server
                 case "resources/read":
                 case "skills/list":
                 case "skills/get":
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        private object ProcessModernMethod(JsonRpcRequest request)
-        {
-            switch (request.Method)
-            {
-                case "server/discover":
-                    return BuildModernDiscoveryResult();
-
-                case "tools/list":
-                {
-                    var toolInfos = BuildModernToolInfos();
-                    if (toolInfos.Count == 0)
-                        return ModernToolMethodUnavailable(request);
-                    return CompleteModernListResult(new JObject { ["tools"] = toolInfos });
-                }
-
-                case "tools/call":
-                    if (!IsModernReadOnlyToolAvailable())
-                        return ModernToolMethodUnavailable(request);
-                    return CallModernReadOnlyTool(request);
-
-                case "resources/list":
-                {
-                    var resources = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
-                        .Where(item => IsModernReadOnlyResourceUri(item.Uri))
-                        .OrderBy(item => item.Uri, StringComparer.Ordinal));
-                    if (OniMcpOptions.Current.SkillsExtensionEnabled)
-                        foreach (JToken file in OniMcpSkillCatalog.ListResources())
-                            resources.Add(file);
-                    return CompleteModernListResult(new JObject { ["resources"] = resources });
-                }
-
-                case "skills/list":
-                    return OniMcpOptions.Current.SkillsExtensionEnabled
-                        ? (object)CompleteModernListResult(new JObject
-                            { ["skills"] = new JArray(OniMcpSkillCatalog.GetSkill()) })
-                        : JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
-                            "Skills extension is disabled");
-
-                case "skills/get":
-                {
-                    if (!OniMcpOptions.Current.SkillsExtensionEnabled)
-                        return JsonRpcResponse.MakeError(request.Id, McpErrorCode.MethodNotFound,
-                            "Skills extension is disabled");
-                    JToken uriToken = request.Params?["uri"];
-                    string uri = uriToken?.Type == JTokenType.String ? (string)uriToken : null;
-                    if (!string.Equals(uri, OniMcpSkillCatalog.SkillUri, StringComparison.Ordinal))
-                        return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
-                            "Unknown skill URI");
-                    return CompleteModernListResult(new JObject { ["skill"] = OniMcpSkillCatalog.GetSkill() });
-                }
+                    return ProcessModernSkillsRequest(request);
 
                 case "resources/templates/list":
                     return CompleteModernListResult(new JObject

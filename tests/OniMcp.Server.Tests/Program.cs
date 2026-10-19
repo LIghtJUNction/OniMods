@@ -293,6 +293,9 @@ internal static class Program
                     }
                     Assert(server.GetSessionSummaries().Count == 0, "Modern resource read allocated legacy session state");
                 });
+                Check("HTTP Skills extension is opt-in and keeps list/get/read coherent", () =>
+                    ModernSkillHttpRegression.Run(modernMeta, port,
+                        (body, method, name) => PostModern(client, body, method, name)));
                 string toolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":103,\"params\":{" + modernMeta + "}}";
                 Check("HTTP modern path maps unsupported methods to HTTP 404", () =>
                 {
