@@ -1,5 +1,7 @@
 # ONI MCP Tool Reference
 
+> **Seven-tool core:** Default `tools/list` exposes only `benchmark`, `building_control`, `navigation_control`, `game_control`, `orders_control`, `server_control`, and `world_editor`. Examples below using `colony_control`, `dupes_control`, `read_control`, or `search_control` describe internal operations; do not call or batch those names on the default surface. Read colony state via `world_editor command=read path=/active/colony/status.oni profile=minimal`, maps via `world_editor command=read path=/active/map/viewport.md compact=true`, and glyphs via `world_editor command=symbols`. Direct extended-tool calls require explicit listing in the current `tools/list`.
+
 Read this reference when selecting tools, composing multi-tool workflows, choosing parameters, or mapping prompts and resources to aggregate calls.
 
 ## Contents

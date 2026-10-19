@@ -57,7 +57,7 @@ world_editor command=pwd|cd|ls|read|zoom|grep|symbols|search|edit|blueprint|batc
 解释地图字码、根据建筑/元素/实体名称生成字码，或读取连接/overlay 字码前，必须先在 commentary 中说明 gameplay skill 要求权威查询，并把当前所有未知字码/名称一次批量提交：
 
 ```text
-search_control domain=glyphs queries=["砖","?","┼","氧气"] direction=auto matchMode=auto
+world_editor command=symbols queries=["砖","?","┼","氧气"] direction=auto matchMode=auto
 ```
 
 禁止根据中文字符、旧 legend 或记忆猜测。`count=0` 必须保持“未知”。上下文相关字码需传 `view=temperature|oxygen|light|decor|disease|radiation|crop|...`。仅可复用同一运行时、同一轮中已经查询过的结果。
@@ -65,13 +65,13 @@ search_control domain=glyphs queries=["砖","?","┼","氧气"] direction=auto m
 正查、反查与批量示例：
 
 ```text
-search_control domain=glyphs queries=["砖","零"] direction=code_to_meaning view=temperature
-search_control domain=glyphs queries=["砖","┼"] direction=code_to_meaning view=logic
-search_control domain=glyphs queries=["砖块","研究站","氧气"] direction=meaning_to_code
-search_control domain=glyphs queries=["■","液","不","易","可","难"] direction=auto view=oxygen perQueryLimit=20
+world_editor command=symbols queries=["砖","零"] direction=code_to_meaning view=temperature
+world_editor command=symbols queries=["砖","┼"] direction=code_to_meaning view=logic
+world_editor command=symbols queries=["砖块","研究站","氧气"] direction=meaning_to_code
+world_editor command=symbols queries=["■","液","不","易","可","难"] direction=auto view=oxygen perQueryLimit=20
 ```
 
-兼容入口 `world_editor command=symbols` 支持相同查询字段，但 gameplay 必须优先使用 `search_control domain=glyphs`。
+`world_editor command=symbols` 是七工具核心公开接口，支持批量、正反向和覆盖层字码查询。只有当 `tools/list` 明确列出 `search_control` 时，才能直接使用后者；不能通过 `server_control` 批量调用隐藏入口。
 
 ## 通用补丁协议
 

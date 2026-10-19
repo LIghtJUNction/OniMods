@@ -1,5 +1,7 @@
 # ONI MCP 工具参考
 
+> **七工具核心接口：** 当前默认 `tools/list` 仅公开 `benchmark`、`building_control`、`navigation_control`、`game_control`、`orders_control`、`server_control`、`world_editor`。本参考部分 `colony_control`/`dupes_control`/`read_control`/`search_control` 示例描述内部操作；在默认接口不要直接或通过 `server_control` 批量调用。读取殖民地用 `world_editor command=read path=/active/colony/status.oni profile=minimal`，读取地图用 `world_editor command=read path=/active/map/viewport.md compact=true`，字码查询用 `world_editor command=symbols`。只有当前 `tools/list` 确实列出扩展工具时，才可执行其直接调用。
+
 在选择工具、编排多工具流程、配置参数、提示词与资源映射到聚合调用时，优先查阅此参考。
 
 ## 目录

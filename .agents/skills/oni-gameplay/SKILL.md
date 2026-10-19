@@ -44,26 +44,17 @@ For autonomous play, keep the game paused while reading, planning, or issuing co
 
 ## Public tool policy
 
-Use the compact aggregate surface:
+Check `tools/list` before using a tool. The normal legacy/default **seven-tool core** contains `benchmark`, `building_control`, `navigation_control`, `game_control`, `orders_control`, `server_control`, and `world_editor`.
 
-- `colony_control`: colony snapshots, diagnostics, management, research, schedules.
-- `dupes_control`: duplicant details, priorities, skills, equipment, commands.
-- `read_control`: resources, buildings, infrastructure, world maps, reusable areas.
-- `building_control`: planning, materials, configuration, storage, automation, special buildings.
-- `orders_control`: dig, mop, sweep, disinfect, cancel, harvest, deconstruct, capture, conduit cuts.
-- `game_control`: pause, speed, save, DLC, state, normal gameplay actions only.
-- `navigation_control`: camera, overlays, and screenshots only.
-- `search_control`: semantic world/object search and discovery execution.
-- `server_control`: discovery, diagnostics, and batching.
-- `world_editor`: virtual-file reads and edits.
+`colony_control`, `dupes_control`, `read_control`, and `search_control` are internal operations on this surface. **Do not call them directly or put them in a `server_control` batch** unless the current `tools/list` explicitly advertises them. A catalog entry or a typed operation-file listing does not make a hidden tool public.
 
-`coordinate_control` is not public. Ordinary aggregate tools reject raw coordinates. Use semantic `areaId`/query/plan inputs, or exact coordinates inside supported `world_editor` map and typed-operation files.
+Read live state with `world_editor command=read path=/active/colony/status.oni profile=minimal`. Read a small map with `world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false`; read an exact cell with `/active/map/cell_X_Y.md`. Use `world_editor command=symbols` for authoritative glyph lookup. Read `/active/ops/tools.md` before working with typed operation files.
 
-For utilities, cut the exact layer with:
+`building_control` performs planning, materials, configuration, storage, and building actions. `orders_control` issues normal designations. `game_control` controls speed/save/game state; `navigation_control` controls view/screenshot; `server_control` provides diagnostics/catalog and batches of **advertised** tools.
 
-`orders_control domain=designation action=cut_conduits type=wire|liquid|gas|solid|logic|travel_tube ... confirm=true`
+`coordinate_control` is not public. Ordinary aggregate tools reject raw coordinates. Use semantic `areaId`/query/plan inputs, or exact coordinates inside supported `world_editor` maps and typed operation files.
 
-For a normal building, prefer `orders_control domain=designation action=deconstruct id=<instanceId> confirm=true`. If a cell contains multiple candidates, list or dry-run first.
+For utilities, cut the exact layer with `orders_control domain=designation action=cut_conduits type=wire|liquid|gas|solid|logic|travel_tube ... confirm=true`. For normal buildings, prefer `orders_control domain=designation action=deconstruct id=<instanceId> confirm=true`. Preview ambiguous targets before writing.
 
 ## Mode selection
 
@@ -78,29 +69,29 @@ If execution fails, return to diagnosis. Do not repeat the same zero-effect call
 
 ## Observation discipline
 
-Start compact:
+Start with one compact, publicly reachable live-state read:
 
 ```text
-colony_control domain=snapshot action=get profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
+world_editor command=read path=/active/colony/status.oni profile=minimal
 ```
 
-Escalate only the flagged domain:
+Escalate only the flagged area:
 
-- food: `read_control domain=resources action=food`
-- power: `read_control domain=infrastructure action=power_summary`
-- rooms: `read_control domain=infrastructure action=rooms`
-- heat: `read_control domain=world action=thermal_overheat_risk`
-- duplicant health/pathing: `dupes_control domain=info action=status_check`
-- exact terrain or utilities: virtual map or `read_control domain=world action=area_snapshot|text_map`
+- food: `world_editor command=read path=/active/resources/food.oni`
+- power: `world_editor command=read path=/active/infrastructure/power.md compact=true`
+- rooms: `world_editor command=read path=/active/infrastructure/rooms.oni`
+- heat: `world_editor command=read path=/active/map/viewport.md view=temperature compact=true syncView=false focusCamera=false`
+- duplicants: `world_editor command=read path=/active/dupes/index.md`, then a named detail file
+- exact terrain and utilities: `world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false`, or an exact cell file
 
-Do not call the same read with identical arguments twice in a row. State what is missing and switch to a narrower read or discovery call.
+`world_editor command=read path=/active/index.md includeState=true` is also available for a one-call world index and embedded colony status. Do not repeat an identical read without a state change; narrow the scope instead.
 
 ## Mandatory glyph lookup
 
 Before interpreting a map glyph, generating a glyph from a building/element/entity name, or reading connection/overlay glyphs, announce in `commentary` that this skill requires an authoritative glyph lookup. Then call:
 
 ```text
-search_control domain=glyphs queries=["<all unknown glyphs or names>"] direction=auto
+world_editor command=symbols queries=["<all unknown glyphs or names>"] direction=auto
 ```
 
 - Batch every unknown glyph/name from the current map in one call; do not issue one lookup per cell.
@@ -111,14 +102,14 @@ search_control domain=glyphs queries=["<all unknown glyphs or names>"] direction
 Examples:
 
 ```text
-search_control domain=glyphs queries=["砖","?","┼"] direction=code_to_meaning matchMode=auto view=logic
-search_control domain=glyphs queries=["砖块","氧气","研究站"] direction=meaning_to_code matchMode=auto
-search_control domain=glyphs queries=["零","■","晒","美","微","低","枯"] direction=auto perQueryLimit=20
+world_editor command=symbols queries=["砖","?","┼"] direction=code_to_meaning matchMode=auto view=logic
+world_editor command=symbols queries=["砖块","氧气","研究站"] direction=meaning_to_code matchMode=auto
+world_editor command=symbols queries=["零","■","晒","美","微","低","枯"] direction=auto perQueryLimit=20
 ```
 
 ## Spatial and camera discipline
 
-- Prefer semantic search, virtual-file maps, `area_snapshot`, or `text_map` for exact decisions.
+- Prefer `world_editor command=search`, virtual-file maps, or exact cell files for decisions.
 - Use `navigation_control` only when the user asks to look somewhere or a visual overlay/screenshot materially helps.
 - Do not move or focus the camera merely to edit an off-screen rectangle. Use the non-camera framing workflow in `references/world-editor.md`.
 - After an intentional camera move, call `navigation_control action=get_view` when exact confirmation matters.
@@ -160,7 +151,7 @@ chore, or `phase=orders_queued` is not a completed building or functioning netwo
 
 - Preview risky or exact edits first: `dryRun=true` and no confirmation.
 - Execute only with `dryRun=false confirm=true` after reviewing the translated plan.
-- `server_control domain=batch action=call_many` supports up to 20 items. Use `requireAllValid=true` and `stopOnError=true` for coordinated writes.
+- `server_control domain=batch action=call_many` supports up to 20 advertised tools. Never batch internal tool names in the seven-tool core. Use `requireAllValid=true` and `stopOnError=true` for coordinated writes.
 - Do not batch dependent reads whose later arguments require an earlier result.
 - Keep response payloads compact: `responseMode=summary` normally, `errors` for retry loops, `full` only for child details.
 - A successful request can still be partial. Inspect `changedCells`, `applied`, `failed`, `partial`, `submittedCells`, `unsubmittedCells`, `phase`, and per-item results. Counts reported by child tools are actions, not necessarily map cells.
@@ -172,7 +163,7 @@ Choose verification before acting:
 | Action | Verify with |
 |---|---|
 | Map build/dig/order | Re-read the exact map rectangle or matching layer |
-| Power change | `power_summary` plus exact `power_ports` if disconnected |
+| Power change | `/active/infrastructure/power.md` plus exact cell details if disconnected |
 | Schedule or policy | Re-list the same management object |
 | Duplicant update | Re-read the duplicant or priority/skill list |
 | Building configuration | Re-list configuration for that building ID |
@@ -224,6 +215,6 @@ Before a medium or dangerous action, confirm:
 - Cache catalog results for the loaded runtime, but invalidate assumptions after a reload.
 - Invalidate related state after every write/execute call.
 - Reuse bounded `areaId` handles for repeated reads and actions; forget temporary custom areas afterward.
-- Use one-shot minimal snapshots instead of assembling many broad reads.
+- Use one-shot `/active/colony/status.oni` minimal snapshots instead of assembling many broad reads.
 - Batch independent reads; serialize dependent calls.
 - Preserve low token use with compact details, narrow rectangles, and RLE only for read-only scans. Use expanded edit format for patches.
