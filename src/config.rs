@@ -115,6 +115,22 @@ fn to_pascal_case(s: &str) -> String {
         .collect()
 }
 
+/// Installation names are directory names, never paths. Check Windows syntax
+/// on every host too, so a shared onim.toml cannot escape its root after moving OS.
+pub(crate) fn validate_mod_directory_name(name: &str) -> Result<()> {
+    if name.is_empty()
+        || name == "."
+        || name == ".."
+        || name.ends_with(['.', ' '])
+        || name
+            .chars()
+            .any(|c| c.is_control() || matches!(c, '/' | '\\' | ':'))
+    {
+        anyhow::bail!("Mod 名称必须是单个目录名，不能包含路径或以点/空格结尾：{name:?}");
+    }
+    Ok(())
+}
+
 /// 从 Directory.Build.props 读取游戏路径
 fn read_game_path_from_props(repo_root: &Path) -> Result<PathBuf> {
     let props = repo_root.join(BUILD_PROPS);
@@ -284,8 +300,10 @@ impl Config {
                 .get(&key)
                 .with_context(|| format!("配置缺失：{}", key))?
                 .clone();
+            let name = cfg.mod_name(&key);
+            validate_mod_directory_name(&name)?;
             result.push(SelectedMod {
-                name: cfg.mod_name(&key),
+                name,
                 config: cfg,
             });
         }
@@ -331,8 +349,10 @@ impl Config {
             .get(&key)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("找不到已选择的 Mod：{}", key))?;
+        let name = cfg.mod_name(&key);
+        validate_mod_directory_name(&name)?;
         Ok(SelectedMod {
-            name: cfg.mod_name(&key),
+            name,
             config: cfg,
         })
     }
@@ -347,14 +367,17 @@ impl Config {
     }
 
     pub fn dev_mod_dir(&self, mod_name: &str) -> Result<PathBuf> {
+        validate_mod_directory_name(mod_name)?;
         Ok(self.game_mods_dir()?.join("Dev").join(mod_name))
     }
 
     pub fn legacy_dev_mod_dir(&self, mod_name: &str) -> Result<PathBuf> {
+        validate_mod_directory_name(mod_name)?;
         Ok(self.game_mods_dir()?.join("dev").join(mod_name))
     }
 
     pub fn local_mod_dir(&self, mod_name: &str) -> Result<PathBuf> {
+        validate_mod_directory_name(mod_name)?;
         Ok(self.game_mods_dir()?.join("Local").join(mod_name))
     }
 
@@ -497,6 +520,51 @@ mod tests {
     use super::{Config, ModConfig, parse_config_for_doctor};
     use std::collections::HashMap;
     use std::path::{Path, PathBuf};
+
+    #[test]
+    fn installation_paths_reject_names_that_escape_the_mod_directory() {
+        let config = Config {
+            game_path: PathBuf::new(),
+            mods: HashMap::new(),
+            default_mod: None,
+        };
+        for name in [
+            "", ".", "..", "../other", "nested/mod", "/tmp/mod", r"..\other",
+            r"C:\mods", "C:mods", r"\\server\share", ".. ", "mod.", "mod ", "bad\0name",
+        ] {
+            assert!(config.dev_mod_dir(name).is_err(), "Dev accepted {name:?}");
+            assert!(config.legacy_dev_mod_dir(name).is_err(), "dev accepted {name:?}");
+            assert!(config.local_mod_dir(name).is_err(), "Local accepted {name:?}");
+        }
+        for name in ["OniMcp", "my_mod-2", "My Mod", "缺氧模组"] {
+            let root = config.game_mods_dir().unwrap();
+            assert_eq!(config.dev_mod_dir(name).unwrap(), root.join("Dev").join(name));
+            assert_eq!(config.legacy_dev_mod_dir(name).unwrap(), root.join("dev").join(name));
+            assert_eq!(config.local_mod_dir(name).unwrap(), root.join("Local").join(name));
+        }
+    }
+
+    #[test]
+    fn selection_rejects_unsafe_keys_and_name_overrides_before_building() {
+        for (key, name) in [("..", None), ("OniMcp", Some("../other"))] {
+            let config = Config {
+                game_path: PathBuf::new(),
+                mods: HashMap::from([(
+                    key.to_string(),
+                    ModConfig {
+                        path: PathBuf::from("mods/OniMcp"),
+                        name: name.map(str::to_string),
+                        publishedfileid: None,
+                        workshop_title: None,
+                    },
+                )]),
+                default_mod: Some(key.to_string()),
+            };
+            assert!(config.select_mod(None).is_err());
+            assert!(config.select_mod(Some(key.to_string())).is_err());
+            assert!(config.select_all_mods().is_err());
+        }
+    }
 
     #[test]
     fn doctor_config_parser_should_preserve_resolvable_mods() -> anyhow::Result<()> {
