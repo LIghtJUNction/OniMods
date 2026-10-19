@@ -4,7 +4,7 @@ cd -- "$(dirname -- "$0")"
 
 lean_bin="${LEAN_BIN:-lean}"
 "$lean_bin" --version > lean-version.txt
-if ! rg -q 'version 4\.19\.0,' lean-version.txt; then
+if ! grep -Eq 'version 4\.19\.0,' lean-version.txt; then
   cat lean-version.txt
   echo 'Expected the pinned Lean 4.19.0 release.' >&2
   exit 1
