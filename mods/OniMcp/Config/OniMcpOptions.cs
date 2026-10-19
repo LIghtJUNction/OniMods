@@ -46,7 +46,7 @@ namespace OniMcp.Config
         public string AuthToken { get; set; } = CreateAuthToken();
 
         [Option("Disable auto disinfect globally", "Keep ONI's global auto disinfect setting disabled when the mod applies this policy.", "Gameplay")]
-        public bool GlobalAutoDisinfectDisabled { get; set; } = false;
+        public bool GlobalAutoDisinfectDisabled { get; set; } = true;
 
         [Option("Clean up screenshots", "Automatically remove old temporary screenshots created by MCP tools.", "Screenshots")]
         public bool ScreenshotCleanupEnabled { get; set; } = true;

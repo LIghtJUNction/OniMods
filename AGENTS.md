@@ -35,6 +35,13 @@
 - If a viewer suggestion is low-risk, evaluate it quickly; if it is risky, explain the blocker briefly.
 - Keep token usage low with compact reads and short polling windows.
 
+## oni-skills 游戏攻略与技能库（可选）
+
+- `oni-skills/` 是本项目的**可选子项目**，用于沉淀《缺氧》高阶游戏机制、工程模块（SPOM、ST/AT、养殖、电网等）与大牛经验。
+- 攻略库完全可选，不影响核心 Mod 的独立开发与编译。
+- 面临复杂模块选型与高阶基地决策时，Agent 可可选查阅 `oni-skills/guides/`，遵循大牛心法（如开局默认禁用自动消毒、防爆温、防爆管原则）。
+- 欢迎随官方版本迭代与社区共同完善。
+
 ## Steam Workshop 发布（硬性禁止）
 
 - **禁止使用 SteamCMD 上传发布模组。** 它的 `+workshop_build_item` + `contentfolder`

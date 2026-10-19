@@ -76,6 +76,7 @@ The repository is organized as a **two-part platform**:
 | `onim` | [src/](src/) | Rust CLI for mod lifecycle management |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP server mod and tool surface |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | Lightweight performance mod targeting measured simulation hot paths |
+| `oni-skills` *(optional)* | [oni-skills/](oni-skills/) | High-level ONI gameplay strategies and community engineering modules |
 | Architecture & Principles | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | Technical implementation, world textualization, and optimization principles |
 | `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | Boilerplate template for new mod creation |
 | Chinese Project Docs | [README_ZH.md](README_ZH.md) | Chinese overview and usage docs |
