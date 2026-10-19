@@ -92,6 +92,11 @@ onim init MyMod
 onim dev -m MyMod
 ```
 
+`onim dev` backs up `mods.json` only when its configuration changes and keeps the
+latest five valid configuration backups. It enables the selected Dev entry
+without enabling other copies of the same mod. Backup cleanup failures are
+reported separately from a successfully applied configuration.
+
 ## Quick Links
 
 - English ONI MCP docs: [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md)

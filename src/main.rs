@@ -10,6 +10,7 @@ mod doctor;
 mod info;
 mod init;
 mod install;
+mod mod_config_backup;
 mod publish;
 mod setup;
 mod steam;
