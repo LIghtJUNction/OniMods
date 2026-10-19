@@ -30,6 +30,87 @@ def require_order(text: str, markers: tuple[str, ...], label: str) -> None:
         cursor = position + len(marker)
 
 
+def verify_auto_material_selection(materials: str) -> None:
+    """Lock the native per-slot recipe and local-stock guards, not a stale first-item choice."""
+    select_elements = extract_block(materials, "private static MaterialSelection SelectElements")
+    auto_selection = extract_block(select_elements, "if (auto)")
+    require_order(
+        auto_selection,
+        (
+            "var recipe = ConstructionRecipeAdapter.Read(def.Mass, def.MaterialCategory);",
+            "var autoCandidates = AvailableMaterials(def, worldId, includeUnavailable: true);",
+            "if (recipe.Known)",
+            "ConstructionRecipeAdapter.SelectAvailable(",
+            "recipe,",
+            "autoCandidates,",
+            "MaterialMatchesAnyCategory(item.Tag, ParseMaterialCategoryExpression(category).ToList())",
+            "item => item.AvailableKg > 0f",
+            "item => item.ReachableLooseKg > 0f",
+            "if (slotMaterials == null)",
+            "var underSupplied = Enumerable.Range(0, recipe.Slots.Count)",
+            ".GroupBy(index => slotMaterials[index].Tag.Name",
+            "group.Sum(index => recipe.Slots[index].RequiredKg)",
+            "if (underSupplied != null)",
+            "var elements = slotMaterials.Select(item => item.Tag).ToList();",
+            'return ValidatedMaterialSelection(elements, "auto",',
+            'return MaterialSelection.Invalid("Native construction recipe is unknown;',
+        ),
+        "automatic construction must select all recipe slots from local inventory and reject unknown recipes",
+    )
+    for marker, label in (
+        ("if (slotMaterials == null)", "missing recipe slot"),
+        ("if (underSupplied != null)", "aggregated material shortage"),
+    ):
+        guard = extract_block(auto_selection, marker)
+        if "return MaterialSelection.Invalid(" not in guard:
+            fail(f"automatic selection must reject {label} before placement")
+
+    inventory = extract_block(materials, "private static List<BuildMaterialInfo> AvailableMaterials")
+    require_order(
+        inventory,
+        (
+            "CandidateMaterialTags(def, worldId)",
+            ".Where(item => item.ValidForBuilding)",
+            ".Where(item => includeUnavailable || item.AvailableKg > 0f)",
+            ".OrderByDescending(item => item.ReachableLooseKg)",
+        ),
+        "available materials must be world-scoped and filtered by stock",
+    )
+
+
+def verify_auto_material_selection_regressions(materials: str) -> None:
+    """Ensure the source contract rejects unsafe changes to each availability gate."""
+    verify_auto_material_selection(materials)
+    mutations = (
+        ("skip stock predicate", "item => item.AvailableKg > 0f,", "item => true,"),
+        ("accept unknown recipe", "if (recipe.Known)", "if (true)"),
+        ("drop full candidate set", "var autoCandidates = AvailableMaterials(def, worldId, includeUnavailable: true);",
+         "var autoCandidates = AvailableMaterials(def, worldId, includeUnavailable: false);"),
+        ("ignore missing slot", "if (slotMaterials == null)", "if (false)"),
+        ("ignore aggregated shortage", "if (underSupplied != null)", "if (false)"),
+        ("ignore repeated material across slots", ".GroupBy(index => slotMaterials[index].Tag.Name,",
+         ".GroupBy(index => index.ToString(),"),
+        ("select no materials", "var elements = slotMaterials.Select(item => item.Tag).ToList();",
+         "var elements = new List<Tag>();"),
+        ("accept recipe without slots",
+         'return MaterialSelection.Invalid("Native construction recipe is unknown; cannot select a complete material set.",',
+         'return MaterialSelection.Invalid("unknown",'),
+        ("ignore inventory filtering", ".Where(item => includeUnavailable || item.AvailableKg > 0f)",
+         ".Where(item => includeUnavailable || true)"),
+    )
+    for label, before, after in mutations:
+        if before not in materials:
+            fail(f"material regression fixture no longer matches source: {label}")
+        changed = materials.replace(before, after, 1)
+        with redirect_stderr(StringIO()):
+            try:
+                verify_auto_material_selection(changed)
+            except SystemExit:
+                continue
+        fail(f"material recipe verifier accepted unsafe change: {label}")
+    print(f"OK: {len(mutations)} native recipe and stock guard mutations were rejected")
+
+
 def verify_existing_material_reuse(plan_one: str) -> None:
     early_guard = (
         'if (earlyExistingBuild != null && ExistingMaterialRequestSatisfied('
@@ -164,8 +245,7 @@ def verify_building_blueprint_safety(
     auto_selection = extract_block(select_elements, "if (auto)")
     if "IsFreeBuildContext" in materials:
         fail("material selection must never bypass inventory")
-    if "available.FirstOrDefault()" not in auto_selection:
-        fail("automatic selection must use available inventory")
+    verify_auto_material_selection(materials)
     if "MaterialSelection.Success(" in select_elements:
         fail("SelectElements success exits must use the unified validation helper")
     if select_elements.count("return ValidatedMaterialSelection(") != 3:
@@ -206,6 +286,8 @@ def main() -> None:
         "private static Dictionary<string, object> TryPlanOne",
     )
     verify_existing_material_reuse_regressions(plan_one)
+    materials_path = root / "mods/OniMcp/Tools/Impl/Build/BuildPlanningMaterials.cs"
+    verify_auto_material_selection_regressions(materials_path.read_text(encoding="utf-8"))
     print("OK: normal utility paths use native placement and preserve material identity")
 
 
