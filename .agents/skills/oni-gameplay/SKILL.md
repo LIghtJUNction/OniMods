@@ -56,13 +56,20 @@ Use a previous completion result if it already answers the question. Otherwise r
 | Duplicants | `/active/dupes/index.oni`, then a named detail |
 | Stock / food | `/active/resources/inventory.oni` / `/active/resources/food.oni` |
 | Power / rooms | `/active/infrastructure/power.md` / `/active/infrastructure/rooms.oni` |
-| Completed building | `/active/buildings/index.md`, then its stable instance file |
+| Completed building | `/active/buildings/index.md`, then its listed `/active/buildings/instances/<prefab>-<InstanceID>.md` file |
 
 These are `world_editor command=read path=...` calls; options shown beside a path are separate arguments. Do not reread every row on every stop. Invalidate relevant live facts after a write, time advance, load or world change. Static definitions and glyph mappings can remain cached when their metadata is unchanged.
 
 ## Map, glyph and construction rules
 
-Read unknown glyphs/names together with `world_editor command=symbols queries=[...] direction=auto`; include `view` for overlays. Reuse verified mappings across the session. Unknown or ambiguous results remain unknown. Do not look up one cell at a time or guess from a Chinese character.
+Before interpreting unknown map glyphs or names, state in commentary that authoritative lookup is required. Do not guess meanings from glyph shapes, Chinese characters or cached examples. Read unknown glyphs/names together with `world_editor command=symbols queries=[...] direction=auto`; include `view` for overlays. Reuse verified mappings across the session; zero matches and ambiguous matches remain unknown.
+
+The same public tool supports both directions. Use these as query shapes, not as preverified meanings:
+
+```text
+world_editor command=symbols queries=["┼"] direction=code_to_meaning view=logic task="解释连接字码"
+world_editor command=symbols queries=["氧气","研究站"] direction=meaning_to_code task="查询名称对应字码"
+```
 
 Use semantic IDs/queries/areas for aggregate tools. Exact edits use reviewed world-editor map tokens or typed operation files. Camera coordinates are for camera operations. Do not pan the camera just to edit off-screen; the map protocol supports non-camera framing. Larger `navigation_control action=set_zoom zoom=...` values show a wider area.
 
