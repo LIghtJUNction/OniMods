@@ -50,6 +50,11 @@ namespace HarmonyLib
 
 namespace CycleTrim.Patches
 {
+    internal static class FetchLayoutExperiment
+    {
+        internal static void StartIfRequested() { }
+    }
+
     internal static class PerformanceProbePatch
     {
         internal static string Owner;

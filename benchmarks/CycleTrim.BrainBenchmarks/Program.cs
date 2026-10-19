@@ -13,6 +13,12 @@ namespace CycleTrim.BrainBenchmarks
         {
             try
             {
+                if (args.Length > 0 && args[0] == "--candidate-layout-benchmark")
+                {
+                    CandidateLayoutBenchmark.Run(args);
+                    return 0;
+                }
+                CandidateLayoutBenchmark.Verify();
                 if (args.Length == 1 && args[0] == "--benchmark")
                 {
                     BrainMicrobenchmark.Run();

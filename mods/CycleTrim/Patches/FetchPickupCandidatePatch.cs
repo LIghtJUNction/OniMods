@@ -14,6 +14,8 @@ namespace CycleTrim.Patches
             "PeterHan.NoWasteWant.NoWasteWantPatches";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
             CompareIncludingPriority;
+        private static readonly Func<FetchManager.Pickup, FetchManager.Pickup, bool> BetterPickup =
+            UpdatePickupsPatch.IsBetter;
 
         private readonly struct PickupKey : IEquatable<PickupKey>
         {
@@ -78,8 +80,10 @@ namespace CycleTrim.Patches
                 int worker,
                 Dictionary<int, int> ___cellCosts)
             {
+                var compact = FetchLayoutExperiment.Compact;
+                FetchLayoutExperiment.RecordUpdate(compact);
                 var candidates = ThreadLocalObjectPool<
-                    Dictionary<PickupKey, FetchManager.Pickup>>.Rent();
+                    FetchCandidateBuffer<PickupKey, FetchManager.Pickup>>.Rent();
 
                 try
                 {
@@ -115,17 +119,10 @@ namespace CycleTrim.Patches
                             foodQuality = fetchable.foodQuality
                         };
                         var key = new PickupKey(pickup.tagBitsHash, pickup.masterPriority);
-                        if (!candidates.TryGetValue(key, out var current)
-                            || IsBetter(pickup, current))
-                        {
-                            candidates[key] = pickup;
-                        }
+                        candidates.Consider(compact, key, pickup, __instance.finalPickups, BetterPickup);
                     }
 
-                    foreach (var candidate in candidates.Values)
-                    {
-                        __instance.finalPickups.Add(candidate);
-                    }
+                    candidates.Complete(compact, __instance.finalPickups);
 
                     __instance.finalPickups.Sort(FinalPickupOrder);
                     return false;
@@ -134,11 +131,11 @@ namespace CycleTrim.Patches
                 {
                     candidates.Clear();
                     ThreadLocalObjectPool<
-                        Dictionary<PickupKey, FetchManager.Pickup>>.Return(candidates);
+                        FetchCandidateBuffer<PickupKey, FetchManager.Pickup>>.Return(candidates);
                 }
             }
 
-            private static bool IsBetter(
+            internal static bool IsBetter(
                 FetchManager.Pickup candidate,
                 FetchManager.Pickup current)
             {

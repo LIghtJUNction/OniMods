@@ -13,6 +13,7 @@
     <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../mods/CycleTrim/Core/FetchCandidateBuffer.cs" Link="FetchCandidateBuffer.cs" />
     <Compile Include="../../mods/CycleTrim/Core/BrainRateCap.cs" Link="BrainRateCap.cs" />
     <Compile Include="../../mods/CycleTrim/Core/RefreshStamp.cs" Link="RefreshStamp.cs" />
     <Compile Include="../../mods/CycleTrim/Core/InvalidationVersions.cs" Link="InvalidationVersions.cs" />
