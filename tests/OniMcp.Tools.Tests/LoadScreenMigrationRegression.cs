@@ -56,4 +56,3 @@ internal static class LoadScreenMigrationRegression
         if (!condition) throw new InvalidOperationException(message);
     }
 }
-
