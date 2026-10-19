@@ -127,8 +127,9 @@ game_control domain=speed action=step_until condition=orders_complete speed=3 ma
 ```
 
 可选停止条件 `condition`：
-- `orders_complete`（默认）：当前重点工单全部完成。
-- `dupe_idle`：复制人变为空闲（说明手头活干完了或无路可走）。
+- `orders_complete`（默认）：启动时捕获的挖掘/建筑工单不再待办；至少捕获一个才会触发。取消也会移除工单，因此仍需核对目标建筑。
+- `dupe_idle`：任一所选世界复制人在 Work 时段执行原生空闲任务，默认持续 2 游戏秒。空闲也可能是无路或缺料。
+- `all_dupes_idle`：全部所选世界存活复制人都在 Work 时段且空闲；无人时不会触发。
 - `cycle_end`：周期结束/入夜。
 - `print` / `printing_pod` / `printable`：**打印舱有新的人员/补给包可供选择**（Immigration 就绪）。
 - `research` / `research_complete`：**当前科技研究完成**（自动暂停并选下一项科技）。
@@ -141,7 +142,15 @@ game_control domain=speed action=step_until condition=orders_complete speed=3 ma
 - `notify:message`：出现消息/对话框类通知（打印舱、故事特质、遗迹发现）。
 - `notify:event`：出现世界级大事件通知（流星雨、火箭发射/着陆、太阳耀斑）。
 - `notify:<keyword>`（如 `notify:pipe`、`notify:broken`、`notify:starv`）：按通知标题/建筑模糊匹配。
-- `any`：上述任一条件触发即自动 Pause 并返回。
+- `any`（兼容字符串）：挖掘/建筑工单、任一复制人空闲、周期变化任一触发。其他组合请用 `until`。
+
+优先按任务选择原子条件，再使用 `all` / `any` 组合。先用 `game_control domain=speed action=step_facts` 读取同一份空闲与工单事实；读取不会恢复游戏。例如本轮要求三人都空闲才暂停：
+
+```json
+{"domain":"speed","action":"step_until","until":{"fact":"dupes_idle","quantifier":"all","schedule":"work","stableSeconds":2},"speed":3,"maxGameSeconds":60,"maxWallSeconds":15}
+```
+
+这不是统一默认策略。组合、稳定窗口、人口与工单追踪边界见 [可组合推进条件](../../../docs/composable-game-waits.md)。`until` 未知字段或空组合会在恢复前拒绝。
 
 **缺氧原生硬件事件机制（终极省 Token 范式）**：
 在缺氧中，你可以利用温度/液位/气压/储量等逻辑传感器连接**自动化通知器（LogicAlarm）**，并命名为 `WaterFull` 或 `SafeTemp`。接着下达 `step_until condition="WaterFull"`。游戏以 3 倍速飞快模拟，一旦传感器触发绿信号，主线程每帧监听到报警后**毫秒级自动暂停并返回**，实现真正意义上的零轮询、零 Token 浪费！
@@ -170,7 +179,7 @@ game_control domain=speed action=step_until condition=orders_complete speed=3 ma
 }
 ```
 
-- 若 `stopReason == "orders_complete"` 且无警报：**工单已全部达成**，无需重读大范围地图，可直接推进下一阶段！
+- 若 `stopReason == "orders_complete"` 且无警报：检查 `orderTracking.initialTrackedOrders`、初始/剩余挖掘与建筑数量，再针对目标核对完成状态。零剩余不证明所有任务类型都已完成。
 - 若因 `notification`、`alert` 或 `dupe_idle` 停止：从 `delta["notifications"]` 直接查看通知标题与产生建筑，无需额外请求！按需使用 `colony_control domain=notification action=click` 聚焦或处理。
 
 记录验证结果：说明目标是否推进、发现的问题、下一轮是否需要继续。

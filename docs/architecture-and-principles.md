@@ -163,6 +163,8 @@ OniMcp 的 `world_editor` 将整个世界状态映射为一组虚拟 Markdown �
 为了解决传统基于 LLM 的游戏控制中“频繁乒乓轮询、盲目休眠、进度缓慢、Token 开销巨大”的痛点，OniMcp 深度借鉴了现代浏览器自动化框架（**Playwright**、**Chrome DevTools Protocol**）的核心设计模式：
 
 ### 1. 目标驱动条件推进 (`step_until`，对标 Playwright `waitForCondition` 与游戏自动化硬件报警)
+
+事实读取（`step_facts`）、原子条件与 `all` / `any` 组合（`until`）、有时限推进并暂停（`step_until`）分别负责观察、表达和执行。具体暂停策略交给 Agent；例如全员空闲只是可选条件。完整语义与示例见 [可组合推进条件](composable-game-waits.md)。
 - **淘汰盲目休眠**：严禁无目的的 `resume -> sleep(10s) -> pause`（复制人跑路需要十几秒，固定休眠导致 LLM 频繁空转轮询）。
 - **事件驱动快进**：通过 `game_control domain=speed action=step_until` 指定终止条件（`condition: "orders_complete" | "dupe_idle" | "cycle_end" | "print" | "research" | "alarm" | "alarm:<name>" | "notify:<keyword>" | "notify:good" | "notify:bad"` 等），游戏以 **3x 快进倍速** 持续模拟。
 - **全方位原生通知拦截（HUD Notifications Hook）**：全面接管缺氧游戏内的 `NotificationScreen` 与 `NotificationManager`。不仅支持打印舱就绪（`condition: "print"`）与科技研究完毕（`condition: "research"`）这类里程碑瞬时唤醒，还支持按通知类型（`notify:good` / `notify:bad` / `notify:message` / `notify:event`）或按关键字（如管道堵塞 `notify:pipe`、建筑故障 `notify:broken`、饥饿 `notify:starv`）进行模糊拦截。
