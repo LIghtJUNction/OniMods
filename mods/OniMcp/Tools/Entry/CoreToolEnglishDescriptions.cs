@@ -16,7 +16,7 @@ namespace OniMcp.Tools
                     Describe(tool, BuildingDescriptions());
                     break;
                 case "game_control":
-                    tool.Description = "Unified game entrypoint for speed, pause/resume, game state, saves, DLC activation, and safe UI actions. Use semantic actions and named targets; coordinate input is not accepted here.";
+                    tool.Description = "Unified game entrypoint for native new-game Survival menus, speed, pause/resume, game state, saves, DLC activation, and safe UI actions. Use launch/new_game_status to discover new-game stages and choices; coordinate input is not accepted here.";
                     Describe(tool, GameDescriptions());
                     break;
                 case "navigation_control":
@@ -107,10 +107,10 @@ namespace OniMcp.Tools
         {
             var d = CommonDescriptions();
             d["domain"] = "Game subsystem: launch, speed, state, save, dlc, or ui.";
-            d["action"] = "Game action for the selected subsystem. UI feedback actions include notification, popup, speech_bubble, and marker.";
+            d["action"] = "Game action for the selected subsystem. launch: status, start, restart_load, restart_status, new_game, new_game_status, new_game_select. New-game menu writes support dryRun and require confirm. UI feedback: notification, popup, speech_bubble, marker.";
             d["kind"] = "UI list subtype.";
             d["uiDomain"] = "UI subsystem: action, feedback.";
-            d["name"] = "Save name, or duplicant name for ui/feedback speech_bubble.";
+            d["name"] = "For launch/new_game_select: an advertised choice id from new_game_status. Otherwise a save name or ui/feedback speech_bubble duplicant name.";
             d["id"] = "Target object id, or duplicant instance id for ui/feedback speech_bubble.";
             d["text"] = "Displayed text for ui/feedback popup or speech_bubble; required for speech_bubble.";
             d["duration"] = "Speech-bubble display duration in seconds; defaults to 5 and is clamped to 0.5-30.";
