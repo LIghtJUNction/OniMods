@@ -331,6 +331,13 @@ namespace OniMcp.Server
                         }
                         task.LastUpdatedAt = System.DateTime.UtcNow;
                     }
+                    try
+                    {
+                        EnqueueResourceListChangedNotification();
+                        EnqueueResourceUpdatedNotification("oni://tasks/" + task.TaskId);
+                        EnqueueResourceUpdatedNotification("oni://reports/" + task.TaskId);
+                    }
+                    catch { }
                 }
                 catch (Exception ex)
                 {
@@ -341,6 +348,12 @@ namespace OniMcp.Server
                         task.Error = ex.Message;
                         task.LastUpdatedAt = System.DateTime.UtcNow;
                     }
+                    try
+                    {
+                        EnqueueResourceListChangedNotification();
+                        EnqueueResourceUpdatedNotification("oni://tasks/" + task.TaskId);
+                    }
+                    catch { }
                 }
             }));
         }

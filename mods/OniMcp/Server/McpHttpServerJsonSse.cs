@@ -100,6 +100,30 @@ namespace OniMcp.Server
             return EnqueueClientRequest(notification, requireSampling: false);
         }
 
+        public int EnqueueResourceListChangedNotification()
+        {
+            var notification = new JObject
+            {
+                ["jsonrpc"] = "2.0",
+                ["method"] = "notifications/resources/list_changed"
+            };
+            return EnqueueClientRequest(notification, requireSampling: false);
+        }
+
+        public int EnqueueResourceUpdatedNotification(string uri)
+        {
+            var notification = new JObject
+            {
+                ["jsonrpc"] = "2.0",
+                ["method"] = "notifications/resources/updated",
+                ["params"] = new JObject
+                {
+                    ["uri"] = uri ?? string.Empty
+                }
+            };
+            return EnqueueClientRequest(notification, requireSampling: false);
+        }
+
         private static JObject CloneOutboundMessage(JObject message)
         {
             var clone = (JObject)message.DeepClone();

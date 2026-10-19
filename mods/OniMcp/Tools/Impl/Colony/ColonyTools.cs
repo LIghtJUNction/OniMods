@@ -15,6 +15,7 @@ namespace OniMcp.Tools
     {
         public static McpTool ControlColony()
         {
+            OniColonyStateResources.Initialize();
             return new McpTool
             {
                 Name = "colony_control",
@@ -22,14 +23,14 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Aliases = new List<string> { "colony_status_control", "colony_ops_control" },
-                Tags = new List<string> { "colony", "snapshot", "diagnostics", "alerts", "survival", "long-run", "report", "notifications", "dupes", "worlds", "management", "schedule", "diet", "research", "medical", "bio", "farming", "ranching" },
-                Description = "殖民地组合入口：domain=snapshot/read/report/diagnostic/survival/notification/management/bio。读取高效状态快照、殖民地基础状态、报告、诊断/告警/诊断设置、生存长跑分诊、HUD 通知、殖民地管理和生物生产；写/点击类操作保留底层 confirm/force 语义。",
+                Tags = new List<string> { "colony", "snapshot", "diagnostics", "alerts", "survival", "long-run", "report", "notifications", "dupes", "worlds", "management", "schedule", "diet", "research", "medical", "bio", "farming", "ranching", "notes" },
+                Description = "殖民地组合入口：domain=snapshot/read/report/diagnostic/survival/notification/management/bio/notes。读取高效状态快照、殖民地基础状态、报告、诊断/告警/诊断设置、生存长跑分诊、HUD 通知、殖民地管理、生物生产及存档隔离笔记；写/点击类操作保留底层 confirm/force 语义。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["domain"] = new McpToolParameter { Type = "string", Description = "snapshot、read、report、diagnostic、survival、notification、management 或 bio，默认 read", Required = false, EnumValues = new List<string> { "snapshot", "read", "report", "diagnostic", "survival", "notification", "management", "bio" } },
+                    ["domain"] = new McpToolParameter { Type = "string", Description = "snapshot、read、report、diagnostic、survival、notification、management、bio 或 notes，默认 read", Required = false, EnumValues = new List<string> { "snapshot", "read", "report", "diagnostic", "survival", "notification", "management", "bio", "notes" } },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "domain=management 时为 schedule、diet、research 或 medical；domain=bio 且 bioDomain=ranching 时为 critters/dropoff/incubator", Required = false },
                     ["bioDomain"] = new McpToolParameter { Type = "string", Description = "domain=bio 时为 farming 或 ranching；兼容把 kind=farming/ranching 当作 bioDomain", Required = false },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=snapshot: get；read: status/dupes/worlds/resources；report: report/summary；diagnostic: diagnostics/alerts/list_settings/set_settings/set_auto_disinfect；survival: plan/status；notification: list/click/dismiss；management: schedule/diet/research/medical 的子动作；bio: farming/ranching 的子动作", Required = true },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=snapshot: get；read: status/dupes/worlds/resources；report: report/summary；diagnostic: diagnostics/alerts/list_settings/set_settings/set_auto_disinfect；survival: plan/status；notification: list/click/dismiss；management: schedule/diet/research/medical 的子动作；bio: farming/ranching 的子动作；notes: list/read/write/append/delete/rename/status", Required = true },
                     ["profile"] = new McpToolParameter { Type = "string", Description = "domain=snapshot：minimal/brief/standard/full", Required = false, EnumValues = new List<string> { "minimal", "brief", "standard", "full" } },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "目标世界 ID，按 action 解释", Required = false },
                     ["includeDupes"] = new McpToolParameter { Type = "boolean", Description = "domain=snapshot：是否包含复制人摘要，默认 true", Required = false },
@@ -62,14 +63,42 @@ namespace OniMcp.Tools
                     ["disabled"] = new McpToolParameter { Type = "boolean", Description = "domain=diagnostic action=set_auto_disinfect 时 true=全局禁用自动消毒", Required = false },
                     ["applyNow"] = new McpToolParameter { Type = "boolean", Description = "domain=diagnostic action=set_auto_disinfect 时是否立即同步现有对象，默认 true", Required = false },
                     ["force"] = new McpToolParameter { Type = "boolean", Description = "允许执行对应底层强制操作，按 action 解释", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "写操作确认，按 action 解释", Required = false }
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "写操作确认，按 action 解释", Required = false },
+                    ["async"] = new McpToolParameter { Type = "boolean", Description = "是否异步执行长耗时任务，完成后将结果写入 dynamic resource 并触发通知，默认 false", Required = false }
                 },
                 Handler = args =>
                 {
                     string domain = (args["domain"]?.ToString() ?? "read").Trim().ToLowerInvariant();
                     var forwarded = new JObject(args);
                     forwarded.Remove("domain");
-                    switch (domain)
+                    forwarded.Remove("async");
+
+                    bool isAsync = ToolUtil.GetBool(args, "async", false);
+                    if (isAsync)
+                    {
+                        var taskEntry = OniDynamicTaskRegistry.SubmitTask($"colony_control domain={domain} action={args["action"]}", "colony", () =>
+                        {
+                            var toolResult = ControlColonyInternal(domain, forwarded, args);
+                            string text = toolResult?.Content?.FirstOrDefault()?.Text ?? "{}";
+                            try { return JToken.Parse(text); } catch { return new JValue(text); }
+                        });
+                        return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        {
+                            ["status"] = "submitted",
+                            ["taskId"] = taskEntry.TaskId,
+                            ["resourceUri"] = taskEntry.ResourceUri,
+                            ["message"] = $"任务已提交，完成后结果将写入 {taskEntry.ResourceUri} 并向客户端发送 notifications/resources/list_changed 通知。"
+                        }, McpJsonUtil.Settings));
+                    }
+
+                    return ControlColonyInternal(domain, forwarded, args);
+                }
+            };
+        }
+
+        private static CallToolResult ControlColonyInternal(string domain, JObject forwarded, JObject args)
+        {
+            switch (domain)
                     {
                         case "snapshot":
                         case "state":
@@ -112,11 +141,12 @@ namespace OniMcp.Tools
                             forwarded["domain"] = bioDomain;
                             forwarded.Remove("bioDomain");
                             return BioControlTools.ControlBio().Handler(forwarded);
+                        case "notes":
+                        case "note":
+                            return ColonyNotesTools.ControlNotes().Handler(forwarded);
                         default:
-                            return CallToolResult.Error("domain must be snapshot, read, report, diagnostic, notification, management, or bio");
+                            return CallToolResult.Error("domain must be snapshot, read, report, diagnostic, notification, management, bio, or notes");
                     }
-                }
-            };
         }
 
         public static McpTool ReadColonyControl()

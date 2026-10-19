@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using OniMcp.Support;
 
 namespace OniMcp.Tools
@@ -39,6 +40,7 @@ namespace OniMcp.Tools
                 add("diagnostics/", "dir", "Low-token stability and log diagnostic files.");
              add("screenshots/", "dir", "Viewport screenshot command guide and latest screenshot link.");
              add("blueprints/", "dir", "Blueprints Expanded files with editable text-map views.");
+             add("notes/", "dir", "Per-save isolated game notes and core AGENTS.md background guidelines.");
              add("ops/", "dir", "Generic editable operation files for all control tools.");
  return entries;
  }
@@ -83,6 +85,20 @@ namespace OniMcp.Tools
                 {
                     add("index.md", "file", "Blueprint index and text-map conversion guide.");
                     entries.AddRange(BlueprintEntries("/active/blueprints/"));
+                }
+                else if (relative == "notes/" || relative.StartsWith("notes/", StringComparison.Ordinal))
+                {
+                    string sub = relative == "notes/" ? "" : relative.Substring("notes/".Length);
+                    if (SaveNotesManager.TryResolveNotePath(sub, false, out string noteDir, out _, out _))
+                    {
+                        if (Directory.Exists(noteDir))
+                        {
+                            foreach (string dir in Directory.GetDirectories(noteDir).OrderBy(d => d))
+                                add(Path.GetFileName(dir) + "/", "dir", "Note subfolder.");
+                            foreach (string file in Directory.GetFiles(noteDir).OrderBy(f => f))
+                                add(Path.GetFileName(file), "file", "Colony note file.");
+                        }
+                    }
                 }
 
                 else if (relative == "infrastructure/")
@@ -278,6 +294,8 @@ namespace OniMcp.Tools
                 || relative == "diagnostics/"
                   || relative == "screenshots/"
                   || relative == "blueprints/"
+                  || relative == "notes/"
+                  || (relative.StartsWith("notes/", StringComparison.Ordinal) && relative.EndsWith("/"))
                   || relative == "management/"
                     || relative == "ops/";
             }

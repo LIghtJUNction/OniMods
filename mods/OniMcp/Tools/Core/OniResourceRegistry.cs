@@ -13,23 +13,40 @@ namespace OniMcp.Tools
     /// </summary>
     public static partial class OniResourceRegistry
     {
+        private static readonly List<Func<IEnumerable<McpResourceInfo>>> _extraResourceProviders = new List<Func<IEnumerable<McpResourceInfo>>>();
+        private static readonly List<Action<List<McpResourceTemplateInfo>>> _extraTemplateProviders = new List<Action<List<McpResourceTemplateInfo>>>();
+        private static readonly List<Func<string, Uri, ReadResourceResult>> _dynamicRouteHandlers = new List<Func<string, Uri, ReadResourceResult>>();
+
+        public static void RegisterResourceProvider(Func<IEnumerable<McpResourceInfo>> provider) { if (provider != null) _extraResourceProviders.Add(provider); }
+        public static void RegisterTemplateProvider(Action<List<McpResourceTemplateInfo>> provider) { if (provider != null) _extraTemplateProviders.Add(provider); }
+        public static void RegisterDynamicRouteHandler(Func<string, Uri, ReadResourceResult> handler) { if (handler != null) _dynamicRouteHandlers.Add(handler); }
+
         public static List<McpResourceInfo> GetResourceInfos()
         {
-            return _resources
-                .Select(resource => resource.Info)
-                .OrderBy(resource => resource.Uri)
-                .ToList();
+            var list = _resources.Select(resource => resource.Info).ToList();
+            foreach (var provider in _extraResourceProviders)
+            {
+                var extra = provider();
+                if (extra != null)
+                    list.AddRange(extra);
+            }
+            return list.OrderBy(resource => resource.Uri).ToList();
         }
 
         public static List<McpResourceTemplateInfo> GetResourceTemplateInfos()
         {
-            return _templates.OrderBy(template => template.UriTemplate).ToList();
+            var templates = BuildResourceTemplates();
+            return templates.OrderBy(template => template.UriTemplate).ToList();
         }
 
         public static ReadResourceResult ReadResource(string uri)
         {
             if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed) || parsed.Scheme != "oni")
                 return null;
+
+            var dynamicResult = ReadDynamicResource(uri);
+            if (dynamicResult != null)
+                return dynamicResult;
 
             string resourceUri = parsed.GetLeftPart(UriPartial.Path).TrimEnd('/');
             var resource = _resources.FirstOrDefault(item => item.Info.Uri.TrimEnd('/') == resourceUri);
@@ -44,7 +61,7 @@ namespace OniMcp.Tools
                 return ReadToolResource(uri, resource.ToolName, arguments, resource.Info.MimeType);
             }
 
-            return ReadDynamicResource(uri);
+            return null;
         }
 
 
@@ -429,14 +446,14 @@ namespace OniMcp.Tools
                     Resource("oni://world/layout-candidates", "read_control", "平面布局候选", "按用途扫描区域，返回房间/平台候选矩形、评分、需挖掘、需铺砖、危险格和连通性。", new JObject { ["domain"] = "world", ["action"] = "layout_candidates" })
                 };
 
-                private static readonly List<McpResourceTemplateInfo> _templates = BuildResourceTemplates();
-
         private static List<McpResourceTemplateInfo> BuildResourceTemplates()
         {
             var templates = new List<McpResourceTemplateInfo>();
             AddWorldAndColonyResourceTemplates(templates);
             AddBuildingAndSpaceResourceTemplates(templates);
             AddDuplicantAndUiResourceTemplates(templates);
+            foreach (var provider in _extraTemplateProviders)
+                provider(templates);
             return templates;
         }
 
@@ -458,6 +475,13 @@ namespace OniMcp.Tools
             result = ReadDuplicantAndUiResourceRoutes(uri, parsed);
             if (result != null)
                 return result;
+
+            foreach (var handler in _dynamicRouteHandlers)
+            {
+                result = handler(uri, parsed);
+                if (result != null)
+                    return result;
+            }
 
             return null;
         }

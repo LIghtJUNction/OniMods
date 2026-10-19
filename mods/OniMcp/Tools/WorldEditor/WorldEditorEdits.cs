@@ -87,6 +87,8 @@ namespace OniMcp.Tools
                 return PreflightDupeDetailEdit(relative, replace);
             if (IsBuildingDetailMarkdown(relative))
                 return PreflightBuildingDetailEdit(relative, search, replace);
+            if (IsNoteVirtualFile(relative))
+                return PreflightNoteEdit(relative, search, replace);
             return CallToolResult.Error("file is read-only for edits: " + path);
         }
 
@@ -115,8 +117,40 @@ namespace OniMcp.Tools
                 return ApplyDupeDetailEdit(routed, relative, replace);
             if (IsBuildingDetailMarkdown(relative))
                 return ApplyBuildingDetailEdit(routed, relative, search, replace);
+            if (IsNoteVirtualFile(relative))
+                return ApplyNoteEdit(routed, relative, search, replace);
 
             return CallToolResult.Error("file is read-only for edits: " + path);
+        }
+
+        private static bool IsNoteVirtualFile(string relative)
+        {
+            return relative.StartsWith("notes/", StringComparison.Ordinal)
+                && (relative.EndsWith(".md", StringComparison.OrdinalIgnoreCase) || relative.EndsWith(".txt", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static CallToolResult PreflightNoteEdit(string relative, string search, string replace)
+        {
+            string noteSub = relative.Substring("notes/".Length);
+            if (!SaveNotesManager.TryResolveNotePath(noteSub, true, out string fullPath, out _, out string error))
+                return CallToolResult.Error(error);
+            string current = System.IO.File.ReadAllText(fullPath, System.Text.Encoding.UTF8);
+            if (!current.Contains(search))
+                return CallToolResult.Error("SEARCH block not found in note: " + relative);
+            return JsonResult(new JObject { ["ok"] = true, ["phase"] = "preflight", ["path"] = fullPath });
+        }
+
+        private static CallToolResult ApplyNoteEdit(JObject args, string relative, string search, string replace)
+        {
+            string noteSub = relative.Substring("notes/".Length);
+            if (!SaveNotesManager.TryResolveNotePath(noteSub, true, out string fullPath, out _, out string error))
+                return CallToolResult.Error(error);
+            string current = System.IO.File.ReadAllText(fullPath, System.Text.Encoding.UTF8);
+            if (!current.Contains(search))
+                return CallToolResult.Error("SEARCH block not found in note: " + relative);
+            string updated = current.Replace(search, replace);
+            var writeArgs = new JObject { ["path"] = noteSub, ["content"] = updated };
+            return SaveNotesManager.WriteNote(writeArgs, isAppend: false);
         }
 
         private static CallToolResult ApplyBuildEdit(JObject args, string relative, string replacement)

@@ -127,6 +127,91 @@ Prefer one SEARCH/REPLACE block. Multiple blocks require outer `allowPartial=tru
 
 This directly creates a continuous line, with no separate follow-up connection step required.
 
+## 文件夹式蓝图管理系统 (Folder-based Blueprints)
+
+`world_editor command=blueprint` 提供了完备的蓝图全生命周期管理，深度集成 Blueprints Expanded v2 格式与原生自动建造回退机制：
+
+| action | 说明 | 示例参数 |
+|--------|------|---------|
+| `list` / `ls` | 列出分类文件夹与蓝图文件（支持树状和 JSON 格式） | `category: "power"`, `format: "json"` |
+| `preview` | 预览蓝图（尺寸、建筑清单、材料用量、网格字符图） | `name: "power/spom"` |
+| `create` / `capture` | 从纯文本创建或直接**框选地图矩形捕获现存建筑与管路** | `name: "spom"`, `category: "power"`, `x1: 10, y1: 20, x2: 25, y2: 30` |
+| `import` | 从 JSON、Markdown 或 Base64 分享码导入蓝图 | `name: "spom"`, `content: "<json/base64>"` |
+| `export` | 导出蓝图为 JSON、Markdown 或 Base64 字符串 | `name: "power/spom"`, `format: "json"` |
+| `share` | 将单个蓝图或整个分类打包为分享代码 | `name: "power/spom"` 或 `category: "power"` |
+| `rename` | 重命名或跨目录移动蓝图 | `from: "test"`, `to: "power/spom"` |
+| `categorize` | 将蓝图移动到分类文件夹 | `name: "spom"`, `category: "power"` |
+| `replace_materials` | 批量替换蓝图内的建筑材料 | `name: "power/spom"`, `from: "Sandstone", to: "Granite"` |
+| `place` / `use` | 放置蓝图（支持 dryRun 预览、材料动态重定向与原生回退） | `name: "power/spom"`, `x: 15, y: 30, dryRun: false, confirm: true` |
+| `cancel` | 取消指定区域或指定蓝图范围内的待建工单 | `name: "power/spom", x: 15, y: 30` 或 `x1: 15, y1: 30, x2: 25, y2: 40` |
+| `delete` | 删除指定蓝图文件或空目录 | `name: "power/spom"` |
+
+- **视觉反馈**：Agent 进行预览、手持蓝图准备放置、成功放置、捕获、材料替换时，会在玩家鼠标光标附近实时弹出 `ToolCallSpeechOverlay` 对话气泡（例如 `📐 手持蓝图 [ SPOM ] 准备放置于 (15,30) [预览]`）。
+
+---
+
+## 存档隔离的文件夹式游戏笔记工具 (Save-Isolated Notes & AGENTS.md)
+
+虚拟文件系统 `/active/notes/` 与 `/active/ops/colony.md` (notes 域) 提供按当前活跃游戏存档物理隔离的笔记管理系统：
+
+- **自动生成 `AGENTS.md`**：每个存档的 `notes/AGENTS.md` 自动初始化为该存档专属的核心背景文档，包含殖民地战略目标、防爆温/防爆管心法、禁忌规则（默认禁用自动消毒、严禁盲目开挖液体蓄水池等）及阶段里程碑。
+- **子文件夹管理**：支持组织 `plans/`（工程规划）、`milestones/`（阶段日志）、`issues/`（疑难杂症）等目录。
+- **操作接口**：可通过 `/active/ops/colony.md` 调度 notes 域动作：
+  - `list` [folder="plans"]
+  - `read` path="AGENTS.md"
+  - `write` path="plans/spom.md" content="..."
+  - `append` path="milestones/cycle-50.md" content="..."
+  - `rename` from="..." to="..."
+  - `delete` path="..."
+  - `status`
+- **虚拟文件系统支持**：可通过 `world_editor` 读取 `/active/notes/AGENTS.md` 并通过 `SEARCH/REPLACE` 直接编辑。
+- **视觉反馈**：读写、更新 AGENTS.md 或追加里程碑日志时，同样在鼠标光标旁弹出实时气泡提示。
+
+---
+
+## 动态资源体系与异步长耗时通知 (Dynamic Resources & Async Notifications)
+
+除了传统的电网与建筑工具，ONI 具备丰富的动态游戏生态状态。OniMcp 将核心状态作为 MCP 原生 **Dynamic Resources (`oni://...`)** 公开，替代繁重的工具轮询：
+
+### 核心殖民地动态资源
+
+| URI | 说明 | 内容格式 |
+|-----|------|---------|
+| `oni://atmosphere/summary` | 全图大气质量、氧气占比、主要气体分布与气温统计 | JSON |
+| `oni://atmosphere/breathability` | 复制人可呼吸格子数、氧气储量、CO2 及窒息风险评估 | JSON |
+| `oni://fluid/liquid/summary` | 净水、污水、原油、盐水等液体存量、储液罐与温度分布 | JSON |
+| `oni://fluid/gas/summary` | 世界主要气体储量、储气罐与管道通畅度 | JSON |
+| `oni://plumbing/summary` | 液体/气体管网网格段数、畅通状态及布局统计 | JSON |
+| `oni://thermal/summary` | 世界最高/最低/平均温度场，极端高温与极寒格统计 | JSON |
+| `oni://food/summary` | 全殖民地食物卡路里储备、人均可用天数及断粮预警 | JSON |
+| `oni://farming/crops` | 种植箱与农砖作物数量、成熟可收获数量及生长分布 | JSON |
+| `oni://ranching/summary` | 动物存活总数、按物种分布统计与圈舍拥挤状态 | JSON |
+| `oni://dupes/vitals` | 复制人生理指标：生命、压力、饱食、呼吸、膀胱等 | JSON |
+| `oni://dupes/morale` | 复制人士气值、士气期望值、净士气差额及高压预警 | JSON |
+| `oni://geysers/summary` | 已探明喷孔、类型、喷发元素、温度及坐标 | JSON |
+| `oni://research/progress` | 当前研发科技、已解锁科技总数及各级研究点数 | JSON |
+| `oni://resources/stockpile` | 按分类汇总的矿物、金属、原材料与工业存量 | JSON |
+| `oni://notes/{path}` | 读取当前存档隔离的游戏笔记（如 `AGENTS.md`） | Markdown |
+| `oni://blueprints/{name}` | 读取已保存蓝图的完整结构定义 | JSON |
+
+### 异步执行与主动通知 (Method 2: Async + Dynamic Resources Notification)
+
+对于长耗时计算（如大范围扫描、生存长跑分诊、高负载蓝图分析）：
+1. **任务提交**：调用操作时附带 `async: true`，服务器立即返回：
+   ```json
+   {
+     "status": "submitted",
+     "taskId": "task_20261019_...",
+     "resourceUri": "oni://reports/task_20261019_...",
+     "message": "任务已提交，完成后结果将写入 oni://reports/... 并主动发送 notifications/resources/list_changed 通知。"
+   }
+   ```
+2. **异步执行**：MCP 服务器在 Unity 主线程调度队列或后台任务池中异步执行，不阻塞客户端调用。
+3. **主动通知**：任务结束时，服务器写入该动态报告资源，并通过 SSE 主动广播 `notifications/resources/list_changed` 与 `notifications/resources/updated`。
+4. **按需读取**：Agent 接收到通知后，调用 `resources/read` 读取 `oni://reports/task_...` 获取完整结果，实现真正的事件驱动与动态资源分离架构。
+
+---
+
 ## 订单与剪断
 
 `orders_control` supports semantic targets and area handles. For an exact rectangle, read `/active/ops/tools.md`, ignore hidden coordinate compatibility entries, then edit `/active/ops/orders.md`, for example `挖 x1=10 y1=20 x2=18 y2=20 priority=7 dryRun=true`. Preview with outer `dryRun=true` and no confirmation; execute only with a new edit using outer `dryRun=false`, `confirm=true`, and non-conflicting command flags.
@@ -178,6 +263,10 @@ This directly creates a continuous line, with no separate follow-up connection s
 | `oni://resources/food` | 食物库存和保质信息 |
 | `oni://dupes` | 复制人列表 |
 | `oni://dupes/status-check` | 复制人位置、差事、需求和疑似被困风险 |
+| `oni://plumbing/liquid` | 液体管道回路、流动方向向量、流速与堵塞瓶颈 |
+| `oni://plumbing/gas` | 气体管道回路、流动方向向量与气体元素分布 |
+| `oni://circuits/logic` | 自动化逻辑信号网络（0/1 电平与 4-bit 线束通道） |
+| `oni://circuits/power` | 电网摘要、回路负载、发电量与过载状态 |
 | `oni://power/summary` | 电网摘要和电池状态 |
 | `oni://power/ports` | 电力接口格、锚点、接线点和端口是否已有电线 |
 | `oni://rooms/list` | 房间系统状态 |
