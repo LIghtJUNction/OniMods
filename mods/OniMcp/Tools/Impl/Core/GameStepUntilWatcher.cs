@@ -24,7 +24,7 @@ namespace OniMcp.Tools
             private float _startWallTime;
             private int _startCycle;
             private bool _initialImmigrantsAvailable;
-            private string _initialActiveTech;
+            private StepResearchTracker _research;
             private HashSet<string> _initialNotificationKeys;
             private bool _completed = true;
             private string _observationError;
@@ -48,7 +48,7 @@ namespace OniMcp.Tools
                 _startCycle = GameUtil.GetCurrentCycle();
                 _orders = new StepOrderTracker(worldId, targetCells);
                 _initialImmigrantsAvailable = Immigration.Instance != null && Immigration.Instance.ImmigrantsAvailable;
-                _initialActiveTech = Research.Instance?.GetActiveResearch()?.tech?.Id;
+                _research = new StepResearchTracker(Research.Instance?.GetActiveResearch());
                 _initialNotificationKeys = new HashSet<string>();
                 foreach (var n in GetAllNotifications())
                     if (n != null) _initialNotificationKeys.Add(GetNotificationKey(n));
@@ -64,9 +64,7 @@ namespace OniMcp.Tools
                     RemainingTrackedOrders = _orders.RemainingCount,
                     CycleEnded = GameUtil.GetCurrentCycle() > _startCycle,
                     PrintingPodReady = !_initialImmigrantsAvailable && Immigration.Instance != null && Immigration.Instance.ImmigrantsAvailable,
-                    ResearchComplete = (_initialActiveTech != null && Research.Instance?.GetActiveResearch() == null)
-                        || notes.Any(n => n.Type == "Good" && (n.Title.IndexOf("Research", StringComparison.OrdinalIgnoreCase) >= 0
-                            || n.Title.IndexOf("研究", StringComparison.OrdinalIgnoreCase) >= 0)),
+                    ResearchComplete = _research.HasCompleted,
                     Duplicants = ReadStepDupeFacts(_worldId), Alarms = alarms, Alerts = alerts, Notifications = notes
                 };
             }
@@ -95,6 +93,12 @@ namespace OniMcp.Tools
                     ["remainingTargetOrders"] = facts.RemainingTrackedOrders,
                     ["orderTracking"] = _orders.ToJson(),
                     ["idleFacts"] = StepDupeFactsJson(facts.Duplicants),
+                    ["researchTracking"] = new Dictionary<string, object>
+                    {
+                        ["initialTechId"] = _research.InitialTechId,
+                        ["initiallyComplete"] = _research.InitiallyComplete,
+                        ["completed"] = facts.ResearchComplete
+                    },
                     ["activeAlarms"] = facts.Alarms,
                     ["activeAlerts"] = facts.Alerts,
                     ["newNotificationCount"] = facts.Notifications.Count(n => n.IsNew),
