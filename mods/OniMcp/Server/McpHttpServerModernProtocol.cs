@@ -193,6 +193,45 @@ namespace OniMcp.Server
                 case "resources/read":
                 case "skills/list":
                 case "skills/get":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private object ProcessModernMethod(JsonRpcRequest request)
+        {
+            switch (request.Method)
+            {
+                case "server/discover":
+                    return BuildModernDiscoveryResult();
+
+                case "tools/list":
+                {
+                    var toolInfos = BuildModernToolInfos();
+                    if (toolInfos.Count == 0)
+                        return ModernToolMethodUnavailable(request);
+                    return CompleteModernListResult(new JObject { ["tools"] = toolInfos });
+                }
+
+                case "tools/call":
+                    if (!IsModernReadOnlyToolAvailable())
+                        return ModernToolMethodUnavailable(request);
+                    return CallModernReadOnlyTool(request);
+
+                case "resources/list":
+                {
+                    var resources = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
+                        .Where(item => IsModernReadOnlyResourceUri(item.Uri))
+                        .OrderBy(item => item.Uri, StringComparer.Ordinal));
+                    if (OniMcpOptions.Current.SkillsExtensionEnabled)
+                        foreach (JToken resource in OniMcpSkillCatalog.ListResources())
+                            resources.Add(resource);
+                    return CompleteModernListResult(new JObject { ["resources"] = resources });
+                }
+
+                case "skills/list":
+                case "skills/get":
                     return ProcessModernSkillsRequest(request);
 
                 case "resources/templates/list":

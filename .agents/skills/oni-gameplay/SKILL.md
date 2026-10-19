@@ -7,7 +7,7 @@ description: Control Oxygen Not Included through Oni MCP with a strict observe-p
 
 ## Strategy reference routing
 
-For colony progression or module selection, read [the colony strategy skill](../oni-mcp-colony-strategy/SKILL.md), then only the relevant topic reference. Cite the original article for the selected design and check its version, DLC and startup conditions. This supplements planning; it does not replace the world-editor protocol, authorize actions, or establish live-game compatibility.
+For colony progression or module selection, read [the colony strategy skill](../oni-mcp-colony-strategy/SKILL.md) if separately installed (the MCP Skills package does not include this sibling; [public repository copy](https://github.com/LIghtJUNction/OniMods/blob/main/.agents/skills/oni-mcp-colony-strategy/SKILL.md)), then only the relevant topic reference. Cite the original article for the selected design and check its version, DLC and startup conditions. This supplements planning; it does not replace the world-editor protocol, authorize actions, or establish live-game compatibility.
 
 
 ## Reference routing
