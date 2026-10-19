@@ -71,12 +71,6 @@ namespace UnityEngine
         internal string GetProperName() => name;
     }
 }
-internal partial class BuildingDef
-{
-    internal int WidthInCells { get; set; }
-    internal int HeightInCells { get; set; }
-    internal CellOffset[] PlacementOffsets { get; set; }
-}
 internal partial class Building
 {
     internal int OriginCell { get; set; }
@@ -88,16 +82,6 @@ internal sealed partial class KPrefabID { internal Tag PrefabTag { get; set; } }
 internal static partial class Grid
 {
     internal static int PosToCell(GameObject go) => go.Cell;
-    internal static int OffsetCell(int cell, CellOffset offset) => cell + offset.x + offset.y * 10;
-}
-internal struct CellOffset { internal int x, y; }
-internal enum Orientation { Neutral, R90 }
-internal sealed class Rotatable
-{
-    internal Orientation Value { get; set; }
-    internal Orientation GetOrientation() => Value;
-    internal static CellOffset GetRotatedCellOffset(CellOffset offset, Orientation orientation)
-        => orientation == Orientation.Neutral ? offset : new CellOffset { x = -offset.y, y = offset.x };
 }
 namespace OniMcp.Tools
 {

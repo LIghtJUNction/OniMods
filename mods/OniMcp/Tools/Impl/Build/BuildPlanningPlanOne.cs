@@ -287,7 +287,7 @@ int cell = Grid.XYToCell(x, y);
             if (!facadeResult.Valid)
                 return ErrorResult(prefabId, x, y, facadeResult.Error);
 
-            var supportResult = ValidateSupport(def, x, y, ToolUtil.GetBool(args, "allowUnsupported", false), plannedSupportCells);
+            var supportResult = ValidateSupport(def, x, y, ToolUtil.GetBool(args, "allowUnsupported", false), plannedSupportCells, orientation);
             if (!supportResult.Valid)
                 return ErrorResult(prefabId, x, y, supportResult.Error, supportResult.ToDictionary());
 
@@ -401,10 +401,9 @@ int cell = Grid.XYToCell(x, y);
             }
 
             Dictionary<string, object> fallbackPlacement = null;
-            var pos = BuildPlacementPosition(cell, def);
-            var go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
+            var go = TryPlaceRequestedBuilding(def, placement, materialResult.Elements, facadeResult.TryPlaceId);
             if (go == null && autoDig != null && !IsLinearUtilityPrefab(prefabId))
-                go = TryPlaceWithBuildTool(def, cell, orientation, materialResult.Elements,
+                go = TryPlaceWithBuildTool(def, Grid.PosToCell(placement.PlacementPoint), orientation, materialResult.Elements,
                     facadeResult.ResponseId, placement, args, out fallbackPlacement);
             if (go == null)
             {

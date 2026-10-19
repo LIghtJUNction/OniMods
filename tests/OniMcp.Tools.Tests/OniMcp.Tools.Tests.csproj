@@ -44,6 +44,8 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlacementIdentityPolicy.cs" Link="Source/BuildPlacementIdentityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementCoordinates.cs" Link="Source/BuildPlanningPlacementCoordinates.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementModels.cs" Link="Source/BuildPlanningPlacementModels.cs" />
     <Compile Include="../../mods/OniMcp/Patches/LoadScreenPreviewPolicy.cs" Link="Source/LoadScreenPreviewPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Entry/NavigationControlTools.cs" Link="Source/NavigationControlTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Navigation/CameraTools.cs" Link="Source/CameraTools.cs" />

@@ -51,6 +51,7 @@ internal static class Program
         StepPrintingPodRegression.Run();
         UtilityPathPlacementRegression.Run();
         ExistingFootprintRegression.Run();
+        RequestedPlacementRegression.Run();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
