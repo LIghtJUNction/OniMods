@@ -23,7 +23,6 @@ namespace OniMcp.Tools
             private float _startGameTime;
             private float _startWallTime;
             private int _startCycle;
-            private bool _initialImmigrantsAvailable;
             private StepResearchTracker _research;
             private HashSet<string> _initialNotificationKeys;
             private bool _completed = true;
@@ -47,7 +46,6 @@ namespace OniMcp.Tools
                 _startWallTime = Time.realtimeSinceStartup;
                 _startCycle = GameUtil.GetCurrentCycle();
                 _orders = new StepOrderTracker(worldId, targetCells);
-                _initialImmigrantsAvailable = Immigration.Instance != null && Immigration.Instance.ImmigrantsAvailable;
                 _research = new StepResearchTracker(Research.Instance?.GetActiveResearch());
                 _initialNotificationKeys = new HashSet<string>();
                 foreach (var n in GetAllNotifications())
@@ -63,7 +61,7 @@ namespace OniMcp.Tools
                     InitialTrackedOrders = _orders.InitialCount,
                     RemainingTrackedOrders = _orders.RemainingCount,
                     CycleEnded = GameUtil.GetCurrentCycle() > _startCycle,
-                    PrintingPodReady = !_initialImmigrantsAvailable && Immigration.Instance != null && Immigration.Instance.ImmigrantsAvailable,
+                    PrintingPodReady = StepPrintingPodState.IsAvailable,
                     ResearchComplete = _research.HasCompleted,
                     Duplicants = ReadStepDupeFacts(_worldId), Alarms = alarms, Alerts = alerts, Notifications = notes
                 };
@@ -92,6 +90,7 @@ namespace OniMcp.Tools
                     ["targetCellCount"] = _targetCells.Count,
                     ["remainingTargetOrders"] = facts.RemainingTrackedOrders,
                     ["orderTracking"] = _orders.ToJson(),
+                    ["immigrantsAvailable"] = StepPrintingPodState.IsAvailable,
                     ["idleFacts"] = StepDupeFactsJson(facts.Duplicants),
                     ["researchTracking"] = new Dictionary<string, object>
                     {
@@ -104,6 +103,25 @@ namespace OniMcp.Tools
                     ["newNotificationCount"] = facts.Notifications.Count(n => n.IsNew),
                     ["activeNotificationCount"] = facts.Notifications.Count
                 };
+            }
+
+            public bool TryCompleteBeforeResume()
+            {
+                if (!_condition.ContainsFact("printing_pod_ready")) return false;
+                try
+                {
+                    var facts = Observe(out string threat);
+                    if (threat != null) { Finish("alert:" + threat); return true; }
+                    if (!_evaluator.EvaluateBeforeResume(_condition, facts, out string reason)) return false;
+                    Finish(reason);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    _observationError = e.Message;
+                    Finish("observation_failed");
+                    return true;
+                }
             }
 
             public void Cancel(string reason = "cancelled") => Finish(reason);
@@ -164,7 +182,6 @@ namespace OniMcp.Tools
                     ["title"] = n.Title, ["type"] = n.Type, ["isNew"] = n.IsNew,
                     ["isAlarm"] = n.IsAlarm, ["notifier"] = n.Notifier
                 }).ToList();
-                delta["immigrantsAvailable"] = Immigration.Instance != null && Immigration.Instance.ImmigrantsAvailable;
                 try
                 {
                     McpHttpServer.Instance?.EnqueueClientNotification(stopReason.StartsWith("alert:") ? "warning" : "info", "OniMcp.StepUntil", delta);

@@ -138,7 +138,7 @@ namespace OniMcp.Tools
                 case "notification": case "notify": case "new_notification": return Atom("new_notification");
                 case "alarm": case "automation_alarm": case "auto_notify": return Atom("alarm");
                 case "alert": case "threat": return Atom("alert");
-                case "print": case "printing_pod": case "printable": case "immigrant": return Atom("printing_pod_ready");
+                case "print": case "printing_pod": case "printable": case "immigrant": case "printing_pod_ready": return Atom("printing_pod_ready");
                 case "research": case "research_complete": return Atom("research_complete");
                 case "notify:good": case "good": return new JObject { ["fact"] = "notification", ["type"] = "Good" };
                 case "notify:bad": case "bad": case "notify:problem":
@@ -161,6 +161,9 @@ namespace OniMcp.Tools
             }
         }
 
+        internal bool ContainsFact(string fact) => Fact == fact
+            || (Children != null && Children.Any(child => child.ContainsFact(fact)));
+
         internal JObject ToJson()
         {
             if (Children != null) return new JObject { [Combination] = new JArray(Children.Select(c => c.ToJson())) };
@@ -176,6 +179,14 @@ namespace OniMcp.Tools
     internal sealed class StepConditionEvaluator
     {
         private readonly Dictionary<StepCondition, double> _since = new Dictionary<StepCondition, double>();
+
+        internal bool EvaluateBeforeResume(StepCondition node, StepConditionFacts facts, out string reason)
+        {
+            reason = null;
+            if (!node.ContainsFact("printing_pod_ready") || !facts.PrintingPodReady) return false;
+            // Evaluate the complete tree; a ready leaf cannot bypass all siblings or stability windows.
+            return Evaluate(node, facts, 0, out reason);
+        }
 
         internal bool Evaluate(StepCondition node, StepConditionFacts facts, double gameSeconds, out string reason)
         {

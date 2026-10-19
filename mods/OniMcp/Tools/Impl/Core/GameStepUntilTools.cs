@@ -80,11 +80,13 @@ namespace OniMcp.Tools
 
             DeferredCallToolResult deferred = wait ? new DeferredCallToolResult() : null;
 
+            Dictionary<string, object> completion = null;
             var watcher = bridge.gameObject.AddComponent<StepUntilWatcher>();
             try
             {
                 watcher.Initialize(condition, requestedCondition, speed, maxGameSeconds, maxWallSeconds, worldId, targetCells, delta =>
                 {
+                    completion = delta;
                     lock (_watcherLock)
                     {
                         if (ReferenceEquals(_activeWatcher, watcher))
@@ -109,6 +111,10 @@ namespace OniMcp.Tools
             {
                 _activeWatcher = watcher;
             }
+
+            // An already-ready printing condition must finish before releasing the pause, in either wait mode.
+            if (watcher.TryCompleteBeforeResume())
+                return deferred ?? CallToolResult.Text(JsonConvert.SerializeObject(completion, McpJsonUtil.Settings));
 
             // Validate and capture the baseline before releasing our pause.
             ReleaseMcpPause(speedControl);
@@ -135,7 +141,8 @@ namespace OniMcp.Tools
                 ["worldId"] = worldId,
                 ["isPaused"] = SpeedControlScreen.Instance == null || SpeedControlScreen.Instance.IsPaused,
                 ["idleFacts"] = StepDupeFactsJson(ReadStepDupeFacts(worldId)),
-                ["pendingOrders"] = orders.ToJson()
+                ["pendingOrders"] = orders.ToJson(),
+                ["immigrantsAvailable"] = StepPrintingPodState.IsAvailable
             };
             return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
         }
@@ -154,6 +161,7 @@ namespace OniMcp.Tools
                 var inactive = new Dictionary<string, object>
                 {
                     ["active"] = false,
+                    ["immigrantsAvailable"] = StepPrintingPodState.IsAvailable,
                     ["isPaused"] = speedControl != null ? speedControl.IsPaused : true,
                     ["speed"] = speedControl != null ? speedControl.GetSpeed() + 1 : 0
                 };
