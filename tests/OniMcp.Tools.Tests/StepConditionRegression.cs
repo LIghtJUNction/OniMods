@@ -115,6 +115,22 @@ internal static class StepConditionRegression
         Check(e.Evaluate(Parse("{condition:'notification'}"), f, 0, out _), "new notification compatibility");
         f.Alarms.Add("WaterFull");
         Check(e.Evaluate(Parse("{until:{fact:'alarm',contains:'water'}}"), f, 0, out _), "alarm atomic predicate");
+
+        var alarmOnly = new StepConditionFacts();
+        alarmOnly.Alarms.Add("WaterFull");
+        Check(e.Evaluate(Parse("{condition:'alarm:WaterFull'}"), alarmOnly, 0, out string reason)
+            && reason == "alarm:WaterFull", "legacy named alarm matches alarm facts with an alarm stop reason");
+        Check(e.Evaluate(Parse("{condition:'WaterFull'}"), alarmOnly, 0, out reason)
+            && reason == "alarm:WaterFull", "legacy bare keyword matches alarm-only facts");
+        alarmOnly.Notifications.Add(new StepNotificationFact { Title = "WaterFull", Type = "Event", Notifier = "Sensor" });
+        foreach (string keyword in new[] { "WaterFull", "notify:WaterFull", "notification:WaterFull", "alert:WaterFull" })
+            Check(e.Evaluate(Parse("{condition:'" + keyword + "'}"), alarmOnly, 0, out reason)
+                && reason == "alarm:WaterFull", "legacy keyword keeps alarm precedence: " + keyword);
+        alarmOnly.Alarms.Clear();
+        Check(!e.Evaluate(Parse("{condition:'alarm:WaterFull'}"), alarmOnly, 0, out _),
+            "an explicit named alarm does not match an ordinary notification");
+        Check(e.Evaluate(Parse("{condition:'WaterFull'}"), alarmOnly, 0, out reason)
+            && reason == "notification:WaterFull", "legacy bare keyword falls back to notifications");
     }
 
     private static StepCondition Parse(string json)

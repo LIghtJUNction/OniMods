@@ -146,9 +146,18 @@ namespace OniMcp.Tools
                 case "notify:message": case "message": case "messages": return new JObject { ["fact"] = "notification", ["type"] = "Messages" };
                 case "notify:event": case "event": return new JObject { ["fact"] = "notification", ["type"] = "Event" };
                 default:
-                    foreach (string prefix in new[] { "alarm:", "notify:", "notification:", "alert:" })
-                        if (s.StartsWith(prefix, StringComparison.Ordinal)) s = s.Substring(prefix.Length).Trim();
-                    return new JObject { ["fact"] = "notification", ["contains"] = s };
+                    if (s.StartsWith("alarm:", StringComparison.Ordinal))
+                        return new JObject { ["fact"] = "alarm", ["contains"] = s.Substring("alarm:".Length).Trim() };
+                    foreach (string prefix in new[] { "notify:", "notification:", "alert:" })
+                    {
+                        if (!s.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                        s = s.Substring(prefix.Length).Trim();
+                        break;
+                    }
+                    // Legacy keyword searches prioritize active alarms, then notification title/notifier.
+                    return new JObject { ["any"] = new JArray(
+                        new JObject { ["fact"] = "alarm", ["contains"] = s },
+                        new JObject { ["fact"] = "notification", ["contains"] = s }) };
             }
         }
 
