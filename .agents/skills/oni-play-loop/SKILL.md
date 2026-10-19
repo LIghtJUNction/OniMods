@@ -130,10 +130,17 @@ game_control domain=speed action=step_until condition=orders_complete speed=3 ma
 - `orders_complete`（默认）：当前重点工单全部完成。
 - `dupe_idle`：复制人变为空闲（说明手头活干完了或无路可走）。
 - `cycle_end`：周期结束/入夜。
-- `alarm` 或 `automation_alarm`：**游戏内自动化通知器（LogicAlarm）被绿灯信号触发**。
+- `print` / `printing_pod` / `printable`：**打印舱有新的人员/补给包可供选择**（Immigration 就绪）。
+- `research` / `research_complete`：**当前科技研究完成**（自动暂停并选下一项科技）。
+- `alarm` 或 `automation_alarm`：**游戏内自动化通知器（LogicAlarm）被绿信号触发**。
 - `alarm:<name>` 或 `<name>`（如 `alarm:WaterFull` 或 `WaterFull`）：匹配指定名称的自动化通知器。
-- `alert` 或 `threat`：出现窒息、受困、红警或严重低生命值等紧急危险（任何运行模式下出现致命危险均会自动紧急刹车）。
-- `notification:<keyword>`：匹配 HUD 上出现的指定关键字通知。
+- `alert` 或 `threat`：出现窒息、受困、红警或严重低生命值等致命危险（任何模式下致命危险均强制紧急刹车）。
+- `notification` 或 `notify`：**游戏内出现任何新增 HUD 通知**。
+- `notify:good`：出现正面里程碑通知（科技完成、技能点就绪、成就解锁）。
+- `notify:bad` 或 `bad`：出现负面故障通知（建筑损坏、管道堵塞、无电力、食物腐烂）。
+- `notify:message`：出现消息/对话框类通知（打印舱、故事特质、遗迹发现）。
+- `notify:event`：出现世界级大事件通知（流星雨、火箭发射/着陆、太阳耀斑）。
+- `notify:<keyword>`（如 `notify:pipe`、`notify:broken`、`notify:starv`）：按通知标题/建筑模糊匹配。
 - `any`：上述任一条件触发即自动 Pause 并返回。
 
 **缺氧原生硬件事件机制（终极省 Token 范式）**：
@@ -144,18 +151,27 @@ game_control domain=speed action=step_until condition=orders_complete speed=3 ma
 `step_until` 返回时已自动处于暂停状态，并携带极精简的增量结果：
 ```json
 {
-  "stopReason": "orders_complete",
-  "elapsedGameSeconds": 38.5,
-  "elapsedWallSeconds": 12.8,
+  "stopReason": "notification:Research Complete: Basic Farming",
+  "condition": "research",
+  "isPaused": true,
+  "elapsedGameSeconds": 48.5,
+  "elapsedWallSeconds": 13.2,
+  "startCycle": 10,
+  "endCycle": 10,
   "remainingTargetOrders": 0,
-  "idleDuplicants": ["Harold"],
-  "alerts": "none",
-  "isPaused": true
+  "idleDuplicants": [],
+  "alerts": [],
+  "alarms": [],
+  "notifications": [
+    { "title": "Research Complete: Basic Farming", "type": "Good", "isNew": true, "isAlarm": false, "notifier": "ResearchCenter" }
+  ],
+  "newNotificationCount": 1,
+  "immigrantsAvailable": false
 }
 ```
 
 - 若 `stopReason == "orders_complete"` 且无警报：**工单已全部达成**，无需重读大范围地图，可直接推进下一阶段！
-- 若因 `alert`、`dupe_idle` 或 `timeout` 停止：按需使用 `dupes_control domain=info action=status_check` 或局部 `read_control domain=world action=area_snapshot` 进行针对性排查。
+- 若因 `notification`、`alert` 或 `dupe_idle` 停止：从 `delta["notifications"]` 直接查看通知标题与产生建筑，无需额外请求！按需使用 `colony_control domain=notification action=click` 聚焦或处理。
 
 记录验证结果：说明目标是否推进、发现的问题、下一轮是否需要继续。
 

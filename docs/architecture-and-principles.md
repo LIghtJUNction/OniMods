@@ -164,21 +164,31 @@ OniMcp 的 `world_editor` 将整个世界状态映射为一组虚拟 Markdown �
 
 ### 1. 目标驱动条件推进 (`step_until`，对标 Playwright `waitForCondition` 与游戏自动化硬件报警)
 - **淘汰盲目休眠**：严禁无目的的 `resume -> sleep(10s) -> pause`（复制人跑路需要十几秒，固定休眠导致 LLM 频繁空转轮询）。
-- **事件驱动快进**：通过 `game_control domain=speed action=step_until` 指定终止条件（`condition: "orders_complete" | "dupe_idle" | "cycle_end" | "alarm" | "alarm:<name>" | "alert"`），游戏以 **3x 快进倍速** 持续模拟。
-- **自动化告警触发（Hardware Alarm Hook）**：充分利用缺氧强大的自动化电路（传感器 + 自动化通知器 `LogicAlarm`）。Agent 只需建造自动化通知器并命名（如 `WaterFull` 或 `TempNormal`），即可直接运行 `step_until condition="WaterFull"`。游戏以 3 倍速运行，信号线变绿的瞬间，引擎主线程毫秒级捕获通知器事件并自动暂停返回，达到对标 Webhook / 硬件中断级别的超高效率。
+- **事件驱动快进**：通过 `game_control domain=speed action=step_until` 指定终止条件（`condition: "orders_complete" | "dupe_idle" | "cycle_end" | "print" | "research" | "alarm" | "alarm:<name>" | "notify:<keyword>" | "notify:good" | "notify:bad"` 等），游戏以 **3x 快进倍速** 持续模拟。
+- **全方位原生通知拦截（HUD Notifications Hook）**：全面接管缺氧游戏内的 `NotificationScreen` 与 `NotificationManager`。不仅支持打印舱就绪（`condition: "print"`）与科技研究完毕（`condition: "research"`）这类里程碑瞬时唤醒，还支持按通知类型（`notify:good` / `notify:bad` / `notify:message` / `notify:event`）或按关键字（如管道堵塞 `notify:pipe`、建筑故障 `notify:broken`、饥饿 `notify:starv`）进行模糊拦截。
+- **自动化告警硬件联动（Hardware Alarm Hook）**：充分利用缺氧强大的自动化电路（传感器 + 自动化通知器 `LogicAlarm`）。Agent 只需建造自动化通知器并命名（如 `WaterFull` 或 `TempNormal`），即可直接运行 `step_until condition="WaterFull"`。信号线变绿瞬间，主线程毫秒级捕获通知器事件并自动暂停返回，达到对标 Webhook / 硬件中断级别的超高效率。
 - **原生威胁自动拦截**：无论当前设置何种条件，只要出现复制人窒息、致命伤、受困红警或 `NotificationType.DuplicantThreatening`，引擎立即强制刹车暂停并返回威胁告警，杜绝挂机致死。
 - **自动暂停与截断**：主线程在 Unity `Update()` 每帧监听目标达成或异常告警，一旦达成立即触发安全暂停，避免挂机空跑或灾难蔓延。
 
 ### 2. 增量感知与执行报告 (`ExecutionDelta`，对标 DOM Mutation Diff)
-- **拒绝全量 Dump**：推进结束后不重新序列化数千 Token 的完整地图，而是直接返回仅百余 Token 的精炼差异摘要：
+- **拒绝全量 Dump**：推进结束后不重新序列化数千 Token 的完整地图，而是直接返回仅百余 Token 的精炼差异摘要（包含新增 HUD 通知、告警、空闲复制人与工单状态）：
   ```json
   {
-    "stopReason": "orders_complete",
-    "elapsedGameSeconds": 42.1,
-    "elapsedWallSeconds": 14.0,
+    "stopReason": "notification:Research Complete: Basic Farming",
+    "condition": "research",
+    "elapsedGameSeconds": 48.5,
+    "elapsedWallSeconds": 13.2,
+    "startCycle": 10,
+    "endCycle": 10,
     "remainingTargetOrders": 0,
-    "idleDuplicants": ["Harold"],
-    "alerts": "none",
+    "idleDuplicants": [],
+    "alerts": [],
+    "alarms": [],
+    "notifications": [
+      { "title": "Research Complete: Basic Farming", "type": "Good", "isNew": true, "isAlarm": false, "notifier": "ResearchCenter" }
+    ],
+    "newNotificationCount": 1,
+    "immigrantsAvailable": false,
     "isPaused": true
   }
   ```
