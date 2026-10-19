@@ -37,5 +37,6 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlacementIdentityPolicy.cs" Link="Source/BuildPlacementIdentityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Patches/LoadScreenPreviewPolicy.cs" Link="Source/LoadScreenPreviewPolicy.cs" />
   </ItemGroup>
 </Project>

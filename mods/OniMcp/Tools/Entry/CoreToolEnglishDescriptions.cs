@@ -107,7 +107,7 @@ namespace OniMcp.Tools
         {
             var d = CommonDescriptions();
             d["domain"] = "Game subsystem: launch, speed, state, save, dlc, or ui.";
-            d["action"] = "Game action for the selected subsystem. launch: status, start, restart_load, restart_status, new_game, new_game_status, new_game_select. New-game menu writes support dryRun and require confirm. UI feedback: notification, popup, speech_bubble, marker.";
+            d["action"] = "Game action for the selected subsystem. launch: status, start, restart_load, restart_status, new_game, new_game_status, new_game_select. New-game menu writes support dryRun and require confirm. ui/action open_load_menu opens the native load list without loading a save; supports dryRun and requires confirm. UI feedback: notification, popup, speech_bubble, marker.";
             d["kind"] = "UI list subtype.";
             d["uiDomain"] = "UI subsystem: action, feedback.";
             d["name"] = "For launch/new_game_select: an advertised choice id from new_game_status. Otherwise a save name or ui/feedback speech_bubble duplicant name.";
