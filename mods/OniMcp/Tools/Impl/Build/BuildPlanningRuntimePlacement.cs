@@ -109,7 +109,7 @@ namespace OniMcp.Tools
                 var check = ComparePlacement(placement, actual);
                 if (!GetBool(check, "valid"))
                     continue;
-                int cell = Grid.XYToCell(placement.AnchorX, placement.AnchorY);
+                int cell = Grid.PosToCell(go);
                 var rotatable = go.GetComponent<Rotatable>();
                 Orientation orientation = rotatable == null ? Orientation.Neutral : rotatable.GetOrientation();
                 if (!IsCompletedBuildFullyRegistered(def, placement, cell, orientation, go, out _))
@@ -353,7 +353,8 @@ namespace OniMcp.Tools
             return layers;
         }
 
-        private static SupportValidation ValidateSupport(BuildingDef def, int x, int y, bool allowUnsupported, HashSet<int> plannedSupportCells)
+        private static SupportValidation ValidateSupport(BuildingDef def, int x, int y, bool allowUnsupported, HashSet<int> plannedSupportCells,
+            Orientation orientation = Orientation.Neutral)
         {
             if (def == null)
                 return SupportValidation.Success("unknown", null);
@@ -363,7 +364,7 @@ namespace OniMcp.Tools
                 return SupportValidation.Success(rule, null);
 
             var missing = new List<Dictionary<string, object>>();
-            foreach (var supportCell in FloorSupportCells(def, x, y))
+            foreach (var supportCell in FloorSupportCells(def, x, y, orientation))
             {
                 bool supported = Grid.IsValidCell(supportCell.Cell)
                     && (Grid.Solid[supportCell.Cell]
@@ -387,17 +388,6 @@ namespace OniMcp.Tools
             return allowUnsupported
                 ? SupportValidation.Warning(rule, missing, error)
                 : SupportValidation.Invalid(rule, missing, error);
-        }
-
-        private static IEnumerable<SupportCell> FloorSupportCells(BuildingDef def, int x, int y)
-        {
-            int width = Math.Max(1, def.WidthInCells);
-            int supportY = y - 1;
-            for (int dx = 0; dx < width; dx++)
-            {
-                int sx = x + dx;
-                yield return new SupportCell(sx, supportY, Grid.XYToCell(sx, supportY));
-            }
         }
 
         private static bool HasSupportBlueprint(int cell)
