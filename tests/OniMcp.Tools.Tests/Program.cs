@@ -47,6 +47,7 @@ internal static class Program
         LoadScreenMigrationRegression.Run();
         StepConditionRegression.Run();
         CameraNavigationRegression.Run();
+        StepPrintingPodRegression.Run();
         UtilityPathPlacementRegression.Run();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }

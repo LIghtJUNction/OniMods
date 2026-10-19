@@ -99,7 +99,7 @@ namespace OniMcp.Tools
                         EnumValues = new List<string> { "0", "1", "2", "3" }
                     },
                     ["condition"] = new McpToolParameter { Type = "string", Description = "兼容停止条件：orders_complete、dupe_idle（任一工作时段复制人）、all_dupes_idle、cycle_end、alert、any；与 until 二选一", Required = false },
-                    ["until"] = new McpToolParameter { Type = "object", Description = "可组合条件：{fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2} 或 {all:[...]}/{any:[...]}；最多 4 层/32 节点，未知字段拒绝。fact 支持 orders_complete/cycle_end/alert/alarm/new_notification/notification/printing_pod_ready/research_complete", Required = false },
+                    ["until"] = new McpToolParameter { Type = "object", Description = "可组合条件：{fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2} 或 {all:[...]}/{any:[...]}；最多 4 层/32 节点，未知字段拒绝。fact 支持 orders_complete/cycle_end/alert/alarm/new_notification/notification/printing_pod_ready/research_complete；printing_pod_ready 为当前原生就绪状态，默认已就绪时恢复前返回", Required = false },
                     ["worldId"] = new McpToolParameter { Type = "integer", Description = "step_until/step_facts 的复制人和挖掘/建筑工单世界；默认当前世界，危险告警仍全局强制暂停", Required = false },
                     ["maxGameSeconds"] = new McpToolParameter { Type = "number", Description = "step_until 游戏内最大推进秒数，默认 60，范围 1–600", Required = false },
                     ["maxWallSeconds"] = new McpToolParameter { Type = "number", Description = "step_until 真实世界最大等待秒数，默认 15，范围 0.5–30", Required = false },

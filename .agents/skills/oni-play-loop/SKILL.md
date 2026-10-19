@@ -25,7 +25,8 @@ agent 绝不能在游戏运行时思考、规划或新增命令。
 - 每个循环都从 `game_control domain=speed action=pause` 开始。
 - 读取状态、读取玩家计划、规划、验证和下达命令时保持暂停。
 - 只有当前计划足够完整、可以观察进展时才恢复游戏。
-- 恢复后等待一个短固定窗口，然后立刻再次暂停。
+- 恢复前先检查 `game_control domain=speed action=step_facts` 的 `immigrantsAvailable`；已就绪先处理本轮打印舱机会，候选列表为空不能视为未就绪。
+- 恢复后用短有界窗口，再次暂停并检查结果中的 `immigrantsAvailable`。
 - 不要无限串联循环。除非用户明确要求多个循环或连续游玩，否则只跑一个循环。
 - 遇到高风险不可逆动作、大范围挖掘、破坏性命令、战斗、保存/读取、沙盒/调试，或接收/打印新复制人前，停下并询问。
 
@@ -44,10 +45,26 @@ game_control domain=speed action=pause
 优先使用紧凑聚合读取：
 
 ```
-colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
-dupes_control domain=info action=status_check radius=8
-game_control domain=ui uiDomain=edit_mark action=list limit=5
+world_editor command=read path=/active/colony/status.oni profile=minimal
+game_control domain=speed action=step_facts
 ```
+
+每轮先读 `step_facts.immigrantsAvailable`，并优先处理上一窗口返回的同名字段。它取自原生 Immigration 就绪状态，不依赖 HUD 新通知或候选是否物化。
+
+若为 true，在暂停中执行：
+
+1. `building_control domain=side_surface surface=facility kind=printing_pod action=list_rewards`。
+2. `printingRewards.available=true` 而 `rewardCount=0`：显式调用同路由 `action=open_immigrants id=<target.id> confirm=true`，再 `list_rewards`。零候选不是未就绪；若打开后仍没有补给候选，记录并明确延后本批，不自动选人，也不反复打开来重抽。
+3. 只从 `printingRewards.rewards[]` 中选择 `kind=care_package` 的补给，优先当前缺口需要的物资；用 `action=claim id=<podId> rewardIndex=<该列表index> dryRun=true` 预览，再 `dryRun=false confirm=true` 领取。不要使用混合 UI 卡片索引，也不要自动添加复制人。
+4. 核对 `claimed=true`、所选物品和 `printingRewards.available=false`，再按返回计划用公开虚拟文件安排清扫/优先级。已获正常玩法授权时，不为查看或领取补给逐轮重新询问用户；`confirm=true` 是工具参数。
+
+如果明确延后已查看的同一批候选，记下原因，并在该窗口显式省略打印舱条件，避免对仍就绪的同一机会无限立即暂停。除此以外，正常推进将 `printing_pod_ready` 与本轮目标用 `until.any` 组合，例如：
+
+```json
+{"domain":"speed","action":"step_until","until":{"any":[{"fact":"printing_pod_ready"},{"fact":"orders_complete"}]},"speed":3,"maxGameSeconds":60,"maxWallSeconds":15}
+```
+
+`printing_pod_ready` 表示当前就绪：默认已就绪时在恢复前返回，运行中冷却结束也会暂停；`all` 组合仍须满足其他条件。不要用仅有工单/科研的等待条件长时间忽略打印舱。
 
 只有需要时才添加针对性读取：
 
@@ -131,7 +148,7 @@ game_control domain=speed action=step_until condition=orders_complete speed=3 ma
 - `dupe_idle`：任一所选世界复制人在 Work 时段执行原生空闲任务，默认持续 2 游戏秒。空闲也可能是无路或缺料。
 - `all_dupes_idle`：全部所选世界存活复制人都在 Work 时段且空闲；无人时不会触发。
 - `cycle_end`：周期结束/入夜。
-- `print` / `printing_pod` / `printable`：**打印舱有新的人员/补给包可供选择**（Immigration 就绪）。
+- `print` / `printing_pod` / `printable`：打印舱当前 Immigration 已就绪；默认已就绪时在恢复前返回，未就绪时等待冷却结束。不依赖奖励候选是否已物化。
 - `research` / `research_complete`：**当前科技研究完成**（自动暂停并选下一项科技）。
 - `alarm` 或 `automation_alarm`：**游戏内自动化通知器（LogicAlarm）被绿信号触发**。
 - `alarm:<name>` 或 `<name>`（如 `alarm:WaterFull` 或 `WaterFull`）：匹配指定名称的自动化通知器。
@@ -180,6 +197,7 @@ game_control domain=speed action=step_until condition=orders_complete speed=3 ma
 ```
 
 - 若 `stopReason == "orders_complete"` 且无警报：检查 `orderTracking.initialTrackedOrders`、初始/剩余挖掘与建筑数量，再针对目标核对完成状态。零剩余不证明所有任务类型都已完成。
+- 无论因何停止，先检查 `immigrantsAvailable`；为 true 就回到上述补给流程或明确记录延后，不能因 `rewardCount=0` 跳过。
 - 若因 `notification`、`alert` 或 `dupe_idle` 停止：从 `delta["notifications"]` 直接查看通知标题与产生建筑，无需额外请求！按需使用 `colony_control domain=notification action=click` 聚焦或处理。
 
 记录验证结果：说明目标是否推进、发现的问题、下一轮是否需要继续。
