@@ -108,7 +108,6 @@ def verify_building_blueprint_safety(
 ) -> None:
     build_root = root / "mods" / "OniMcp" / "Tools" / "Impl" / "Build"
     paths = {
-        "native": build_root / "BuildPlanningNativeUtilityPath.cs",
         "placement": build_root / "BuildPlanningActionPlacement.cs",
         "plan_one": build_root / "BuildPlanningPlanOne.cs",
         "materials": build_root / "BuildPlanningMaterials.cs",
@@ -123,15 +122,6 @@ def verify_building_blueprint_safety(
     else:
         selected = sources
 
-    native_method = extract_block(
-        selected[paths["native"]],
-        "private static Dictionary<string, object> TryPlaceUtilityPathNative",
-    )
-    require_order(native_method, ("ValidateUtilityPathSafety", "SelectElements", "SelectUtilityBuildTool"),
-                  "native path safety and materials must precede tool execution")
-    if "IsFreeBuildContext" in native_method:
-        fail("native utility paths cannot bypass material rules")
-
     auto_connect = extract_block(
         selected[paths["placement"]],
         "public static McpTool AutoConnectUtility()",
@@ -139,14 +129,14 @@ def verify_building_blueprint_safety(
     require_order(
         auto_connect,
         (
-            "TryPlaceUtilityPathNative",
-            'GetBool(nativePath, "success")',
-            'GetBool(nativePath, "shouldFallback")',
+            "ValidateUtilityPathSafety",
             "foreach (var point in path)",
             "TryPlanOne(def.PrefabID, point.x, point.y",
         ),
-        "utility auto-connect must continue from native fallback into per-cell planning",
+        "utility auto-connect must validate the whole path before per-cell planning",
     )
+    if "TryPlaceUtilityPathNative" in auto_connect:
+        fail("utility auto-connect must not activate shared player input tools")
     path_loop = extract_block(auto_connect, "foreach (var point in path)")
     if "TryPlanOne(def.PrefabID, point.x, point.y" not in path_loop:
         fail("utility fallback path loop must call TryPlanOne for each cell")

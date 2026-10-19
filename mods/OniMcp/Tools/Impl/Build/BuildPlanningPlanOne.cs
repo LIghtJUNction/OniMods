@@ -403,7 +403,7 @@ int cell = Grid.XYToCell(x, y);
             Dictionary<string, object> fallbackPlacement = null;
             var pos = BuildPlacementPosition(cell, def);
             var go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
-            if (go == null && autoDig != null)
+            if (go == null && autoDig != null && !IsLinearUtilityPrefab(prefabId))
                 go = TryPlaceWithBuildTool(def, cell, orientation, materialResult.Elements,
                     facadeResult.ResponseId, placement, args, out fallbackPlacement);
             if (go == null)
