@@ -7,11 +7,11 @@
     <StartupObject>ModernEmptyExtensionIdentifierRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/SKILL.md" LogicalName="OniMcp.Skills.oni-mcp-control.SKILL.md" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/world-editor.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.world-editor.md" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/world-editor.zh.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.world-editor.zh.md" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/tool-reference.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.tool-reference.md" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/tool-reference.zh.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.tool-reference.zh.md" />
+    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/SKILL.md" LogicalName="OniMcp.Skills.oni-mcp-control.SKILL.md" WithCulture="false" />
+    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/world-editor.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.world-editor.md" WithCulture="false" />
+    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/world-editor.zh.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.world-editor.zh.md" WithCulture="false" />
+    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/tool-reference.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.tool-reference.md" WithCulture="false" />
+    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/tool-reference.zh.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.tool-reference.zh.md" WithCulture="false" />
   </ItemGroup>
 
   <ItemGroup>
