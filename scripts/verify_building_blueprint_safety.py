@@ -248,8 +248,11 @@ def verify_building_blueprint_safety(
     verify_auto_material_selection(materials)
     if "MaterialSelection.Success(" in select_elements:
         fail("SelectElements success exits must use the unified validation helper")
-    if select_elements.count("return ValidatedMaterialSelection(") != 3:
-        fail("all three SelectElements success exits must use the unified validation helper")
+    # Native recipes now have four success paths: automatic, category,
+    # explicit slot-complete and explicit fallback for an unknown recipe.
+    # Each path must pass through the same material validation helper.
+    if select_elements.count("return ValidatedMaterialSelection(") != 4:
+        fail("all four SelectElements success exits must use the unified validation helper")
 
     validated_success = extract_block(
         materials,
