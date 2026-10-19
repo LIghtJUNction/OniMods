@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
+using OniMcp.Server;
 using OniMcp.Support;
 
 namespace OniMcp.Tools
@@ -419,6 +420,20 @@ namespace OniMcp.Tools
                     ["newNotificationCount"] = newCount,
                     ["immigrantsAvailable"] = Immigration.Instance != null && Immigration.Instance.ImmigrantsAvailable
                 };
+
+                try
+                {
+                    var server = McpHttpServer.Instance;
+                    if (server != null)
+                    {
+                        string level = stopReason.StartsWith("alert:") ? "warning" : "info";
+                        server.EnqueueClientNotification(level, "OniMcp.StepUntil", delta);
+                    }
+                }
+                catch (Exception)
+                {
+                    // Non-fatal broadcast failure
+                }
 
                 try
                 {
