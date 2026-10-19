@@ -33,15 +33,18 @@ namespace OniMcp.Tools
         {
             private readonly List<Diggable> _digs = new List<Diggable>();
             private readonly List<Constructable> _builds = new List<Constructable>();
+            private readonly StepDeferredOrderTracker _deferred;
             internal int InitialDigOrders { get; private set; }
             internal int InitialBuildOrders { get; private set; }
-            internal int InitialCount => InitialDigOrders + InitialBuildOrders;
+            internal int InitialCount => InitialDigOrders + InitialBuildOrders + _deferred.InitialCount;
             internal int RemainingDigOrders => _digs.Count(d => d != null);
             internal int RemainingBuildOrders => _builds.Count(b => b != null);
-            internal int RemainingCount => RemainingDigOrders + RemainingBuildOrders;
+            internal int RemainingCount => RemainingDigOrders + RemainingBuildOrders + _deferred.RemainingCount;
 
             internal StepOrderTracker(int worldId, HashSet<int> targetCells)
             {
+                _deferred = new StepDeferredOrderTracker(BuildPlanningTools.CaptureDeferredBuildOrders(worldId, targetCells)
+                    .Select(handle => new KeyValuePair<string, Func<string>>(handle.Id, handle.ReadStatus)));
                 bool targeted = targetCells != null && targetCells.Count > 0;
                 if (Components.Diggables != null)
                 {
@@ -72,14 +75,15 @@ namespace OniMcp.Tools
 
             internal Dictionary<string, object> ToJson() => new Dictionary<string, object>
             {
-                ["kinds"] = new[] { "dig", "build" },
+                ["kinds"] = new[] { "dig", "build", "deferred_build" },
                 ["initialDigOrders"] = InitialDigOrders,
                 ["initialBuildOrders"] = InitialBuildOrders,
                 ["initialTrackedOrders"] = InitialCount,
                 ["remainingDigOrders"] = RemainingDigOrders,
                 ["remainingBuildOrders"] = RemainingBuildOrders,
+                ["deferredBuilds"] = _deferred.ToJson(),
                 ["remainingTrackedOrders"] = RemainingCount,
-                ["semantics"] = "Captured orders still present; completed and cancelled orders both leave the pending set. New orders and other chore kinds are excluded."
+                ["semantics"] = "Captured native orders and deferred-build workflows; workflow phases may overlap native counts. Terminal workflows leave the pending set. New requests and other chore kinds are excluded."
             };
         }
 

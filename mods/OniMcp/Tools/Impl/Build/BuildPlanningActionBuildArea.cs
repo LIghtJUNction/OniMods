@@ -103,6 +103,7 @@ namespace OniMcp.Tools
                             continue;
                         }
                         var preview = TryPlanOne(prefabId, anchor.x, anchor.y, preflightArgs, preflightSupport);
+                        AddConstructionDiagnostics(preview, prefabId, anchor.x, anchor.y, worldId);
                         bool valid = preview.ContainsKey("valid") && (bool)preview["valid"];
                         if (valid)
                         {
@@ -175,6 +176,7 @@ namespace OniMcp.Tools
             foreach (var anchor in executionAnchors)
                     {
                         var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport, autoDigContext);
+                        AddConstructionDiagnostics(result, prefabId, anchor.x, anchor.y, ToolUtil.ResolveWorldId(args));
                         bool wasPlanned = GetBool(result, "planned");
                         bool wasAlreadyPresent = GetBool(result, "alreadyPresent");
                         bool wasAlreadyConnected = GetBool(result, "alreadyConnected");
@@ -240,6 +242,7 @@ namespace OniMcp.Tools
                         ? "Some anchors remain blocked or pending auto-dig. Inspect remainingAction/preflightErrors."
                         : "Batch complete.",
                         ["preflightErrors"] = hardFailedPreviews.Take(50).ToList(),
+                        ["batchConstructionDiagnostics"] = BatchConstructionDiagnostics(results),
                         ["results"] = results
                     };
                     if (!string.IsNullOrEmpty(executionConflictReason))

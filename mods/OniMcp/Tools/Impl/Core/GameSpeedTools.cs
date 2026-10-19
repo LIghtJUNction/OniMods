@@ -104,7 +104,8 @@ namespace OniMcp.Tools
                     ["maxGameSeconds"] = new McpToolParameter { Type = "number", Description = "step_until 游戏内最大推进秒数，默认 60，范围 1–600", Required = false },
                     ["maxWallSeconds"] = new McpToolParameter { Type = "number", Description = "step_until 真实世界最大等待秒数，默认 15，范围 0.5–30", Required = false },
                     ["wait"] = new McpToolParameter { Type = "boolean", Description = "step_until 是否等待执行结果完成后返回，默认 true；false 为后台执行", Required = false },
-                    ["targetCells"] = new McpToolParameter { Type = "array", Description = "step_until 监控的 cell 数组；启动时捕获涉及这些格子的挖掘/建筑工单，不传则捕获当前世界全部挖掘/建筑工单", Required = false }
+                    ["requestId"] = new McpToolParameter { Type = "string", Description = "step_status/step_cancel 的等待句柄；省略时查询当前等待或最近完成结果", Required = false },
+                    ["targetCells"] = new McpToolParameter { Type = "array", Description = "step_until 监控的 cell 数组；捕获涉及这些格子的挖掘、建筑及先挖后建流程，直到各流程终止；不传则捕获当前世界", Required = false }
                 },
                 Handler = args =>
                 {
@@ -230,7 +231,7 @@ namespace OniMcp.Tools
             if (speedControl == null)
                 return CallToolResult.Error("SpeedControlScreen not available");
 
-            ReleaseMcpPause(speedControl);
+            ReleaseMcpPause(speedControl, releaseNativePause: true);
             var result = new Dictionary<string, object>
             {
                 ["isPaused"] = speedControl.IsPaused,
@@ -257,17 +258,29 @@ namespace OniMcp.Tools
             _mcpPauseScreen = speedControl;
         }
 
-        private static void ReleaseMcpPause(SpeedControlScreen speedControl)
+        private static void ReleaseMcpPause(SpeedControlScreen speedControl, bool releaseNativePause = false)
         {
             var game = Game.Instance;
+            bool hasMcpPauseLease = _mcpPauseGame != null || _mcpPauseScreen != null;
             bool ownsPause = game != null
                 && ReferenceEquals(_mcpPauseGame, game)
                 && ReferenceEquals(_mcpPauseScreen, speedControl);
 
             _mcpPauseGame = null;
             _mcpPauseScreen = null;
-            if (ownsPause && speedControl != null && speedControl.IsPaused)
+            if (speedControl == null || !speedControl.IsPaused)
+                return;
+
+            if (ownsPause)
+            {
+                // Release only the reference acquired by MCP. Other ONI pause owners stay intact.
                 speedControl.Unpause();
+            }
+            else if (!hasMcpPauseLease && releaseNativePause)
+            {
+                // Resume must also release a native ONI pause when MCP never acquired one.
+                speedControl.Unpause();
+            }
         }
 
     }

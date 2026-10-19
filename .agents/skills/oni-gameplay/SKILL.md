@@ -16,6 +16,7 @@ Keep this file loaded for every control task. Load only the reference needed for
 
 - Read [references/world-editor.md](references/world-editor.md) **before any** `world_editor` map edit, off-screen framing, operation-file command, management edit, plan, blueprint, or batch. It contains the exact virtual-file protocol and examples. 中文版: [references/world-editor.zh.md](references/world-editor.zh.md)
 - Read [references/tool-reference.md](references/tool-reference.md) when selecting among aggregate tools, resources, prompts, parameters, tool categories, or standard multi-tool workflows. It contains the detailed tables and quick reference. 中文版: [references/tool-reference.zh.md](references/tool-reference.zh.md)
+- Read [gameplay task feedback](../../../docs/gameplay-task-feedback.md) when interpreting construction readiness, pending builds, target-task diagnostics, asynchronous `step_until` results, or duplicant needs. It records current response fields and their evidence limits.
 
 Do not duplicate those references into the working context unless the task requires them.
 
@@ -42,6 +43,16 @@ For autonomous play, keep the game paused while reading, planning, or issuing co
 - For liquid-adjacent digs, trapped duplicants, broad rectangles, or irreversible edits, pause and inspect exact cells before acting.
 - If livestream or OBS health fails during a live session, pause gameplay and restore the stream before continuing.
 
+## Network and connection discipline
+
+- **Mandatory IPv4 loopback**: Always use `http://127.0.0.1:8788/mcp/` across `mcporter`, HTTP requests, or scripts. **Never use `http://localhost:8788/mcp/`**. In Linux and Node.js environments, `localhost` often resolves to IPv6 `::1` first, causing Mono's `HttpListener` to hang or hit a 30-second timeout!
+- **mcporter CLI standard invocation**:
+  ```bash
+  rtk proxy mcporter call --http-url http://127.0.0.1:8788/mcp/ --allow-http --tool world_editor --args '{"command":"read","path":"/active/colony/status.oni","profile":"minimal"}' --timeout 45000 --output json
+  ```
+- **Direct curl requirements**:
+  Headers required: `Content-Type: application/json`, `Accept: application/json, text/event-stream`, `Mcp-Protocol-Version: 2025-11-25`, `Mcp-Session-Id: <sessionId>` (obtained from `initialize` response).
+
 ## Public tool policy
 
 Check `tools/list` before using a tool. The normal legacy/default **seven-tool core** contains `benchmark`, `building_control`, `navigation_control`, `game_control`, `orders_control`, `server_control`, and `world_editor`.
@@ -55,6 +66,7 @@ Read live state with `world_editor command=read path=/active/colony/status.oni p
 `coordinate_control` is not public. Gameplay aggregate tools reject raw coordinates. Use semantic `areaId`/query/plan inputs, or exact coordinates inside supported `world_editor` maps and typed operation files. Camera-only `navigation_control` actions accept their advertised position, pan, and screenshot coordinates. Use `navigation_control action=set_zoom zoom=23` to zoom without changing the center; larger zoom values show a wider area.
 
 For utilities, cut the exact layer with `orders_control domain=designation action=cut_conduits type=wire|liquid|gas|solid|logic|travel_tube ... confirm=true`. For normal buildings, prefer `orders_control domain=designation action=deconstruct id=<instanceId> confirm=true`. Preview ambiguous targets before writing.
+For building priority, set semantics via `orders_control domain=priority action=set_building query="建筑名" priority=8` (emphasize semantic query, never raw coordinates).
 
 ## Mode selection
 
@@ -75,13 +87,15 @@ Start with one compact, publicly reachable live-state read:
 world_editor command=read path=/active/colony/status.oni profile=minimal
 ```
 
-Escalate only the flagged area:
+Escalate only the flagged area via public 7 tools and canonical virtual files:
 
+- inventory: `world_editor command=read path=/active/resources/inventory.oni`
 - food: `world_editor command=read path=/active/resources/food.oni`
 - power: `world_editor command=read path=/active/infrastructure/power.md compact=true`
 - rooms: `world_editor command=read path=/active/infrastructure/rooms.oni`
 - heat: `world_editor command=read path=/active/map/viewport.md view=temperature compact=true syncView=false focusCamera=false`
-- duplicants: `world_editor command=read path=/active/dupes/index.md`, then a named detail file
+- duplicants: `world_editor command=read path=/active/dupes/index.oni` (or `/active/dupes/index.md`, then a named detail file)
+- building priority: `orders_control domain=priority action=set_building query="建筑名" priority=8` (semantic query, not raw coordinates)
 - exact terrain and utilities: `world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false`, or an exact cell file
 
 `world_editor command=read path=/active/index.md includeState=true` is also available for a one-call world index and embedded colony status. Do not repeat an identical read without a state change; narrow the scope instead.
@@ -197,6 +211,41 @@ Check task state if a task ID was returned. Otherwise narrow the area, limit, or
 ### Confirmation rejection
 
 Add `confirm=true` only after the user has authorized the mutation and the dry-run is acceptable.
+
+### External pause and native pauseCount recovery
+
+When `step_until` returns immediately with `stopReason: "external_pause"` and `elapsedGameSeconds: 0`:
+1. **Check Escape menu**: The native pause/options screen (`PauseScreen`) may be open. Dismiss it with:
+   ```
+   game_control domain=ui uiDomain=action action=trigger uiAction=Escape
+   ```
+2. **Clear native `pauseCount`**: ONI's engine maintains an internal `SpeedControl.pauseCount` counter (e.g. from manual keyboard pause). If `pauseCount > 0`, MCP speed commands cannot unpause the simulation.
+   Focus the ONI window (`hyprctl dispatch focuswindow "Oxygen Not Included"`) and simulate a Spacebar press to decrement the counter:
+   ```bash
+   ydotool key 57:1 57:0
+   ```
+3. **Re-engage MCP control**: Take over speed control and verify advancement:
+   ```
+   game_control domain=speed action=pause
+   game_control domain=speed action=step_facts
+   ```
+   Then issue `step_until` and verify `elapsedGameSeconds > 0`.
+
+## Recording and cloud archive discipline (Linux/Hyprland)
+
+When live footage recording or archive staging is active:
+- **OpenScreen Wayland automation**: Launch `/home/lightjunction/.local/opt/openscreen/OpenScreen.AppImage record` under a PTY wrapper with explicit Wayland environment (`WAYLAND_DISPLAY=wayland-1`, `XDG_CURRENT_DESKTOP=Hyprland`, etc.). Handle the desktop portal card selection via `ydotool` or window manager dispatcher.
+- **Pre-resume capture verification**: Confirm `sourceKind=window` and `capture started` in the log, and extract a test frame via ffmpeg (`ffmpeg -ss 00:00:01 -i <file> -vframes 1 /tmp/verify.jpg`) to ensure the ONI game window is actively being captured without a black screen before resuming game simulation.
+- **Graceful termination**: Send `stop\n` to PTY stdin or `kill -INT <pid>` (or `touch /tmp/oni_record.stop`). Never `kill -9` recording processes as it corrupts MP4 moov atom indices.
+- **100 MiB slice & Google Drive upload standard**:
+  - Slice large videos into ~90-second segments via lossless stream copy:
+    ```bash
+    ffmpeg -y -i input.mp4 -c copy -f segment -segment_time 90 -reset_timestamps 1 part%02d.mp4
+    ```
+    (Guarantees segment sizes stay between 30~60 MiB, strictly below the 100 MiB cloud upload limit).
+  - Upload slices: `gdrive mutate upload <part.mp4> --parent <folderId>`.
+  - Verify via `gdrive readonly info <fileId> --json` to verify size and presence.
+  - **Do not delete local raw footage until all slice uploads are verified in Google Drive**.
 
 ## Risk checklist
 

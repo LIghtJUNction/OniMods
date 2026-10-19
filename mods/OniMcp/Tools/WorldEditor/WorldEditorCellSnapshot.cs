@@ -26,6 +26,7 @@ namespace OniMcp.Tools
 
         private static string ReadCellSnapshotMarkdown(JObject args, int x, int y)
         {
+            bool compact = ShouldCompactMap(args);
             int cell = Grid.XYToCell(x, y);
             var sb = new StringBuilder();
             sb.AppendLine("# Cell (" + x + "," + y + ") Cross-View Snapshot");
@@ -42,19 +43,25 @@ namespace OniMcp.Tools
             AppendCellInfrastructureSnapshot(sb, cell);
             AppendCellPortSnapshot(sb, cell);
             AppendCellItemSnapshot(sb, cell, args);
-            AppendCellPickupDetailSnapshot(sb, cell, args);
-            AppendCellPickupSummary(sb, cell);
-            AppendCellDecisionHints(sb, x, y, cell);
-            AppendCellQuickOps(sb, x, y, cell);
-            AppendCellNextReads(sb, x, y, cell);
-            sb.AppendLine();
-            sb.AppendLine("## Links");
-            sb.AppendLine("- `/active/map/viewport.md`");
-            sb.AppendLine("- `/active/infrastructure/power.md`");
-            sb.AppendLine("- `/active/infrastructure/liquid_conduits.md`");
-            sb.AppendLine("- `/active/infrastructure/gas_conduits.md`");
-            sb.AppendLine("- `/active/infrastructure/logic.md`");
-            sb.AppendLine("- `/active/infrastructure/solid_conveyor.md`");
+            if (!compact)
+            {
+                AppendCellPickupDetailSnapshot(sb, cell, args);
+                AppendCellPickupSummary(sb, cell);
+            }
+            AppendCellDecisionHints(sb, x, y, cell, compact);
+            if (!compact)
+            {
+                AppendCellQuickOps(sb, x, y, cell);
+                AppendCellNextReads(sb, x, y, cell);
+                sb.AppendLine();
+                sb.AppendLine("## Links");
+                sb.AppendLine("- `/active/map/viewport.md`");
+                sb.AppendLine("- `/active/infrastructure/power.md`");
+                sb.AppendLine("- `/active/infrastructure/liquid_conduits.md`");
+                sb.AppendLine("- `/active/infrastructure/gas_conduits.md`");
+                sb.AppendLine("- `/active/infrastructure/logic.md`");
+                sb.AppendLine("- `/active/infrastructure/solid_conveyor.md`");
+            }
             return sb.ToString();
         }
 

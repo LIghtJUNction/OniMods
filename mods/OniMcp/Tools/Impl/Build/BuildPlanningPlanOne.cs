@@ -225,7 +225,8 @@ namespace OniMcp.Tools
             anchor["coordMode"] = "relative";
         }
 
-        private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args, HashSet<int> plannedSupportCells = null, AutoDigContext autoDigContext = null)
+        private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args,
+            HashSet<int> plannedSupportCells = null, AutoDigContext autoDigContext = null, string deferredBuildId = null)
         {
             if (!ToolUtil.GetBool(args, "dryRun", false) && Game.Instance != null && Game.Instance.SandboxModeActive)
                 return ErrorResult(prefabId, x, y, "Exit sandbox mode before issuing normal gameplay build orders.");
@@ -372,6 +373,13 @@ int cell = Grid.XYToCell(x, y);
                     ["autoDig"] = autoDig
                 };
             }
+
+            // A native dig order cannot clear a solid footprint synchronously. Do not let
+            // TryPlaceRequestedBuilding overlap or replace its DigPlacer; resume from the
+            // bounded deferred queue only after the recorded native errands clear the cells.
+            if (autoDig != null && HasPendingAutoDigOrders(autoDig))
+                return DeferBuildAfterAutoDig(prefabId, x, y, args, placement, autoDig,
+                    materialResult.ToDictionary(), deferredBuildId);
 
             var executionExistingBuild = ExistingMatchingBuildAtPlacement(def, placement);
             if (executionExistingBuild != null)

@@ -140,28 +140,30 @@ namespace OniMcp.Tools
         {
             var result = new KeyNeeds();
             var amounts = dupe.GetComponent<Amounts>();
-            if (amounts == null)
-                return result;
-
-            if (DupeAmountUtil.TryGetStressValue(dupe, out var stress))
-                result.Stress = stress;
-
-            foreach (var amount in amounts.ModifierList)
-            {
-                if (amount == null || amount.amount == null)
-                    continue;
-                string id = amount.amount.Id ?? "";
-                string name = amount.amount.Name ?? "";
-                float value = ToolUtil.SafeFloat(amount.value);
-                if (Contains(id, "Stamina") || Contains(name, "Stamina")) result.Stamina = value;
-                else if (Contains(id, "Calories") || Contains(name, "Calories")) result.Calories = value;
-                else if (result.Stress < 0f && (Contains(id, "Stress") || Contains(name, "Stress"))) result.Stress = value;
-                else if (Contains(id, "Bladder") || Contains(name, "Bladder")) result.Bladder = value;
-                else if (Contains(id, "Breath") || Contains(name, "Breath")) result.Breath = value;
-                else if (Contains(id, "Temperature") || Contains(name, "Temperature")) result.BodyTemperature = value;
-            }
+            var native = Db.Get()?.Amounts;
+            result.HasAmounts = amounts != null;
+            result.IsBionic = DuplicantNeedReadout.IsBionic(dupe);
+            ReadNeed(dupe, native?.Stamina, "stamina", value => result.Stamina = value, result);
+            ReadNeed(dupe, native?.Calories, "calories", value => result.Calories = value, result);
+            ReadNeed(dupe, native?.Stress, "stress", value => result.Stress = value, result);
+            ReadNeed(dupe, native?.Bladder, "bladder", value => result.Bladder = value, result);
+            ReadNeed(dupe, native?.Breath, "breath", value => result.Breath = value, result);
+            ReadNeed(dupe, native?.Temperature, "bodyTemperature", value => result.BodyTemperature = value, result);
+            if (result.IsBionic)
+                result.BionicPower = BionicPowerSummary(dupe);
 
             return result;
+        }
+
+        private static void ReadNeed(MinionIdentity dupe, Amount amount, string key, Action<float> assign, KeyNeeds result)
+        {
+            bool available = DupeAmountUtil.TryGetAmountValue(dupe, amount, out var value);
+            result.Definitions[key] = amount != null;
+            result.Available[key] = available;
+            if (available)
+                assign(value);
+            else if (DuplicantNeedStatePolicy.Availability(result.IsBionic, result.HasAmounts, amount != null, false) == "unknown")
+                result.UnknownNeeds.Add(key);
         }
 
         private static string SafeString(Func<string> getter, string fallback)

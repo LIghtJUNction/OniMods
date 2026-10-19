@@ -177,6 +177,7 @@ namespace OniMcp.Tools
                     var previewArgs = (JObject)args.DeepClone();
                     previewArgs["dryRun"] = true;
                     var result = TryPlanOne(args["prefabId"]?.ToString(), x, y, previewArgs);
+                    AddConstructionDiagnostics(result, args["prefabId"]?.ToString(), x, y, ToolUtil.ResolveWorldId(previewArgs));
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
             };
@@ -274,6 +275,7 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                     foreach (var point in path)
                     {
                         var result = TryPlanOne(def.PrefabID, point.x, point.y, args, plannedSupportCells, autoDigContext);
+                        AddConstructionDiagnostics(result, def.PrefabID, point.x, point.y, worldId);
                         bool ok = result.ContainsKey("planned") && (bool)result["planned"];
                         bool validPlacement = result.ContainsKey("valid") && (bool)result["valid"];
                     bool alreadyPresent = result.ContainsKey("alreadyPresent") && (bool)result["alreadyPresent"];
@@ -328,6 +330,7 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                 ["path"] = path.Select(p => new { x = p.x, y = p.y }).ToList(),
                 ["segments"] = BuildPathSegments(path),
                 ["errors"] = errors.Take(50).ToList(),
+                ["batchConstructionDiagnostics"] = BatchConstructionDiagnostics(results),
                 ["results"] = results
             };
                     if (placementConflict)
@@ -425,6 +428,7 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                             scannedAnchors++;
                             var previewArgs = (JObject)scanArgs.DeepClone();
                             var preview = TryPlanOne(prefabId, x, y, previewArgs);
+                            AddConstructionDiagnostics(preview, prefabId, x, y, worldId);
                             bool valid = GetDictionaryBool(preview, "valid");
                             bool warningOnly = valid && GetNestedBool(preview, "support", "warningOnly");
                             int score = ScorePlacementCandidate(preview, valid, warningOnly);

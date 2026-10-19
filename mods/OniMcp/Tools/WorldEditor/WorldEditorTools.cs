@@ -313,7 +313,7 @@ namespace OniMcp.Tools
                 ["steps"] = new McpToolParameter { Type = "array", Description = "Batch steps. Each step is a world_editor/game_control/navigation_control argument object.", Required = false },
                 ["items"] = new McpToolParameter { Type = "array", Description = "Alias for steps.", Required = false },
                 ["view"] = new McpToolParameter { Type = "string", Description = "Overlay context for symbols/read/zoom, e.g. power, oxygen, temperature.", Required = false },
-                ["compact"] = new McpToolParameter { Type = "boolean", Description = "Map read/zoom compression. Default true uses per-5-cell RLE like 粉x3; false expands every cell for editing.", Required = false },
+                ["compact"] = new McpToolParameter { Type = "boolean", Description = "Map and cell read compression. Default true uses per-5-cell RLE for maps and omits repeated cell guidance; false expands map cells and includes full cell guidance.", Required = false },
                 ["format"] = new McpToolParameter { Type = "string", Description = "Map: edit/raw/uncompressed expands cells. /active/index.md: progress lists unfinished construction; help lists files/commands; full also adds colony state.", Required = false },
                 ["includeState"] = new McpToolParameter { Type = "boolean", Description = "/active/index.md: append current colony JSON snapshot for first-call world state.", Required = false },
                 ["includeInfrastructure"] = new McpToolParameter { Type = "boolean", Description = "/active/index.md and read_control state/current: append compact infrastructure ports/lines.", Required = false },

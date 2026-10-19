@@ -1,11 +1,12 @@
 # ONI MCP 工具参考
 
-> **七工具核心接口：** 当前默认 `tools/list` 仅公开 `benchmark`、`building_control`、`navigation_control`、`game_control`、`orders_control`、`server_control`、`world_editor`。本参考部分 `colony_control`/`dupes_control`/`read_control`/`search_control` 示例描述内部操作；在默认接口不要直接或通过 `server_control` 批量调用。读取殖民地用 `world_editor command=read path=/active/colony/status.oni profile=minimal`，读取地图用 `world_editor command=read path=/active/map/viewport.md compact=true`，字码查询用 `world_editor command=symbols`。只有当前 `tools/list` 确实列出扩展工具时，才可执行其直接调用。
+> **通信与七工具核心：** 使用 `mcporter` 或 HTTP 客户端时，必须使用 IPv4 地址 `http://127.0.0.1:8788/mcp/`（避免 `localhost` 解析为 IPv6 `::1` 导致 Mono 挂起或 30 秒超时）。直接 curl 必须携带 `Mcp-Session-Id` header 及协议版本 `2025-11-25`。当前默认仅公开 7 工具：`benchmark`、`building_control`、`navigation_control`、`game_control`、`orders_control`、`server_control`、`world_editor`。禁止直接调用内部工具（如 `colony_control`、`dupes_control`、`read_control`）。所有状态与资源读取均走 `world_editor` 虚拟文件，建筑优先级设置走 `orders_control domain=priority action=set_building query="建筑名" priority=8`。
 
 在选择工具、编排多工具流程、配置参数、提示词与资源映射到聚合调用时，优先查阅此参考。
 
 ## 目录
 
+- [网络与通信连接](#网络与通信连接)
 - [发现能力](#发现能力)
 - [读取、写入、执行](#读取写入执行)
 - [标准流程](#标准流程)
@@ -15,6 +16,23 @@
 - [提示词工作流](#提示词工作流)
 - [资源 URI](#资源-uri)
 - [快速参考](#快速参考)
+
+## 网络与通信连接
+
+- **IPv4 环回连接（防挂起）**：始终使用 `http://127.0.0.1:8788/mcp/`。Linux/Node.js 下 `localhost` 会被优先解析为 IPv6 `::1`，导致 Mono HttpListener 发生 30 秒超时甚至连接挂起。
+- **mcporter 标准调用**：
+  ```bash
+  rtk proxy mcporter call --http-url http://127.0.0.1:8788/mcp/ --allow-http --tool world_editor --args '{"command":"read","path":"/active/colony/status.oni","profile":"minimal"}' --timeout 45000 --output json
+  ```
+- **直接 curl 调用格式**：
+  ```bash
+  curl -X POST http://127.0.0.1:8788/mcp/ \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json, text/event-stream" \
+    -H "Mcp-Protocol-Version: 2025-11-25" \
+    -H "Mcp-Session-Id: <SESSION_ID>" \
+    -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"world_editor","arguments":{"command":"read","path":"/active/colony/status.oni","profile":"minimal"}}}'
+  ```
 
 ## 发现能力
 
@@ -30,8 +48,8 @@
 
 ## 读取、写入、执行
 
-- **读取（Read）**：快照与状态查询，例如快照、复制人详情、资源、基础设施、地图。
-- **写入（Write）**：日程、优先级、过滤器、阈值、名称、策略等配置。通常为中风险操作，通常需要确认。
+- **读取（Read）**：快照与状态查询，通过 `world_editor command=read path=...` 访问虚拟文件。
+- **写入（Write）**：日程、优先级、过滤器、阈值、名称、策略等配置。通常为中风险操作，需要确认。
 - **执行（Execute）**：暂停/恢复、指定任务、拆除/建造/拍照等操作。涉及地图变更的危险操作需要确认。
 
 `oni://...` 属于可缓存资源。工具调用是带参数的实时操作。提示词只描述链路，不能直接执行。
@@ -41,12 +59,12 @@
 ### 殖民地健康检查
 
 ```text
-colony_control domain=snapshot action=get profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
-colony_control domain=snapshot action=get profile=brief        # 仅在 minimal 标记相关时使用
-read_control domain=resources action=food                      # 需要食物细节时
-read_control domain=infrastructure action=power_summary        # 发现电力问题时
-read_control domain=world action=thermal_overheat_risk         # 发现过热风险时
-read_control domain=infrastructure action=rooms                # 房间覆盖率相关时
+world_editor command=read path=/active/colony/status.oni profile=minimal
+world_editor command=read path=/active/resources/inventory.oni   # 库存水平
+world_editor command=read path=/active/resources/food.oni        # 食物储备与保质期
+world_editor command=read path=/active/infrastructure/power.md   # 电网总览
+world_editor command=read path=/active/infrastructure/rooms.oni  # 房间覆盖率
+world_editor command=read path=/active/dupes/index.oni           # 复制人状态与健康
 ```
 
 ### 简单低风险执行
@@ -62,8 +80,7 @@ read_control domain=infrastructure action=rooms                # 房间覆盖率
 
 ```text
 game_control domain=speed action=pause
-read_control domain=world action=area_snapshot preset=construction|utilities encoding=rle
-read_control domain=world action=text_map profile=standard encoding=plain includeElements=true
+world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false
 # 仅用于可选的可视化确认
 navigation_control action=switch_view view=<overlay> screenshot=true
 # dry-run -> 执行 -> 再读取同一区域
@@ -71,18 +88,16 @@ navigation_control action=switch_view view=<overlay> screenshot=true
 
 精确编辑地图请使用显式地图表头；反复语义操作可用 `areaId`。
 
-### 复制人管理
+### 复制人与建筑优先级管理
 
 ```text
-colony_control domain=read action=dupes
-dupes_control domain=info action=detail id=<id>
-dupes_control domain=info action=needs id=<id>
-dupes_control domain=priority action=list id=<id>
-# 仅提交必需变更
-dupes_control domain=priority action=list id=<id>   # 验证
+world_editor command=read path=/active/dupes/index.oni
+world_editor command=read path=/active/dupes/<name>.md
+# 设置建筑优先级（强调语义 query，非原始坐标）
+orders_control domain=priority action=set_building query="建筑名" priority=8
 ```
 
-在使用需要 `id` 的工具前，先从花名册解析到数值 ID。
+在管理复制人前，先通过花名册或虚拟文件确认名称与 ID。
 
 ### 配置批量更新
 
@@ -91,8 +106,8 @@ server_control domain=batch action=call_many
   dryRun=true responseMode=summary requireAllValid=true stopOnError=true
   defaults={confirm:true}
   items=[
-    {t:dupes_control,a:{domain:priority,action:set,id:1,choreGroup:Dig,priority:4}},
-    {t:colony_control,a:{domain:management,kind:schedule,action:set_block,schedule:"Default",hour:3,group:Sleep}}
+    {t:orders_control,a:{domain:priority,action:set_building,query:"ResearchCenter",priority:8}},
+    {t:building_control,a:{domain:config,action:set,query:"Battery",setting:"threshold",value:50}}
   ]
 ```
 
@@ -120,7 +135,7 @@ server_control domain=batch action=call_many
 - 纯只读地图检查可使用原始矩形；但仅限 typed operation 文件明确支持的语法。
 - 普通聚合工具应使用语义查询、目标、计划或 `areaId`，而不是原始坐标。
 - 坐标为左下原点世界格点。保留返回的绝对坐标，不要将 `rx/ry` 与 `x/y` 混淆。
-- 用 `read_control domain=area action=define` 定义可复用区域；必要时合并相邻句柄，临时句柄复用后应忘记。
+- 区域操作优先使用命名区域或 `world_editor` 精确视口文件；临时句柄复用后应及时忘记。
 
 ### 确认逻辑
 
@@ -138,10 +153,10 @@ server_control domain=batch action=call_many
 
 ```text
 server_control domain=batch action=call_many responseMode=summary items=[
-  {t:colony_control,a:{domain:read,action:status}},
-  {t:colony_control,a:{domain:diagnostic,action:diagnostics}},
-  {t:read_control,a:{domain:resources,action:food}},
-  {t:read_control,a:{domain=infrastructure,action:power_summary}}
+  {t:world_editor,a:{command:read,path:"/active/colony/status.oni",profile:"minimal"}},
+  {t:world_editor,a:{command:read,path:"/active/resources/inventory.oni"}},
+  {t:world_editor,a:{command:read,path:"/active/resources/food.oni"}},
+  {t:world_editor,a:{command:read,path:"/active/infrastructure/rooms.oni"}}
 ]
 ```
 
@@ -188,7 +203,9 @@ server_control domain=batch action=call_many responseMode=summary items=[
 
 ## 资源 URI
 
-| URI | 对应工具 | 用途 |
+> **说明：** Resource URI（`oni://...`）属于 MCP 资源协议（resources/read），在内部映射数据；在直接工具调用（tools/call）中，必须使用公开 7 工具及 `world_editor` 虚拟文件原生路径（例如 `/active/resources/inventory.oni`、`/active/infrastructure/power.md`），禁止直接调用内部工具名。
+
+| URI | 内部映射 | 用途 |
 |---|---|---|
 | `oni://colony/status` | `colony_control domain=read action=status` | 基线状态 |
 | `oni://colony/diagnostics` | `colony_control domain=diagnostic action=diagnostics` | 已诊断问题 |

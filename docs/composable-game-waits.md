@@ -21,6 +21,12 @@ For a colony where all three duplicants have finished available work:
 
 This is an example policy, not a server default. One idle duplicant may indicate blocked work, while everybody idle does not prove a building was successfully completed. Inspect the returned facts and the actual building state.
 
+## Interpret the stop result
+
+`alert` matches any alert present in the current observation, including an already-existing Bad notification; it is not limited to new or severe threats. Separately, `StepUntilWatcher` checks duplicant threats and forces a stop even when the requested expression does not contain `alert`. Read `stopReason`, `alerts`, and `notifications` to tell these cases apart. A very short return (including about 0.1 seconds) does not by itself show a `pauseCount` problem or prove that the requested work advanced.
+
+`orders_complete` means the native dig/build orders and deferred-build workflows captured at start are no longer pending. Cancellation or a terminal workflow failure also removes pending work; inspect `orderTracking.deferredBuilds.states` and the target state before reporting success. A wait can make useful progress and then stop at its game-time or wall-time limit. The game is paused when `step_until` returns.
+
 To require the captured orders to disappear **and** everyone to be idle, or to stop for an alarm:
 
 ```json
@@ -46,7 +52,7 @@ To require the captured orders to disappear **and** everyone to be idle, or to s
 | `fact` | Meaning / options |
 | --- | --- |
 | `dupes_idle` | Native `IdleChore` / Idle chore type; `quantifier=any` (default) or `all`; `schedule=work` (default) or `any`. |
-| `orders_complete` | At least one captured dig/build order existed, and none remain pending. |
+| `orders_complete` | At least one native dig/build order or deferred-build workflow was captured, and none remain pending. |
 | `cycle_end` | Cycle advanced since execution started. |
 | `alert` | Current bad/threat alerts. Severe duplicant threats override every expression. |
 | `alarm` | Current native automation alarm; optional case-insensitive `contains`. |
@@ -65,7 +71,7 @@ A ready Printing Pod is checked before releasing the pause when the expression i
 
 Idle population is every live duplicant in `worldId` (default: the selected world). With `schedule=work`, each matching duplicant's current `ScheduleBlock.GroupId` must equal the native `Db.Get().ScheduleGroups.Worktime.Id`. This is a schedule-group identity, distinct from the `Work` block type or localized labels. Raw `scheduleGroupId` / `workScheduleGroupId` values are included in idle facts for verification. `all` requires **every** member of the full population to satisfy both facts; off-work duplicants are not silently excluded. Zero duplicants never satisfy either quantifier. A null current chore is not classified as idle because it also occurs between chores. Native idle includes idle wandering. The two-second default filters brief idle transitions; the agent can change it.
 
-Orders are captured once at execution start: existing native `Diggable` and `Constructable` objects in the selected world. `targetCells` optionally selects digs and intersecting building footprints across construction layers; without it, the whole selected world is captured. New orders and other chore kinds (delivery, research, sweeping, etc.) are excluded. Completion **or cancellation** removes an order from the pending set, so completion still needs a targeted game-state check when cancellation is possible.
+Orders are captured once at execution start: native `Diggable` and `Constructable` objects plus active deferred-build handles in the selected world. `targetCells` selects digs and intersecting building footprints, including deferred placements. The captured deferred handle remains pending through digging and the subsequently created blueprint until it reaches a terminal state. New requests and other chore kinds (delivery, research, sweeping, etc.) are excluded. Counts describe tracked native objects and workflows; phases can overlap, so they are not a unique count of duplicant chores. Completion, cancellation or failure removes pending work; zero still requires a targeted state check.
 
 `researchTracking` reports `initialTechId`, `initiallyComplete`, and `completed` for the captured native technology. Clearing/changing the active research slot, old notifications, localized HUD titles, and reused notification IDs do not prove completion. If there was no active technology at execution start, this fact cannot match during that step.
 

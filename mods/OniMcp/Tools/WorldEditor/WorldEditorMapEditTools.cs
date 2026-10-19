@@ -234,7 +234,7 @@ namespace OniMcp.Tools
                     ["cells"] = groupCells,
                     ["ok"] = !failed,
                     ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
-                    ["result"] = MapEditResultValue(result)
+                    ["result"] = MapEditBuildResultValue(result)
                 });
             }
 

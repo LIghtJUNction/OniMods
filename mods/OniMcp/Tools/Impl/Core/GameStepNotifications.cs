@@ -14,6 +14,41 @@ namespace OniMcp.Tools
             private static readonly FieldInfo ScreenNotificationsField = AccessTools.Field(typeof(NotificationScreen), "notifications");
             private static readonly FieldInfo ManagerNotificationsField = AccessTools.Field(typeof(NotificationManager), "notifications");
 
+            private string ReadCriticalThreat()
+            {
+                if (ClusterManager.Instance?.activeWorld?.AlertManager != null
+                    && ClusterManager.Instance.activeWorld.AlertManager.IsRedAlert()) return "red_alert";
+
+                if (Components.LiveMinionIdentities != null)
+                {
+                    foreach (var dupe in Components.LiveMinionIdentities.Items)
+                    {
+                        if (dupe == null) continue;
+                        if (DupeAmountUtil.AmountValueByName(dupe, "Breath", 100f) < 20f)
+                            return dupe.GetProperName() + "_suffocating";
+                        if (DupeAmountUtil.AmountValueByName(dupe, "HitPoints", 100f) < 35f)
+                            return dupe.GetProperName() + "_low_health";
+                    }
+                }
+
+                var screen = NotificationScreen.Instance;
+                var manager = NotificationManager.Instance;
+                string notificationThreat = FindCriticalNotification(screen == null ? null : ScreenNotificationsField?.GetValue(screen));
+                return notificationThreat ?? FindCriticalNotification(manager == null ? null : ManagerNotificationsField?.GetValue(manager));
+            }
+
+            private static string FindCriticalNotification(object source)
+            {
+                var notifications = source as IEnumerable<Notification>;
+                if (notifications == null) return null;
+                foreach (var notification in notifications)
+                {
+                    if (notification == null || notification.Type != NotificationType.DuplicantThreatening) continue;
+                    return string.IsNullOrEmpty(notification.titleText) ? "DuplicantThreatening" : notification.titleText;
+                }
+                return null;
+            }
+
             private void ScanNotificationsAndAlarms(
                 out string threatAlert,
                 out string triggeredAlarm,
@@ -107,9 +142,11 @@ namespace OniMcp.Tools
             private static List<Notification> GetAllNotifications()
             {
                 var list = new List<Notification>();
-                var sn = ScreenNotificationsField?.GetValue(NotificationScreen.Instance) as IEnumerable<Notification>;
+                var screen = NotificationScreen.Instance;
+                var manager = NotificationManager.Instance;
+                var sn = screen == null ? null : ScreenNotificationsField?.GetValue(screen) as IEnumerable<Notification>;
                 if (sn != null) list.AddRange(sn.Where(x => x != null));
-                var mn = ManagerNotificationsField?.GetValue(NotificationManager.Instance) as IEnumerable<Notification>;
+                var mn = manager == null ? null : ManagerNotificationsField?.GetValue(manager) as IEnumerable<Notification>;
                 if (mn != null) list.AddRange(mn.Where(x => x != null));
                 return list;
             }

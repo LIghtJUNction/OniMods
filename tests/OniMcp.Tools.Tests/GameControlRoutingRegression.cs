@@ -25,10 +25,12 @@ internal static class GameControlRoutingRegression
         foreach (string parameter in new[] { "force", "element", "massKg", "prefabId", "storyId", "temperatureK", "diseaseCount" })
             Require(!tool.Parameters.ContainsKey(parameter), "removed parameter must not consume tool context: " + parameter);
         Require(!tool.Parameters["domain"].EnumValues.Contains("sandbox"), "schema must not advertise a removed route");
-        foreach (string parameter in new[] { "until", "condition", "maxGameSeconds", "maxWallSeconds", "wait", "targetCells" })
+        var stepInputs = new[] { "until", "condition", "maxGameSeconds", "maxWallSeconds", "wait", "targetCells", "requestId" };
+        foreach (string parameter in stepInputs)
             Require(tool.Parameters.ContainsKey(parameter), "condition execution input must be discoverable: " + parameter);
         Require(tool.Parameters["until"].Type == "object", "until must advertise structured expressions");
-        Require(tool.Parameters.Count <= 40, "game control schema must remain bounded including six explicit step inputs");
+        Require(tool.Parameters["requestId"].Type == "string", "wait handles must be discoverable as strings");
+        Require(tool.Parameters.Count - stepInputs.Length <= 34, "unrelated game control inputs must stay within their existing schema budget");
         Require(tool.Handler(null).IsError, "missing domain must return an error");
 
         GameControlRouteTestDoubles.Calls = 0;

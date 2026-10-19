@@ -45,6 +45,11 @@ Convenience forwards also support game speed, camera/view/overlay, and screensho
 | `/active/buildings/index.md` | Completed building parameter index | read only |
 | `/active/buildings/instances/<prefab>-<InstanceID>.md` | Stable per-building parameters | one canonical field line |
 | `/active/buildings/plans.oni` | Building plan text | plan patch |
+| `/active/resources/inventory.oni` | Current world inventory levels and pickupable details | read only |
+| `/active/resources/food.oni` | Current world food stock, kcal, and freshness | read only |
+| `/active/infrastructure/rooms.oni` | Current world room definitions and coverage | read only |
+| `/active/infrastructure/power.md` | Power grid infrastructure map and circuit view | exact map view |
+| `/active/dupes/index.oni` | Duplicant status, health, and trapped-dupe triage index | read only |
 | `/active/infrastructure/*.oni` | Utility connection plans | plan patch |
 | `/active/infrastructure/*.md` | Infrastructure map views | exact map preflight; connection glyph edits are refused |
 
@@ -302,10 +307,25 @@ Requested read bounds also apply with `syncView=false`; the camera need not move
 Compact reads keep bounds, tokens and their legend, while omitting verbose per-cell,
 connection and building-file tables. For edits use `format=edit compact=false` and
 include identical headers and Y-row sets on both sides. Duplicate rows are rejected.
+Map and cell reads default to compact output. A compact map uses RLE and points to
+`/active/symbols/glyphs.md` or `world_editor command=symbols` for current glyph meanings;
+do not infer a token's meaning from its shape. Its readable/unknown counts summarize
+only the requested visible rectangle; liquid-occupant counts are distinct duplicants,
+not cells. These are not full-world counts. For an
+expanded map use `compact=false` or `format=edit`; full cell guidance and pickup detail
+are also available with `compact=false`.
 Blueprint material annotations use the full construction recipe, not terrain material.
 Utility glyphs come from native physical connections: `?` is unavailable data, `*` is
 confirmed no connections, and arrows are single-ended connections. Planned utility
 segments do not establish a working network.
+
+Map object tokens may hide the element directly underneath. When liquid, terrain, or
+pickupable state under an object affects a decision, read only that cell's
+`/active/map/cell_X_Y.md` detail before issuing an order. In one observed case, a cell
+under a Printing Pod showed 0.08 kg polluted water and two `DisposableElectrobank_RawMetal`
+pickups. After a normal `step_until` using `orders_complete` with a time limit, the cell
+showed Oxygen while both pickups remained. This is a record of that observation, not a
+fixed map pattern; re-read the exact cell after simulation advances.
 
 Use the loop: pause → small read → preview → submit one native change → short normal
 run → pause → reread. Inspect `phase`, `partial`, `reportedActions`, and

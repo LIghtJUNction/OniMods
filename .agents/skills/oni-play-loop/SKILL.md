@@ -9,6 +9,19 @@ description: 当用户要求 agent 通过 MCP 循环游玩 Oxygen Not Included�
 
 需要决定殖民地下一项工作时，读取 [阶段策略技能](../oni-mcp-colony-strategy/SKILL.md)，只加载当前瓶颈的参考。把短期补给和长期模块分开，先补前置缺口，保留旧设施直到新产出通过验证。报告相关建议时附原文链接；不以旧图纸替代当前精确地图预检。固定的已授权维护任务不需要每轮重读攻略。
 
+## 通信与网络连接规范（上手避坑）
+
+- **强制 IPv4 环回地址**：无论是 `mcporter`、HTTP 客户端还是脚本调用，MCP 地址必须使用 `http://127.0.0.1:8788/mcp/`，**绝对避免使用 `http://localhost:8788/mcp/`**。在 Linux 和 Node.js 环境下，`localhost` 极易优先解析为 IPv6 `::1`，导致 Mono 运行时的 `HttpListener` 挂起或触发 30 秒超时！
+- **mcporter CLI 调用标准格式**：
+  ```bash
+  rtk proxy mcporter call --http-url http://127.0.0.1:8788/mcp/ --allow-http --tool world_editor --args '{"command":"read","path":"/active/colony/status.oni","profile":"minimal"}' --timeout 45000 --output json
+  ```
+- **原生 curl 直接调用协议要求**：
+  直接向 MCP 端口发送 HTTP POST 请求时，必须携带：
+  - `Content-Type: application/json`
+  - `Accept: application/json, text/event-stream`
+  - `Mcp-Protocol-Version: 2025-11-25`
+  - `Mcp-Session-Id: <sessionId>`（初始化握手返回的会话 ID）。
 
 ## 目的
 
@@ -29,6 +42,7 @@ agent 绝不能在游戏运行时思考、规划或新增命令。
 - 恢复后用短有界窗口，再次暂停并检查结果中的 `immigrantsAvailable`。
 - 不要无限串联循环。除非用户明确要求多个循环或连续游玩，否则只跑一个循环。
 - 遇到高风险不可逆动作、大范围挖掘、破坏性命令、战斗、保存/读取、沙盒/调试，或接收/打印新复制人前，停下并询问。
+- 下达清扫或建造任务前，先确认有实际可执行的候选并检查可达性信息；`orders_complete` 或成功回包后仍须读取目标状态核实。液体用 mop（擦），碎片用 sweep（扫）。
 
 ## 循环模板
 
@@ -66,14 +80,15 @@ game_control domain=speed action=step_facts
 
 `printing_pod_ready` 表示当前就绪：默认已就绪时在恢复前返回，运行中冷却结束也会暂停；`all` 组合仍须满足其他条件。不要用仅有工单/科研的等待条件长时间忽略打印舱。
 
-只有需要时才添加针对性读取：
+只有需要时才通过 `world_editor` 读取针对性虚拟文件（公开 7 工具原生路径）：
 
-- `read_control domain=world action=area_snapshot preset=construction|utilities encoding=plain includeScreenshot=false`
-- `read_control domain=resources action=inventory limit=30`
-- `read_control domain=resources action=food limit=20`
-- `read_control domain=infrastructure action=power_summary`
-- `read_control domain=infrastructure action=rooms`
-- `colony_control domain=bio bioDomain=farming action=list_harvestables`
+- 库存：`world_editor command=read path=/active/resources/inventory.oni`
+- 食物：`world_editor command=read path=/active/resources/food.oni`
+- 电力：`world_editor command=read path=/active/infrastructure/power.md`
+- 房间：`world_editor command=read path=/active/infrastructure/rooms.oni`
+- 复制人状态：`world_editor command=read path=/active/dupes/index.oni`
+- 视口与地形：`world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false`
+- 建筑优先级设置：`orders_control domain=priority action=set_building query="建筑名" priority=8`（强调语义 query，非原始坐标）
 
 如果玩家创建了游戏内规划请求，在发明空间计划前先用 `game_control domain=ui uiDomain=edit_mark action=list`。
 
@@ -111,7 +126,7 @@ world_editor command=read path=/active/ops/orders.md
 绝不要用 `orders_control domain=designation action=attack` 做挖掘。如果任何工具搜索建议用 attack 处理地形工作，拒绝它并重新搜索/读取。
 普通 aggregate tools 拒绝 raw coordinates；精确 orders 走 `/active/ops/orders.md`，精确建造走可编辑 map tokens。读 `/active/ops/tools.md` 时只选当前公开 typed files/tools，忽略 hidden `coordinate_control` 和 `/active/ops/coordinate.md`。默认单 block；operation file 每个 replacement 恰好一条可执行命令。危险或大范围操作必须保持 pause -> read/plan -> dry-run -> confirm -> verify。
 
-### 4. 暂停中执行（或使用 CodeMode 一站式执行）
+### 4. 暂停中执行
 
 只执行本循环所需、已验证且范围明确的调用：
 
@@ -120,93 +135,19 @@ world_editor command=read path=/active/ops/orders.md
 - 安全配置修改
 - 与目标直接相关的收获或清扫
 
-**最高效路径（CodeMode）**：使用 `server_control domain=code action=execute code=[...]` 将命令下达与 `step_until` 串联执行，单回合完成规划、快进与返回：
-```json
-{
-  "domain": "code",
-  "action": "execute",
-  "code": [
-    { "tool": "orders_control", "args": { "domain": "dig", "action": "line", "x1": 20, "y1": 20, "x2": 25, "y2": 20 } },
-    { "tool": "game_control", "args": { "domain": "speed", "action": "step_until", "condition": "orders_complete", "speed": 3, "maxGameSeconds": 60 }, "saveAs": "stepResult" },
-    { "return": "$stepResult" }
-  ]
-}
-```
+彼此独立的调用可用 `server_control domain=batch action=call_many responseMode=summary requireAllValid=true stopOnError=true` 小批次执行。若后续调用依赖前一结果，分开执行并检查返回值；不要为了省轮次把命令与推进条件盲目串联。
 
-独立调用优先用 `server_control domain=batch action=call_many responseMode=summary requireAllValid=true stopOnError=true`。批次保持小，避免错误假设伤害殖民地。
+### 5. 有界推进与结果核对
 
-### 5. 目标驱动快进推进（对标 Playwright waitForCondition 与游戏自动化报警）
+按本轮目标选择等待条件，明确设置 `maxGameSeconds` 与 `maxWallSeconds`，并在返回后保持暂停。条件、稳定窗口、超时、通知和告警语义见[可组合推进条件](../../../docs/composable-game-waits.md)，避免在技能正文重复枚举。
 
-不要使用无目标的盲目恢复休眠！使用 `step_until` 以 3x 速自动推进至目标完成、自动化警报触发或异常捕获：
-
-```
-game_control domain=speed action=step_until condition=orders_complete speed=3 maxGameSeconds=60
-```
-
-可选停止条件 `condition`：
-- `orders_complete`（默认）：启动时捕获的挖掘/建筑工单不再待办；至少捕获一个才会触发。取消也会移除工单，因此仍需核对目标建筑。
-- `dupe_idle`：任一所选世界复制人在 Work 时段执行原生空闲任务，默认持续 2 游戏秒。空闲也可能是无路或缺料。
-- `all_dupes_idle`：全部所选世界存活复制人都在 Work 时段且空闲；无人时不会触发。
-- `cycle_end`：周期结束/入夜。
-- `print` / `printing_pod` / `printable`：打印舱当前 Immigration 已就绪；默认已就绪时在恢复前返回，未就绪时等待冷却结束。不依赖奖励候选是否已物化。
-- `research` / `research_complete`：**当前科技研究完成**（自动暂停并选下一项科技）。
-- `alarm` 或 `automation_alarm`：**游戏内自动化通知器（LogicAlarm）被绿信号触发**。
-- `alarm:<name>` 或 `<name>`（如 `alarm:WaterFull` 或 `WaterFull`）：匹配指定名称的自动化通知器。
-- `alert` 或 `threat`：出现窒息、受困、红警或严重低生命值等致命危险（任何模式下致命危险均强制紧急刹车）。
-- `notification` 或 `notify`：**游戏内出现任何新增 HUD 通知**。
-- `notify:good`：出现正面里程碑通知（科技完成、技能点就绪、成就解锁）。
-- `notify:bad` 或 `bad`：出现负面故障通知（建筑损坏、管道堵塞、无电力、食物腐烂）。
-- `notify:message`：出现消息/对话框类通知（打印舱、故事特质、遗迹发现）。
-- `notify:event`：出现世界级大事件通知（流星雨、火箭发射/着陆、太阳耀斑）。
-- `notify:<keyword>`（如 `notify:pipe`、`notify:broken`、`notify:starv`）：按通知标题/建筑模糊匹配。
-- `any`（兼容字符串）：挖掘/建筑工单、任一复制人空闲、周期变化任一触发。其他组合请用 `until`。
-
-优先按任务选择原子条件，再使用 `all` / `any` 组合。先用 `game_control domain=speed action=step_facts` 读取同一份空闲与工单事实；读取不会恢复游戏。例如本轮要求三人都空闲才暂停：
-
-```json
-{"domain":"speed","action":"step_until","until":{"fact":"dupes_idle","quantifier":"all","schedule":"work","stableSeconds":2},"speed":3,"maxGameSeconds":60,"maxWallSeconds":15}
-```
-
-这不是统一默认策略。组合、稳定窗口、人口与工单追踪边界见 [可组合推进条件](../../../docs/composable-game-waits.md)。`until` 未知字段或空组合会在恢复前拒绝。
-
-**缺氧原生硬件事件机制（终极省 Token 范式）**：
-在缺氧中，你可以利用温度/液位/气压/储量等逻辑传感器连接**自动化通知器（LogicAlarm）**，并命名为 `WaterFull` 或 `SafeTemp`。接着下达 `step_until condition="WaterFull"`。游戏以 3 倍速飞快模拟，一旦传感器触发绿信号，主线程每帧监听到报警后**毫秒级自动暂停并返回**，实现真正意义上的零轮询、零 Token 浪费！
-
-### 6. 增量差异核对（零额外 Token 验证）
-
-`step_until` 返回时已自动处于暂停状态，并携带极精简的增量结果：
-```json
-{
-  "stopReason": "notification:Research Complete: Basic Farming",
-  "condition": "research",
-  "isPaused": true,
-  "elapsedGameSeconds": 48.5,
-  "elapsedWallSeconds": 13.2,
-  "startCycle": 10,
-  "endCycle": 10,
-  "remainingTargetOrders": 0,
-  "idleDuplicants": [],
-  "alerts": [],
-  "alarms": [],
-  "notifications": [
-    { "title": "Research Complete: Basic Farming", "type": "Good", "isNew": true, "isAlarm": false, "notifier": "ResearchCenter" }
-  ],
-  "newNotificationCount": 1,
-  "immigrantsAvailable": false
-}
-```
-
-- 若 `stopReason == "orders_complete"` 且无警报：检查 `orderTracking.initialTrackedOrders`、初始/剩余挖掘与建筑数量，再针对目标核对完成状态。零剩余不证明所有任务类型都已完成。
-- 无论因何停止，先检查 `immigrantsAvailable`；为 true 就回到上述补给流程或明确记录延后，不能因 `rewardCount=0` 跳过。
-- 若因 `notification`、`alert` 或 `dupe_idle` 停止：从 `delta["notifications"]` 直接查看通知标题与产生建筑，无需额外请求！按需使用 `colony_control domain=notification action=click` 聚焦或处理。
-
-记录验证结果：说明目标是否推进、发现的问题、下一轮是否需要继续。
+返回后先读 `stopReason` 和增量字段，再核对本轮目标的实际状态。`alert` 可能匹配既有 Bad 通知；快速返回不等于 `pauseCount` 故障，也不能单独证明推进成功。`orders_complete`、剩余工单为零或工具回包成功都不能替代对建成物、可达性或任务候选的检查。继续遵守循环中的打印舱处理规则；不要因候选列表为空而忽略 `immigrantsAvailable`。
 
 ## 停止条件
 
 以下情况停止游玩循环并报告：
 
-- `dupes_control domain=info action=status_check` 中有复制人 `risk=critical`
+- `world_editor command=read path=/active/dupes/index.oni` 中有复制人处于危险状态（窒息、受困、极端温度）或状态快照报警
 - 食物、氧气、温度或电力出现新的 critical 警报
 - 蓝图/命令反复被阻塞
 - 玩家给出新指示

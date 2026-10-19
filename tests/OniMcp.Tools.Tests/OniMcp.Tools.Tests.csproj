@@ -16,6 +16,13 @@
     <Compile Include="../../mods/OniMcp/Support/McpJsonUtil.cs" Link="Source/McpJsonUtil.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepCondition.cs" Link="Source/StepCondition.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepResearchTracker.cs" Link="Source/StepResearchTracker.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepUntilResultCache.cs" Link="Source/StepUntilResultCache.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepDeferredOrderTracker.cs" Link="Source/StepDeferredOrderTracker.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ConstructionReadinessPolicy.cs" Link="Source/ConstructionReadinessPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ConstructionRecipeAdapter.cs" Link="Source/ConstructionRecipeAdapter.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningDeferredBuildPolicy.cs" Link="Source/BuildPlanningDeferredBuildPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/ObservedTaskRanking.cs" Link="Source/ObservedTaskRanking.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/DuplicantNeedStatePolicy.cs" Link="Source/DuplicantNeedStatePolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameSpeedTools.cs" Link="Source/GameSpeedTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepPrintingPodState.cs" Link="Source/StepPrintingPodState.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Entry/BenchmarkTools.cs" Link="Source/BenchmarkTools.cs" />

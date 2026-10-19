@@ -168,4 +168,7 @@ internal partial class BuildingDef
 {
     public string PrefabID { get; set; }
     public string Name { get; set; }
+    public float[] Mass { get; set; }
+    public string[] MaterialCategory { get; set; }
+    public float MassTier { get; set; }
 }

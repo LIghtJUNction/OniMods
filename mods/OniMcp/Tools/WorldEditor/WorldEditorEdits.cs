@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
+using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
@@ -40,7 +41,7 @@ namespace OniMcp.Tools
                         ["error"] = result.Content?.FirstOrDefault()?.Text ?? "preflight failed",
                         ["applied"] = 0
                     }));
-                preflight.Add(new JObject { ["block"] = i, ["result"] = result.Content?.FirstOrDefault()?.Text ?? string.Empty });
+                preflight.Add(new JObject { ["block"] = i, ["result"] = McpJsonUtil.ParseResultText(result.Content?.FirstOrDefault()?.Text) });
             }
 
             if (!WorldEditorExecutionAllowed(args))
@@ -56,7 +57,7 @@ namespace OniMcp.Tools
                 {
                     ["block"] = i,
                     ["ok"] = !WorldEditorResultFailed(result),
-                    ["result"] = result?.Content?.FirstOrDefault()?.Text ?? "edit failed"
+                    ["result"] = McpJsonUtil.ParseResultText(result?.Content?.FirstOrDefault()?.Text ?? "edit failed")
                 });
                 if (WorldEditorResultFailed(result))
                     return WorldEditorExecutionFailure("search_replace", path, applied + ResultAppliedCount(result), results);

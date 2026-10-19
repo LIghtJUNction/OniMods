@@ -93,6 +93,11 @@
   <ItemGroup>
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.png" Condition="Exists('$(MSBuildProjectDirectory)/preview.png')" />
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.jpg" Condition="Exists('$(MSBuildProjectDirectory)/preview.jpg')" />
+    <Content Include="$(MSBuildProjectDirectory)/THIRD_PARTY_NOTICES.txt">
+      <Link>THIRD_PARTY_NOTICES.txt</Link>
+      <TargetPath>THIRD_PARTY_NOTICES.txt</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -115,6 +120,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
     <PackageReference Include="PLib" Version="4.24.0" GeneratePathProperty="true" />
+    <PackageReference Include="Toon.Format" Version="1.0.0" />
   </ItemGroup>
 
   <!-- 构建后生成元数据文件 -->
@@ -163,6 +169,7 @@
     <!-- 复制 mod 文件到 dist/ModName/ -->
     <ItemGroup>
       <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
+      <ModOutputFiles Include="$(OutputPath)THIRD_PARTY_NOTICES.txt" />
       <ModOutputFiles Include="$(OutputPath)mod.yaml" />
       <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
       <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />

@@ -20,6 +20,7 @@ namespace OniMcp.Tools
     {
         private static StepUntilWatcher _activeWatcher;
         private static readonly object _watcherLock = new object();
+        private static readonly StepUntilResultCache _completedResults = new StepUntilResultCache(8);
 
         public static CallToolResult StepUntil(JObject args)
         {
@@ -69,6 +70,7 @@ namespace OniMcp.Tools
             object requestedCondition = args?["until"] != null ? (object)condition.ToJson()
                 : (args?["condition"]?.ToString() ?? "orders_complete");
 
+            _completedResults.BindGame(Game.Instance, ResolveStepRootWorld());
             lock (_watcherLock)
             {
                 if (_activeWatcher != null)
@@ -80,13 +82,31 @@ namespace OniMcp.Tools
 
             DeferredCallToolResult deferred = wait ? new DeferredCallToolResult() : null;
 
+            string requestId = Guid.NewGuid().ToString("N");
+            Game gameIdentity = Game.Instance;
+            object rootWorld = ResolveStepRootWorld();
+            object worldIdentity = ResolveStepWorld(worldId);
+            var loadIdentity = new StepUntilLoadIdentity(gameIdentity, rootWorld, worldIdentity);
             Dictionary<string, object> completion = null;
             var watcher = bridge.gameObject.AddComponent<StepUntilWatcher>();
             try
             {
-                watcher.Initialize(condition, requestedCondition, speed, maxGameSeconds, maxWallSeconds, worldId, targetCells, delta =>
+                watcher.Initialize(requestId, loadIdentity, condition, requestedCondition, speed, maxGameSeconds, maxWallSeconds, worldId, targetCells, delta =>
                 {
-                    completion = delta;
+                    Dictionary<string, object> terminal = delta;
+                    if (loadIdentity.MatchesSave(Game.Instance, ResolveStepRootWorld()))
+                    {
+                        _completedResults.Add(requestId, gameIdentity, rootWorld, delta);
+                        if (_completedResults.TryGet(requestId, gameIdentity, rootWorld, out var stored)) terminal = stored;
+                    }
+                    else
+                    {
+                        terminal = StepUntilResultCache.WithCompletionMetadata(delta, DateTimeOffset.UtcNow);
+                    }
+                    var speedControlAtCompletion = SpeedControlScreen.Instance;
+                    terminal = StepUntilResultView.WithCurrentPause(terminal,
+                        speedControlAtCompletion == null || speedControlAtCompletion.IsPaused);
+                    completion = terminal;
                     lock (_watcherLock)
                     {
                         if (ReferenceEquals(_activeWatcher, watcher))
@@ -95,7 +115,7 @@ namespace OniMcp.Tools
 
                     if (deferred != null)
                     {
-                        string json = JsonConvert.SerializeObject(delta, McpJsonUtil.Settings);
+                        string json = JsonConvert.SerializeObject(terminal, McpJsonUtil.Settings);
                         deferred.Complete(CallToolResult.Text(json));
                     }
                 });
@@ -117,7 +137,7 @@ namespace OniMcp.Tools
                 return deferred ?? CallToolResult.Text(JsonConvert.SerializeObject(completion, McpJsonUtil.Settings));
 
             // Validate and capture the baseline before releasing our pause.
-            ReleaseMcpPause(speedControl);
+            ReleaseMcpPause(speedControl, releaseNativePause: true);
             speedControl.SetSpeed(Math.Max(0, Math.Min(speed - 1, 2)));
 
             if (!wait)
@@ -149,31 +169,109 @@ namespace OniMcp.Tools
 
         public static CallToolResult StepStatus(JObject args)
         {
+            _completedResults.BindGame(Game.Instance, ResolveStepRootWorld());
             StepUntilWatcher watcher;
-            lock (_watcherLock)
+            lock (_watcherLock) watcher = _activeWatcher;
+
+            if (watcher != null && !watcher.IsForCurrentLoad(Game.Instance, ResolveStepRootWorld(), ResolveStepWorld(watcher.WorldId)))
             {
-                watcher = _activeWatcher;
+                watcher.Cancel("scene_unloaded");
+                lock (_watcherLock) if (ReferenceEquals(_activeWatcher, watcher)) _activeWatcher = null;
+                watcher = null;
             }
 
-            if (watcher == null || !watcher.IsRunning)
+            string requestedId = args?["requestId"]?.ToString();
+            Dictionary<string, object> completed = null;
+            if (!string.IsNullOrWhiteSpace(requestedId)
+                && _completedResults.TryGet(requestedId, Game.Instance, ResolveStepRootWorld(), out completed))
+                return SerializeCompletedStepResult(completed);
+
+            if (watcher != null && watcher.IsRunning
+                && (string.IsNullOrWhiteSpace(requestedId) || requestedId == watcher.RequestId))
             {
-                var speedControl = SpeedControlScreen.Instance;
-                var inactive = new Dictionary<string, object>
+                var activeStatus = watcher.GetStatus();
+                activeStatus["status"] = "running";
+                activeStatus["found"] = true;
+                activeStatus["activeRequestId"] = watcher.RequestId;
+                return CallToolResult.Text(JsonConvert.SerializeObject(activeStatus, McpJsonUtil.Settings));
+            }
+
+            if (!string.IsNullOrWhiteSpace(requestedId))
+            {
+                return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                 {
-                    ["active"] = false,
-                    ["immigrantsAvailable"] = StepPrintingPodState.IsAvailable,
-                    ["isPaused"] = speedControl != null ? speedControl.IsPaused : true,
-                    ["speed"] = speedControl != null ? speedControl.GetSpeed() + 1 : 0
-                };
-                return CallToolResult.Text(JsonConvert.SerializeObject(inactive, McpJsonUtil.Settings));
+                    ["active"] = false, ["found"] = false, ["status"] = "not_found",
+                    ["isPaused"] = CurrentStepPaused(), ["currentIsPaused"] = CurrentStepPaused(),
+                    ["requestId"] = requestedId,
+                    ["activeRequestId"] = watcher != null && watcher.IsRunning ? watcher.RequestId : null
+                }, McpJsonUtil.Settings));
             }
 
-            return CallToolResult.Text(JsonConvert.SerializeObject(watcher.GetStatus(), McpJsonUtil.Settings));
+            string latestId = _completedResults.LatestId;
+            if (!string.IsNullOrWhiteSpace(latestId)
+                && _completedResults.TryGet(latestId, Game.Instance, ResolveStepRootWorld(), out completed))
+                return SerializeCompletedStepResult(completed);
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["active"] = false, ["found"] = false, ["status"] = "idle",
+                ["isPaused"] = CurrentStepPaused(), ["currentIsPaused"] = CurrentStepPaused(),
+                ["requestId"] = null,
+                ["activeRequestId"] = watcher != null && watcher.IsRunning ? watcher.RequestId : null
+            }, McpJsonUtil.Settings));
         }
 
         public static CallToolResult StepCancel(JObject args)
         {
+            _completedResults.BindGame(Game.Instance, ResolveStepRootWorld());
+            string requestedId = args?["requestId"]?.ToString();
             StepUntilWatcher watcher;
+            lock (_watcherLock) watcher = _activeWatcher;
+            if (watcher != null && !watcher.IsForCurrentLoad(Game.Instance, ResolveStepRootWorld(), ResolveStepWorld(watcher.WorldId)))
+            {
+                watcher.Cancel("scene_unloaded");
+                lock (_watcherLock) if (ReferenceEquals(_activeWatcher, watcher)) _activeWatcher = null;
+                watcher = null;
+            }
+
+            Dictionary<string, object> completed = null;
+            bool hasCompleted = !string.IsNullOrWhiteSpace(requestedId)
+                && _completedResults.TryGet(requestedId, Game.Instance, ResolveStepRootWorld(), out completed);
+            string action = StepUntilCancelPolicy.Resolve(requestedId, watcher != null && watcher.IsRunning ? watcher.RequestId : null, hasCompleted);
+            if (action == "completed")
+                return SerializeCompletedStepResult(completed);
+            if (action == "not_found")
+                return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                {
+                    ["found"] = false, ["status"] = "not_found", ["requestId"] = requestedId,
+                    ["isPaused"] = CurrentStepPaused(), ["currentIsPaused"] = CurrentStepPaused(),
+                    ["activeRequestId"] = watcher != null && watcher.IsRunning ? watcher.RequestId : null
+                }, McpJsonUtil.Settings));
+
+            if (action == "cancel_active")
+            {
+                if (watcher == null || !watcher.IsRunning
+                    || !watcher.IsForCurrentLoad(Game.Instance, ResolveStepRootWorld(), ResolveStepWorld(watcher.WorldId)))
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["found"] = false, ["status"] = "not_found", ["requestId"] = requestedId,
+                        ["isPaused"] = CurrentStepPaused(), ["currentIsPaused"] = CurrentStepPaused(),
+                        ["activeRequestId"] = watcher != null && watcher.IsRunning ? watcher.RequestId : null
+                    }, McpJsonUtil.Settings));
+
+                lock (_watcherLock) if (ReferenceEquals(_activeWatcher, watcher)) _activeWatcher = null;
+                watcher.Cancel("cancelled_by_user");
+                if (_completedResults.TryGet(requestedId, Game.Instance, ResolveStepRootWorld(), out completed))
+                    return SerializeCompletedStepResult(completed);
+                return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                {
+                    ["found"] = true, ["active"] = false, ["status"] = "cancelled",
+                    ["requestId"] = requestedId, ["stopReason"] = "cancelled_by_user"
+                }, McpJsonUtil.Settings));
+            }
+
+            // No handle preserves the original convenience behavior: cancel the active
+            // request, or pause manually if there is no watcher.
             lock (_watcherLock)
             {
                 watcher = _activeWatcher;
@@ -183,11 +281,37 @@ namespace OniMcp.Tools
             if (watcher != null)
             {
                 watcher.Cancel("cancelled_by_user");
+                if (_completedResults.TryGet(watcher.RequestId, Game.Instance, ResolveStepRootWorld(), out completed))
+                    return SerializeCompletedStepResult(completed);
                 return CallToolResult.Text("Active step_until cancelled and game paused.");
             }
 
             Pause();
             return CallToolResult.Text("No active step_until found. Game paused.");
+        }
+
+        private static bool CurrentStepPaused()
+        {
+            var speedControl = SpeedControlScreen.Instance;
+            return speedControl == null || speedControl.IsPaused;
+        }
+
+        private static CallToolResult SerializeCompletedStepResult(Dictionary<string, object> completed)
+        {
+            var current = StepUntilResultView.WithCurrentPause(completed, CurrentStepPaused());
+            return CallToolResult.Text(JsonConvert.SerializeObject(current, McpJsonUtil.Settings));
+        }
+
+        private static object ResolveStepRootWorld()
+        {
+            var clusterManager = ClusterManager.Instance;
+            return clusterManager == null ? null : clusterManager.GetWorld(0);
+        }
+
+        private static object ResolveStepWorld(int worldId)
+        {
+            var clusterManager = ClusterManager.Instance;
+            return clusterManager == null ? null : clusterManager.GetWorld(worldId);
         }
 
         private static bool TryStepSeconds(JToken token, out float seconds) =>
