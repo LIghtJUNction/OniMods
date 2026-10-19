@@ -57,7 +57,7 @@ Only normal gameplay is supported. Sandbox, instant-build, direct terrain writes
 Before interpreting map codes, converting names to codes, or reading connection/overlay glyphs, state in commentary that the gameplay skill requires authoritative lookup. Query every unknown glyph/name together:
 
 ```text
-search_control domain=glyphs queries=["砖","?","┼","氧气"] direction=auto matchMode=auto
+world_editor command=symbols queries=["砖","?","┼","氧气"] direction=auto matchMode=auto
 ```
 
 Do not infer meanings from Chinese characters, a stale legend, or memory. Preserve `count=0` as unknown. Pass `view=temperature|oxygen|light|decor|disease|radiation|crop|...` for contextual rows. Results may be reused only within the same runtime and turn.
@@ -65,13 +65,13 @@ Do not infer meanings from Chinese characters, a stale legend, or memory. Preser
 Forward, reverse, and batch examples:
 
 ```text
-search_control domain=glyphs queries=["砖","零"] direction=code_to_meaning view=temperature
-search_control domain=glyphs queries=["砖","┼"] direction=code_to_meaning view=logic
-search_control domain=glyphs queries=["砖块","研究站","氧气"] direction=meaning_to_code
-search_control domain=glyphs queries=["■","液","不","易","可","难"] direction=auto view=oxygen perQueryLimit=20
+world_editor command=symbols queries=["砖","零"] direction=code_to_meaning view=temperature
+world_editor command=symbols queries=["砖","┼"] direction=code_to_meaning view=logic
+world_editor command=symbols queries=["砖块","研究站","氧气"] direction=meaning_to_code
+world_editor command=symbols queries=["■","液","不","易","可","难"] direction=auto view=oxygen perQueryLimit=20
 ```
 
-`world_editor command=symbols` remains a compatible read-only alias and accepts the same lookup fields, but `search_control domain=glyphs` is the mandatory gameplay entrypoint.
+`world_editor command=symbols` is the mandatory public seven-tool-core lookup. Direct `search_control` is allowed only if explicitly advertised by the current `tools/list`; do not tunnel hidden names through `server_control` batching.
 
 ## Universal patch protocol
 

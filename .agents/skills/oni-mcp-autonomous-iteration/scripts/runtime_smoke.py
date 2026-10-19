@@ -271,7 +271,56 @@ def assert_tool_success(result, payload, label):
     assert_true(not is_error_payload(payload), f"{label} failed: {payload}")
 
 
-def hidden_state_calls():
+def core_state_calls():
+    """Read both colony and spatial state through the advertised world_editor."""
+    return [
+        ("colony", {"command": "read", "path": "/active/colony/status.oni", "profile": "minimal",
+                    "syncView": False, "focusCamera": False}),
+        ("map", {"command": "read", "path": "/active/map/viewport.md", "compact": True,
+                 "view": "default", "syncView": False, "focusCamera": False}),
+    ]
+
+
+def run_core_state_checks(client):
+    """Verify real live reads, not just existence or success of a batch preflight."""
+    glyph_args = {
+        "command": "symbols", "queries": ["?"], "direction": "code_to_meaning",
+    }
+    glyph_result, glyph_payload = call_result_with_retry(client, "world_editor", glyph_args)
+    assert_tool_success(glyph_result, glyph_payload, "public glyph lookup")
+    assert_true(
+        glyph_payload.get("resultContract", {}).get("style") == "authoritative_glyph_mapping"
+        and len(glyph_payload.get("results", [])) == 1,
+        f"public glyph lookup returned no authoritative mapping: {glyph_payload}",
+    )
+    results = [{"tool": "world_editor", "kind": "glyphs", "payload": glyph_payload}]
+    snapshot = None
+    for kind, args in core_state_calls():
+        result, payload = call_result_with_retry(client, "world_editor", args)
+        assert_tool_success(result, payload, f"public {kind} read")
+        if kind == "colony":
+            assert_true(
+                payload.get("profile") == "minimal"
+                and isinstance(payload.get("worldId"), int)
+                and isinstance(payload.get("cycle"), (int, float))
+                and isinstance(payload.get("paused"), bool)
+                and isinstance(payload.get("metrics"), dict),
+                f"colony status virtual file is not a live minimal snapshot: {payload}",
+            )
+            snapshot = payload
+        else:
+            map_text = payload.get("text", "")
+            assert_true(
+                isinstance(map_text, str) and map_text.startswith("#")
+                and "X:" in map_text and "Y:" in map_text,
+                f"map virtual file did not return a coordinate-framed map: {payload}",
+            )
+        results.append({"tool": "world_editor", "kind": kind, "payload": payload})
+    return snapshot, results
+
+
+def optional_full_state_calls():
+    """Only call these when tools/list explicitly advertises the full surface."""
     return [
         {
             "name": "colony_control",
@@ -280,45 +329,11 @@ def hidden_state_calls():
         {
             "name": "read_control",
             "arguments": {
-                "domain": "world",
-                "action": "search",
-                "pattern": "粉砂岩-泥土-氧气",
-                "direction": "both",
-                "matchMode": "smart",
-                "worldId": 0,
-                "limit": 3,
+                "domain": "world", "action": "search", "pattern": "粉砂岩-泥土-氧气",
+                "direction": "both", "matchMode": "smart", "worldId": 0, "limit": 3,
             },
         },
     ]
-
-
-def batch_state_checks(client, dry_run):
-    return call_result_with_retry(
-        client,
-        "server_control",
-        {
-            "domain": "batch",
-            "action": "call_many",
-            "calls": hidden_state_calls(),
-            "defaults": {"task": "runtime smoke: read-only hidden aggregate check"},
-            "dryRun": dry_run,
-            "requireAllValid": True,
-            "stopOnError": True,
-            "responseMode": "full",
-        },
-    )
-
-
-def child_payload(batch_payload, name):
-    for child in batch_payload.get("results", []):
-        if child.get("canonicalName") != name:
-            continue
-        text = child.get("text", "")
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            return {"text": text}
-    raise AssertionError(f"batch result missing child: {name}")
 
 
 def main():
@@ -410,32 +425,20 @@ def main():
     results.append({"tool": "world_editor", "payload": active_payload})
 
     if not game_loaded:
-        state_result, state_payload = batch_state_checks(client, dry_run=True)
-        assert_tool_success(state_result, state_payload, "server_control state preflight")
-        assert_true(state_payload.get("valid") is True, f"state preflight invalid: {state_payload}")
-        assert_true(state_payload.get("executed") == 0, "main-menu state preflight executed child calls")
-        state_mode = "preflight_game_not_loaded"
+        state_mode = "main_menu_game_not_loaded"
         snapshot = None
-    elif surface == "authenticated_full":
-        state_results = []
-        for call in hidden_state_calls():
-            state_result, state_payload = call_result_with_retry(
-                client, call["name"], call["arguments"]
-            )
-            assert_tool_success(state_result, state_payload, call["name"])
-            state_results.append({"tool": call["name"], "payload": state_payload})
-        results.extend(state_results)
-        snapshot = next(item["payload"] for item in state_results if item["tool"] == "colony_control")
-        state_mode = "direct_full_surface"
     else:
-        state_result, state_payload = batch_state_checks(client, dry_run=False)
-        assert_tool_success(state_result, state_payload, "server_control state batch")
-        assert_true(state_payload.get("valid") is True, f"state batch invalid: {state_payload}")
-        assert_true(state_payload.get("failed") == 0, f"state batch failed: {state_payload}")
-        assert_true(state_payload.get("executed") == 2, f"state batch did not execute both reads: {state_payload}")
-        results.append({"tool": "server_control", "payload": state_payload})
-        snapshot = child_payload(state_payload, "colony_control")
-        state_mode = "server_batch_default_surface"
+        snapshot, core_results = run_core_state_checks(client)
+        results.extend(core_results)
+        state_mode = "public_virtual_files"
+        if surface == "authenticated_full":
+            for call in optional_full_state_calls():
+                state_result, state_payload = call_result_with_retry(
+                    client, call["name"], call["arguments"]
+                )
+                assert_tool_success(state_result, state_payload, call["name"])
+                results.append({"tool": call["name"], "payload": state_payload})
+            state_mode = "public_virtual_files_and_direct_full_surface"
 
     if snapshot is not None:
         assert_true(snapshot.get("ok", True), "snapshot reported failure")

@@ -10,6 +10,7 @@ from pathlib import Path
 from onimcp_verify_parsing import fail, matching_delimiter
 from verify_building_blueprint_safety import verify_building_blueprint_safety
 from verify_glyph_lookup_contract import verify_glyph_lookup_contract
+from verify_runtime_smoke_surface import verify_runtime_smoke_surface
 from verify_world_editor_building_files import verify_world_editor_building_files
 
 
@@ -300,6 +301,7 @@ def main() -> None:
             fail(f"required source file not found: {path.relative_to(root)}")
     sources = {path: path.read_text(encoding="utf-8") for path in tools_root.rglob("*.cs")}
     verify_glyph_lookup_contract(root, sources)
+    verify_runtime_smoke_surface(root)
     verify_world_editor_building_files(root)
     registry = sources[registry_path]
     catalog = sources[tools_root / "Impl" / "Build" / "BuildPlanningCatalog.cs"]
