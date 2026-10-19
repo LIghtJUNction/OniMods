@@ -11,6 +11,7 @@ namespace OniMcp.Tools
         {
             var result = new List<StepDupeFact>();
             if (Components.LiveMinionIdentities == null) return result;
+            string workGroupId = Db.Get().ScheduleGroups.Worktime.Id;
             foreach (var dupe in Components.LiveMinionIdentities.Items)
             {
                 if (dupe == null || !ToolUtil.GameObjectMatchesWorld(dupe.gameObject, worldId)) continue;
@@ -21,8 +22,8 @@ namespace OniMcp.Tools
                 {
                     Name = dupe.GetProperName(),
                     Idle = idle,
-                    WorkScheduled = string.Equals(dupe.GetComponent<Schedulable>()?.GetSchedule()?.GetCurrentScheduleBlock()?.GroupId,
-                        "Work", StringComparison.OrdinalIgnoreCase)
+                    ScheduleGroupId = dupe.GetComponent<Schedulable>()?.GetSchedule()?.GetCurrentScheduleBlock()?.GroupId,
+                    WorkScheduleGroupId = workGroupId
                 });
             }
             return result;
@@ -90,7 +91,8 @@ namespace OniMcp.Tools
             ["workIdleCount"] = dupes.Count(d => d.Idle && d.WorkScheduled),
             ["duplicants"] = dupes.Select(d => new Dictionary<string, object>
             {
-                ["name"] = d.Name, ["idle"] = d.Idle, ["workScheduled"] = d.WorkScheduled
+                ["name"] = d.Name, ["idle"] = d.Idle, ["workScheduled"] = d.WorkScheduled,
+                ["scheduleGroupId"] = d.ScheduleGroupId, ["workScheduleGroupId"] = d.WorkScheduleGroupId
             }).ToList()
         };
     }
