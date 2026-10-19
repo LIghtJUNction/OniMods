@@ -5,10 +5,14 @@ using OniMcp.Tools;
 internal static class StepConditionRegression
 {
     private static int assertions;
+    // Installed ONI 744825 ScheduleGroups.Worktime is created with Add("Worktime", ...).
+    // This is a fixture value; the production reader obtains the actual resource Id from Db.
+    private const string NativeWorkGroupId = "Worktime";
 
     internal static void Run()
     {
         InvalidExpressions();
+        NativeWorkScheduleIdentity();
         IdleQuantifiersAndStability();
         CompositionAndOrders();
         LegacyAndNotifications();
@@ -43,6 +47,23 @@ internal static class StepConditionRegression
             Check(!StepCondition.TryParse(new JObject { ["until"] = new JObject { ["fact"] = "alert", ["stableSeconds"] = invalid } }, out _, out _), "finite stability bound");
     }
 
+    private static void NativeWorkScheduleIdentity()
+    {
+        var fact = new StepDupeFact { ScheduleGroupId = NativeWorkGroupId, WorkScheduleGroupId = NativeWorkGroupId };
+        Check(fact.WorkScheduled, "native Worktime group is work-scheduled");
+        foreach (string group in new[] { "Work", "工作", "Recreation", "Sleep", "worktime", null })
+        {
+            fact.ScheduleGroupId = group;
+            Check(!fact.WorkScheduled, "block type, display name, off-work, and missing IDs cannot replace native group identity: " + group);
+        }
+        fact.ScheduleGroupId = NativeWorkGroupId;
+        fact.WorkScheduleGroupId = null;
+        Check(!fact.WorkScheduled, "missing native work resource never classifies a group as work");
+        fact.WorkScheduleGroupId = "FutureWorkResourceId";
+        fact.ScheduleGroupId = "FutureWorkResourceId";
+        Check(fact.WorkScheduled, "work identity follows the Db resource ID rather than a hardcoded fixture literal");
+    }
+
     private static void IdleQuantifiersAndStability()
     {
         var all = Parse("{until:{fact:'dupes_idle',quantifier:'all'}}");
@@ -51,9 +72,9 @@ internal static class StepConditionRegression
         var e = new StepConditionEvaluator();
         Check(!e.Evaluate(all, f, 0, out _), "zero duplicants cannot satisfy all idle");
         Check(!e.Evaluate(any, f, 0, out _), "zero duplicants cannot satisfy any idle");
-        f.Duplicants.Add(new StepDupeFact { Name = "one", Idle = true, WorkScheduled = true });
-        f.Duplicants.Add(new StepDupeFact { Name = "two", Idle = false, WorkScheduled = true });
-        f.Duplicants.Add(new StepDupeFact { Name = "three", Idle = true, WorkScheduled = true });
+        f.Duplicants.Add(new StepDupeFact { Name = "one", Idle = true, ScheduleGroupId = NativeWorkGroupId, WorkScheduleGroupId = NativeWorkGroupId });
+        f.Duplicants.Add(new StepDupeFact { Name = "two", Idle = false, ScheduleGroupId = NativeWorkGroupId, WorkScheduleGroupId = NativeWorkGroupId });
+        f.Duplicants.Add(new StepDupeFact { Name = "three", Idle = true, ScheduleGroupId = NativeWorkGroupId, WorkScheduleGroupId = NativeWorkGroupId });
         Check(e.Evaluate(any, f, 1, out string reason) && reason == "dupe_idle:one", "any can match one native idle dupe");
         Check(!e.Evaluate(all, f, 1, out _), "busy dupe blocks all");
         f.Duplicants[1].Idle = true;
@@ -63,7 +84,7 @@ internal static class StepConditionRegression
         f.Duplicants[1].Idle = true;
         Check(!e.Evaluate(all, f, 4, out _), "stability restarts");
         Check(e.Evaluate(all, f, 6, out reason) && reason == "all_dupes_idle", "all native idle for two seconds");
-        f.Duplicants[1].WorkScheduled = false;
+        f.Duplicants[1].ScheduleGroupId = "Recreation";
         Check(!e.Evaluate(all, f, 7, out _), "off-work dupe blocks work-scoped all rather than shrinking population");
         var anySchedule = Parse("{until:{fact:'dupes_idle',quantifier:'all',schedule:'any',stableSeconds:0}}");
         Check(e.Evaluate(anySchedule, f, 7, out _), "agent may choose schedule any");
@@ -74,7 +95,7 @@ internal static class StepConditionRegression
         var condition = Parse("{until:{all:[{fact:'orders_complete'},{any:[{fact:'dupes_idle',quantifier:'all',stableSeconds:2},{fact:'cycle_end'}]}]}}");
         var e = new StepConditionEvaluator();
         var f = new StepConditionFacts { InitialTrackedOrders = 5, RemainingTrackedOrders = 1 };
-        f.Duplicants.Add(new StepDupeFact { Name = "one", Idle = true, WorkScheduled = true });
+        f.Duplicants.Add(new StepDupeFact { Name = "one", Idle = true, ScheduleGroupId = NativeWorkGroupId, WorkScheduleGroupId = NativeWorkGroupId });
         Check(!e.Evaluate(condition, f, 0, out _), "pending build prevents all combination");
         f.RemainingTrackedOrders = 0;
         Check(e.Evaluate(condition, f, 2, out string reason) && reason == "condition:all", "nested any/all compose independent facts");

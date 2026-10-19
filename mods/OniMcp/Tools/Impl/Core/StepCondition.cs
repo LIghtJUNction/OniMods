@@ -251,7 +251,10 @@ namespace OniMcp.Tools
     {
         public string Name;
         public bool Idle;
-        public bool WorkScheduled;
+        public string ScheduleGroupId;
+        public string WorkScheduleGroupId;
+        public bool WorkScheduled => !string.IsNullOrEmpty(WorkScheduleGroupId)
+            && string.Equals(ScheduleGroupId, WorkScheduleGroupId, StringComparison.Ordinal);
     }
 
     internal sealed class StepNotificationFact
