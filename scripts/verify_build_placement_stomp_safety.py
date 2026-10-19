@@ -172,6 +172,11 @@ def main() -> int:
         failures,
     )
 
+    require(auto_connect_body, "if (!dryRun && errors.Count == 0)",
+            "failed cell planning cannot modify connection data", failures)
+    require(auto_connect_body, "bool complete = errors.Count == 0 &&",
+            "failed cell planning cannot report a complete path", failures)
+
     # Conflict categories are promoted to MCP errors with stable top-level
     # reasonCode values rather than successful Text responses with nested errors.
     require_order(
