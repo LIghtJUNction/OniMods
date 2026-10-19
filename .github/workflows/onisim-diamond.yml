@@ -1,0 +1,39 @@
+name: OniSim diamond proof and regression
+
+on:
+  pull_request:
+    paths:
+      - "experimental/OniSim/**"
+      - ".github/workflows/onisim-diamond.yml"
+  push:
+    branches: [main]
+    paths:
+      - "experimental/OniSim/**"
+      - ".github/workflows/onisim-diamond.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  component-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.1
+      - name: Build original and optimized Rust components
+        run: python3 experimental/OniSim/lean-lab/harness/run.py build
+      - name: Run differential correctness cases
+        run: python3 experimental/OniSim/lean-lab/harness/run.py verify
+  lean-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean 4.19.0 through elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:v4.19.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Check all Lean proofs and logical dependencies
+        run: bash experimental/OniSim/lean-lab/proof/verify.sh

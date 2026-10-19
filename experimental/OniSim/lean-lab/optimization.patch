@@ -1,0 +1,179 @@
+--- /dev/null
++++ b/experimental/OniSim/native/src/diamond.rs
+@@ -0,0 +1,76 @@
++//! Exact obstacle-free four-neighbor coverage, emitted as contiguous row spans.
++//!
++//! A search that accepts depths strictly below `max_depth` visits the clipped
++//! Manhattan ball of radius `max_depth - 1`. Zero coordinates are excluded by
++//! the native search. Its u16 coordinates also exclude any wrap through zero.
++//! This iterator needs no grid-sized marks, queue, or result allocation.
++
++use std::ops::Range;
++
++/// One half-open linear-index range per nonempty row of the search diamond.
++/// The owning world's allocated dimensions establish that index products fit.
++pub(crate) struct DiamondRows {
++    stride: usize,
++    center_x: i32,
++    center_y: i32,
++    radius: i32,
++    upper_x: i32,
++    next_y: i32,
++    end_y: i32,
++}
++
++pub(crate) fn rows(
++    stride: usize,
++    padded_height: usize,
++    start_x: i32,
++    start_y: i32,
++    max_depth: u8,
++) -> DiamondRows {
++    // Preserve the original cast before testing the start, including negative
++    // and greater-than-u16 inputs. Valid nodes form a rectangle, not a torus.
++    let center_x = i32::from(start_x as u16);
++    let center_y = i32::from(start_y as u16);
++    let upper_x = stride.min(65_536) as i32;
++    let upper_y = padded_height.min(65_536) as i32;
++    let radius = i32::from(max_depth) - 1;
++    let valid = max_depth != 0
++        && center_x > 0
++        && center_y > 0
++        && center_x < upper_x
++        && center_y < upper_y;
++    let (next_y, end_y) = if valid {
++        (
++            (center_y - radius).max(1),
++            (center_y + radius + 1).min(upper_y),
++        )
++    } else {
++        (0, 0)
++    };
++    DiamondRows {
++        stride,
++        center_x,
++        center_y,
++        radius,
++        upper_x,
++        next_y,
++        end_y,
++    }
++}
++
++impl Iterator for DiamondRows {
++    type Item = Range<usize>;
++
++    #[inline]
++    fn next(&mut self) -> Option<Self::Item> {
++        if self.next_y >= self.end_y {
++            return None;
++        }
++        let y = self.next_y;
++        self.next_y += 1;
++        let reach = self.radius - (y - self.center_y).abs();
++        let first_x = (self.center_x - reach).max(1) as usize;
++        let end_x = (self.center_x + reach + 1).min(self.upper_x) as usize;
++        let row = y as usize * self.stride;
++        Some(row + first_x..row + end_x)
++    }
++}
+--- a/experimental/OniSim/native/src/disease_emitters.rs
++++ b/experimental/OniSim/native/src/disease_emitters.rs
+@@ -1,9 +1,7 @@
+-//! DiseaseEmitter's official timer and breadth-first area emission behavior.
+-
+-use std::collections::VecDeque;
++//! DiseaseEmitter's timer and obstacle-free area emission behavior.
+ 
+ use crate::fluid_helpers::add_disease;
+-use crate::status::{Error, Result, Status};
++use crate::status::Result;
+ use crate::tables::DiseaseTable;
+ use crate::world::{PhysicsWorld, Region};
+ 
+@@ -31,54 +29,25 @@
+     }
+ }
+ 
+-fn allocation_error() -> Error {
+-    Error::new(
+-        Status::ResourceLimit,
+-        "could not allocate disease emitter search",
+-    )
+-}
+-
+ // ELF 0x544f0, with its final argument false: solids do not stop this search.
+ // Coordinates and depth in FloodFillInfo are unsigned 16-bit values.
++// Visit the same cells once in row order. The caller changes only each visited
++// cell's own disease fields; emitter order is retained. See the Lean experiment
++// for the graph-coverage and independent-cell update proofs.
+ pub(crate) fn reachable_cells(
+     world: &PhysicsWorld,
+     start_x: i32,
+     start_y: i32,
+     max_depth: u8,
+-) -> Result<Vec<usize>> {
+-    let mut visited = Vec::new();
+-    visited
+-        .try_reserve_exact(world.read.element.len())
+-        .map_err(|_| allocation_error())?;
+-    visited.resize(world.read.element.len(), false);
+-    let mut queue = VecDeque::new();
+-    queue.try_reserve(1).map_err(|_| allocation_error())?;
+-    queue.push_back((start_x as u16, start_y as u16, 0u16));
+-    let mut result = Vec::new();
+-    while let Some((x, y, depth)) = queue.pop_front() {
+-        if depth >= max_depth as u16
+-            || x == 0
+-            || y == 0
+-            || x as usize >= world.stride
+-            || y as usize >= world.padded_height
+-        {
+-            continue;
+-        }
+-        let cell = y as usize * world.stride + x as usize;
+-        if visited[cell] {
+-            continue;
+-        }
+-        visited[cell] = true;
+-        result.try_reserve(1).map_err(|_| allocation_error())?;
+-        result.push(cell);
+-        queue.try_reserve(4).map_err(|_| allocation_error())?;
+-        let next = depth.wrapping_add(1);
+-        queue.push_back((x, y.wrapping_sub(1), next));
+-        queue.push_back((x.wrapping_sub(1), y, next));
+-        queue.push_back((x.wrapping_add(1), y, next));
+-        queue.push_back((x, y.wrapping_add(1), next));
+-    }
+-    Ok(result)
++) -> impl Iterator<Item = usize> {
++    crate::diamond::rows(
++        world.stride,
++        world.padded_height,
++        start_x,
++        start_y,
++        max_depth,
++    )
++    .flatten()
+ }
+ 
+ // ELF 0x60bb0. Only the emitter's center is clipped to the region; each search
+@@ -100,7 +69,7 @@
+             continue;
+         }
+         if emitter.elapsed >= emitter.emit_interval {
+-            let cells = reachable_cells(world, x, y, emitter.max_depth)?;
++            let cells = reachable_cells(world, x, y, emitter.max_depth);
+             for cell in cells {
+                 if emitter.emit_count >= 0 || world.write.disease_idx[cell] == emitter.disease_idx {
+                     add_disease(
+--- a/experimental/OniSim/native/src/lib.rs
++++ b/experimental/OniSim/native/src/lib.rs
+@@ -4,6 +4,7 @@
+ mod component_handles;
+ mod conduit;
+ mod conduit_ffi;
++mod diamond;
+ mod disease;
+ mod disease_emitters;
+ mod event_records;

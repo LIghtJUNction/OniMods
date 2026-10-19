@@ -1,0 +1,45 @@
+'SimDiamond.Walk.start_legal' does not depend on any axioms
+'SimDiamond.Walk.end_legal' does not depend on any axioms
+'SimDiamond.adjacent_distance' depends on axioms: [propext, Quot.sound]
+'SimDiamond.Walk.distance_le' depends on axioms: [propext, Quot.sound]
+'SimDiamond.step_towards' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.shortest_walk' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.reach_iff_diamond' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.mem_intRange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.nodup_intRange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.row_intervals_iff_diamond' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.mem_scan_iff_intervals' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.mem_scan_iff_diamond' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.mem_scan_iff_reach' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.nodup_row' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.row_member_y' depends on axioms: [propext, Quot.sound]
+'SimDiamond.nodup_scan' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.scan_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.checkedScan_illegal' depends on axioms: [propext]
+'SimDiamond.checkedScan_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.mem_checkedScan_iff_reach' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.mem_checkedScan_iff_diamond' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.nodup_checkedScan' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.mem_neighbors_iff' depends on axioms: [propext]
+'SimDiamond.mem_frontier_iff_walk' depends on axioms: [propext, Quot.sound]
+'SimDiamond.mem_unique_iff' depends on axioms: [propext, Quot.sound]
+'SimDiamond.nodup_unique' depends on axioms: [propext, Quot.sound]
+'SimDiamond.mem_bfs_iff_reach' depends on axioms: [propext, Quot.sound]
+'SimDiamond.nodup_bfs' depends on axioms: [propext, Quot.sound]
+'SimDiamond.bfs_checkedScan_same_cells' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.runUpdates_at' depends on axioms: [propext]
+'SimDiamond.runUpdates_same_set' depends on axioms: [propext, Quot.sound]
+'SimDiamond.bfs_checkedScan_same_updates' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SimDiamond.linearIndex_injective' depends on axioms: [propext, Quot.sound]
+'SimDiamond.legal_effectiveBounds' depends on axioms: [propext, Classical.choice, Quot.sound]
+SimDiamond.reach_iff_diamond {b : SimDiamond.Bounds} {c : SimDiamond.Cell} (hc : SimDiamond.Legal b c) (r : Nat)
+  (p : SimDiamond.Cell) : SimDiamond.ReachWithin b c r p ↔ SimDiamond.Legal b p ∧ SimDiamond.manhattan c p < r
+SimDiamond.bfs_checkedScan_same_cells (b : SimDiamond.Bounds) (c : SimDiamond.Cell) (r : Nat) (p : SimDiamond.Cell) :
+  p ∈ SimDiamond.bfs b c r ↔ p ∈ SimDiamond.checkedScan b c r
+SimDiamond.bfs_checkedScan_same_updates {Value : Type} (b : SimDiamond.Bounds) (c : SimDiamond.Cell) (r : Nat)
+  (update : SimDiamond.Cell → Value → Value) (state : SimDiamond.Cell → Value) :
+  SimDiamond.runUpdates update (SimDiamond.bfs b c r) state =
+    SimDiamond.runUpdates update (SimDiamond.checkedScan b c r) state
+SimDiamond.linearIndex_injective (stride : Int) (p q : SimDiamond.Cell) (hpx : 0 ≤ p.x) (hpxw : p.x < stride)
+  (hqx : 0 ≤ q.x) (hqxw : q.x < stride) (heq : SimDiamond.linearIndex stride p = SimDiamond.linearIndex stride q) :
+  p = q

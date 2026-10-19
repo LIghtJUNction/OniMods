@@ -1,0 +1,18 @@
+{
+  "reviewer": "independent kernel_audit agent",
+  "review_type": "source and formal-model inspection; not human review or game execution",
+  "result": "no P1/P2 issue found",
+  "checked_at_utc": "2026-10-19T20:59:45.991548+00:00",
+  "reviewed_files": {
+    "onisim-source/experimental/OniSim/native/src/diamond.rs": "d500edd4f2604c672c86862707d05aebe6a1e7ced98cd3b3d07553a72d2539ad",
+    "onisim-source/experimental/OniSim/native/src/disease_emitters.rs": "6b5eabdb4b3ee962f3d09b793dd7e872cb6a983f004c66a8b9fee36944c2693d",
+    "onisim-source/experimental/OniSim/native/src/lib.rs": "f9c42fa9798896544bfe37455c7acb7b24aeeeb70a804a6a5538248c54bb1ea5",
+    "onisim-lean-lab/proof/SimDiamond.lean": "fbf6ffb534e99ddb9189fd0c89a5c7944be53f523eb0c5d9ade3edc94d43b0f5"
+  },
+  "material_boundaries": [
+    "finite breadth-layer reference is not a byte-level Rust queue proof",
+    "successful valid world state semantics; unnecessary search allocation failures disappear",
+    "u16 conversion and machine index limits are checked at the source/differential-test bridge",
+    "different emitters retain their original order"
+  ]
+}

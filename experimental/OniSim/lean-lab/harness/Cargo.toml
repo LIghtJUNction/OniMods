@@ -1,0 +1,10 @@
+[package]
+name = "onisim-diamond-validation"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+allocation_stats = []
+
+[workspace]
