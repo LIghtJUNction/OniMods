@@ -297,12 +297,12 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                         EqualsIgnoreCase(item.TryGetValue("reasonCode", out object itemReason) ? itemReason?.ToString() : null, "utility_path_conflict")
                         || EqualsIgnoreCase(item.TryGetValue("reasonCode", out itemReason) ? itemReason?.ToString() : null, "placement_conflict"));
                     string networkError = null;
-                    bool networkConnected = true;
+                    bool networkConnected = errors.Count == 0;
                     if (!dryRun && errors.Count == 0)
                         networkConnected = FinalizeUtilityPathConnections(def, path, worldId, out networkError);
                     if (networkConnected && !dryRun && errors.Count == 0 && IsCompletedUtilityPath(def, path))
                         networkConnected = ValidateCompletedUtilityPathNetwork(def, path, out networkError);
-                    if (!networkConnected) errors.Add(new Dictionary<string, object> { ["reasonCode"] = "utility_network_incomplete", ["error"] = networkError });
+                    if (!networkConnected && networkError != null) errors.Add(new Dictionary<string, object> { ["reasonCode"] = "utility_network_incomplete", ["error"] = networkError });
                     int connectedCells = dryRun ? valid : CountUtilityPathCells(def, path, worldId);
                     bool complete = errors.Count == 0 && (dryRun ? valid == path.Count : connectedCells >= path.Count && networkConnected);
                     var response = new Dictionary<string, object>
