@@ -40,12 +40,14 @@ game_control domain=speed action=pause
 
 重命名复制人前，询问用户命名风格。独立的“批量重命名复制人”请求走重命名快路径，不执行完整开局快照、日程、消毒或环境侦察。
 
-只简短询问一次。示例：
+只简短询问一次。示例选项：
 
-- `职业前缀`: `Dig-Ada`, `Build-Meep`
-- `中文岗位`: `挖掘-艾达`, `建造-米普`
-- `短标签`: `Digger`, `Builder`, `Cook`
-- 用户自定义风格
+- `岗位后缀（推荐，保留原名）`: `Harold (矿工)`, `Meep (建造)`
+- `前置短标签`: `[矿] Harold`, `[建] Meep`
+- `称号模式`: `掘地匠 Harold`, `建筑大师 Meep`
+- `保持原名`: `keep`（不改动复制人名字，仅分析特质与推荐岗位）
+- `前缀模式（旧版）`: `矿工-Harold`, `建造-Meep`
+- 用户自定义模板（如 `{name}·{role}`）
 
 用户回答前，不要执行 `dupes_control domain=command action=auto_rename apply=true`。允许预览：
 
@@ -81,7 +83,7 @@ navigation_control action=get_view
 colony_control domain=management kind=schedule action=list
 ```
 
-预览错峰班次：
+预览错峰班次（默认 style=natural 生成 早班/中班/晚班，且 traitAware=true 智能根据夜猫子/早起鸟/呼噜怪分配）：
 
 ```
 colony_control domain=management kind=schedule action=optimize apply=false
@@ -90,11 +92,11 @@ colony_control domain=management kind=schedule action=optimize apply=false
 只有当任务明确是设置/配置，或用户确认后才应用：
 
 ```
-colony_control domain=management kind=schedule action=optimize apply=true prefix="AI轮班"
+colony_control domain=management kind=schedule action=optimize apply=true
 colony_control domain=management kind=schedule action=list
 ```
 
-目标是早期开局错峰，减少厕所、床位和娱乐拥堵。除非用户要求具体数量，否则保持默认自动班次数。
+目标是早期开局错峰，减少厕所、床位和娱乐拥堵。支持自定义 `sleepHours`（默认3）、`hygieneHours`（默认1）、`recreationHours`（默认2）。
 
 ### 3. 按属性重命名复制人
 
@@ -105,7 +107,7 @@ game_control domain=speed action=pause
 # 如果用户还没选风格，先问一次并停止等待回答。
 dupes_control domain=command action=auto_rename style=<user style> apply=false
 # 用户确认预览后：
-dupes_control domain=command action=auto_rename style=<user style> apply=true
+dupes_control domain=command action=auto_rename style=<user style> apply=true confirm=true
 colony_control domain=read action=dupes
 ```
 

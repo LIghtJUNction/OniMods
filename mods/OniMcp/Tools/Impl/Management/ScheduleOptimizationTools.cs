@@ -20,16 +20,21 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "optimize_schedules", "schedule_stagger_shifts", "stagger_dupe_schedules" },
                 Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "shift", "stagger", "optimize", "日程", "复制人", "错峰", "轮班", "优化" },
-                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=optimize",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=optimize。错峰优化日程：支持 natural 自然中文命名、夜猫子/早起鸟/呼噜怪智能特质分班、可配置睡眠/洗漱/娱乐时长",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["shifts"] = new McpToolParameter { Type = "integer", Description = "轮班数量，默认按人数自动：1-2 人用 1 班，3-5 人用 3 班，最多 4 班", Required = false },
                     ["baseSleepStart"] = new McpToolParameter { Type = "integer", Description = "第一班睡眠开始小时，默认 20", Required = false },
-                    ["prefix"] = new McpToolParameter { Type = "string", Description = "日程名前缀，默认 AI轮班；未传 names/namePattern 时使用", Required = false },
+                    ["style"] = new McpToolParameter { Type = "string", Description = "日程命名风格：natural（自然中文 早班/中班/晚班）、en（Morning/Afternoon/Night）、prefix（如 轮班-1）。默认 natural", Required = false },
+                    ["prefix"] = new McpToolParameter { Type = "string", Description = "日程名前缀，style=prefix 时有效，默认 轮班", Required = false },
                     ["names"] = new McpToolParameter { Type = "array", Description = "自定义日程名列表，按班次顺序使用；也可传逗号分隔字符串", Required = false },
                     ["namePattern"] = new McpToolParameter { Type = "string", Description = "日程名模板，支持 {prefix}/{index}/{number}/{i}/{sleepStart}/{hour}，例如 Night-{index}", Required = false },
                     ["startIndex"] = new McpToolParameter { Type = "integer", Description = "模板和默认命名的起始序号，默认 1", Required = false },
                     ["separator"] = new McpToolParameter { Type = "string", Description = "默认命名 prefix 与序号之间的分隔符，默认 -；可传空字符串", Required = false },
+                    ["sleepHours"] = new McpToolParameter { Type = "integer", Description = "睡眠时长（小时），默认 3（范围 2-5）", Required = false },
+                    ["hygieneHours"] = new McpToolParameter { Type = "integer", Description = "洗漱时长（小时），默认 1（范围 0-3）", Required = false },
+                    ["recreationHours"] = new McpToolParameter { Type = "integer", Description = "娱乐时长（小时），默认 2（范围 1-4）", Required = false },
+                    ["traitAware"] = new McpToolParameter { Type = "boolean", Description = "是否根据复制人特质智能分配班次（夜猫子安排夜间工作、早起鸟安排晨间工作、呼噜怪错开睡眠），默认 true", Required = false },
                     ["apply"] = new McpToolParameter { Type = "boolean", Description = "是否实际创建并分配，默认 false 只预览", Required = false }
                 },
                 Handler = args =>
@@ -41,6 +46,10 @@ namespace OniMcp.Tools
                     int requestedShifts = ToolUtil.GetInt(args, "shifts") ?? DefaultShiftCount(dupes.Count);
                     int shifts = Math.Max(1, Math.Min(requestedShifts, Math.Min(4, Math.Max(1, dupes.Count))));
                     int baseSleepStart = NormalizeHour(ToolUtil.GetInt(args, "baseSleepStart") ?? 20);
+                    int sleepHours = Math.Max(2, Math.Min(ToolUtil.GetInt(args, "sleepHours") ?? 3, 5));
+                    int hygieneHours = Math.Max(0, Math.Min(ToolUtil.GetInt(args, "hygieneHours") ?? 1, 3));
+                    int recreationHours = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "recreationHours") ?? 2, 4));
+                    bool traitAware = ToolUtil.GetBool(args, "traitAware", true);
                     bool apply = ToolUtil.GetBool(args, "apply", false);
 
                     string nameError;
@@ -50,10 +59,12 @@ namespace OniMcp.Tools
 
                     var shiftPlans = new List<Dictionary<string, object>>();
                     var schedules = new List<Schedule>();
+                    var sleepStarts = new List<int>();
 
                     for (int i = 0; i < shifts; i++)
                     {
                         int sleepStart = NormalizeHour(baseSleepStart + i * Math.Max(1, 24 / shifts));
+                        sleepStarts.Add(sleepStart);
                         string scheduleName = scheduleNames[i];
                         Schedule schedule = FindSchedule(scheduleName);
 
@@ -61,7 +72,7 @@ namespace OniMcp.Tools
                         {
                             if (schedule == null)
                                 schedule = ScheduleManager.Instance.AddSchedule(Db.Get().ScheduleGroups.allGroups, scheduleName, alarmOn: true);
-                            ApplyShiftTemplate(schedule, sleepStart);
+                            ApplyShiftTemplate(schedule, sleepStart, sleepHours, hygieneHours, recreationHours);
                         }
 
                         schedules.Add(schedule);
@@ -69,40 +80,22 @@ namespace OniMcp.Tools
                         {
                             ["name"] = scheduleName,
                             ["sleepStart"] = sleepStart,
+                            ["sleepHours"] = sleepHours,
+                            ["hygieneHours"] = hygieneHours,
+                            ["recreationHours"] = recreationHours,
                             ["existing"] = schedule != null,
-                            ["blocks"] = BuildTemplatePreview(sleepStart)
+                            ["blocks"] = BuildTemplatePreview(sleepStart, sleepHours, hygieneHours, recreationHours)
                         });
                     }
 
-                    var assignments = new List<Dictionary<string, object>>();
-                    for (int i = 0; i < dupes.Count; i++)
-                    {
-                        int shiftIndex = shifts == 0 ? 0 : i % shifts;
-                        string scheduleName = scheduleNames[shiftIndex];
-
-                        if (apply)
-                        {
-                            var schedulable = dupes[i].GetComponent<Schedulable>();
-                            var target = FindSchedule(scheduleName);
-                            if (schedulable != null && target != null)
-                            {
-                                schedulable.GetSchedule()?.Unassign(schedulable);
-                                target.Assign(schedulable);
-                            }
-                        }
-
-                        assignments.Add(new Dictionary<string, object>
-                        {
-                            ["dupe"] = dupes[i].GetProperName(),
-                            ["schedule"] = scheduleName
-                        });
-                    }
+                    var assignments = AssignDupesToShifts(dupes, scheduleNames, sleepStarts, sleepHours, traitAware, apply);
 
                     var result = new Dictionary<string, object>
                     {
                         ["applied"] = apply,
                         ["duplicants"] = dupes.Count,
                         ["shifts"] = shifts,
+                        ["traitAware"] = traitAware,
                         ["naming"] = new Dictionary<string, object>
                         {
                             ["names"] = scheduleNames,
@@ -130,27 +123,194 @@ namespace OniMcp.Tools
                 return ValidateScheduleNames(explicitNames.Take(shifts).ToList(), out error);
             }
 
-            string prefix = args["prefix"]?.ToString();
-            if (string.IsNullOrWhiteSpace(prefix))
-                prefix = "AI轮班";
-
-            int startIndex = ToolUtil.GetInt(args, "startIndex") ?? 1;
-            string separator = args["separator"]?.ToString();
-            if (separator == null)
-                separator = "-";
-
             string pattern = args["namePattern"]?.ToString();
-            var names = new List<string>();
-            for (int i = 0; i < shifts; i++)
+            if (!string.IsNullOrWhiteSpace(pattern))
             {
-                int number = startIndex + i;
-                int sleepStart = NormalizeHour(baseSleepStart + i * Math.Max(1, 24 / shifts));
-                string name = string.IsNullOrWhiteSpace(pattern)
-                    ? $"{prefix}{separator}{number}"
-                    : FormatScheduleName(pattern, prefix, number, i, sleepStart);
-                names.Add(name);
+                string patPrefix = args["prefix"]?.ToString() ?? "轮班";
+                int patStartIndex = ToolUtil.GetInt(args, "startIndex") ?? 1;
+                var pnames = new List<string>();
+                for (int i = 0; i < shifts; i++)
+                {
+                    int number = patStartIndex + i;
+                    int sleepStart = NormalizeHour(baseSleepStart + i * Math.Max(1, 24 / shifts));
+                    pnames.Add(FormatScheduleName(pattern, patPrefix, number, i, sleepStart));
+                }
+                return ValidateScheduleNames(pnames, out error);
             }
-            return ValidateScheduleNames(names, out error);
+
+            string style = (args["style"]?.ToString() ?? "").Trim().ToLowerInvariant();
+            string prefix = args["prefix"]?.ToString();
+            bool usePrefix = style == "prefix" || style == "numeric" || (!string.IsNullOrWhiteSpace(prefix) && prefix != "AI轮班" && style != "natural");
+
+            if (usePrefix)
+            {
+                if (string.IsNullOrWhiteSpace(prefix) || prefix == "AI轮班")
+                    prefix = "轮班";
+                int startIndex = ToolUtil.GetInt(args, "startIndex") ?? 1;
+                string separator = args["separator"]?.ToString() ?? "-";
+                var names = new List<string>();
+                for (int i = 0; i < shifts; i++)
+                {
+                    names.Add($"{prefix}{separator}{startIndex + i}");
+                }
+                return ValidateScheduleNames(names, out error);
+            }
+
+            var natural = GetNaturalShiftNames(shifts, style == "en");
+            return ValidateScheduleNames(natural, out error);
+        }
+
+        private static List<string> GetNaturalShiftNames(int shifts, bool en)
+        {
+            if (en)
+            {
+                if (shifts == 1) return new List<string> { "Standard Shift" };
+                if (shifts == 2) return new List<string> { "Day Shift", "Night Shift" };
+                if (shifts == 3) return new List<string> { "Morning Shift", "Afternoon Shift", "Night Shift" };
+                return new List<string> { "Morning Shift", "Day Shift", "Evening Shift", "Night Shift" };
+            }
+            if (shifts == 1) return new List<string> { "标准日程" };
+            if (shifts == 2) return new List<string> { "早班", "晚班" };
+            if (shifts == 3) return new List<string> { "早班", "中班", "晚班" };
+            return new List<string> { "晨班", "白班", "午班", "夜班" };
+        }
+
+        private static List<Dictionary<string, object>> AssignDupesToShifts(
+            List<MinionIdentity> dupes,
+            List<string> scheduleNames,
+            List<int> sleepStarts,
+            int sleepHours,
+            bool traitAware,
+            bool apply)
+        {
+            int shifts = scheduleNames.Count;
+            var assignments = new List<Dictionary<string, object>>();
+            if (shifts == 0 || dupes.Count == 0) return assignments;
+
+            if (!traitAware)
+            {
+                for (int i = 0; i < dupes.Count; i++)
+                {
+                    int sIdx = i % shifts;
+                    ApplyScheduleAssignment(dupes[i], scheduleNames[sIdx], apply);
+                    assignments.Add(new Dictionary<string, object>
+                    {
+                        ["dupe"] = dupes[i].GetProperName(),
+                        ["schedule"] = scheduleNames[sIdx],
+                        ["reason"] = "顺序轮班"
+                    });
+                }
+                return assignments;
+            }
+
+            var nightSleepCount = new int[shifts];
+            var morningSleepCount = new int[shifts];
+            int[] nightBonus = { 21, 22, 23, 0, 1, 2 };
+            int[] morningBonus = { 3, 4, 5, 6, 7, 8 };
+
+            for (int s = 0; s < shifts; s++)
+            {
+                var sleepSet = new HashSet<int>();
+                for (int h = 0; h < sleepHours; h++)
+                    sleepSet.Add(NormalizeHour(sleepStarts[s] + h));
+                nightSleepCount[s] = nightBonus.Count(h => sleepSet.Contains(h));
+                morningSleepCount[s] = morningBonus.Count(h => sleepSet.Contains(h));
+            }
+
+            var shiftCounts = new int[shifts];
+            var snorerCounts = new int[shifts];
+            var dupeInfos = dupes.Select(dupe =>
+            {
+                var traits = dupe.GetComponent<Klei.AI.Traits>()?.GetTraitIds() ?? new List<string>();
+                return new
+                {
+                    Dupe = dupe,
+                    Traits = traits,
+                    IsNightOwl = traits.Contains("NightOwl"),
+                    IsEarlyBird = traits.Contains("EarlyBird"),
+                    IsSnorer = traits.Contains("Snorer")
+                };
+            }).ToList();
+
+            var prioritized = dupeInfos
+                .OrderByDescending(d => d.IsNightOwl || d.IsEarlyBird)
+                .ThenByDescending(d => d.IsSnorer)
+                .ToList();
+
+            var assignedMap = new Dictionary<MinionIdentity, (int shiftIdx, string reason)>();
+
+            foreach (var d in prioritized)
+            {
+                int chosenShift;
+                string reason;
+
+                if (d.IsNightOwl)
+                {
+                    chosenShift = Enumerable.Range(0, shifts)
+                        .OrderBy(s => nightSleepCount[s])
+                        .ThenBy(s => shiftCounts[s])
+                        .First();
+                    reason = $"夜猫子特质（最佳夜间工作班次，夜间睡眠重叠 {nightSleepCount[chosenShift]}h）";
+                }
+                else if (d.IsEarlyBird)
+                {
+                    chosenShift = Enumerable.Range(0, shifts)
+                        .OrderBy(s => morningSleepCount[s])
+                        .ThenBy(s => shiftCounts[s])
+                        .First();
+                    reason = $"早起鸟特质（最佳晨间工作班次，晨间睡眠重叠 {morningSleepCount[chosenShift]}h）";
+                }
+                else if (d.IsSnorer)
+                {
+                    chosenShift = Enumerable.Range(0, shifts)
+                        .OrderBy(s => snorerCounts[s])
+                        .ThenBy(s => shiftCounts[s])
+                        .First();
+                    snorerCounts[chosenShift]++;
+                    reason = "呼噜怪特质（错开睡眠时间，减少宿舍喧闹干扰）";
+                }
+                else
+                {
+                    chosenShift = Enumerable.Range(0, shifts)
+                        .OrderBy(s => shiftCounts[s])
+                        .First();
+                    reason = "常规均衡错峰分配";
+                }
+
+                shiftCounts[chosenShift]++;
+                assignedMap[d.Dupe] = (chosenShift, reason);
+            }
+
+            foreach (var dupe in dupes)
+            {
+                var info = assignedMap[dupe];
+                string targetSchedule = scheduleNames[info.shiftIdx];
+                ApplyScheduleAssignment(dupe, targetSchedule, apply);
+
+                var traits = dupe.GetComponent<Klei.AI.Traits>()?.GetTraitIds() ?? new List<string>();
+                assignments.Add(new Dictionary<string, object>
+                {
+                    ["dupe"] = dupe.GetProperName(),
+                    ["schedule"] = targetSchedule,
+                    ["shiftIndex"] = info.shiftIdx,
+                    ["reason"] = info.reason,
+                    ["traits"] = traits
+                });
+            }
+
+            return assignments;
+        }
+
+        private static void ApplyScheduleAssignment(MinionIdentity dupe, string scheduleName, bool apply)
+        {
+            if (!apply) return;
+            var schedulable = dupe.GetComponent<Schedulable>();
+            var target = FindSchedule(scheduleName);
+            if (schedulable != null && target != null)
+            {
+                schedulable.GetSchedule()?.Unassign(schedulable);
+                target.Assign(schedulable);
+            }
         }
 
         private static List<string> ReadNameList(Newtonsoft.Json.Linq.JToken token)
@@ -224,7 +384,10 @@ namespace OniMcp.Tools
                 return "names";
             if (!string.IsNullOrWhiteSpace(args["namePattern"]?.ToString()))
                 return "namePattern";
-            return "prefix";
+            string style = args["style"]?.ToString()?.Trim()?.ToLowerInvariant();
+            if (style == "prefix" || style == "numeric" || (!string.IsNullOrWhiteSpace(args["prefix"]?.ToString()) && args["prefix"]?.ToString() != "AI轮班"))
+                return "prefix";
+            return "natural";
         }
 
         private static Dictionary<string, object> ScheduleToDictionary(Schedule schedule)
@@ -266,31 +429,32 @@ namespace OniMcp.Tools
                                          string.Equals(group.Name, id, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static void ApplyShiftTemplate(Schedule schedule, int sleepStart)
+        private static void ApplyShiftTemplate(Schedule schedule, int sleepStart, int sleepHours = 3, int hygieneHours = 1, int recHours = 2)
         {
             var groups = Db.Get().ScheduleGroups;
             for (int hour = 0; hour < 24; hour++)
                 schedule.SetBlockGroup(hour, groups.Worktime);
 
-            SetBlock(schedule, sleepStart - 1, groups.Hygene);
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < hygieneHours; i++)
+                SetBlock(schedule, sleepStart - hygieneHours + i, groups.Hygene);
+
+            for (int i = 0; i < sleepHours; i++)
                 SetBlock(schedule, sleepStart + i, groups.Sleep);
-            for (int i = 3; i < 5; i++)
-                SetBlock(schedule, sleepStart + i, groups.Recreation);
+
+            for (int i = 0; i < recHours; i++)
+                SetBlock(schedule, sleepStart + sleepHours + i, groups.Recreation);
         }
 
-        private static List<Dictionary<string, object>> BuildTemplatePreview(int sleepStart)
+        private static List<Dictionary<string, object>> BuildTemplatePreview(int sleepStart, int sleepHours, int hygieneHours, int recHours)
         {
             var blocks = new List<Dictionary<string, object>>();
+            var sleepSet = new HashSet<int>(Enumerable.Range(0, sleepHours).Select(i => NormalizeHour(sleepStart + i)));
+            var hygieneSet = new HashSet<int>(Enumerable.Range(0, hygieneHours).Select(i => NormalizeHour(sleepStart - hygieneHours + i)));
+            var recSet = new HashSet<int>(Enumerable.Range(0, recHours).Select(i => NormalizeHour(sleepStart + sleepHours + i)));
+
             for (int hour = 0; hour < 24; hour++)
             {
-                string group = "Worktime";
-                if (hour == NormalizeHour(sleepStart - 1))
-                    group = "Hygene";
-                else if (hour == NormalizeHour(sleepStart) || hour == NormalizeHour(sleepStart + 1) || hour == NormalizeHour(sleepStart + 2))
-                    group = "Sleep";
-                else if (hour == NormalizeHour(sleepStart + 3) || hour == NormalizeHour(sleepStart + 4))
-                    group = "Recreation";
+                string group = hygieneSet.Contains(hour) ? "Hygene" : (sleepSet.Contains(hour) ? "Sleep" : (recSet.Contains(hour) ? "Recreation" : "Worktime"));
                 blocks.Add(new Dictionary<string, object> { ["hour"] = hour, ["group"] = group });
             }
             return blocks;
