@@ -262,7 +262,7 @@ theorem bfs_checkedScan_same_updates {Value : Type}
 | `harness/` | 编译原函数、改进函数和真实疾病操作的独立实验。 |
 | `results/` | 差分测试、60 场景的原始计时样本、分配记录和统计结果。 |
 | `evidence/` | 改动前后整库编译记录，以及实验身份记录。 |
-| `optimization.patch` | 三个生产源码文件的补丁，可对原始归档执行 `git apply`。 |
+| `baseline/` + `../native/src/` | 原始疾病发射代码与优化后的实际源码，可直接比较。 |
 
 原源码的 `SNAPSHOT-MANIFEST.json` 和 `PROGRESS.md` 是 04:02 交接快照的历史
 记录。交付根目录的当前清单与本实验报告描述本次改动后的状态。
