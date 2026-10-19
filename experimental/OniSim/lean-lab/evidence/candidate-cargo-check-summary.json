@@ -1,0 +1,25 @@
+{
+  "command": [
+    "cargo",
+    "check",
+    "--manifest-path",
+    "/workspace/scratch/d2db565d18f3/onisim-source/experimental/OniSim/native/Cargo.toml",
+    "--locked",
+    "--offline",
+    "--target-dir",
+    "/tmp/oni-rust-env/check-target",
+    "--message-format=short"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 0.6525189876556396,
+  "errors_by_code": {
+    "E0432": 10,
+    "E0433": 4,
+    "E0631": 1,
+    "E0609": 10,
+    "E0599": 5,
+    "E0308": 5,
+    "E0061": 1
+  },
+  "total_compiler_errors": 36
+}

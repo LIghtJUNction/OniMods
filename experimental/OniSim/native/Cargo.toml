@@ -1,0 +1,12 @@
+[package]
+name = "oni-sim-core"
+version = "0.1.0"
+edition = "2021"
+description = "Experimental native storage and transport for OniSim; not a game-ready simulator"
+license-file = "../../../LICENSE"
+
+[lib]
+name = "oni_sim_core"
+crate-type = ["cdylib"]
+
+[workspace]

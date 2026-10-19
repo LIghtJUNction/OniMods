@@ -1,0 +1,25 @@
+{
+  "checked_at_utc": "2026-10-19T21:14:14.562838+00:00",
+  "method": "Extract package to a new temporary directory; offline-build both Rust binaries, rerun differential suite, recompile Lean proof with no packaged olean; check patch against exact original archive",
+  "command_exit_codes": {
+    "portable_lean_result": 0,
+    "portable_rust_build_result": 0,
+    "portable_rust_verify_result": 0,
+    "final_patch_result": 0
+  },
+  "lean_theorems": 34,
+  "correctness_status": "passed",
+  "correctness_cases": 65040,
+  "measured_benchmark_rerun": false,
+  "source_files_equal_to_final_workspace": {
+    "onisim-lean-lab/proof/SimDiamond.lean": "fbf6ffb534e99ddb9189fd0c89a5c7944be53f523eb0c5d9ade3edc94d43b0f5",
+    "onisim-lean-lab/proof/ProofChecks.lean": "4e2f01942552dbe7df9484ad3ce31301eaf8d8bbd0c67b7bc0c443f9b9c725af",
+    "onisim-lean-lab/harness/src/main.rs": "0b39153dd176faa8ea4768059fe53f80d08df261b6f6e96e06d1d463dad1937c",
+    "onisim-lean-lab/harness/src/benchmark.rs": "5d91c16ae6d45ea56169bc17f49282a86a76574dbadbeba1d5171abbbef571fd",
+    "onisim-lean-lab/harness/src/verify.rs": "f1b90ff1ff97bea5475191a3046f1465602708cc04e5fdd58dcae908308b9896",
+    "onisim-source/experimental/OniSim/native/src/diamond.rs": "d500edd4f2604c672c86862707d05aebe6a1e7ced98cd3b3d07553a72d2539ad",
+    "onisim-source/experimental/OniSim/native/src/disease_emitters.rs": "6b5eabdb4b3ee962f3d09b793dd7e872cb6a983f004c66a8b9fee36944c2693d",
+    "onisim-source/experimental/OniSim/native/src/lib.rs": "f9c42fa9798896544bfe37455c7acb7b24aeeeb70a804a6a5538248c54bb1ea5"
+  },
+  "note": "Later packaging adds only documentation and evidence; tested code and proof are unchanged"
+}
