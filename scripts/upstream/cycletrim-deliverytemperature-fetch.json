@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "repository": "llunak/oni-deliverytemperaturelimit",
+  "commit": "17ab2850f6b979fff047ce1c8cf7e18802a87645",
+  "checkedDate": "2026-09-19",
+  "scope": "Source-only compatibility contract for CycleTrim's FetchManager.FetchablesByPrefabId.UpdatePickups replacement and Delivery Temperature Limit's temperature-partitioning behavior. These pins are not proof of current ONI runtime compatibility.",
+  "files": [
+    {
+      "path": "Source/Patch.cs",
+      "gitBlobSha1": "ad5798fe8651648d4218b3d2ddaab5843770a2a8"
+    },
+    {
+      "path": "Source/PatchFastTrack.cs",
+      "gitBlobSha1": "93745fa57a949c5ae7a2591ccdb19343ee611950"
+    },
+    {
+      "path": "Source/Mod.cs",
+      "gitBlobSha1": "4634ca181c69c672556cae8886000a03ab8f0180"
+    }
+  ],
+  "observedContract": {
+    "vanillaTargetPatchType": "DeliveryTemperatureLimit.FetchManager_FetchablesByPrefabId_Patch",
+    "vanillaTargetType": "FetchManager.FetchablesByPrefabId",
+    "vanillaTargetMethod": "UpdatePickups",
+    "vanillaPatchKind": "transpiler",
+    "reason": "Delivery Temperature Limit keeps candidates distinct by tag, priority, and temperature index so a nearer out-of-range pickup cannot hide a farther in-range pickup.",
+    "fastTrackCompatibilityType": "DeliveryTemperatureLimit.FetchManagerFastUpdate_PickupTagDict_Patch",
+    "fastTrackTarget": "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate+PickupTagDict.AddItem"
+  },
+  "maintainedSupercooled": {
+    "repository": "MaksymShostak/oxygen-not-included",
+    "commit": "05039f53c637ceccdee983c88347f2e3cc99fd43",
+    "checkedDate": "2026-09-24",
+    "files": [
+      {
+        "path": "mods/delivery-temperature-limit-supercooled/Source/KleiImplementationAdapters/KleiPickupTemperatureGroupingPatches.cs",
+        "gitBlobSha1": "6b40c6faf75a437fa0b1aed7278aa1e40c527480"
+      },
+      {
+        "path": "mods/delivery-temperature-limit-supercooled/Source/RuntimePatchInstallation/DeliveryTemperatureRuntimePatchInstaller.cs",
+        "gitBlobSha1": "f078b289d59101603aea5ba4884ecc25570e22f6"
+      },
+      {
+        "path": "mods/delivery-temperature-limit-supercooled/Source/HarmonyTranspilerInfrastructure/HarmonyPatchContractVerifier.cs",
+        "gitBlobSha1": "9d0ca796cee8108f4c11b07db2ed0af368e30f5c"
+      },
+      {
+        "path": "mods/delivery-temperature-limit-supercooled/Source/DeliveryTemperatureLimitMod.cs",
+        "gitBlobSha1": "99bb9dd26555a0357006bd1f48f37f19f45dc337"
+      }
+    ],
+    "observedContract": {
+      "markerType": "DeliveryTemperatureLimit.KleiPickupTemperatureGroupingPatches",
+      "target": "FetchManager.FetchablesByPrefabId.UpdatePickups(Navigator, int)",
+      "installationPhase": "OnAllModsLoaded",
+      "authorityRule": "The maintained implementation rejects an unpermitted bool Prefix that can skip the exact Klei target, so CycleTrim must not install its skipping Prefix when this active mod assembly is present."
+    }
+  },
+  "cycleTrimPolicy": "CycleTrim withholds its UpdatePickups Prefix during initial PatchAll. After all active mod DLLs are loaded, it installs only when FastTrack and maintained Delivery Temperature Limit are absent and the pinned legacy Delivery Temperature Limit transpiler is not installed."
+}
