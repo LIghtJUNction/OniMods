@@ -198,53 +198,6 @@ namespace OniMcp.Tools
             return null;
         }
 
-        private static IEnumerable<Dictionary<string, object>> ExistingObjectFootprint(GameObject go, BuildingDef def, string kind, HashSet<int> footprintCells)
-        {
-            if (go == null)
-                yield break;
-            int objectCell = Grid.PosToCell(go);
-            if (!Grid.IsValidCell(objectCell))
-                yield break;
-
-            int objectX = Grid.CellColumn(objectCell);
-            int objectY = Grid.CellRow(objectCell);
-            int width = Math.Max(1, def?.WidthInCells ?? 1);
-            int height = Math.Max(1, def?.HeightInCells ?? 1);
-            var building = go.GetComponent<Building>();
-            int anchorCell = building != null ? building.GetBottomLeftCell() : objectCell;
-            int anchorX = Grid.IsValidCell(anchorCell) ? Grid.CellColumn(anchorCell) : objectX - width / 2;
-            int anchorY = Grid.IsValidCell(anchorCell) ? Grid.CellRow(anchorCell) : objectY - height / 2;
-            var kpid = go.GetComponent<KPrefabID>();
-            string id = def?.PrefabID ?? kpid?.PrefabTag.Name ?? go.name;
-
-            for (int dy = 0; dy < height; dy++)
-            {
-                for (int dx = 0; dx < width; dx++)
-                {
-                    int x = anchorX + dx;
-                    int y = anchorY + dy;
-                    int cell = Grid.XYToCell(x, y);
-                    if (!Grid.IsValidCell(cell) || !footprintCells.Contains(cell))
-                        continue;
-                    yield return new Dictionary<string, object>
-                    {
-                        ["kind"] = kind,
-                        ["id"] = id,
-                        ["name"] = ToolUtil.CleanName(go.GetProperName()),
-                        ["x"] = x,
-                        ["y"] = y,
-                        ["cell"] = cell,
-                        ["objectX"] = objectX,
-                        ["objectY"] = objectY,
-                        ["anchorX"] = anchorX,
-                        ["anchorY"] = anchorY,
-                        ["reasonCode"] = "occupied_by_" + kind,
-                        ["reason"] = "requested footprint overlaps an existing " + kind + " footprint"
-                    };
-                }
-            }
-        }
-
         private static IEnumerable<Constructable> FindConstructables(int worldId)
         {
             Constructable[] constructables;

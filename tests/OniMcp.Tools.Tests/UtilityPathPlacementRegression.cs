@@ -85,7 +85,7 @@ internal partial class BuildingDef
     internal ObjectLayer TileLayer { get; set; }
     internal ObjectLayer ReplacementLayer { get; set; }
 }
-internal class Building { internal BuildingDef Def { get; set; } }
+internal partial class Building { internal BuildingDef Def { get; set; } }
 internal sealed class BuildingComplete : Building { }
 internal interface IHaveUtilityNetworkMgr { IUtilityNetworkMgr GetNetworkManager(); }
 internal interface IUtilityNetworkMgr

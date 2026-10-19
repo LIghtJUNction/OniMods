@@ -18,6 +18,7 @@
     <Compile Include="../../mods/OniMcp/Tools/Entry/BenchmarkTools.cs" Link="Source/BenchmarkTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Bio/HarvestMarkPolicy.cs" Link="Source/HarvestMarkPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Bio/FarmingUprootTools.cs" Link="Source/FarmingUprootTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingFootprint.cs" Link="Source/BuildPlanningExistingFootprint.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningUtilityPathConnections.cs" Link="Source/BuildPlanningUtilityPathConnections.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningUtilityPathReadiness.cs" Link="Source/BuildPlanningUtilityPathReadiness.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningBackwallSupportPolicy.cs" Link="Source/BuildPlanningBackwallSupportPolicy.cs" />
