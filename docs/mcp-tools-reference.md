@@ -166,9 +166,12 @@ This directly creates a continuous line, with no separate follow-up connection s
 - `get_view`：读取当前相机位置、缩放和激活世界。
 - `set_active_world`：切换激活世界并移动相机。
 - `set_view` / `move`：设置或平移相机。
+- `set_zoom zoom=23`：保持当前中心缩放，不需要 `x/y`。`zoom` 是视野的半高，数值越大看得越远；默认立即生效。
 - `switch_view`：切换氧气、电力、管线、温度等覆盖层，可选截图。
 - `focus_cell` / `focus_dupe`：聚焦格子或复制人。
 - `screenshot` / `coordinate_screenshot`：保存普通截图或带坐标网格的区域截图。
+
+相机动作可直接传对应的 `x/y`、`dx/dy` 或截图边界坐标；这不会开放建造、订单等工具的坐标输入。`set_view` 和 `move` 省略 `zoom` 时保持当前缩放，`snap=false` 同时平滑移动与缩放。随后用 `get_view` 核对当前 `orthographicSize` 与原生目标 `targetOrthographicSize`。`world_editor command=zoom ... syncView=true` 默认完整取景；显式 `focusMode=detail` 才使用可能裁切范围的近景模式。
 
 建造和任务操作应直接使用 `building_control` 与 `orders_control`。每次工具调用必填的 `task` 文本会自动显示在玩家鼠标附近，无需额外定位流程。
 

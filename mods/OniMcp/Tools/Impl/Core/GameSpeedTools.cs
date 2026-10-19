@@ -87,10 +87,10 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "game_control_speed", "game_pause_resume_speed" },
                 Tags = new List<string> { "game", "speed", "pause", "resume", "time" },
-                Description = "统一读取游戏时间并控制暂停/恢复/速度/步进。action=time、pause、resume、set_speed、step_until、step_status、step_cancel；step_until 类似 Playwright waitForCondition，以快进推进直到工单完成、小人发呆、警报或超时后自动暂停并返回增量差异报告。",
+                Description = "统一读取游戏时间并控制暂停/恢复/速度/步进。action=time、pause、resume、set_speed、step_until、step_status、step_facts、step_cancel；step_until 类似 Playwright waitForCondition，以快进推进直到工单完成、小人发呆、警报或超时后自动暂停并返回增量差异报告。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：time、pause、resume、set_speed、step_until、step_status、step_cancel", Required = true, EnumValues = new List<string> { "time", "pause", "resume", "set_speed", "step_until", "step_status", "step_cancel" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "动作：time、pause、resume、set_speed、step_until、step_status、step_facts、step_cancel", Required = true, EnumValues = new List<string> { "time", "pause", "resume", "set_speed", "step_until", "step_status", "step_facts", "step_cancel" } },
                     ["speed"] = new McpToolParameter
                     {
                         Type = "integer",
@@ -98,11 +98,13 @@ namespace OniMcp.Tools
                         Required = false,
                         EnumValues = new List<string> { "0", "1", "2", "3" }
                     },
-                    ["condition"] = new McpToolParameter { Type = "string", Description = "step_until 停止条件：orders_complete、dupe_idle、cycle_end、alert、any；默认 orders_complete", Required = false },
+                    ["condition"] = new McpToolParameter { Type = "string", Description = "兼容停止条件：orders_complete、dupe_idle（任一工作时段复制人）、all_dupes_idle、cycle_end、alert、any；与 until 二选一", Required = false },
+                    ["until"] = new McpToolParameter { Type = "object", Description = "可组合条件：{fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2} 或 {all:[...]}/{any:[...]}；最多 4 层/32 节点，未知字段拒绝。fact 支持 orders_complete/cycle_end/alert/alarm/new_notification/notification/printing_pod_ready/research_complete", Required = false },
+                    ["worldId"] = new McpToolParameter { Type = "integer", Description = "step_until/step_facts 的复制人和挖掘/建筑工单世界；默认当前世界，危险告警仍全局强制暂停", Required = false },
                     ["maxGameSeconds"] = new McpToolParameter { Type = "number", Description = "step_until 游戏内最大推进秒数，默认 60，范围 1–600", Required = false },
                     ["maxWallSeconds"] = new McpToolParameter { Type = "number", Description = "step_until 真实世界最大等待秒数，默认 15，范围 0.5–30", Required = false },
                     ["wait"] = new McpToolParameter { Type = "boolean", Description = "step_until 是否等待执行结果完成后返回，默认 true；false 为后台执行", Required = false },
-                    ["targetCells"] = new McpToolParameter { Type = "array", Description = "step_until 重点监控的 cell 数组，全部完成时提前触发暂停", Required = false }
+                    ["targetCells"] = new McpToolParameter { Type = "array", Description = "step_until 监控的 cell 数组；启动时捕获涉及这些格子的挖掘/建筑工单，不传则捕获当前世界全部挖掘/建筑工单", Required = false }
                 },
                 Handler = args =>
                 {
@@ -125,10 +127,12 @@ namespace OniMcp.Tools
                             return StepUntil(args);
                         case "step_status":
                             return StepStatus(args);
+                        case "step_facts":
+                            return StepFacts(args);
                         case "step_cancel":
                             return StepCancel(args);
                         default:
-                            return CallToolResult.Error("action must be time, pause, resume, set_speed, step_until, step_status, or step_cancel");
+                            return CallToolResult.Error("action must be time, pause, resume, set_speed, step_until, step_status, step_facts, or step_cancel");
                     }
                 }
             };

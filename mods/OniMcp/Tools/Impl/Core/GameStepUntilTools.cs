@@ -23,6 +23,8 @@ namespace OniMcp.Tools
 
         public static CallToolResult StepUntil(JObject args)
         {
+            if (!StepCondition.TryParse(args, out var condition, out string conditionError))
+                return CallToolResult.Error(conditionError);
             if (Game.Instance == null)
                 return CallToolResult.Error("Game not initialized");
 
@@ -32,28 +34,40 @@ namespace OniMcp.Tools
 
             int speed = 3;
             var speedToken = args?["speed"];
-            if (speedToken != null && int.TryParse(speedToken.ToString(), out int parsedSpeed) && parsedSpeed >= 1 && parsedSpeed <= 3)
-                speed = parsedSpeed;
-
-            string condition = (args?["condition"]?.ToString() ?? "orders_complete").Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(condition)) condition = "orders_complete";
+            if (speedToken != null)
+            {
+                if (!int.TryParse(speedToken.ToString(), out speed) || speed < 1 || speed > 3)
+                    return CallToolResult.Error("step_until speed must be 1, 2, or 3.");
+            }
 
             float maxGameSeconds = 60f;
             var maxGameToken = args?["maxGameSeconds"] ?? args?["maxSeconds"];
-            if (maxGameToken != null && float.TryParse(maxGameToken.ToString(), out float parsedGameSec))
-                maxGameSeconds = Mathf.Clamp(parsedGameSec, 1f, 600f);
+            if (maxGameToken != null)
+            {
+                if (!TryStepSeconds(maxGameToken, out float seconds)) return CallToolResult.Error("maxGameSeconds must be finite.");
+                maxGameSeconds = Mathf.Clamp(seconds, 1f, 600f);
+            }
 
             float maxWallSeconds = 15f;
             var maxWallToken = args?["maxWallSeconds"] ?? args?["wallTimeout"];
-            if (maxWallToken != null && float.TryParse(maxWallToken.ToString(), out float parsedWallSec))
-                maxWallSeconds = Mathf.Clamp(parsedWallSec, 0.5f, 30f);
+            if (maxWallToken != null)
+            {
+                if (!TryStepSeconds(maxWallToken, out float seconds)) return CallToolResult.Error("maxWallSeconds must be finite.");
+                maxWallSeconds = Mathf.Clamp(seconds, 0.5f, 30f);
+            }
 
             bool wait = true;
             var waitToken = args?["wait"];
-            if (waitToken != null && bool.TryParse(waitToken.ToString(), out bool parsedWait))
-                wait = parsedWait;
+            if (waitToken != null && !bool.TryParse(waitToken.ToString(), out wait))
+                return CallToolResult.Error("wait must be a boolean.");
 
             var targetCells = ExtractTargetCells(args);
+            int worldId = ToolUtil.ResolveWorldId(args);
+            var bridge = MainThreadBridge.Instance;
+            if (bridge == null)
+                return CallToolResult.Error("MainThreadBridge not available");
+            object requestedCondition = args?["until"] != null ? (object)condition.ToJson()
+                : (args?["condition"]?.ToString() ?? "orders_complete");
 
             lock (_watcherLock)
             {
@@ -64,52 +78,66 @@ namespace OniMcp.Tools
                 }
             }
 
-            ReleaseMcpPause(speedControl);
-            speedControl.SetSpeed(Math.Max(0, Math.Min(speed - 1, 2)));
-
-            var bridge = MainThreadBridge.Instance;
-            if (bridge == null)
-                return CallToolResult.Error("MainThreadBridge not available");
-
             DeferredCallToolResult deferred = wait ? new DeferredCallToolResult() : null;
 
             var watcher = bridge.gameObject.AddComponent<StepUntilWatcher>();
-            watcher.Initialize(condition, speed, maxGameSeconds, maxWallSeconds, targetCells, delta =>
+            try
             {
-                lock (_watcherLock)
+                watcher.Initialize(condition, requestedCondition, speed, maxGameSeconds, maxWallSeconds, worldId, targetCells, delta =>
                 {
-                    if (ReferenceEquals(_activeWatcher, watcher))
-                        _activeWatcher = null;
-                }
+                    lock (_watcherLock)
+                    {
+                        if (ReferenceEquals(_activeWatcher, watcher))
+                            _activeWatcher = null;
+                    }
 
-                if (deferred != null)
-                {
-                    string json = JsonConvert.SerializeObject(delta, McpJsonUtil.Settings);
-                    deferred.Complete(CallToolResult.Text(json));
-                }
-            });
+                    if (deferred != null)
+                    {
+                        string json = JsonConvert.SerializeObject(delta, McpJsonUtil.Settings);
+                        deferred.Complete(CallToolResult.Text(json));
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Object.Destroy(watcher);
+                AcquireMcpPause(speedControl);
+                return CallToolResult.Error("Could not capture step_until baseline: " + e.Message);
+            }
 
             lock (_watcherLock)
             {
                 _activeWatcher = watcher;
             }
 
+            // Validate and capture the baseline before releasing our pause.
+            ReleaseMcpPause(speedControl);
+            speedControl.SetSpeed(Math.Max(0, Math.Min(speed - 1, 2)));
+
             if (!wait)
             {
-                var initialStatus = new Dictionary<string, object>
-                {
-                    ["status"] = "running",
-                    ["speed"] = speed,
-                    ["condition"] = condition,
-                    ["maxGameSeconds"] = maxGameSeconds,
-                    ["maxWallSeconds"] = maxWallSeconds,
-                    ["targetCellCount"] = targetCells.Count,
-                    ["message"] = "Game running until condition is met; use action=step_status or action=pause"
-                };
+                var initialStatus = watcher.GetStatus();
+                initialStatus["status"] = "running";
+                initialStatus["message"] = "Game running until condition is met; use action=step_status or action=pause";
                 return CallToolResult.Text(JsonConvert.SerializeObject(initialStatus, McpJsonUtil.Settings));
             }
 
             return deferred;
+        }
+
+        public static CallToolResult StepFacts(JObject args)
+        {
+            if (Game.Instance == null) return CallToolResult.Error("Game not initialized");
+            int worldId = ToolUtil.ResolveWorldId(args);
+            var orders = new StepOrderTracker(worldId, ExtractTargetCells(args));
+            var result = new Dictionary<string, object>
+            {
+                ["worldId"] = worldId,
+                ["isPaused"] = SpeedControlScreen.Instance == null || SpeedControlScreen.Instance.IsPaused,
+                ["idleFacts"] = StepDupeFactsJson(ReadStepDupeFacts(worldId)),
+                ["pendingOrders"] = orders.ToJson()
+            };
+            return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
         }
 
         public static CallToolResult StepStatus(JObject args)
@@ -153,6 +181,11 @@ namespace OniMcp.Tools
             Pause();
             return CallToolResult.Text("No active step_until found. Game paused.");
         }
+
+        private static bool TryStepSeconds(JToken token, out float seconds) =>
+            float.TryParse(token.ToString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out seconds)
+            && !float.IsNaN(seconds) && !float.IsInfinity(seconds);
 
         private static bool HasRectInput(JObject args) =>
             args != null && (!string.IsNullOrWhiteSpace(args["areaId"]?.ToString())

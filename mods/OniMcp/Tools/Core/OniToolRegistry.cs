@@ -119,7 +119,8 @@ namespace OniMcp.Tools
                         if (param.Key == ToolCallMiddleware.TaskDescriptionParameter)
                             continue;
 
-                        if (IsCoordinateParameter(param.Key) && !IsCoordinateTool(tool.Name))
+                        if (IsCoordinateParameter(param.Key) && !IsCoordinateTool(tool.Name)
+                            && !CameraCoordinatePolicy.ExposesParameter(tool.Name, param.Key))
                             continue;
 
                         properties[param.Key] = new SchemaProperty
@@ -228,9 +229,10 @@ namespace OniMcp.Tools
 
                 ToolCallMiddleware.PresentTaskDescription(taskDescription);
 
-                if (!allowValidatedCoordinates && !IsCoordinateTool(tool.Name) && ContainsCoordinateArguments(arguments))
+                if (!allowValidatedCoordinates && !IsCoordinateTool(tool.Name) && ContainsCoordinateArguments(arguments)
+                    && !CameraCoordinatePolicy.AllowsArguments(tool.Name, arguments))
                 {
-                    var coordinateResult = ToolCallMiddleware.Inject(CallToolResult.Error("Coordinate arguments are only supported by coordinate_control; use semantic query/target/areaId inputs for this tool."), middlewareNotifications);
+                    var coordinateResult = ToolCallMiddleware.Inject(CallToolResult.Error("Coordinate arguments require a supported navigation_control camera action or a validated world_editor operation; use semantic query/target/areaId for gameplay tools."), middlewareNotifications);
                     return usedLegacyAlias
                         ? ToolMetadata.AddLegacyAliasDeprecationWarning(coordinateResult, name, tool.Name)
                         : coordinateResult;
