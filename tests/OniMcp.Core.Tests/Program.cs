@@ -20,6 +20,7 @@ internal static class Program
         Run("task descriptions require nonempty JSON strings", TaskDescriptions);
         Run("invalid tool names return errors", InvalidNames);
         Run("tool calls still enforce coordinate and task constraints", ToolConstraints);
+        Run("camera coordinate exception preserves gameplay boundaries", CameraCoordinateRegression.Run);
         Run("tool cache respects visibility after all-tools access", CacheVisibility);
         Run("public catalog preserves schemas and internal operation isolation", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);
@@ -27,7 +28,7 @@ internal static class Program
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
         Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
-        Console.WriteLine(failures == 0 ? "All 13 core regression groups passed." : failures + " regression groups failed.");
+        Console.WriteLine(failures == 0 ? "All 14 core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 
@@ -183,7 +184,7 @@ internal static class Program
         {
             Require(info.InputSchema.Required.Count(name => name == "task") == 1
                 && info.InputSchema.Required.Contains("action"), "Required schema fields changed: " + info.Name);
-            Require(info.InputSchema.Properties.ContainsKey("x") == (info.Name == "world_editor"),
+            Require(info.InputSchema.Properties.ContainsKey("x") == (info.Name == "world_editor" || info.Name == "navigation_control"),
                 "Coordinate schema boundary changed: " + info.Name);
             Require(info.Execution.TaskSupport == "optional", "Task support changed: " + info.Name);
             if (info.Name != "benchmark" && info.Name != "world_editor")

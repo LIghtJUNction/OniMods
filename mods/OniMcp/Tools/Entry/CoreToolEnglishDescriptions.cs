@@ -20,7 +20,7 @@ namespace OniMcp.Tools
                     Describe(tool, GameDescriptions());
                     break;
                 case "navigation_control":
-                    tool.Description = "Unified camera and view entrypoint for camera movement, world switching, overlays, focus, and screenshots.";
+                    tool.Description = "Unified camera and view entrypoint for camera movement, zoom, world switching, overlays, focus, and screenshots. Camera-only coordinates are accepted here; gameplay coordinates remain restricted.";
                     Describe(tool, NavigationDescriptions());
                     break;
                 case "orders_control":
@@ -129,18 +129,18 @@ namespace OniMcp.Tools
         {
             var d = CommonDescriptions();
             d["domain"] = "Camera domain. If omitted, the tool accepts known camera actions.";
-            d["action"] = "Camera action: get_view, set_active_world, set_view, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot.";
+            d["action"] = "Camera action: get_view, set_active_world, set_view, set_zoom, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot. set_zoom requires zoom only and preserves the current center.";
             d["worldId"] = "Target world id; required by set_active_world and otherwise defaults to the active world.";
             d["requireDiscovered"] = "Require the target world to be discovered before switching.";
             d["lookAtSurface"] = "Reveal the target world's surface before switching when needed.";
             d["x"] = "Target world X for set_view/move, or cell X for focus_cell.";
             d["y"] = "Target world Y for set_view/move, or cell Y for focus_cell.";
-            d["zoom"] = "Camera zoom level.";
+            d["zoom"] = "Orthographic half-height in world cells: larger values show more of the colony. Required for set_zoom without x/y; omitted set_view/move zoom preserves the current size.";
             d["snap"] = "Snap immediately instead of moving smoothly.";
             d["mode"] = "Camera move mode: pan or jump.";
             d["dx"] = "Relative camera X offset in move pan mode.";
             d["dy"] = "Relative camera Y offset in move pan mode.";
-            d["duration"] = "Smooth movement duration.";
+            d["duration"] = "Smooth camera movement time constant in seconds; defaults to 0.5.";
             d["view"] = "Overlay view name.";
             d["screenshot"] = "Capture a screenshot.";
             d["filename"] = "Screenshot filename.";

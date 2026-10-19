@@ -52,7 +52,7 @@ Read live state with `world_editor command=read path=/active/colony/status.oni p
 
 `building_control` performs planning, materials, configuration, storage, and building actions. `orders_control` issues normal designations. `game_control` controls speed/save/game state; `navigation_control` controls view/screenshot; `server_control` provides diagnostics/catalog and batches of **advertised** tools.
 
-`coordinate_control` is not public. Ordinary aggregate tools reject raw coordinates. Use semantic `areaId`/query/plan inputs, or exact coordinates inside supported `world_editor` maps and typed operation files.
+`coordinate_control` is not public. Gameplay aggregate tools reject raw coordinates. Use semantic `areaId`/query/plan inputs, or exact coordinates inside supported `world_editor` maps and typed operation files. Camera-only `navigation_control` actions accept their advertised position, pan, and screenshot coordinates. Use `navigation_control action=set_zoom zoom=23` to zoom without changing the center; larger zoom values show a wider area.
 
 For utilities, cut the exact layer with `orders_control domain=designation action=cut_conduits type=wire|liquid|gas|solid|logic|travel_tube ... confirm=true`. For normal buildings, prefer `orders_control domain=designation action=deconstruct id=<instanceId> confirm=true`. Preview ambiguous targets before writing.
 
