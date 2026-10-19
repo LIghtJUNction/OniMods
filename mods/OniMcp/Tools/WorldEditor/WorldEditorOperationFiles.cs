@@ -352,7 +352,8 @@ namespace OniMcp.Tools
                 error = "ops cannot invoke child world_editor commands or recursive batches";
                 return false;
             }
-            if (!semanticCoordinates && toolName != "coordinate_control" && OniToolRegistry.HasCoordinateArguments(arguments))
+            if (!semanticCoordinates && toolName != "coordinate_control" && OniToolRegistry.HasCoordinateArguments(arguments)
+                && !CameraCoordinatePolicy.AllowsArguments(toolName, arguments))
             {
                 error = "Raw ops calls cannot pass coordinates to ordinary tools; use a supported semantic command or coordinate_control.";
                 return false;

@@ -39,5 +39,8 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlacementIdentityPolicy.cs" Link="Source/BuildPlacementIdentityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Patches/LoadScreenPreviewPolicy.cs" Link="Source/LoadScreenPreviewPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Entry/NavigationControlTools.cs" Link="Source/NavigationControlTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Navigation/CameraTools.cs" Link="Source/CameraTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Navigation/CameraFramingPolicy.cs" Link="Source/CameraFramingPolicy.cs" />
   </ItemGroup>
 </Project>
