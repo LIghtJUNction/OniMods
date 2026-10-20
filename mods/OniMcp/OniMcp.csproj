@@ -114,12 +114,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.45">
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="PLib" Version="4.24.0" GeneratePathProperty="true" />
+    <PackageReference Include="PLib" Version="4.25.0" GeneratePathProperty="true" />
     <PackageReference Include="Toon.Format" Version="1.0.0" />
   </ItemGroup>
 
@@ -156,7 +156,7 @@
   <!-- 构建后打包 Mod 到仓库根目录 dist/ -->
   <Target Name="PackageMod" AfterTargets="GenerateModFiles">
     <PropertyGroup>
-      <DistPath>$(MSBuildProjectDirectory)/../../dist/</DistPath>
+      <DistPath Condition="'$(DistPath)' == ''">$(MSBuildProjectDirectory)/../../dist/</DistPath>
       <DistModPath>$(DistPath)$(AssemblyName)/</DistModPath>
       <ZipFile>$(DistPath)$(AssemblyName).zip</ZipFile>
     </PropertyGroup>

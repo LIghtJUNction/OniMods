@@ -24,11 +24,32 @@ namespace OniSim.CycleTrim
 
         public static LoaderResult Configure(Assembly gameAssembly)
         {
+            return Configure(gameAssembly, true);
+        }
+
+        public static LoaderResult Configure(Assembly gameAssembly, bool enabled)
+        {
             lock (Gate)
             {
                 if (mappedPath != null) return Mapped();
-                if (!string.Equals(Environment.GetEnvironmentVariable(EnableVariable), "1", StringComparison.Ordinal))
-                    return new LoaderResult(LoaderState.Disabled, "Disabled; this call opens no native module and inserts no mapping.");
+                if (!enabled)
+                    return new LoaderResult(LoaderState.Disabled,
+                        "Disabled in CycleTrim's PLib Mod settings; no native module was opened and no mapping was inserted.");
+                string setting = Environment.GetEnvironmentVariable(EnableVariable);
+                if (!string.IsNullOrWhiteSpace(setting))
+                {
+                    setting = setting.Trim();
+                    if (string.Equals(setting, "0", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(setting, "false", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(setting, "off", StringComparison.OrdinalIgnoreCase))
+                        return new LoaderResult(LoaderState.Disabled,
+                            "Disabled by " + EnableVariable + "; no native module was opened and no mapping was inserted.");
+                    if (!string.Equals(setting, "1", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(setting, "true", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(setting, "on", StringComparison.OrdinalIgnoreCase))
+                        return new LoaderResult(LoaderState.Refused,
+                            "Invalid " + EnableVariable + " value; use 0/false/off to disable or 1/true/on to enable.");
+                }
                 try
                 {
                     string path = Environment.GetEnvironmentVariable(LibraryVariable);

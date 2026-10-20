@@ -1,22 +1,24 @@
 # CycleTrim OniSim loader
 
-This loader is part of CycleTrim's OniSim core integration. It remains
-default-disabled until ONI runtime and compatibility acceptance is complete.
-It has not been installed or run in the game. `gameReady=false` still applies.
-Building the project does not load Mono, the native core, or the game and does
-not copy anything into the ONI installation or mods directory.
+This loader is part of CycleTrim's OniSim core integration. Linux x86_64 builds
+include the native library by default, and the PLib CycleTrim Mod option enables
+the mapping by default. Turn the option off to keep the vanilla SimDLL mapping;
+the change requires restarting ONI. The mapping and game
+behavior remain unverified; `gameReady=false` still applies. Building the project
+does not load Mono, the native core, or the game and does not copy anything into
+the ONI installation or mods directory.
 
 The `KMod.UserMod2.OnLoad` entry keeps the official `Sim`, `SimMessages`, and Mod
-call surfaces intact. It installs no Harmony patches. When explicitly enabled,
+call surfaces intact. It installs no Harmony patches. Unless explicitly disabled,
 it attempts one assembly-scoped mapping of the official `SimDLL` import name
-to the caller's absolute native library path. No private Mono layout, detour,
+to the bundled native library or the caller's absolute override path. No private Mono layout, detour,
 custom message protocol, or managed Grid mirror is used.
 
-Default behavior reads `CYCLETRIM_ONISIM_ENABLE`; unless its value is exactly
-`1`, the loader returns without opening native modules or calling Mono APIs.
-An enabled attempt also requires `CYCLETRIM_ONISIM_NATIVE_PATH` to name an
-explicit absolute library file. These switches are for controlled runtime
-validation; they are not evidence that gameplay is safe or supported.
+`CYCLETRIM_ONISIM_ENABLE` remains a startup override: set it to `0`, `false`, or
+`off` to force-disable mapping; `1`, `true`, or `on` permits it when the PLib
+option is enabled. Other nonempty values are refused. `CYCLETRIM_ONISIM_NATIVE_PATH` may name an absolute library override;
+when unset, the loader uses `OniSim/liboni_sim_core.so` beside the Mod assembly.
+These switches control mapping; they do not establish gameplay compatibility.
 
 The preflight requires Linux x64 Mono and the exact inspected game assembly and
 Unity Mono fingerprints in `OfficialProfile.cs`. It requires no `Game` instance,
@@ -37,7 +39,7 @@ evidence does not prove `OnLoad` runs before all relevant P/Invoke resolutions,
 that an insertion affects this Unity build as expected, or that native behavior
 satisfies the game's complete call sequence. The `Game`-instance check is only
 a startup guard; it does not prove an empty P/Invoke cache. Loader output says
-`MappedUnverified`, never ready or validated. Removing or changing a mapping
+`MappedUnverified`, never ready or validated. Disabling or changing a mapping
 requires restarting the process; there is no hot unload or rollback operation.
 Repeated configuration reports the existing mapping even if the enable or path
 environment variables have since changed.

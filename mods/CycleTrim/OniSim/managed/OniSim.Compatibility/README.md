@@ -8,8 +8,10 @@ Only Linux x64 little-endian is supported. `Open` requires the caller's explicit
 absolute path to `liboni_sim_core.so`.
 
 This standalone facade does not currently take over the game's `Sim` or
-`SimMessages` calls. The separate [OniSim.Mod loader prototype](../OniSim.Mod/README.md)
-is default-disabled and its Mono mapping and game lifecycle remain unverified.
+`SimMessages` calls. CycleTrim's PLib Mod setting enables the separate
+[OniSim.Mod loader](../OniSim.Mod/README.md) by default; its Mono mapping and game
+lifecycle remain unverified. Turn the option off in Mod settings and restart to
+disable it, or set `CYCLETRIM_ONISIM_ENABLE=0` before startup.
 
 `SendMessage` forwards any message ID and owned byte payload to native validation.
 Managed checks cover nulls, buffer lengths, and allocation bounds; the native

@@ -2,6 +2,8 @@ using System;
 using CycleTrim.Patches;
 using HarmonyLib;
 using OniSim.CycleTrim;
+using PeterHan.PLib.Core;
+using PeterHan.PLib.Options;
 
 namespace CycleTrim
 {
@@ -10,16 +12,31 @@ namespace CycleTrim
         public override void OnLoad(Harmony harmony)
         {
             PerformanceProbePatch.SetHarmonyId(harmony.Id);
-            if (string.Equals(
-                Environment.GetEnvironmentVariable(OniSimLoader.EnableVariable),
-                "1",
-                StringComparison.Ordinal))
+            bool enableOniSim = true;
+            try
             {
-                LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly);
-                Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
+                PUtil.InitLibrary();
+                OniSimOptions options = POptions.ReadSettings<OniSimOptions>();
+                if (options != null)
+                    enableOniSim = options.EnableOniSim;
             }
+            catch (Exception error)
+            {
+                Console.WriteLine("[CycleTrim][OniSim] PLib options could not be loaded; using the default enabled setting: " + error.Message);
+            }
+            try
+            {
+                new POptions().RegisterOptions(this, typeof(OniSimOptions));
+            }
+            catch (Exception error)
+            {
+                Console.WriteLine("[CycleTrim][OniSim] PLib options dialog registration failed: " + error.Message);
+            }
+
+            LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
+            Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
             // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
-            // Set the probe owner first, then let the native loader install once.
+            // Set the probe owner first, then let the native loader map once.
             base.OnLoad(harmony);
         }
     }
