@@ -75,11 +75,120 @@ fn insulation_conductivity(
     )
 }
 
-/// Update one pair using the official old-snapshot/new-write temperature rule.
-/// `a` and `b` are padded internal indexes selected by the element kernel.
+// A cache belongs to one temperature pass. Its immutable table borrow prevents
+// coefficients from changing while an entry is live. Keys are directional:
+// ka and kb deliberately retain their original multiplication order.
+const CONTACT_SLOTS: usize = 64;
+
+pub(crate) struct ThermalContactCache<'a> {
+    elements: &'a ElementTable,
+    entries: [(u64, f32); CONTACT_SLOTS],
+    probe_left: u16,
+    probe_hits: u16,
+    bypass: bool,
+}
+
+impl<'a> ThermalContactCache<'a> {
+    pub(crate) fn new(elements: &'a ElementTable) -> Self {
+        Self {
+            elements,
+            entries: [(u64::MAX, 0.0); CONTACT_SLOTS],
+            probe_left: 128,
+            probe_hits: 0,
+            bypass: false,
+        }
+    }
+
+    #[inline(always)]
+    fn contact(&mut self, ea: u16, eb: u16, ia: u8, ib: u8, wall: bool) -> f32 {
+        if self.bypass {
+            return self.uncached_contact(ea, eb, ia, ib, wall);
+        }
+        let key = u64::from(ea)
+            | (u64::from(eb) << 16)
+            | (u64::from(ia) << 32)
+            | (u64::from(ib) << 40)
+            | (u64::from(wall) << 48);
+        let slot = (key.wrapping_mul(0x9e37_79b9_7f4a_7c15) >> 58) as usize;
+        let hit = self.entries[slot].0 == key;
+        if self.probe_left != 0 {
+            self.probe_left -= 1;
+            self.probe_hits += u16::from(hit);
+            // High-entropy material/insulation combinations can cost more in
+            // hash probes than they save. Fall back for the rest of this pass;
+            // the next pass gets a fresh, bounded probe window.
+            if self.probe_left == 0 && self.probe_hits < 32 {
+                self.bypass = true;
+            }
+        }
+        if hit {
+            return self.entries[slot].1;
+        }
+        let contact = self.uncached_contact(ea, eb, ia, ib, wall);
+        // Keep exceptional arithmetic on the original path, including NaN payloads.
+        if contact.is_finite() {
+            self.entries[slot] = (key, contact);
+        }
+        contact
+    }
+
+    #[inline(always)]
+    fn uncached_contact(&self, ea: u16, eb: u16, ia: u8, ib: u8, wall: bool) -> f32 {
+        if wall {
+            backwall_contact(self.elements, ea, eb, ia)
+        } else {
+            let (conductivity, surface) = insulation_conductivity(self.elements, ea, eb, ia, ib);
+            conductivity * surface
+        }
+    }
+}
+
+fn backwall_contact(
+    elements: &ElementTable,
+    cell_element: u16,
+    wall_element: u16,
+    insulation: u8,
+) -> f32 {
+    let cell_record = record(elements, cell_element);
+    let wall_record = record(elements, wall_element);
+    let insulation = f32::from(insulation);
+    let insulation2 = insulation * insulation;
+    let cell_k = insulation2 * CONDUCTIVITY_SCALE * cell_record.thermal_conductivity;
+    let wall_k = wall_record.thermal_conductivity;
+    let conductance = if insulation2 < INSULATION_GEOMETRIC_MEAN_THRESHOLD {
+        ordered_min_f32(wall_k, cell_k)
+    } else {
+        (wall_k.ln() + cell_k.ln()) * 0.5
+    };
+    let conductance = if insulation2 < INSULATION_GEOMETRIC_MEAN_THRESHOLD {
+        conductance
+    } else {
+        conductance.exp()
+    };
+    let surface = phase_multiplier(cell_record, wall_record.state)
+        * phase_multiplier(wall_record, cell_record.state);
+    conductance * surface
+}
+
+#[inline(always)]
 pub(crate) fn update_temperature(
     world: &mut PhysicsWorld,
-    elements: &ElementTable,
+    contacts: &mut ThermalContactCache<'_>,
+    a: usize,
+    b: usize,
+) {
+    if contacts.bypass {
+        update_temperature_impl::<false>(world, contacts, a, b);
+    } else {
+        update_temperature_impl::<true>(world, contacts, a, b);
+    }
+}
+
+/// Update one pair using the official old-snapshot/new-write temperature rule.
+/// `a` and `b` are padded internal indexes selected by the element kernel.
+fn update_temperature_impl<const CACHED: bool>(
+    world: &mut PhysicsWorld,
+    contacts: &mut ThermalContactCache<'_>,
     a: usize,
     b: usize,
 ) {
@@ -91,10 +200,14 @@ pub(crate) fn update_temperature(
     let insulation_b = read.insulation[b];
     let ea = read.element[a];
     let eb = read.element[b];
-    let (conductivity, surface) =
-        insulation_conductivity(elements, ea, eb, insulation_a, insulation_b);
-
-    let contact = conductivity * surface;
+    let elements = contacts.elements;
+    let contact = if CACHED {
+        contacts.contact(ea, eb, insulation_a, insulation_b, false)
+    } else {
+        let (conductivity, surface) =
+            insulation_conductivity(elements, ea, eb, insulation_a, insulation_b);
+        conductivity * surface
+    };
 
     let ca = read.mass[a] * record(elements, ea).specific_heat_capacity;
     let cb = read.mass[b] * record(elements, eb).specific_heat_capacity;
@@ -152,11 +265,25 @@ pub(crate) fn update_temperature(
     write.temperature[b] = out_b.clamp(MIN_TEMPERATURE, MAX_TEMPERATURE);
 }
 
-/// Exchange heat between a cell and its backwall; the wall temperature is
-/// updated in place in the official ABI's single backwall arrays.
+#[inline(always)]
 pub(crate) fn update_backwall_temperature(
     world: &mut PhysicsWorld,
-    elements: &ElementTable,
+    contacts: &mut ThermalContactCache<'_>,
+    events: &mut crate::events::EventQueues,
+    cell: usize,
+) {
+    if contacts.bypass {
+        update_backwall_temperature_impl::<false>(world, contacts, events, cell);
+    } else {
+        update_backwall_temperature_impl::<true>(world, contacts, events, cell);
+    }
+}
+
+/// Exchange heat between a cell and its backwall; the wall temperature is
+/// updated in place in the official ABI's single backwall arrays.
+fn update_backwall_temperature_impl<const CACHED: bool>(
+    world: &mut PhysicsWorld,
+    contacts: &mut ThermalContactCache<'_>,
     events: &mut crate::events::EventQueues,
     cell: usize,
 ) {
@@ -166,25 +293,25 @@ pub(crate) fn update_backwall_temperature(
         return;
     }
 
+    let elements = contacts.elements;
+    let contact = if CACHED {
+        contacts.contact(
+            cell_element,
+            wall_element,
+            world.read.insulation[cell],
+            0,
+            true,
+        )
+    } else {
+        backwall_contact(
+            elements,
+            cell_element,
+            wall_element,
+            world.read.insulation[cell],
+        )
+    };
     let cell_record = record(elements, cell_element);
     let wall_record = record(elements, wall_element);
-    let insulation = f32::from(world.read.insulation[cell]);
-    let insulation2 = insulation * insulation;
-    let cell_k = insulation2 * CONDUCTIVITY_SCALE * cell_record.thermal_conductivity;
-    let wall_k = wall_record.thermal_conductivity;
-    let conductance = if insulation2 < INSULATION_GEOMETRIC_MEAN_THRESHOLD {
-        ordered_min_f32(wall_k, cell_k)
-    } else {
-        (wall_k.ln() + cell_k.ln()) * 0.5
-    };
-    let conductance = if insulation2 < INSULATION_GEOMETRIC_MEAN_THRESHOLD {
-        conductance
-    } else {
-        conductance.exp()
-    };
-    let surface = phase_multiplier(cell_record, wall_record.state)
-        * phase_multiplier(wall_record, cell_record.state);
-    let contact = conductance * surface;
 
     let tc = world.read.temperature[cell];
     let tw = world.backwall_temperature[cell];

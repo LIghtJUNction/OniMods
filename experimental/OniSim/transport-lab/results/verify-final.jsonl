@@ -1,0 +1,3 @@
+{"ftz":false,"thermal_calls":2385152,"gas_calls_and_passes":644800,"mass_searches":124660,"ratio_patterns":33819136,"passed":true}
+{"ftz":true,"thermal_calls":2385152,"gas_calls_and_passes":644800,"mass_searches":124660,"ratio_patterns":33819136,"passed":true}
+{"total_thermal":4770304,"total_gas":1289600,"total_mass":249320,"total_ratio":67638272,"passed":true}

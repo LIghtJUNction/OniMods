@@ -1,0 +1,5 @@
+/target/
+/target-alloc/
+/src/generated/
+**/__pycache__/
+/proof/*.olean

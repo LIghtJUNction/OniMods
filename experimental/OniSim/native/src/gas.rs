@@ -44,8 +44,17 @@ pub(crate) fn update_pressure(
         (a, b, ma, flow, element_a, element_b, record_b.state & 3)
     };
     let amount = smin(amount, old_mass);
-    let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
-    let germ_count = cvtt(world.read.disease_count[src] as f32 * fraction);
+    // MINSS/MAXSS-style clamping maps every quotient, including NaN and
+    // infinities, into finite [0, 1]. A zero count therefore transfers zero.
+    // Do not skip the rest of a zero-flow update: it can still change the
+    // temperature bits, clear stale disease state, or notify a vacuum cell.
+    let count = world.read.disease_count[src];
+    let germ_count = if count == 0 {
+        0
+    } else {
+        let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
+        cvtt(count as f32 * fraction)
+    };
     let germ_id = world.write.disease_idx[src];
     let source_temperature = world.write.temperature[src];
     let dest_temperature = world.write.temperature[dst];
