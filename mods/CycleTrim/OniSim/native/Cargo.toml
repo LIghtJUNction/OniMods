@@ -1,0 +1,12 @@
+[package]
+name = "oni-sim-core"
+version = "0.1.0"
+edition = "2021"
+description = "CycleTrim native simulation core for Oxygen Not Included; runtime validation is ongoing"
+license-file = "../../../../LICENSE"
+
+[lib]
+name = "oni_sim_core"
+crate-type = ["cdylib"]
+
+[workspace]

@@ -28,6 +28,14 @@ ONI 性能优化 Mod。该 Mod 针对缺氧的几个高频模拟路径做降频�
 - 以稳定性优先，避免影响原版关键玩法。
 - CycleTrim 不再接管 `SmartReservoir` 的 automation 信号发送；储液罐/气库及复用该组件的第三方建筑保留原版重复通知语义。
 
+### OniSim 原生仿真内核
+
+OniSim 是 CycleTrim 仓库内的原生仿真核心，源码位于 [`OniSim/`](OniSim/)。CycleTrim 可构建一个附带 OniSim 原生库的 Linux x86_64 包。由于真实游戏和兼容性验收尚未完成，后端默认关闭；显式启用后会在启动阶段尝试把 `Assembly-CSharp` 的 `SimDLL` 导入映射到 OniSim。映射无法热撤销，必须重启 ONI 才能切回原版。
+
+仅用于可丢弃的测试存档。当前 OniSim 仍未通过完整消息、存档/读档、DLC、其他 Mod 与真实游戏运行验收，不能视为可用的完整替代品。加载器只接受已静态检查的 ONI `Assembly-CSharp` 与 Mono 文件指纹；其他游戏版本会拒绝映射并在日志中说明原因。
+
+构建带 OniSim 的包时设置 `IncludeOniSim=true`；启动 ONI 前设置 `CYCLETRIM_ONISIM_ENABLE=1`。也可用 `CYCLETRIM_ONISIM_NATIVE_PATH` 指定 `.so` 的绝对路径。移除开关后重启，即回到原版 `SimDLL`。
+
 ## 性能实测摘要
 
 以下为固定场景增量测试（非全局通用），硬件与存档不同会有差异：
@@ -80,6 +88,7 @@ dotnet run --no-build --no-restore -c Release --project benchmarks/CycleTrim.Bra
 ```text
 mods/CycleTrim/
 ├── ModInfo.cs          # KMod 入口
+├── OniSim/             # 原生仿真核心、C ABI 与加载器
 ├── Core/               # 与游戏补丁无关的核心逻辑（如 BrainRateCap）
 ├── Patches/            # Harmony 补丁
 ├── docs/               # Steam 描述等

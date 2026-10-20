@@ -1,0 +1,201 @@
+use crate::bytes::MAX_BATCH;
+use crate::frames::MAX_PENDING_COMMANDS;
+use crate::frames_plan::{parse, Action, Preview, FRAME, LOAD, PREPARE};
+use crate::state::State;
+use crate::status::{Error, Result, Status};
+use std::ffi::c_void;
+
+pub(crate) fn validate_prepare(state: &State, bytes: &[u8]) -> Result<Vec<u8>> {
+    let mut preview = Preview::from_state(state);
+    match parse(PREPARE, bytes, &mut preview, state)? {
+        Action::Prepare(visibility) => Ok(visibility),
+        _ => unreachable!("PREPARE parser returned a different action"),
+    }
+}
+
+pub(crate) fn execute(
+    state: &mut State,
+    id: i32,
+    length: usize,
+    count: usize,
+    bytes: &[u8],
+) -> Result<*mut c_void> {
+    state.require_active()?;
+    if let Some(fault) = &state.fault {
+        return Err(Error::new(
+            Status::InvalidState,
+            format!("simulation fault; Shutdown required: {fault}"),
+        ));
+    }
+    if count > MAX_BATCH {
+        return Err(Error::new(
+            Status::ResourceLimit,
+            "batch exceeds 4096 messages",
+        ));
+    }
+    if count == 0 {
+        return Ok(std::ptr::null_mut());
+    }
+    if state.save_image.is_some() {
+        return Err(Error::new(
+            Status::InvalidState,
+            "EndSave is required before further messages",
+        ));
+    }
+    let thermal_message = crate::thermal_components::is_message(id);
+    let mass_message = crate::mass_components::is_message(id);
+    let radiation_message = crate::radiation::is_message(id);
+    if thermal_message || mass_message || radiation_message {
+        if count != 1 {
+            return Err(Error::new(
+                Status::Unsupported,
+                "component batch transactions are not implemented",
+            ));
+        }
+        if state.queued_component_commands >= MAX_PENDING_COMMANDS {
+            return Err(Error::new(
+                Status::ResourceLimit,
+                "pending component command limit exceeded",
+            ));
+        }
+        let shape = state.shape.as_ref().ok_or_else(|| {
+            Error::new(
+                Status::InvalidState,
+                "component messages require an allocated world shape",
+            )
+        })?;
+        let elements = state.elements.as_ref().unwrap();
+        if thermal_message {
+            state.thermal.queue(id, bytes)?;
+        }
+        if mass_message {
+            let diseases = state.diseases.as_ref().ok_or_else(|| {
+                Error::new(
+                    Status::InvalidState,
+                    "mass components require registered diseases",
+                )
+            })?;
+            state.mass.queue(id, bytes, shape, elements, diseases)?;
+        }
+        if radiation_message {
+            state.radiation_emitters.queue(id, bytes, shape)?;
+        }
+        state.queued_component_commands += 1;
+        return Ok(std::ptr::null_mut());
+    }
+    if id == FRAME && count != 1 {
+        return Err(Error::new(
+            Status::Unsupported,
+            "multi-frame batch commit is not implemented",
+        ));
+    }
+    if id == LOAD {
+        if count != 1 {
+            return Err(Error::new(
+                Status::Unsupported,
+                "batched Load is not supported",
+            ));
+        }
+        if state.grid.as_ref().is_none_or(|grid| grid.started) {
+            return Err(Error::new(
+                Status::InvalidState,
+                "Load requires an allocated, unstarted grid",
+            ));
+        }
+        if !state.material.is_empty() || state.queued_component_commands != 0 {
+            return Err(Error::new(
+                Status::InvalidState,
+                "finish queued commands before Load",
+            ));
+        }
+        let elements = state
+            .elements
+            .as_deref()
+            .ok_or_else(|| Error::new(Status::InvalidState, "Load requires registered elements"))?;
+        let diseases = state.diseases.as_deref();
+        let world = state.world.as_mut().ok_or_else(|| {
+            Error::new(
+                Status::InvalidState,
+                "Load requires an allocated physics world",
+            )
+        })?;
+        crate::save::load_into(world, elements, diseases, bytes)?;
+        let grid = state.grid.as_mut().unwrap();
+        world.publish_to(grid);
+        grid.initialized = true;
+        grid.seed = world.rng;
+        // Official managed Load only interprets this as a nonnull success token.
+        return Ok(grid.descriptor() as *mut c_void);
+    }
+    let mut preview = Preview::from_state(state);
+    let mut actions = Vec::new();
+    actions
+        .try_reserve_exact(count)
+        .map_err(|_| Error::new(Status::ResourceLimit, "could not allocate batch plan"))?;
+    for index in 0..count {
+        let at = index * length;
+        actions.push(
+            parse(id, &bytes[at..at + length], &mut preview, state).map_err(|error| {
+                Error::new(
+                    error.status,
+                    format!("batch item {index}: {}", error.message),
+                )
+            })?,
+        );
+    }
+    let added_commands = actions
+        .iter()
+        .filter(|action| matches!(action, Action::Modify(_)))
+        .count();
+    state.material.reserve_replacements(added_commands)?;
+    // All parsing, allocation, lifecycle and generation checks completed above.
+    // No fallible operation remains in this commit loop.
+    let mut result = std::ptr::null_mut();
+    for action in actions {
+        result = std::ptr::null_mut();
+        match action {
+            Action::Allocate(grid, world, generation)
+            | Action::Initialize(grid, world, generation) => {
+                state.grid = Some(grid);
+                state.world = Some(world);
+                state.shape = state
+                    .world
+                    .as_ref()
+                    .map(crate::worker_shape::WorldShape::from_world);
+                state.generation = generation;
+                state.scheduler = Default::default();
+                state.thermal = Default::default();
+                state.mass = Default::default();
+                state.radiation_emitters = Default::default();
+                state.queued_component_commands = 0;
+            }
+            Action::Start(legacy) => {
+                result = state.start_worker(legacy)?;
+            }
+            Action::Modify(replacement) => {
+                state.material.queue_replacement(
+                    replacement.index,
+                    replacement.temperature,
+                    replacement.mass,
+                    replacement.disease_count,
+                    replacement.element,
+                    replacement.disease,
+                );
+            }
+            Action::Elements(table) => state.elements = Some(std::sync::Arc::new(table)),
+            Action::Diseases(table) => state.diseases = Some(std::sync::Arc::new(table)),
+            Action::Frame(frame) => {
+                state.submit_frame(frame)?;
+                state.scheduler.completed_frames += 1;
+            }
+            Action::Prepare(visibility) => {
+                let _ = visibility;
+                return Err(Error::new(
+                    Status::InvalidState,
+                    "Prepare must use the worker publication barrier",
+                ));
+            }
+        }
+    }
+    Ok(result)
+}

@@ -12,10 +12,19 @@
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
     <ModVersion>0.3.2</ModVersion>
     <ModApiVersion>2</ModApiVersion>
+    <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">false</IncludeOniSim>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="OniSim/**/*.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/OniSimLoader.cs" Link="OniSim/OniSimLoader.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/LinuxModule.cs" Link="OniSim/LinuxModule.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/MonoImageMapper.cs" Link="OniSim/MonoImageMapper.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/OfficialProfile.cs" Link="OniSim/OfficialProfile.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -81,11 +90,24 @@
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+    <MakeDir Directories="$(DistModPath)OniSim" Condition="Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
+    <Copy SourceFiles="$(OutputPath)OniSim/liboni_sim_core.so" DestinationFiles="$(DistModPath)OniSim/liboni_sim_core.so" Condition="Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist --exclude=history ." />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
+  </Target>
+
+  <Target Name="BuildOniSimNative" BeforeTargets="PackageMod" Condition="'$(IncludeOniSim)' == 'true'">
+    <Error Condition="'$(OS)' != 'Unix'" Text="OniSim bundling currently requires Linux x86_64." />
+    <PropertyGroup>
+      <OniSimCargoManifest>$(MSBuildProjectDirectory)/OniSim/native/Cargo.toml</OniSimCargoManifest>
+      <OniSimCargoTargetDir>$(MSBuildProjectDirectory)/obj/$(Configuration)/OniSimNative</OniSimCargoTargetDir>
+    </PropertyGroup>
+    <Exec Command="cargo build --locked --release --manifest-path &quot;$(OniSimCargoManifest)&quot; --target-dir &quot;$(OniSimCargoTargetDir)&quot;" />
+    <MakeDir Directories="$(OutputPath)OniSim" />
+    <Copy SourceFiles="$(OniSimCargoTargetDir)/release/liboni_sim_core.so" DestinationFiles="$(OutputPath)OniSim/liboni_sim_core.so" />
   </Target>
 
 </Project>
