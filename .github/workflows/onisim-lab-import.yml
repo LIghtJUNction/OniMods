@@ -70,6 +70,10 @@ jobs:
               elif not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != entry['before_sha256']:
                   raise SystemExit(f'Original source changed: {name}')
               content = entry['content'].encode('utf-8')
+              # Python's text reader normalized this generated CSV; restore its
+              # original CRLF bytes, then require the unchanged reviewed hash.
+              if name == 'experimental/OniSim/transport-lab/results/summary.csv':
+                  content = content.replace(b'\n', b'\r\n')
               if len(content) != entry['bytes'] or hashlib.sha256(content).hexdigest() != entry['sha256']:
                   raise SystemExit(f'Source checksum mismatch: {name}')
               checked[name] = content
