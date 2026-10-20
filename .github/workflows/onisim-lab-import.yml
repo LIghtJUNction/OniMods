@@ -1,0 +1,90 @@
+name: Import reviewed OniSim transport sources
+on:
+  push:
+    branches: [perf/onisim-transport-20261020]
+    paths: [.github/workflows/onisim-lab-import.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: perf/onisim-transport-20261020
+      - name: Validate and apply reviewed source manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import lzma
+          from pathlib import Path, PurePosixPath
+          import shutil
+          import subprocess
+
+          root = Path.cwd()
+          staging = root / '.github/onisim-transport-payload'
+          parts = [staging / f'part{i}.b64' for i in range(5)]
+          encoded = ''.join(''.join(p.read_text(encoding='ascii').split()) for p in parts)
+          raw = base64.b64decode(encoded, validate=True)
+          expected = '74b9ec10a76f5a53dcb124aa3ee8f6853469bbb6908e0742c8d943ae4b576dd1'
+          if len(raw) != 57512 or hashlib.sha256(raw).hexdigest() != expected:
+              raise SystemExit('Reviewed package checksum mismatch; no source was changed')
+          decoder = lzma.LZMADecompressor(memlimit=268435456)
+          document = decoder.decompress(raw, max_length=300165)
+          if len(document) != 300164 or not decoder.eof or decoder.unused_data:
+              raise SystemExit('Unexpected source package length')
+          manifest = json.loads(document)
+          if manifest['base_commit'] != '6aa40cfd71ebb33d794373f5a830b87f8eefaf01':
+              raise SystemExit('Unexpected source baseline')
+          entries = manifest['files']
+          if len(entries) != 48:
+              raise SystemExit('Unexpected file count')
+          existing = {
+              'experimental/OniSim/native/src/gas.rs',
+              'experimental/OniSim/native/src/thermal.rs',
+              'experimental/OniSim/native/src/mass_components_flood.rs',
+              'experimental/OniSim/native/src/simulation_step.rs',
+              'experimental/OniSim/README.md',
+          }
+          checked = {}
+          for entry in entries:
+              name = entry['path']
+              relative = PurePosixPath(name)
+              if relative.is_absolute() or '..' in relative.parts or str(relative) != name:
+                  raise SystemExit('Unsafe source path')
+              if name not in existing and not name.startswith('experimental/OniSim/transport-lab/'):
+                  raise SystemExit('Source path is not allowlisted')
+              if name in checked:
+                  raise SystemExit('Duplicate source path')
+              path = root / name
+              if any(p.is_symlink() for p in [path, *path.parents]):
+                  raise SystemExit('Symlink in source path')
+              if entry['before_sha256'] is None:
+                  if path.exists():
+                      raise SystemExit(f'New source already exists: {name}')
+              elif not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != entry['before_sha256']:
+                  raise SystemExit(f'Original source changed: {name}')
+              content = entry['content'].encode('utf-8')
+              if len(content) != entry['bytes'] or hashlib.sha256(content).hexdigest() != entry['sha256']:
+                  raise SystemExit(f'Source checksum mismatch: {name}')
+              checked[name] = content
+          for name, content in checked.items():
+              path = root / name
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_bytes(content)
+              print(hashlib.sha256(content).hexdigest(), name)
+          shutil.rmtree(staging)
+          subprocess.run(['git', 'add', '--', *checked, '.github/onisim-transport-payload'], check=True)
+          subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
+          print('Verified and staged all 48 reviewed source files; no toolchains or game binaries included')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'perf(onisim): add experimentally verified mass, thermal and gas transport candidates' -m 'Preserve ordered updates, add Lean proofs and real-kernel differential tests. Include all performance cases and measured regressions; not approved for production or whole-game performance claims.'
+          git push origin HEAD:perf/onisim-transport-20261020
+          git rev-parse HEAD
