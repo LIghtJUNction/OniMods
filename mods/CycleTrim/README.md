@@ -30,11 +30,20 @@ ONI 性能优化 Mod。该 Mod 针对缺氧的几个高频模拟路径做降频�
 
 ### OniSim 原生仿真内核
 
-OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Linux x86_64 构建默认把原生库打入 Mod 包，并在启动阶段尝试把 `Assembly-CSharp` 的 `SimDLL` 导入映射到 OniSim。PLib 的 CycleTrim Mod 设置中“Use OniSim simulation core”默认开启；关闭后重启 ONI，启动时就会保留原版 SimDLL。映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的强制关闭开关。
+OniSim 是 CycleTrim 的实验性原生仿真核心，源码位于 [`OniSim/`](OniSim/)。
+默认不打包原生库，也不接管游戏的 SimDLL。需要测试时，在 Linux x86_64 下使用
+`IncludeOniSim=true` 构建，再显式开启 PLib 的“Use OniSim simulation core”设置，
+并在通过 Steam 启动 ONI 前设置 `CYCLETRIM_ONISIM_ENABLE=1`。两项条件缺一不可。
+即使旧的设置文件中保存了开启状态，缺少环境变量也不会映射原生库。
+关闭后必须重启 ONI，已经建立的映射不能热撤销。
 
-仅用于可丢弃的测试存档。当前 OniSim 仍未通过完整消息、存档/读档、DLC、其他 Mod 与真实游戏运行验收，不能视为可用的完整替代品。加载器只接受已静态检查的 ONI `Assembly-CSharp` 与 Mono 文件指纹；其他游戏版本会拒绝映射并在日志中说明原因。
+**仅用于可丢弃的测试存档。** 当前 OniSim 仍未通过全部消息、存档读写、DLC、其他 Mod 和
+真实游戏运行验收，不能视为原版 SimDLL 的可用替代品。加载器只接受静态核对过的
+ONI `Assembly-CSharp` 与 Mono 指纹；其他游戏版本会拒绝映射。
 
-Linux x86_64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。正常情况下通过游戏 Mod 设置页启用或关闭，并按 PLib 提示重启 ONI。`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前强制关闭，`1` 可显式允许加载。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内 `.so`；未设置时使用 Mod 目录下的 `OniSim/liboni_sim_core.so`。
+默认构建不包含 `.so`；`IncludeOniSim=true` 才会在 Linux x86_64 下打包
+`OniSim/liboni_sim_core.so`。`CYCLETRIM_ONISIM_NATIVE_PATH` 可指定绝对路径
+覆盖包内库。单独配置环境变量不会绕过 PLib 的关闭设置。
 
 ## 性能实测摘要
 

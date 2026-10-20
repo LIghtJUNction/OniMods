@@ -12,7 +12,7 @@ namespace CycleTrim
         public override void OnLoad(Harmony harmony)
         {
             PerformanceProbePatch.SetHarmonyId(harmony.Id);
-            bool enableOniSim = true;
+            bool enableOniSim = false;
             try
             {
                 PUtil.InitLibrary();
@@ -22,7 +22,7 @@ namespace CycleTrim
             }
             catch (Exception error)
             {
-                Console.WriteLine("[CycleTrim][OniSim] PLib options could not be loaded; using the default enabled setting: " + error.Message);
+                Console.WriteLine("[CycleTrim][OniSim] PLib options could not be loaded; leaving the experimental core disabled: " + error.Message);
             }
             LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
             Console.WriteLine("[CycleTrim][OniSim] " + result.Message);

@@ -29,11 +29,23 @@ A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected 
 
 ### OniSim native simulation core
 
-OniSim is CycleTrim's native simulation core, with source under [`OniSim/`](OniSim/). Linux x86_64 builds include its native library by default and attempt to map `Assembly-CSharp`'s `SimDLL` imports to OniSim at startup. The PLib CycleTrim Mod option “Use OniSim simulation core” is enabled by default; turn it off and restart ONI to keep the vanilla SimDLL mapping. Mapping cannot be hot-reverted. `CYCLETRIM_ONISIM_ENABLE=0`, `false`, or `off` remains available as a startup override to disable it.
+OniSim is an experimental native simulator under [`OniSim/`](OniSim/).
+It is neither bundled nor loaded by default. To prepare an isolated Linux x86_64
+test build, set `IncludeOniSim=true`. Mapping requires both the explicit
+CycleTrim PLib option and `CYCLETRIM_ONISIM_ENABLE=1` set before Steam starts ONI.
+A saved PLib option alone cannot enable it; disabling a mapped library requires
+a full game restart.
 
-Use only with a disposable test save. OniSim has not passed full message coverage, save/load, DLC, other-Mod, or real-game runtime acceptance and is not a complete replacement yet. The loader accepts only the statically inspected ONI `Assembly-CSharp` and Mono fingerprints; other game versions are refused with a log message.
+**Disposable test saves only.** Message coverage, native save/load, DLC,
+other-Mod interactions and real-game runtime acceptance remain incomplete.
+OniSim is not a verified SimDLL replacement. Unsupported Assembly-CSharp and
+Mono fingerprints are rejected during preflight.
 
-Linux x86_64 builds include OniSim by default; use `IncludeOniSim=false` to create a package without it. Enable or disable runtime mapping in the game's Mod settings, then restart as prompted by PLib. `CYCLETRIM_ONISIM_ENABLE=0` can force-disable it before startup; `1` explicitly permits loading. `CYCLETRIM_ONISIM_NATIVE_PATH` may override the bundled library with an absolute `.so` path; when unset, the loader uses `OniSim/liboni_sim_core.so` beside the Mod assembly.
+The optional bundle puts `liboni_sim_core.so` at
+`OniSim/liboni_sim_core.so` next to the Mod assembly. The absolute
+`CYCLETRIM_ONISIM_NATIVE_PATH` can override it for isolated testing. A build
+without `IncludeOniSim=true` has no native library, even if a prior build
+produced one in its output directory.
 
 ## Benchmark summary
 

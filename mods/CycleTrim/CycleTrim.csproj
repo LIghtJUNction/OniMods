@@ -13,7 +13,6 @@
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
     <ModVersion>0.3.2</ModVersion>
     <ModApiVersion>2</ModApiVersion>
-    <IncludeOniSim Condition="'$(IncludeOniSim)' == '' and '$(OS)' == 'Unix' and Exists('/proc/sys/kernel/ostype') and '$(NETCoreSdkRuntimeIdentifier)' == 'arch-x64'">true</IncludeOniSim>
     <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">false</IncludeOniSim>
   </PropertyGroup>
 
@@ -103,8 +102,8 @@
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
-    <MakeDir Directories="$(DistModPath)OniSim" Condition="Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
-    <Copy SourceFiles="$(OutputPath)OniSim/liboni_sim_core.so" DestinationFiles="$(DistModPath)OniSim/liboni_sim_core.so" Condition="Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
+    <MakeDir Directories="$(DistModPath)OniSim" Condition="'$(IncludeOniSim)' == 'true' And Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
+    <Copy SourceFiles="$(OutputPath)OniSim/liboni_sim_core.so" DestinationFiles="$(DistModPath)OniSim/liboni_sim_core.so" Condition="'$(IncludeOniSim)' == 'true' And Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
     <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist --exclude=history ." />
 

@@ -18,8 +18,8 @@ OniSim 是 CycleTrim 的原生仿真核心，依据本机官方 SimDLL 接口与
 - 调度正在恢复官方 Step 批次、双 GameData、ready 屏障与异步工作线程。
   细节见 [FRAME-SYNC.md](FRAME-SYNC.md)。
 - C# 独立调用层提供长度边界、错误检查、会话生命周期和借用指针视图。
-  CycleTrim 的 PLib Mod 设置默认启用 OniSim，可在游戏 Mod 设置页关闭，重启后生效；
-  `CYCLETRIM_ONISIM_ENABLE=0` 也可在启动前强制关闭。真实游戏接管仍未验证。
+  CycleTrim 的 OniSim 设置默认关闭。只有用户显式开启 PLib 设置，并在启动 Steam 前设置
+  `CYCLETRIM_ONISIM_ENABLE=1`，才允许尝试映射；所有改动需重启，且真实游戏接管仍未验证。
 - 疾病发射器的菱形遍历经过 Lean 4.19 证明和 65,040 个差分场景验证；该组件基准在记录的场景中快 13.894 倍，不代表整局性能提升。详见 [lean-lab/README.md](lean-lab/README.md)。
 
 以上是实现进度，不是运行结果。`gameReady=false`、`runtimeValidated=false`
@@ -56,8 +56,8 @@ rtk dotnet build mods/CycleTrim/OniSim/managed/OniSim.Host/OniSim.Host.csproj -c
 ```
 
 编译通过只证明源码和 ABI 边界可构建，不证明游戏行为、存档、DLC 或其他 Mod 兼容。
-CycleTrim 在支持的 Linux x64 环境默认尝试使用 OniSim；可在 PLib Mod 设置页关闭并重启，或设置
-`CYCLETRIM_ONISIM_ENABLE=0` 在启动前强制关闭。在完成隔离存档的真实游戏验收前，
-不要把它当作已验证的原版替代品。
+CycleTrim 默认不打包也不启用 OniSim。测试构建需显式设置 `IncludeOniSim=true`，
+测试运行需同时开启 PLib 设置并设置 `CYCLETRIM_ONISIM_ENABLE=1` 后通过 Steam 启动。
+在完成隔离存档的真实游戏验收前，不要把它当作已验证的原版替代品。
 
 `development-build.json` 与 `first-run.json` 记录旧源码快照；退役的 OSB1 协议保存在 [history/](history/)。这些都是历史材料，不能代表当前源码。

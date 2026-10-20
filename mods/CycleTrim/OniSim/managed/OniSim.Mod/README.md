@@ -1,24 +1,28 @@
 # CycleTrim OniSim loader
 
-This loader is part of CycleTrim's OniSim core integration. Linux x86_64 builds
-include the native library by default, and the PLib CycleTrim Mod option enables
-the mapping by default. Turn the option off to keep the vanilla SimDLL mapping;
-the change requires restarting ONI. The mapping and game
-behavior remain unverified; `gameReady=false` still applies. Building the project
-does not load Mono, the native core, or the game and does not copy anything into
-the ONI installation or mods directory.
+This loader is experimental and default-disabled. The CycleTrim package does not
+include its native library by default. Build an experimental Linux x86_64 package
+with `IncludeOniSim=true` only when testing.
 
-The `KMod.UserMod2.OnLoad` entry keeps the official `Sim`, `SimMessages`, and Mod
-call surfaces intact. It installs no Harmony patches. Unless explicitly disabled,
-it attempts one assembly-scoped mapping of the official `SimDLL` import name
-to the bundled native library or the caller's absolute override path. No private Mono layout, detour,
-custom message protocol, or managed Grid mirror is used.
+Both the CycleTrim PLib Mod option and an explicit startup
+`CYCLETRIM_ONISIM_ENABLE=1` are required for mapping. A missing or disabled
+setting leaves the official SimDLL intact. For an isolated standalone loader,
+the environment variable is still required. Use disposable test saves only;
+restarting ONI is required to return to the official library once mapped.
+Building the project does not launch or install the game.
 
-`CYCLETRIM_ONISIM_ENABLE` remains a startup override: set it to `0`, `false`, or
-`off` to force-disable mapping; `1`, `true`, or `on` permits it when the PLib
-option is enabled. Other nonempty values are refused. `CYCLETRIM_ONISIM_NATIVE_PATH` may name an absolute library override;
-when unset, the loader uses `OniSim/liboni_sim_core.so` beside the Mod assembly.
-These switches control mapping; they do not establish gameplay compatibility.
+The `KMod.UserMod2.OnLoad` entry leaves official `Sim` and `SimMessages`
+methods intact and installs no Harmony patches. The loader performs a single
+assembly-scoped mapping only after version and native checks. No private Mono
+layout, detour or extra managed Grid mirror is used.
+
+`CYCLETRIM_ONISIM_ENABLE` accepts `1`, `true` or `on` to allow a previously
+selected PLib option; `0`, `false` or `off` disables it. Unknown nonempty
+values are refused. Missing values always disable mapping even if a previously
+saved PLib configuration says enabled. `CYCLETRIM_ONISIM_NATIVE_PATH` can
+specify an absolute override; otherwise the library is expected at
+`OniSim/liboni_sim_core.so` next to the CycleTrim assembly.
+These switches do not establish gameplay compatibility.
 
 The preflight requires Linux x64 Mono and the exact inspected game assembly and
 Unity Mono fingerprints in `OfficialProfile.cs`. It requires no `Game` instance,

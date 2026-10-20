@@ -36,7 +36,9 @@ namespace OniSim.CycleTrim
                     return new LoaderResult(LoaderState.Disabled,
                         "Disabled in CycleTrim's PLib Mod settings; no native module was opened and no mapping was inserted.");
                 string setting = Environment.GetEnvironmentVariable(EnableVariable);
-                if (!string.IsNullOrWhiteSpace(setting))
+                if (string.IsNullOrWhiteSpace(setting))
+                    return new LoaderResult(LoaderState.Disabled,
+                        "Experimental OniSim requires " + EnableVariable + "=1 and PLib opt-in; vanilla SimDLL remains in use.");
                 {
                     setting = setting.Trim();
                     if (string.Equals(setting, "0", StringComparison.OrdinalIgnoreCase) ||
