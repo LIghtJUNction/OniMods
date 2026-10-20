@@ -1,0 +1,72 @@
+name: OniSim transport proof and regression
+on:
+  pull_request:
+    paths:
+      - 'experimental/OniSim/native/**'
+      - 'experimental/OniSim/transport-lab/**'
+      - '.github/workflows/onisim-transport.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'experimental/OniSim/native/**'
+      - 'experimental/OniSim/transport-lab/**'
+      - '.github/workflows/onisim-transport.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: onisim-transport-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  component-regression:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check complete changed-line whitespace
+        run: python3 scripts/check_git_whitespace.py
+      - name: Install pinned Rust and formatter
+        run: rustup toolchain install 1.90.0 --profile minimal --component rustfmt
+      - name: Check candidate formatting without rewriting the immutable baseline
+        shell: bash
+        run: |
+          rustup run 1.90.0 rustfmt --edition 2021 --check --config skip_children=true \
+            experimental/OniSim/native/src/gas.rs \
+            experimental/OniSim/native/src/thermal.rs \
+            experimental/OniSim/native/src/mass_components_flood.rs \
+            experimental/OniSim/native/src/simulation_step.rs \
+            experimental/OniSim/transport-lab/src/*.rs
+      - name: Prepare exact production kernels and verify baseline hashes
+        working-directory: experimental/OniSim/transport-lab
+        run: python3 prepare.py
+      - name: Build standalone component regression only
+        working-directory: experimental/OniSim/transport-lab
+        env:
+          RUSTFLAGS: -Dwarnings
+        run: cargo +1.90.0 build --release --locked --offline
+      - name: Compare ordered output and float bits with FTZ off and on
+        working-directory: experimental/OniSim/transport-lab
+        run: ./target/release/onisim-transport-lab verify
+      - name: Validate recorded timing matrix without claiming new CI performance
+        working-directory: experimental/OniSim/transport-lab
+        run: |
+          python3 summarize.py
+          git diff --exit-code -- results/summary.json results/summary.csv
+  lean-proof:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Lean release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:v4.19.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Compile 27 theorems and inspect logical dependencies
+        run: python3 experimental/OniSim/transport-lab/proof/verify.py
