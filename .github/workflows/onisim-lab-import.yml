@@ -18,18 +18,11 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import base64
-          import hashlib
-          import json
-          import lzma
+          import base64, hashlib, json, lzma, shutil, subprocess
           from pathlib import Path, PurePosixPath
-          import shutil
-          import subprocess
-
           root = Path.cwd()
           staging = root / '.github/onisim-transport-payload'
-          parts = [staging / f'part{i}.b64' for i in range(5)]
-          encoded = ''.join(''.join(p.read_text(encoding='ascii').split()) for p in parts)
+          encoded = ''.join(''.join((staging / f'part{i}.b64').read_text(encoding='ascii').split()) for i in range(5))
           raw = base64.b64decode(encoded, validate=True)
           expected = '74b9ec10a76f5a53dcb124aa3ee8f6853469bbb6908e0742c8d943ae4b576dd1'
           if len(raw) != 57512 or hashlib.sha256(raw).hexdigest() != expected:
@@ -39,11 +32,8 @@ jobs:
           if len(document) != 300164 or not decoder.eof or decoder.unused_data:
               raise SystemExit('Unexpected source package length')
           manifest = json.loads(document)
-          if manifest['base_commit'] != '6aa40cfd71ebb33d794373f5a830b87f8eefaf01':
-              raise SystemExit('Unexpected source baseline')
-          entries = manifest['files']
-          if len(entries) != 48:
-              raise SystemExit('Unexpected file count')
+          if manifest['base_commit'] != '6aa40cfd71ebb33d794373f5a830b87f8eefaf01' or len(manifest['files']) != 48:
+              raise SystemExit('Unexpected source baseline or file count')
           existing = {
               'experimental/OniSim/native/src/gas.rs',
               'experimental/OniSim/native/src/thermal.rs',
@@ -52,7 +42,7 @@ jobs:
               'experimental/OniSim/README.md',
           }
           checked = {}
-          for entry in entries:
+          for entry in manifest['files']:
               name = entry['path']
               relative = PurePosixPath(name)
               if relative.is_absolute() or '..' in relative.parts or str(relative) != name:
@@ -70,13 +60,27 @@ jobs:
               elif not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != entry['before_sha256']:
                   raise SystemExit(f'Original source changed: {name}')
               content = entry['content'].encode('utf-8')
-              # Python's text reader normalized this generated CSV; restore its
-              # original CRLF bytes, then require the unchanged reviewed hash.
               if name == 'experimental/OniSim/transport-lab/results/summary.csv':
                   content = content.replace(b'\n', b'\r\n')
               if len(content) != entry['bytes'] or hashlib.sha256(content).hexdigest() != entry['sha256']:
                   raise SystemExit(f'Source checksum mismatch: {name}')
               checked[name] = content
+          # Keep numeric evidence unchanged; use LF for the derived CSV to meet
+          # the repository's whitespace contract and make regeneration stable.
+          summary = 'experimental/OniSim/transport-lab/results/summary.csv'
+          checked[summary] = checked[summary].replace(b'\r\n', b'\n')
+          generator = 'experimental/OniSim/transport-lab/summarize.py'
+          before = b'csv.DictWriter(handle, fieldnames=fields)'
+          after = b'csv.DictWriter(handle, fieldnames=fields, lineterminator="\\n")'
+          if checked[generator].count(before) != 1:
+              raise SystemExit('Unexpected CSV generator')
+          checked[generator] = checked[generator].replace(before, after)
+          for name, digest in {
+              summary: '5a9a85538d5a534f99acd97c0acaac5bd786022ccd7811368e84491f94e8be8a',
+              generator: '33c5d77c52a57c8b881a8b95b87e01cab7af39005ce953979b66010d74b52d85',
+          }.items():
+              if hashlib.sha256(checked[name]).hexdigest() != digest:
+                  raise SystemExit('CSV normalization mismatch')
           for name, content in checked.items():
               path = root / name
               path.parent.mkdir(parents=True, exist_ok=True)
@@ -85,10 +89,10 @@ jobs:
           shutil.rmtree(staging)
           subprocess.run(['git', 'add', '--', *checked, '.github/onisim-transport-payload'], check=True)
           subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
-          print('Verified and staged all 48 reviewed source files; no toolchains or game binaries included')
+          print('Verified and staged 48 reviewed source files; no toolchains or game binaries included')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'perf(onisim): add experimentally verified mass, thermal and gas transport candidates' -m 'Preserve ordered updates, add Lean proofs and real-kernel differential tests. Include all performance cases and measured regressions; not approved for production or whole-game performance claims.'
+          git commit -m 'perf(onisim): add verified mass, thermal and gas transport experiments' -m 'Preserve ordered updates, add Lean proofs and real-kernel differential tests. Include all performance cases and measured regressions; not approved for production or whole-game performance claims.'
           git push origin HEAD:perf/onisim-transport-20261020
           git rev-parse HEAD
