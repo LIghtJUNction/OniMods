@@ -8,39 +8,19 @@ permissions:
 jobs:
   kit:
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - name: Prepare pinned compilers and source without credentials
+      - name: Prepare pinned formatter
         shell: bash
         run: |
           set -euo pipefail
-          rustup toolchain install 1.90.0 --profile minimal
-          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:v4.19.0
-          export PATH="$HOME/.elan/bin:$PATH"
-          lean --version
-          rustc +1.90.0 --version
-          mkdir -p kit/lean/bin kit/lean/lib kit/rust/bin kit/rust/lib out
-          lean_root=$(lean --print-prefix)
-          cp "$lean_root/bin/lean" kit/lean/bin/
-          rsync -a --include='*/' --include='*.olean' --include='*.so*' --exclude='*' "$lean_root/lib/" kit/lean/lib/
-          find "$lean_root" -maxdepth 1 -type f \( -iname '*license*' -o -iname '*notice*' \) -exec cp {} kit/lean/ \;
-          rust_root=$(rustc +1.90.0 --print sysroot)
-          cp "$rust_root/bin/rustc" "$rust_root/bin/cargo" kit/rust/bin/
-          cp -a "$rust_root/lib/." kit/rust/lib/
-          cp -a "$rust_root/share/doc/rust" kit/rust/licenses
-          rm -rf kit/rust/licenses/html
-          tar -cJf out/lean-minimal.tar.xz -C kit lean
-          tar -cJf out/rust-minimal.tar.xz -C kit rust
-          git archive --format=tar.gz HEAD experimental/OniSim AGENTS.md RTK.md UPSTREAM.toml LICENSE LICENSING.md docs/autonomous-iteration.md .github/workflows/onisim-diamond.yml .gitignore > out/onisim-checkout.tar.gz
-          sha256sum out/* > out/SHA256SUMS
-          ls -lh out
+          rustup toolchain install 1.90.0 --profile minimal --component rustfmt
+          mkdir -p out
+          cp "$(rustc +1.90.0 --print sysroot)/bin/rustfmt" out/
+          sha256sum out/rustfmt > out/SHA256SUMS
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: onisim-offline-experiment-kit
+          name: onisim-rustfmt
           path: out/
-          compression-level: 0
           retention-days: 1
           if-no-files-found: error
