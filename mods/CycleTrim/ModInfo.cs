@@ -24,6 +24,11 @@ namespace CycleTrim
             {
                 Console.WriteLine("[CycleTrim][OniSim] PLib options could not be loaded; using the default enabled setting: " + error.Message);
             }
+            LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
+            Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
+            // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
+            // Set the probe owner first, then let the native loader map once.
+            base.OnLoad(harmony);
             try
             {
                 new POptions().RegisterOptions(this, typeof(OniSimOptions));
@@ -32,12 +37,6 @@ namespace CycleTrim
             {
                 Console.WriteLine("[CycleTrim][OniSim] PLib options dialog registration failed: " + error.Message);
             }
-
-            LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
-            Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
-            // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
-            // Set the probe owner first, then let the native loader map once.
-            base.OnLoad(harmony);
         }
     }
 }
