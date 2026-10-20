@@ -277,7 +277,13 @@ fn update_components(
     Ok(())
 }
 
-fn temperature_pair(world: &mut PhysicsWorld, elements: &ElementTable, a: usize, b: usize) {
+fn temperature_pair(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    contacts: &mut crate::thermal::ThermalContactCache<'_>,
+    a: usize,
+    b: usize,
+) {
     let difference = f32::from_bits(
         (world.read.temperature[a] - world.read.temperature[b]).to_bits() & 0x7fff_ffff,
     );
@@ -288,7 +294,7 @@ fn temperature_pair(world: &mut PhysicsWorld, elements: &ElementTable, a: usize,
         && second.thermal_conductivity > 0.0
         && (first.state | second.state) & 0x10 == 0
     {
-        crate::thermal::update_temperature(world, elements, a, b);
+        crate::thermal::update_temperature(world, contacts, a, b);
     }
 }
 
@@ -298,19 +304,20 @@ fn temperature_phase(
     events: &mut EventQueues,
     region: Region,
 ) {
+    let mut contacts = crate::thermal::ThermalContactCache::new(elements);
     // A single serial SimUpdateTemperatureTask: row-major exchange, then a
     // separate row-major transition pass. All exchange reads remain old cells.
     for y in region.min_y..region.max_y {
         for x in region.min_x..region.max_x {
             let cell = y as usize * world.stride + x as usize;
             if world.read.mass[cell] > 0.0 && world.backwall_mass[cell] > 0.0 {
-                crate::thermal::update_backwall_temperature(world, elements, events, cell);
+                crate::thermal::update_backwall_temperature(world, &mut contacts, events, cell);
             }
             if x < region.max_x - 1 {
-                temperature_pair(world, elements, cell, cell + 1);
+                temperature_pair(world, elements, &mut contacts, cell, cell + 1);
             }
             if y < region.max_y - 1 {
-                temperature_pair(world, elements, cell, cell + world.stride);
+                temperature_pair(world, elements, &mut contacts, cell, cell + world.stride);
             }
         }
     }
