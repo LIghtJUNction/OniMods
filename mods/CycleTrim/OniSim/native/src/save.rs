@@ -82,12 +82,23 @@ pub(crate) fn serialize(
     Ok(bytes)
 }
 
-pub(crate) fn load_into(
-    world: &mut PhysicsWorld,
+pub(crate) struct LoadPlan {
+    cells: Vec<LoadedCell>,
+    origin: [usize; 2],
+    width: usize,
+    has_disease: bool,
+    has_backwall: bool,
+    pub(crate) saved_options: u8,
+    legacy_thermal_boundaries: bool,
+}
+
+pub(crate) fn plan_load(
+    world: &PhysicsWorld,
     elements: &ElementTable,
     diseases: Option<&DiseaseTable>,
     bytes: &[u8],
-) -> Result<()> {
+    previous_options: u8,
+) -> Result<LoadPlan> {
     if bytes.len() > MAX_PAYLOAD {
         return Err(resource());
     }
@@ -113,7 +124,7 @@ pub(crate) fn load_into(
         (0, 0)
     };
     let saved_options = if version >= 13 { reader.byte()? } else { 0 };
-    if world.saved_options != 0 && world.saved_options != saved_options {
+    if previous_options != 0 && previous_options != saved_options {
         return Err(invalid("loaded worlds have different saved options"));
     }
     if x.checked_add(width).is_none_or(|end| end > world.stride)
@@ -138,50 +149,51 @@ pub(crate) fn load_into(
         .get(&VOID)
         .ok_or_else(|| state("loading requires the Void element"))?;
     let mut cells: Vec<LoadedCell> = reserved(count)?;
-    for row in 0..height {
-        let destination = (y + row) * world.stride + x;
-        for column in 0..width {
-            let target = destination + column;
-            let hash = match reader.i32()? {
-                41_996_153 => -1_736_594_426,
-                596_754_987 => 1_282_846_257,
-                other => other,
-            };
-            let mut temperature = reader.f32()?;
-            let mut mass = reader.f32()?;
-            let mut radiation = if version >= 14 {
-                reader.f32()?
-            } else {
-                world.write.radiation[target]
-            };
-            let mut element = elements_by_hash.get(&hash).copied().unwrap_or(vacuum);
-            if !elements_by_hash.contains_key(&hash) {
-                temperature = 0.0;
-                mass = 0.0;
-                radiation = 0.0;
-            }
-            if temperature <= 0.0 {
-                temperature = 293.0;
-            }
-            if radiation <= 0.0 {
-                radiation = 0.0;
-            }
-            if element == vacuum || element == void {
-                temperature = 0.0;
-                mass = 0.0;
-                radiation = 0.0;
-            }
-            load_transition(elements, &mut element, &mut temperature)?;
-            cells.push(LoadedCell {
-                target,
-                element,
-                temperature,
-                mass,
-                radiation,
-                disease: None,
-                backwall: None,
-            });
+    for _ in 0..count {
+        let hash = match reader.i32()? {
+            41_996_153 => -1_736_594_426,
+            596_754_987 => 1_282_846_257,
+            other => other,
+        };
+        let mut temperature = reader.f32()?;
+        let mut mass = reader.f32()?;
+        // Legacy saves leave existing radiation intact, including a value
+        // written by an earlier overlapping Load in the same batch.
+        let mut write_radiation = version >= 14;
+        let mut radiation = if write_radiation { reader.f32()? } else { 0.0 };
+        let known_element = elements_by_hash.get(&hash).copied();
+        let mut element = known_element.unwrap_or(vacuum);
+        if known_element.is_none() {
+            temperature = 0.0;
+            mass = 0.0;
+            radiation = 0.0;
+            write_radiation = true;
         }
+        if temperature <= 0.0 {
+            temperature = 293.0;
+        }
+        if write_radiation && radiation <= 0.0 {
+            radiation = 0.0;
+        }
+        if element == vacuum || element == void {
+            temperature = 0.0;
+            mass = 0.0;
+            radiation = 0.0;
+            write_radiation = true;
+        }
+        load_transition(elements, &mut element, &mut temperature)?;
+        cells.push(LoadedCell {
+            element,
+            temperature,
+            mass,
+            radiation,
+            write_radiation,
+            disease_index: NO_DISEASE,
+            disease_count: 0,
+            backwall_element: INVALID_ELEMENT,
+            backwall_mass: 0.0,
+            backwall_temperature: 0.0,
+        });
     }
     if version >= 9 {
         for cell in &mut cells {
@@ -196,7 +208,8 @@ pub(crate) fn load_into(
                     .filter(|&index| index != NO_DISEASE)
                     .unwrap_or(NO_DISEASE)
             };
-            cell.disease = Some((index, if index == NO_DISEASE { 0 } else { count }));
+            cell.disease_index = index;
+            cell.disease_count = if index == NO_DISEASE { 0 } else { count };
         }
     }
     if version >= 15 {
@@ -208,7 +221,9 @@ pub(crate) fn load_into(
                 .get(&hash)
                 .copied()
                 .unwrap_or(INVALID_ELEMENT);
-            cell.backwall = Some((element, mass, temperature));
+            cell.backwall_element = element;
+            cell.backwall_mass = mass;
+            cell.backwall_temperature = temperature;
         }
     }
     if (8..=14).contains(&version) {
@@ -217,37 +232,58 @@ pub(crate) fn load_into(
     if reader.position != bytes.len() {
         return Err(invalid("unconsumed bytes in native save"));
     }
+    Ok(LoadPlan {
+        cells,
+        origin: [x, y],
+        width,
+        has_disease: version >= 9,
+        has_backwall: version >= 15,
+        saved_options,
+        legacy_thermal_boundaries: version <= 10,
+    })
+}
+
+impl LoadPlan {
     // Every fallible parse, lookup and allocation completes before changing the world.
-    for cell in cells {
-        let target = cell.target;
-        world.write.element[target] = cell.element;
-        world.write.temperature[target] = cell.temperature;
-        world.write.mass[target] = cell.mass;
-        world.write.radiation[target] = cell.radiation;
-        if let Some((index, count)) = cell.disease {
-            world.write.disease_idx[target] = index;
-            world.write.disease_count[target] = count;
+    pub(crate) fn apply(self, world: &mut PhysicsWorld) {
+        for (row, cells) in self.cells.chunks_exact(self.width).enumerate() {
+            let start = (self.origin[1] + row) * world.stride + self.origin[0];
+            for (column, cell) in cells.iter().enumerate() {
+                let target = start + column;
+                world.write.element[target] = cell.element;
+                world.write.temperature[target] = cell.temperature;
+                world.write.mass[target] = cell.mass;
+                if cell.write_radiation {
+                    world.write.radiation[target] = cell.radiation;
+                }
+                if self.has_disease {
+                    world.write.disease_idx[target] = cell.disease_index;
+                    world.write.disease_count[target] = cell.disease_count;
+                }
+                if self.has_backwall {
+                    world.backwall_element[target] = cell.backwall_element;
+                    world.backwall_mass[target] = cell.backwall_mass;
+                    world.backwall_temperature[target] = cell.backwall_temperature;
+                }
+            }
         }
-        if let Some((element, mass, temperature)) = cell.backwall {
-            world.backwall_element[target] = element;
-            world.backwall_mass[target] = mass;
-            world.backwall_temperature[target] = temperature;
-        }
+        world.saved_options = self.saved_options;
+        world.legacy_thermal_boundaries |= self.legacy_thermal_boundaries;
+        world.sync_read_from_write();
     }
-    world.saved_options = saved_options;
-    world.legacy_thermal_boundaries |= version <= 10;
-    world.sync_read_from_write();
-    Ok(())
 }
 
 struct LoadedCell {
-    target: usize,
     element: u16,
     temperature: f32,
     mass: f32,
     radiation: f32,
-    disease: Option<(u8, i32)>,
-    backwall: Option<(u16, f32, f32)>,
+    write_radiation: bool,
+    disease_index: u8,
+    disease_count: i32,
+    backwall_element: u16,
+    backwall_mass: f32,
+    backwall_temperature: f32,
 }
 
 fn load_transition(
@@ -401,5 +437,13 @@ impl<'a> Reader<'a> {
 
     fn f32(&mut self) -> Result<f32> {
         Ok(f32::from_bits(self.i32()? as u32))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn load_plan_cell_storage_stays_within_32_bytes() {
+        assert!(std::mem::size_of::<super::LoadedCell>() <= 32);
     }
 }

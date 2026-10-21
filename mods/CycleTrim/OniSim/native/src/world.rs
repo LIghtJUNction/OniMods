@@ -2,8 +2,8 @@ use crate::grid::Grid;
 use crate::radiation::RadiationParams;
 use crate::status::{Error, Result, Status};
 use crate::tables::ElementTable;
-use crate::world_cells::filled;
 pub(crate) use crate::world_cells::Cells;
+use crate::world_cells::filled;
 
 #[derive(Clone, Copy, Default)]
 pub(crate) struct Region {

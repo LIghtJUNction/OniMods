@@ -81,9 +81,9 @@ pub(crate) fn displace_liquid(
         return false;
     }
     let candidates = [
-        source.checked_add(1).unwrap_or(usize::MAX),
+        source.saturating_add(1),
         source.checked_sub(1).unwrap_or(usize::MAX),
-        source.checked_add(world.stride).unwrap_or(usize::MAX),
+        source.saturating_add(world.stride),
         source.checked_sub(world.stride).unwrap_or(usize::MAX),
     ];
     if displace_liquid_simple(

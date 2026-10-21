@@ -9,6 +9,7 @@ use std::ops::Range;
 
 /// One half-open linear-index range per nonempty row of the search diamond.
 /// The owning world's allocated dimensions establish that index products fit.
+#[derive(Clone)]
 pub(crate) struct DiamondRows {
     stride: usize,
     center_x: i32,
@@ -17,6 +18,20 @@ pub(crate) struct DiamondRows {
     upper_x: i32,
     next_y: i32,
     end_y: i32,
+}
+
+impl DiamondRows {
+    pub(crate) fn y_bounds(&self) -> Range<usize> {
+        self.next_y as usize..self.end_y as usize
+    }
+
+    pub(crate) fn span(&self, y: usize) -> Range<usize> {
+        let reach = self.radius - (y as i32 - self.center_y).abs();
+        let first_x = (self.center_x - reach).max(1) as usize;
+        let end_x = (self.center_x + reach + 1).min(self.upper_x) as usize;
+        let row = y * self.stride;
+        row + first_x..row + end_x
+    }
 }
 
 pub(crate) fn rows(
@@ -64,10 +79,6 @@ impl Iterator for DiamondRows {
         }
         let y = self.next_y;
         self.next_y += 1;
-        let reach = self.radius - (y - self.center_y).abs();
-        let first_x = (self.center_x - reach).max(1) as usize;
-        let end_x = (self.center_x + reach + 1).min(self.upper_x) as usize;
-        let row = y as usize * self.stride;
-        Some(row + first_x..row + end_x)
+        Some(self.span(y as usize))
     }
 }

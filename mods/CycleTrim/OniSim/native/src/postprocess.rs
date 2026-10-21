@@ -224,6 +224,14 @@ fn gas(
     {
         let sample = world.next_random() as f32;
         if f32::from_bits(0x46e66499) < sample {
+            // The tiny-mass check uses the entering direction, but random
+            // swaps use its already-negated value (ELF 0x7233e..0x72361).
+            let first = cell
+                .checked_add_signed(world.gas_scan_direction as isize)
+                .unwrap();
+            let second = cell
+                .checked_add_signed(-(world.gas_scan_direction as isize))
+                .unwrap();
             let mut choice = Some(first);
             let mut temperature = world.write.temperature[first];
             if f32::MAX < temperature

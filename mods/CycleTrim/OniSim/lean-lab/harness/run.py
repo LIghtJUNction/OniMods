@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce this native component experiment with Rust 1.99.1 and no crates."""
+"""Reproduce this native component experiment with Rust 1.99.1 and locked Rayon dependencies."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def sha(path: Path) -> str:
 def source_hashes() -> dict[str, str]:
     paths = list((LAB / "harness/src").glob("*.rs"))
     paths += list((LAB / "baseline").glob("*.rs"))
-    paths += [MANIFEST, LAB / "harness/Cargo.lock", SOURCE / "disease_emitters.rs", SOURCE / "diamond.rs"]
+    paths += [LAB.parent / "rust-toolchain.toml", MANIFEST, LAB / "harness/Cargo.lock", SOURCE / "disease_emitters.rs", SOURCE / "diamond.rs", SOURCE / "disease_fields.rs", SOURCE / "parallel.rs", SOURCE / "float_env.rs"]
     return {str(path.relative_to(ROOT)): sha(path) for path in sorted(paths)}
 
 
@@ -42,7 +42,7 @@ def read_optional(path: str) -> str | None:
 def run(command: list[str], log_name: str) -> None:
     print("RUN", json.dumps(command), flush=True)
     with (RESULTS / log_name).open("w") as log:
-        result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
+        result = subprocess.run(command, cwd=MANIFEST.parent, stdout=log, stderr=subprocess.STDOUT)
     if result.returncode:
         print((RESULTS / log_name).read_text(), file=sys.stderr)
         raise SystemExit(result.returncode)
@@ -54,6 +54,7 @@ def main() -> None:
     parser.add_argument("--target-dir", type=Path, default=Path("/tmp/onisim-diamond-build"))
     parser.add_argument("--cpu", type=int)
     args = parser.parse_args()
+    args.target_dir = args.target_dir.resolve()
     RESULTS.mkdir(parents=True, exist_ok=True)
     allowed = sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else []
     selected = args.cpu if args.cpu is not None else (allowed[-1] if allowed else None)
@@ -63,12 +64,12 @@ def main() -> None:
             os.sched_setaffinity(0, {selected})
         except OSError as error:
             affinity_error = str(error)
-    compiler = subprocess.check_output(["rustc", "--version", "--verbose"], text=True)
+    compiler = subprocess.check_output(["rustc", "--version", "--verbose"], text=True, cwd=MANIFEST.parent)
     if not compiler.startswith("rustc 1.99.1 "):
         raise SystemExit("This recorded experiment requires Rust 1.99.1; select that rustup toolchain first.")
     if os.environ.get("RUSTFLAGS") or os.environ.get("CARGO_ENCODED_RUSTFLAGS"):
         raise SystemExit("Unset RUSTFLAGS/CARGO_ENCODED_RUSTFLAGS to reproduce release defaults.")
-    cargo = subprocess.check_output(["cargo", "--version"], text=True).strip()
+    cargo = subprocess.check_output(["cargo", "--version"], text=True, cwd=MANIFEST.parent).strip()
     timing_target = args.target_dir / "timing"
     allocation_target = args.target_dir / "allocation"
     executable = timing_target / "release/onisim-diamond-validation"

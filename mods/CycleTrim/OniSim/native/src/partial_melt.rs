@@ -2,7 +2,7 @@
 
 use crate::events::EventQueues;
 use crate::fluid_displacement::evaporate;
-use crate::fluid_helpers::{clear_disease, cvtt, game_index, notify};
+use crate::fluid_helpers::{cvtt, game_index, notify};
 use crate::gas::displace_gas;
 use crate::tables::{DiseaseTable, ElementRecord, ElementTable};
 use crate::world::PhysicsWorld;
@@ -58,37 +58,33 @@ fn pair(
     }
 
     let mut emitted = false;
-    if !world.falling_disabled {
-        if let (Some(public), Some(below)) =
+    if !world.falling_disabled
+        && let (Some(public), Some(below)) =
             (game_index(world, cell), cell.checked_sub(world.stride))
+    {
+        let active = world.active_mask[public as usize] != 0 || world.simulate_all_active;
+        if active
+            && world.read.properties[below] & 2 == 0
+            && target.low_temperature - TEMP_MARGIN <= melt_temperature
+            && melt_temperature <= target.high_temperature + TEMP_MARGIN
         {
-            let active = world.active_mask[public as usize] != 0 || world.simulate_all_active;
-            if active
-                && world.read.properties[below] & 2 == 0
-                && target.low_temperature - TEMP_MARGIN <= melt_temperature
-                && melt_temperature <= target.high_temperature + TEMP_MARGIN
-            {
-                let count = world.write.disease_count[neighbor];
-                let removed_count = cvtt((count as f32) * (MELT_MASS / solid_mass));
-                events.spawn_falling_liquid(
-                    public,
-                    transition,
-                    world.write.disease_idx[neighbor],
-                    MELT_MASS,
-                    melt_temperature,
-                    removed_count,
-                );
-                let remainder = (solid_temperature * solid_mass * solid.specific_heat_capacity
-                    - required)
-                    / (solid_mass * solid.specific_heat_capacity);
-                world.write.temperature[neighbor] = remainder;
-                world.write.mass[neighbor] -= MELT_MASS;
-                world.write.disease_count[neighbor] = count.wrapping_sub(removed_count);
-                if world.write.disease_count[neighbor] < 1 {
-                    clear_disease(&mut world.write, neighbor);
-                }
-                emitted = true;
-            }
+            let count = world.write.disease_count[neighbor];
+            let removed_count = cvtt((count as f32) * (MELT_MASS / solid_mass));
+            events.spawn_falling_liquid(
+                public,
+                transition,
+                world.write.disease_idx[neighbor],
+                MELT_MASS,
+                melt_temperature,
+                removed_count,
+            );
+            // ELF 0x70bc9 cools the heat source, retaining the donor's
+            // temperature. It does not normalize the donor disease slot.
+            world.write.temperature[cell] =
+                (source_temperature * source_capacity - required) / source_capacity;
+            world.write.mass[neighbor] -= MELT_MASS;
+            world.write.disease_count[neighbor] = count.wrapping_sub(removed_count);
+            emitted = true;
         }
     }
     if emitted {
@@ -103,13 +99,10 @@ fn pair(
     }
     world.write.element[cell] = transition;
     world.write.temperature[cell] = melt_temperature;
+    // The in-cell path writes a fresh five-kilogram liquid parcel after
+    // displacing the gas (ELF 0x70b06), and leaves donor germs untouched.
+    world.write.mass[cell] = MELT_MASS;
     world.write.mass[neighbor] -= MELT_MASS;
-    let removed_count = cvtt(world.write.disease_count[neighbor] as f32 * (MELT_MASS / solid_mass));
-    world.write.disease_count[neighbor] =
-        world.write.disease_count[neighbor].wrapping_sub(removed_count);
-    if world.write.disease_count[neighbor] < 1 {
-        clear_disease(&mut world.write, neighbor);
-    }
     if solid_mass <= MELT_MASS {
         evaporate(world, events, neighbor);
     }

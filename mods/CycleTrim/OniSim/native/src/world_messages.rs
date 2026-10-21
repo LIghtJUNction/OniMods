@@ -5,7 +5,7 @@
 #[path = "world_messages_cells.rs"]
 mod cells_kernel;
 
-use crate::bytes::{dimensions, i32at, invalid, MAX_PAYLOAD};
+use crate::bytes::{MAX_PAYLOAD, dimensions, i32at, invalid};
 use crate::status::{Error, Result, Status};
 use crate::world::PhysicsWorld;
 
@@ -103,7 +103,7 @@ pub(crate) fn parse_immediate(
             let logical = trim_fixed_payload(bytes, length)?;
             let mut offsets = Vec::new();
             offsets.try_reserve_exact(count).map_err(|_| allocation())?;
-            for record in logical[4..].chunks_exact(16) {
+            for record in logical[4..].as_chunks::<16>().0 {
                 let rect = Rectangle {
                     x: i32at(record, 0),
                     y: i32at(record, 4),
@@ -207,7 +207,12 @@ impl WorldMessages {
         id == MODIFY_ZONE
     }
 
-    pub(crate) fn queue(&mut self, id: i32, bytes: &[u8], world: &PhysicsWorld) -> Result<()> {
+    pub(crate) fn queue(
+        &mut self,
+        id: i32,
+        bytes: &[u8],
+        world: &crate::worker_shape::WorldShape,
+    ) -> Result<()> {
         if id != MODIFY_ZONE || bytes.len() != 8 {
             return Err(invalid("ModifyCellWorldZone requires an 8-byte record"));
         }
@@ -232,6 +237,18 @@ impl WorldMessages {
 
     pub(crate) fn take_pending(&mut self) -> PendingCommands {
         std::mem::take(&mut self.pending)
+    }
+
+    pub(crate) fn append(&mut self, mut staged: Self) -> Result<()> {
+        if self.len().saturating_add(staged.len()) > MAX_PENDING {
+            return Err(allocation());
+        }
+        self.pending
+            .zones
+            .try_reserve(staged.pending.zones.len())
+            .map_err(|_| allocation())?;
+        self.pending.zones.append(&mut staged.pending.zones);
+        Ok(())
     }
 
     pub(crate) fn len(&self) -> usize {

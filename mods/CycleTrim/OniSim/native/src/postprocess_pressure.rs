@@ -1,5 +1,5 @@
 use crate::events::{EventQueues, WorldDamageInfo};
-use crate::fluid_helpers::{game_index, phase, swap_material};
+use crate::fluid_helpers::{game_index, phase, smin, swap_material};
 use crate::tables::{ElementRecord, ElementTable};
 use crate::world::PhysicsWorld;
 
@@ -37,10 +37,13 @@ pub(crate) fn density_displacement(
         let lower_mass = world.write.mass[below];
         let equilibrium =
             (temperature * mass + lower_temperature * lower_mass) / (mass + lower_mass);
-        let result = if temperature <= equilibrium && equilibrium <= lower_temperature {
-            equilibrium
+        // ELF 0x6fe48..0x6fe51 clamps from the cold side first. Rounding
+        // can put the weighted mean just below that endpoint; retaining the
+        // hot endpoint instead creates a one-ULP warming on each convection.
+        let result = if temperature <= equilibrium {
+            smin(lower_temperature, equilibrium)
         } else {
-            lower_temperature
+            temperature
         };
         world.write.temperature[cell] = result;
         world.write.temperature[below] = result;

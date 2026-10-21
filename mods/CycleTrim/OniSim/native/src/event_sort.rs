@@ -64,11 +64,7 @@ fn median_to_first(records: &mut [SpawnOreInfo], first: usize, last: usize) -> S
     let kc = key(records[c]);
     let median = if ka < kb {
         if kc <= kb {
-            if ka < kc {
-                c
-            } else {
-                a
-            }
+            if ka < kc { c } else { a }
         } else {
             b
         }
@@ -182,7 +178,7 @@ fn adjust_heap(records: &mut [SpawnOreInfo], top: usize, len: usize, value: Spaw
     }
 
     // An even-sized heap has one final left child below its last parent.
-    if len % 2 == 0 && (len - 2) / 2 == hole {
+    if len.is_multiple_of(2) && (len - 2) / 2 == hole {
         let child = 2 * hole + 1;
         records[hole] = records[child];
         hole = child;

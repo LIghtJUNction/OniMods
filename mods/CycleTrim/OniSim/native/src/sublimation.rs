@@ -48,15 +48,13 @@ fn consume_neighbor(
         return false;
     }
     let random = f32::from(world.next_random()) * RANDOM_SCALE;
-    if !(random < neighbor_record.sublimate_probability
-        || random == neighbor_record.sublimate_probability)
-    {
+    if !(random <= neighbor_record.sublimate_probability) {
         return false;
     }
 
     let rate = RATE_SCALE * neighbor_record.sublimate_rate;
     let neighbor_mass = world.write.mass[neighbor];
-    let transfer = if neighbor_mass <= rate {
+    let mut transfer = if neighbor_mass <= rate {
         neighbor_mass
     } else {
         rate
@@ -83,12 +81,22 @@ fn consume_neighbor(
     let donor_temperature = world.write.temperature[neighbor];
     let donor_disease = world.write.disease_idx[neighbor];
     let donor_count = world.write.disease_count[neighbor];
-    let germs = cvtt((transfer / neighbor_mass) * donor_count as f32);
+    let mut germs = cvtt((transfer / neighbor_mass) * donor_count as f32);
     let output_mass = neighbor_record.sublimate_efficiency * transfer;
 
     if product == source_element {
         let prior_mass = world.write.mass[cell];
         let prior_temperature = world.write.temperature[cell];
+        let space = MIN_SOURCE_MASS - prior_mass;
+        let output_mass = if output_mass > space {
+            // ELF 0x71938 caps the product, scales donor removal, and
+            // recomputes removed germs using the adjusted donor mass.
+            transfer *= space / output_mass;
+            germs = cvtt((transfer / neighbor_mass) * donor_count as f32);
+            space
+        } else {
+            output_mass
+        };
         add_mass_and_update_temperature(
             &mut world.write,
             diseases,
@@ -127,7 +135,9 @@ fn consume_neighbor(
     if world.write.disease_count[neighbor] < 1 {
         clear_disease(&mut world.write, neighbor);
     }
-    world.write.radiation[neighbor] += transfer;
+    // DoSublimation 0x71808 adds through SimData+0x58 (flow), not
+    // CellSOA's radiation array. Keep the donor's radiation unchanged.
+    world.accumulated_flow[neighbor] += transfer;
 
     let rotation = match neighbor as isize - cell as isize {
         -1 => -90.0,

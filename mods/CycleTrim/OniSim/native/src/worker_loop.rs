@@ -1,6 +1,6 @@
 //! The worker half never executes simulation code while holding the mailbox.
 
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 
 use super::Shared;

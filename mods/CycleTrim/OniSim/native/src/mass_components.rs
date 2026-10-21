@@ -55,6 +55,10 @@ impl PendingCommands {
 pub(crate) struct MassComponents {
     consumers: ComponentHandles<Consumer>,
     emitters: ComponentHandles<Emitter>,
+    // Native emitter output lives in the component manager across publications,
+    // unlike the transient frame event queues. CopySimDataToGame clears its
+    // element/mass/temperature after copying, including retired handle slots.
+    emitted_mass_infos: Vec<crate::events::EmittedMassInfo>,
     disease_emitters: ComponentHandles<DiseaseEmitterData>,
     // DiseaseConsumer Register/Unregister manage real handles. Its Modify,
     // Update and UpdateDataListOnly are single-ret functions in this binary.
@@ -79,6 +83,22 @@ fn payload_size(id: i32) -> Option<usize> {
 }
 
 impl MassComponents {
+    pub(crate) fn append_pending(&mut self, mut staged: Self) -> Result<()> {
+        if self.pending.len().saturating_add(staged.pending.len())
+            > crate::frames::MAX_PENDING_COMMANDS
+        {
+            return Err(Error::new(
+                Status::ResourceLimit,
+                "mass-component command queue is full",
+            ));
+        }
+        self.pending
+            .try_reserve(staged.pending.len())
+            .map_err(allocation)?;
+        self.pending.append(&mut staged.pending);
+        Ok(())
+    }
+
     pub(crate) fn take_engine_state(&mut self) -> Self {
         let pending = std::mem::take(&mut self.pending);
         let mut components = std::mem::take(self);
@@ -247,7 +267,7 @@ impl MassComponents {
                         i32at(b, 12),
                     ))?;
                     let dense = self.emitters.data.len() - 1;
-                    if let Some(info) = events.emitted_mass_entries.get_mut(dense) {
+                    if let Some(info) = self.emitted_mass_infos.get_mut(dense) {
                         *info = emitter::empty_mass();
                     }
                     state_callback(events, i32at(b, 4), handle);

@@ -30,7 +30,13 @@ pub(super) fn modify(
             let _ = writeln!(
                 std::io::stderr().lock(),
                 "INVALID TEMPERATURE FOR CELL ENERGY MODIFICATION:\nID({}), kj({:.6}), maxT({:.6}), cell({}), mass({:.6}), deg. chg({:.6}), temp({:.6})",
-                command.diagnostic_id, command.kilojoules, maximum, cell, mass, delta, old,
+                command.diagnostic_id,
+                command.kilojoules,
+                maximum,
+                cell,
+                mass,
+                delta,
+                old,
             );
             temperature = smax(smin(temperature, 10000.0), 1.0);
             if !(temperature > 0.0) {

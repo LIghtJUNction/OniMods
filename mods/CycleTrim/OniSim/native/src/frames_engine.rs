@@ -1,7 +1,7 @@
 //! Simulation-only state. Submission never borrows this Engine to seal frames.
 
-use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use crate::frames::QueuedFrame;
 use crate::frames_data::GameData;
@@ -87,6 +87,9 @@ impl Engine {
         // empty batch. Releasing per ProcessFrame would change generations.
         crate::conduit_ffi::release_queued_handles()?;
         output.events.clear();
+        output
+            .events
+            .track_grid_changes(self.world.width * self.world.height);
         // Step clears flow once before all ProcessNextFrame calls, including
         // when no game frames are available. Substeps never clear these flows.
         self.world.flow.fill([0.0; 4]);
@@ -104,25 +107,30 @@ impl Engine {
                 let diseases = self.diseases.as_deref().ok_or_else(|| {
                     Error::new(Status::InvalidState, "physics requires registered diseases")
                 })?;
-                crate::simulation_step::preflight(
-                    &self.world,
-                    &self.elements,
-                    Some(diseases),
-                    frame.elapsed,
-                )?;
                 let mut systems = crate::simulation_step::StepSystems {
                     mass: &mut self.mass,
                     thermal: &mut self.thermal,
                     radiation: &mut self.radiation,
                 };
-                for _ in 0..ticks {
-                    crate::simulation_step::step(
+                // The first preparation replaces both the frame preflight and
+                // its identical first-substep check. Its borrow prevents any
+                // intervening world/table mutation. Later substeps still check
+                // their changed state exactly as before.
+                crate::simulation_step::PreparedStep::new(
+                    &mut self.world,
+                    &self.elements,
+                    diseases,
+                    frame.elapsed,
+                )?
+                .run(&mut output.events, &mut systems)?;
+                for _ in 1..ticks {
+                    crate::simulation_step::PreparedStep::new(
                         &mut self.world,
                         &self.elements,
                         diseases,
-                        &mut output.events,
-                        &mut systems,
-                    )?;
+                        crate::simulation_step::FIXED_DT,
+                    )?
+                    .run(&mut output.events, &mut systems)?;
                 }
                 self.residual_time = residual;
             }
@@ -134,6 +142,8 @@ impl Engine {
         // CopySimDataToGame publishes/clears accumulated component energy only
         // once for the whole Step, rather than after every processed frame.
         self.thermal.publish(&mut output.events)?;
+        self.mass
+            .publish_emitted_mass(&mut output.events, self.world.vacuum_element)?;
         output.events.consolidate_spawn_ore();
         output
             .events
@@ -142,7 +152,7 @@ impl Engine {
         // +0x58 is copied to GameData before its global periodic reset. Empty
         // and zero-elapsed batches advance this counter exactly like Step.
         if ACCUMULATED_FLOW_PUBLICATIONS
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |count| {
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |count| {
                 Some((count + 1) % 15)
             })
             .is_ok_and(|previous| previous == 14)

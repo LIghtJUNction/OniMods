@@ -32,7 +32,7 @@ fn pressure_cell(
     diseases: &DiseaseTable,
     events: &mut EventQueues,
     cell: usize,
-) {
+) -> bool {
     let element = world.read.element[cell];
     let record = &elements.elements[element as usize].record;
     let source_phase = record.state & 3;
@@ -41,7 +41,7 @@ fn pressure_cell(
         || world.write.element[cell] != element
         || record.state & 2 != 0
     {
-        return;
+        return false;
     }
     let direction = world.scan_direction;
     let side = cell.wrapping_add_signed(direction as isize);
@@ -99,18 +99,25 @@ fn pressure_cell(
             side + world.stride,
         );
     }
+    // All cell-mutating pressure calls are below the early-return guard.
+    // Conservatively retain the copy even if no target accepted a transfer.
+    true
 }
 
 /// Native pressure reverse scans begin at x=max_x and stop before x=min_x;
 /// the forward scan begins at min_x and stops before max_x. This selects each
 /// horizontal edge from the side indicated by scan_direction.
+/// Returns false only when no path that mutates CellSOA was reached.
+/// Flow updates still execute; true is conservative and need not mean a change.
+#[must_use]
 pub(crate) fn gas_phase(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
     diseases: &DiseaseTable,
     events: &mut EventQueues,
     region: Region,
-) {
+) -> bool {
+    let mut changed = false;
     for y in region.min_y..region.max_y {
         let row = y as usize * world.stride;
         let (mut cell, stop) = if world.scan_direction > 0 {
@@ -119,7 +126,7 @@ pub(crate) fn gas_phase(
             (row + region.max_x as usize, row + region.min_x as usize)
         };
         while cell != stop {
-            pressure_cell(world, elements, diseases, events, cell);
+            changed |= pressure_cell(world, elements, diseases, events, cell);
             cell = cell.wrapping_add_signed(world.scan_direction as isize);
         }
     }
@@ -130,6 +137,7 @@ pub(crate) fn gas_phase(
             if old_phase(world, elements, cell) != 1 {
                 continue;
             }
+            changed = true;
             let element = world.read.element[cell];
             let direction = world.scan_direction as isize;
             for offset in [
@@ -162,6 +170,7 @@ pub(crate) fn gas_phase(
             }
         }
     }
+    changed
 }
 
 // Both displacement loops use MIN for the lower y bound. Preserve the literal
@@ -178,20 +187,25 @@ fn displacement_bounds(world: &PhysicsWorld, region: Region) -> (i32, i32, i32, 
     )
 }
 
+/// Returns false only when no path that mutates CellSOA was reached.
+/// Flow updates still execute; true is conservative and need not mean a change.
+#[must_use]
 pub(crate) fn liquid_phase(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
     diseases: &DiseaseTable,
     events: &mut EventQueues,
     region: Region,
-) {
+) -> bool {
+    let mut changed = false;
     if region.min_x == region.max_x {
-        return;
+        return false;
     }
     for y in region.min_y..region.max_y {
         for x in region.min_x..region.max_x {
             let cell = y as usize * world.stride + x as usize;
             if old_phase(world, elements, cell) == 2 && world.read.mass[cell] > 0.0 {
+                changed = true;
                 crate::fluid::update_liquid(world, elements, diseases, events, cell);
             }
         }
@@ -203,6 +217,7 @@ pub(crate) fn liquid_phase(
             if old_phase(world, elements, cell) != 2 {
                 continue;
             }
+            changed = true;
             let element = world.read.element[cell];
             let direction = world.scan_direction as isize;
             let first = cell.wrapping_add_signed(-direction);
@@ -258,4 +273,5 @@ pub(crate) fn liquid_phase(
             }
         }
     }
+    changed
 }

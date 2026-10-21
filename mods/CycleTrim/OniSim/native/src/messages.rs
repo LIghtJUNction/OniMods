@@ -1,11 +1,18 @@
 use crate::bytes::MAX_BATCH;
 use crate::frames::MAX_PENDING_COMMANDS;
-use crate::frames_plan::{parse, Action, Preview, FRAME, LOAD, PREPARE};
+use crate::frames_plan::{Action, LOAD, PREPARE, Preview, parse};
 use crate::state::State;
 use crate::status::{Error, Result, Status};
 use std::ffi::c_void;
 
 pub(crate) fn validate_prepare(state: &State, bytes: &[u8]) -> Result<Vec<u8>> {
+    state.require_active()?;
+    if state.fault.is_some() || state.save_image.is_some() {
+        return Err(Error::new(
+            Status::InvalidState,
+            "Prepare requires a healthy session without an active save image",
+        ));
+    }
     let mut preview = Preview::from_state(state);
     match parse(PREPARE, bytes, &mut preview, state)? {
         Action::Prepare(visibility) => Ok(visibility),
@@ -42,17 +49,23 @@ pub(crate) fn execute(
             "EndSave is required before further messages",
         ));
     }
+    // Present in the managed enum, absent from BOTH dispatch registries in the
+    // pinned 744825 native library. Its SIM_HandleMessage returns null without
+    // consuming their payload. Visibility is submitted through Prepare.
+    if matches!(id, -563_057_023 | -409_964_931 | -727_746_602) {
+        return Ok(std::ptr::null_mut());
+    }
+    if crate::messages_cells::execute(state, id, length, count, bytes)? {
+        return Ok(std::ptr::null_mut());
+    }
+    if crate::messages_world::execute(state, id, length, count, bytes)? {
+        return Ok(std::ptr::null_mut());
+    }
     let thermal_message = crate::thermal_components::is_message(id);
     let mass_message = crate::mass_components::is_message(id);
     let radiation_message = crate::radiation::is_message(id);
     if thermal_message || mass_message || radiation_message {
-        if count != 1 {
-            return Err(Error::new(
-                Status::Unsupported,
-                "component batch transactions are not implemented",
-            ));
-        }
-        if state.queued_component_commands >= MAX_PENDING_COMMANDS {
+        if state.queued_component_commands.saturating_add(count) > MAX_PENDING_COMMANDS {
             return Err(Error::new(
                 Status::ResourceLimit,
                 "pending component command limit exceeded",
@@ -65,44 +78,62 @@ pub(crate) fn execute(
             )
         })?;
         let elements = state.elements.as_ref().unwrap();
-        if thermal_message {
-            state.thermal.queue(id, bytes)?;
-        }
-        if mass_message {
-            let diseases = state.diseases.as_ref().ok_or_else(|| {
+        let mut thermal = crate::thermal_components::ThermalComponents::default();
+        let mut mass = crate::mass_components::MassComponents::default();
+        let mut radiation = crate::radiation::RadiationEmitters::default();
+        let diseases = state.diseases.as_deref();
+        for index in 0..count {
+            let payload = &bytes[index * length..(index + 1) * length];
+            let queued = if thermal_message {
+                thermal.queue(id, payload)
+            } else if mass_message {
+                mass.queue(
+                    id,
+                    payload,
+                    shape,
+                    elements,
+                    diseases.ok_or_else(|| {
+                        Error::new(
+                            Status::InvalidState,
+                            "mass components require registered diseases",
+                        )
+                    })?,
+                )
+                .map(|_| ())
+            } else {
+                radiation.queue(id, payload, shape).map(|_| ())
+            };
+            queued.map_err(|error| {
                 Error::new(
-                    Status::InvalidState,
-                    "mass components require registered diseases",
+                    error.status,
+                    format!("batch item {index}: {}", error.message),
                 )
             })?;
-            state.mass.queue(id, bytes, shape, elements, diseases)?;
+        }
+        if thermal_message {
+            state.thermal.append_pending(thermal)?;
+        }
+        if mass_message {
+            state.mass.append_pending(mass)?;
         }
         if radiation_message {
-            state.radiation_emitters.queue(id, bytes, shape)?;
+            state.radiation_emitters.append_pending(radiation)?;
         }
-        state.queued_component_commands += 1;
+        state.queued_component_commands += count;
         return Ok(std::ptr::null_mut());
     }
-    if id == FRAME && count != 1 {
-        return Err(Error::new(
-            Status::Unsupported,
-            "multi-frame batch commit is not implemented",
-        ));
-    }
     if id == LOAD {
-        if count != 1 {
-            return Err(Error::new(
-                Status::Unsupported,
-                "batched Load is not supported",
-            ));
-        }
         if state.grid.as_ref().is_none_or(|grid| grid.started) {
             return Err(Error::new(
                 Status::InvalidState,
                 "Load requires an allocated, unstarted grid",
             ));
         }
-        if !state.material.is_empty() || state.queued_component_commands != 0 {
+        if !state.material.is_empty()
+            || state.early.len() != 0
+            || !state.world_messages.is_empty()
+            || state.queued_component_commands != 0
+        {
             return Err(Error::new(
                 Status::InvalidState,
                 "finish queued commands before Load",
@@ -119,7 +150,31 @@ pub(crate) fn execute(
                 "Load requires an allocated physics world",
             )
         })?;
-        crate::save::load_into(world, elements, diseases, bytes)?;
+        let mut plans = Vec::new();
+        plans
+            .try_reserve_exact(count)
+            .map_err(|_| Error::new(Status::ResourceLimit, "could not reserve Load batch"))?;
+        let mut options = world.saved_options;
+        for index in 0..count {
+            let plan = crate::save::plan_load(
+                world,
+                elements,
+                diseases,
+                &bytes[index * length..(index + 1) * length],
+                options,
+            )
+            .map_err(|error| {
+                Error::new(
+                    error.status,
+                    format!("batch item {index}: {}", error.message),
+                )
+            })?;
+            options = plan.saved_options;
+            plans.push(plan);
+        }
+        for plan in plans {
+            plan.apply(world);
+        }
         let grid = state.grid.as_mut().unwrap();
         world.publish_to(grid);
         grid.initialized = true;
@@ -143,11 +198,6 @@ pub(crate) fn execute(
             })?,
         );
     }
-    let added_commands = actions
-        .iter()
-        .filter(|action| matches!(action, Action::Modify(_)))
-        .count();
-    state.material.reserve_replacements(added_commands)?;
     // All parsing, allocation, lifecycle and generation checks completed above.
     // No fallible operation remains in this commit loop.
     let mut result = std::ptr::null_mut();
@@ -171,16 +221,6 @@ pub(crate) fn execute(
             }
             Action::Start(legacy) => {
                 result = state.start_worker(legacy)?;
-            }
-            Action::Modify(replacement) => {
-                state.material.queue_replacement(
-                    replacement.index,
-                    replacement.temperature,
-                    replacement.mass,
-                    replacement.disease_count,
-                    replacement.element,
-                    replacement.disease,
-                );
             }
             Action::Elements(table) => state.elements = Some(std::sync::Arc::new(table)),
             Action::Diseases(table) => state.diseases = Some(std::sync::Arc::new(table)),

@@ -102,10 +102,32 @@ observed work. Frame-batch output ownership is documented in [FRAME-SYNC.md](FRA
 
 ## Parallel execution constraints
 
-The implementation currently serializes native mutations. It does not create a
-pool of eight workers or infer independence from a cell's chunk number.
+Disease-emitter cell updates and disease postprocessing now use a persistent,
+bounded Rayon pool. The default worker count is available CPU parallelism capped
+at eight. `CYCLETRIM_ONISIM_WORKERS=1` selects the serial path; positive values are
+capped by CPU availability and eight. Configuration is read once when the first
+eligible kernel initializes the pool. Work below 8,192 visited cells stays serial;
+pool creation failure also falls back to serial execution.
 
-The future execution boundary must retain:
+Emitter rows own disjoint mutable slices of all four disease arrays. Emitters
+still execute in their original order, with a barrier after each emitter, so
+overlapping species competition and negative counts retain their ordering.
+The Lean-proved clipped diamond supplies both serial and parallel row spans;
+no grid-sized visited array or BFS queue is allocated. Postprocessing owns whole
+row bands, reads only each cell's immutable material fields and mutable disease
+fields, and preserves the original arithmetic. Its cleanup is fused with that
+cell's growth because neither reads another cell. Narrow bounds skip unrelated
+columns. Each task installs and restores the submitting thread's floating-point
+environment, including FTZ, DAZ and rounding.
+
+Command queues, diffusion between neighboring cells, thermal/fluid stages,
+component order, region order, events and publication remain ordered. Pool
+completion is a barrier before the next stage. This is parallelism in these two
+established independent kernels, not a claim of a fully parallel simulator.
+Current validation and reproduction commands are in
+[PARALLEL-VALIDATION.md](PARALLEL-VALIDATION.md).
+
+Further parallel execution must retain:
 
 - The observed order between command, thermal, fluid, component and publication
   stages, once each stage has been recovered. The table above is incomplete.

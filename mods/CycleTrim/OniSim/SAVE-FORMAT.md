@@ -1,9 +1,10 @@
 # Official native save contract
 
-This is an interface and binary-format description derived only from the local
-official Linux x64 binaries. It is not a claim that the Rust implementation can
-load an ONI colony. No simulator, host, game, save/load call or test was executed
-to obtain these observations.
+This interface and binary-format description was originally derived by static
+inspection of the local official Linux x64 binaries. Those observations alone
+were not runtime evidence. Subsequent authored native fixtures and disposable
+colony tests are recorded separately in [conformance/README.md](conformance/README.md)
+and [RUNTIME-VALIDATION.md](RUNTIME-VALIDATION.md), with exact binary identities.
 
 Sources inspected statically on 2026-10-20:
 
@@ -23,6 +24,20 @@ native-owned byte buffer. `*size` is its byte count. A new BeginSave first relea
 the previous buffer. `SIM_EndSave()` at `0x324b0` frees it and clears the retained
 pointer; calling EndSave without a retained buffer has no effect. A caller must
 copy the bytes before EndSave, another BeginSave, or session teardown.
+
+The pinned writer directly traverses mutable simulation arrays; this entry
+contains no FrameSync wait or worker join. Callers must synchronize simulation
+before saving. The Rust writer holds its Engine mutex during serialization and
+retains a separate owned image afterward; this does not make an unsynchronized
+caller-held pointer valid across EndSave or Shutdown.
+
+Authored native fixtures exercise eight consecutive BeginSave replacements
+without an intervening EndSave, including absent-backwall normalization, and
+three replacements with positive or negative header origins. Every image is
+copied before the next BeginSave, and its size/hash is compared with the pinned
+writer. Origin probes test serialized header bytes only; negative origins are
+not accepted as valid load destinations. The driver releases the image in a
+finally block even when reading or validating it fails.
 
 Managed `Sim.Save(BinaryWriter, x, y)` copies that buffer, calls EndSave, then
 writes an outer little-endian `i32 blobLength` followed by the blob bytes.
@@ -290,6 +305,11 @@ this combined contract.
 ## Remaining evidence boundary
 
 The format, offsets and managed call order above are static observations of one
-official build. No successful official-to-Rust or Rust-to-official load has been
-demonstrated. Runtime error reporting, active-thread save synchronization,
-historical fixture coverage and a full restored-colony run remain unverified.
+official build. Later differential fixtures author versions 0 through 15, load
+them in each implementation, compare published data and current-version save
+bytes, reset each session and reload its own current image. They also exercise
+legacy thermal boundaries, discarded legacy words and retained radiation across
+overlapping loads. They are not a collection of historical colony files or a
+cross-implementation exchange of complete colony saves. Repeated EndSave calls
+are compared with the official idempotent release. Broad historical-colony,
+concurrent-save and multi-world acceptance remain open.

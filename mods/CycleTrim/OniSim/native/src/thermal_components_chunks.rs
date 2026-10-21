@@ -7,18 +7,10 @@ use crate::thermal_components::{ElementChunk, ThermalComponents};
 use crate::world::{PhysicsWorld, Region};
 
 fn dmin(first: f64, second: f64) -> f64 {
-    if first < second {
-        first
-    } else {
-        second
-    }
+    if first < second { first } else { second }
 }
 fn dmax(first: f64, second: f64) -> f64 {
-    if first > second {
-        first
-    } else {
-        second
-    }
+    if first > second { first } else { second }
 }
 
 // Unnamed official heat-exchange helper at ELF 0x61520. It updates the

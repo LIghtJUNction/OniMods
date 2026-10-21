@@ -1,0 +1,186 @@
+{
+  "schema": 1,
+  "kind": "rejected-experiment",
+  "native_sha256": "cac14c041fa77b057cf7bf62e8af0768f6e8f81eac9e14185cd51e690fd41121",
+  "baseline_sha256": "268977a5b35f167a77c29ab5fca27b0356feaecacf00c4e167e64603de4374ba",
+  "scope": "96x96 native fixtures, eight alternating pairs per scene, CPU16 worker1; not whole-game FPS",
+  "units": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "+1.99.1",
+      "test",
+      "--release",
+      "--locked",
+      "-j",
+      "1",
+      "--manifest-path",
+      "mods/CycleTrim/OniSim/conformance/artifacts/pressure-packed-divisions-20261021/native/Cargo.toml"
+    ],
+    "exit_code": 0,
+    "passed": true,
+    "release_tests": 41,
+    "arithmetic_word_flag_observations": 3030272,
+    "floating_environments": 32,
+    "scalar_body_text_identical": true,
+    "compiler": "rustc 1.99.1",
+    "source_sha256": {
+      "pressure_math.rs": "fbceff5cef8bccadca43a96a2224453161eaa792dc23fcc91cbb2963c6d9273b",
+      "gas.rs": "d9c43778a478b481980478aed9efda44a73bff4bd503908f67f316d69bb8f86c",
+      "simulation_step_fluid.rs": "95d7a3607fd7eb210b5c6b282b9377016b9f390f33793fbeab148a60ed243c91"
+    }
+  },
+  "conformance": {
+    "1": {
+      "exit_code": 0,
+      "passed": true,
+      "cases": 231
+    },
+    "4": {
+      "exit_code": 0,
+      "passed": true,
+      "cases": 231
+    }
+  },
+  "samples": 96,
+  "all_final_snapshots_match_official": true,
+  "scenes": {
+    "fluid": {
+      "cpu_change_percent": 1.817234685595115,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.5068264200000001,
+          "minimum": 0.47605025399999995,
+          "maximum": 0.831094493
+        },
+        "candidate": {
+          "median": 0.5160366455000001,
+          "minimum": 0.504269119,
+          "maximum": 0.749543651
+        },
+        "median_speedup": 0.9821519933122658
+      },
+      "peak_rss_kib": {
+        "baseline": 33236.0,
+        "candidate": 33282.0
+      },
+      "peak_rss_change_percent": 0.13840414008905455
+    },
+    "thermal": {
+      "cpu_change_percent": -1.133576445359319,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.1621094905,
+          "minimum": 0.14695075300000002,
+          "maximum": 0.20055154399999997
+        },
+        "candidate": {
+          "median": 0.1602718555,
+          "minimum": 0.145308449,
+          "maximum": 0.178797592
+        },
+        "median_speedup": 1.0114657373514966
+      },
+      "peak_rss_kib": {
+        "baseline": 33294.0,
+        "candidate": 33240.0
+      },
+      "peak_rss_change_percent": -0.16219138583528636
+    },
+    "sealed": {
+      "cpu_change_percent": 0.8225294728698263,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.479393764,
+          "minimum": 0.44728670499999995,
+          "maximum": 0.5171870140000001
+        },
+        "candidate": {
+          "median": 0.483336919,
+          "minimum": 0.461645077,
+          "maximum": 0.5457451010000001
+        },
+        "median_speedup": 0.9918418087983881
+      },
+      "peak_rss_kib": {
+        "baseline": 33194.0,
+        "candidate": 33220.0
+      },
+      "peak_rss_change_percent": 0.07832740856781317
+    },
+    "germ_flow": {
+      "cpu_change_percent": 9.562978368178122,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.6533177175,
+          "minimum": 0.631095027,
+          "maximum": 1.023100216
+        },
+        "candidate": {
+          "median": 0.7157943495,
+          "minimum": 0.6579177549999999,
+          "maximum": 0.871403283
+        },
+        "median_speedup": 0.912717064554028
+      },
+      "peak_rss_kib": {
+        "baseline": 33264.0,
+        "candidate": 33294.0
+      },
+      "peak_rss_change_percent": 0.09018759018759592
+    },
+    "mixed_germs": {
+      "cpu_change_percent": 9.75243515148092,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.6811053185,
+          "minimum": 0.659996488,
+          "maximum": 1.021913245
+        },
+        "candidate": {
+          "median": 0.7475296730000001,
+          "minimum": 0.6725274059999999,
+          "maximum": 1.1523452070000002
+        },
+        "median_speedup": 0.9111415146459343
+      },
+      "peak_rss_kib": {
+        "baseline": 33212.0,
+        "candidate": 33236.0
+      },
+      "peak_rss_change_percent": 0.07226303745633267
+    },
+    "vacuum": {
+      "cpu_change_percent": -3.918469601304597,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.43040086349999995,
+          "minimum": 0.40811204799999995,
+          "maximum": 0.7620083369999999
+        },
+        "candidate": {
+          "median": 0.4135357365,
+          "minimum": 0.40036515500000003,
+          "maximum": 0.6284357110000001
+        },
+        "median_speedup": 1.0407827559057885
+      },
+      "peak_rss_kib": {
+        "baseline": 33164.0,
+        "candidate": 33166.0
+      },
+      "peak_rss_change_percent": 0.006030635629006298
+    }
+  },
+  "gates": {
+    "fluid_cpu_reduction_at_least_5_percent": false,
+    "no_other_scene_cpu_regression_above_3_percent": false,
+    "no_peak_rss_increase_above_3_percent": true
+  },
+  "production_adopted": false,
+  "whole_game_speedup_established": false,
+  "decision": "Reject: fluid +1.817%, germ-flow +9.563% and mixed-germs +9.752%; scalar/packed correctness does not justify the regressions. Retain all samples including noisy host intervals; do not alter gates or rerun unchanged sources.",
+  "first_failure": "Intrinsic live result words matched but extra invalid MXCSR flag appeared. Opaque DIVPS with neutral upper lanes passes 3030272 word/control-flag observations; first failing source and logs retained.",
+  "raw_report_sha256": "b354159dab322d8515915b5c7aac91b4929e8af8d5eea938f314176634fd783d"
+}

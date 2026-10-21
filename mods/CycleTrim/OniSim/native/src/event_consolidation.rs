@@ -44,17 +44,9 @@ fn mixed_temperature(ma: f32, ta: f32, mb: f32, tb: f32, total: f32) -> f32 {
     // Preserve the native ordered comparisons, including unordered float cases.
     if ta <= tb {
         let upper = if average <= tb { average } else { tb };
-        if ta <= average {
-            upper
-        } else {
-            ta
-        }
+        if ta <= average { upper } else { ta }
     } else if tb <= average {
-        if average <= ta {
-            average
-        } else {
-            ta
-        }
+        if average <= ta { average } else { ta }
     } else {
         tb
     }

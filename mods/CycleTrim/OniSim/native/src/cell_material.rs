@@ -87,6 +87,29 @@ fn reserve<T>(queue: &mut Vec<T>) -> Result<()> {
 }
 
 impl CellMaterialQueue {
+    pub(crate) fn append(&mut self, mut staged: Self) -> Result<()> {
+        if self.len().saturating_add(staged.len()) > MAX_PENDING_COMMANDS {
+            return Err(Error::new(
+                Status::ResourceLimit,
+                "pending material command limit exceeded",
+            ));
+        }
+        macro_rules! reserve_pending {
+            ($($field:ident),*) => { $(self.pending.$field.try_reserve(staged.pending.$field.len())
+                .map_err(|_| Error::new(Status::ResourceLimit, "could not reserve material batch"))?;)* };
+        }
+        reserve_pending!(modifications, digs, consumption, emission);
+        self.pending
+            .modifications
+            .append(&mut staged.pending.modifications);
+        self.pending.digs.append(&mut staged.pending.digs);
+        self.pending
+            .consumption
+            .append(&mut staged.pending.consumption);
+        self.pending.emission.append(&mut staged.pending.emission);
+        Ok(())
+    }
+
     pub(crate) fn is_empty(&self) -> bool {
         self.pending.is_empty()
     }
@@ -95,37 +118,6 @@ impl CellMaterialQueue {
     }
     pub(crate) fn take_pending(&mut self) -> PendingCommands {
         std::mem::take(&mut self.pending)
-    }
-
-    pub(crate) fn reserve_replacements(&mut self, count: usize) -> Result<()> {
-        self.pending.modifications.try_reserve(count).map_err(|_| {
-            Error::new(
-                Status::ResourceLimit,
-                "could not reserve cell replacement queue",
-            )
-        })
-    }
-
-    pub(crate) fn queue_replacement(
-        &mut self,
-        cell: usize,
-        temperature: f32,
-        mass: f32,
-        count: i32,
-        element: u16,
-        disease: u8,
-    ) {
-        self.pending.modifications.push(Modification {
-            cell,
-            callback: -1,
-            temperature,
-            mass,
-            count,
-            element,
-            replace_type: 1,
-            disease,
-            subtype: 1,
-        });
     }
 
     pub(crate) fn queue(

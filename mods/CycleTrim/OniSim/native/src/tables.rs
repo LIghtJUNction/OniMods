@@ -135,7 +135,7 @@ impl ElementTable {
         }
         let records = reader.take(record_bytes)?;
         let mut elements = reserve(count)?;
-        for raw in records.chunks_exact(ELEMENT_BYTES) {
+        for raw in records.as_chunks::<ELEMENT_BYTES>().0 {
             let name = reader.string()?;
             let mut record = [0; ELEMENT_BYTES];
             record.copy_from_slice(raw);

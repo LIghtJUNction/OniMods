@@ -63,12 +63,23 @@ pub(crate) fn disease_table(special_values: bool) -> DiseaseTable {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(&255i32.to_le_bytes());
     bytes.extend_from_slice(&0i32.to_le_bytes());
-    let strengths = [0.0f32, 0.25, 1.0, 4.0, f32::INFINITY, f32::from_bits(0x7fc12345)];
+    let strengths = [
+        0.0f32,
+        0.25,
+        1.0,
+        4.0,
+        f32::INFINITY,
+        f32::from_bits(0x7fc12345),
+    ];
     for index in 0..255 {
         bytes.extend_from_slice(&0i32.to_le_bytes()); // empty name
         let mut header = [0u8; 76];
         header[0..4].copy_from_slice(&(index as i32).to_le_bytes());
-        let strength = if special_values { strengths[index % strengths.len()] } else { 1.0 };
+        let strength = if special_values {
+            strengths[index % strengths.len()]
+        } else {
+            1.0
+        };
         header[4..8].copy_from_slice(&strength.to_le_bytes());
         bytes.extend_from_slice(&header);
     }
@@ -102,8 +113,7 @@ pub(crate) fn random_world(stride: usize, height: usize, rng: &mut Rng) -> Physi
 #[inline]
 pub(crate) fn consume_index(state: u64, index: usize) -> u64 {
     let index = std::hint::black_box(index as u64);
-    (state.rotate_left(9) ^ index.wrapping_mul(0x9e3779b97f4a7c15))
-        .wrapping_add(0xd1b54a32d192ed03)
+    (state.rotate_left(9) ^ index.wrapping_mul(0x9e3779b97f4a7c15)).wrapping_add(0xd1b54a32d192ed03)
 }
 
 pub(crate) fn disease_checksum(cells: &Cells) -> u64 {

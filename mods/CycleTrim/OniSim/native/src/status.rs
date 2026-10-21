@@ -1,6 +1,6 @@
 use std::cell::RefCell;
-use std::ffi::{c_char, CString};
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::ffi::{CString, c_char};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 #[derive(Clone, Copy)]
 #[repr(i32)]
@@ -98,7 +98,7 @@ pub(crate) fn last_status() -> i32 {
     .unwrap_or(Status::InternalFailure as i32)
 }
 pub(crate) fn last_error() -> *const c_char {
-    let unavailable = b"status unavailable\0".as_ptr().cast();
+    let unavailable = c"status unavailable".as_ptr();
     catch_unwind(|| {
         LAST.try_with(|last| {
             last.try_borrow()

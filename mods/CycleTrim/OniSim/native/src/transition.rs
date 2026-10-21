@@ -112,26 +112,26 @@ fn do_state_transition_from_element(
     // counts are removed only when that cell maps to a valid public cell.
     if ore != u16::MAX {
         let ore_mass = world.write.mass[cell] * conversion;
-        if ore_mass > ORE_MASS_EPSILON && ore_mass > 0.0 {
-            if let Some(game_cell) = game_index(world, cell) {
-                let germ_count = cvtt(conversion * world.write.disease_count[cell] as f32);
-                events.spawn_ore(
-                    game_cell,
-                    ore,
-                    world.write.disease_idx[cell],
-                    ore_mass,
-                    shifted_temperature,
-                    germ_count,
-                );
-                world.write.mass[cell] -= ore_mass;
-                world.write.disease_count[cell] =
-                    world.write.disease_count[cell].wrapping_sub(germ_count);
-                if world.write.disease_count[cell] < 1 {
-                    world.write.disease_idx[cell] = u8::MAX;
-                    world.write.disease_count[cell] = 0;
-                    world.write.disease_infestation[cell] = 0;
-                    world.write.disease_growth[cell] = 0.0;
-                }
+        if ore_mass > ORE_MASS_EPSILON
+            && let Some(game_cell) = game_index(world, cell)
+        {
+            let germ_count = cvtt(conversion * world.write.disease_count[cell] as f32);
+            events.spawn_ore(
+                game_cell,
+                ore,
+                world.write.disease_idx[cell],
+                ore_mass,
+                shifted_temperature,
+                germ_count,
+            );
+            world.write.mass[cell] -= ore_mass;
+            world.write.disease_count[cell] =
+                world.write.disease_count[cell].wrapping_sub(germ_count);
+            if world.write.disease_count[cell] < 1 {
+                world.write.disease_idx[cell] = u8::MAX;
+                world.write.disease_count[cell] = 0;
+                world.write.disease_infestation[cell] = 0;
+                world.write.disease_growth[cell] = 0.0;
             }
         }
     }
@@ -158,39 +158,35 @@ fn do_state_transition_from_element(
         // solid transition is emitted as ore and the source cell is cleared
         // only when its cell is active or debug editing is enabled.
         if !(SOLID_MASS_FRACTION < current_mass / target_record.default_mass || current_mass <= 0.0)
+            && let Some(game) = game_cell
+            && (world.simulate_all_active || world.active_mask[game as usize] != 0)
         {
-            if let Some(game) = game_cell {
-                if world.simulate_all_active || world.active_mask[game as usize] != 0 {
-                    events.spawn_ore(
-                        game,
-                        target,
-                        disease,
-                        current_mass,
-                        current_temperature,
-                        disease_count,
-                    );
-                    clear_cell(&mut world.write, world.vacuum_element, cell);
-                }
-            }
+            events.spawn_ore(
+                game,
+                target,
+                disease,
+                current_mass,
+                current_temperature,
+                disease_count,
+            );
+            clear_cell(&mut world.write, world.vacuum_element, cell);
         }
-    } else if !world.falling_disabled {
-        if let (Some(game), Some(below)) = (game_cell, below) {
-            if world.read.properties[below] & 2 == 0
-                && (world.simulate_all_active || world.active_mask[game as usize] != 0)
-                && target_record.low_temperature - PHASE_MARGIN <= current_temperature
-                && current_temperature <= target_record.high_temperature + PHASE_MARGIN
-            {
-                events.spawn_falling_liquid(
-                    game,
-                    target,
-                    disease,
-                    current_mass,
-                    current_temperature,
-                    disease_count,
-                );
-                clear_cell(&mut world.write, world.vacuum_element, cell);
-            }
-        }
+    } else if !world.falling_disabled
+        && let (Some(game), Some(below)) = (game_cell, below)
+        && world.read.properties[below] & 2 == 0
+        && (world.simulate_all_active || world.active_mask[game as usize] != 0)
+        && target_record.low_temperature - PHASE_MARGIN <= current_temperature
+        && current_temperature <= target_record.high_temperature + PHASE_MARGIN
+    {
+        events.spawn_falling_liquid(
+            game,
+            target,
+            disease,
+            current_mass,
+            current_temperature,
+            disease_count,
+        );
+        clear_cell(&mut world.write, world.vacuum_element, cell);
     }
 
     // The native computes the public index after special ejection/clear; an

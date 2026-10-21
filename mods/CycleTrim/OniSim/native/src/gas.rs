@@ -28,10 +28,29 @@ pub(crate) fn update_pressure(
     coefficient: f32,
     b: usize,
 ) -> f32 {
-    let element_b = world.read.element[b];
+    // Preflight already enforces equal CellSOA lengths. Reborrow every field
+    // with one common checked length so LLVM can share index proofs. No
+    // unchecked indexing, temporary cell copies or arithmetic changes.
+    let count = world.read.element.len();
+    assert!(
+        a < count && b < count,
+        "pressure pair is outside cell storage"
+    );
+    let read_element = &world.read.element[..count];
+    let read_mass = &world.read.mass[..count];
+    let read_disease_count = &world.read.disease_count[..count];
+    let write_element = &mut world.write.element[..count];
+    let write_mass = &mut world.write.mass[..count];
+    let write_temperature = &mut world.write.temperature[..count];
+    let write_disease_idx = &mut world.write.disease_idx[..count];
+    let write_disease_count = &mut world.write.disease_count[..count];
+    let write_disease_infestation = &mut world.write.disease_infestation[..count];
+    let write_disease_growth = &mut world.write.disease_growth[..count];
+
+    let element_b = read_element[b];
     let record_b = &tables.elements[element_b as usize].record;
-    let ma = world.read.mass[a];
-    let mb = world.read.mass[b];
+    let ma = read_mass[a];
+    let mb = read_mass[b];
     let coefficient = if phase_a == 1 {
         coefficient
     } else {
@@ -45,11 +64,11 @@ pub(crate) fn update_pressure(
     };
     let amount = smin(amount, old_mass);
     let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
-    let germ_count = cvtt(world.read.disease_count[src] as f32 * fraction);
-    let germ_id = world.write.disease_idx[src];
-    let source_temperature = world.write.temperature[src];
-    let dest_temperature = world.write.temperature[dst];
-    let dest_mass = world.write.mass[dst];
+    let germ_count = cvtt(read_disease_count[src] as f32 * fraction);
+    let germ_id = write_disease_idx[src];
+    let source_temperature = write_temperature[src];
+    let dest_temperature = write_temperature[dst];
+    let dest_mass = write_mass[dst];
     let combined_mass = dest_mass + amount;
     let temperature = if combined_mass <= 0.0 {
         0.0
@@ -67,22 +86,36 @@ pub(crate) fn update_pressure(
             dest_temperature
         }
     };
-    world.write.mass[dst] = combined_mass;
-    world.write.temperature[dst] = temperature;
-    add_disease(&mut world.write, diseases, dst, germ_id, germ_count);
-    world.write.mass[src] = smax(world.write.mass[src] - amount, 0.0);
-    let remaining = world.write.disease_count[src].wrapping_sub(germ_count);
-    world.write.disease_count[src] = remaining;
+    write_mass[dst] = combined_mass;
+    write_temperature[dst] = temperature;
+    crate::fluid_helpers::add_disease_fields(
+        diseases,
+        &mut write_disease_idx[dst],
+        &mut write_disease_count[dst],
+        &mut write_disease_infestation[dst],
+        &mut write_disease_growth[dst],
+        germ_id,
+        germ_count,
+    );
+    write_mass[src] = smax(write_mass[src] - amount, 0.0);
+    let remaining = write_disease_count[src].wrapping_sub(germ_count);
+    write_disease_count[src] = remaining;
     if remaining <= 0 {
-        clear_disease(&mut world.write, src);
+        write_disease_idx[src] = 255;
+        write_disease_count[src] = 0;
+        write_disease_infestation[src] = 0;
+        write_disease_growth[src] = 0.0;
     }
     if dest_phase == 0 {
         if dest_element == world.sink_element {
-            world.write.mass[dst] = 0.0;
-            world.write.temperature[dst] = 0.0;
-            clear_disease(&mut world.write, dst);
+            write_mass[dst] = 0.0;
+            write_temperature[dst] = 0.0;
+            write_disease_idx[dst] = 255;
+            write_disease_count[dst] = 0;
+            write_disease_infestation[dst] = 0;
+            write_disease_growth[dst] = 0.0;
         } else {
-            world.write.element[dst] = source_element;
+            write_element[dst] = source_element;
             notify(world, events, dst);
         }
     }

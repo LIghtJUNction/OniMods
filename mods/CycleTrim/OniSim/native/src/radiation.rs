@@ -108,6 +108,22 @@ fn decode(shape: &WorldShape, payload: &[u8], at: usize) -> Result<RadiationEmit
 }
 
 impl RadiationEmitters {
+    pub(crate) fn append_pending(&mut self, mut staged: Self) -> Result<()> {
+        macro_rules! append_fields {
+            ($($field:ident),*) => {
+                let current = 0 $(+ self.pending.$field.len())*;
+                let added = 0 $(+ staged.pending.$field.len())*;
+                if current.saturating_add(added) > crate::frames::MAX_PENDING_COMMANDS {
+                    return Err(Error::new(Status::ResourceLimit, "radiation command queue is full"));
+                }
+                $(self.pending.$field.try_reserve(staged.pending.$field.len()).map_err(allocation)?;)*
+                $(self.pending.$field.append(&mut staged.pending.$field);)*
+            };
+        }
+        append_fields!(add, modify, remove, cell, params);
+        Ok(())
+    }
+
     pub(crate) fn take_engine_state(&mut self) -> Self {
         let pending = std::mem::take(&mut self.pending);
         let mut components = std::mem::take(self);
@@ -288,12 +304,12 @@ impl RadiationEmitters {
             data.elapsed += dt;
             let radius = u32::from(data.radius_x.max(data.radius_y));
             let increment = data.speed / radius as f32;
-            let steps;
+
             // COMISS/JNE also takes the zero-period branch for an unordered rate.
-            if data.rate == 0.0 || data.rate.is_nan() {
+            let steps = if data.rate == 0.0 || data.rate.is_nan() {
                 data.elapsed = 0.0;
                 data.iteration = 0;
-                steps = 1;
+                1
             } else {
                 if data.rate <= data.elapsed {
                     data.elapsed = 0.0;
@@ -301,12 +317,12 @@ impl RadiationEmitters {
                 } else if data.speed < data.elapsed {
                     continue;
                 }
-                steps = if dt / increment <= 1.0 && !(increment > data.accumulated) {
+                if dt / increment <= 1.0 && !(increment > data.accumulated) {
                     1
                 } else {
                     cvtt_f32_i32(dt / increment)
-                };
-            }
+                }
+            };
             for _ in 0..steps.max(0) {
                 match data.kind {
                     0 => ellipse(world, elements, region, data)?,

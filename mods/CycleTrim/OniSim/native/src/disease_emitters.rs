@@ -1,9 +1,68 @@
-//! DiseaseEmitter's official timer and breadth-first area emission behavior.
+//! DiseaseEmitter timers and the Lean-proved clipped diamond traversal.
 
+use crate::float_env::FloatEnv;
 use crate::fluid_helpers::add_disease;
+use crate::fluid_helpers::add_disease_fields;
 use crate::status::Result;
 use crate::tables::DiseaseTable;
 use crate::world::{PhysicsWorld, Region};
+use rayon::prelude::*;
+
+fn emit(
+    world: &mut PhysicsWorld,
+    diseases: &DiseaseTable,
+    x: i32,
+    y: i32,
+    emitter: &DiseaseEmitterData,
+) {
+    let rows = crate::diamond::rows(world.stride, world.padded_height, x, y, emitter.max_depth);
+    let work = rows.clone().map(|span| span.len()).sum();
+    if let Some(pool) = crate::parallel::pool(work) {
+        let stride = world.stride;
+        let bounds = rows.y_bounds();
+        let extent = bounds.start * stride..bounds.end * stride;
+        let cells = &mut world.write;
+        let environment = FloatEnv::capture();
+        pool.install(|| {
+            cells.disease_idx[extent.clone()]
+                .par_chunks_mut(stride)
+                .zip(cells.disease_count[extent.clone()].par_chunks_mut(stride))
+                .zip(cells.disease_infestation[extent.clone()].par_chunks_mut(stride))
+                .zip(cells.disease_growth[extent].par_chunks_mut(stride))
+                .enumerate()
+                .for_each(|(row, (((ids, counts), infestation), growth))| {
+                    let _environment = environment.install();
+                    let y = bounds.start + row;
+                    let span = rows.span(y);
+                    for local in span.start - y * stride..span.end - y * stride {
+                        if emitter.emit_count >= 0 || ids[local] == emitter.disease_idx {
+                            add_disease_fields(
+                                diseases,
+                                &mut ids[local],
+                                &mut counts[local],
+                                &mut infestation[local],
+                                &mut growth[local],
+                                emitter.disease_idx,
+                                emitter.emit_count,
+                            );
+                        }
+                    }
+                });
+        });
+    } else {
+        for cell in rows.flatten() {
+            if emitter.emit_count >= 0 || world.write.disease_idx[cell] == emitter.disease_idx {
+                add_disease(
+                    &mut world.write,
+                    diseases,
+                    cell,
+                    emitter.disease_idx,
+                    emitter.emit_count,
+                );
+            }
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub(crate) struct DiseaseEmitterData {
@@ -69,18 +128,7 @@ pub(crate) fn update(
             continue;
         }
         if emitter.elapsed >= emitter.emit_interval {
-            let cells = reachable_cells(world, x, y, emitter.max_depth);
-            for cell in cells {
-                if emitter.emit_count >= 0 || world.write.disease_idx[cell] == emitter.disease_idx {
-                    add_disease(
-                        &mut world.write,
-                        diseases,
-                        cell,
-                        emitter.disease_idx,
-                        emitter.emit_count,
-                    );
-                }
-            }
+            emit(world, diseases, x, y, emitter);
             // At most one emission per update, including zero-duration periods.
             emitter.elapsed -= emitter.emit_interval;
         }

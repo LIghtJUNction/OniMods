@@ -34,6 +34,7 @@ payload containing consecutive 28-byte region records.
 | --- | --- |
 | ONISIM_GetAbiVersion | u32, currently 1 |
 | ONISIM_TryInitialize | Exclusive acquisition; same callback shape as SIM_Initialize, result in status |
+| ONISIM_IsReady | 1 ready, 0 running, -1 failure; does not consume data or release a batch |
 | ONISIM_GetLastStatus | Thread-local i32 status |
 | ONISIM_GetLastError | Borrowed null-terminated UTF-8 error string |
 | ONISIM_GetGeneration | u64 lifecycle revision |
@@ -45,6 +46,24 @@ Statuses: 0 success, 1 invalid argument, 2 unsupported, 3 invalid lifecycle,
 4 resource limit, 5 internal failure, 6 buffer too small. Check status immediately
 after an operation. LastStatus/LastError preserve it; other successful exports
 clear it. An error string lasts until the next operation on that thread.
+
+Official message, save and conduit exports also report their first returned error through
+the registered managed diagnostic callback, after releasing native locks.
+On the pinned profile, id 1 means a fatal `Sim.DLLReportMessageMessage`: pack=4,
+28 bytes, callstack pointer at 0, message pointer at 8, file pointer at 16 and
+line i32 at 24. Strings live through the synchronous callback. This is the
+game's crash report path, not an informational logging channel. Diagnostics do
+not turn unsupported operations into success or replace status inspection by
+extension callers.
+
+`SIM_DebugCrash` is an explicit diagnostic assertion: it raises SIGINT and, if
+the signal handler returns, invokes fatal id 1 with `Assert failed: false`, file
+`SimBindings.cpp`, line 434, matching the pinned profile. It is tested only in
+isolated children with an explicit signal handler, never in colony acceptance.
+It is separate from the once-per-session reporting of normal simulation errors.
+On this Linux profile `SYSINFO_Acquire` returns null (the original provider is
+absent), and repeated `SYSINFO_Release` calls are no-ops. No placeholder JSON or
+system-information string is returned.
 
 Rust panics are contained at the foreign boundary. Invalid foreign addresses and
 process-level allocation failure are not made safe by catching a Rust panic.
@@ -78,6 +97,10 @@ Prepare returns a completed batch; it is not a request to simulate that batch ag
 The authoritative static catalogue is [OFFICIAL-MESSAGES.md](OFFICIAL-MESSAGES.md):
 62 ids, payload sizes, pointer-bearing fields, output records and startup chains.
 The runtime capability list describes implemented paths, not tested conformance.
+The three `ignoredMessages` are enum-only IDs absent from the pinned native
+dispatchers: SetVisibleCells, ToggleProfiler and RadiationSickness. They return
+null without consuming the payload, matching the reference. Prepare supplies
+visibility instead. Other unsupported IDs remain errors.
 Implementation and integration are still in progress. An unsupported operation
 must report an error rather than silently acknowledge simulated progress.
 
@@ -86,6 +109,12 @@ wire semantics. This avoids a second managed whitelist rejecting newly implement
 ids. Heterogeneous managed batches execute sequentially and have no rollback
 promise; a later failure reports how many earlier calls completed. Do not infer
 atomicity from the shape of a batch API.
+
+Homogeneous native Load batches parse all images before writing and commit in
+record order. Prepare batches validate/copy all visibility records, then cross
+the worker barrier once per record and return the last descriptor. These barriers
+wait without holding the global FFI state lock. Prepare rejects an active save
+lease or faulted session, as other messages do.
 
 Initialization images have a 14-byte header: width/height i32, seed u32,
 radiation/headless bool8. They contain separate arrays of N Cell records (16 B),
@@ -119,6 +148,16 @@ Full field and event layouts live in the catalogue and C header. Events are
 coherent with their batch grid and component outputs. The property textures are
 CPU buffers consumed by the game's texture upload, not guessed graphics handles.
 The conduit output separately uses three Pack=4 count/pointer pairs, 36 bytes.
+Conduit Add/Set reject a contents temperature above 10000 K before mutation and
+report fatal id 1; this is required because managed Set ignores its return value.
+The pinned original reports an assert and then resets invalid contents; continued
+state after a fatal report is deliberately not claimed equivalent.
+
+Emitted-mass slots belong to the mass-component manager. Publication copies the
+retained slots, then clears element/mass/temperature while preserving disease
+fields and retired slots. Recreating a transient empty event list each frame
+would change the public component output. EndSave is an idempotent release,
+including before BeginSave and after Shutdown.
 
 CopyGridImage returns the required size for null destination or zero capacity.
 Negative capacity fails. An undersized nonempty destination is not written.
@@ -126,7 +165,9 @@ Snapshot does not advance physics; whole-grid copying is an explicit operation.
 
 ## Evidence boundary
 
-Current work is static inspection and compilation under the user's instruction
-to finish development before testing. No current behavior, speedup, game launch,
-Mod acceptance or deployed library is claimed. Earlier build and OSB1 demo
-receipts are historical and do not validate the changing source tree.
+The exact native fixtures, library hashes and test scope are recorded in
+[conformance/README.md](conformance/README.md). Steam-launched game runs are
+separate evidence in [RUNTIME-VALIDATION.md](RUNTIME-VALIDATION.md), bound to the
+native and managed binaries actually loaded. Old build/OSB1 receipts do not
+validate the changing source tree. Full compatibility and game performance
+remain unverified; gameReady and runtimeValidated stay false.

@@ -1,7 +1,9 @@
 //! Serial form of SimBase::UpdateData (official ELF 0x69730).
 //!
 //! Every copy below is the complete active CellSOA -> old CellSOA copy in the
-//! original. In particular there is no copy between disease diffusion,
+//! original. Post-fluid copies are omitted only when the phase reached no
+//! CellSOA-mutating path and read/write still contain the same words.
+//! In particular there is no copy between disease diffusion,
 //! components, and postprocessing, nor at the end of a region.
 
 use crate::events::EventQueues;
@@ -48,30 +50,34 @@ fn validate_cells(
     if lengths.iter().any(|&length| length != count) {
         return Err(invalid("physics CellSOA arrays have different lengths"));
     }
-    if cells
-        .element
-        .iter()
-        .any(|&element| element as usize >= elements.len())
-    {
+    if !crate::id_validation::valid_u16::<false>(&cells.element, elements.len()) {
         return Err(invalid("physics cell references an absent element"));
     }
-    if cells
-        .disease_idx
-        .iter()
-        .any(|&disease| disease != u8::MAX && disease as usize >= diseases.len())
-    {
+    if !crate::id_validation::valid_u8(&cells.disease_idx, diseases.len()) {
         return Err(invalid("physics cell references an absent disease"));
     }
     Ok(())
 }
 
+#[cfg(test)]
+thread_local! {
+    static PREFLIGHT_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) fn take_preflight_calls() -> usize {
+    PREFLIGHT_CALLS.with(|calls| calls.replace(0))
+}
+
 /// Pure storage/table validation; it never advances RNG, cells, or components.
-pub(crate) fn preflight(
+fn preflight(
     world: &PhysicsWorld,
     elements: &ElementTable,
     diseases: Option<&DiseaseTable>,
     dt: f32,
 ) -> Result<()> {
+    #[cfg(test)]
+    PREFLIGHT_CALLS.with(|calls| calls.set(calls.get() + 1));
     if !dt.is_finite() || dt <= 0.0 {
         return Err(Error::new(
             Status::InvalidArgument,
@@ -113,10 +119,7 @@ pub(crate) fn preflight(
     .iter()
     .any(|&length| length != count)
         || world.active_mask.len() != world.width * world.height
-        || world
-            .backwall_element
-            .iter()
-            .any(|&element| element as usize >= elements.len())
+        || !crate::id_validation::valid_u16::<true>(&world.backwall_element, elements.len())
         || world
             .inactive_mask
             .as_ref()
@@ -157,51 +160,80 @@ pub(crate) fn preflight(
     Ok(())
 }
 
-/// One fixed 0.2 second native update. The frame manager owns delta subdivision
-/// and clearing the flow arrays once before processing its queued frames.
-pub(crate) fn step(
-    world: &mut PhysicsWorld,
-    elements: &ElementTable,
-    diseases: &DiseaseTable,
-    events: &mut EventQueues,
-    systems: &mut StepSystems<'_>,
-) -> Result<()> {
-    preflight(world, elements, Some(diseases), FIXED_DT)?;
-    world.scan_direction = -world.scan_direction;
-    world.sync_read_from_write();
-    for index in 0..world.regions.len() {
-        let region = world.regions[index];
-        let mut temperature_events = EventQueues::default();
-        temperature_phase(world, elements, &mut temperature_events, region);
-        world.sync_read_from_write();
-        gas_phase(world, elements, diseases, events, region);
-        world.sync_read_from_write();
-        // Gas events are already in the main queue. Temperature task events
-        // join after them, at ConsolidateEvents, rather than at task execution.
-        consolidate_events(events, &mut temperature_events);
-        liquid_phase(world, elements, diseases, events, region);
-        // UpdateData skips this barrier only for an empty-width region.
-        if region.min_x != region.max_x {
-            world.sync_read_from_write();
-        }
-        disease_diffusion(world, elements, diseases, events, region)?;
-        if world.radiation_enabled {
-            crate::radiation::update_region(world, elements, diseases, region)?;
-        }
-        update_components(world, elements, diseases, events, systems, &region)?;
-        let bounds = postprocess_bounds(world, region);
-        decay_inactive(world, elements, bounds);
-        for y in bounds.2..bounds.3 {
-            for x in bounds.0..bounds.1 {
-                crate::postprocess::cell(world, elements, diseases, events, y * world.stride + x)?;
-            }
-        }
-        crate::disease::post_process_bounds(
-            world, diseases, bounds.0, bounds.1, bounds.2, bounds.3,
-        )?;
+/// A successful preflight borrows the exact state until one fixed step runs.
+/// The private, non-cloneable token is consumed by run; subsequent substeps
+/// must validate their newly mutated world again.
+pub(crate) struct PreparedStep<'a> {
+    world: &'a mut PhysicsWorld,
+    elements: &'a ElementTable,
+    diseases: &'a DiseaseTable,
+}
+
+impl<'a> PreparedStep<'a> {
+    pub(crate) fn new(
+        world: &'a mut PhysicsWorld,
+        elements: &'a ElementTable,
+        diseases: &'a DiseaseTable,
+        elapsed: f32,
+    ) -> Result<Self> {
+        preflight(world, elements, Some(diseases), elapsed)?;
+        Ok(Self {
+            world,
+            elements,
+            diseases,
+        })
     }
-    world.tick_seed = world.tick_seed.wrapping_add(1);
-    Ok(())
+
+    pub(crate) fn run(self, events: &mut EventQueues, systems: &mut StepSystems<'_>) -> Result<()> {
+        let Self {
+            world,
+            elements,
+            diseases,
+        } = self;
+        world.scan_direction = -world.scan_direction;
+        world.sync_read_from_write();
+        for index in 0..world.regions.len() {
+            let region = world.regions[index];
+            let mut temperature_events = EventQueues::default();
+            temperature_phase(world, elements, &mut temperature_events, region);
+            world.sync_read_from_write();
+            if gas_phase(world, elements, diseases, events, region) {
+                world.sync_read_from_write();
+            }
+            // Gas events are already in the main queue. Temperature task events
+            // join after them, at ConsolidateEvents, rather than at task execution.
+            consolidate_events(events, &mut temperature_events);
+            // read and write Cells are equal at phase entry. If no cell-mutating
+            // helper was reached, copying those same bytes again is redundant.
+            // Flow/event work still executes in its original order.
+            if liquid_phase(world, elements, diseases, events, region) {
+                world.sync_read_from_write();
+            }
+            disease_diffusion(world, elements, diseases, events, region)?;
+            if world.radiation_enabled {
+                crate::radiation::update_region(world, elements, diseases, region)?;
+            }
+            update_components(world, elements, diseases, events, systems, &region)?;
+            let bounds = postprocess_bounds(world, region);
+            decay_inactive(world, elements, bounds);
+            for y in bounds.2..bounds.3 {
+                for x in bounds.0..bounds.1 {
+                    crate::postprocess::cell(
+                        world,
+                        elements,
+                        diseases,
+                        events,
+                        y * world.stride + x,
+                    )?;
+                }
+            }
+            crate::disease::post_process_bounds(
+                world, diseases, bounds.0, bounds.1, bounds.2, bounds.3,
+            )?;
+        }
+        world.tick_seed = world.tick_seed.wrapping_add(1);
+        Ok(())
+    }
 }
 
 fn consolidate_events(events: &mut EventQueues, task: &mut EventQueues) {
@@ -277,7 +309,13 @@ fn update_components(
     Ok(())
 }
 
-fn temperature_pair(world: &mut PhysicsWorld, elements: &ElementTable, a: usize, b: usize) {
+fn temperature_pair(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    cache: &mut crate::thermal::ThermalContactCache<'_>,
+    a: usize,
+    b: usize,
+) {
     let difference = f32::from_bits(
         (world.read.temperature[a] - world.read.temperature[b]).to_bits() & 0x7fff_ffff,
     );
@@ -288,7 +326,7 @@ fn temperature_pair(world: &mut PhysicsWorld, elements: &ElementTable, a: usize,
         && second.thermal_conductivity > 0.0
         && (first.state | second.state) & 0x10 == 0
     {
-        crate::thermal::update_temperature(world, elements, a, b);
+        crate::thermal::update_temperature(world, cache, a, b);
     }
 }
 
@@ -300,6 +338,7 @@ fn temperature_phase(
 ) {
     // A single serial SimUpdateTemperatureTask: row-major exchange, then a
     // separate row-major transition pass. All exchange reads remain old cells.
+    let mut cache = crate::thermal::ThermalContactCache::new(elements);
     for y in region.min_y..region.max_y {
         for x in region.min_x..region.max_x {
             let cell = y as usize * world.stride + x as usize;
@@ -307,10 +346,10 @@ fn temperature_phase(
                 crate::thermal::update_backwall_temperature(world, elements, events, cell);
             }
             if x < region.max_x - 1 {
-                temperature_pair(world, elements, cell, cell + 1);
+                temperature_pair(world, elements, &mut cache, cell, cell + 1);
             }
             if y < region.max_y - 1 {
-                temperature_pair(world, elements, cell, cell + world.stride);
+                temperature_pair(world, elements, &mut cache, cell, cell + world.stride);
             }
         }
     }

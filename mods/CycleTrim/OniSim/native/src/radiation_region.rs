@@ -94,11 +94,7 @@ pub(crate) fn update_region(
             };
             let transmitted = (1.0 - attenuation(world, elements, cell)?) * incoming;
             world.radiation_transmission[cell] = if 0.01 <= transmitted {
-                if transmitted <= 0.0 {
-                    0.0
-                } else {
-                    transmitted
-                }
+                if transmitted <= 0.0 { 0.0 } else { transmitted }
             } else {
                 0.0
             };

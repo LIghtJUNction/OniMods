@@ -1,14 +1,20 @@
 //! Cell disease diffusion and growth from the official native implementation.
 
 use crate::events::{DiseaseConsumptionCallback, Events};
+use crate::float_env::FloatEnv;
 use crate::fluid_helpers::{add_disease, clear_disease, phase};
 use crate::numeric::cvtt_f32_i32;
 use crate::status::{Error, Result, Status};
 use crate::tables::{DiseaseTable, ElementTable, RangeInfo};
 use crate::world::{PhysicsWorld, Region};
+use rayon::prelude::*;
 
 const DIFFUSION_FRACTION: f32 = 0.125;
 const DISEASE_STEP: f32 = 0.2;
+
+#[cfg(test)]
+#[path = "disease_tests.rs"]
+mod tests;
 
 fn range_values(range: &RangeInfo) -> [f32; 4] {
     [
@@ -153,6 +159,47 @@ pub(crate) fn update_cells(
     Ok(())
 }
 
+fn grow_cell(
+    diseases: &DiseaseTable,
+    id: u8,
+    count: i32,
+    growth: &mut f32,
+    element: u16,
+    temperature: f32,
+    mass: f32,
+    radiation: f32,
+    radiation_enabled: bool,
+) -> i32 {
+    let disease = &diseases.diseases[id as usize];
+    let element = &disease.elements[element as usize];
+    let count_float = count as f32;
+    let temperature_half_life = calculate_range_half_life(
+        temperature,
+        &disease.temperature_range,
+        &disease.temperature_half_lives,
+    );
+    let temperature_growth = half_life_to_growth_rate(temperature_half_life);
+    let mut change = (*growth - count_float) + temperature_growth * count_float;
+    let min_count = element.min_count_per_kg * mass;
+    let max_count = mass * element.max_count_per_kg;
+    if !(max_count >= count_float) || !(count_float >= min_count) {
+        if min_count > count_float {
+            change -= DISEASE_STEP * element.under_population_death_rate;
+        } else {
+            change +=
+                (half_life_to_growth_rate(element.over_population_half_life) - 1.0) * count_float;
+        }
+    } else {
+        change += (half_life_to_growth_rate(element.population_half_life) - 1.0) * count_float;
+    }
+    if radiation_enabled {
+        change -= radiation * disease.radiation_kill_rate;
+    }
+    let whole = cvtt_f32_i32(change);
+    *growth = change - whole as f32;
+    count.wrapping_add(whole)
+}
+
 // ELF 0x34980: growth uses the active write buffer, then a separate cleanup pass.
 // Bounds are half open and already include the world's one-cell padding.
 pub(crate) fn post_process_bounds(
@@ -163,61 +210,122 @@ pub(crate) fn post_process_bounds(
     min_y: usize,
     max_y: usize,
 ) -> Result<()> {
-    if max_x > world.stride || max_y > world.padded_height || min_x > max_x || min_y > max_y {
+    post_process_cells(
+        &mut world.write,
+        diseases,
+        world.stride,
+        world.padded_height,
+        world.radiation_enabled,
+        (min_x, max_x, min_y, max_y),
+        crate::parallel::pool(
+            max_x
+                .saturating_sub(min_x)
+                .saturating_mul(max_y.saturating_sub(min_y)),
+        ),
+    )
+}
+
+fn post_process_cells(
+    cells: &mut crate::world::Cells,
+    diseases: &DiseaseTable,
+    stride: usize,
+    padded_height: usize,
+    radiation_enabled: bool,
+    (min_x, max_x, min_y, max_y): (usize, usize, usize, usize),
+    pool: Option<&rayon::ThreadPool>,
+) -> Result<()> {
+    if max_x > stride || max_y > padded_height || min_x > max_x || min_y > max_y {
         return Err(Error::new(
             Status::InvalidArgument,
             "disease region is out of range",
         ));
     }
+    if min_x == max_x || min_y == max_y {
+        return Ok(());
+    }
+    if let Some(pool) = pool {
+        // Size tasks by visited cells, preserving full rows for exclusive ownership.
+        // A narrow rectangle must not scan the rest of the world's columns.
+        let rows_per_chunk = crate::parallel::CHUNK_CELLS
+            .div_ceil(max_x - min_x)
+            .min(max_y - min_y);
+        let chunk_cells = stride * rows_per_chunk;
+        let extent = min_y * stride..max_y * stride;
+        let element = &cells.element;
+        let temperature = &cells.temperature;
+        let mass = &cells.mass;
+        let radiation = &cells.radiation;
+        let environment = FloatEnv::capture();
+        pool.install(|| {
+            cells.disease_idx[extent.clone()]
+                .par_chunks_mut(chunk_cells)
+                .zip(cells.disease_count[extent.clone()].par_chunks_mut(chunk_cells))
+                .zip(cells.disease_infestation[extent.clone()].par_chunks_mut(chunk_cells))
+                .zip(cells.disease_growth[extent.clone()].par_chunks_mut(chunk_cells))
+                .enumerate()
+                .for_each(|(chunk, (((ids, counts), infestation), growth))| {
+                    let _environment = environment.install();
+                    let offset = extent.start + chunk * chunk_cells;
+                    for row in (0..ids.len()).step_by(stride) {
+                        for local in row + min_x..row + max_x {
+                            let cell = offset + local;
+                            if ids[local] != u8::MAX {
+                                counts[local] = grow_cell(
+                                    diseases,
+                                    ids[local],
+                                    counts[local],
+                                    &mut growth[local],
+                                    element[cell],
+                                    temperature[cell],
+                                    mass[cell],
+                                    radiation[cell],
+                                    radiation_enabled,
+                                );
+                            }
+                            // Each cell reads only itself: cleanup can follow its growth
+                            // immediately without changing the original two-pass result.
+                            if counts[local] < 1 {
+                                ids[local] = u8::MAX;
+                                counts[local] = 0;
+                                infestation[local] = 0;
+                                growth[local] = 0.0;
+                            }
+                            infestation[local] = (infestation[local] as u16 + 1).min(254) as u8;
+                        }
+                    }
+                });
+        });
+        return Ok(());
+    }
     for y in min_y..max_y {
         for x in min_x..max_x {
-            let cell = y * world.stride + x;
-            let id = world.write.disease_idx[cell];
+            let cell = y * stride + x;
+            let id = cells.disease_idx[cell];
             if id == u8::MAX {
                 continue;
             }
-            let disease = &diseases.diseases[id as usize];
-            let element = &disease.elements[world.write.element[cell] as usize];
-            let count = world.write.disease_count[cell];
-            let count_float = count as f32;
-            let temperature_half_life = calculate_range_half_life(
-                world.write.temperature[cell],
-                &disease.temperature_range,
-                &disease.temperature_half_lives,
+            cells.disease_count[cell] = grow_cell(
+                diseases,
+                id,
+                cells.disease_count[cell],
+                &mut cells.disease_growth[cell],
+                cells.element[cell],
+                cells.temperature[cell],
+                cells.mass[cell],
+                cells.radiation[cell],
+                radiation_enabled,
             );
-            let temperature_growth = half_life_to_growth_rate(temperature_half_life);
-            let mut change =
-                (world.write.disease_growth[cell] - count_float) + temperature_growth * count_float;
-            let min_count = element.min_count_per_kg * world.write.mass[cell];
-            let max_count = world.write.mass[cell] * element.max_count_per_kg;
-            if !(max_count >= count_float) || !(count_float >= min_count) {
-                if min_count > count_float {
-                    change -= DISEASE_STEP * element.under_population_death_rate;
-                } else {
-                    change += (half_life_to_growth_rate(element.over_population_half_life) - 1.0)
-                        * count_float;
-                }
-            } else {
-                change +=
-                    (half_life_to_growth_rate(element.population_half_life) - 1.0) * count_float;
-            }
-            if world.radiation_enabled {
-                change -= world.write.radiation[cell] * disease.radiation_kill_rate;
-            }
-            let whole = cvtt_f32_i32(change);
-            world.write.disease_growth[cell] = change - whole as f32;
-            world.write.disease_count[cell] = count.wrapping_add(whole);
         }
     }
     for y in min_y..max_y {
         for x in min_x..max_x {
-            let cell = y * world.stride + x;
-            if world.write.disease_count[cell] < 1 {
-                clear_disease(&mut world.write, cell);
+            let cell = y * stride + x;
+            if cells.disease_count[cell] < 1 {
+                clear_disease(cells, cell);
             }
             // Even a cleared cell advances from zero to one in this pass.
-            world.write.disease_infestation[cell] =
-                (world.write.disease_infestation[cell] as u16 + 1).min(254) as u8;
+            cells.disease_infestation[cell] =
+                (cells.disease_infestation[cell] as u16 + 1).min(254) as u8;
         }
     }
     Ok(())

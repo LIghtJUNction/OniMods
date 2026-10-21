@@ -1,3 +1,4 @@
+pub(crate) use crate::disease_fields::add_disease_fields;
 use crate::events::EventQueues;
 use crate::tables::{DiseaseTable, ElementTable};
 use crate::world::{Cells, PhysicsWorld};
@@ -63,6 +64,7 @@ pub(crate) fn calculate_disease(
     }
 }
 
+#[inline(always)]
 pub(crate) fn add_disease(
     cells: &mut Cells,
     tables: &DiseaseTable,
@@ -70,15 +72,15 @@ pub(crate) fn add_disease(
     disease: u8,
     count: i32,
 ) {
-    let old_id = cells.disease_idx[cell];
-    let (id, count) = calculate_disease(tables, old_id, cells.disease_count[cell], disease, count);
-    cells.disease_idx[cell] = id;
-    cells.disease_count[cell] = count;
-    if count <= 0 {
-        clear_disease(cells, cell);
-    } else if id != old_id {
-        cells.disease_infestation[cell] = 0;
-    }
+    add_disease_fields(
+        tables,
+        &mut cells.disease_idx[cell],
+        &mut cells.disease_count[cell],
+        &mut cells.disease_infestation[cell],
+        &mut cells.disease_growth[cell],
+        disease,
+        count,
+    );
 }
 
 pub(crate) fn add_mass_and_update_temperature(

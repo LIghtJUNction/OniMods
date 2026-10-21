@@ -90,6 +90,8 @@
     <RemoveDir Directories="$(DistModPath)" />
     <Delete Files="$(ZipFile)" />
     <Delete Files="$(DistPath)$(AssemblyName)-src.tar.gz" />
+    <Delete Files="$(DistPath)delivery-validation.json" />
+    <Delete Files="$(DistPath)source-build-validation.json" />
 
     <ItemGroup>
       <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
@@ -99,14 +101,25 @@
       <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />
       <ModOutputFiles Include="$(OutputPath)preview.jpg" Condition="Exists('$(OutputPath)preview.jpg')" />
       <ModOutputFiles Include="$(OutputPath)README.md" />
+      <ModOutputFiles Include="$(MSBuildProjectDirectory)/../../LICENSE;$(MSBuildProjectDirectory)/../../LICENSE.MIT;$(MSBuildProjectDirectory)/../../LICENSING.md;$(MSBuildProjectDirectory)/../../UPSTREAM.toml" />
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-zh.md" Condition="Exists('$(OutputPath)docs/steam-description-zh.md')" />
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
     <MakeDir Directories="$(DistModPath)OniSim" Condition="Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
     <Copy SourceFiles="$(OutputPath)OniSim/liboni_sim_core.so" DestinationFiles="$(DistModPath)OniSim/liboni_sim_core.so" Condition="Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
+    <ItemGroup>
+      <OniSimValidation Include="$(MSBuildProjectDirectory)/OniSim/PARALLEL-VALIDATION.md;$(MSBuildProjectDirectory)/OniSim/RUNTIME-VALIDATION.md;$(MSBuildProjectDirectory)/OniSim/PROGRESS.md;$(MSBuildProjectDirectory)/OniSim/PERFORMANCE.md" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OniSimValidation)" DestinationFolder="$(DistModPath)OniSim" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
+    <MakeDir Directories="$(DistModPath)OniSim/conformance/results" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/OniSim/conformance/README.md" DestinationFolder="$(DistModPath)OniSim/conformance" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
+    <ItemGroup>
+      <OniSimConformanceReceipts Include="$(MSBuildProjectDirectory)/OniSim/conformance/results/*.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OniSimConformanceReceipts)" DestinationFolder="$(DistModPath)OniSim/conformance/results" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist --exclude=history ." />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/CycleTrim LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml" />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
@@ -118,7 +131,7 @@
       <OniSimCargoManifest>$(MSBuildProjectDirectory)/OniSim/native/Cargo.toml</OniSimCargoManifest>
       <OniSimCargoTargetDir>$(MSBuildProjectDirectory)/obj/$(Configuration)/OniSimNative</OniSimCargoTargetDir>
     </PropertyGroup>
-    <Exec Command="cargo build --locked --release --manifest-path &quot;$(OniSimCargoManifest)&quot; --target-dir &quot;$(OniSimCargoTargetDir)&quot;" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/OniSim" EnvironmentVariables="RUSTC_WRAPPER=;RUSTC_WORKSPACE_WRAPPER=" Command="cargo build --locked --release --manifest-path &quot;$(OniSimCargoManifest)&quot; --target-dir &quot;$(OniSimCargoTargetDir)&quot;" />
     <MakeDir Directories="$(OutputPath)OniSim" />
     <Copy SourceFiles="$(OniSimCargoTargetDir)/release/liboni_sim_core.so" DestinationFiles="$(OutputPath)OniSim/liboni_sim_core.so" />
   </Target>

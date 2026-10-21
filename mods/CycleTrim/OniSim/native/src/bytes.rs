@@ -52,7 +52,8 @@ pub(crate) unsafe fn input<'a>(ptr: *const u8, length: usize) -> Result<&'a [u8]
             "message pointer is null or address range overflows",
         ));
     }
-    Ok(std::slice::from_raw_parts(ptr, length))
+    // SAFETY: the caller guarantees a live, readable allocation for this range.
+    Ok(unsafe { std::slice::from_raw_parts(ptr, length) })
 }
 
 pub(crate) fn overlaps(a: usize, length: usize, b: usize, other_length: usize) -> bool {

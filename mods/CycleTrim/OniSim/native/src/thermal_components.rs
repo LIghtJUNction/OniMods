@@ -194,6 +194,22 @@ impl ThermalComponents {
         Ok(())
     }
 
+    pub(crate) fn append_pending(&mut self, mut staged: Self) -> Result<()> {
+        if self.pending.len().saturating_add(staged.pending.len())
+            > crate::frames::MAX_PENDING_COMMANDS
+        {
+            return Err(Error::new(
+                Status::ResourceLimit,
+                "thermal component message queue is full",
+            ));
+        }
+        self.pending
+            .try_reserve(staged.pending.len())
+            .map_err(|_| allocation())?;
+        self.pending.append(&mut staged.pending);
+        Ok(())
+    }
+
     pub(crate) fn queue_energy_batch(&mut self, records: &[[u8; 16]]) -> Result<()> {
         let new_len = self
             .pending
@@ -361,14 +377,13 @@ impl ThermalComponents {
                 }
             }
             REMOVE_CONTACT => {
-                if let Ok(group) = self.contacts.get_mut(handle) {
-                    if let Some(at) = group
+                if let Ok(group) = self.contacts.get_mut(handle)
+                    && let Some(at) = group
                         .contacts
                         .iter()
                         .position(|entry| entry.0 == i32at(b, 4))
-                    {
-                        group.contacts.remove(at);
-                    }
+                {
+                    group.contacts.remove(at);
                 }
             }
             REMOVE_CONTACTS => {
@@ -410,13 +425,13 @@ impl ThermalComponents {
                 }
             }
             CHUNK_ENERGY => {
-                if let Ok(chunk) = self.chunks.get_mut(handle) {
-                    if 0.0 < chunk.heat_capacity {
-                        chunk.temperature = crate::numeric::smax(
-                            f32at(b, 4) / chunk.heat_capacity + chunk.temperature,
-                            0.0,
-                        );
-                    }
+                if let Ok(chunk) = self.chunks.get_mut(handle)
+                    && 0.0 < chunk.heat_capacity
+                {
+                    chunk.temperature = crate::numeric::smax(
+                        f32at(b, 4) / chunk.heat_capacity + chunk.temperature,
+                        0.0,
+                    );
                 }
             }
             CHUNK_ADJUSTER => {

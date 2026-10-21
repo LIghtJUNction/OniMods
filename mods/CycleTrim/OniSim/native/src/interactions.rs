@@ -4,7 +4,7 @@
 //! official native reader retains GasObliteration entries (ELF 0x36050); unknown
 //! interaction types are skipped. No managed pointer survives this parser.
 
-use crate::bytes::{f32at, i32at, invalid, u16at, u32at, MAX_PAYLOAD};
+use crate::bytes::{MAX_PAYLOAD, f32at, i32at, invalid, u16at, u32at};
 use crate::gas::GasObliteration;
 use crate::status::{Error, Result, Status};
 
@@ -40,14 +40,17 @@ pub(crate) unsafe fn parse(
     if overlaps_storage(address, length) {
         return Err(invalid("interaction array overlaps native-owned storage"));
     }
-    let records = std::slice::from_raw_parts(address as *const u8, length);
+    // SAFETY: the caller retains the pinned foreign array for the complete parse.
+    let records = unsafe { std::slice::from_raw_parts(address as *const u8, length) };
     decode(records, element_count)
 }
 
 fn decode(records: &[u8], element_count: usize) -> Result<Vec<GasObliteration>> {
     let retained = records
-        .chunks_exact(RECORD_BYTES)
-        .filter(|record| u32at(record, 0) == GAS_OBLITERATION)
+        .as_chunks::<RECORD_BYTES>()
+        .0
+        .iter()
+        .filter(|record| u32at(record.as_slice(), 0) == GAS_OBLITERATION)
         .count();
     let mut rules = Vec::new();
     rules.try_reserve_exact(retained).map_err(|_| {
@@ -56,7 +59,7 @@ fn decode(records: &[u8], element_count: usize) -> Result<Vec<GasObliteration>> 
             "could not allocate interaction metadata",
         )
     })?;
-    for record in records.chunks_exact(RECORD_BYTES) {
+    for record in records.as_chunks::<RECORD_BYTES>().0.iter() {
         if u32at(record, 0) != GAS_OBLITERATION {
             continue;
         }

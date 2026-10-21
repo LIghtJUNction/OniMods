@@ -1,0 +1,210 @@
+{
+  "schema": 1,
+  "native_sha256": "9cddf6640a22a61f28d1026bdb5713b376cc46f62dd0e41f365bb6fc83ee49ff",
+  "case": "thermal",
+  "scope": "Three 1ms own-process userspace CPU-clock profiles, exact official final outputs. Sampling bias applies; percentages exclude other modules; not timing acceptance.",
+  "all_final_publications_match_official": true,
+  "exported_pointer_symbolization_verified": true,
+  "profile": {
+    "total_samples": 641,
+    "native_samples": 484,
+    "threads_with_samples": 6,
+    "lost": 0,
+    "corrupt": 0,
+    "symbols": [
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+        "samples": 165,
+        "percent_of_native_samples": 34.09090909090909
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step4step",
+        "samples": 97,
+        "percent_of_native_samples": 20.041322314049587
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+        "samples": 42,
+        "percent_of_native_samples": 8.677685950413224
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.13732286682310840907",
+        "samples": 36,
+        "percent_of_native_samples": 7.43801652892562
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+        "samples": 36,
+        "percent_of_native_samples": 7.43801652892562
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+        "samples": 34,
+        "percent_of_native_samples": 7.024793388429752
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step14validate_cells",
+        "samples": 29,
+        "percent_of_native_samples": 5.991735537190083
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease19post_process_bounds",
+        "samples": 25,
+        "percent_of_native_samples": 5.1652892561983474
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step9preflight",
+        "samples": 14,
+        "percent_of_native_samples": 2.8925619834710745
+      },
+      {
+        "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core12presentationNtB2_19PresentationBuffers6update",
+        "samples": 3,
+        "percent_of_native_samples": 0.6198347107438017
+      },
+      {
+        "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core5worldNtB2_12PhysicsWorld10publish_to",
+        "samples": 2,
+        "percent_of_native_samples": 0.4132231404958678
+      },
+      {
+        "symbol": "_RNvNtNtCsesrpLENfIw6_12oni_sim_core12presentation6liquid6update",
+        "samples": 1,
+        "percent_of_native_samples": 0.2066115702479339
+      }
+    ],
+    "hot_instruction_offsets": [
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+        "elf_virtual_address_hex": "0x943c2",
+        "samples": 57
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+        "elf_virtual_address_hex": "0x97fcd",
+        "samples": 11
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+        "elf_virtual_address_hex": "0x94213",
+        "samples": 10
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+        "elf_virtual_address_hex": "0x943c6",
+        "samples": 9
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.13732286682310840907",
+        "elf_virtual_address_hex": "0x6191a",
+        "samples": 9
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step9preflight",
+        "elf_virtual_address_hex": "0x68bb8",
+        "samples": 9
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+        "elf_virtual_address_hex": "0x943ba",
+        "samples": 8
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+        "elf_virtual_address_hex": "0x9420b",
+        "samples": 8
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.13732286682310840907",
+        "elf_virtual_address_hex": "0x6191d",
+        "samples": 7
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step4step",
+        "elf_virtual_address_hex": "0x68070",
+        "samples": 6
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step4step",
+        "elf_virtual_address_hex": "0x67a0a",
+        "samples": 6
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step14validate_cells",
+        "elf_virtual_address_hex": "0x6627e",
+        "samples": 6
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+        "elf_virtual_address_hex": "0x98079",
+        "samples": 6
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+        "elf_virtual_address_hex": "0x943ca",
+        "samples": 5
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.13732286682310840907",
+        "elf_virtual_address_hex": "0x618d7",
+        "samples": 5
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.13732286682310840907",
+        "elf_virtual_address_hex": "0x618ae",
+        "samples": 5
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step4step",
+        "elf_virtual_address_hex": "0x67952",
+        "samples": 5
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+        "elf_virtual_address_hex": "0x466cf",
+        "samples": 5
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step14validate_cells",
+        "elf_virtual_address_hex": "0x66270",
+        "samples": 4
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease19post_process_bounds",
+        "elf_virtual_address_hex": "0x7a4bc",
+        "samples": 4
+      }
+    ]
+  },
+  "module_distribution": {
+    "scope": "Diagnostic own-process userspace CPU-clock sample distribution by mapped module basename, three thermal profiles; not precise instruction attribution or game performance",
+    "total_samples": 641,
+    "modules": [
+      {
+        "name": "candidate.so",
+        "samples": 484,
+        "percent": 75.50702028081123
+      },
+      {
+        "name": "libm.so.6",
+        "samples": 125,
+        "percent": 19.50078003120125
+      },
+      {
+        "name": "libc.so.6",
+        "samples": 27,
+        "percent": 4.212168486739469
+      },
+      {
+        "name": "libpython3.14.so.1.0",
+        "samples": 4,
+        "percent": 0.62402496099844
+      },
+      {
+        "name": "_ctypes.cpython-314-x86_64-linux-gnu.so",
+        "samples": 1,
+        "percent": 0.15600624024961
+      }
+    ]
+  }
+}

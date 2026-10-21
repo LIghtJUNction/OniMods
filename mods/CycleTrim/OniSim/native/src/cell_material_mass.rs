@@ -173,7 +173,7 @@ impl PendingCommands {
                     callback_idx: command.callback,
                 });
             }
-            if phase(elements, element) != 3 {
+            if element == u16::MAX || phase(elements, element) != 3 {
                 continue;
             }
             if !command.skip_event {
@@ -192,18 +192,18 @@ impl PendingCommands {
                         world.write.disease_count[cell],
                     )
                 };
-                if mass > 0.0 {
-                    if let Some(game_cell) = game_index(world, cell) {
-                        events.dig_info.push(SpawnOreInfo {
-                            cell_idx: game_cell,
-                            elem_idx: elements.elements[element as usize].record.index,
-                            disease_idx: disease,
-                            pad0: 0,
-                            mass,
-                            temperature,
-                            disease_count: count,
-                        });
-                    }
+                if mass > 0.0
+                    && let Some(game_cell) = game_index(world, cell)
+                {
+                    events.dig_info.push(SpawnOreInfo {
+                        cell_idx: game_cell,
+                        elem_idx: elements.elements[element as usize].record.index,
+                        disease_idx: disease,
+                        pad0: 0,
+                        mass,
+                        temperature,
+                        disease_count: count,
+                    });
                 }
             }
             if command.backwall {

@@ -31,7 +31,9 @@ void *SIM_HandleMessages(int32_t id, int32_t length, int32_t count,
                          const uint8_t *messages);
 const uint8_t *SIM_BeginSave(int32_t *size, int32_t x, int32_t y);
 void SIM_EndSave(void);
+/* Explicit assertion hook: raises SIGINT, then reports fatal id 1 if it returns. */
 void SIM_DebugCrash(void);
+/* The pinned Linux provider returns NULL; release is idempotent. */
 const char *SYSINFO_Acquire(void);
 void SYSINFO_Release(void);
 
@@ -54,6 +56,8 @@ uint32_t ONISIM_GetAbiVersion(void);
  * (status 3 or 4) does not transfer ownership; do not shut down that session.
  * Check status immediately, before calling any other extension. */
 void ONISIM_TryInitialize(OniSimMessageHandler callback);
+/* Read-only: 1 ready, 0 running, -1 failure. Does not publish or release a batch. */
+int32_t ONISIM_IsReady(void);
 int32_t ONISIM_GetLastStatus(void);
 const char *ONISIM_GetLastError(void);
 uint64_t ONISIM_GetGeneration(void);

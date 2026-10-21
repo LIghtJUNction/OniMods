@@ -94,13 +94,13 @@ fn resize<T: Clone>(values: &mut Vec<T>, count: usize, empty: T) -> Result<()> {
 impl MassComponents {
     pub(crate) fn update_data_lists(&mut self, events: &mut EventQueues) -> Result<()> {
         resize(
-            &mut events.emitted_mass_entries,
+            &mut self.emitted_mass_infos,
             self.emitters.slot_count(),
             empty_mass(),
         )?;
         for dense in 0..self.emitters.data.len() {
             let slot = ComponentHandles::<Emitter>::slot(self.emitters.handle_at(dense));
-            events.emitted_mass_entries[slot] = empty_mass();
+            self.emitted_mass_infos[slot] = empty_mass();
         }
         resize(
             &mut events.disease_emitted_infos,
@@ -148,7 +148,7 @@ impl MassComponents {
         events: &mut EventQueues,
     ) -> Result<()> {
         resize(
-            &mut events.emitted_mass_entries,
+            &mut self.emitted_mass_infos,
             self.emitters.slot_count(),
             empty_mass(),
         )?;
@@ -163,7 +163,7 @@ impl MassComponents {
                 continue;
             }
             if data.elapsed >= data.interval {
-                let info = &mut events.emitted_mass_entries[slot];
+                let info = &mut self.emitted_mass_infos[slot];
                 if info.elem_idx == u16::MAX
                     || info.elem_idx == world.vacuum_element
                     || info.elem_idx == data.element
@@ -192,7 +192,7 @@ impl MassComponents {
                     if result.mass > 0.0 {
                         // Only element/mass/temperature are aggregated. Native
                         // Emit's result always reports absent disease.
-                        let info = &mut events.emitted_mass_entries[slot];
+                        let info = &mut self.emitted_mass_infos[slot];
                         let old_mass = info.mass;
                         let old_temperature = info.temperature;
                         let total = result.mass + old_mass;
@@ -224,6 +224,33 @@ impl MassComponents {
                 data.elapsed -= data.interval;
             }
             data.elapsed += dt;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn publish_emitted_mass(
+        &mut self,
+        events: &mut EventQueues,
+        vacuum: u16,
+    ) -> Result<()> {
+        events
+            .emitted_mass_entries
+            .try_reserve(
+                self.emitted_mass_infos
+                    .len()
+                    .saturating_sub(events.emitted_mass_entries.len()),
+            )
+            .map_err(super::allocation)?;
+        events.emitted_mass_entries.clear();
+        events
+            .emitted_mass_entries
+            .extend_from_slice(&self.emitted_mass_infos);
+        // ELF 0x58d00 copies all slots; 0x58d20..0x58e5a resets only these
+        // three fields. Preserve disease fields and retired-slot visibility.
+        for info in &mut self.emitted_mass_infos {
+            info.elem_idx = vacuum;
+            info.mass = 0.0;
+            info.temperature = 0.0;
         }
         Ok(())
     }
@@ -277,10 +304,10 @@ fn try_emit(
                 }
             }
             3 if data.mass > 0.0 => {
-                if let Some(public) = game_index(world, cell) {
-                    if world.simulate_all_active || world.active_mask[public as usize] != 0 {
-                        events.spawn_ore(public, data.element, 255, data.mass, temperature, 0);
-                    }
+                if let Some(public) = game_index(world, cell)
+                    && (world.simulate_all_active || world.active_mask[public as usize] != 0)
+                {
+                    events.spawn_ore(public, data.element, 255, data.mass, temperature, 0);
                 }
             }
             _ => {}
@@ -337,5 +364,33 @@ fn emit(
         mass: data.mass,
         temperature,
         disease_count: 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ok<T>(result: Result<T>) -> T {
+        result.unwrap_or_else(|error| panic!("{}", error.message))
+    }
+
+    #[test]
+    fn emitter_publication_keeps_cleared_and_retired_slots_in_manager_storage() {
+        let mut manager = MassComponents::default();
+        let handle = ok(manager.emitters.insert(Emitter::new(2.0, -1, -1)));
+        let mut events = EventQueues::default();
+        ok(manager.update_data_lists(&mut events));
+        ok(manager.publish_emitted_mass(&mut events, 7));
+        assert_eq!(events.emitted_mass_entries[0].elem_idx, u16::MAX);
+        events.clear();
+        ok(manager.publish_emitted_mass(&mut events, 7));
+        assert_eq!(events.emitted_mass_entries[0].elem_idx, 7);
+        assert_eq!(events.emitted_mass_entries[0].mass.to_bits(), 0);
+        ok(manager.emitters.remove(handle));
+        events.clear();
+        ok(manager.publish_emitted_mass(&mut events, 7));
+        assert_eq!(events.emitted_mass_entries.len(), 1);
+        assert_eq!(events.emitted_mass_entries[0].elem_idx, 7);
     }
 }

@@ -113,8 +113,13 @@ impl EarlyCommands {
             MODIFY_BACKWALL => {
                 let public = i32at(payload, 0);
                 let element = u16at(payload, 4);
-                if element as usize >= elements.len() {
-                    return Err(invalid("backwall command has an unknown element index"));
+                // 0xffff is the managed BackwallIndexer null sentinel, not a
+                // registered material. ProcessFrame 0x4c651 stores it verbatim.
+                if element != u16::MAX && element as usize >= elements.len() {
+                    return Err(invalid(format!(
+                        "backwall element index {element} is absent from {} registered elements",
+                        elements.len()
+                    )));
                 }
                 push(
                     &mut self.backwall,

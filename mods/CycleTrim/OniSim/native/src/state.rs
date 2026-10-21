@@ -2,7 +2,7 @@ use std::ffi::c_void;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use crate::cell_material::CellMaterialQueue;
-use crate::frames::{NewFrame, QueuedFrame, Scheduler, MAX_PENDING_COMMANDS};
+use crate::frames::{MAX_PENDING_COMMANDS, NewFrame, QueuedFrame, Scheduler};
 use crate::frames_commands::EarlyCommands;
 use crate::frames_data::GameData;
 use crate::frames_engine::Engine;
@@ -27,6 +27,7 @@ pub(crate) struct State {
     pub(crate) active: bool,
     pub(crate) closing: bool,
     pub(crate) callback: Callback,
+    pub(crate) diagnostic_reported: bool,
     pub(crate) grid: Option<Grid>,
     pub(crate) elements: Option<Arc<ElementTable>>,
     pub(crate) diseases: Option<Arc<DiseaseTable>>,
@@ -259,6 +260,12 @@ impl State {
                 self.worker = Some(worker);
                 self.borrowed_ranges = initial_ranges;
                 let grid = self.grid.as_mut().unwrap();
+                // FrameSync::initGameData initially copies CellSOA only. The
+                // GameData backwall vectors keep their constructor sentinels
+                // until the first CopySimDataToGame publication.
+                grid.backwall_element.fill(u16::MAX);
+                grid.backwall_mass.fill(0.0);
+                grid.backwall_temperature.fill(0.0);
                 for (index, pointer) in initial_pointers.into_iter().enumerate() {
                     grid.set_texture_pointer(index, pointer);
                 }
@@ -359,6 +366,7 @@ impl State {
         self.diseases = None;
         self.interactions.clear();
         self.callback = None;
+        self.diagnostic_reported = false;
         self.active = false;
         self.world = None;
         self.shape = None;

@@ -98,6 +98,35 @@ pub(crate) struct EarlyCommands {
 }
 
 impl EarlyCommands {
+    pub(crate) fn append(&mut self, mut staged: Self) -> Result<()> {
+        if self.len().saturating_add(staged.len()) > crate::frames::MAX_PENDING_COMMANDS {
+            return Err(Error::new(
+                Status::ResourceLimit,
+                "too many queued cell commands",
+            ));
+        }
+        macro_rules! append_fields {
+            ($($field:ident),*) => {
+                $(self.$field.try_reserve(staged.$field.len()).map_err(allocation)?;)*
+                $(self.$field.append(&mut staged.$field);)*
+            };
+        }
+        append_fields!(
+            insulation,
+            strength,
+            energy,
+            properties,
+            consume_disease,
+            modify_disease,
+            backwall
+        );
+        if staged.debug_pending {
+            self.debug = staged.debug;
+            self.debug_pending = true;
+        }
+        Ok(())
+    }
+
     pub(crate) fn len(&self) -> usize {
         self.insulation.len()
             + self.strength.len()

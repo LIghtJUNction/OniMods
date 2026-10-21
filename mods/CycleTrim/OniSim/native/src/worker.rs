@@ -4,7 +4,7 @@
 //! mutex), never the global FFI State mutex. A ready result must be returned by
 //! Prepare before the runner may reuse either of its two GameData buffers.
 
-use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
 
@@ -185,13 +185,13 @@ impl<F: Send + 'static, D: Send + 'static> Worker<F, D> {
                 "simulation worker cannot join itself",
             ));
         }
-        if let Some(thread) = self.thread.take() {
-            if thread.join().is_err() {
-                self.shared.fail(Error::new(
-                    Status::InternalFailure,
-                    "simulation worker terminated during shutdown",
-                ));
-            }
+        if let Some(thread) = self.thread.take()
+            && thread.join().is_err()
+        {
+            self.shared.fail(Error::new(
+                Status::InternalFailure,
+                "simulation worker terminated during shutdown",
+            ));
         }
         if let Some(fault) = &self.shared.lock().fault {
             return Err(fault.error());
@@ -268,6 +268,13 @@ impl<F: Send + 'static, D: Send + 'static> WorkerHandle<F, D> {
 
     pub(crate) fn check(&self) -> Result<()> {
         available(&self.shared.lock())
+    }
+
+    /// Observe readiness without consuming the result or releasing the worker.
+    pub(crate) fn is_ready(&self) -> Result<bool> {
+        let mailbox = self.shared.lock();
+        available(&mailbox)?;
+        Ok(mailbox.ready.is_some() && !mailbox.leased)
     }
 
     pub(crate) fn request_stop(&self) {
@@ -349,5 +356,250 @@ impl<F: Send + 'static, D: Send + 'static> Drop for ReadyLease<F, D> {
             });
         }
         self.shared.changed.notify_all();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        mpsc,
+    };
+    use std::time::{Duration, Instant};
+
+    fn ok<T>(result: Result<T>) -> T {
+        result.unwrap_or_else(|error| panic!("{}", error.message))
+    }
+
+    #[test]
+    fn full_queue_does_not_capture_or_drop_commands() {
+        let (started, entered) = mpsc::channel();
+        let (release, gate) = mpsc::channel();
+        let mut worker = ok(Worker::<usize, Vec<usize>>::spawn(
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            move |frames, _, output, _| {
+                if frames.is_empty() {
+                    started.send(()).unwrap();
+                    gate.recv_timeout(Duration::from_secs(2)).unwrap();
+                }
+                *output = frames;
+                Ok(())
+            },
+        ));
+        let handle = worker.handle();
+        entered.recv_timeout(Duration::from_secs(2)).unwrap();
+        for frame in 0..MAX_QUEUED_FRAMES {
+            ok(handle.submit_with(|| (frame, Vec::new())));
+        }
+        let captured = AtomicUsize::new(0);
+        let error = handle
+            .submit_with(|| {
+                captured.fetch_add(1, Ordering::SeqCst);
+                (999, Vec::new())
+            })
+            .expect_err("full queue must fail");
+        assert!(matches!(error.status, Status::ResourceLimit));
+        assert_eq!(captured.load(Ordering::SeqCst), 0);
+        release.send(()).unwrap();
+        let empty = ok(handle.wait_ready());
+        assert!(empty.data().is_empty());
+        ok(empty.release());
+        let batch = ok(handle.wait_ready());
+        assert_eq!(batch.data(), &(0..MAX_QUEUED_FRAMES).collect::<Vec<_>>());
+        // Shutdown must also tolerate an outstanding publication lease.
+        ok(worker.shutdown());
+        drop(batch);
+    }
+
+    #[test]
+    fn worker_failure_wakes_waiters_and_rejects_later_submissions() {
+        let (started, entered) = mpsc::channel();
+        let (release, gate) = mpsc::channel();
+        let mut worker = ok(Worker::<(), ()>::spawn(
+            (),
+            (),
+            Vec::new(),
+            move |_, _, _, _| {
+                started.send(()).unwrap();
+                gate.recv_timeout(Duration::from_secs(2)).unwrap();
+                Err(Error::new(Status::InvalidState, "authored runner failure"))
+            },
+        ));
+        entered.recv_timeout(Duration::from_secs(2)).unwrap();
+        let handle = worker.handle();
+        let waiting = handle.clone();
+        let (completed, result) = mpsc::channel();
+        let waiter = thread::spawn(move || {
+            let error = waiting
+                .wait_ready()
+                .err()
+                .expect("failed runner cannot publish");
+            completed
+                .send((error.status as i32, error.message))
+                .unwrap();
+        });
+        release.send(()).unwrap();
+        assert_eq!(
+            result.recv_timeout(Duration::from_secs(2)).unwrap(),
+            (
+                Status::InvalidState as i32,
+                "authored runner failure".into()
+            )
+        );
+        waiter.join().unwrap();
+        assert!(matches!(
+            handle
+                .submit_with(|| panic!("failed worker must not capture"))
+                .err()
+                .unwrap()
+                .status,
+            Status::InvalidState
+        ));
+        assert_eq!(
+            worker.shutdown().err().unwrap().message,
+            "authored runner failure"
+        );
+    }
+
+    #[test]
+    fn shutdown_does_not_require_releasing_an_outstanding_publication() {
+        let mut worker = ok(Worker::<(), ()>::spawn((), (), Vec::new(), |_, _, _, _| {
+            Ok(())
+        }));
+        let handle = worker.handle();
+        let lease = ok(handle.wait_ready());
+        // Keep the worker behind its barrier, then stop it. A subsequent
+        // Prepare must return immediately, even though this lease was not released.
+        ok(worker.shutdown());
+        assert!(matches!(
+            handle.wait_ready().err().unwrap().status,
+            Status::InvalidState
+        ));
+        assert!(matches!(
+            handle.is_ready().err().unwrap().status,
+            Status::InvalidState
+        ));
+        drop(lease);
+        ok(worker.shutdown());
+    }
+
+    #[test]
+    fn repeated_batches_keep_owned_frames_ordered_across_shutdowns() {
+        for session in 0..16 {
+            let mut worker = ok(Worker::<usize, Vec<usize>>::spawn(
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                |frames, _, output, _| {
+                    *output = frames;
+                    Ok(())
+                },
+            ));
+            let handle = worker.handle();
+            let mut ready = ok(handle.wait_ready());
+            assert!(ready.data().is_empty());
+            for batch in 0..64 {
+                let frames = (0..MAX_QUEUED_FRAMES)
+                    .map(|item| (session * 64 + batch) * MAX_QUEUED_FRAMES + item)
+                    .collect::<Vec<_>>();
+                for &frame in &frames {
+                    ok(handle.submit_with(|| (frame, Vec::new())));
+                }
+                ok(ready.release());
+                ready = ok(handle.wait_ready());
+                assert_eq!(ready.data(), &frames);
+            }
+            ok(worker.shutdown());
+            drop(ready);
+            assert!(matches!(
+                handle.check().err().unwrap().status,
+                Status::InvalidState
+            ));
+        }
+    }
+
+    #[test]
+    fn abandoned_lease_and_capture_panic_make_failure_observable() {
+        let mut abandoned = ok(Worker::<(), ()>::spawn((), (), Vec::new(), |_, _, _, _| {
+            Ok(())
+        }));
+        let handle = abandoned.handle();
+        drop(ok(handle.wait_ready()));
+        assert_eq!(
+            handle.wait_ready().err().unwrap().message,
+            "Prepare abandoned a ready simulation frame"
+        );
+        assert_eq!(
+            abandoned.shutdown().err().unwrap().message,
+            "Prepare abandoned a ready simulation frame"
+        );
+
+        let mut panicked = ok(Worker::<(), ()>::spawn((), (), Vec::new(), |_, _, _, _| {
+            Ok(())
+        }));
+        let handle = panicked.handle();
+        let lease = ok(handle.wait_ready());
+        assert!(
+            catch_unwind(AssertUnwindSafe(|| {
+                let _ = handle.submit_with(|| panic!("authored capture panic"));
+            }))
+            .is_err()
+        );
+        assert_eq!(
+            handle.check().err().unwrap().message,
+            "simulation frame capture panicked"
+        );
+        assert_eq!(
+            panicked.shutdown().err().unwrap().message,
+            "simulation frame capture panicked"
+        );
+        drop(lease);
+    }
+
+    #[test]
+    fn readiness_observation_preserves_the_publication_barrier() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let running_calls = calls.clone();
+        let (started, entered) = mpsc::channel();
+        let (release, gate) = mpsc::channel();
+        let mut worker = ok(Worker::<(), u32>::spawn(
+            0,
+            0,
+            Vec::new(),
+            move |_, _, output, _| {
+                if running_calls.fetch_add(1, Ordering::SeqCst) == 0 {
+                    let _ = started.send(());
+                    gate.recv_timeout(Duration::from_secs(2)).map_err(|_| {
+                        Error::new(Status::InternalFailure, "test runner gate timed out")
+                    })?;
+                }
+                *output = 42;
+                Ok(())
+            },
+        ));
+        let handle = worker.handle();
+        entered
+            .recv_timeout(Duration::from_secs(2))
+            .expect("worker entered runner");
+        assert!(!ok(handle.is_ready()));
+        release.send(()).expect("release test runner");
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while !ok(handle.is_ready()) {
+            assert!(Instant::now() < deadline, "worker did not become ready");
+            std::thread::yield_now();
+        }
+        assert!(ok(handle.is_ready()));
+        assert!(ok(handle.is_ready()));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        let lease = ok(handle.wait_ready());
+        assert_eq!(*lease.data(), 42);
+        assert!(!ok(handle.is_ready()));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        ok(lease.release());
+        ok(worker.shutdown());
+        assert!(handle.is_ready().is_err());
     }
 }

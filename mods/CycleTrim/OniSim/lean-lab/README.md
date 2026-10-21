@@ -279,7 +279,7 @@ RUSTUP_TOOLCHAIN=1.99.1 python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py al
 ```
 
 若沿用源码项目的 RTK 约定，可在命令前加 `rtk bypass`。
-Lean 仅依赖随安装提供的 `Std`；Rust 测试组件没有外部 crate。
+Lean 仅依赖随安装提供的 `Std`；原始 Rust 测试组件没有外部 crate；当前生产并行接入及验证组件使用 Cargo.lock 锁定的 Rayon。
 `harness/README.md` 列出分阶段执行和 CPU 选择方法。
 `all` 会重新核对原归档 SHA-256、编译、运行差分测试，再计时并统计分配。
 
@@ -307,3 +307,5 @@ Lean 仅依赖随安装提供的 `Std`；Rust 测试组件没有外部 crate。
 `results/` 中的 CSV 属于上一轮实验的历史原始测量记录，不表示在 GitHub
 Actions 或其他计算机上重新测得相同数字。
 完整游戏中的收益与兼容性尚未证实。
+
+2026-10-20：当前生产接入的串行/并行复验见 [PARALLEL-VALIDATION.md](../PARALLEL-VALIDATION.md)。上面的历史基准和无依赖说明不代表当前线程池的资源开销。

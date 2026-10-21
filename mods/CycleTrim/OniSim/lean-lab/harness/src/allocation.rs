@@ -25,7 +25,7 @@ fn add_live(size: usize) {
 
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let pointer = System.alloc(layout);
+        let pointer = unsafe { System.alloc(layout) };
         if !pointer.is_null() && ACTIVE.load(Ordering::Relaxed) {
             ALLOCS.fetch_add(1, Ordering::Relaxed);
             REQUESTED.fetch_add(layout.size() as u64, Ordering::Relaxed);
@@ -35,7 +35,7 @@ unsafe impl GlobalAlloc for Counting {
     }
 
     unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-        let pointer = System.alloc_zeroed(layout);
+        let pointer = unsafe { System.alloc_zeroed(layout) };
         if !pointer.is_null() && ACTIVE.load(Ordering::Relaxed) {
             ALLOCS.fetch_add(1, Ordering::Relaxed);
             REQUESTED.fetch_add(layout.size() as u64, Ordering::Relaxed);
@@ -48,11 +48,11 @@ unsafe impl GlobalAlloc for Counting {
         if ACTIVE.load(Ordering::Relaxed) {
             LIVE.fetch_sub(layout.size() as u64, Ordering::Relaxed);
         }
-        System.dealloc(pointer, layout);
+        unsafe { System.dealloc(pointer, layout) };
     }
 
     unsafe fn realloc(&self, pointer: *mut u8, layout: Layout, size: usize) -> *mut u8 {
-        let new_pointer = System.realloc(pointer, layout, size);
+        let new_pointer = unsafe { System.realloc(pointer, layout, size) };
         if !new_pointer.is_null() && ACTIVE.load(Ordering::Relaxed) {
             REALLOCS.fetch_add(1, Ordering::Relaxed);
             REQUESTED.fetch_add(size as u64, Ordering::Relaxed);
@@ -91,27 +91,50 @@ pub(crate) fn run(path: &str) {
                     let emitter = fixture.emitters[0];
                     let x = emitter.cell % fixture.world.stride as i32;
                     let y = emitter.cell / fixture.world.stride as i32;
-                    count(|| { match algorithm {
-                        Algorithm::Baseline => { benchmark::baseline_search(&fixture.world, x, y, case.depth); }
-                        Algorithm::Candidate => { benchmark::candidate_search(&fixture.world, x, y, case.depth); }
-                    } })
+                    count(|| match algorithm {
+                        Algorithm::Baseline => {
+                            benchmark::baseline_search(&fixture.world, x, y, case.depth);
+                        }
+                        Algorithm::Candidate => {
+                            benchmark::candidate_search(&fixture.world, x, y, case.depth);
+                        }
+                    })
                 }
                 Kind::Update => {
                     let mut world = fixture.world.clone();
                     match algorithm {
                         Algorithm::Baseline => {
-                            let mut data: Vec<_> = fixture.emitters.iter().map(|e| e.baseline()).collect();
-                            count(|| benchmark::baseline_update(&mut world, &table, &fixture.region, &mut data))
+                            let mut data: Vec<_> =
+                                fixture.emitters.iter().map(|e| e.baseline()).collect();
+                            count(|| {
+                                benchmark::baseline_update(
+                                    &mut world,
+                                    &table,
+                                    &fixture.region,
+                                    &mut data,
+                                )
+                            })
                         }
                         Algorithm::Candidate => {
-                            let mut data: Vec<_> = fixture.emitters.iter().map(|e| e.candidate()).collect();
-                            count(|| benchmark::candidate_update(&mut world, &table, &fixture.region, &mut data))
+                            let mut data: Vec<_> =
+                                fixture.emitters.iter().map(|e| e.candidate()).collect();
+                            count(|| {
+                                benchmark::candidate_update(
+                                    &mut world,
+                                    &table,
+                                    &fixture.region,
+                                    &mut data,
+                                )
+                            })
                         }
                     }
                 }
             };
             let (allocations, reallocations, requested, peak, live) = statistics;
-            assert_eq!(live, 0, "temporary allocation scope must end with no live storage");
+            assert_eq!(
+                live, 0,
+                "temporary allocation scope must end with no live storage"
+            );
             writeln!(writer, "{},{},{},{},{},{},{},{},{},{allocations},{reallocations},{requested},{peak},{live}",
                 case.id(), case.kind.name(), case.width, case.height, case.depth, case.depth - 1,
                 case.emitter_count, fixture.visited_cells, algorithm.name()).unwrap();

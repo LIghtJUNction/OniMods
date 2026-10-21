@@ -25,7 +25,9 @@ pub(crate) struct PhysicsWorld {
 
 impl PhysicsWorld {
     pub(crate) fn fixture(stride: usize, padded_height: usize) -> Self {
-        let length = stride.checked_mul(padded_height).expect("fixture storage overflow");
+        let length = stride
+            .checked_mul(padded_height)
+            .expect("fixture storage overflow");
         Self {
             stride,
             padded_height,

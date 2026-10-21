@@ -46,7 +46,8 @@ fn pair(
     let upper = source.high_temperature + TRANSITION_MARGIN;
     let neighbor_temperature = world.write.temperature[neighbor];
     if neighbor_temperature <= upper
-        || neighbor_temperature < target.low_temperature + MIN_TARGET_MARGIN
+        || neighbor_temperature
+            < rec(elements, world.write.element[neighbor]).low_temperature + MIN_TARGET_MARGIN
     {
         return false;
     }
@@ -89,7 +90,9 @@ fn pair(
     if !displace_liquid(world, elements, diseases, events, cell, source_id) {
         world.write.mass[cell] += TRANSFER_MASS;
         restore_germs(world, cell, removed_germs);
-        world.write.temperature[cell] = neighbor_temperature;
+        // ELF 0x71132 restores the cooled neighbour after displacement fails;
+        // the source keeps its own temperature.
+        world.write.temperature[neighbor] = neighbor_temperature;
         return false;
     }
 
@@ -98,23 +101,22 @@ fn pair(
     world.write.element[cell] = target_id;
     if target_phase == 1 && !world.falling_disabled {
         let below = cell.saturating_sub(world.stride);
-        if let Some(public) = game_index(world, cell) {
-            if world.read.properties[below] & 2 == 0
-                && (world.active_mask[public as usize] != 0 || world.simulate_all_active)
-                && target.low_temperature - TRANSITION_MARGIN <= upper
-                && upper <= target.high_temperature + TRANSITION_MARGIN
-            {
-                events.spawn_falling_liquid(
-                    public,
-                    target_id,
-                    world.write.disease_idx[cell],
-                    TRANSFER_MASS,
-                    upper,
-                    removed_germs,
-                );
-                world.mark_dirty(cell, 0x1f);
-                return true;
-            }
+        if let Some(public) = game_index(world, cell)
+            && world.read.properties[below] & 2 == 0
+            && (world.active_mask[public as usize] != 0 || world.simulate_all_active)
+            && target.low_temperature - TRANSITION_MARGIN <= upper
+            && upper <= target.high_temperature + TRANSITION_MARGIN
+        {
+            events.spawn_falling_liquid(
+                public,
+                target_id,
+                world.write.disease_idx[cell],
+                TRANSFER_MASS,
+                upper,
+                removed_germs,
+            );
+            world.mark_dirty(cell, 0x1f);
+            return true;
         }
     }
     if let Some(public) = game_index(world, cell) {

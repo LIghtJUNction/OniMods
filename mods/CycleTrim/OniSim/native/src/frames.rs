@@ -9,15 +9,6 @@ pub(crate) struct NewFrame {
     pub(crate) regions: Vec<Region>,
 }
 
-pub(crate) struct Replacement {
-    pub(crate) index: usize,
-    pub(crate) temperature: f32,
-    pub(crate) mass: f32,
-    pub(crate) disease_count: i32,
-    pub(crate) element: u16,
-    pub(crate) disease: u8,
-}
-
 #[derive(Default)]
 pub(crate) struct Scheduler {
     pub(crate) free_slots: Vec<crate::frames_commands::EarlyCommands>,
@@ -36,7 +27,7 @@ pub(crate) struct QueuedFrame {
 
 impl NewFrame {
     pub(crate) fn parse(bytes: &[u8], width: i32, height: i32) -> Result<Self> {
-        if bytes.is_empty() || bytes.len() % 28 != 0 {
+        if bytes.is_empty() || !bytes.len().is_multiple_of(28) {
             return Err(invalid(
                 "NewGameFrame requires one or more 28-byte active-region records",
             ));
@@ -49,7 +40,7 @@ impl NewFrame {
         regions
             .try_reserve_exact(bytes.len() / 28)
             .map_err(|_| Error::new(Status::ResourceLimit, "could not allocate frame regions"))?;
-        for record in bytes.chunks_exact(28) {
+        for record in bytes.as_chunks::<28>().0 {
             let (min_x, min_y) = (i32at(record, 4), i32at(record, 8));
             let (max_x, max_y) = (i32at(record, 12), i32at(record, 16));
             let (sunlight, cosmic_radiation) = (f32at(record, 20), f32at(record, 24));

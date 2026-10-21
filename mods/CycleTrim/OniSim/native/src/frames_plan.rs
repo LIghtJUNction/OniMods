@@ -1,5 +1,5 @@
-use crate::bytes::{dimensions, f32at, i32at, invalid, nonnegative, u16at};
-use crate::frames::{NewFrame, Replacement, MAX_PENDING_COMMANDS};
+use crate::bytes::{dimensions, f32at, i32at, invalid, nonnegative};
+use crate::frames::NewFrame;
 use crate::grid::Grid;
 use crate::state::State;
 use crate::status::{Error, Result, Status};
@@ -9,7 +9,6 @@ use crate::world::PhysicsWorld;
 pub(crate) const ALLOCATE: i32 = 1_092_408_308;
 pub(crate) const INITIALIZE: i32 = 2_062_421_945;
 pub(crate) const START: i32 = -931_446_686;
-pub(crate) const MODIFY: i32 = -1_252_920_804;
 pub(crate) const ELEMENTS: i32 = 1_108_437_482;
 pub(crate) const DISEASES: i32 = 825_301_935;
 pub(crate) const FRAME: i32 = -775_326_397;
@@ -20,7 +19,6 @@ pub(crate) enum Action {
     Allocate(Grid, PhysicsWorld, u64),
     Initialize(Grid, PhysicsWorld, u64),
     Start(Option<u16>),
-    Modify(Replacement),
     Elements(ElementTable),
     Diseases(DiseaseTable),
     Frame(NewFrame),
@@ -57,7 +55,10 @@ impl Preview {
             disease_element_count: state.diseases.as_ref().map(|table| table.element_count),
             grid_bytes: 0,
             completed_frames: state.scheduler.completed_frames,
-            pending_commands: state.material.len() + state.queued_component_commands,
+            pending_commands: state.material.len()
+                + state.early.len()
+                + state.world_messages.len()
+                + state.queued_component_commands,
         }
     }
 
@@ -151,64 +152,12 @@ fn validate_image(bytes: &[u8]) -> Result<(i32, i32, u8, u8)> {
     Ok((width, height, radiation, headless))
 }
 
-fn replacement(bytes: &[u8], preview: &Preview) -> Result<Replacement> {
-    if bytes.len() != 28 {
-        return Err(invalid("ModifyCell message must be 28 bytes"));
-    }
-    if !preview.initialized {
-        return Err(Error::new(
-            Status::InvalidState,
-            "ModifyCell requires an initialized grid",
-        ));
-    }
-    let index = i32at(bytes, 0);
-    if index < 0 || index as usize >= preview.count {
-        return Err(invalid("ModifyCell index is outside the grid"));
-    }
-    if i32at(bytes, 4) != -1 || bytes[22] != 1 || bytes[24] != 1 {
-        return Err(Error::new(
-            Status::Unsupported,
-            "only absolute Replace=1/addSubType=1 with callbackIdx=-1 is implemented",
-        ));
-    }
-    if u16at(bytes, 20) == u16::MAX {
-        return Err(Error::new(
-            Status::Unsupported,
-            "ModifyCell sentinel element semantics are unknown",
-        ));
-    }
-    let temperature = f32at(bytes, 8);
-    let mass = f32at(bytes, 12);
-    let disease_count = i32at(bytes, 16);
-    if !nonnegative(temperature) || !nonnegative(mass) || disease_count < 0 {
-        return Err(invalid(
-            "ModifyCell temperature, mass and disease count must be finite and nonnegative",
-        ));
-    }
-    if preview
-        .element_count
-        .is_none_or(|length| u16at(bytes, 20) as usize >= length)
-    {
-        return Err(invalid(
-            "ModifyCell element index is not in the registered table",
-        ));
-    }
-    if mass != 0.0 && temperature <= 0.0 {
-        return Err(invalid(
-            "nonzero ModifyCell mass requires positive temperature",
-        ));
-    }
-    Ok(Replacement {
-        index: index as usize,
-        temperature,
-        mass,
-        disease_count,
-        element: u16at(bytes, 20),
-        disease: bytes[23],
-    })
-}
-
 pub(crate) fn parse(id: i32, bytes: &[u8], preview: &mut Preview, state: &State) -> Result<Action> {
+    let bytes = if id == INITIALIZE {
+        crate::world_messages::trim_initialize_payload(bytes)?
+    } else {
+        bytes
+    };
     match id {
         ALLOCATE => {
             if bytes.len() != 10 {
@@ -271,17 +220,6 @@ pub(crate) fn parse(id: i32, bytes: &[u8], preview: &mut Preview, state: &State)
                 None
             };
             Ok(Action::Start(legacy))
-        }
-        MODIFY => {
-            let action = replacement(bytes, preview)?;
-            preview.pending_commands += 1;
-            if preview.pending_commands > MAX_PENDING_COMMANDS {
-                return Err(Error::new(
-                    Status::ResourceLimit,
-                    "pending cell command limit exceeded",
-                ));
-            }
-            Ok(Action::Modify(action))
         }
         FRAME => {
             if !preview.started {
