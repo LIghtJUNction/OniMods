@@ -68,6 +68,7 @@ internal static class Program
     {
         try
         {
+            if (args.Length == 1 && args[0] == "--tcp-worker-budget") return TcpWorkerBudgetTests.Run();
             if (args.Length > 0 && args[0] == "--peer") return PeerProcess(args);
             if (args.Length > 0 && args[0] == "--native-interest-peer") return NativeInterestPeer.Run(args);
             if (args.Length > 0 && args[0] == "--native-work-peer") return NativeRemoteWorkPeer.Run(args);
@@ -122,6 +123,7 @@ internal static class Program
             Framing();
             Discovery();
             Translations();
+            TcpWorkerBudgetProcess();
             MultiProcess();
             NetworkResilienceTests.Run(Check);
             ModerationTests.Run(Check);
@@ -463,6 +465,30 @@ internal static class Program
         }
     }
 
+    private static ProcessStartInfo SelfStart()
+    {
+        // Reuse this host, including an SDK supplied by absolute path. An apphost
+        // already knows its managed entry point; dotnet needs the assembly path.
+        string executable = Environment.ProcessPath ?? throw new InvalidOperationException("Missing test host path.");
+        var start = new ProcessStartInfo(executable) { RedirectStandardOutput = true, RedirectStandardError = true };
+        if (Path.GetFileNameWithoutExtension(executable).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+            start.ArgumentList.Add(Assembly.GetExecutingAssembly().Location);
+        return start;
+    }
+
+    private static void TcpWorkerBudgetProcess()
+    {
+        Reset();
+        var start = SelfStart();
+        start.ArgumentList.Add("--tcp-worker-budget");
+        using (var child = Process.Start(start))
+        {
+            if (!child.WaitForExit(20000)) { child.Kill(true); throw new Exception("TCP worker-budget process timed out."); }
+            Check(child.ExitCode == 0, "bounded TCP workers: " + child.StandardError.ReadToEnd());
+            Console.Write(child.StandardOutput.ReadToEnd());
+        }
+    }
+
     private static void MultiProcess()
     {
         Reset();
@@ -473,8 +499,7 @@ internal static class Program
         {
             for (int i = 0; i < 3; i++)
             {
-                var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
-                start.ArgumentList.Add(Assembly.GetExecutingAssembly().Location);
+                var start = SelfStart();
                 start.ArgumentList.Add("--peer"); start.ArgumentList.Add(address);
                 start.ArgumentList.Add(port.ToString()); start.ArgumentList.Add("Process" + i);
                 children.Add(Process.Start(start));

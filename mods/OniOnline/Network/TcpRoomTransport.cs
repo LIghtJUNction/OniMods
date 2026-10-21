@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -14,7 +16,9 @@ namespace OniOnline.Network
         {
             internal string Id;
             internal TcpClient Client;
-            internal readonly BlockingCollection<byte[]> Outbox = new BlockingCollection<byte[]>(64);
+            internal readonly Queue<byte[]> Outbox = new Queue<byte[]>();
+            internal readonly SemaphoreSlim OutboxReady = new SemaphoreSlim(0);
+            internal bool WritesCompleted;
             internal int Closed;
             internal Task Writer;
         }
@@ -155,8 +159,22 @@ namespace OniOnline.Network
             try
             {
                 var stream = connection.Client.GetStream();
-                foreach (var data in connection.Outbox.GetConsumingEnumerable())
+                while (true)
                 {
+                    // Idle peers must not occupy thread-pool workers. With one blocking
+                    // consumer per socket, a larger room starves its own handshakes.
+                    await connection.OutboxReady.WaitAsync().ConfigureAwait(false);
+                    byte[] data;
+                    lock (connection.Outbox)
+                    {
+                        if (Volatile.Read(ref connection.Closed) != 0) return;
+                        if (connection.Outbox.Count == 0)
+                        {
+                            if (connection.WritesCompleted) return;
+                            continue;
+                        }
+                        data = connection.Outbox.Dequeue();
+                    }
                     var header = new[] { (byte)(data.Length >> 24), (byte)(data.Length >> 16), (byte)(data.Length >> 8), (byte)data.Length };
                     await stream.WriteAsync(header, 0, 4).ConfigureAwait(false);
                     await stream.WriteAsync(data, 0, data.Length).ConfigureAwait(false);
@@ -171,11 +189,16 @@ namespace OniOnline.Network
             if (data == null || data.Length == 0 || data.Length > Protocol.MaxPacketBytes) return false;
             Connection connection;
             if (!connections.TryGetValue(peer, out connection) || Volatile.Read(ref connection.Closed) != 0) return false;
-            try
+            lock (connection.Outbox)
             {
-                if (connection.Outbox.TryAdd((byte[])data.Clone())) return true;
+                if (Volatile.Read(ref connection.Closed) != 0 || connection.WritesCompleted) return false;
+                if (connection.Outbox.Count < 64)
+                {
+                    connection.Outbox.Enqueue((byte[])data.Clone());
+                    connection.OutboxReady.Release();
+                    return true;
+                }
             }
-            catch (InvalidOperationException) { }
             Close(connection);
             return false;
         }
@@ -185,7 +208,12 @@ namespace OniOnline.Network
             if (Interlocked.Exchange(ref connection.Closed, 1) != 0) return;
             Connection ignored;
             connections.TryRemove(connection.Id, out ignored);
-            connection.Outbox.CompleteAdding();
+            lock (connection.Outbox)
+            {
+                connection.WritesCompleted = true;
+                connection.Outbox.Clear();
+                connection.OutboxReady.Release();
+            }
             connection.Client.Close();
             Enqueue(new TransportEvent { Kind = TransportEventKind.Disconnected, Peer = connection.Id });
         }
@@ -215,14 +243,20 @@ namespace OniOnline.Network
         {
             if (Interlocked.Exchange(ref disposed, 1) != 0) return;
             if (listener != null) listener.Stop();
-            foreach (var connection in connections.Values)
+            var closing = connections.Values.ToArray();
+            foreach (var connection in closing)
             {
-                connection.Outbox.CompleteAdding();
-                // Best effort graceful leave: only the single writer touches the stream.
-                try { if (connection.Writer != null) connection.Writer.Wait(100); }
-                catch (AggregateException) { }
-                Close(connection);
+                lock (connection.Outbox)
+                {
+                    connection.WritesCompleted = true;
+                    connection.OutboxReady.Release();
+                }
             }
+            // Drain all existing Leave frames under one room-wide deadline, rather
+            // than blocking Unity for up to 100ms multiplied by the player count.
+            try { Task.WaitAll(closing.Select(c => c.Writer).Where(t => t != null).ToArray(), 100); }
+            catch (AggregateException) { }
+            foreach (var connection in closing) Close(connection);
             TransportEvent ignored;
             while (TryReceive(out ignored)) { }
         }
