@@ -56,7 +56,9 @@ namespace OniMcp.Tools
             var reward = CarePackageInfoDictionary(selected, rewards.IndexOf(selected));
             var priorityPlan = PrintingRewardPriorityPlan(telepad, reward);
             List<ITelepadDeliverableContainer> screenContainers;
-            bool cleanupReady = TryGetImmigrantScreenContainers(out screenContainers);
+            bool cleanupReady = TryGetImmigrantScreenContainers(out screenContainers)
+                && screenContainers.OfType<CarePackageContainer>().Any(container =>
+                    container != null && ReferenceEquals(container.Info, selected));
             if (ToolUtil.GetBool(args, "dryRun", false))
             {
                 return JsonResult(new Dictionary<string, object>
@@ -76,8 +78,11 @@ namespace OniMcp.Tools
             if (!cleanupReady)
                 return CallToolResult.Error("Printing pod reward UI state is unavailable; reopen the immigrant screen before claiming");
 
-            telepad.OnAcceptDelivery(selected);
             bool screenClosed = CloseImmigrantScreen();
+            if (!screenClosed)
+                return CallToolResult.Error("Printing pod reward screen could not be closed; no reward was claimed");
+
+            telepad.OnAcceptDelivery(selected);
             PrintingPodClaimCleanup.Clear(screenContainers, container =>
             {
                 if (container == null)
@@ -154,13 +159,11 @@ namespace OniMcp.Tools
             if (immigration == null || !immigration.ImmigrantsAvailable)
                 return new List<CarePackageInfo>();
 
-            var field = typeof(CarePackageContainer).GetField("containers", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            var value = field == null ? null : field.GetValue(null) as IEnumerable<ITelepadDeliverableContainer>;
-            if (value == null)
+            List<ITelepadDeliverableContainer> screenContainers;
+            if (!TryGetImmigrantScreenContainers(out screenContainers))
                 return new List<CarePackageInfo>();
 
-            return value
-                .OfType<CarePackageContainer>()
+            return screenContainers.OfType<CarePackageContainer>()
                 .Where(container => container != null && container.Info != null)
                 .Select(container => container.Info)
                 .ToList();
