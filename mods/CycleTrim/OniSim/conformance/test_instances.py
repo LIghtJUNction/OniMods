@@ -105,6 +105,75 @@ class ConcurrencyAuditTests(unittest.TestCase):
                 verify_concurrency(receipt, instances, audited)
 
 
+class NativeThreadAuditTests(unittest.TestCase):
+    def fixture(self, root, workers=4):
+        tasks = root / "123/task"
+        names = ["python-main", "onisim-physics", *[f"OniSim-cell-{i}" for i in range(workers)]]
+        for tid, name in enumerate(names, 123):
+            folder = tasks / str(tid)
+            folder.mkdir(parents=True)
+            (folder / "comm").write_text(name + "\n")
+            (folder / "schedstat").write_text(f"{tid * 1000} 0 0\n")
+        return tasks
+
+    def test_observed_names_and_explicit_count_gate(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(root)
+            observation = verify_instances.native_threads(123, root)
+            self.assertEqual(observation['total_threads'], 6)
+            self.assertEqual(observation['runtime_ns']['124'], 124000)
+            self.assertEqual(len(observation['runtime_ns']), 5)
+            verify_instances.require_cell_workers(observation, 4)
+            with self.assertRaisesRegex(RuntimeError, "differ from required"):
+                verify_instances.require_cell_workers(observation, 3)
+            self.assertEqual(list(observation['physics_threads'].values()), ['onisim-physics'])
+
+    def test_serial_does_not_invent_one_pool_worker(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(root, workers=0)
+            observation = verify_instances.native_threads(123, root)
+            verify_instances.require_cell_workers(observation, 0)
+            with self.assertRaises(RuntimeError):
+                verify_instances.require_cell_workers(observation, 1)
+
+    def test_unreadable_or_empty_tasks_never_mean_zero_workers(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            tasks = root / '123/task'
+            tasks.mkdir(parents=True)
+            with self.assertRaisesRegex(RuntimeError, "no observable threads"):
+                verify_instances.native_threads(123, root)
+            self.fixture(root)
+            (tasks / '123/comm').unlink()
+            with self.assertRaises(FileNotFoundError):
+                verify_instances.native_threads(123, root)
+
+    def test_changed_task_set_is_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            tasks = self.fixture(root)
+            before = list(tasks.iterdir())
+            with patch('pathlib.Path.iterdir', side_effect=[iter(before), iter(before[:-1])]):
+                with self.assertRaisesRegex(RuntimeError, "thread set changed"):
+                    verify_instances.native_threads(123, root)
+
+    def test_duplicate_misnamed_and_missing_physics_threads_are_rejected(self):
+        valid = dict(physics_threads={'1': 'onisim-physics'}, cell_workers={'2': 'OniSim-cell-0'})
+        for observation, expected in [
+            (dict(valid, physics_threads={}), 1),
+            (dict(valid, physics_threads={'1': 'onisim-physics', '3': 'onisim-physics'}), 1),
+            (dict(valid, cell_workers={'2': 'OniSim-cell-0', '3': 'OniSim-cell-0'}), 2),
+            (dict(valid, cell_workers={'2': 'OniSim-cell-other'}), 1),
+        ]:
+            with self.subTest(observation=observation), self.assertRaises(RuntimeError):
+                verify_instances.require_cell_workers(observation, expected)
+        for expected in [True, -1, 9]:
+            with self.assertRaises(RuntimeError):
+                verify_instances.require_cell_workers(valid, expected)
+
+
 class NativeMappingAuditTests(unittest.TestCase):
     def test_live_assembly_run_and_pid_must_all_match(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -119,7 +188,9 @@ class NativeMappingAuditTests(unittest.TestCase):
                 verify_hashes=Mock(), paths=lambda name: dict(user=profile, control=profile),
                 instances=dict(guest1=dict(graphics="headless")))
             backend = SimpleNamespace(ProcessIdentity=SimpleNamespace(capture=Mock(return_value=(123, 456))))
-            with patch("verify_instances.mapped_native", return_value="native"):
+            with patch("verify_instances.mapped_native", return_value="native"), \
+                 patch("verify_instances.native_threads", return_value=dict(total_threads=1,
+                     physics_threads={"123": "onisim-physics"}, cell_workers={})):
                 self.assertEqual(inspect_instance(controller, backend, "guest1", sha, "native")["managed_sha256"], sha)
                 with self.assertRaisesRegex(RuntimeError, "not the requested candidate"):
                     inspect_instance(controller, backend, "guest1", "0" * 64, "native")

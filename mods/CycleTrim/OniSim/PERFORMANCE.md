@@ -9,6 +9,45 @@ the new native identity. These earlier runs had host load
 and paging, so no whole-game FPS improvement is established. Rejected
 variants below have separate identities and are not production replacements.
 
+## Direct official comparison of the current core
+
+The current 2772e526 Rust file and pinned official 85111cd0 library were measured
+on CPU16, one worker, eight alternating pairs in each 96x96 scene. All 96 final
+states match official exactly, with zero timed major faults. The existing fixed
+gates pass: no CPU regression above 3%, one CPU reduction at least 10%, and no
+peak RSS increase above 3%. All ranges and live-host context remain recorded.
+
+| Scene | CPU change versus official | Elapsed change |
+| --- | ---: | ---: |
+| Fluid | -9.52% | -9.30% |
+| Thermal | -22.19% | -22.18% |
+| Sealed | -22.46% | -22.14% |
+| Germ flow | -8.65% | -8.64% |
+| Mixed germs | -8.91% | -9.00% |
+| Vacuum | -51.99% | -51.59% |
+
+Native child-process peak RSS falls 9.24-60.30% across these authored fixtures.
+This includes library/fixture allocation differences and does not establish
+Unity/Mono or whole-game memory savings. These are direct official comparisons,
+not additive combinations of earlier Rust-to-Rust gains. See the
+[exact receipt](conformance/results/linux-744825-pressure-sweep-official.json).
+
+## Current one/four-worker scaling
+
+The same 2772e526 file is also measured with one versus four workers on
+CPU0/2/4/6. All 156 final states match official and no timed major faults occur.
+Every four-worker sample observes all four persistent worker names and positive
+total scheduler runtime. Both 96x96 and 192x192 still fail the new strict gates
+and the older scaling criteria: several scenes regress CPU or elapsed time.
+
+A separate 36-sample PMU run compares the same worker configurations. Retired
+instructions increase 2.14% germ-flow, 2.14% mixed-germs and 0.80% thermal; cycles
+increase 7.92%, 6.52% and 11.10%. This does not isolate scheduling, frequency or
+cache effects. It establishes that merely adding threads does not remove the
+whole-frame limiter. No default-thread policy is changed from these results.
+All counters/outliers remain, with running/enabled at least 98%. See the
+[scaling receipt](conformance/results/linux-744825-pressure-sweep-scaling.json).
+
 ## Current borrowed pressure sweep
 
 The adopted 2772e526 source borrows the fixed-size pressure arrays once per

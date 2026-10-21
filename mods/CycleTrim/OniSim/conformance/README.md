@@ -16,6 +16,15 @@ pair; actual worker names, graphics and complete runtime acceptance remain pendi
 Sections below describe earlier
 binaries and retain their original test counts and scope.
 
+Runtime library audits now automatically record actual physics/pool thread names
+and their scheduler runtimes inside the PID-incarnation checks. After a bounded
+warmup step, use `verify_instances.py --require-cell-workers 4` with the other
+usual audit arguments to enforce the exact observed pool names. Serial mode uses
+`--require-cell-workers 0`; setting workers=1 does not create a one-thread pool.
+Missing/unreadable/changing task sets fail rather than being recorded as zero.
+The five new fake-proc/API-double tests are game-free evidence, not recovered
+observations for the earlier stopped headless process.
+
 Earlier source correction: the mixed-material thermal multiplication order now
 matches the original instruction sequence. The then-current native `c301cc3e…`
 passes 227 cases and 9103 publications with [one](results/linux-744825-workers1.json)

@@ -25,6 +25,21 @@ All final states match official and no timed major faults occur. A separate
 -12.36% mixed-germs, cycles -8.19% / -8.20%; physics instructions fall about
 13.7-13.8%. Host load/frequency dispersion and fixture scope still apply.
 
+The new file now also passes a direct one-worker CPU16 comparison against
+official: 96 exact 96x96 samples, zero timed major faults, CPU medians -9.52%
+fluid, -22.19% thermal, -22.46% sealed, -8.65% germ-flow, -8.91% mixed-germs and
+-51.99% vacuum. The original fixed native CPU/RSS gates pass. This is not
+whole-game FPS or Unity memory evidence; the exact receipt is
+`conformance/results/linux-744825-pressure-sweep-official.json`.
+
+Fresh same-file one/four-worker scaling still fails at both sizes. All 156 final
+states match official, four worker names and positive scheduler runtime are
+observed, but CPU/elapsed regressions remain. A separate 36-sample hardware run
+observes only 0.80-2.14% extra retired instructions, with cycles +6.52-11.10%.
+Scheduling, frequency and cache effects are not separately attributed. The
+thread policy stays unchanged. See
+`conformance/results/linux-744825-pressure-sweep-scaling.json`.
+
 The isolated 5eb76a3 package has ZIP bd0b2823, managed d0437d55 and native
 2772e526. A genuine Steam headless process loaded those exact bytes, the approved
 disposable save, Null graphics and zero camera callbacks. Normal bounded progress,

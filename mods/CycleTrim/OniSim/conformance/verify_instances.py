@@ -54,6 +54,33 @@ def mapped_native(pid, profile, expected, proc=Path("/proc")):
     return next(iter(mapped.values()))
 
 
+def native_threads(pid, proc=Path("/proc")):
+    """Observe a stable task set; a failed read is not evidence of zero workers."""
+    tasks = proc / str(pid) / "task"
+    before = {p.name for p in tasks.iterdir() if p.name.isdigit()}
+    require(before, "Native process has no observable threads")
+    names = {tid: (tasks / tid / "comm").read_text().strip()
+             for tid in sorted(before, key=int)}
+    require(all(names.values()), "Native thread has an empty name")
+    selected = {tid: name for tid, name in names.items()
+                if name == "onisim-physics" or name.startswith("OniSim-cell-")}
+    runtime = {tid: int((tasks / tid / "schedstat").read_text().split()[0]) for tid in selected}
+    require(all(value >= 0 for value in runtime.values()), "Native thread runtime is invalid")
+    after = {p.name for p in tasks.iterdir() if p.name.isdigit()}
+    require(before == after, "Native thread set changed during observation")
+    return dict(total_threads=len(names), runtime_ns=runtime,
+                physics_threads={tid: name for tid, name in names.items() if name == "onisim-physics"},
+                cell_workers={tid: name for tid, name in names.items() if name.startswith("OniSim-cell-")})
+
+
+def require_cell_workers(observation, expected):
+    require(type(expected) is int and 0 <= expected <= 8, "Invalid expected cell-worker count")
+    require(len(observation["physics_threads"]) == 1, "Require exactly one observed physics thread")
+    actual = sorted(observation["cell_workers"].values())
+    require(actual == [f"OniSim-cell-{index}" for index in range(expected)],
+            f"Observed cell-worker names differ from required count {expected}: {actual}")
+
+
 def inspect_instance(controller, backend, name, managed, native):
     status = controller.read_status(name)
     pid = status["pid"]
@@ -73,6 +100,7 @@ def inspect_instance(controller, backend, name, managed, native):
     require(location.resolve().is_relative_to(paths["user"].resolve()), "Loaded CycleTrim is outside its instance profile")
     require(assembly.get("sha256") == managed and digest(location) == managed,
             "Actually loaded CycleTrim assembly is not the requested candidate")
+    threads = native_threads(pid)
     final = controller.read_status(name)
     require(all(final.get(k) == status.get(k) for k in ("pid", "identity", "runNonce")),
             "Instance restarted during the library audit")
@@ -80,7 +108,7 @@ def inspect_instance(controller, backend, name, managed, native):
     require(mapped_native(pid, paths["user"], native) == native_hash, "OniSim changed during the audit")
     return dict(pid=pid, identity=status["identity"], runNonce=status["runNonce"],
                 managed_sha256=managed, mapped_native_sha256=native_hash,
-                mode=controller.instances[name]["graphics"], status=final)
+                mode=controller.instances[name]["graphics"], status=final, native_threads=threads)
 
 
 def native_clock(value):
@@ -161,6 +189,8 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--name", action="append", help="Inspect selected instances without claiming four-game acceptance")
     parser.add_argument("--concurrency-receipt", type=Path)
+    parser.add_argument("--require-cell-workers", type=int, choices=range(9),
+                        help="Require observed pool names after warmup; 0 is serial, not one pool worker")
     args = parser.parse_args()
     protected = [args.managed, args.native, args.concurrency_receipt]
     if args.output.suffix != ".json" or args.output.resolve().is_relative_to(args.group_root.resolve()) or any(
@@ -185,6 +215,8 @@ def main():
         result["instances"] = audits
         for name in names:
             audits[name] = inspect_instance(controller, backend, name, managed, native)
+            if args.require_cell_workers is not None:
+                require_cell_workers(audits[name]["native_threads"], args.require_cell_workers)
         if args.concurrency_receipt:
             document = json.loads(args.concurrency_receipt.read_text())
             result["concurrency"] = verify_concurrency(document, controller.instances, audits)
