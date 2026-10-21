@@ -53,7 +53,8 @@ namespace OniMcp.Tools
                     ["responseMode"] = new McpToolParameter { Type = "string", Description = "domain=batch action=call_many：full/summary/errors，默认 summary", Required = false, EnumValues = new List<string> { "full", "summary", "errors" } },
                     ["includeArguments"] = new McpToolParameter { Type = "boolean", Description = "domain=batch action=call_many：是否回显合并 defaults 后的 arguments，默认 false", Required = false },
                     ["maxTextChars"] = new McpToolParameter { Type = "integer", Description = "domain=batch action=call_many：summary/errors 模式下每项 text 最大字符数，默认 500，最大 4000", Required = false },
-                    ["program"] = new McpToolParameter { Type = "object", Description = "domain=program action=execute：受限流程 DSL 对象、数组或 JSON 字符串，格式如 {vars:{...},steps:[...]}", Required = false },
+                    ["program"] = new McpToolParameter { Type = "object", Description = "domain=program/code action=execute：受限流程 DSL / CodeMode 对象、数组或 JSON 字符串", Required = false },
+                    ["code"] = new McpToolParameter { Type = "object", Description = "program 的别名，支持直接传 CodeMode 步骤数组或程序对象", Required = false },
                     ["maxSteps"] = new McpToolParameter { Type = "integer", Description = "domain=program action=execute：最大执行语句数，默认 200，最大 2000", Required = false },
                     ["maxLoopIterations"] = new McpToolParameter { Type = "integer", Description = "domain=program action=execute：单个 while/repeat 最大迭代次数，默认 100，最大 1000", Required = false },
                     ["trace"] = new McpToolParameter { Type = "boolean", Description = "domain=program action=execute：是否返回详细执行 trace，默认 true", Required = false },
@@ -87,14 +88,14 @@ namespace OniMcp.Tools
                         return ToolBatchTools.CallMany().Handler(args);
                     if (domain == "middleware" || domain == "tool_middleware" || domain == "notice")
                         return ToolCallMiddlewareControl(args);
-                    if (domain == "program" || domain == "agent_program" || domain == "flow" || domain == "script")
+                    if (domain == "program" || domain == "agent_program" || domain == "flow" || domain == "script" || domain == "code" || domain == "codemode")
                     {
                         string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
-                        if (action == "execute" || action == "run" || action == "start")
+                        if (string.IsNullOrEmpty(action) || action == "execute" || action == "run" || action == "start")
                             return AgentProgramTools.ExecuteProgram().Handler(args);
                         return CallToolResult.Error("domain=program action must be execute");
                     }
-                    return CallToolResult.Error("domain must be diagnostics, client_request, catalog, batch, program, or middleware");
+                    return CallToolResult.Error("domain must be diagnostics, client_request, catalog, batch, program, code, or middleware");
                 }
             };
         }

@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "complete": true,
+  "scope": "192x192 native frame fixtures, not whole-game FPS",
+  "native_sha256": "8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0",
+  "cpus": [
+    0,
+    2,
+    4,
+    6
+  ],
+  "baseline_workers": 1,
+  "candidate_workers": 4,
+  "samples": 60,
+  "scenes": {
+    "fluid": {
+      "cpu_change_percent": -2.471463364418114,
+      "wall_change_percent": -7.122336628748371,
+      "peak_rss_change_percent": 0.33057851239668423
+    },
+    "thermal": {
+      "cpu_change_percent": 19.981862510045612,
+      "wall_change_percent": 5.143936177500574,
+      "peak_rss_change_percent": 0.3023660140600182
+    },
+    "sealed": {
+      "cpu_change_percent": 13.414730845809842,
+      "wall_change_percent": 8.359267953965333,
+      "peak_rss_change_percent": 0.21946420463145877
+    },
+    "germ_flow": {
+      "cpu_change_percent": 2.209470900033894,
+      "wall_change_percent": -6.336314003676147,
+      "peak_rss_change_percent": 0.251535103943179
+    },
+    "mixed_germs": {
+      "cpu_change_percent": 6.413224994427202,
+      "wall_change_percent": -3.004023137175882,
+      "peak_rss_change_percent": 0.19988155167307564
+    },
+    "vacuum": {
+      "cpu_change_percent": 8.659081012753989,
+      "wall_change_percent": 3.640525269619266,
+      "peak_rss_change_percent": 0.3724683789865679
+    }
+  },
+  "gates": {
+    "all_finals_match_official": true,
+    "four_workers_observed": true,
+    "positive_total_worker_runtime_each_sample": true,
+    "one_scene_wall_reduction_at_least_5_percent": true,
+    "no_scene_wall_regression_over_3_percent": false,
+    "no_scene_cpu_regression_over_10_percent": false,
+    "no_scene_peak_rss_increase_over_3_percent": true
+  },
+  "passes_predeclared_gates": false,
+  "timed_major_faults": 0,
+  "raw_report_sha256": "6cffa947166b4eaa9b5ffe11a1e20084ef13015d5262c1e45f6fdde9a71df995",
+  "interpretation": "Four persistent workers have positive measured runtime; full native scenes still fail CPU-efficiency gates. Host frequency/load observations retained. These fixtures do not establish whole-game or concurrent-game performance."
+}

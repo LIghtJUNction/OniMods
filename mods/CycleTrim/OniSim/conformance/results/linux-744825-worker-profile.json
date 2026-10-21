@@ -1,0 +1,325 @@
+{
+  "scope": "CPU-clock IP sampling of Rust physics worker only, during 180 native fluid batches; excludes initialization/snapshots, not an FPS benchmark",
+  "samples": 10351,
+  "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "modules": {
+    "liboni_sim_core.so": 10090,
+    "libc.so.6": 259,
+    "libm.so.6": 2
+  },
+  "functions": [
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::gas::update_pressure",
+      "samples": 2562,
+      "percent": 24.751231765046857
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::fluid_helpers::add_disease",
+      "samples": 1397,
+      "percent": 13.496280552603613
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::postprocess::cell",
+      "samples": 1132,
+      "percent": 10.936141435610086
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::simulation_step_fluid::gas_phase",
+      "samples": 1100,
+      "percent": 10.626992561105208
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::simulation_step::step",
+      "samples": 776,
+      "percent": 7.496860206743309
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::partial_melt::apply",
+      "samples": 512,
+      "percent": 4.94638199207806
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::disease_fields::add_disease_fields",
+      "samples": 407,
+      "percent": 3.9319872476089266
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::fluid::update_liquid",
+      "samples": 282,
+      "percent": 2.724374456574244
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::transition::do_state_transition_from_element",
+      "samples": 280,
+      "percent": 2.705052651917689
+    },
+    {
+      "name": "libc.so.6:[unresolved]",
+      "samples": 259,
+      "percent": 2.502173703023862
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::disease::post_process_bounds",
+      "samples": 256,
+      "percent": 2.47319099603903
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::simulation_step_fluid::liquid_phase",
+      "samples": 206,
+      "percent": 1.990145879625157
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::postprocess_pressure::density_displacement",
+      "samples": 182,
+      "percent": 1.758284223746498
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::sublimation::apply_with_source",
+      "samples": 164,
+      "percent": 1.5843879818375037
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::simulation_step::validate_cells",
+      "samples": 125,
+      "percent": 1.2076127910346826
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::simulation_step::preflight",
+      "samples": 109,
+      "percent": 1.0530383537822432
+    },
+    {
+      "name": "liboni_sim_core.so:core::slice::sort::unstable::quicksort::quicksort::<oni_sim_core::event_records::SubstanceChangeInfo, <[oni_sim_core::event_records::SubstanceChangeInfo]>::sort_unstable_by_key<i32, <oni_sim_core::events::EventQueues>::resolve_grid_changes::{closure#2}>::{closure#0}>",
+      "samples": 104,
+      "percent": 1.004733842140856
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::partial_transition::apply",
+      "samples": 79,
+      "percent": 0.7632112839339195
+    },
+    {
+      "name": "liboni_sim_core.so:core::slice::sort::shared::smallsort::small_sort_network::<oni_sim_core::event_records::SubstanceChangeInfo, <[oni_sim_core::event_records::SubstanceChangeInfo]>::sort_unstable_by_key<i32, <oni_sim_core::events::EventQueues>::resolve_grid_changes::{closure#2}>::{closure#0}>",
+      "samples": 75,
+      "percent": 0.7245676746208096
+    },
+    {
+      "name": "liboni_sim_core.so:<oni_sim_core::events::EventQueues>::resolve_grid_changes",
+      "samples": 54,
+      "percent": 0.5216887257269829
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::fluid::transfer_liquid",
+      "samples": 52,
+      "percent": 0.502366921070428
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::fluid_helpers::swap_material",
+      "samples": 45,
+      "percent": 0.4347406047724858
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::fluid::remove_transfer",
+      "samples": 43,
+      "percent": 0.41541880011593085
+    },
+    {
+      "name": "liboni_sim_core.so:<oni_sim_core::world::PhysicsWorld>::publish_to",
+      "samples": 41,
+      "percent": 0.39609699545937593
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::fluid_helpers::notify",
+      "samples": 34,
+      "percent": 0.3284706791614337
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::fluid_helpers::add_mass_and_update_temperature",
+      "samples": 28,
+      "percent": 0.27050526519176893
+    },
+    {
+      "name": "liboni_sim_core.so:<oni_sim_core::presentation::PresentationBuffers>::update",
+      "samples": 17,
+      "percent": 0.16423533958071684
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::presentation::liquid::update",
+      "samples": 9,
+      "percent": 0.08694812095449715
+    },
+    {
+      "name": "liboni_sim_core.so:oni_sim_core::presentation::liquid::estimated_gradient",
+      "samples": 6,
+      "percent": 0.057965413969664766
+    },
+    {
+      "name": "liboni_sim_core.so:core::slice::sort::shared::pivot::median3_rec::<oni_sim_core::event_records::SubstanceChangeInfo, <[oni_sim_core::event_records::SubstanceChangeInfo]>::sort_unstable_by_key<i32, <oni_sim_core::events::EventQueues>::resolve_grid_changes::{closure#2}>::{closure#0}>",
+      "samples": 4,
+      "percent": 0.038643609313109846
+    }
+  ],
+  "hottest_offsets": [
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::fluid_helpers::add_disease",
+      "offset": "0x81",
+      "samples": 1061
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x185",
+      "samples": 220
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x15d",
+      "samples": 219
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::disease_fields::add_disease_fields",
+      "offset": "0x0",
+      "samples": 179
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::postprocess::cell",
+      "offset": "0x76",
+      "samples": 161
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x180",
+      "samples": 131
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0xa2",
+      "samples": 110
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x17c",
+      "samples": 107
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x165",
+      "samples": 102
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x39d",
+      "samples": 100
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x0",
+      "samples": 94
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x2b8",
+      "samples": 90
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::fluid_helpers::add_disease",
+      "offset": "0x30",
+      "samples": 89
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::fluid_helpers::add_disease",
+      "offset": "0x0",
+      "samples": 88
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x40",
+      "samples": 87
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::disease_fields::add_disease_fields",
+      "offset": "0x12",
+      "samples": 86
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x252",
+      "samples": 86
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x74",
+      "samples": 83
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::postprocess::cell",
+      "offset": "0x66",
+      "samples": 78
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::disease_fields::add_disease_fields",
+      "offset": "0x100",
+      "samples": 77
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x16",
+      "samples": 74
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x283",
+      "samples": 74
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::fluid_helpers::add_disease",
+      "offset": "0x64",
+      "samples": 73
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::gas::update_pressure",
+      "offset": "0x205",
+      "samples": 65
+    },
+    {
+      "module": "liboni_sim_core.so",
+      "function": "oni_sim_core::simulation_step::preflight",
+      "offset": "0x3ab",
+      "samples": 65
+    }
+  ],
+  "schema": 1,
+  "sample_period_ns": 1000000,
+  "lost_samples": 0,
+  "profiled_thread": "onisim-physics",
+  "profiler_overhead_included": true,
+  "not_for_speedup_comparison": true,
+  "source_sha256": {
+    "sample.c": "0054cb11166fe06140fb6e078fd471c68e4ecb9fd4a9f9b6e785114b5d267a30",
+    "profile_child.py": "0397285c952222419cdd00efe9e05e38225d3a98bf9553f105e076b567f865be",
+    "analyze.py": "35e218fadec202d22c0775a559fdb968b568b88eb808d3bb294d776520e573aa"
+  }
+}

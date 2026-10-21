@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "native_sha256": "7811921b7d3fd9593bb822cdace22cd1e64948b442d7f786223ee4aeeb65fb5e",
+  "managed_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "headless_save_load_passed": true,
+  "steps_native_seconds": [
+    0.9499855041503906,
+    1.199981689453125,
+    0.9166526794433594
+  ],
+  "exact_saved_clock_restored": true,
+  "measurement_complete": true,
+  "measurement_summary": {
+    "cpu_seconds_per_native_second": {
+      "median": 0.660010070954455,
+      "minimum": 0.5818270597945586,
+      "maximum": 0.6863729194446377
+    },
+    "elapsed_seconds": {
+      "median": 3.366957120000734,
+      "minimum": 3.31329895700037,
+      "maximum": 3.7149982749979245
+    },
+    "native_seconds": {
+      "median": 2.1999664306640625,
+      "minimum": 2.1666336059570312,
+      "maximum": 2.199970245361328
+    },
+    "major_faults": {
+      "median": 1860,
+      "minimum": 1705,
+      "maximum": 5806
+    }
+  },
+  "measurement_samples": 5,
+  "native_process_final_pss_kib": 356351,
+  "native_process_final_swap_pss_kib": 3931780,
+  "owned_tree_peak_pss_plus_swap_pss_kib": 4325855,
+  "valid_owned_resource_samples": 123,
+  "scope": "One Steam-launched real headless game, small three-duplicant test save, guarded speed-1 steps; not maximum throughput or FPS",
+  "original_save_unchanged": true,
+  "baseline_comparison": false,
+  "whole_game_speedup_established": false,
+  "graphical_candidate_tested": false,
+  "concurrent_real_games_validated": false,
+  "production_adopted": false,
+  "original_measurement_failure_retained": true,
+  "measurement_fix": "Wait for companion telemetry to publish the same native paused clock after MCP pause acknowledgement",
+  "quit_verified": true,
+  "owned_processes_reclaimed": 5,
+  "controller_stopped": true,
+  "capacity_forecast_bytes": 5368709120,
+  "reserve_bytes": 1073741824,
+  "graphical_admission": "Current single-game admission failed before launch; required minimum increases with observed forecast",
+  "memory_interpretation": "Swapping resident pages out is not reducing the process footprint. PSS plus SwapPSS and major faults show substantial host memory pressure.",
+  "memory_phase_observations": {
+    "scope": "Nearest periodic owned-tree measurements; includes Unity, native runtime, wrappers and controller; not allocator attribution or proof of a leak",
+    "observations": [
+      {
+        "phase": "step_before_save",
+        "clock": 51.56664276123047,
+        "sample": {
+          "time": "2026-10-21T01:48:28.698296+00:00",
+          "pss_plus_swap_pss_kib": 3475722
+        },
+        "distance_seconds": 0.10721898078918457
+      },
+      {
+        "phase": "step_after_save",
+        "clock": 52.766624450683594,
+        "sample": {
+          "time": "2026-10-21T01:48:32.967445+00:00",
+          "pss_plus_swap_pss_kib": 3509045
+        },
+        "distance_seconds": 1.0201358795166016
+      },
+      {
+        "phase": "step_after_reload",
+        "clock": 52.48329544067383,
+        "sample": {
+          "time": "2026-10-21T01:48:54.824542+00:00",
+          "pss_plus_swap_pss_kib": 4320937
+        },
+        "distance_seconds": 0.26866698265075684
+      }
+    ]
+  },
+  "reload_memory_interpretation": "Owned-tree PSS plus SwapPSS increased by about 793 MiB around reload in this one run. Requires matched official-library and repeated-reload comparison; not proof of a leak or Rust attribution.",
+  "post_test_host_memory_snapshot": {
+    "captured_at": "2026-10-21T02:02:08.538449+00:00",
+    "available_kib": 4616340,
+    "zram_original_data_bytes": 14257627136,
+    "zram_compressed_bytes": 3900353314,
+    "zram_physical_bytes": 3989266432,
+    "scope": "Post-test host state, not a synchronized timing-window sample"
+  }
+}

@@ -56,8 +56,11 @@ def main() -> int:
             "!Immigration.Instance.ImmigrantsAvailable",
             "CurrentCarePackages().ToList()",
             "TryGetImmigrantScreenContainers(out screenContainers)",
-            "telepad.OnAcceptDelivery(selected)",
+            "ReferenceEquals(container.Info, selected)",
+            "if (!cleanupReady)",
             "CloseImmigrantScreen()",
+            "if (!screenClosed)",
+            "telepad.OnAcceptDelivery(selected)",
             "PrintingPodClaimCleanup.Clear(screenContainers",
         ],
         "ClaimPrintingReward",
@@ -72,10 +75,14 @@ def main() -> int:
         [
             "Immigration.Instance",
             "!immigration.ImmigrantsAvailable",
-            "typeof(CarePackageContainer).GetField",
+            "TryGetImmigrantScreenContainers(out screenContainers)",
+            "screenContainers.OfType<CarePackageContainer>()",
         ],
         "CurrentCarePackages",
     )
+
+    if "typeof(CarePackageContainer).GetField" in current or "BindingFlags.Static" in current:
+        fail("CurrentCarePackages must use the native screen option set, not the stale static registry")
 
     preflight = method_body(source, "private static bool TryGetImmigrantScreenContainers(")
     for marker in (

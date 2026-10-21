@@ -313,6 +313,8 @@ namespace OniMcp.Tools
 
         private static Dictionary<string, object> NotificationInfo(Notification notification, int index)
         {
+            var messageNotification = notification as MessageNotification;
+            var tutorialMessage = messageNotification?.message as TutorialMessage;
             Transform focus = notification.clickFocus;
             GameObject focusGo = focus != null ? focus.gameObject : null;
             var focusKpid = focusGo?.GetComponent<KPrefabID>();
@@ -343,6 +345,8 @@ namespace OniMcp.Tools
                     ["worldId"] = Grid.IsValidCell(focusCell) && Grid.IsWorldValidCell(focusCell) ? Grid.WorldIdx[focusCell] : -1
                 },
                 ["isMessage"] = notification is MessageNotification,
+                ["messageType"] = messageNotification?.message?.GetType().Name,
+                ["tutorialMessageId"] = tutorialMessage == null ? null : tutorialMessage.messageId.ToString(),
                 ["hasCustomClick"] = notification.customClickCallback != null,
                 ["clearOnClick"] = notification.clearOnClick,
                 ["dismissable"] = notification.showDismissButton,

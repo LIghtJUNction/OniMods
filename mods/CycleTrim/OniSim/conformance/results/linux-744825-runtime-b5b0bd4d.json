@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "game_build": 744825,
+  "unity": "6000.3.5f2",
+  "native_sha256": "b5b0bd4d860b9451399771e9a3b6ddf527b53b22119172b1ed15cb9e3457000f",
+  "cycletrim_dll_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "steam_launched": true,
+  "headless": true,
+  "batch_mode": true,
+  "graphics_device": "Null",
+  "camera_render_callbacks": 0,
+  "game_crash": false,
+  "cell_workers": [
+    "OniSim-cell-0",
+    "OniSim-cell-1",
+    "OniSim-cell-2",
+    "OniSim-cell-3"
+  ],
+  "native_seconds_advanced_before_save": 4.484130859375,
+  "native_seconds_advanced_after_reload": 2.71728515625,
+  "reload_clock_equal": true,
+  "reload_clock": 2601.498046875,
+  "duplicants": 3,
+  "sample_physical_fields_equal": true,
+  "whole_grid_runtime_bitwise_comparison": false,
+  "skipped_timelapse_captures": 3,
+  "restoration": {
+    "process_stopped": true,
+    "original_cycletrim_files_restored": true,
+    "original_mod_enablement_restored": true,
+    "new_mod_metadata_preserved": true,
+    "continue_save_preference_restored": true,
+    "source_save_unchanged": true
+  },
+  "startup_wait_timed_out": true,
+  "startup_note": "Initial 180-second engine readiness wait expired under paging. Later verified the same owned process with fresh headless telemetry, then issued one colony load; no restart or graphics fallback.",
+  "load_wait_note": "Waited for fresh paused telemetry, three duplicants and usable active save after the one load request.",
+  "source_fixture": {
+    "sandbox_enabled": false,
+    "saved_mod_count": 1,
+    "saved_mod_ids": [
+      "oni_mcp"
+    ],
+    "content_mods_required": false,
+    "source_sha256": "2595e303efb90cc71f56083273fada1eaa521c1168ac8ff80b2b09b516213b8e",
+    "source_bytes": 1272759
+  },
+  "acceptance_scope": "One ordinary non-sandbox early colony copy with only OniMcp in its saved mod footprint; bounded progress and save/reload only. No large-colony, full compatibility, graphics upload, whole-grid runtime equivalence or performance claim.",
+  "private_evidence": "tools/OniHarness/artifacts/cycletrim-rust-20261020/run-ready-lifecycle/",
+  "mapped_native_path_sha256_verified": true
+}

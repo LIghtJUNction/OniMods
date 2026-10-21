@@ -34,6 +34,7 @@ A large-scale modular repository for Oxygen Not Included mod development:
 
 ## Table of Contents
 
+- [Gameplay Demo](#gameplay-demo)
 - [Project Overview](#project-overview)
 - [Supported Modules](#supported-modules)
 - [Quick Start](#quick-start)
@@ -45,6 +46,18 @@ A large-scale modular repository for Oxygen Not Included mod development:
 - [Compatibility](#compatibility)
 - [Contributing](#contributing)
 - [Release Notes](#release-notes)
+
+## Gameplay Demo
+
+[我把《缺氧》交给 GPT，这三个小人能活下来吗？-哔哩哔哩](https://b23.tv/isOd72t)
+
+Watch GPT operate an Oxygen Not Included colony through OniMcp, including construction, farming, and the problems encountered along the way. The screenshots below are taken directly from the video.
+
+[![Colony overview from the GPT gameplay video at 03:05](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
+
+| Reading state and issuing operations · 00:18 | Construction in progress · 02:10 |
+| --- | --- |
+| ![OniMcp workflow illustrated in the video](docs/images/gpt-oni-demo/mcp-workflow.jpg) | ![Colony construction and dig orders in the video](docs/images/gpt-oni-demo/colony-building.jpg) |
 
 ## Project Overview
 
@@ -63,6 +76,8 @@ The repository is organized as a **two-part platform**:
 | `onim` | [src/](src/) | Rust CLI for mod lifecycle management |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP server mod and tool surface |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | Lightweight performance mod targeting measured simulation hot paths |
+| `oni-skills` *(optional)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | High-level ONI gameplay strategies and community engineering modules |
+| Architecture & Principles | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | Technical implementation, world textualization, and optimization principles |
 | `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | Boilerplate template for new mod creation |
 | Chinese Project Docs | [README_ZH.md](README_ZH.md) | Chinese overview and usage docs |
 | MCP Runtime Docs | [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md) | Current tool/resource reference |
@@ -76,6 +91,11 @@ onim doctor
 onim init MyMod
 onim dev -m MyMod
 ```
+
+`onim dev` backs up `mods.json` only when its configuration changes and keeps the
+latest five valid configuration backups. It enables the selected Dev entry
+without enabling other copies of the same mod. Backup cleanup failures are
+reported separately from a successfully applied configuration.
 
 ## Quick Links
 

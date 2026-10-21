@@ -22,9 +22,9 @@ namespace OniMcp.Tools
                 ["action"] = new McpToolParameter
                 {
                     Type = "string",
-                    Description = "操作：parse_plan/search_defs/materials/preview/placement_candidates/auto_connect/repair_line/build_area/room_template",
+                    Description = "操作：parse_plan/search_defs/materials/preview/placement_candidates/auto_connect/repair_line/build_area/room_template/pending_build",
                     Required = true,
-                    EnumValues = new List<string> { "parse_plan", "search_defs", "materials", "preview", "placement_candidates", "auto_connect", "repair_line", "connect_line", "build_area", "room_template" }
+                    EnumValues = new List<string> { "parse_plan", "search_defs", "materials", "preview", "placement_candidates", "auto_connect", "repair_line", "connect_line", "build_area", "room_template", "pending_build" }
                 }
             };
 
@@ -39,6 +39,10 @@ namespace OniMcp.Tools
             parameters["steps"] = new McpToolParameter { Type = "integer", Description = "repair_line: cells to connect in direction, default 1.", Required = false };
             MergeParameters(parameters, BuildArea().Parameters);
  MergeParameters(parameters, RoomTemplatePlan().Parameters);
+            parameters["pendingBuildId"] = new McpToolParameter { Type = "string", Description = "pending_build: opaque handle returned when an auto-dig build is deferred.", Required = false };
+            parameters["pendingBuildAction"] = new McpToolParameter { Type = "string", Description = "pending_build operation: status (default) or cancel. Cancel preview defaults to dryRun=true; actual cancellation requires dryRun=false and confirm=true. Native dig and uproot orders remain untouched.", Required = false, EnumValues = new List<string> { "status", "cancel" } };
+            parameters["dryRun"] = new McpToolParameter { Type = "boolean", Description = "pending_build cancel: defaults to true; must be false to apply cancellation.", Required = false };
+            parameters["confirm"] = new McpToolParameter { Type = "boolean", Description = "pending_build cancel: must be true to apply cancellation.", Required = false };
             return parameters;
         }
 
@@ -75,7 +79,7 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Aliases = new List<string> { "buildings_planning_control", "build_control" },
                 Tags = new List<string> { "buildings", "materials", "preview", "placement", "utility", "建造", "材料", "预检", "候选" },
- Description = "建造规划组合工具：action=search_defs/materials/preview/placement_candidates/auto_connect/build_area/room_template",
+ Description = "建造规划组合工具：action=search_defs/materials/preview/placement_candidates/auto_connect/build_area/room_template/pending_build",
                 Parameters = BuildPlanningControlParams(),
                 Handler = args =>
                 {
@@ -122,8 +126,15 @@ namespace OniMcp.Tools
  case "room_plan":
  case "quick_room":
  return RoomTemplatePlan().Handler(forwardArgs);
+                    case "pending_build":
+                        if (args["pendingBuildAction"] != null)
+                            forwardArgs["action"] = args["pendingBuildAction"].ToString();
+                        else
+                            forwardArgs["action"] = "status";
+                        forwardArgs["pendingBuildId"] = args["pendingBuildId"];
+                        return DeferredBuildControl(forwardArgs);
                     default:
-                        return CallToolResult.Error("action must be parse_plan, search_defs, materials, preview, placement_candidates, auto_connect, repair_line, build_area, or room_template");
+                        return CallToolResult.Error("action must be parse_plan, search_defs, materials, preview, placement_candidates, auto_connect, repair_line, build_area, room_template, or pending_build");
                     }
                 }
             };
@@ -150,70 +161,6 @@ namespace OniMcp.Tools
                     return "LogicWire";
                 default:
                     return "Wire";
-            }
-        }
-
-        private sealed class PlacementDetails
-        {
-            public string PrefabId;
-            public int AnchorX;
-            public int AnchorY;
-            public int WorldId;
-            public Orientation Orientation;
-            public int Width;
-            public int Height;
-            public Vector3 PlacementPoint;
-            public List<FootprintCell> Footprint = new List<FootprintCell>();
-
-            public Dictionary<string, object> ToDictionary()
-            {
-                return new Dictionary<string, object>
-                {
-                    ["prefabId"] = PrefabId,
-                    ["anchor"] = "lowerLeftCell",
-                    ["anchorX"] = AnchorX,
-                    ["anchorY"] = AnchorY,
-                    ["worldId"] = WorldId,
-                    ["orientation"] = Orientation.ToString(),
-                    ["width"] = Width,
-                    ["height"] = Height,
-                    ["footprintCells"] = Width * Height,
-                    ["placementPoint"] = new
-                    {
-                        x = Math.Round(PlacementPoint.x, 3),
-                        y = Math.Round(PlacementPoint.y, 3),
-                        z = Math.Round(PlacementPoint.z, 3)
-                    },
-                    ["guidance"] = Width == 1 && Height == 1
-                        ? "This is a single-cell footprint and can be line-dragged."
-                        : "This is a multi-cell footprint; place each anchor with a separate left click and verify before continuing."
-                };
-            }
-        }
-
-        private sealed class FootprintCell
-        {
-            public int X;
-            public int Y;
-            public int Cell;
-            public int WorldId;
-            public bool Valid;
-            public bool Visible;
-            public bool InWorld;
-
-            public Dictionary<string, object> ToDictionary()
-            {
-                return new Dictionary<string, object>
-                {
-                    ["x"] = X,
-                    ["y"] = Y,
-                    ["cell"] = Cell,
-                    ["worldId"] = WorldId,
-                    ["valid"] = Valid,
-                    ["visible"] = Visible,
-                    ["inWorld"] = InWorld,
-                    ["reasonCode"] = Valid && Visible && InWorld ? null : (!Valid ? "invalid_cell" : (!Visible ? "unrevealed" : "wrong_world"))
-                };
             }
         }
 

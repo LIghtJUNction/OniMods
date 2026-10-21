@@ -17,5 +17,7 @@ internal static class PrintingPodClaimCleanupRegression
             throw new InvalidOperationException("printing-pod cleanup must destroy every materialized option exactly once");
         if (destroyed[0] != "care-package" || destroyed[1] != "duplicant")
             throw new InvalidOperationException("printing-pod cleanup must preserve native option traversal order");
+
+        PrintingPodClaimHandlerRegression.Run();
     }
 }

@@ -1,0 +1,18 @@
+[package]
+name = "onisim-diamond-validation"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[features]
+allocation_stats = []
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+rayon = "1.12.0"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

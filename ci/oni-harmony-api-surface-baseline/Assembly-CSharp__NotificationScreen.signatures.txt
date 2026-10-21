@@ -1,0 +1,65 @@
+type public class NotificationScreen : KScreen
+member private Color badColor
+member private Color badColorBG
+member private Color eventColor
+member private Color eventColorBG
+member private Color messageColor
+member private Color messageColorBG
+member private Color messageImportantColor
+member private Color messageImportantColorBG
+member private Color normalColor
+member private Color normalColorBG
+member private Color warningColor
+member private Color warningColorBG
+member private Dictionary < NotificationType , string > notificationSounds
+member private Dictionary < string , Entry > entriesByMessage
+member private Dictionary < string , float > timeOfLastNotification
+member private List < Entry > entries
+member private List < MessageDialog > dialogPrefabs
+member private List < Notification > notifications
+member private List < Notification > pendingNotifications
+member private MessageDialogFrame messageDialog
+member private Notifier notifier
+member private float initTime
+member private float soundDecayTime
+member private void InitNotificationSounds ( )
+member private void OnClick ( Entry entry )
+member private void OnNewMessage ( object data )
+member private void PlayDingSound ( Notification notification , int count )
+member private void PositionLocatorIcon ( )
+member private void ShowMessage ( MessageNotification mn )
+member private void SortNotifications ( )
+member private void Update ( )
+member protected override void OnActivate ( )
+member protected override void OnPrefabInit ( )
+member protected override void OnSpawn ( )
+member public Color GetNotificationBGColour ( NotificationType type )
+member public Color GetNotificationColour ( NotificationType type )
+member public GameObject LabelPrefab
+member public GameObject LabelsFolder
+member public GameObject MessagesFolder
+member public GameObject MessagesPrefab
+member public List < CustomNotificationPrefabs > customNotificationPrefabs
+member public NotificationScreen ( )
+member public Sprite GetNotificationIcon ( NotificationType type )
+member public Sprite icon_bad
+member public Sprite icon_event
+member public Sprite icon_message
+member public Sprite icon_message_important
+member public Sprite icon_normal
+member public Sprite icon_threatening
+member public Sprite icon_video
+member public Sprite icon_warning
+member public TextStyleSetting TooltipTextStyle
+member public bool dirty
+member public float lifetime
+member public static void DestroyInstance ( )
+member public string GetNotificationSound ( NotificationType type )
+member public void AddNotification ( Notification notification )
+member public void AddPendingNotification ( Notification notification )
+member public void OnClickNextMessage ( )
+member public void RemoveNotification ( Notification notification )
+member public void RemovePendingNotification ( Notification notification )
+nested private class Entry
+nested public class CustomNotificationPrefabs
+property public static NotificationScreen Instance { get ; private set ; }

@@ -1,9 +1,12 @@
 # ONI MCP Tool Reference
 
+> **Network and seven-tool core:** When using `mcporter` or HTTP clients, always connect to IPv4 `http://127.0.0.1:8788/mcp/` (avoid `localhost` which resolves to IPv6 `::1` and causes Mono HttpListener 30-second timeouts). Direct curl requests require `Mcp-Session-Id` header and protocol version `2025-11-25`. Default `tools/list` exposes only 7 tools: `benchmark`, `building_control`, `navigation_control`, `game_control`, `orders_control`, `server_control`, and `world_editor`. Do not call internal operations directly (e.g. `colony_control`, `dupes_control`, `read_control`). Read all state and resources via `world_editor` virtual files, and configure building priority via `orders_control domain=priority action=set_building query="<Name>" priority=8`.
+
 Read this reference when selecting tools, composing multi-tool workflows, choosing parameters, or mapping prompts and resources to aggregate calls.
 
 ## Contents
 
+- [Network and transport](#network-and-transport)
 - [Discovery](#discovery)
 - [Read, write, execute](#read-write-execute)
 - [Standard workflows](#standard-workflows)
@@ -13,6 +16,23 @@ Read this reference when selecting tools, composing multi-tool workflows, choosi
 - [Prompt workflows](#prompt-workflows)
 - [Resource URIs](#resource-uris)
 - [Quick reference](#quick-reference)
+
+## Network and transport
+
+- **IPv4 loopback mandatory**: Always use `http://127.0.0.1:8788/mcp/`. On Linux/Node.js environments, `localhost` resolves to IPv6 `::1` first, causing Mono's HttpListener to hang or hit 30s timeout.
+- **mcporter standard call**:
+  ```bash
+  rtk proxy mcporter call --http-url http://127.0.0.1:8788/mcp/ --allow-http --tool world_editor --args '{"command":"read","path":"/active/colony/status.oni","profile":"minimal"}' --timeout 45000 --output json
+  ```
+- **Direct curl invocation format**:
+  ```bash
+  curl -X POST http://127.0.0.1:8788/mcp/ \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json, text/event-stream" \
+    -H "Mcp-Protocol-Version: 2025-11-25" \
+    -H "Mcp-Session-Id: <SESSION_ID>" \
+    -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"world_editor","arguments":{"command":"read","path":"/active/colony/status.oni","profile":"minimal"}}}'
+  ```
 
 ## Discovery
 
@@ -28,23 +48,23 @@ The manifest exposes the compact public aggregate surface. Treat legacy fine-gra
 
 ## Read, write, execute
 
-- **Read:** state queries such as snapshots, duplicant details, resources, infrastructure, and maps. Retry-safe only while arguments and state are unchanged.
+- **Read:** state queries such as snapshots, duplicant details, resources, infrastructure, and maps via `world_editor command=read path=...`.
 - **Write:** configuration such as schedules, priorities, filters, thresholds, names, and policies. Usually medium risk and requires confirmation.
 - **Execute:** pause/resume, orders, deconstruction, construction, camera actions, saves, and other operations. Dangerous map mutations require confirmation.
 
-Resources (`oni://...`) are cacheable snapshots. Tools are parameterized live operations. Prompts describe a standard chain but do not execute it.
+`oni://...` are cacheable snapshots. Tools are parameterized live operations. Prompts describe a standard chain but do not execute it.
 
 ## Standard workflows
 
 ### Colony health check
 
 ```text
-colony_control domain=snapshot action=get profile=minimal delta=true watch=stress,food_kcal,red_alert,alerts
-colony_control domain=snapshot action=get profile=brief        # only when minimal flags concern
-read_control domain=resources action=food                      # when food detail is needed
-read_control domain=infrastructure action=power_summary        # when power is flagged
-read_control domain=world action=thermal_overheat_risk         # when heat is flagged
-read_control domain=infrastructure action=rooms                # when room coverage matters
+world_editor command=read path=/active/colony/status.oni profile=minimal
+world_editor command=read path=/active/resources/inventory.oni   # inventory levels
+world_editor command=read path=/active/resources/food.oni        # food reserves and freshness
+world_editor command=read path=/active/infrastructure/power.md   # power grid overview
+world_editor command=read path=/active/infrastructure/rooms.oni  # room coverage
+world_editor command=read path=/active/dupes/index.oni           # dupe health and status
 ```
 
 ### Simple low-risk execution
@@ -60,8 +80,7 @@ Use this for a short dig, mop, sweep, floor line, setting change, or reviewed bl
 
 ```text
 game_control domain=speed action=pause
-read_control domain=world action=area_snapshot preset=construction|utilities encoding=rle
-read_control domain=world action=text_map profile=standard encoding=plain includeElements=true
+world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false
 # optional visual confirmation only
 navigation_control action=switch_view view=<overlay> screenshot=true
 # dry-run, execute, then reread the same rectangle
@@ -69,18 +88,16 @@ navigation_control action=switch_view view=<overlay> screenshot=true
 
 Use explicit map headers for exact virtual-file edits. Use `areaId` for repeated semantic operations.
 
-### Duplicant management
+### Duplicant and building priority management
 
 ```text
-colony_control domain=read action=dupes
-dupes_control domain=info action=detail id=<id>
-dupes_control domain=info action=needs id=<id>
-dupes_control domain=priority action=list id=<id>
-# batch only the required changes
-dupes_control domain=priority action=list id=<id>   # verify
+world_editor command=read path=/active/dupes/index.oni
+world_editor command=read path=/active/dupes/<name>.md
+# Set building priority (emphasize semantic query, not raw coordinates)
+orders_control domain=priority action=set_building query="<BuildingName>" priority=8
 ```
 
-Resolve name to numeric ID from the roster before tools that require `id`.
+Resolve name to numeric ID from the roster or virtual file before tools that require `id`.
 
 ### Batch configuration
 
@@ -89,8 +106,8 @@ server_control domain=batch action=call_many
   dryRun=true responseMode=summary requireAllValid=true stopOnError=true
   defaults={confirm:true}
   items=[
-    {t:dupes_control,a:{domain:priority,action:set,id:1,choreGroup:Dig,priority:4}},
-    {t:colony_control,a:{domain:management,kind:schedule,action:set_block,schedule:"Default",hour:3,group:Sleep}}
+    {t:orders_control,a:{domain:priority,action:set_building,query:"ResearchCenter",priority:8}},
+    {t:building_control,a:{domain:config,action:set,query:"Battery",setting:"threshold",value:50}}
   ]
 ```
 
@@ -118,7 +135,7 @@ If validation passes, call again with `dryRun=false`, then verify each affected 
 - Raw rectangles are valid for read-only map inspection and syntax explicitly supported by typed operation files.
 - Ordinary aggregate action tools use semantic query, target, plan, or `areaId` rather than raw coordinates.
 - Coordinates are world cells with bottom-left origin. Preserve returned absolute coordinates; do not confuse `rx/ry` with `x/y`.
-- Define reusable areas with `read_control domain=area action=define`; merge adjacent handles when needed and forget temporary custom handles afterward.
+- Prefer named semantic areas or `world_editor` viewport files for spatial operations; forget temporary custom handles afterward.
 
 ### Confirmation
 
@@ -136,10 +153,10 @@ Read the exact schedule, policy, building, duplicant, or map state; calculate th
 
 ```text
 server_control domain=batch action=call_many responseMode=summary items=[
-  {t:colony_control,a:{domain:read,action:status}},
-  {t:colony_control,a:{domain:diagnostic,action:diagnostics}},
-  {t:read_control,a:{domain:resources,action:food}},
-  {t:read_control,a:{domain:infrastructure,action:power_summary}}
+  {t:world_editor,a:{command:read,path:"/active/colony/status.oni",profile:"minimal"}},
+  {t:world_editor,a:{command:read,path:"/active/resources/inventory.oni"}},
+  {t:world_editor,a:{command:read,path:"/active/resources/food.oni"}},
+  {t:world_editor,a:{command:read,path:"/active/infrastructure/rooms.oni"}}
 ]
 ```
 
@@ -186,7 +203,9 @@ Prompts describe the chain; call the resources/tools yourself.
 
 ## Resource URIs
 
-| URI | Tool equivalent | Purpose |
+> **Note:** Resource URIs (`oni://...`) are MCP resource protocol endpoints (`resources/read`) mapped internally. For direct tool calls (`tools/call`), you must use the public 7 tools and `world_editor` canonical virtual files (e.g. `/active/resources/inventory.oni`, `/active/infrastructure/power.md`); do not invoke internal tool names directly.
+
+| URI | Internal Mapping | Purpose |
 |---|---|---|
 | `oni://colony/status` | `colony_control domain=read action=status` | Baseline status |
 | `oni://colony/diagnostics` | `colony_control domain=diagnostic action=diagnostics` | Diagnosed issues |

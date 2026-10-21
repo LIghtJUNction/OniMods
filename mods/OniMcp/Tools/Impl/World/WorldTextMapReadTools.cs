@@ -143,6 +143,7 @@ namespace OniMcp.Tools
                     var jsonRows = new List<Dictionary<string, object>>();
                     var sparseCells = new List<Dictionary<string, object>>();
                     var markdownRows = new List<string>();
+                    var observedTokens = new HashSet<string>();
 
                     for (int y = rect["y2"]; y >= rect["y1"]; y--)
                     {
@@ -153,8 +154,10 @@ namespace OniMcp.Tools
                         {
                             int cell = Grid.XYToCell(x, y);
                             CellSummary summary = GetCellSummary(cell, x, y, worldId, visibleOnly, overlays, overlayView, view);
+                            string cellToken = TokenForCell(summary, view);
                             rowSymbols.Append(summary.Symbol);
-                            rowTokens.Add(TokenForCell(summary, view));
+                            rowTokens.Add(cellToken);
+                            observedTokens.Add(cellToken.Trim());
 
                             if (summary.Valid)
                             {
@@ -198,6 +201,12 @@ namespace OniMcp.Tools
 
                     if (sparse)
                     {
+                        foreach (var item in sparseRuns)
+                        {
+                            string sparseToken = TokenForSparseItem(item, view);
+                            if (!string.IsNullOrEmpty(sparseToken))
+                                observedTokens.Add(sparseToken.Trim());
+                        }
                         foreach (var item in sparseRuns.Take(objectLimit > 0 ? objectLimit : 500))
                             text.AppendLine(SparseRunLine(item, minimal, view));
                     }
@@ -239,7 +248,7 @@ namespace OniMcp.Tools
                     if (format == "json")
                         return CallToolResult.Text(JsonConvert.SerializeObject(BuildTextMapJson(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, openCells, occupiedCells, blockedCells, buildableCells, overlays, legend, jsonRows, sparseCells, elementCounts, includeElements, elementLimit, objectLimit, compact: false, includeRows: true, includeObjects: true), McpJsonUtil.Settings));
 
-                    return CallToolResult.Text(BuildTextMapMarkdown(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, openCells, occupiedCells, blockedCells, buildableCells, overlays, legend, markdownRows, sparseRuns, elementCounts, includeElements, elementLimit, objectLimit, detail == "full" ? fullLines : null));
+                    return CallToolResult.Text(BuildTextMapMarkdown(area, rect, worldId, width, height, view, sparse, visibleOnly, encoding, validCells, visibleCells, openCells, occupiedCells, blockedCells, buildableCells, overlays, legend, markdownRows, sparseRuns, elementCounts, includeElements, elementLimit, objectLimit, detail == "full" ? fullLines : null, observedTokens));
                 }
             };
         }

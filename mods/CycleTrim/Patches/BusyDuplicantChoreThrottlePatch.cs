@@ -14,33 +14,37 @@ namespace CycleTrim.Patches
             new ConditionalWeakTable<ChoreConsumer, State>();
         private static readonly ConditionalWeakTable<ChoreConsumer, State>.CreateValueCallback
             StateFactory = CreateState;
+        private static readonly ConditionalWeakTable<PickupableSensor, State> SensorStates =
+            new ConditionalWeakTable<PickupableSensor, State>();
+        private static readonly ConditionalWeakTable<PickupableSensor, State>.CreateValueCallback
+            SensorStateFactory = CreateSensorState;
         private static readonly AccessTools.FieldRef<Brain, ChoreConsumer> BrainChoreConsumer =
             AccessTools.FieldRefAccess<Brain, ChoreConsumer>("choreConsumer");
 
         private sealed class State
         {
-            internal readonly VersionedRefreshGate PickupGate =
-                new VersionedRefreshGate(4);
-            internal readonly VersionedRefreshGate ChoreGate =
-                new VersionedRefreshGate(4);
+            internal readonly CoupledRefreshGate RefreshGate =
+                new CoupledRefreshGate(4);
+            internal readonly ChoreConsumer Consumer;
             internal readonly bool IsDuplicant;
+            internal readonly KPrefabID PrefabId;
             internal NavGrid NavGrid;
 
-            internal State(bool isDuplicant)
+            internal State(ChoreConsumer consumer, bool isDuplicant, KPrefabID prefabId)
             {
+                Consumer = consumer;
                 IsDuplicant = isDuplicant;
+                PrefabId = prefabId;
             }
 
             internal void Invalidate()
             {
-                PickupGate.Invalidate();
-                ChoreGate.Invalidate();
+                RefreshGate.Invalidate();
             }
 
             internal void Reset()
             {
-                PickupGate.Reset();
-                ChoreGate.Reset();
+                RefreshGate.Reset();
             }
         }
 
@@ -49,9 +53,20 @@ namespace CycleTrim.Patches
             return AccessTools.TypeByName(FastTrackPatchType) == null;
         }
 
+        private static State CreateSensorState(PickupableSensor sensor)
+        {
+            var consumer = sensor.GetComponent<ChoreConsumer>();
+            return consumer == null
+                ? new State(null, isDuplicant: false, null)
+                : States.GetValue(consumer, StateFactory);
+        }
+
         private static State CreateState(ChoreConsumer consumer)
         {
-            return new State(consumer.GetComponent<MinionIdentity>() != null);
+            return new State(
+                consumer,
+                consumer.GetComponent<MinionIdentity>() != null,
+                consumer.GetComponent<KPrefabID>());
         }
 
         private static bool IsBusyChore(Chore currentChore)
@@ -67,15 +82,16 @@ namespace CycleTrim.Patches
             out ChoreConsumer consumer,
             out State state)
         {
-            consumer = sensor.GetComponent<ChoreConsumer>();
-            if (consumer == null || navigator == null)
+            if (sensor == null || navigator == null)
             {
+                consumer = null;
                 state = null;
                 return false;
             }
 
-            state = States.GetValue(consumer, StateFactory);
-            return state.IsDuplicant;
+            state = SensorStates.GetValue(sensor, SensorStateFactory);
+            consumer = state.Consumer;
+            return state.IsDuplicant && consumer != null;
         }
 
         private static RefreshStamp CaptureStamp(
@@ -149,8 +165,14 @@ namespace CycleTrim.Patches
                     return true;
                 }
 
-                return state.PickupGate.ShouldRefresh(
-                    CaptureStamp(state, consumer, ___navigator, currentChore));
+                var stamp = CaptureStamp(state, consumer, ___navigator, currentChore);
+                if (state.PrefabId != null
+                    && state.PrefabId.HasTag(GameTags.PreventChoreInterruption))
+                {
+                    return state.RefreshGate.BeginProducerOnly(stamp);
+                }
+
+                return state.RefreshGate.Begin(stamp);
             }
         }
 
@@ -197,7 +219,7 @@ namespace CycleTrim.Patches
                     return true;
                 }
 
-                if (state.ChoreGate.ShouldRefresh(
+                if (state.RefreshGate.Complete(
                     CaptureStamp(state, __instance, navigator, currentChore)))
                 {
                     return true;

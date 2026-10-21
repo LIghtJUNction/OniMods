@@ -1,0 +1,342 @@
+{
+  "schema": 1,
+  "candidate_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "before_candidate_sha256": "a1ef3400389fa2e8c0fcd0db703dc683df362d9b132eff2771530887b45e8f07",
+  "source_sha256": {
+    "mods/CycleTrim/OniSim/native/src/thermal.rs": "07891adc19937c94321e91bc8542fd0ea324d94a41c804db777bbcda8d27caab",
+    "mods/CycleTrim/OniSim/conformance/soak_cases.py": "2ce7076a1fd79aeed1f0d87beeab0b2f39192914b68b9a7348a85d9fcd7dc88e"
+  },
+  "scope": "Preserve original insulation-factor multiplication rounding, validated against pinned official binary; not whole-game performance or compatibility acceptance.",
+  "root_cause": "The original multiplies scale by squared insulation before conductivity (ELF 0x54a02..0x54a0c); the port multiplied conductivity by scale first.",
+  "original_library_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "runtime_validated": false,
+  "whole_game_performance_measured": false,
+  "production_package_updated": false,
+  "mixed-soak-v1-workers1": {
+    "passed": false,
+    "summary_sha256": "3cb034760767f69867f9ef0971db3f8d4d588aef96c268cc9bcbedb8d3c2d9ee",
+    "cases": [
+      {
+        "case": "soak-mixed-seed7",
+        "passed": false,
+        "differences": 195
+      },
+      {
+        "case": "soak-mixed-seed104729",
+        "passed": false,
+        "differences": 207
+      },
+      {
+        "case": "soak-mixed-seed2147483647",
+        "passed": false,
+        "differences": 205
+      }
+    ]
+  },
+  "mixed-soak-fixed-workers1": {
+    "passed": true,
+    "summary_sha256": "786f6a1a42aab4ed6618f0a46df056cc25610b5e58272821e8b386f41234be69",
+    "cases": [
+      {
+        "case": "soak-mixed-seed7",
+        "passed": true,
+        "differences": 0
+      },
+      {
+        "case": "soak-mixed-seed104729",
+        "passed": true,
+        "differences": 0
+      },
+      {
+        "case": "soak-mixed-seed2147483647",
+        "passed": true,
+        "differences": 0
+      }
+    ]
+  },
+  "conformance": [
+    {
+      "workers": 1,
+      "cases": 227,
+      "publications_compared": 9103,
+      "passed": true,
+      "summary_sha256": "d925c4f3ce32fbbde78a6390f3cfc9d3e3065ca3120e588d02b2a4b76ef00062",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "2ce7076a1fd79aeed1f0d87beeab0b2f39192914b68b9a7348a85d9fcd7dc88e",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    {
+      "workers": 4,
+      "cases": 227,
+      "publications_compared": 9103,
+      "passed": true,
+      "summary_sha256": "a1367a9ba72921b574b50da1e428538511391a79d83a8bd7cb3fc11f494d03c2",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "2ce7076a1fd79aeed1f0d87beeab0b2f39192914b68b9a7348a85d9fcd7dc88e",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    }
+  ],
+  "passed": true,
+  "release_unit_tests_passed": 31,
+  "driver_host_tests_passed": 39,
+  "reproducible_build": {
+    "passed": true,
+    "native_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+    "different_source_root": true,
+    "fresh_target": true,
+    "compiler_wrappers_disabled": true
+  },
+  "runtime_preparation": "artifacts/mixed-thermal-order-runtime/preparation.json",
+  "runtime_status": "Small-fixture headless and graphical four-worker acceptance passed; all owned games exited normally. Current native timing misses the original germ-flow regression gate; profiling and final delivery remain pending.",
+  "headless_two_worker_roundtrip": {
+    "passed": true,
+    "receipt_sha256": "b143e86f599f7534dfcbc98f5cb7ce0d6c8d9239c64fe6eabf1a1db4de5c8c72",
+    "checkpoint_sha256": "06a8c65b86ff87b3aa2e689230a690825d49d7a3185f84467eb7c42ef6dd3957",
+    "checkpoint_clock": 51.56664276123047,
+    "headless_before_graphical": true,
+    "normal_quit_completed": true
+  },
+  "four_worker_preparation": "artifacts/mixed-thermal-four-runtime/preparation.json",
+  "headless_four_worker_roundtrip": {
+    "passed": true,
+    "pid": 2791705,
+    "receipt_sha256": "09bdf75b3a17074c48a29771e908c682aaab3504d896ac0996711b427427136c",
+    "actual_cell_workers": [
+      "OniSim-cell-0",
+      "OniSim-cell-1",
+      "OniSim-cell-2",
+      "OniSim-cell-3"
+    ],
+    "checkpoint_sha256": "a463806c79510acbe79d29574ca6335fca700e78e3c220749fe7b1b60ec8c3ad",
+    "checkpoint_clock": 52.51662826538086,
+    "positive_steps": [
+      0.9499855041503906,
+      1.199981689453125,
+      0.9499855041503906
+    ],
+    "final_paused": true,
+    "normal_quit_completed": true
+  },
+  "graphical_preparation": "artifacts/mixed-thermal-graphics-runtime/preparation.json",
+  "headless_runtime_validated": true,
+  "graphical_acceptance": true,
+  "runtime_validated_for_small_fixture": true,
+  "graphical_roundtrip": {
+    "passed": true,
+    "pid": 2811717,
+    "native_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+    "managed_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+    "graphics_device": "OpenGLCore",
+    "batch_mode": false,
+    "camera_render_callbacks": 86592,
+    "actual_cell_workers": [
+      "OniSim-cell-0",
+      "OniSim-cell-1",
+      "OniSim-cell-2",
+      "OniSim-cell-3"
+    ],
+    "receipt_sha256": "92de4dc3ca9ba8e1b82bdf8236ca59e3c00e8d358c1fdc91b04a9c80db7194aa",
+    "checkpoint_clock": 53.566612243652344,
+    "positive_steps": [
+      1.0499839782714844,
+      1.0999832153320312,
+      0.6833229064941406
+    ],
+    "final_paused": true,
+    "game_error": null,
+    "observations": {
+      "texture-before-roundtrip.json": {
+        "request": 1,
+        "complete": true,
+        "graphicsDevice": "OpenGLCore",
+        "frame": 33,
+        "width": 736,
+        "height": 304,
+        "textures": {
+          "Flow": {
+            "bytes": 1789952,
+            "format": "RGFloat",
+            "nativeSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+            "unityCpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 1789952,
+            "gpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+            "gpuEqual": true
+          },
+          "Liquid": {
+            "bytes": 894976,
+            "format": "RGBA32",
+            "nativeSha256": "b2895e6c2fcd8fe3b78580af56cea1780c65f2ab8ca72e7475bc5bba7c278052",
+            "unityCpuSha256": "b2895e6c2fcd8fe3b78580af56cea1780c65f2ab8ca72e7475bc5bba7c278052",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 894976,
+            "gpuSha256": "b2895e6c2fcd8fe3b78580af56cea1780c65f2ab8ca72e7475bc5bba7c278052",
+            "gpuEqual": true
+          },
+          "LiquidData": {
+            "bytes": 894976,
+            "format": "RGBA32",
+            "nativeSha256": "228cccf4c6b5bc584a3e7c4d56d599c9f590719f4b29a5ea1897fcb4842e5521",
+            "unityCpuSha256": "228cccf4c6b5bc584a3e7c4d56d599c9f590719f4b29a5ea1897fcb4842e5521",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 894976,
+            "gpuSha256": "228cccf4c6b5bc584a3e7c4d56d599c9f590719f4b29a5ea1897fcb4842e5521",
+            "gpuEqual": true
+          },
+          "MaterialData": {
+            "bytes": 894976,
+            "format": "RGBA32",
+            "nativeSha256": "37cb336ce738caa114edd133ab28bea877fa2e74559551af9e322178b0acb54f",
+            "unityCpuSha256": "37cb336ce738caa114edd133ab28bea877fa2e74559551af9e322178b0acb54f",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 894976,
+            "gpuSha256": "37cb336ce738caa114edd133ab28bea877fa2e74559551af9e322178b0acb54f",
+            "gpuEqual": true
+          },
+          "ExposedToSunlight": {
+            "bytes": 223744,
+            "format": "R8",
+            "nativeSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+            "unityCpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 223744,
+            "gpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+            "gpuEqual": true
+          }
+        },
+        "passed": true,
+        "capturedAt": "2026-10-20T22:20:18.1854330Z"
+      },
+      "texture-after-roundtrip.json": {
+        "request": 2,
+        "complete": true,
+        "graphicsDevice": "OpenGLCore",
+        "frame": 1356,
+        "width": 736,
+        "height": 304,
+        "textures": {
+          "Flow": {
+            "bytes": 1789952,
+            "format": "RGFloat",
+            "nativeSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+            "unityCpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 1789952,
+            "gpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+            "gpuEqual": true
+          },
+          "Liquid": {
+            "bytes": 894976,
+            "format": "RGBA32",
+            "nativeSha256": "b5133c2aa238d69679e3b828469037ec101e0bdf0327a9cc9d4097da3edc399f",
+            "unityCpuSha256": "b5133c2aa238d69679e3b828469037ec101e0bdf0327a9cc9d4097da3edc399f",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 894976,
+            "gpuSha256": "b5133c2aa238d69679e3b828469037ec101e0bdf0327a9cc9d4097da3edc399f",
+            "gpuEqual": true
+          },
+          "LiquidData": {
+            "bytes": 894976,
+            "format": "RGBA32",
+            "nativeSha256": "6597aeda53776734e98a7246a12a9ed7d470c69093e94cfe704ce0636e991eaf",
+            "unityCpuSha256": "6597aeda53776734e98a7246a12a9ed7d470c69093e94cfe704ce0636e991eaf",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 894976,
+            "gpuSha256": "6597aeda53776734e98a7246a12a9ed7d470c69093e94cfe704ce0636e991eaf",
+            "gpuEqual": true
+          },
+          "MaterialData": {
+            "bytes": 894976,
+            "format": "RGBA32",
+            "nativeSha256": "58ed92ef74d49a9897d16717fd706216db65b70e47229e112ef2040e38f5a1a4",
+            "unityCpuSha256": "58ed92ef74d49a9897d16717fd706216db65b70e47229e112ef2040e38f5a1a4",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 894976,
+            "gpuSha256": "58ed92ef74d49a9897d16717fd706216db65b70e47229e112ef2040e38f5a1a4",
+            "gpuEqual": true
+          },
+          "ExposedToSunlight": {
+            "bytes": 223744,
+            "format": "R8",
+            "nativeSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+            "unityCpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+            "cpuEqual": true,
+            "gpuComplete": true,
+            "gpuBytes": 223744,
+            "gpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+            "gpuEqual": true
+          }
+        },
+        "passed": true,
+        "capturedAt": "2026-10-20T22:21:26.9186500Z"
+      }
+    },
+    "visual_inspection_passed": true,
+    "screenshot_sha256": "797ae92d4b50880fc0012bdbad861cc91850c36e7d0e94c61f5232700cb0f1fa",
+    "window_geometry": {
+      "address": "0x562433410240",
+      "pid": 2811717,
+      "mapped": true,
+      "size": [
+        2048,
+        1280
+      ],
+      "at": [
+        0,
+        0
+      ],
+      "monitor": 0,
+      "fullscreen": 2,
+      "xwayland": true,
+      "class": "OxygenNotIncluded",
+      "monitor_geometry": {
+        "width": 2560,
+        "height": 1600,
+        "scale": 1.25,
+        "transform": 0
+      },
+      "png_size": [
+        2560,
+        1600
+      ]
+    },
+    "physical_size_matches_png": true,
+    "normal_quit_completed": true
+  },
+  "current_performance_measured": true,
+  "native_performance_receipt": "linux-744825-mixed-thermal-performance.json",
+  "passed_current_native_performance_gates": false,
+  "original_source_save_unchanged": true,
+  "preliminary_source_archive_compilation": {
+    "passed": true,
+    "source_archive_sha256": "4d03b5eeb1b0479f86eb13d91094b6457d4a52961fec62c2f2f7ee197d002062",
+    "native_matches_runtime_tested": true,
+    "rebuilt_managed_runtime_tested": false,
+    "scope": "Exact preliminary archive compiles in a fresh tree; source archive and delivery gates still need final refresh."
+  }
+}

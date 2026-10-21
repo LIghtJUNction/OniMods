@@ -1,0 +1,719 @@
+--- a/mods/CycleTrim/OniSim/native/src/float_env.rs
++++ b/mods/CycleTrim/OniSim/native/src/float_env.rs
+@@ -24,6 +24,15 @@
+                 options(nostack, preserves_flags));
+         }
+         Self(value)
++    }
++
++    #[cfg(test)]
++    pub(crate) fn control_for_test(self, bits: u32) -> Self {
++        Self((self.0 & !0xe040) | (bits & 0xe040) | 0x1f80)
++    }
++
++    pub(crate) fn all_exceptions_masked(self) -> bool {
++        cfg!(target_arch = "x86_64") && self.0 & 0x1f80 == 0x1f80
+     }
+ 
+     pub(crate) fn install(self) -> FloatEnvGuard {
+@@ -77,6 +86,17 @@
+     use rayon::prelude::*;
+ 
+     #[test]
++    fn reordering_requires_every_exception_to_be_masked() {
++        let original = FloatEnv::capture();
++        for bit in [0x80, 0x100, 0x200, 0x400, 0x800, 0x1000] {
++            let _guard = FloatEnv((original.0 | 0x1f80) & !bit & !0x3f).install();
++            assert!(!FloatEnv::capture().all_exceptions_masked());
++        }
++        let _guard = FloatEnv(original.0 | 0x1f80).install();
++        assert!(FloatEnv::capture().all_exceptions_masked());
++    }
++
++    #[test]
+     fn tasks_inherit_submitter_rounding_and_restore_pool_environment() {
+         let pool = rayon::ThreadPoolBuilder::new()
+             .num_threads(2)
+--- a/mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs
++++ b/mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs
+@@ -1,4 +1,7 @@
+ //! Ordered pressure/liquid traversal from official UpdateData, ELF 0x69730.
++
++#[path = "pressure_tiles.rs"]
++mod tiles;
+ 
+ use crate::events::EventQueues;
+ use crate::tables::{DiseaseTable, ElementTable};
+@@ -26,7 +29,7 @@
+         && (state & 3 != source_phase || element == source_element)
+ }
+ 
+-fn pressure_cell(
++pub(super) fn pressure_cell(
+     world: &mut PhysicsWorld,
+     elements: &ElementTable,
+     diseases: &DiseaseTable,
+@@ -101,6 +104,51 @@
+     }
+ }
+ 
++// First validate scheduling independently of parallel execution. All conflicting
++// tasks retain native order; same-wave cells have disjoint 2x2 footprints.
++// With unmasked exceptions, retain literal order to preserve trap sequencing.
++fn pressure_cells(
++    region: Region,
++    direction: i32,
++    stride: usize,
++    wavefront: bool,
++    mut visit: impl FnMut(usize),
++) {
++    let width = (region.max_x - region.min_x) as usize;
++    let height = (region.max_y - region.min_y) as usize;
++    if width == 0 || height == 0 {
++        return;
++    }
++    if !wavefront {
++        for y in region.min_y..region.max_y {
++            let row = y as usize * stride;
++            let (mut cell, stop) = if direction > 0 {
++                (row + region.min_x as usize, row + region.max_x as usize)
++            } else {
++                (row + region.max_x as usize, row + region.min_x as usize)
++            };
++            while cell != stop {
++                visit(cell);
++                cell = cell.wrapping_add_signed(direction as isize);
++            }
++        }
++        return;
++    }
++    for wave in 0..width + 2 * (height - 1) {
++        let first_y = wave.saturating_sub(width - 1).div_ceil(2);
++        let last_y = (wave / 2).min(height - 1);
++        for y in first_y..=last_y {
++            let x = wave - 2 * y;
++            let physical_x = if direction > 0 {
++                region.min_x as usize + x
++            } else {
++                region.max_x as usize - x
++            };
++            visit((region.min_y as usize + y) * stride + physical_x);
++        }
++    }
++}
++
+ /// Native pressure reverse scans begin at x=max_x and stop before x=min_x;
+ /// the forward scan begins at min_x and stops before max_x. This selects each
+ /// horizontal edge from the side indicated by scan_direction.
+@@ -111,17 +159,10 @@
+     events: &mut EventQueues,
+     region: Region,
+ ) {
+-    for y in region.min_y..region.max_y {
+-        let row = y as usize * world.stride;
+-        let (mut cell, stop) = if world.scan_direction > 0 {
+-            (row + region.min_x as usize, row + region.max_x as usize)
+-        } else {
+-            (row + region.max_x as usize, row + region.min_x as usize)
+-        };
+-        while cell != stop {
++    if !tiles::try_run(world, elements, diseases, events, region) {
++        pressure_cells(region, world.scan_direction, world.stride, false, |cell| {
+             pressure_cell(world, elements, diseases, events, cell);
+-            cell = cell.wrapping_add_signed(world.scan_direction as isize);
+-        }
++        });
+     }
+     let (min_x, max_x, min_y, max_y) = displacement_bounds(world, region);
+     for y in min_y..max_y {
+@@ -259,3 +300,56 @@
+         }
+     }
+ }
++
++#[cfg(test)]
++mod pressure_schedule_tests {
++    use super::*;
++    use std::collections::HashMap;
++
++    #[test]
++    fn wavefront_visits_each_cell_once_and_preserves_all_overlapping_pairs() {
++        for width in [0, 1, 2, 3, 7, 16] {
++            for height in [0, 1, 2, 3, 8, 17] {
++                for direction in [-1, 1] {
++                    for (min_x, min_y) in [(1, 1), (3, 5)] {
++                        let region = Region {
++                            min_x,
++                            min_y,
++                            max_x: min_x + width,
++                            max_y: min_y + height,
++                            ..Region::default()
++                        };
++                        let mut original = Vec::new();
++                        let mut reordered = Vec::new();
++                        pressure_cells(region, direction, 64, false, |c| original.push(c));
++                        pressure_cells(region, direction, 64, true, |c| reordered.push(c));
++                        let mut expected = original.clone();
++                        expected.sort_unstable();
++                        let mut actual = reordered.clone();
++                        actual.sort_unstable();
++                        assert_eq!(actual, expected);
++                        assert_eq!(actual.len(), (width * height) as usize);
++                        actual.dedup();
++                        assert_eq!(actual.len(), expected.len());
++                        let positions: HashMap<_, _> = reordered
++                            .iter()
++                            .enumerate()
++                            .map(|(index, &cell)| (cell, index))
++                            .collect();
++                        let footprint = |c: usize| {
++                            let side = c.wrapping_add_signed(direction as isize);
++                            [c, side, c + 64, side + 64]
++                        };
++                        for (index, &left) in original.iter().enumerate() {
++                            for &right in &original[index + 1..] {
++                                if footprint(left).iter().any(|c| footprint(right).contains(c)) {
++                                    assert!(positions[&left] < positions[&right]);
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++        }
++    }
++}
+--- /dev/null
++++ b/mods/CycleTrim/OniSim/native/src/pressure_tiles.rs
+@@ -0,0 +1,275 @@
++//! Experimental owned skew tiles. No worker borrows the global mutable world.
++use std::cell::RefCell;
++
++use rayon::prelude::*;
++
++use crate::events::EventQueues;
++use crate::float_env::FloatEnv;
++use crate::tables::{DiseaseTable, ElementTable};
++use crate::world::{Cells, PhysicsWorld, Region};
++
++const BAND: usize = 32;
++const ROWS: usize = 16;
++const PATCH_WIDTH: usize = BAND + 2 * (ROWS - 1) + 1;
++const PATCH_HEIGHT: usize = ROWS + 1;
++const PATCH_CELLS: usize = (PATCH_WIDTH + 2) * (PATCH_HEIGHT + 2);
++const MAX_TASKS: usize = BAND * ROWS;
++
++struct Scratch {
++    world: PhysicsWorld,
++    events: EventQueues,
++    tasks: Vec<usize>,
++    touched: Vec<(usize, usize)>,
++    marks: Vec<u8>,
++}
++
++thread_local! {
++    // Owned by the simulation thread and dropped with that thread. At most
++    // eight fixed-size patches survive; no world's dimensions enter capacity.
++    static SCRATCH: RefCell<Vec<Scratch>> = const { RefCell::new(Vec::new()) };
++}
++
++fn copy_cell(source: &Cells, from: usize, target: &mut Cells, to: usize) {
++    target.element[to] = source.element[from];
++    target.temperature[to] = source.temperature[from];
++    target.mass[to] = source.mass[from];
++    target.properties[to] = source.properties[from];
++    target.insulation[to] = source.insulation[from];
++    target.strength[to] = source.strength[from];
++    target.disease_idx[to] = source.disease_idx[from];
++    target.disease_count[to] = source.disease_count[from];
++    target.disease_infestation[to] = source.disease_infestation[from];
++    target.disease_growth[to] = source.disease_growth[from];
++    target.radiation[to] = source.radiation[from];
++}
++
++impl Scratch {
++    fn new(elements: &ElementTable) -> Option<Self> {
++        let world = PhysicsWorld::new(PATCH_WIDTH, PATCH_HEIGHT, 0, elements).ok()?;
++        let mut tasks = Vec::new();
++        tasks.try_reserve_exact(MAX_TASKS).ok()?;
++        let mut touched = Vec::new();
++        touched.try_reserve_exact(PATCH_CELLS).ok()?;
++        let mut marks = Vec::new();
++        marks.try_reserve_exact(PATCH_CELLS).ok()?;
++        marks.resize(PATCH_CELLS, 0);
++        let mut events = EventQueues::default();
++        events
++            .substance_change_info
++            .try_reserve_exact(3 * MAX_TASKS)
++            .ok()?;
++        Some(Self {
++            world,
++            events,
++            tasks,
++            touched,
++            marks,
++        })
++    }
++
++    fn prepare(
++        &mut self,
++        source: &PhysicsWorld,
++        region: Region,
++        band: usize,
++        row_band: usize,
++    ) -> bool {
++        self.tasks.clear();
++        self.touched.clear();
++        self.marks.fill(0);
++        self.events.clear();
++        let width = (region.max_x - region.min_x) as usize;
++        let height = (region.max_y - region.min_y) as usize;
++        let first_y = row_band * ROWS;
++        let end_y = (first_y + ROWS).min(height);
++        let range = |y| {
++            let first = (band * BAND).saturating_sub(2 * y);
++            let end = ((band + 1) * BAND).saturating_sub(2 * y).min(width);
++            first..end
++        };
++        let mut min_x = usize::MAX;
++        let mut max_x = 0;
++        for y in first_y..end_y {
++            let row = range(y);
++            if !row.is_empty() {
++                min_x = min_x.min(row.start);
++                max_x = max_x.max(row.end); // Includes the side-neighbour halo.
++            }
++        }
++        if min_x == usize::MAX {
++            return false;
++        }
++        debug_assert!(max_x - min_x < PATCH_WIDTH);
++        let direction = source.scan_direction;
++        self.world.scan_direction = direction;
++        self.world.sink_element = source.sink_element;
++        self.world.vacuum_element = source.vacuum_element;
++        self.world.boundary_element = source.boundary_element;
++        let local = |x, y| {
++            let physical_x = if direction > 0 {
++                x - min_x + 1
++            } else {
++                max_x - x + 1
++            };
++            (y - first_y + 1) * (PATCH_WIDTH + 2) + physical_x
++        };
++        for y in first_y..end_y {
++            for x in range(y) {
++                self.tasks.push(local(x, y));
++                for (u, v) in [(x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)] {
++                    let to = local(u, v);
++                    if self.marks[to] != 0 {
++                        continue;
++                    }
++                    self.marks[to] = 1;
++                    let physical_x = if direction > 0 {
++                        region.min_x as usize + u
++                    } else {
++                        region.max_x as usize - u
++                    };
++                    let from = (region.min_y as usize + v) * source.stride + physical_x;
++                    copy_cell(&source.read, from, &mut self.world.read, to);
++                    copy_cell(&source.write, from, &mut self.world.write, to);
++                    self.world.flow[to] = source.flow[from];
++                    self.world.dirty[to] = false;
++                    self.world.dirty_flags[to] = 0;
++                    self.touched.push((to, from));
++                }
++            }
++        }
++        debug_assert!(self.tasks.len() <= MAX_TASKS);
++        true
++    }
++
++    fn execute(&mut self, elements: &ElementTable, diseases: &DiseaseTable, environment: FloatEnv) {
++        let _guard = environment.install();
++        for &cell in &self.tasks {
++            super::pressure_cell(&mut self.world, elements, diseases, &mut self.events, cell);
++        }
++    }
++
++    fn commit(&self, target: &mut PhysicsWorld, events: &mut EventQueues) {
++        for &(from, to) in &self.touched {
++            copy_cell(&self.world.write, from, &mut target.write, to);
++            target.flow[to] = self.world.flow[from];
++            if self.world.dirty[from] {
++                target.mark_dirty(to, self.world.dirty_flags[from]);
++                // Pressure emits only substance notifications. Final native
++                // canonicalization ignores their payload/order/multiplicity.
++                if let Some(public) = target.public_index(to) {
++                    events.substance_change(public as i32);
++                }
++            }
++        }
++    }
++}
++
++fn run_batch(
++    pool: &rayon::ThreadPool,
++    jobs: &mut [Scratch],
++    elements: &ElementTable,
++    diseases: &DiseaseTable,
++    environment: FloatEnv,
++    world: &mut PhysicsWorld,
++    events: &mut EventQueues,
++) {
++    pool.install(|| {
++        jobs.par_iter_mut()
++            .for_each(|s| s.execute(elements, diseases, environment))
++    });
++    for scratch in jobs {
++        scratch.commit(world, events);
++    }
++}
++
++pub(super) fn try_run(
++    world: &mut PhysicsWorld,
++    elements: &ElementTable,
++    diseases: &DiseaseTable,
++    events: &mut EventQueues,
++    region: Region,
++) -> bool {
++    if region.max_x <= region.min_x || region.max_y <= region.min_y {
++        return false;
++    }
++    let width = (region.max_x - region.min_x) as usize;
++    let height = (region.max_y - region.min_y) as usize;
++    let environment = FloatEnv::capture();
++    if !environment.all_exceptions_masked() {
++        return false;
++    }
++    let Some(pool) = crate::parallel::pool(width * height) else {
++        return false;
++    };
++    run_with_pool(world, elements, diseases, events, region, environment, pool)
++}
++
++fn run_with_pool(
++    world: &mut PhysicsWorld,
++    elements: &ElementTable,
++    diseases: &DiseaseTable,
++    events: &mut EventQueues,
++    region: Region,
++    environment: FloatEnv,
++    pool: &rayon::ThreadPool,
++) -> bool {
++    let width = (region.max_x - region.min_x) as usize;
++    let height = (region.max_y - region.min_y) as usize;
++    let workers = pool.current_num_threads();
++    SCRATCH.with(|cache| {
++        let Ok(mut cache) = cache.try_borrow_mut() else {
++            return false;
++        };
++        let missing = workers.saturating_sub(cache.len());
++        if cache.try_reserve_exact(missing).is_err() {
++            return false;
++        }
++        while cache.len() < workers {
++            let Some(scratch) = Scratch::new(elements) else {
++                return false;
++            };
++            cache.push(scratch);
++        }
++        let bands = (width - 1 + 2 * (height - 1)) / BAND + 1;
++        let row_bands = height.div_ceil(ROWS);
++        let mut batch = 0;
++        for level in 0..bands + row_bands - 1 {
++            for band in level.saturating_sub(row_bands - 1)..=level.min(bands - 1) {
++                let row_band = level - band;
++                if !cache[batch].prepare(world, region, band, row_band) {
++                    continue;
++                }
++                batch += 1;
++                if batch == workers {
++                    run_batch(
++                        pool,
++                        &mut cache[..batch],
++                        elements,
++                        diseases,
++                        environment,
++                        world,
++                        events,
++                    );
++                    batch = 0;
++                }
++            }
++            if batch != 0 {
++                run_batch(
++                    pool,
++                    &mut cache[..batch],
++                    elements,
++                    diseases,
++                    environment,
++                    world,
++                    events,
++                );
++                batch = 0;
++            }
++        }
++        true
++    })
++}
++
++#[cfg(test)]
++#[path = "pressure_tiles_tests.rs"]
++mod tests;
+--- /dev/null
++++ b/mods/CycleTrim/OniSim/native/src/pressure_tiles_tests.rs
+@@ -0,0 +1,253 @@
++use super::*;
++use crate::tables::{Disease, RangeInfo};
++
++fn elements() -> ElementTable {
++    let mut bytes = 4_i32.to_le_bytes().to_vec();
++    for (index, hash) in [0xa9360b34_u32, 0x2d39bf75, 0x6d95058c, 0x12345678]
++        .into_iter()
++        .enumerate()
++    {
++        let mut record = [0_u8; 164];
++        record[..4].copy_from_slice(&hash.to_le_bytes());
++        record[8..10].copy_from_slice(&(index as u16).to_le_bytes());
++        record[10] = [0, 0, 3, 1][index];
++        record[36..40].copy_from_slice(&0.25_f32.to_le_bytes());
++        bytes.extend_from_slice(&record);
++    }
++    bytes.extend_from_slice(&[0; 16]);
++    ElementTable::parse(&bytes).unwrap()
++}
++
++fn diseases() -> DiseaseTable {
++    let range = RangeInfo {
++        min_viable: 0.0,
++        min_growth: 0.0,
++        max_growth: 0.0,
++        max_viable: 0.0,
++    };
++    DiseaseTable {
++        element_count: 4,
++        diseases: (0..2)
++            .map(|id| Disease {
++                name: String::new(),
++                raw_header: [0; 76],
++                hash: id,
++                strength: (id + 1) as f32,
++                temperature_range: range.clone(),
++                temperature_half_lives: range.clone(),
++                pressure_range: range.clone(),
++                pressure_half_lives: range.clone(),
++                radiation_kill_rate: 0.0,
++                elements: Vec::new(),
++            })
++            .collect(),
++    }
++}
++
++fn fixture(elements: &ElementTable, direction: i32, seed: usize) -> PhysicsWorld {
++    let mut world =
++        PhysicsWorld::new(137, 79, 42, elements).unwrap_or_else(|e| panic!("{}", e.message));
++    for cell in 0..world.write.mass.len() {
++        let n = cell.wrapping_mul(17).wrapping_add(seed);
++        let x = cell % world.stride;
++        let y = cell / world.stride;
++        world.write.element[cell] =
++            if x == 0 || x == world.stride - 1 || y == 0 || y == world.padded_height - 1 {
++                2
++            } else if n % 11 == 0 {
++                1
++            } else {
++                3
++            };
++        world.write.mass[cell] = [0.0, 0.001, 1.0, 4.0, 1000.0, f32::from_bits(1), -0.0][n % 7];
++        world.write.temperature[cell] =
++            [0.0, 1.0, 273.15, 300.0, 1000.0, f32::from_bits(0x7fc12345)][n % 6];
++        world.write.properties[cell] = u8::from(n % 43 == 0);
++        world.write.disease_idx[cell] = [0, 1, 255][n % 3];
++        world.write.disease_count[cell] = [0, 1, 7, 10000, i32::MAX][n % 5];
++        world.write.disease_growth[cell] = f32::from_bits((n as u32).wrapping_mul(123457));
++        world.write.disease_infestation[cell] = n as u8;
++        world.flow[cell] = [n as f32 * 0.01; 4];
++        world.dirty[cell] = n % 7 == 0;
++        world.dirty_flags[cell] = (n % 32) as u8;
++    }
++    world.read.copy_from(&world.write);
++    world.scan_direction = direction;
++    world
++}
++
++fn equal(actual: &PhysicsWorld, expected: &PhysicsWorld) {
++    let a = &actual.write;
++    let e = &expected.write;
++    assert_eq!(a.element, e.element);
++    assert_eq!(a.disease_idx, e.disease_idx);
++    assert_eq!(a.disease_count, e.disease_count);
++    assert_eq!(a.disease_infestation, e.disease_infestation);
++    assert_eq!(a.properties, e.properties);
++    for (a, e) in [
++        (&a.mass, &e.mass),
++        (&a.temperature, &e.temperature),
++        (&a.disease_growth, &e.disease_growth),
++    ] {
++        assert!(a.iter().zip(e).all(|(a, e)| a.to_bits() == e.to_bits()));
++    }
++    assert!(
++        actual
++            .flow
++            .iter()
++            .flatten()
++            .zip(expected.flow.iter().flatten())
++            .all(|(a, e)| a.to_bits() == e.to_bits())
++    );
++    assert_eq!(actual.dirty, expected.dirty);
++    assert_eq!(actual.dirty_flags, expected.dirty_flags);
++}
++
++fn ids(events: &EventQueues) -> Vec<i32> {
++    let mut ids: Vec<_> = events
++        .substance_change_info
++        .iter()
++        .map(|e| e.cell_idx)
++        .collect();
++    ids.sort_unstable();
++    ids.dedup();
++    ids
++}
++
++fn retained_bytes(s: &Scratch) -> usize {
++    fn bytes<T>(v: &Vec<T>) -> usize {
++        v.capacity() * std::mem::size_of::<T>()
++    }
++    fn cells(c: &Cells) -> usize {
++        bytes(&c.element)
++            + bytes(&c.temperature)
++            + bytes(&c.mass)
++            + bytes(&c.properties)
++            + bytes(&c.insulation)
++            + bytes(&c.strength)
++            + bytes(&c.disease_idx)
++            + bytes(&c.disease_count)
++            + bytes(&c.disease_infestation)
++            + bytes(&c.disease_growth)
++            + bytes(&c.radiation)
++    }
++    let w = &s.world;
++    std::mem::size_of::<Scratch>()
++        + cells(&w.read)
++        + cells(&w.write)
++        + bytes(&w.backwall_element)
++        + bytes(&w.backwall_mass)
++        + bytes(&w.backwall_temperature)
++        + bytes(&w.flow)
++        + bytes(&w.accumulated_flow)
++        + bytes(&w.radiation_transmission)
++        + w.inactive_mask.as_ref().map_or(0, bytes)
++        + bytes(&w.dirty)
++        + bytes(&w.dirty_flags)
++        + bytes(&w.regions)
++        + bytes(&w.world_offsets)
++        + bytes(&w.active_mask)
++        + bytes(&s.tasks)
++        + bytes(&s.touched)
++        + bytes(&s.marks)
++        + s.events
++            .storage_ranges()
++            .iter()
++            .map(|(_, size)| size)
++            .sum::<usize>()
++}
++
++#[test]
++fn owned_tiles_match_serial_fields_flow_dirty_and_notification_membership() {
++    let elements = elements();
++    let diseases = diseases();
++    for rounding in [0, 0x2000, 0x4000, 0x6000] {
++        for denormals in [0, 0x40, 0x8000, 0x8040] {
++            let _environment = FloatEnv::capture()
++                .control_for_test(rounding | denormals)
++                .install();
++            for workers in [2, 4] {
++                let pool = rayon::ThreadPoolBuilder::new()
++                    .num_threads(workers)
++                    .build()
++                    .unwrap();
++                for direction in [-1, 1] {
++                    for seed in [0, 42, 12345] {
++                        for region in [
++                            Region {
++                                min_x: 1,
++                                max_x: 137,
++                                min_y: 1,
++                                max_y: 79,
++                                ..Region::default()
++                            },
++                            Region {
++                                min_x: 3,
++                                max_x: 134,
++                                min_y: 5,
++                                max_y: 76,
++                                ..Region::default()
++                            },
++                            Region {
++                                min_x: 40,
++                                max_x: 41,
++                                min_y: 7,
++                                max_y: 78,
++                                ..Region::default()
++                            },
++                        ] {
++                            let mut original = fixture(&elements, direction, seed);
++                            let mut parallel = fixture(&elements, direction, seed);
++                            let mut expected = EventQueues::default();
++                            let mut actual = EventQueues::default();
++                            super::super::pressure_cells(
++                                region,
++                                direction,
++                                original.stride,
++                                false,
++                                |cell| {
++                                    super::super::pressure_cell(
++                                        &mut original,
++                                        &elements,
++                                        &diseases,
++                                        &mut expected,
++                                        cell,
++                                    );
++                                },
++                            );
++                            assert!(run_with_pool(
++                                &mut parallel,
++                                &elements,
++                                &diseases,
++                                &mut actual,
++                                region,
++                                FloatEnv::capture(),
++                                &pool
++                            ));
++                            equal(&parallel, &original);
++                            assert_eq!(ids(&actual), ids(&expected));
++                            SCRATCH.with(|cache| {
++                                for s in cache.borrow().iter() {
++                                    assert_eq!(s.world.write.mass.len(), PATCH_CELLS);
++                                    assert!(s.tasks.capacity() >= MAX_TASKS);
++                                    assert!(s.tasks.len() <= MAX_TASKS);
++                                    assert!(s.touched.len() <= PATCH_CELLS);
++                                    assert!(retained_bytes(s) <= 160 * 1024);
++                                    if workers == 2
++                                        && direction == -1
++                                        && seed == 0
++                                        && region.min_x == 1
++                                        && rounding == 0
++                                        && denormals == 0
++                                    {
++                                        println!("scratch_retained_bytes={}", retained_bytes(s));
++                                    }
++                                }
++                            });
++                        }
++                    }
++                }
++            }
++        }
++    }
++}

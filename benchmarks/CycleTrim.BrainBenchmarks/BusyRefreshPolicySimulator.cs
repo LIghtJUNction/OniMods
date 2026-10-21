@@ -4,35 +4,31 @@ namespace CycleTrim.BrainBenchmarks
 {
     internal sealed class BusyRefreshPolicySimulator
     {
-        private readonly VersionedRefreshGate pickupGate;
-        private readonly VersionedRefreshGate choreGate;
+        private readonly CoupledRefreshGate gate;
 
         internal BusyRefreshPolicySimulator(int maxSkippedRefreshes)
         {
-            pickupGate = new VersionedRefreshGate(maxSkippedRefreshes);
-            choreGate = new VersionedRefreshGate(maxSkippedRefreshes);
+            gate = new CoupledRefreshGate(maxSkippedRefreshes);
         }
 
         internal bool ShouldRunPickup(RefreshStamp stamp)
         {
-            return pickupGate.ShouldRefresh(stamp);
+            return gate.Begin(stamp);
         }
 
         internal bool ShouldRunChore(RefreshStamp stamp)
         {
-            return choreGate.ShouldRefresh(stamp);
+            return gate.Complete(stamp);
         }
 
         internal void Invalidate()
         {
-            pickupGate.Invalidate();
-            choreGate.Invalidate();
+            gate.Invalidate();
         }
 
         internal void Reset()
         {
-            pickupGate.Reset();
-            choreGate.Reset();
+            gate.Reset();
         }
     }
 }

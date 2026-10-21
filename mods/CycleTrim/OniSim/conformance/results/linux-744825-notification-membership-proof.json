@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "checked_at_utc": "2026-10-20T18:06:31.927824+00:00",
+  "lean_version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+  "passed": true,
+  "modules": [
+    {
+      "source": "DiseaseMerge.lean",
+      "theorems": [
+        "DiseaseMerge.optimized_eq_general",
+        "DiseaseMerge.same_species_nonpositive_clears",
+        "DiseaseMerge.same_species_positive_preserves_metadata"
+      ],
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "source": "PressureSchedule.lean",
+      "theorems": [
+        "PressureSchedule.disjoint_tasks_commute",
+        "PressureSchedule.distinct_same_wave_disjoint",
+        "PressureSchedule.ordered_overlap_increases_wave",
+        "PressureSchedule.same_wave_overlap_equal",
+        "PressureSchedule.view_after_disjoint"
+      ],
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "source": "NotificationMembership.lean",
+      "theorems": [
+        "NotificationMembership.clear_sound",
+        "NotificationMembership.fold_membership",
+        "NotificationMembership.raw_append_sound",
+        "NotificationMembership.record_membership",
+        "NotificationMembership.record_sound"
+      ],
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    }
+  ],
+  "source_sha256": {
+    "DiseaseMerge.lean": "c27d5f175fc06d849bcf7ca921a081a95d150935e22db7ef85e54881216894cd",
+    "PressureSchedule.lean": "6dba67f7ab8e32651b72a79175cc71dd1a4694f328c43600870104273dbe5792",
+    "NotificationMembership.lean": "e4d0fae297a3e59953695e6223cbae95e4af362e455580004b7545528a6637e4",
+    "verify.py": "d0de626cb854656045abecc5f5fe366b736ebf0b1a502301c35aa8cf418afc54"
+  },
+  "checked_theorems": 13,
+  "production_pressure_parallel_implemented": false,
+  "scope": "Pure disease-state equivalence, local pressure-footprint scheduling and notification membership models; not a Rust implementation, event-order, aliasing, full scheduler or game-equivalence proof"
+}

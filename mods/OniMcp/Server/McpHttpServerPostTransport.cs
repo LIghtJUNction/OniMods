@@ -366,6 +366,15 @@ namespace OniMcp.Server
                     processEx = ex;
                 }
 
+                if (result is IDeferredMcpResponse deferred)
+                {
+                    deferred.RegisterCompletion((deferredResult, deferredEx) =>
+                    {
+                        ThreadPool.QueueUserWorkItem(_ => SendPostResponse(response, rpcRequest.Id, deferredResult, deferredEx, sessionId));
+                    });
+                    return;
+                }
+
                 ThreadPool.QueueUserWorkItem(_ => SendPostResponse(response, rpcRequest.Id, result, processEx, sessionId));
             }), () => CloseStaleHttpResponse(response));
         }

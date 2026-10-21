@@ -29,14 +29,13 @@ description: 当用户询问 ONI 游戏机制、建筑/资源/元素/动植物�
 只有答案取决于玩家当前殖民地时，才读取最小必要的只读上下文：
 
 ```
-colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
-read_control domain=world action=area_snapshot preset=planning encoding=plain includeScreenshot=false
-dupes_control domain=info action=status_check radius=8
-read_control domain=resources action=inventory limit=30
-read_control domain=resources action=food limit=20
-read_control domain=infrastructure action=power_summary
-read_control domain=infrastructure action=rooms
-read_control domain=world action=layout_candidates purpose=<goal>
+world_editor command=read path=/active/colony/status.oni profile=minimal
+world_editor command=read path=/active/resources/inventory.oni
+world_editor command=read path=/active/resources/food.oni
+world_editor command=read path=/active/infrastructure/power.md
+world_editor command=read path=/active/infrastructure/rooms.oni
+world_editor command=read path=/active/dupes/index.oni
+world_editor command=read path=/active/map/viewport.md compact=true
 ```
 
 验证当前存档可用建材时，可使用只读规划动作：
@@ -102,8 +101,8 @@ building_control domain=planning action=materials prefabId=Outhouse includeUnava
 2. 只读当前存档：
 
 ```
-colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
-colony_control domain=management kind=research action=status
+world_editor command=read path=/active/colony/status.oni profile=minimal
+world_editor command=read path=/active/management/research.md
 ```
 
 然后给出结合当前存档的建议；除非用户授权，不要修改研究队列。

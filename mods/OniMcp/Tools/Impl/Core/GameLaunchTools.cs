@@ -22,10 +22,11 @@ namespace OniMcp.Tools
                 Risk = "dangerous",
                 Aliases = new List<string> { "game_start_control", "game_auto_start" },
                 Tags = new List<string> { "game", "launch", "start", "load", "lifecycle", "automation" },
-                Description = "兼容入口：请优先使用 game_control domain=launch。支持 status/start/restart_load/restart_status；restart_load 保存当前精确存档后通过 Steam 重启并由新进程加载。",
+                Description = "兼容入口：请优先使用 game_control domain=launch。支持 status/start/restart_load/restart_status，以及 new_game/new_game_status/new_game_select 原生生存模式新开局。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "status 查询会话；start 加载存档；restart_load 保存并经 Steam 重启后精确加载；restart_status 查询持久任务", Required = true, EnumValues = new List<string> { "status", "start", "restart_load", "restart_status" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "status/start/restart_load/restart_status；新建游戏：new_game_status/new_game/new_game_select（name 使用当前界面返回的 choice id）", Required = true, EnumValues = new List<string> { "status", "start", "restart_load", "restart_status", "new_game", "new_game_status", "new_game_select" } },
+                    ["name"] = new McpToolParameter { Type = "string", Description = "new_game_select：new_game_status 返回的 choice id", Required = false },
                     ["type"] = new McpToolParameter { Type = "string", Description = "存档来源：local、cloud 或 both，默认 both", Required = false, EnumValues = new List<string> { "local", "cloud", "both" } },
                     ["index"] = new McpToolParameter { Type = "integer", Description = "要加载的存档索引，来自 action=status 返回的 saves；省略则使用最近存档", Required = false },
                     ["path"] = new McpToolParameter { Type = "string", Description = "要加载的完整存档路径；优先于 index/latest", Required = false },
@@ -33,7 +34,7 @@ namespace OniMcp.Tools
                     ["resume"] = new McpToolParameter { Type = "boolean", Description = "start 默认 true；restart_load 默认 false，重启加载后保持暂停", Required = false },
                     ["speed"] = new McpToolParameter { Type = "integer", Description = "resume=true 时设置速度：1=正常、2=快进、3=超快，默认 1", Required = false, EnumValues = new List<string> { "1", "2", "3" } },
                     ["limit"] = new McpToolParameter { Type = "integer", Description = "status 返回多少个候选存档，默认 5，最大 50", Required = false },
-                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "restart_load/start 仅预览，不执行保存、退出或加载", Required = false },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "start/restart_load/new_game/new_game_select 仅预览，不执行保存、退出、加载或菜单选择", Required = false },
                     ["jobId"] = new McpToolParameter { Type = "string", Description = "restart_status 可选任务 ID，用于核对查询结果", Required = false },
                     ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=start/restart_load 实际执行必须为 true", Required = false }
                 },
@@ -42,6 +43,10 @@ namespace OniMcp.Tools
                     string action = (args["action"]?.ToString() ?? "status").Trim().ToLowerInvariant();
                     switch (action)
                     {
+                        case "new_game":
+                        case "new_game_status":
+                        case "new_game_select":
+                            return GameNewGameTools.Handle(args);
                         case "status":
                             return Status(args);
                         case "start":

@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using OniMcp.Config;
 using OniMcp.Support;
 using UnityEngine;
 
@@ -18,7 +19,8 @@ namespace OniMcp.Server
 {
         private void SendJson(HttpListenerResponse response, object data, int statusCode)
         {
-            string json = JsonConvert.SerializeObject(data, McpJsonUtil.Settings);
+            McpTextContentEncoder.Configure(OniMcpOptions.Current.ToolTextFormat);
+            string json = JsonConvert.SerializeObject(McpTextContentEncoder.FormatJsonRpcResponse(data), McpJsonUtil.Settings);
             byte[] buffer = Encoding.UTF8.GetBytes(json);
 
             response.StatusCode = statusCode;

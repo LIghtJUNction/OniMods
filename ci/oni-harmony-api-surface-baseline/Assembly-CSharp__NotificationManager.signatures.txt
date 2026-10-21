@@ -1,0 +1,13 @@
+type public class NotificationManager : KMonoBehaviour
+member private List < Notification > notifications
+member private List < Notification > pendingNotifications
+member private void DoAddNotification ( Notification notification )
+member private void Update ( )
+member protected override void OnForcedCleanUp ( )
+member protected override void OnPrefabInit ( )
+member public NotificationManager ( )
+member public event Action < Notification > notificationAdded
+member public event Action < Notification > notificationRemoved
+member public void AddNotification ( Notification notification )
+member public void RemoveNotification ( Notification notification )
+property public static NotificationManager Instance { get ; private set ; }

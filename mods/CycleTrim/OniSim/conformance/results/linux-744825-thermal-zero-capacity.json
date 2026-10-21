@@ -1,0 +1,188 @@
+{
+  "schema": 1,
+  "utc": "2026-10-20T16:02:31.752554+00:00",
+  "scope": "Authored native fixtures for installed ONI Linux build 744825; no Unity/game runtime claim",
+  "change": "Preserve ordered MINSD/MAXSD equilibrium selection and asymmetric MINSS/MAXSS temperature clamps for zero heat capacity",
+  "reference_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "before_native_sha256": "0abce1559d6ec16bf9931a57e4ef0675c0b1b1b1f4f309add3c68b721a9ec794",
+  "after_native_sha256": "027320dc3efe25d27a652d3549f21b5e790a9447e3656a3be2b867bddc39272c",
+  "same_source_except": [
+    "src/thermal.rs"
+  ],
+  "source_sha256": {
+    "Cargo.toml": "4d343c36a2819dd3f7f934db68e852084402dea7b02597149244824d25bd5df7",
+    "Cargo.lock": "526da0a15dff6b5c704a372d764115566cce1c03ee6787e0ed497c1ab7dff255",
+    "src/bytes.rs": "cf2bb99377052808522958b32e95d0bb59e3bc25f6007f03b8bf8a8cdc88a3ee",
+    "src/cell_material.rs": "9284535dd4fb4d89ad56eff90f40f99c800e0bfb53366027513204e69d1f54bd",
+    "src/cell_material_add_gas.rs": "b55a3f0df2c60aed89a131d9d5cfe04dfc9f35e66caf2468242a35e1708e3e0f",
+    "src/cell_material_add_liquid.rs": "e48301f2ffbef88674745ad4a379b98178a2bc7452f73d51ad395de06de2db03",
+    "src/cell_material_add_solid.rs": "7da7cb74c934dcde2ed298b30c2588c76288e4f4ed616e5a54b65da2fe7c2911",
+    "src/cell_material_commands.rs": "e244580f2c79b617499573d184a5da821fad8c97e4d3ff4ecd40eb921f442aba",
+    "src/cell_material_mass.rs": "92fe5ac9fb39b6c82c3f70d24b56261b6a33febcc6f27995f91f3cc2a48803d0",
+    "src/cell_material_rect.rs": "f23643e892dd6551874095c56521206d4ba4d5f471f731d3cc41d36ae9005511",
+    "src/component_handles.rs": "692f20bbc0e6ca40278bb23342fd1488a6e24e5f44feee1b1bdcecc0c499ff1d",
+    "src/conduit.rs": "773c3dab05b21e4d8a84e3da39e09f2e95d5b43260a435c3e34b7d8c297e4fd0",
+    "src/conduit_ffi.rs": "c5e2ab4e329e7edc5a2ddda7b1ee421f7e9b5c8f6ab7b9f58471c8f50da05fd7",
+    "src/diagnostics.rs": "df0237f030d00f5ad8c6e16727fc530afe50808ad712188ac0efebdbc4723a7d",
+    "src/diamond.rs": "f10401943f6af3386485c22d06f27ad06201ab8e0c5963c9eae5fb61800b59b5",
+    "src/disease.rs": "349e466d42e1f51d0ccc22415a9136bc643bb0b99ee45910ef81afc0d95f151a",
+    "src/disease_emitters.rs": "586ba010b024c7488ddffc714176d7b8d93b2a52a927dec0117b00840a150bd3",
+    "src/disease_fields.rs": "e9e1c7a6aee892cbe501144cac5619cd01566d7d77ba75dc088f5365c61a67c1",
+    "src/disease_tests.rs": "a5e7f54d0911e299a3ebefedef72fe36c55b30761eb983412da448bb5b264e75",
+    "src/event_consolidation.rs": "ff91fa54d17e8a6b4efcd1b45865446b0ca4703fba706979587b16c4f2f04ce9",
+    "src/event_records.rs": "63dbd4bb53397d3fdf90d6250edabf3b11216a2e2270e2a9eece8341a7235851",
+    "src/event_sort.rs": "133c18d43fe9d5b4e73facf0bfa095eeac3907744c116e469cc962e6d353906c",
+    "src/events.rs": "cf0b4c706a863876ba0a6b7b07b77502ae8e62c537efc9294170618fd3089546",
+    "src/float_env.rs": "10c84ff1fb897f56dc2de69b41efe1efae07ebf9c4a28e1a651ad09d92ab4339",
+    "src/fluid.rs": "b9d65248f6e991606b4406181f74277acc2fa867076539ece547b6460e001b42",
+    "src/fluid_displacement.rs": "055f37cdb5f7c333b8df4e7c24bc8aa43fd48cbde0d6743c203e23d2b846996c",
+    "src/fluid_helpers.rs": "1b77faa09b60134aaf08c84137d0ab503f9a875fec073f332f6d7626ed70326f",
+    "src/frames.rs": "f170a26a142a49fc0d1ac2865a8e19a2bd6410fb1b8c0e6ec2713a0cf94a59b5",
+    "src/frames_commands.rs": "9df81090d398cbb879be6e322917b01e23ec21e01d99c073bc62dd68270d35ed",
+    "src/frames_commands_energy.rs": "7f8a4de9b78f135c75168aa14781a78954a1a6bd564c2e89e19887c243f21b7b",
+    "src/frames_commands_parse.rs": "e70a1af236b8edea385a08a450d4ae27760323106785c93fa02bbc6a5799439e",
+    "src/frames_commands_process.rs": "61507c320ea5dfa12eaf212a8c5c5cb6bd6662340464b412d37e3088c3bd671e",
+    "src/frames_data.rs": "1a8cef86c1c8333047a74a502ecc209d681ecc92e58fe84c739360e0c50a6ee8",
+    "src/frames_engine.rs": "35083bc5558f88fadf2fb622374c71f7bd550d689ff5137cfce13b8970f27107",
+    "src/frames_plan.rs": "0bd9b2e1072af57e6038687a0997a926d2967acd92174c8a06b83d25a2917e5c",
+    "src/gas.rs": "63e13a4e0da68d452c793d18614674f217a14e5124e529525e06af00bfece381",
+    "src/grid.rs": "024e47c245777e584ca4cafd2f82e58da76ed46d59380e8cfde1ff6de6176169",
+    "src/interactions.rs": "cf03a6992f25d9b62557ce23d5a0bdcdc3cea1fa36f1937214e37c98fc09749c",
+    "src/lib.rs": "037bfa25dcf92ea9db9082f0cc1dc523e6091d640c97e6b4191cc2d93512e80a",
+    "src/mass_components.rs": "3b057c83636fcb264fc478b921819235b5b099aa6bc3123fbadc8a1ad509983b",
+    "src/mass_components_consumer.rs": "6d1dd2a1c96b614129d9b948ecd458a417f1231fdafdfc848d8f3b9325535ecc",
+    "src/mass_components_emitter.rs": "1033101361a5c03f300cc5947956b979feba41c1b419a604ee4fd611a617df1f",
+    "src/mass_components_flood.rs": "323ea619ac79679ef2f3f731468fc1d18306f1d714a6dc379d517609d9322da1",
+    "src/messages.rs": "9888db9c153adb7d6761d2735272e90f9d0fdfa456c8659d74103c269be524e8",
+    "src/messages_cells.rs": "ab09b7f377b52c3b1257c4551470c4fb0ea26476d032fef704ffac91369d75a1",
+    "src/messages_tests.rs": "2a1af0c97e39360258fa283af786c042d9843ec3039cc76725d0fa532b22db5c",
+    "src/messages_world.rs": "ecb2635561d63fb378592d2c2a6edc4f2b52d3fd6af73d5a8f007c8b70e4f97e",
+    "src/numeric.rs": "9e542c2157e2057ab33286fba7744aca9200fbf510d1e264713b99f79b2b1d72",
+    "src/offgas.rs": "0fbeb600eda014ef77bfd05633dfe03737c7b4a2030ac93828143309f02de55d",
+    "src/parallel.rs": "70fd47e748481b09ae684789ba0def964631bad830b52d6761a2bc02f5c127cd",
+    "src/partial_melt.rs": "d28668a36885c37fa5bacb028a1bb4dd01071dee384b91a1c0212ea9629df2d8",
+    "src/partial_transition.rs": "828b630984dced692d664b08578afffed6628d51bfafd076d2226741fea5354f",
+    "src/postprocess.rs": "a79d2a9509c2150779ccf16be6fecd5f0da074162e3909e767040f1ebb15ec41",
+    "src/postprocess_pressure.rs": "446a0f40105d8de964212c8d28e93e352eb5ae6a70acc2bddd2b66d72b947f4a",
+    "src/presentation.rs": "7232d454fba762ab3b4b4fbfab2c90d45fed3bc344f74cd89165978509b4f5d5",
+    "src/presentation_liquid.rs": "53e64b4e8345f87519418eb25420463fc1fae35bb9bc9e1651c7deca1c3a8a83",
+    "src/presentation_sun.rs": "f656c23ad1d72a22e3eb198f350c3e9f90f50373a96be5d7a36a75736c0f59a4",
+    "src/radiation.rs": "d683c39263dcf552fbe3033da1e3e5d82a79eb5ed558c643a82f4237f57c96d3",
+    "src/radiation_rays.rs": "04479e0524217b35a3400b1c4d0ab65856827ec4a9411b0f31c6a9038f1c9622",
+    "src/radiation_region.rs": "c20d9cec2b1579265b250ccd719407290629ea973b9cf675b1a7d7e297467f98",
+    "src/save.rs": "1d6c88c31de625e4036541c5c1c2817d9eca5c006a6bc3bf7103d124c95226c5",
+    "src/simulation_step.rs": "47cf6f480437eb0790b2f4166029b3616670952d6a61328123a56dbdf8233e88",
+    "src/simulation_step_fluid.rs": "ab97e17312ee96ff2bca31667c54eb32c67fb386741ed6125a51742782476a46",
+    "src/state.rs": "ca305c7a02f43fde6bfeb4f70763da523df743c22c2bd955e0edd37b804b8572",
+    "src/status.rs": "0e800e9a61178ef6f04507d52700c535cda088cdffc2b18e0e8c1bd9dd968583",
+    "src/sublimation.rs": "bb3fbdae3a0112a5d8bc8a019c3d7acd0a9e41b629fbbfff5ee34d40996bf779",
+    "src/tables.rs": "dd1ba491e528189eb09332bc47d5f4263228e6800ce1eb779f203153b3194367",
+    "src/thermal.rs": "367ba13b7274d69b4767b5f822d8da27555a9d82ede11262e6d066a976e75160",
+    "src/thermal_components.rs": "808eb4e770f43274eba5f093bf2e74cfefb4377aa818d26563cd928d56705db1",
+    "src/thermal_components_buildings.rs": "f4adddc674f4ce47cd599a341558ceaf40547e2f65ddfcaa4b20a3f2bf980659",
+    "src/thermal_components_chunks.rs": "823fe39788515e8c1ae81b0afad0f856c7fce30a0c7ed86a1cef876e95552f7f",
+    "src/transition.rs": "e1c427c9258f8786e7f30aa123904b91601c7c7ec6d2930f57553767d879e82b",
+    "src/unstable.rs": "e8560b8412b366e9ec447fd23b79330a22885662c915de709a726cd44ec04f63",
+    "src/worker.rs": "414a662ef9bc2c4aded2257ebcb86c0057cbf7a49d595493951877a96fd4f948",
+    "src/worker_loop.rs": "2a755e86b56dd9d552ea8b736d8ce76d585ece7d00a25bdd9d134808f49d71fb",
+    "src/worker_shape.rs": "0c7312386aeff87f6f7925eac680e41f4d1b4dbf4b7e6e7e620b7f5f282961e8",
+    "src/world.rs": "6cae43b7c2f05a621812856e8ba08033382b684e8b6c291eba67bca8afc2672f",
+    "src/world_cells.rs": "91b9975505a805379ad515948ab4ff001c429c8f6203da4a3cbb6801bc27712c",
+    "src/world_messages.rs": "5f15ece52353418bb906d198d6f3ab2e2518c0fc33f882d7655db8443b2191e1",
+    "src/world_messages_cells.rs": "9c00b426abac992ef14c16afacc74960bf5aab16737894c73d6c6c894ad08724"
+  },
+  "rust_toolchain": "1.99.0",
+  "native_host_tests": {
+    "profile": "release",
+    "passed": 28
+  },
+  "regression_before": {
+    "passed": false,
+    "cases": 4,
+    "failed": [
+      {
+        "name": "thermal-zero-capacity-first0-hot0",
+        "first_difference": {
+          "frame": 2,
+          "path": "arrays.temperature",
+          "reference_length": 81,
+          "candidate_length": 81,
+          "different_entries": 1,
+          "first": [
+            [
+              41,
+              1133084672,
+              4290772992
+            ]
+          ]
+        }
+      },
+      {
+        "name": "thermal-zero-capacity-first1-hot0",
+        "first_difference": {
+          "frame": 2,
+          "path": "arrays.temperature",
+          "reference_length": 81,
+          "candidate_length": 81,
+          "different_entries": 1,
+          "first": [
+            [
+              40,
+              1142292480,
+              4290772992
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "validation": {
+    "1": {
+      "passed": true,
+      "workers_requested": 1,
+      "cases": 215,
+      "publications_compared": 6451,
+      "fixtures_with_cell_workers": 0,
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "8d68e59a6a9abf581a1b9730c258462bbf89d9f14b8f6f4559f9a797614a8cd6",
+        "cases.py": "107224bb194b66327bdab6cf781659c8f4830344473d8d8b68de18b7f315b8d7",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    "4": {
+      "passed": true,
+      "workers_requested": 4,
+      "cases": 215,
+      "publications_compared": 6451,
+      "fixtures_with_cell_workers": 1,
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "8d68e59a6a9abf581a1b9730c258462bbf89d9f14b8f6f4559f9a797614a8cd6",
+        "cases.py": "107224bb194b66327bdab6cf781659c8f4830344473d8d8b68de18b7f315b8d7",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    }
+  },
+  "new_cases": {
+    "total": 36,
+    "minimal_zero_capacity": 4,
+    "pressure_boundaries": 16,
+    "deterministic_mixed_scenes": 16
+  },
+  "runtime_validated": false,
+  "game_ready": false,
+  "package_updated": false,
+  "limitations": [
+    "Verification binds the frozen source and exact native hash above. The shared working tree continues changing independently.",
+    "No Steam launch, installed mod replacement, colony save mutation, performance claim, or publication occurred."
+  ]
+}

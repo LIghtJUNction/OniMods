@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "scope": "Linux build 744825, one three-duplicant survival fixture; corrected notification dedup target acceptance",
+  "managed_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "native_sha256": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89",
+  "headless_save_reload_verified": true,
+  "headless_before_graphics_verified": true,
+  "graphical_acceptance": true,
+  "full_compatibility": false,
+  "whole_game_performance_measured": false,
+  "concurrency_validated": false,
+  "production_adopted": false,
+  "headless": {
+    "pid": 2639420,
+    "graphics_device": "Null",
+    "batch_mode": true,
+    "camera_render_callbacks": 0,
+    "duplicants_at_final_observation": 3,
+    "clock_at_load": 50.61665725708008,
+    "checkpoint_clock": 51.56664276123047,
+    "checkpoint_sha256": "163514bd282a7b8460f696e7e288b8e7a3808c036b3a7e19e6a78d5b4d0d922e",
+    "source_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+    "step_progress": [
+      0.9499855041503906,
+      1.199981689453125,
+      0.9499855041503906
+    ],
+    "clock_after_save_step": 52.766624450683594,
+    "clock_after_reload": 51.56664276123047,
+    "clock_after_reload_step": 52.51662826538086,
+    "final_paused": true,
+    "whole_receipt_sha256": "154462a1bcd18fd1288156121a36f9c643a0dc09f95b8198a45a413d3fb93d25",
+    "game_error": null,
+    "normal_quit_completed": true
+  },
+  "graphics": {
+    "started": true,
+    "pid": 2682739,
+    "graphics_device": "OpenGLCore",
+    "batch_mode": false,
+    "root_verified": true,
+    "camera_render_callbacks": 310362,
+    "save_reload_verified": true,
+    "input_checkpoint_sha256": "163514bd282a7b8460f696e7e288b8e7a3808c036b3a7e19e6a78d5b4d0d922e",
+    "final_paused": true,
+    "game_error": null,
+    "visual_inspection": "Actual Unity screenshot inspected after acknowledging two owned test-profile mod dialogs; terrain, liquid and three duplicants visible without observed corruption.",
+    "screenshot_sha256": "dba666268f9bbba463dbe90b93bf421a2803d153a8df7d58224214c2c2f5a639",
+    "whole_receipt_sha256": "be064916c53b6b735def33e8f3d4f8705cefe0c0e40bc8d2b94c5f33640352de",
+    "texture_receipt_sha256": {
+      "texture-before-roundtrip.json": "56b6e7b2095e225067764b46a0989d30409ba3c77a9ae7b8187d2a18c17140cc",
+      "texture-after-roundtrip.json": "a201cd9010deabc3533e97fd170063369cc106d14d8105d90ddfd097fc70d03f"
+    },
+    "normal_quit_completed": true
+  },
+  "tools": {
+    "host_tests_passed": 39,
+    "source_sha256": {
+      "mcp_roundtrip.py": "20c504c09f7b8484c177692d51ee2a500ba2bd750c232e9056693f40c325fafe",
+      "test_mcp_roundtrip.py": "3da2bd30a4b06081958a3a1c5318daad99c0f724674046a05acbd3c4f1ccfdc5",
+      "prepare_instances.py": "598cd4b0fabf174a6ff3499fd2573c3f9a69b2fca01222855851c1f5fef947d5",
+      "test_instances.py": "f7555e7cd1e79e6638875ad617f5ad8482fb2da1827d0fefd35243cc0cfee1d8"
+    },
+    "host_log_sha256": "93a9928c835e4e477e0b002cde9952b60063231bb82dbca84e1c0b6494ebc990"
+  },
+  "remaining": [
+    "Whole-game controlled performance comparison",
+    "Four real overlapping instances and memory qualification",
+    "Adopt verified source and refresh release package"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "prepared": true,
+  "probe_sha256": "6517b5f548e1aa863f89ed423ca6c143e88ed5a0a04a1e5f4a84bce966f2c8d7",
+  "pinned_managed_reference_sha256": "6db652990ad1038e86b3493ed43004e12bfd61e62a4be60c787a9a9b9ac52ee1",
+  "source_sha256": {
+    "MemoryProbe.cs": "0fe0b2d4cf7dc8d50e67cf3f0071e83936f8827a4f67d58b5255a30b26b8cbe3",
+    "MemoryProbe.csproj": "f3ce7a747e44d8cb937fa11bb72529cb72de4570216e0ffbc2ce882e17c44e19",
+    "mod.yaml": "a5c9a2e167fece88506e290d74ea25010d58c695eb6416b521fe7d9585c6e2d4",
+    "mod_info.yaml": "71fd750b527e5577496d2f2273f10cda86ecb02e678213c0c61fdc64828c4907",
+    "build.py": "eca20814720c6894f63251c389c2a2dd5310d3014dcd5e8724ec34b3b990abb2"
+  },
+  "build_exit_code": 0,
+  "collector_protocol_tests": 5,
+  "game_instances_started": 0,
+  "runtime_validated": false,
+  "native_sha256": "268977a5b35f167a77c29ab5fca27b0356feaecacf00c4e167e64603de4374ba",
+  "group_sha256": "7ef7cbc4bc8046236f46c1c2cc07909cc53ed0a8aaa8d31457925ad002704d21",
+  "preparation_marker_sha256": "a4377f4fe1472e8972dd94cb3dc03eeae99e15de061392b91ed823a744e911c6",
+  "original_save_unchanged": true,
+  "memory_snapshot": {
+    "captured_at": "2026-10-21T02:40:28.322200+00:00",
+    "available_bytes": 5727625216,
+    "configured_single_game_budget_bytes": 6442450944,
+    "configured_four_game_budget_bytes": 22548578304,
+    "scope": "Read-only host capacity snapshot, not controller admission or a running game measurement"
+  },
+  "ksm_research": {
+    "run": 0,
+    "configuration_changed": false,
+    "documentation": "https://docs.kernel.org/admin-guide/mm/ksm.html",
+    "finding": "Kernel supports KSM but its scanner is stopped. No shared anonymous-page savings may be claimed. Deduplication has scanning cost and needs its own evidence before any adoption."
+  },
+  "scope": "Compilation, collector protocol tests and isolated preparation only. No actual Unity/Mono memory snapshots captured yet.",
+  "instance_helper_tests": 13,
+  "prior_preparation_superseded": true,
+  "prepared_native_sha256": "268977a5b35f167a77c29ab5fca27b0356feaecacf00c4e167e64603de4374ba",
+  "capture_script_sha256": "e02220f76ee69af0a22ba4fdcc65ec9f0d974c6264c8dcba094d4de55c1fa278"
+}

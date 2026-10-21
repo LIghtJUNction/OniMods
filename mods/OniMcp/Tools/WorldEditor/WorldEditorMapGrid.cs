@@ -9,6 +9,12 @@ namespace OniMcp.Tools
 {
     public static partial class WorldEditorTools
     {
+        private struct MapBuildingInfo
+        {
+            public string Id;
+            public string Name;
+        }
+
         private static readonly ObjectLayer[] PowerLayers = { ObjectLayer.Wire, ObjectLayer.WireTile, ObjectLayer.ReplacementWire };
         private static readonly ObjectLayer[] LiquidLayers = { ObjectLayer.LiquidConduit, ObjectLayer.LiquidConduitTile, ObjectLayer.ReplacementLiquidConduit };
         private static readonly ObjectLayer[] GasLayers = { ObjectLayer.GasConduit, ObjectLayer.GasConduitTile, ObjectLayer.ReplacementGasConduit };
@@ -110,7 +116,11 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             var gridLines = new List<string>();
             var details = new List<string>();
             var legend = new Dictionary<char, string>();
-            var critterCells = BuildCritterCellMap();
+            int readableCellCount = 0;
+            int unknownCellCount = 0;
+            var dupesInLiquid = new HashSet<int>();
+            var critterCells = BuildCritterCellMap(xMin, xMax, yMin, yMax);
+            var buildingCache = new Dictionary<GameObject, MapBuildingInfo>();
 
             for (int y = yMax; y >= yMin; y--)
             {
@@ -123,9 +133,12 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                     {
                         line.Append("? ");
                         previousRunKey = null;
-                        legend['?'] = "Unknown, hidden, or outside the active world; never infer an empty cell.";
+                        unknownCellCount++;
+                        if (!compact)
+                            legend['?'] = "Unknown, hidden, or outside the active world; never infer an empty cell.";
                         continue;
                     }
+                    readableCellCount++;
                     string elemId = "Vacuum";
                     string elemName = "Vacuum";
                     string buildingId = string.Empty;
@@ -145,18 +158,31 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                         building = CellBuildingObject(cell);
                         if (building != null)
                         {
-                            var complete = building.GetComponent<BuildingComplete>();
-                            buildingId = building.GetComponent<Building>()?.Def?.PrefabID
-                                ?? complete?.Def?.PrefabID ?? building.GetComponent<KPrefabID>()?.PrefabTag.Name ?? string.Empty;
-                            buildingName = building.GetProperName();
+                            MapBuildingInfo cached;
+                            if (!buildingCache.TryGetValue(building, out cached))
+                            {
+                                var complete = building.GetComponent<BuildingComplete>();
+                                buildingId = building.GetComponent<Building>()?.Def?.PrefabID
+                                    ?? complete?.Def?.PrefabID ?? building.GetComponent<KPrefabID>()?.PrefabTag.Name ?? string.Empty;
+                                buildingName = building.GetProperName();
+                                cached = new MapBuildingInfo { Id = buildingId, Name = buildingName };
+                                buildingCache[building] = cached;
+                            }
+                            else
+                            {
+                                buildingId = cached.Id;
+                                buildingName = cached.Name;
+                            }
                         }
                         minion = Grid.Objects[cell, (int)ObjectLayer.Minion];
                         critterCells.TryGetValue(cell, out critter);
                     }
 
                     float tempC = Grid.IsValidCell(cell) ? Grid.Temperature[cell] - 273.15f : 0f;
+                    if (minion != null && IsLiquidCell(cell))
+                        dupesInLiquid.Add(minion.GetInstanceID());
                     char symbol = ResolveMapSymbol(activeMode, cell, elemId, elemName, buildingId, buildingName, building, minion, critter, tempC);
-                    if (!legend.ContainsKey(symbol))
+                    if (!compact && !legend.ContainsKey(symbol))
                         legend[symbol] = SymbolLegend(activeMode, symbol);
 
                     string runKey;
@@ -171,7 +197,14 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             }
 
             AppendGrid(sb, xMin, xMax, gridLines, compact);
-            AppendLegend(sb, legend, activeMode);
+            if (compact)
+            {
+                int totalCells = (xMax - xMin + 1) * (yMax - yMin + 1);
+                sb.AppendLine("- Cells: readable=" + readableCellCount + "/" + totalCells
+                    + ", unknown=" + unknownCellCount
+                    + "; distinct duplicants in liquid=" + dupesInLiquid.Count + ".");
+            }
+            AppendLegend(sb, legend, activeMode, compact);
             if (!compact)
                 AppendConnectionDetails(sb, activeMode, xMin, xMax, yMin, yMax);
             if (details.Count > 0)
@@ -218,20 +251,38 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             sb.AppendLine();
         }
 
-        private static Dictionary<int, GameObject> BuildCritterCellMap()
+        private static Dictionary<int, GameObject> BuildCritterCellMap(int xMin = -1, int xMax = -1, int yMin = -1, int yMax = -1)
         {
             var result = new Dictionary<int, GameObject>();
             if (Components.Capturables == null || Components.Capturables.Items == null)
                 return result;
+            bool bounded = xMin >= 0 && yMin >= 0 && xMax >= xMin && yMax >= yMin;
             foreach (var cap in Components.Capturables.Items)
             {
-                if (cap == null || cap.gameObject == null)
-                    continue;
+                if (cap == null || cap.gameObject == null) continue;
                 int cell = Grid.PosToCell(cap.gameObject);
-                if (Grid.IsValidCell(cell))
-                    result[cell] = cap.gameObject;
+                if (!Grid.IsValidCell(cell)) continue;
+                if (bounded)
+                {
+                    int x = Grid.CellColumn(cell);
+                    int y = Grid.CellRow(cell);
+                    if (x < xMin || x > xMax || y < yMin || y > yMax) continue;
+                }
+                result[cell] = cap.gameObject;
             }
             return result;
+        }
+
+        private static GameObject FindCritterAtCell(int cell)
+        {
+            if (Components.Capturables == null || Components.Capturables.Items == null || !Grid.IsValidCell(cell))
+                return null;
+            foreach (var cap in Components.Capturables.Items)
+            {
+                if (cap != null && cap.gameObject != null && Grid.PosToCell(cap.gameObject) == cell)
+                    return cap.gameObject;
+            }
+            return null;
         }
 
         private static char ResolveMapSymbol(HashedString mode, int cell, string elemId, string elemName, string buildingId, string buildingName, GameObject building, GameObject minion, GameObject critter, float tempC)
@@ -291,28 +342,6 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
                 sb.AppendLine(InsertGridGuides(line, compact));
             sb.AppendLine("```");
             sb.AppendLine();
-        }
-
-        private static void AppendLegend(StringBuilder sb, Dictionary<char, string> legend, HashedString activeMode)
-        {
-            sb.AppendLine("## Legend");
-            foreach (var item in legend.OrderBy(kv => kv.Key))
-                sb.AppendLine(IsConnectionGlyph(item.Key) ? "- `" + item.Key + "` : 连接 (Connection) | " + item.Value : FormatLegendLine(item.Key, item.Value));
-            AppendInfrastructureLegend(sb, activeMode);
-            // Detailed virtual-file help is available on demand, not repeated per map.
-            sb.AppendLine();
-        }
-
-        private static void AppendInfrastructureLegend(StringBuilder sb, HashedString activeMode)
-        {
-            if (!IsInfrastructureOverlayMode(activeMode))
-                return;
-
-            sb.AppendLine("- `⌒xxx` : 桥/跨线建筑锚点，桥本体与下方线路可同时显示");
-            sb.AppendLine("- `⊗xxx` : 输入端口锚点；电力=耗电端，管道/轨道=入口，信号=输入");
-            sb.AppendLine("- `⊙xxx` : 输出端口锚点；电力=发电端，管道/轨道=出口，信号=输出");
-            sb.AppendLine("- `⊗⊙xxx` : 同一判定格同时是输入和输出端口");
-            sb.AppendLine("- `*xxx` : 该格存在未连接/孤立线路，同时保留建筑、生物或复制人锚点");
         }
 
         private static string FormatMapCellToken(HashedString mode, char symbol, int x, int y, int cell, GameObject building, GameObject minion, GameObject critter, string buildingId, string buildingName, string previousRunKey, out string runKey)
