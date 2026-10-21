@@ -25,10 +25,26 @@ All final states match official and no timed major faults occur. A separate
 -12.36% mixed-germs, cycles -8.19% / -8.20%; physics instructions fall about
 13.7-13.8%. Host load/frequency dispersion and fixture scope still apply.
 
-Actual-game headless, graphical, whole-game CPU/RAM and four simultaneous-game
-acceptance of this new identity remain pending. Prior package/profile receipts
-bind older natives and cannot approve 2772e526. See
-`conformance/results/linux-744825-pressure-sweep-borrows.json`.
+The isolated 5eb76a3 package has ZIP bd0b2823, managed d0437d55 and native
+2772e526. A genuine Steam headless process loaded those exact bytes, the approved
+disposable save, Null graphics and zero camera callbacks. Normal bounded progress,
+save/load, clock rollback and post-reload progress passed; the original save is
+unchanged. All four owned game/runtime processes, the supervisor and controller
+exited normally. Actual worker-thread names were not captured, so complete
+headless acceptance is still not claimed. Graphical, whole-game CPU/RAM and
+four simultaneous-game acceptance remain pending. See
+`conformance/results/linux-744825-pressure-sweep-{delivery,headless}.json`.
+
+The first armed memory probe correctly refused at its freshness guard, but
+investigation found a tooling defect: automatic JSON date parsing followed by
+string conversion lost the UTC suffix and reparsed it in local time. The helper
+now retains raw ISO strings. Forty-three production-helper checks in UTC,
+Asia/Taipei and America/Los_Angeles plus 12 Python collector/mapping tests pass;
+the fixed probe compiles against the pinned installed game. Its next launch was
+refused by the unchanged 6 GiB single-game capacity gate. No Unity/Mono counter
+capture has passed. The failure and new build remain separate, with no lowered
+identity, freshness or capacity limits. See
+`conformance/results/linux-744825-memory-probe-timezone.json`.
 
 ## Previous 8bd development source
 

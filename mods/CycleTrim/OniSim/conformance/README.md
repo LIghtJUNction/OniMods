@@ -11,7 +11,9 @@ reproduce the measured native identity. See
 Incremental native timing against 8bd415ce passes the fixed CPU/wall/RSS gates
 at 96x96 and 192x192. This does not establish direct official-library timing,
 whole-game performance, graphical acceptance or four simultaneous full games.
-Current actual-game acceptance remains pending. Sections below describe earlier
+One genuine Steam headless normal save/load roundtrip has passed for the new
+pair; actual worker names, graphics and complete runtime acceptance remain pending.
+Sections below describe earlier
 binaries and retain their original test counts and scope.
 
 Earlier source correction: the mixed-material thermal multiplication order now

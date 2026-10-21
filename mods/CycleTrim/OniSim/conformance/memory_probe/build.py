@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parent
-SOURCES = ("MemoryProbe.cs", "MemoryProbe.csproj", "mod.yaml", "mod_info.yaml", "build.py")
+SOURCES = ("MemoryProbe.cs", "MemoryRequest.cs", "MemoryRequestTests.cs", "MemoryProbe.csproj", "mod.yaml", "mod_info.yaml", "build.py")
 
 
 def sha(path):

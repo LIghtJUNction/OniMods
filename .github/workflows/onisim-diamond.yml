@@ -33,6 +33,22 @@ jobs:
         run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
       - name: Run differential correctness cases
         run: python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py verify
+  memory-probe-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.401'
+      - name: Build memory request protocol tests without game files
+        run: >-
+          dotnet build mods/CycleTrim/OniSim/conformance/memory_probe/MemoryProbe.csproj
+          -c Release --disable-build-servers -p:ProbeProtocolTests=true
+          -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -p:NuGetAudit=false
+          -p:BaseIntermediateOutputPath="$RUNNER_TEMP/memory-probe-protocol/obj/"
+          -p:OutputPath="$RUNNER_TEMP/memory-probe-protocol/bin/"
+      - name: Check UTC and non-UTC memory request boundaries
+        run: dotnet "$RUNNER_TEMP/memory-probe-protocol/bin/CycleTrim.MemoryProbe.dll"
   lean-proof:
     runs-on: ubuntu-latest
     steps:

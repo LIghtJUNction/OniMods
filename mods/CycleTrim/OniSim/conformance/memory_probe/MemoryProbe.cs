@@ -64,16 +64,8 @@ namespace CycleTrim.Conformance.Memory
                 var request = JObject.Parse(input);
                 int sequence = (int)request["request"];
                 if (sequence <= lastRequest) return;
-                var status = JObject.Parse(File.ReadAllText(Path.Combine(root, "instance-status.json")));
-                System.DateTime captured = System.DateTime.Parse((string)status["capturedAt"], CultureInfo.InvariantCulture,
-                                                  DateTimeStyles.RoundtripKind).ToUniversalTime();
-                double age = (System.DateTime.UtcNow - captured).TotalSeconds;
-                if ((int?)request["pid"] != pid || (int?)status["pid"] != pid || age < 0 || age > 10
-                    || (bool?)status["rootVerified"] != true || (bool?)status["gameLoaded"] != true
-                    || (bool?)status["paused"] != true || string.IsNullOrEmpty((string)status["runNonce"])
-                    || (string)request["runNonce"] != (string)status["runNonce"]
-                    || (string)request["identity"] != (string)status["identity"])
-                    throw new InvalidOperationException("Memory request does not match fresh owned paused telemetry");
+                var status = MemoryRequest.Validate(request,
+                    File.ReadAllText(Path.Combine(root, "instance-status.json")), pid, System.DateTime.UtcNow);
                 if (GameClock.Instance == null)
                     throw new InvalidOperationException("Native clock is absent");
                 double nativeSeconds = GameClock.Instance.GetTime();

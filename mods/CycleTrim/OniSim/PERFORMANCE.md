@@ -43,8 +43,10 @@ running/enabled is at least 98%. These counts support reduced main-thread work.
 
 Other host workloads remain running. All sample ranges, load/frequency records
 and RSS observations are retained. These incremental Rust fixture results are
-not direct official-library timing or whole-game FPS/RAM improvements. Runtime
-and concurrent complete-game acceptance remain pending. See the
+not direct official-library timing or whole-game FPS/RAM improvements. The new native/managed pair has passed one Steam headless save/load roundtrip;
+actual worker names, graphical and concurrent complete-game acceptance remain
+pending. The armed memory-probe guard failed, then received a timezone fix with
+43 host checks; actual Unity/Mono memory counters remain unverified. See the
 [exact receipt](conformance/results/linux-744825-pressure-sweep-borrows.json) and
 [base-bound proposal](conformance/proposals/pressure-sweep-borrows.patch).
 

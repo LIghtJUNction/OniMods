@@ -45,6 +45,27 @@ Run the game-free capture and mapping tests with:
 rtk proxy python3 -m unittest discover -s . -p 'test_*.py'
 ```
 
+The same project can compile the production request validator without any game
+assemblies, using [Newtonsoft.Json 13.0.4](https://www.nuget.org/packages/Newtonsoft.Json/13.0.4)
+for the host tests. The three-timezone tests reproduce the former Json.NET DateTime
+string conversion losing the UTC suffix, then check accepted timestamps and
+rejection of stale/future timestamps or mismatched ownership:
+
+```sh
+rtk proxy dotnet build MemoryProbe.csproj -c Release --disable-build-servers \
+  -p:ProbeProtocolTests=true -p:ImportDirectoryBuildProps=false \
+  -p:ImportDirectoryBuildTargets=false -p:NuGetAudit=false \
+  -p:BaseIntermediateOutputPath=/tmp/ct-memory-protocol/obj/ \
+  -p:OutputPath=/tmp/ct-memory-protocol/bin/
+rtk proxy dotnet /tmp/ct-memory-protocol/bin/CycleTrim.MemoryProbe.dll
+```
+
+Telemetry JSON now retains date strings until explicit timezone-aware parsing.
+The existing ten-second age bound, PID/run/identity checks and paused-native-clock
+check remain in force. The first real 6517b5f5 probe request was rejected at this
+guard; its failure is retained. The corrected probe has compilation and 43 pure
+protocol checks, but still needs a successful real Unity/Mono capture.
+
 The mapping tests use temporary ordinary files and synthetic `/proc` entries;
 they establish rejection behavior, not an observed game core or Unity counter.
 
