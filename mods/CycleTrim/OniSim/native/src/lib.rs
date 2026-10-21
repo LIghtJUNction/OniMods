@@ -71,8 +71,12 @@ mod world_messages;
 
 use status::{Error, Result, Status, boundary};
 
-#[cfg(not(all(target_os = "linux", target_arch = "x86_64", target_endian = "little")))]
-compile_error!("this experimental ABI currently supports Linux x86_64 little-endian only");
+#[cfg(not(all(
+    any(target_os = "linux", target_os = "windows", target_os = "macos"),
+    target_arch = "x86_64",
+    target_endian = "little"
+)))]
+compile_error!("the simulation ABI requires Windows, macOS or Linux x86_64 little-endian");
 
 const CAPABILITIES: &[u8] = concat!(
     "{\"abiVersion\":1,\"gameReady\":false,\"simulationStep\":true,",
@@ -91,7 +95,7 @@ const CAPABILITIES: &[u8] = concat!(
     "\"flow\":true,\"textures\":false,\"radiationSimulation\":true,\"radiationStorage\":\"native\",",
     "\"tableSemantics\":\"physics-metadata\",\"snapshot\":\"explicit-copy\",",
     "\"storageMutationTiming\":\"frame-command-stage\",\"officialCommandScheduling\":false,",
-    "\"execution\":\"asynchronous-frame-worker\",\"diagnosticCallbacks\":true,\"debugAssert\":true,\"systemInfo\":\"unavailable-linux\",\"runtimeValidated\":false,",
+    "\"execution\":\"asynchronous-frame-worker\",\"diagnosticCallbacks\":true,\"debugAssert\":true,\"systemInfo\":\"unavailable\",\"runtimeValidated\":false,",
     "\"batchPrevalidation\":true,\"readyObservation\":true,\"externalPointerSynchronization\":\"caller-required\"}\0"
 )
 .as_bytes();

@@ -7,7 +7,7 @@ internal static class WorkshopTarget
     internal static uint ConsumerAppId =>
         checked((uint)ReadId("ONIM_PUBLISH_CONSUMER_APP_ID", 457140));
     internal static ulong WorkshopId =>
-        ReadId("ONIM_PUBLISH_WORKSHOP_ID", 3766318556);
+        ReadId("ONIM_PUBLISH_WORKSHOP_ID", 3807166689);
     internal static ulong ExpectedOwner =>
         ReadId("ONIM_PUBLISH_EXPECTED_OWNER", 76561199137573787);
     internal static string DisplayName =>

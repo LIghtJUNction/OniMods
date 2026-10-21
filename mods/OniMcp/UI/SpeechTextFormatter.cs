@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Markdig;
 using Markdig.Extensions.EmphasisExtras;
-using Markdig.Extensions.Tables;
 using Markdig.Helpers;
 using Markdig.Parsers;
 using Markdig.Parsers.Inlines;

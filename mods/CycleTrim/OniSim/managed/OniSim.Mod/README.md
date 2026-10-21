@@ -1,6 +1,6 @@
 # CycleTrim OniSim loader
 
-This loader is part of CycleTrim's OniSim core integration. Linux x86_64 builds
+This loader is part of CycleTrim's OniSim core integration. Windows x64, macOS x64 and Linux x64 builds
 include the native library by default, and the PLib CycleTrim Mod option enables
 the mapping by default. Turn the option off to keep the vanilla SimDLL mapping;
 the change requires restarting ONI. The mapping and game
@@ -17,11 +17,11 @@ custom message protocol, or managed Grid mirror is used.
 `CYCLETRIM_ONISIM_ENABLE` remains a startup override: set it to `0`, `false`, or
 `off` to force-disable mapping; `1`, `true`, or `on` permits it when the PLib
 option is enabled. Other nonempty values are refused. `CYCLETRIM_ONISIM_NATIVE_PATH` may name an absolute library override;
-when unset, the loader uses `OniSim/liboni_sim_core.so` beside the Mod assembly.
+when unset, the loader uses the platform library under `OniSim/linux-x64/`,
+`OniSim/windows-x64/` or `OniSim/macos-x64/` beside the Mod assembly.
 These switches control mapping; they do not establish gameplay compatibility.
 
-The preflight requires Linux x64 Mono and the exact inspected game assembly and
-Unity Mono fingerprints in `OfficialProfile.cs`. It requires no `Game` instance,
+The preflight requires x64 Unity Mono and the exact inspected game assembly fingerprint in `OfficialProfile.cs`. Linux additionally checks its inspected Unity Mono fingerprint. Other platforms bind public embedding exports only from the already-loaded game-local Unity runtime. It requires no `Game` instance,
 gets the existing Mono module with `RTLD_NOLOAD`, and enumerates loaded assemblies
 to locate the exact `Assembly-CSharp` MonoImage by filename. It rejects missing
 images, unsupported profiles, missing exports, and non-v1 native ABI before the

@@ -19,7 +19,7 @@ namespace OniSim.CycleTrim
         public const string LibraryVariable = "CYCLETRIM_ONISIM_NATIVE_PATH";
         private static readonly object Gate = new object();
         private static string mappedPath;
-        private static LinuxModule targetModule;
+        private static NativeModule targetModule;
         private static MonoImageMapper mapper;
 
         public static LoaderResult Configure(Assembly gameAssembly)
@@ -56,24 +56,23 @@ namespace OniSim.CycleTrim
                     if (string.IsNullOrWhiteSpace(path))
                     {
                         string modDirectory = Path.GetDirectoryName(typeof(OniSimLoader).Assembly.Location);
-                        path = Path.Combine(modDirectory, "OniSim", "liboni_sim_core.so");
+                        path = NativePlatform.BundledLibrary(modDirectory);
                     }
                     if (!Path.IsPathRooted(path))
                         throw new InvalidOperationException(LibraryVariable + " must be an absolute path when set.");
                     path = Path.GetFullPath(path);
-                    if (Type.GetType("Mono.Runtime") == null || Environment.OSVersion.Platform != PlatformID.Unix ||
-                        IntPtr.Size != 8 || !BitConverter.IsLittleEndian || !File.Exists("/proc/sys/kernel/ostype") ||
-                        File.ReadAllText("/proc/sys/kernel/ostype").Trim() != "Linux")
-                        throw new PlatformNotSupportedException("OniSim takeover requires Linux x64 Mono.");
+                    NativePlatform.RequireSupported();
+                    if (Type.GetType("Mono.Runtime") == null)
+                        throw new PlatformNotSupportedException("OniSim takeover requires Unity Mono.");
                     OfficialProfile.ValidateAssembly(gameAssembly);
                     RequireNoGameInstance(gameAssembly);
                     string monoPath = OfficialProfile.MonoPath(gameAssembly.Location);
                     OfficialProfile.ValidateMono(monoPath);
-                    mapper = new MonoImageMapper(LinuxModule.OpenAlreadyLoaded(monoPath));
+                    mapper = new MonoImageMapper(NativeModule.OpenAlreadyLoaded(monoPath));
                     IntPtr image = mapper.FindImage(Path.GetFullPath(gameAssembly.Location));
                     if (image == IntPtr.Zero) throw new InvalidOperationException("The exact loaded Assembly-CSharp MonoImage was not found.");
                     // All checks and symbol binding precede the single image-scoped mutation.
-                    targetModule = LinuxModule.OpenTarget(path);
+                    targetModule = NativeModule.OpenTarget(path);
                     OfficialProfile.ValidateTarget(targetModule);
                     mapper.Insert(image, path);
                     mappedPath = path;

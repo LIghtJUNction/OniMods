@@ -25,7 +25,8 @@ internal static class Program
 
     private static int Run(string[] args)
     {
-        var queryOnly = args.Contains("--query-only", StringComparer.Ordinal);
+        var queryOwned = args.Contains("--query-owned", StringComparer.Ordinal);
+        var queryOnly = args.Contains("--query-only", StringComparer.Ordinal) || queryOwned;
         var consumerContext = args.Contains("--consumer-context", StringComparer.Ordinal);
         var validateOnly = args.Contains("--validate-vdf", StringComparer.Ordinal);
         var metadataOnly = args.Contains("--metadata-only", StringComparer.Ordinal);
@@ -225,6 +226,11 @@ internal static class Program
         {
             SteamAppContext.VerifyActive(role);
             SteamWorkshopPublisher.ValidateAccount();
+            if (queryOwned)
+            {
+                SteamWorkshopPublisher.PrintOwnedItems();
+                return 0;
+            }
             var before = SteamWorkshopPublisher.QueryTarget();
             SteamWorkshopPublisher.PrintTarget(before);
             if (queryOnly)

@@ -10,12 +10,12 @@ PUBLISHER_PROJECT="$ROOT/tools/OniMods.SteamPublisher/OniMods.SteamPublisher.csp
 PUBLISHER_DLL="$ROOT/tools/OniMods.SteamPublisher/bin/Release/net10.0/OniMods.SteamPublisher.dll"
 case "$MOD_KEY" in
 CycleTrim)
-  EXPECTED_ID="3766318556"
+  EXPECTED_ID="3807166689"
   TITLE_CONTAINS="CycleTrim"
   ;;
 OniMcp)
-  EXPECTED_ID="3731864673"
-  TITLE_CONTAINS="ONI MCP Server"
+  EXPECTED_ID="3807166922"
+  TITLE_CONTAINS="OniMcp"
   ;;
 *)
   echo "Unsupported publish target: $MOD_KEY" >&2
@@ -97,19 +97,9 @@ PY
     exit 1
   fi
 
-  if [[ "$DRY_RUN" != true ]]; then
-    local page
-    page="$(curl --proto '=https' --tlsv1.2 -fsSL --max-time 20 \
-      "https://steamcommunity.com/sharedfiles/filedetails/?id=$EXPECTED_ID")"
-    grep -Fq "steamcommunity.com/app/$CONSUMER_APP_ID" <<<"$page" || {
-      echo "Refusing upload: Workshop item does not belong to ONI app $CONSUMER_APP_ID" >&2
-      exit 1
-    }
-    grep -Fqi "$TITLE_CONTAINS" <<<"$page" || {
-      echo "Refusing upload: Workshop item title does not contain $TITLE_CONTAINS" >&2
-      exit 1
-    }
-  fi
+  # Live app, owner and title checks run through the Steam SDK in
+  # client_preflight and again immediately before the upload. Public HTML can
+  # return a rate-limit page with HTTP 200 and is not an identity check.
 }
 
 require_clean_worktree() {
@@ -222,6 +212,11 @@ client_preflight() {
       cat "$creator_log" "$consumer_log"
       return
     fi
+    if grep -Fq "Workshop item identity check failed" "$creator_log" "$consumer_log"; then
+      cat "$creator_log" "$consumer_log" >&2
+      echo "Steam returned an invalid target; preflight stopped without upload" >&2
+      return 1
+    fi
     sleep 2
   done
   tail -20 "$creator_log" "$consumer_log" >&2
@@ -242,6 +237,11 @@ if [[ "$PREFLIGHT_ONLY" == true ]]; then
 fi
 
 require_clean_worktree
+
+if [[ "$MOD_KEY" == "CycleTrim" ]]; then
+  : "${OniSimNativeBundle:?CycleTrim releases require OniSimNativeBundle from the three-platform OniSim native CI run}"
+  python3 "$ROOT/scripts/build_onisim_native.py" --validate-bundle "$OniSimNativeBundle"
+fi
 
 if [[ "$DRY_RUN" != true ]]; then
   client_preflight

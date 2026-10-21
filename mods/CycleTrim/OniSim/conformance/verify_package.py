@@ -55,7 +55,7 @@ def verify(dist):
     with zipfile.ZipFile(dist / "CycleTrim.zip") as package:
         require(not any(Path(name).name == "CycleTrim.TextureProbe.dll" for name in package.namelist()),
                 "The opt-in texture probe must not be included in the production mod")
-        native = sha(package.read("OniSim/liboni_sim_core.so"))
+        native = sha(package.read("OniSim/linux-x64/liboni_sim_core.so"))
         managed = sha(package.read("CycleTrim.dll"))
         for workers in (1, 4):
             name = f"results/linux-744825-workers{workers}.json"

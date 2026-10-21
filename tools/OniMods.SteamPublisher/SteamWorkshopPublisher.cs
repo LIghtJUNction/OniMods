@@ -23,6 +23,43 @@ internal static partial class SteamWorkshopPublisher
         QueryItem(WorkshopTarget.WorkshopId, WorkshopTarget.TitleContains,
             requirePrivate: false);
 
+    internal static void PrintOwnedItems()
+    {
+        var account = SteamUser.GetSteamID().GetAccountID();
+        for (uint page = 1; page <= 10; page++)
+        {
+            var query = SteamUGC.CreateQueryUserUGCRequest(account,
+                EUserUGCList.k_EUserUGCList_Published,
+                EUGCMatchingUGCType.k_EUGCMatchingUGCType_Items,
+                EUserUGCListSortOrder.k_EUserUGCListSortOrder_LastUpdatedDesc,
+                new AppId_t(0), new AppId_t(WorkshopTarget.ConsumerAppId), page);
+            try
+            {
+                SteamUGC.SetAllowCachedResponse(query, 0);
+                var result = WaitForCall<SteamUGCQueryCompleted_t>(
+                    SteamUGC.SendQueryUGCRequest(query), QueryTimeout, "Owned Workshop items query");
+                if (result.m_eResult != EResult.k_EResultOK)
+                    throw new InvalidOperationException("Owned items query failed: " + result.m_eResult);
+                Console.WriteLine($"ownedItemsTotal={result.m_unTotalMatchingResults}");
+                for (uint index = 0; index < result.m_unNumResultsReturned; index++)
+                {
+                    Require(SteamUGC.GetQueryUGCResult(query, index, out var item), "GetQueryUGCResult");
+                    Console.WriteLine($"ownedItem={item.m_nPublishedFileId.m_PublishedFileId} "
+                        + $"result={item.m_eResult} owner={item.m_ulSteamIDOwner} "
+                        + $"creatorApp={item.m_nCreatorAppID.m_AppId} consumerApp={item.m_nConsumerAppID.m_AppId} "
+                        + $"visibility={item.m_eVisibility} title={item.m_rgchTitle}");
+                }
+                if (result.m_unNumResultsReturned == 0 || page * 50 >= result.m_unTotalMatchingResults)
+                    return;
+            }
+            finally
+            {
+                SteamUGC.ReleaseQueryUGCRequest(query);
+            }
+        }
+        throw new InvalidOperationException("Owned items query exceeded its bounded page limit");
+    }
+
     internal static SteamUGCDetails_t QueryItem(
         ulong workshopId, string titleContains, bool requirePrivate,
         bool requirePublic = false)
@@ -403,7 +440,8 @@ internal static partial class SteamWorkshopPublisher
         SteamUGCDetails_t details, ulong workshopId,
         string titleContains, bool requirePrivate, bool requirePublic)
     {
-        if (details.m_nPublishedFileId.m_PublishedFileId != workshopId
+        if (details.m_eResult != EResult.k_EResultOK
+            || details.m_nPublishedFileId.m_PublishedFileId != workshopId
             || details.m_nCreatorAppID.m_AppId != WorkshopTarget.CreatorAppId
             || details.m_nConsumerAppID.m_AppId != WorkshopTarget.ConsumerAppId
             || details.m_ulSteamIDOwner != WorkshopTarget.ExpectedOwner
@@ -419,6 +457,7 @@ internal static partial class SteamWorkshopPublisher
         {
             throw new InvalidOperationException(
                 $"Workshop item identity check failed for {WorkshopTarget.DisplayName}: "
+                + $"result={details.m_eResult}, "
                 + $"id={details.m_nPublishedFileId.m_PublishedFileId}, "
                 + $"creatorApp={details.m_nCreatorAppID.m_AppId}, "
                 + $"consumerApp={details.m_nConsumerAppID.m_AppId}, "

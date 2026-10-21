@@ -58,7 +58,7 @@ def main():
             raise RuntimeError(f"Extracted source build failed ({result.returncode}); inspect source-build.log")
         rebuilt_package = checkout / "dist/CycleTrim.zip"
         with zipfile.ZipFile(rebuilt_package) as package:
-            native = hashlib.sha256(package.read("OniSim/liboni_sim_core.so")).hexdigest()
+            native = hashlib.sha256(package.read("OniSim/linux-x64/liboni_sim_core.so")).hexdigest()
             wrapper = hashlib.sha256(package.read("CycleTrim.dll")).hexdigest()
         if hashlib.sha256(archive_path.read_bytes()).hexdigest() != digest:
             raise RuntimeError("Source archive changed during its isolated build")

@@ -30,14 +30,17 @@ namespace OniSim.CycleTrim
 
         internal static string MonoPath(string assemblyPath)
         {
-            string managed = Path.GetDirectoryName(Path.GetFullPath(assemblyPath));
-            string data = Path.GetDirectoryName(managed);
-            return Path.Combine(data, "MonoBleedingEdge", "x86_64", "libmonobdwgc-2.0.so");
+            return NativePlatform.MonoPath(assemblyPath);
         }
 
-        internal static void ValidateMono(string path) { RequireDigest(path, MonoSha256, "Unity Mono runtime"); }
+        internal static void ValidateMono(string path)
+        {
+            if (NativePlatform.IsLinux) RequireDigest(path, MonoSha256, "Unity Mono runtime");
+            // Other platforms bind only the already-loaded, game-local Unity runtime's
+            // public embedding exports. No offsets or Linux runtime bytes are reused.
+        }
 
-        internal static void ValidateTarget(LinuxModule module)
+        internal static void ValidateTarget(NativeModule module)
         {
             foreach (string entry in Imports) module.RequireSymbol(entry);
             module.RequireSymbol("ONISIM_TryInitialize");

@@ -2,6 +2,11 @@
 
 [b]轻量级性能优化 Mod（缺氧 / Oxygen Not Included）[/b]
 
+[h2]v0.4.0 OniSim 核心[/h2]
+发布包包含 Windows x64、macOS x64、Linux x64 的 Rust 仿真核心，三平台默认启用。可在 CycleTrim Mod 设置里关闭并重启游戏，以使用原版核心；启动前设置 CYCLETRIM_ONISIM_ENABLE=0 也可强制关闭。未知游戏版本会拒绝接管并保留原版核心。
+
+Windows/macOS 通过 CI 原生构建与宿主加载器测试，尚无对应 ONI 实机验收。旧 Linux 实测回执仅适用于其中记录的二进制和存档。
+
 [h2]v0.3.1 修复[/h2]
 CycleTrim 之前只用 `currentChore != null` 判断复制人是否忙碌。ONI 空闲时仍会保留一个非空的 `IdleChore`，所以拾取和差事刷新也受到了节流。
 

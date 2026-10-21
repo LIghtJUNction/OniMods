@@ -1,5 +1,4 @@
 using System;
-using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 
 namespace OniMcp.Tools

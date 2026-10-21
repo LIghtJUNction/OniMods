@@ -2,9 +2,18 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
-## Unreleased
+## 2026-10-22 — 0.4.0
 
-- 0.3.3 source: retain the queued navigation stamp when a worker dequeues just
+- Bundle the OniSim Rust core for Windows x64, macOS x64 and Linux x64 in one
+  Workshop ZIP. The PLib option defaults to enabled on each platform; restart is
+  required after changing it. Unsupported game profiles retain the original core.
+- Build and test each native target on its own CI runner, including native export
+  binding, initialization and shutdown through the production platform loader.
+  CI/host tests do not establish Windows or macOS ONI runtime compatibility.
+- Require all three binaries, matching source fingerprints and matching binary
+  checksums before the Steam publisher accepts a CycleTrim release.
+
+- Retain the queued navigation stamp when a worker dequeues just
   before the main thread advances its tick. Linked production-patch regressions
   cover that interleaving and late callbacks after unregistering a navigator.
 - Store validated OniSim thermal commands inline and append energy batches

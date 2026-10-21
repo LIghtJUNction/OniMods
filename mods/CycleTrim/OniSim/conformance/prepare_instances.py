@@ -15,9 +15,10 @@ from verify_instances import digest, require, load_backend
 from texture_probe.build import verify_receipt as verify_texture_probe
 from memory_probe.build import verify_receipt as verify_memory_probe
 
-PAYLOAD = ("CycleTrim.dll", "mod_info.yaml", "mod.yaml", "OniSim/liboni_sim_core.so",
+NATIVE_PATHS = ("OniSim/linux-x64/liboni_sim_core.so", "OniSim/liboni_sim_core.so")
+PAYLOAD = ("CycleTrim.dll", "mod_info.yaml", "mod.yaml", *NATIVE_PATHS,
            "LICENSE", "LICENSE.MIT", "LICENSING.md", "THIRD_PARTY_NOTICES.txt")
-REQUIRED = set(PAYLOAD[:4])
+REQUIRED = set(PAYLOAD[:3])
 COMPANION_FILES = ("OniHarness.Runtime.dll", "mod.yaml", "mod_info.yaml")
 MCP_PAYLOAD = ("OniMcp.dll", "mod_info.yaml", "mod.yaml", "LICENSE", "LICENSE.MIT",
                "LICENSING.md", "THIRD_PARTY_NOTICES.txt", "assets/edit_mark_tool.png",
@@ -55,7 +56,9 @@ def stage_package(package, destination, native=None):
     if native is not None:
         check_native(native)
     stage_files(package, destination, PAYLOAD, REQUIRED, "the real managed/native CycleTrim payload")
-    target = destination / "OniSim/liboni_sim_core.so"
+    targets = [destination / name for name in NATIVE_PATHS if (destination / name).is_file()]
+    require(len(targets) == 1, "Require exactly one Linux native library in the staged package")
+    target = targets[0]
     if native is not None:
         expected_native = digest(native)
         shutil.copyfile(native, target)

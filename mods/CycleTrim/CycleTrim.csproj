@@ -11,11 +11,11 @@
     <ModTitle>CycleTrim</ModTitle>
     <ModDescription>Streamlines fetch pickup candidates, limits expensive pickup/chore refreshes for active duplicants only, and throttles stationary-critter navigation probing; IdleChore, idle duplicants, and explicit priority updates retain the vanilla immediate path. / 优化拾取候选选择，仅限制真正忙碌复制人的高开销拾取与差事刷新，并对静止小动物的导航探针调用进行节流；IdleChore、空闲复制人与显式优先更新均保留原版即时路径。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
-    <ModVersion>0.3.3</ModVersion>
+    <ModVersion>0.4.0</ModVersion>
+    <Version>$(ModVersion)</Version>
     <ModApiVersion>2</ModApiVersion>
-    <OniSimNativePlatformSupported Condition="$([MSBuild]::IsOSPlatform('Linux')) And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">true</OniSimNativePlatformSupported>
-    <IncludeOniSim Condition="'$(IncludeOniSim)' == '' And '$(OniSimNativePlatformSupported)' == 'true'">true</IncludeOniSim>
-    <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">false</IncludeOniSim>
+    <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">true</IncludeOniSim>
+    <OniSimPython Condition="'$(OniSimPython)' == ''">python3</OniSimPython>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,7 +30,8 @@
   <ItemGroup>
     <Compile Remove="OniSim/**/*.cs" />
     <Compile Include="OniSim/managed/OniSim.Mod/OniSimLoader.cs" Link="OniSim/OniSimLoader.cs" />
-    <Compile Include="OniSim/managed/OniSim.Mod/LinuxModule.cs" Link="OniSim/LinuxModule.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/NativeModule.cs" Link="OniSim/NativeModule.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/NativePlatform.cs" Link="OniSim/NativePlatform.cs" />
     <Compile Include="OniSim/managed/OniSim.Mod/MonoImageMapper.cs" Link="OniSim/MonoImageMapper.cs" />
     <Compile Include="OniSim/managed/OniSim.Mod/OfficialProfile.cs" Link="OniSim/OfficialProfile.cs" />
   </ItemGroup>
@@ -107,34 +108,39 @@
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
-    <MakeDir Directories="$(DistModPath)OniSim" Condition="'$(IncludeOniSim)' == 'true' And Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
-    <Copy SourceFiles="$(OutputPath)OniSim/liboni_sim_core.so" DestinationFiles="$(DistModPath)OniSim/liboni_sim_core.so" Condition="'$(IncludeOniSim)' == 'true' And Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
+    <ItemGroup Condition="'$(IncludeOniSim)' == 'true'">
+      <OniSimNativeFiles Include="$(OutputPath)OniSim/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OniSimNativeFiles)" DestinationFiles="@(OniSimNativeFiles->'$(DistModPath)OniSim/%(RecursiveDir)%(Filename)%(Extension)')" />
     <ItemGroup>
       <OniSimValidation Include="$(MSBuildProjectDirectory)/OniSim/PARALLEL-VALIDATION.md;$(MSBuildProjectDirectory)/OniSim/RUNTIME-VALIDATION.md;$(MSBuildProjectDirectory)/OniSim/PROGRESS.md;$(MSBuildProjectDirectory)/OniSim/PERFORMANCE.md" />
     </ItemGroup>
-    <Copy SourceFiles="@(OniSimValidation)" DestinationFolder="$(DistModPath)OniSim" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
-    <MakeDir Directories="$(DistModPath)OniSim/conformance/results" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/OniSim/conformance/README.md" DestinationFolder="$(DistModPath)OniSim/conformance" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
+    <Copy SourceFiles="@(OniSimValidation)" DestinationFolder="$(DistModPath)OniSim" Condition="'$(IncludeOniSim)' == 'true'" />
+    <MakeDir Directories="$(DistModPath)OniSim/conformance/results" Condition="'$(IncludeOniSim)' == 'true'" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/OniSim/conformance/README.md" DestinationFolder="$(DistModPath)OniSim/conformance" Condition="'$(IncludeOniSim)' == 'true'" />
     <ItemGroup>
       <OniSimConformanceReceipts Include="$(MSBuildProjectDirectory)/OniSim/conformance/results/*.json" />
     </ItemGroup>
-    <Copy SourceFiles="@(OniSimConformanceReceipts)" DestinationFolder="$(DistModPath)OniSim/conformance/results" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
+    <Copy SourceFiles="@(OniSimConformanceReceipts)" DestinationFolder="$(DistModPath)OniSim/conformance/results" Condition="'$(IncludeOniSim)' == 'true'" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/CycleTrim LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml" />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/CycleTrim scripts/build_onisim_native.py LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml" />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
   </Target>
 
   <Target Name="BuildOniSimNative" BeforeTargets="PackageMod" Condition="'$(IncludeOniSim)' == 'true'">
-    <Error Condition="'$(OniSimNativePlatformSupported)' != 'true'" Text="OniSim bundling currently requires Linux x86_64." />
     <PropertyGroup>
-      <OniSimCargoManifest>$(MSBuildProjectDirectory)/OniSim/native/Cargo.toml</OniSimCargoManifest>
-      <OniSimCargoTargetDir>$(MSBuildProjectDirectory)/obj/$(Configuration)/OniSimNative</OniSimCargoTargetDir>
+      <OniSimBundlePath>$(OniSimNativeBundle)</OniSimBundlePath>
+      <OniSimBundlePath Condition="'$(OniSimBundlePath)' == ''">$(MSBuildProjectDirectory)/obj/$(Configuration)/OniSimBundle</OniSimBundlePath>
     </PropertyGroup>
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/OniSim" EnvironmentVariables="RUSTC_WRAPPER=;RUSTC_WORKSPACE_WRAPPER=" Command="cargo build --locked --release --manifest-path &quot;$(OniSimCargoManifest)&quot; --target-dir &quot;$(OniSimCargoTargetDir)&quot;" />
-    <MakeDir Directories="$(OutputPath)OniSim" />
-    <Copy SourceFiles="$(OniSimCargoTargetDir)/release/liboni_sim_core.so" DestinationFiles="$(OutputPath)OniSim/liboni_sim_core.so" />
+    <Exec Condition="'$(OniSimNativeBundle)' == ''" IgnoreStandardErrorWarningFormat="true" Command="$(OniSimPython) &quot;$(MSBuildProjectDirectory)/../../scripts/build_onisim_native.py&quot; --output-root &quot;$(OniSimBundlePath)&quot;" />
+    <Exec Condition="'$(OniSimNativeBundle)' != ''" IgnoreStandardErrorWarningFormat="true" Command="$(OniSimPython) &quot;$(MSBuildProjectDirectory)/../../scripts/build_onisim_native.py&quot; --validate-bundle &quot;$(OniSimBundlePath)&quot;" />
+    <RemoveDir Directories="$(OutputPath)OniSim" />
+    <ItemGroup>
+      <OniSimBundleFiles Include="$(OniSimBundlePath)/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OniSimBundleFiles)" DestinationFiles="@(OniSimBundleFiles->'$(OutputPath)OniSim/%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 
 </Project>
