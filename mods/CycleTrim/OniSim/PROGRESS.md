@@ -7,7 +7,7 @@ The canonical development native is now
 Twelve native source files and the expanded thermal case registration were
 integrated after checking the C301 source-archive ancestor and preserving
 unrelated source bytes. An independent canonical build produces the exact
-tested binary. All 41 release Rust tests and 47 game-free harness tests pass.
+tested binary. All 41 release Rust tests and 49 game-free harness tests pass.
 The canonical harness matches the frozen expanded run byte-for-byte: both one
 and four workers pass 263 cases / 9571 publications, including 32 new thermal
 wire-word cases. The 12 memory-collector protocol/mapping tests are separate.
@@ -35,6 +35,17 @@ increases 9.2% and sealed wall time 12.5%. All 156 timed final states still matc
 official; no timed major faults occurred. The experiment and rejection are in
 `conformance/results/linux-744825-disease-active-dispatch.json`. The canonical
 native remains `8bd415ce…`.
+
+The follow-up checked-cleanup-slice experiment `6ad189b3…` also remains rejected.
+It passes 42 release tests and both complete 263-case / 9571-publication runs,
+but its 156 full-frame timing samples still fail the original elapsed-time gates.
+See `conformance/results/linux-744825-disease-cleanup-slices.json`.
+The common dispatch-removal premise was then tested directly on production
+disease post-processing. Parallel clean-cell cleanup is faster than serial at
+both sizes, so uninfected regions cannot be treated as having no useful parallel
+work. The next optimization should reduce cleanup work while retaining useful
+parallelism. The rerunnable test and limitations are documented in
+`conformance/DISEASE-DISPATCH-DIAGNOSTIC.md`.
 
 The source includes checked common-length pressure slices, integer SIMD index
 validation, phase-local contact reuse, conservative identity-copy elimination,
