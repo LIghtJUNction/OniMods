@@ -47,6 +47,29 @@ work. The next optimization should reduce cleanup work while retaining useful
 parallelism. The rerunnable test and limitations are documented in
 `conformance/DISEASE-DISPATCH-DIAGNOSTIC.md`.
 
+Two further SSE2 cleanup proposals preserve the pool and exclusive row ownership.
+`368df124…` and the exact all-clear/all-retained branch variant `9dbb9536…` each
+pass 45 release tests and both 263-case / 9571-publication suites. Bounds, tails,
+all lane masks and float words are checked; the branch variant also checks three
+input classes in each of 512 MXCSR environments. Neither is adopted: the first
+fails both full-frame size gates; the branch variant passes 192x192 but fails the
+original 96x96 mixed-germ limits (CPU +4.37%, wall +3.83%). All 156 timed samples
+per variant are retained. Public proposals are archived; the branch proposal
+independently rebuilds to the exact tested native hash.
+
+A 24-sample CPU-core PMU diagnostic then counts actual warmed physics, pool and
+orchestration threads. In sealed fixtures, pool instructions fall 39.85%, but
+whole-process instructions fall only 1.11%; mixed-germ whole-process instructions
+fall 0.15%. The serial physics thread accounts for about 90-97% of retired
+instructions in these two scenes. Prioritize its hotspots for larger gains.
+Counters do not override failed elapsed-time gates or establish whole-game FPS.
+Receipts are `conformance/results/linux-744825-disease-cleanup-{sse2,sse2-fastpaths,counters}.json`.
+
+The dedicated OniSim CI now also runs the complete production native crate's
+Release unit tests without game files, alongside the emitter differential suite.
+This closes a coverage gap; official-library and actual-game runs remain local,
+separate acceptance levels.
+
 The source includes checked common-length pressure slices, integer SIMD index
 validation, phase-local contact reuse, conservative identity-copy elimination,
 and the consumed PreparedStep token. The contact-cache and PreparedStep Lean

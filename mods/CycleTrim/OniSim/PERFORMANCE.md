@@ -37,6 +37,32 @@ Actual-game headless, graphical, whole-game CPU/RAM and concurrent complete-game
 acceptance of the new canonical native remain pending. The main distribution
 ZIP and earlier runtime receipts are separate artifacts.
 
+## Cleanup vectorization and main-thread attribution
+
+Two private SSE2 cleanup variants pass 45 release tests and exact official
+comparisons at one/four workers. They retain parallel row ownership, integer-only
+cleanup and scalar tails. The branch variant avoids old-payload reads for four
+cleared cells and unchanged-field stores for four retained cells. It still fails
+the original small-grid mixed-germ gate, so neither proposal replaces 8bd415ce.
+See `conformance/results/linux-744825-disease-cleanup-sse2{,-fastpaths}.json`.
+
+Six alternating pairs per scene then observe the baseline and branch variant on
+CPU0/2/4/6 with the matching `cpu_core` PMU, recording every warmed process thread.
+All 24 final snapshots match official; running/enabled is 100% for recorded
+counters. The high-cycle mixed-germ candidate outlier remains included.
+
+| Scene | Pool instructions | Whole-process instructions | Whole-process cycles |
+| --- | ---: | ---: | ---: |
+| Sealed | -39.85% | -1.11% | -1.93% |
+| Mixed germs | -1.44% | -0.15% | -1.12% |
+
+About 90-97% of retired instructions remain in `onisim-physics` in these two
+fixtures. This identifies a larger target than further cleanup tuning. Instruction
+shares are not wall-time shares, and these counters do not turn the failed CPU/
+elapsed gates into passes. Frequency, cache and scheduling effects remain in the
+live-host timing samples. Actual-game performance is still unmeasured for this
+candidate. See `conformance/results/linux-744825-disease-cleanup-counters.json`.
+
 ## Actual-game measurement and memory capacity
 
 The experimental PreparedStep candidate `7811921b…` passed a Steam-launched
