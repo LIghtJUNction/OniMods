@@ -13,7 +13,8 @@
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
     <ModVersion>0.3.2</ModVersion>
     <ModApiVersion>2</ModApiVersion>
-    <IncludeOniSim Condition="'$(IncludeOniSim)' == '' and '$(OS)' == 'Unix' and Exists('/proc/sys/kernel/ostype') and '$(NETCoreSdkRuntimeIdentifier)' == 'arch-x64'">true</IncludeOniSim>
+    <OniSimNativePlatformSupported Condition="$([MSBuild]::IsOSPlatform('Linux')) And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">true</OniSimNativePlatformSupported>
+    <IncludeOniSim Condition="'$(IncludeOniSim)' == '' And '$(OniSimNativePlatformSupported)' == 'true'">true</IncludeOniSim>
     <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">false</IncludeOniSim>
   </PropertyGroup>
 
@@ -126,7 +127,7 @@
   </Target>
 
   <Target Name="BuildOniSimNative" BeforeTargets="PackageMod" Condition="'$(IncludeOniSim)' == 'true'">
-    <Error Condition="'$(OS)' != 'Unix' Or !Exists('/proc/sys/kernel/ostype') Or '$(NETCoreSdkRuntimeIdentifier)' != 'arch-x64'" Text="OniSim bundling currently requires Linux x86_64." />
+    <Error Condition="'$(OniSimNativePlatformSupported)' != 'true'" Text="OniSim bundling currently requires Linux x86_64." />
     <PropertyGroup>
       <OniSimCargoManifest>$(MSBuildProjectDirectory)/OniSim/native/Cargo.toml</OniSimCargoManifest>
       <OniSimCargoTargetDir>$(MSBuildProjectDirectory)/obj/$(Configuration)/OniSimNative</OniSimCargoTargetDir>

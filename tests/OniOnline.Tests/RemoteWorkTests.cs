@@ -5,7 +5,7 @@ using System.Linq;
 using OniOnline.Multiplayer;
 using OniOnline.Network;
 
-internal static class RemoteWorkTests
+internal static partial class RemoteWorkTests
 {
     private static Action<bool, string> check;
     private sealed class Context : IWorldWorkContext
@@ -59,6 +59,11 @@ internal static class RemoteWorkTests
         BuildingRecoveryIsolation();
         BuildingOptimisticRouting();
         BuildingWeakNetwork();
+        CancellationAuthorityAndReplay();
+        CancellationNativeFailureBoundaries();
+        CancellationWireAndRecovery();
+        CancellationRoutingAndLostReceipt();
+        CancellationTimeoutAndCompletion();
         AuthorityIsolationAndMerge();
         ValidationAndReplay();
         RejectedPlansNeverBecomeExecutable();

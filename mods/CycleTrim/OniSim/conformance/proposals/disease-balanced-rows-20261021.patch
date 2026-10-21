@@ -1,0 +1,13 @@
+--- a/src/disease.rs
++++ b/src/disease.rs
+@@ -246,9 +246,7 @@
+     if let Some(pool) = pool {
+         // Size tasks by visited cells, preserving full rows for exclusive ownership.
+         // A narrow rectangle must not scan the rest of the world's columns.
+-        let rows_per_chunk = crate::parallel::CHUNK_CELLS
+-            .div_ceil(max_x - min_x)
+-            .min(max_y - min_y);
++        let rows_per_chunk = (max_y - min_y).div_ceil(pool.current_num_threads());
+         let chunk_cells = stride * rows_per_chunk;
+         let extent = min_y * stride..max_y * stride;
+         let element = &cells.element;

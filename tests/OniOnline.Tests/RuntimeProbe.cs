@@ -77,6 +77,7 @@ namespace OniOnline
             public NativeWorkFixture nativeWork;
             public NativeDupeFixture nativeDupe;
             public NativeRemoteWorkFixture nativeRemoteWork;
+            public MultiplayerProbeSnapshot multiplayer;
         }
 
         [Serializable] private sealed class NativeDupeFixture
@@ -346,6 +347,7 @@ namespace OniOnline
             string commandPath = Path.Combine(output, "command.json");
             try
             {
+                AdvanceMultiplayerProbe(runtime);
                 if (File.Exists(commandPath) && new FileInfo(commandPath).Length <= 4096)
                 {
                     var command = JsonUtility.FromJson<Command>(File.ReadAllText(commandPath));
@@ -378,6 +380,7 @@ namespace OniOnline
 
         private void Execute(OnlineRuntime runtime, Command command)
         {
+            if (TryExecuteMultiplayerProbe(runtime, command)) return;
             if (GetComponent<NativeNavigationQuiescenceProbe>() != null && command.action != "quit" && command.action != "screenshot")
                 throw new InvalidOperationException("Wait for the single-nav experiment to restore native admission before another command.");
             if (GetComponent<NativeBuildingBridgeProbe>() != null && command.action != "quit" && command.action != "screenshot")
@@ -1351,6 +1354,7 @@ namespace OniOnline
                 nativeWork = nativeWork,
                 nativeDupe = nativeDupe,
                 nativeRemoteWork = nativeRemoteWork,
+                multiplayer = CaptureMultiplayerProbe(runtime),
                 uiLabels = UnityEngine.Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsSortMode.None)
                     .Where(t => t.gameObject.activeInHierarchy && t.transform.root.name == "OniOnlineWindow").Select(t => t.text).Take(60).ToArray()
             };

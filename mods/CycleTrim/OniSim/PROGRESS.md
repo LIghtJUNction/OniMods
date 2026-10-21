@@ -1,8 +1,38 @@
 # OniSim status (2026-10-21)
 
-## Current development source
+## Current source recheck at adc4b2e
 
-The canonical development native is now
+The unchanged production native source tree
+`78a3a96032d063b196a52226fcdd9dcb0ab76564` rebuilds with Rust 1.99.1 as
+`55d5a236ccf6ac311d05a63898e34faceff686495ac372d1f6c9ccd785a62fd9`.
+All 43 Release Rust tests and 57 game-free Python tests pass. Fresh runs against
+the fingerprint-pinned official 744825 library pass all 287 cases / 9,739
+publications with one worker and again with four workers. The parallel emitter
+case observes all four `OniSim-cell-*` threads. The receipt is
+`conformance/results/linux-744825-native-recheck-20261021.json`.
+
+This correctness recheck does not turn the earlier failed one/four-worker
+scaling gates into a pass. No Steam/Unity client was launched; full game thread
+sampling, Unity memory, graphical and whole-colony performance acceptance remain
+open for this exact library. Earlier successful runtime receipts below belong
+to their stated binaries and cannot approve this one.
+
+A new equal-row disease-cleanup scheduling experiment is rejected. All 96
+96x96 complete-frame final states match the official library, with four working
+cell threads and no timed major faults. However, mixed-germ CPU rises 4.30% and
+wall time rises 5.69%, exceeding the unchanged 3% regression limits. No production
+kernel or dispatch policy changed. The proposal and all samples are retained in
+`conformance/results/linux-744825-balanced-disease-rows-20261021.json`.
+
+The first timing attempt exposed a harness error: this container has no
+`/proc/pressure` files. The benchmark now records these optional counters as
+unknown with the OS error, allowing timing to proceed without inventing zero
+load. Required process memory and worker observations remain strict. New tests
+cover missing, denied and available pressure readings.
+
+## Previous pressure-sweep development source
+
+The pressure-sweep native at that stage was
 `2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f`.
 The pressure sweep borrows fixed-length storage once, retaining checked indices,
 original floating expressions, serial transfer/notification order and padded-edge

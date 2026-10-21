@@ -25,7 +25,20 @@ namespace OniOnline.UI
         private TextMeshProUGUI pageLabel;
         private Button mineTab, memberTab, mergedTab, previousPage, nextPage;
         private Button allowMap, allowPlans, allowTasks;
-        private readonly List<TextMeshProUGUI> rowLabels = new List<TextMeshProUGUI>();
+        private sealed class PlanLine
+        {
+            internal string Text;
+            internal WorkTaskIntent Plan;
+        }
+        private sealed class PlanRow
+        {
+            internal GameObject Root;
+            internal TextMeshProUGUI Label;
+            internal Button Cancel;
+            internal WorkTaskIntent Plan;
+        }
+        private readonly List<PlanRow> planRows = new List<PlanRow>();
+        private readonly Dictionary<string, string> cancellations = new Dictionary<string, string>();
         private long revision = -1;
         private double nextPoll;
         private const int PageSize = 32;
@@ -99,12 +112,12 @@ namespace OniOnline.UI
                 nextPoll = Time.realtimeSinceStartupAsDouble + 3;
                 runtime.Multiplayer.Work.RequestPlans(ownerId, planetId, merged, actorId);
             }
-            if (revision != runtime.Multiplayer.Revision) Refresh();
+            if (revision != runtime.Revision) Refresh();
         }
         private void Refresh()
         {
             if (runtime.Multiplayer == null || runtime.Session == null) return;
-            revision = runtime.Multiplayer.Revision;
+            revision = runtime.Revision;
             var work = runtime.Multiplayer.Work;
             string actorName = runtime.Session.Players.FirstOrDefault(p => p.Id == actorId)?.Name ?? T("work.mine");
             modeLabel.text = merged ? T("work.merged") : T("work.personal") + " · " + actorName;
@@ -120,39 +133,95 @@ namespace OniOnline.UI
             PermissionButton(allowPlans, "work.allow_plans", RemoteWorkPermission.ViewPlans, direct, canGrant);
             PermissionButton(allowTasks, "work.allow_tasks", RemoteWorkPermission.IssueTasks, direct, canGrant);
             var plans = work.GetPlans(ownerId, planetId, merged, actorId);
+            if (!merged && actorId == runtime.Session.LocalPlayerId)
+            {
+                var currentKeys = new HashSet<string>(plans.Select(PlanKey));
+                foreach (string key in cancellations.Keys.Where(key => !currentKeys.Contains(key)).ToArray()) cancellations.Remove(key);
+            }
             var lines = plans.OrderByDescending(p => p.Priority).ThenBy(p => p.Cell.Y).ThenBy(p => p.Cell.X)
-                .Select(p => Format(p.ActorId, p.Cell, p.Priority, T(p.Build != null && p.Historical && !p.HistoricalActive ? "work.unconfirmed" : "work.confirmed"), p.Build)).ToList();
+                .Select(p => new PlanLine { Plan = p, Text = Format(p.ActorId, p.Cell, p.Priority,
+                    CancellationStatus(p) ?? T(p.Build != null && p.Historical && !p.HistoricalActive ? "work.unconfirmed" : "work.confirmed"), p.Build) }).ToList();
             if (!merged && actorId == runtime.Session.LocalPlayerId)
                 foreach (var draft in work.OwnDrafts(planetId))
                 {
                     var status = work.GetSubmission(draft.RequestId);
                     if (status != null && status.Accepted && !status.DryRun) continue;
                     foreach (var cell in draft.Cells)
-                        lines.Add(Format(actorId, cell, draft.Priority, Status(status), draft.Build));
+                        lines.Add(new PlanLine { Text = Format(actorId, cell, draft.Priority, Status(status), draft.Build) });
                 }
             int pageCount = Math.Max(1, (lines.Count + PageSize - 1) / PageSize);
             page = Math.Min(page, pageCount - 1);
             pageLabel.text = (page + 1) + " / " + pageCount;
             previousPage.interactable = page > 0; nextPage.interactable = page + 1 < pageCount;
-            if (lines.Count == 0) lines.Add(T("work.empty"));
+            if (lines.Count == 0) lines.Add(new PlanLine { Text = T("work.empty") });
             int index = 0;
             foreach (var line in lines.Skip(page * PageSize).Take(PageSize))
             {
-                if (index == rowLabels.Count)
+                if (index == planRows.Count)
                 {
-                    var row = OnlineWidgets.Rect("PlanRow", rows);
-                    OnlineWidgets.Surface(row, new Color(0.24f, 0.255f, 0.31f));
-                    OnlineWidgets.Size(row, -1, 54);
-                    var label = OnlineWidgets.Label(row.transform, "", 17);
-                    OnlineWidgets.Stretch(label.rectTransform);
-                    label.rectTransform.offsetMin = new Vector2(10, 5); label.rectTransform.offsetMax = new Vector2(-10, -5);
+                    var row = OnlineWidgets.Row(rows, 54);
+                    OnlineWidgets.Surface(row.gameObject, new Color(0.24f, 0.255f, 0.31f));
+                    row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 6, 5, 5);
+                    var label = OnlineWidgets.Label(row, "", 17);
+                    OnlineWidgets.Size(label.gameObject, -1, 44, 1);
                     label.textWrappingMode = TextWrappingModes.Normal;
                     label.overflowMode = TextOverflowModes.Ellipsis;
-                    rowLabels.Add(label);
+                    var item = new PlanRow { Root = row.gameObject, Label = label };
+                    item.Cancel = OnlineWidgets.Button(row, T("work.cancel_plan"), () => CancelPlan(item.Plan), 120);
+                    planRows.Add(item);
                 }
-                var item = rowLabels[index++]; item.transform.parent.gameObject.SetActive(true); item.text = line;
+                var view = planRows[index++];
+                view.Root.SetActive(true); view.Label.text = line.Text; view.Plan = line.Plan;
+                bool ownPlan = !merged && actorId == runtime.Session.LocalPlayerId && line.Plan != null && line.Plan.ActorId == actorId;
+                view.Cancel.gameObject.SetActive(ownPlan);
+                if (ownPlan)
+                {
+                    var grant = work.GetReceivedGrant(ownerId, planetId);
+                    view.Cancel.interactable = runtime.Session.Joined && !runtime.Session.Reconnecting && !runtime.Session.Leaving &&
+                        runtime.Session.Players.Any(p => p.Id == ownerId && p.Connected) &&
+                        work.ExecutionError(ownerId, planetId) == null && !CancellationPending(line.Plan) &&
+                        (ownerId == actorId || grant != null && (grant.Permissions & RemoteWorkPermission.IssueTasks) != 0);
+                }
             }
-            for (int i = index; i < rowLabels.Count; i++) rowLabels[i].transform.parent.gameObject.SetActive(false);
+            for (int i = index; i < planRows.Count; i++) planRows[i].Root.SetActive(false);
+        }
+
+        private static string PlanKey(WorkTaskIntent plan)
+        { return plan.RequestId + ":" + plan.ConfirmedRevision + ":" + plan.Key; }
+
+        private RemoteWorkReceipt CancellationReceipt(WorkTaskIntent plan)
+        {
+            string request;
+            return cancellations.TryGetValue(PlanKey(plan), out request) ? runtime.Multiplayer.Work.GetSubmission(request) : null;
+        }
+
+        private bool CancellationPending(WorkTaskIntent plan)
+        {
+            var receipt = CancellationReceipt(plan);
+            return receipt != null && (receipt.Reason == "work_queued" || receipt.Reason == "work_cancelled" ||
+                receipt.Reason == "work_execution_uncertain");
+        }
+
+        private string CancellationStatus(WorkTaskIntent plan)
+        {
+            var receipt = CancellationReceipt(plan);
+            if (receipt == null) return null;
+            if (receipt.Accepted) return T("work.cancelled");
+            if (receipt.Reason == "work_queued") return T("work.cancelling");
+            if (receipt.Reason == "work_response_unconfirmed" || receipt.Reason == "work_execution_uncertain") return T("work.unconfirmed");
+            return T("work.cancel_rejected");
+        }
+
+        private void CancelPlan(WorkTaskIntent plan)
+        {
+            if (plan == null || runtime.Session == null || runtime.Multiplayer == null || merged ||
+                plan.ActorId != runtime.Session.LocalPlayerId || CancellationPending(plan)) return;
+            var work = runtime.Multiplayer.Work;
+            if (!work.CancelPlan(ownerId, plan)) { stateLabel.text = T("work.unavailable"); return; }
+            // Local-owner receipts can arrive synchronously. Query the stored receipt
+            // after submission; retain the plan until the authority refreshes it.
+            cancellations[PlanKey(plan)] = work.LastSubmittedRequestId;
+            Refresh();
         }
         private void TogglePermission(RemoteWorkPermission flag)
         {

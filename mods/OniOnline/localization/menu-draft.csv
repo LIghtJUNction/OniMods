@@ -228,6 +228,10 @@ work.merged,最终合并指令,最終合併指令,Merged orders
 work.personal,个人计划,個人計畫,Personal plans
 work.hint,我的计划立即显示；只有已确认的计划才进入合并视图。查看其他成员的计划需要授权。,我的計畫立即顯示；只有已確認的計畫才進入合併視圖。查看其他成員的計畫需要授權。,Your plans appear immediately. Confirmed plans enter the merged view. Viewing another member requires permission.
 work.confirmed,已确认,已確認,Confirmed
+work.cancel_plan,取消此任务,取消此工作,Cancel task
+work.cancelling,正在取消…,正在取消…,Cancelling…
+work.cancelled,已取消，正在更新,已取消，正在更新,Cancelled; refreshing
+work.cancel_rejected,取消未成功，请刷新后重试,取消未成功，請更新後重試,Cancel failed; refresh and retry
 work.dig,挖掘,挖掘,Dig
 work.draft,本地草稿,本機草稿,Local draft
 work.pending,正在同步…,正在同步…,Syncing…

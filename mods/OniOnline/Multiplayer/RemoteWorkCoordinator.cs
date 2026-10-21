@@ -192,6 +192,23 @@ namespace OniOnline.Multiplayer
             return true;
         }
 
+        // Keep the displayed plan until its authority confirms cancellation. Selecting one
+        // plan cannot withdraw another author's work or a newer plan at the same location.
+        internal bool CancelPlan(string ownerId, WorkTaskIntent plan)
+        {
+            if (plan == null || plan.ActorId != session.LocalPlayerId || !WorkPlanGeometry.ValidShape(plan.Kind, plan.Layer, plan.Build)) return false;
+            var request = new RemoteWorkRequest { RequestId = Guid.NewGuid().ToString("N"), PlanetId = plan.PlanetId,
+                Kind = plan.Kind, Layer = plan.Layer, Priority = plan.Priority, Cells = new[] { plan.Cell },
+                Build = plan.Build == null ? null : plan.Build.Copy(), CancelTargetRequestId = plan.RequestId, CancelTargetRevision = plan.ConfirmedRevision };
+            if (!BindGrant(ownerId, request) || requestDrafts.Count >= RemoteWorkAuthority.MaxLedger) return false;
+            // Map before Submit: the local owner's authoritative receipt is synchronous.
+            requestDrafts[request.RequestId] = request.RequestId;
+            Submission(request.RequestId, new RemoteWorkReceipt { RequestId = request.RequestId, Reason = "work_queued" });
+            if (Submit(ownerId, request)) { Notify(); return true; }
+            requestDrafts.Remove(request.RequestId); submissions.Remove(request.RequestId);
+            Notify(); return false;
+        }
+
         internal bool RequestPlans(string ownerId, string planetId, bool merged, string actorId = null)
         {
             if (ownerOfPlanet(planetId) != ownerId || !Connected(ownerId)) return false;
@@ -285,7 +302,15 @@ namespace OniOnline.Multiplayer
                 RemoteWorkGrant scopeGrant = GetReceivedGrant(sender, request.Request.PlanetId);
                 if (message.Receipt.Reason == "work_stale_world" &&
                     (scopeGrant == null || scopeGrant.AuthorityEpoch == request.Request.AuthorityEpoch)) InvalidateScope(sender, request.Request.PlanetId);
-                else { pending.Remove(message.Receipt.RequestId); DeliverReceipt(sender, message.Receipt); }
+                else
+                {
+                    pending.Remove(message.Receipt.RequestId); DeliverReceipt(sender, message.Receipt);
+                    if (request.Request.IsCancellation && (message.Receipt.Accepted || message.Receipt.Reason == "work_cancel_stale"))
+                    {
+                        RequestPlans(sender, request.Request.PlanetId, false);
+                        RequestPlans(sender, request.Request.PlanetId, true);
+                    }
+                }
             }
             else if (message.Kind == RemoteWorkMessageKind.QueryPlans) ReplyPlans(sender, message);
             else if (message.Kind == RemoteWorkMessageKind.Plans) AcceptPlans(sender, message);
@@ -396,6 +421,7 @@ namespace OniOnline.Multiplayer
                 autoConfirm.Remove(receipt.RequestId);
                 if (receipt.Accepted && receipt.DryRun) Confirm(sender, draft.Item2, receipt);
             }
+            Notify();
         }
         private void Submission(string draftId, RemoteWorkReceipt receipt)
         {
@@ -406,7 +432,7 @@ namespace OniOnline.Multiplayer
         private static RemoteWorkRequest CopyRequest(RemoteWorkRequest r)
         { return new RemoteWorkRequest { RequestId = r.RequestId, PlanetId = r.PlanetId, AuthorityEpoch = r.AuthorityEpoch, GrantToken = r.GrantToken,
             Kind = r.Kind, Layer = r.Layer, Build = r.Build == null ? null : r.Build.Copy(), DryRun = r.DryRun, PreviewToken = r.PreviewToken, Priority = r.Priority,
-            Cells = r.Cells == null ? null : (WorkCell[])r.Cells.Clone() }; }
+            Cells = r.Cells == null ? null : (WorkCell[])r.Cells.Clone(), CancelTargetRequestId = r.CancelTargetRequestId, CancelTargetRevision = r.CancelTargetRevision }; }
         public void Dispose() { disposed = true; session.ApplicationMessageReceived -= Receive; outgoing.Clear(); pending.Clear(); autoConfirm.Clear(); receivedGrants.Clear(); receivedPlans.Clear(); assemblies.Clear(); authorityErrors.Clear(); authorityStatuses.Clear(); ownerGenerations.Clear(); ownerScopes.Clear(); invalidatedScopes.Clear(); drafts.Clear(); requestDrafts.Clear(); submissions.Clear(); }
     }
 }

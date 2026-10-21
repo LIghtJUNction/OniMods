@@ -102,7 +102,7 @@ internal static class Program
     {
         int failures = 0;
         foreach (Action test in new Action[] { SwitchingWorldsPreservesEachSavedPlanet, OldWorldCompletionCannotDeleteSameCellInNewWorld,
-            StaleRegistrationCannotRefreshOrCallCurrentAuthority })
+            StaleRegistrationCannotRefreshOrCallCurrentAuthority, () => CancellationJournalTests.Run(Check) })
         {
             try { test(); }
             catch (Exception error) { Console.Error.WriteLine(test.Method.Name + ": " + error); failures++; }

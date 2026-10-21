@@ -132,6 +132,34 @@ class CaseConcurrencyTests(unittest.TestCase):
 
 
 class LibraryPreflightTests(unittest.TestCase):
+    def test_optional_pressure_context_records_missing_and_denied_counters(self):
+        def read(path):
+            if path.name == 'cpu':
+                raise FileNotFoundError(2, 'PSI not exposed')
+            if path.name == 'memory':
+                raise PermissionError(13, 'PSI not readable')
+            return 'some avg10=0.25 total=42\n'
+
+        with patch.object(frame_benchmark.os, 'sched_getaffinity', return_value={0}), \
+             patch.object(Path, 'exists', return_value=False), \
+             patch.object(Path, 'read_text', autospec=True, side_effect=read):
+            context = frame_benchmark.host_context()
+        self.assertEqual(context['pressure'], dict(cpu=None, memory=None,
+                                                  io='some avg10=0.25 total=42'))
+        self.assertEqual(context['pressure_unavailable'], dict(
+            cpu=dict(error='FileNotFoundError', errno=2),
+            memory=dict(error='PermissionError', errno=13)))
+
+    def test_available_pressure_context_retains_each_observation(self):
+        with patch.object(frame_benchmark.os, 'sched_getaffinity', return_value={0}), \
+             patch.object(Path, 'exists', return_value=False), \
+             patch.object(Path, 'read_text', autospec=True,
+                          side_effect=lambda path: f'{path.name} observation\n'):
+            context = frame_benchmark.host_context()
+        self.assertEqual(context['pressure'], {kind: f'{kind} observation'
+                                              for kind in ('cpu', 'memory', 'io')})
+        self.assertEqual(context['pressure_unavailable'], {})
+
     def test_interrupted_timing_binds_inputs_and_excludes_rejected_child(self):
         for fail_at, mutate in [(1, False), (7, False), (7, True)]:
             with self.subTest(fail_at=fail_at, mutate=mutate), tempfile.TemporaryDirectory() as directory:
