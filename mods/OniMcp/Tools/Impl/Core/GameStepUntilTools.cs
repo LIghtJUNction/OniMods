@@ -17,8 +17,6 @@ namespace OniMcp.Tools
     /// </summary>
     public static partial class GameControlTools
     {
-        private static StepUntilWatcher _activeWatcher;
-        private static readonly object _watcherLock = new object();
         private static readonly StepUntilResultCache _completedResults = new StepUntilResultCache(8);
 
         public static CallToolResult StepUntil(JObject args)

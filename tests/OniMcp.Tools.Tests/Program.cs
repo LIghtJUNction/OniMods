@@ -44,6 +44,7 @@ internal static class Program
         TestSweepEligibilityPolicy();
         TestBackwallSupportPolicy();
         TestGameSpeedPauseOwnership();
+        StepSpeedInterruptionRegression.Run();
         LoadScreenMigrationRegression.Run();
         StepConditionRegression.Run();
         StepResearchCompletionRegression.Run();
