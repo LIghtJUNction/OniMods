@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using KSerialization;
 using OniOnline.Core;
+using OniOnline.Network;
 using OniOnline.Runtime;
 using UnityEngine;
 using System.Runtime.Serialization;
@@ -29,6 +30,7 @@ namespace OniOnline.Multiplayer
         [Serialize] private int selectedNativeWorldId = -1;
         [Serialize] private List<PlanetIdentity> planets = new List<PlanetIdentity>();
         [Serialize] private NativeWorkSavedState workJournal = new NativeWorkSavedState();
+        [Serialize] private string accountBanPayload;
         [Serialize] private int dupeOriginSchema;
         [Serialize] private string dupeOriginPayload;
         private DupeOriginLedger dupeOrigins;
@@ -46,6 +48,13 @@ namespace OniOnline.Multiplayer
             set { Ensure(); if (!Network.Protocol.ValidText(value, 64)) throw new ArgumentException("invalid_room_name"); homeSystemName = value; }
         }
         internal int SelectedNativeWorldId { get { Ensure(); return selectedNativeWorldId; } }
+        internal string SavedAccountBans { get { Ensure(); return accountBanPayload; } }
+        internal void StoreAccountBans(string payload)
+        {
+            Ensure();
+            RoomModerationPersistence.Decode(homeSystemId, payload);
+            accountBanPayload = payload;
+        }
 
         internal static OnlineColonyState Current
         {

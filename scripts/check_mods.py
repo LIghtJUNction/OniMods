@@ -71,6 +71,10 @@ def main() -> int:
             )
             for path in projects
         )
+        checks.append((
+            "OniOnline multiplayer collector regressions",
+            [sys.executable, str(ROOT / "tests/OniOnline.Tests/test_multiplayer_runtime.py"), "-v"],
+        ))
 
     failures = []
     environment = dict(os.environ, DOTNET_CLI_TELEMETRY_OPTOUT="1",

@@ -144,6 +144,11 @@ namespace OniOnline.Multiplayer
         public int Priority = 5;
         public WorkCell[] Cells = Array.Empty<WorkCell>();
         public WorkBuildSpec Build;
+        // Cancellation addresses one exact confirmed plan owned by the authenticated actor.
+        // A later plan at the same cell must not be removed by a delayed cancel packet.
+        public string CancelTargetRequestId;
+        public long CancelTargetRevision;
+        internal bool IsCancellation { get { return CancelTargetRequestId != null; } }
     }
 
     internal sealed class RemoteWorkReceipt

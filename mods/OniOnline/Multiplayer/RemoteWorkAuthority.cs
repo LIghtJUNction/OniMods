@@ -145,6 +145,10 @@ namespace OniOnline.Multiplayer
                 return Reject(request.RequestId, request.DryRun, "work_invalid_cells");
             if (request.Kind == RemoteWorkKind.Build && WorkPlanGeometry.Footprint(new WorkTaskIntent { Kind = request.Kind, Cell = request.Cells[0], Build = request.Build }).Any(c => c.X > 8192 || c.Y > 8192))
                 return Reject(request.RequestId, request.DryRun, "work_invalid_cells");
+            if ((request.IsCancellation && (request.DryRun || !string.IsNullOrEmpty(request.PreviewToken) || request.Cells.Length != 1 ||
+                !Guid.TryParseExact(request.CancelTargetRequestId, "N", out id) || request.CancelTargetRevision < 1)) ||
+                (!request.IsCancellation && request.CancelTargetRevision != 0))
+                return Reject(request.RequestId, request.DryRun, "work_cancel_request");
             string hash;
             try { hash = Fingerprint(actorId, request, false); }
             catch (InvalidDataException) { return Reject(request.RequestId, request.DryRun, "work_request"); }
@@ -157,6 +161,7 @@ namespace OniOnline.Multiplayer
                 return Reject(request.RequestId, request.DryRun, "work_native_build_validation_required");
             if (IsBlocked) return Reject(request.RequestId, request.DryRun, BlockReason);
             if (ledger.Count >= MaxLedger) return Reject(request.RequestId, request.DryRun, "work_replay_capacity");
+            if (request.IsCancellation) return CancelPlan(actorId, request, ledgerKey, hash);
             foreach (string key in previews.Where(p => p.Value.Expires < now).Select(p => p.Key).ToArray()) previews.Remove(key);
             WorkExecution check;
             try { check = executor.Preflight(current, request); }
@@ -210,6 +215,40 @@ namespace OniOnline.Multiplayer
             { Block("work_execution_uncertain"); return CopyReceipt(pending); }
         }
 
+        private RemoteWorkReceipt CancelPlan(string actorId, RemoteWorkRequest request, string ledgerKey, string hash)
+        {
+            string key = actorId + ":" + ((byte)request.Layer) + ":" + request.Cells[0].X + ":" + request.Cells[0].Y;
+            WorkTaskIntent plan;
+            if (!plans.TryGetValue(key, out plan) || plan.RequestId != request.CancelTargetRequestId ||
+                plan.ConfirmedRevision != request.CancelTargetRevision || plan.Kind != request.Kind || plan.Priority != request.Priority ||
+                !WorkPlanGeometry.SameBuild(plan.Build, request.Build))
+                return Remember(ledgerKey, hash, Reject(request.RequestId, false, "work_cancel_stale"));
+
+            var candidatePlans = new Dictionary<string, WorkTaskIntent>(plans);
+            candidatePlans.Remove(key);
+            WorkTaskIntent[] before = GetMergedPlans();
+            WorkTaskIntent[] desired = Merge(candidatePlans, grants);
+            var uncertain = Reject(request.RequestId, false, "work_execution_uncertain");
+            // Reserve the request before touching native work; a lost receipt may only replay
+            // this result, never a second cancellation or the later replacement at this cell.
+            Remember(ledgerKey, hash, uncertain);
+            try
+            {
+                WorkExecution execution = SameMerge(before, desired) ? WorkExecution.Accept(0) : executor.Reconcile(current, before, desired);
+                if (execution == null || !execution.Accepted)
+                {
+                    if (execution == null || !execution.NoMutationGuaranteed) Block("work_execution_uncertain");
+                    LastError = IsBlocked ? BlockReason : execution.Reason;
+                    return Remember(ledgerKey, hash, Reject(request.RequestId, false, LastError));
+                }
+                Commit(plans, candidatePlans); StateRevision++;
+                Publish(); LastError = null;
+                return Remember(ledgerKey, hash, new RemoteWorkReceipt { RequestId = request.RequestId, Accepted = true, Count = 1, Reason = "work_cancelled" });
+            }
+            catch (Exception)
+            { Block("work_execution_uncertain"); return CopyReceipt(uncertain); }
+        }
+
         private void Block(string reason)
         { IsBlocked = true; BlockReason = LastError = reason; previews.Clear(); StateRevision++; Publish(); }
         private void Publish() { if (persistence != null && current != null) persistence.Publish(current, ownerId); }
@@ -235,7 +274,8 @@ namespace OniOnline.Multiplayer
             var copy = new RemoteWorkRequest { RequestId = contentOnly ? "" : request.RequestId, PlanetId = request.PlanetId,
                 AuthorityEpoch = request.AuthorityEpoch, GrantToken = request.GrantToken ?? "", Kind = request.Kind, Layer = request.Layer,
                 DryRun = contentOnly ? false : request.DryRun, PreviewToken = contentOnly ? "" : request.PreviewToken,
-                Priority = request.Priority, Cells = request.Cells, Build = request.Build == null ? null : request.Build.Copy() };
+                Priority = request.Priority, Cells = request.Cells, Build = request.Build == null ? null : request.Build.Copy(),
+                CancelTargetRequestId = request.CancelTargetRequestId, CancelTargetRevision = request.CancelTargetRevision };
             byte[] bytes = RemoteWorkWire.Encode(new RemoteWorkMessage { Kind = RemoteWorkMessageKind.Request, TargetId = actorId, Request = copy });
             using (var sha = new SHA256Managed()) return Convert.ToBase64String(sha.ComputeHash(bytes));
         }

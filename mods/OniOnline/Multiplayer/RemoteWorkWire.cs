@@ -19,7 +19,8 @@ namespace OniOnline.Multiplayer
             using (var stream = new MemoryStream())
             using (var w = new BinaryWriter(stream, Utf8))
             {
-                byte version = (byte)((value.Request != null && value.Request.Build != null || value.Plans != null && Array.Exists(value.Plans, p => p.Build != null)) ? 5 : 4);
+                byte version = (byte)(value.Request != null && value.Request.IsCancellation ? 6 :
+                    (value.Request != null && value.Request.Build != null || value.Plans != null && Array.Exists(value.Plans, p => p.Build != null)) ? 5 : 4);
                 w.Write(Magic); w.Write(version); w.Write((byte)value.Kind); Text(w, value.TargetId);
                 if (value.Kind == RemoteWorkMessageKind.Grant)
                 {
@@ -36,6 +37,7 @@ namespace OniOnline.Multiplayer
                     w.Write(r.Cells.Length);
                     foreach (var cell in r.Cells) { w.Write(cell.X); w.Write(cell.Y); }
                     if (version >= 5) WriteBuild(w, r.Build);
+                    if (version >= 6) { Text(w, r.CancelTargetRequestId); w.Write(r.CancelTargetRevision); }
                 }
                 else if (value.Kind == RemoteWorkMessageKind.Receipt)
                 {
@@ -72,8 +74,9 @@ namespace OniOnline.Multiplayer
             using (var stream = new MemoryStream(data, false))
             using (var r = new BinaryReader(stream, Utf8))
             {
-                r.ReadUInt32(); byte version = r.ReadByte(); if (version != 4 && version != 5) throw new InvalidDataException("work_version");
+                r.ReadUInt32(); byte version = r.ReadByte(); if (version != 4 && version != 5 && version != 6) throw new InvalidDataException("work_version");
                 var m = new RemoteWorkMessage { Kind = (RemoteWorkMessageKind)r.ReadByte(), TargetId = Text(r) };
+                if (version == 6 && m.Kind != RemoteWorkMessageKind.Request) throw new InvalidDataException("work_version");
                 if (m.Kind == RemoteWorkMessageKind.Grant)
                 {
                     m.Grant = new RemoteWorkGrant { PlanetId = Text(r), AuthorityEpoch = Text(r), ActorId = Text(r),
@@ -91,6 +94,7 @@ namespace OniOnline.Multiplayer
                     m.Request.Cells = new WorkCell[count];
                     for (int i = 0; i < count; i++) m.Request.Cells[i] = new WorkCell(r.ReadInt32(), r.ReadInt32());
                     if (version >= 5) m.Request.Build = ReadBuild(r);
+                    if (version >= 6) { m.Request.CancelTargetRequestId = Text(r); m.Request.CancelTargetRevision = r.ReadInt64(); }
                 }
                 else if (m.Kind == RemoteWorkMessageKind.Receipt)
                     m.Receipt = new RemoteWorkReceipt { RequestId = Text(r), Accepted = r.ReadBoolean(), DryRun = r.ReadBoolean(),

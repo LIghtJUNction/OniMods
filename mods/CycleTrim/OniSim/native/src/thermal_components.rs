@@ -4,6 +4,10 @@ mod buildings_kernel;
 #[path = "thermal_components_chunks.rs"]
 mod chunks_kernel;
 
+#[cfg(test)]
+#[path = "thermal_components_tests.rs"]
+mod tests;
+
 use crate::bytes::{f32at, i32at, invalid, u16at};
 use crate::component_handles::ComponentHandles;
 use crate::events::{
@@ -62,8 +66,24 @@ pub(crate) struct ElementChunk {
     pub(crate) adjust_conductivity: f32,
 }
 
+// Every thermal message has a fixed ABI size, at most the 44-byte building
+// record. Own its bytes inline so conduit heat batches need no per-record heap
+// allocation. The message spec still supplies the exact slice length on replay.
+struct Pending {
+    id: i32,
+    bytes: [u8; 44],
+}
+
+impl Pending {
+    fn new(id: i32, bytes: &[u8]) -> Self {
+        let mut command = Self { id, bytes: [0; 44] };
+        command.bytes[..bytes.len()].copy_from_slice(bytes);
+        command
+    }
+}
+
 #[derive(Default)]
-pub(crate) struct PendingCommands(Vec<(i32, Vec<u8>)>);
+pub(crate) struct PendingCommands(Vec<Pending>);
 
 impl PendingCommands {
     pub(crate) fn len(&self) -> usize {
@@ -81,7 +101,7 @@ pub(crate) struct ThermalComponents {
     pub(crate) chunks: ComponentHandles<ElementChunk>,
     pub(crate) building_infos: Vec<BuildingTemperatureInfo>,
     pub(crate) chunk_infos: Vec<ElementChunkInfo>,
-    pending: Vec<(i32, Vec<u8>)>,
+    pending: Vec<Pending>,
 }
 
 fn message_spec(id: i32) -> Option<(u8, usize)> {
@@ -187,10 +207,7 @@ impl ThermalComponents {
             ));
         }
         self.pending.try_reserve(1).map_err(|_| allocation())?;
-        let mut copy = Vec::new();
-        copy.try_reserve_exact(size).map_err(|_| allocation())?;
-        copy.extend_from_slice(bytes);
-        self.pending.push((id, copy));
+        self.pending.push(Pending::new(id, bytes));
         Ok(())
     }
 
@@ -222,22 +239,14 @@ impl ThermalComponents {
                 "thermal component message queue is full",
             ));
         }
-        let mut batch = Vec::new();
-        batch
-            .try_reserve_exact(records.len())
-            .map_err(|_| allocation())?;
-        for record in records {
-            let mut bytes = Vec::new();
-            bytes
-                .try_reserve_exact(record.len())
-                .map_err(|_| allocation())?;
-            bytes.extend_from_slice(record);
-            batch.push((BUILDING_ENERGY, bytes));
-        }
+        // Check and reserve the entire batch before appending anything. Inline
+        // payload copies cannot fail, preserving all-or-nothing queue mutation.
         self.pending
             .try_reserve(records.len())
             .map_err(|_| allocation())?;
-        self.pending.extend(batch);
+        for record in records {
+            self.pending.push(Pending::new(BUILDING_ENERGY, record));
+        }
         Ok(())
     }
 
@@ -288,15 +297,16 @@ impl ThermalComponents {
         // preserving order within each vector rather than message arrival order.
         // BackwallData is processed between chunk adjusters and chunk removal.
         for rank in ranks.clone() {
-            for (id, bytes) in &commands.0 {
-                if message_spec(*id).unwrap().0 == rank {
-                    self.apply(*id, bytes, world, table, events)?;
+            for command in &commands.0 {
+                let (command_rank, size) = message_spec(command.id).unwrap();
+                if command_rank == rank {
+                    self.apply(command.id, &command.bytes[..size], world, table, events)?;
                 }
             }
         }
         commands
             .0
-            .retain(|(id, _)| !ranks.contains(&message_spec(*id).unwrap().0));
+            .retain(|command| !ranks.contains(&message_spec(command.id).unwrap().0));
         Ok(())
     }
 
