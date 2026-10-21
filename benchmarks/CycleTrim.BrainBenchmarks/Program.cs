@@ -112,6 +112,7 @@ namespace CycleTrim.BrainBenchmarks
                 RunTest(
                     nameof(CreatureSchedulerPreservesPriorityUntilAllowanceArrives),
                     CreatureSchedulerPreservesPriorityUntilAllowanceArrives);
+                RunTest(nameof(BusyConsumersKeepIdentityEligibility), BusyConsumersKeepIdentityEligibility);
                 RunPathProbeRegressionTests();
                 return 0;
             }
