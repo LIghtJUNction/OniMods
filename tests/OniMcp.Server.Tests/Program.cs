@@ -34,6 +34,7 @@ internal static class Program
         Invoke(_bridge, "Awake");
         try
         {
+            Check("immutable Skills package matches manifest", ModernSkillCatalogRegression.Run);
             Check("main-thread invocation preserves result and exception", () =>
             {
                 Assert(MainThreadBridge.Invoke(() => 42) == 42, "Inline return value");
@@ -292,6 +293,11 @@ internal static class Program
                     }
                     Assert(server.GetSessionSummaries().Count == 0, "Modern resource read allocated legacy session state");
                 });
+                Check("HTTP Skills extension is opt-in and keeps list/get/read coherent", () =>
+                    ModernSkillHttpRegression.Run(modernMeta, port,
+                        (body, method, name) => PostModern(client, body, method, name)));
+                Check("HTTP settings save preserves the Skills opt-in", () =>
+                    ModernSkillHttpRegression.VerifySettingsPost(client, port));
                 string toolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":103,\"params\":{" + modernMeta + "}}";
                 Check("HTTP modern path maps unsupported methods to HTTP 404", () =>
                 {

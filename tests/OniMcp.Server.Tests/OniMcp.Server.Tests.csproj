@@ -6,8 +6,12 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <StartupObject>ModernEmptyExtensionIdentifierRegressionEntry</StartupObject>
   </PropertyGroup>
+  <Import Project="../../mods/OniMcp/OniMcpSkillResources.props" />
+
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="ModernSkillCatalogRegression.cs" />
+    <Compile Include="ModernSkillHttpRegression.cs" />
     <Compile Include="LegacyPingRegression.cs" />
     <Compile Include="LegacySessionLifecycleRegression.cs" />
     <Compile Include="LegacySseDisconnectActivityRegression.cs" />

@@ -120,9 +120,11 @@ namespace OniMcp.Server
                 if (uriToken?.Type == JTokenType.String)
                 {
                     string uri = (string)uriToken;
-                    Uri parsedUri;
-                    if (!Uri.TryCreate(uri, UriKind.Absolute, out parsedUri)
-                        || !string.Equals(parsedUri.Scheme, "oni", StringComparison.Ordinal))
+                    bool permittedSkill = OniMcp.Config.OniMcpOptions.Current.SkillsExtensionEnabled
+                        && OniMcpSkillCatalog.IsKnownResource(uri);
+                    Uri parsedUri = null;
+                    if (!permittedSkill && (!Uri.TryCreate(uri, UriKind.Absolute, out parsedUri)
+                        || !string.Equals(parsedUri.Scheme, "oni", StringComparison.Ordinal)))
                     {
                         response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
                         SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
@@ -131,7 +133,7 @@ namespace OniMcp.Server
                         return;
                     }
 
-                    if (!IsModernReadOnlyResourceUri(uri))
+                    if (!permittedSkill && !IsModernReadOnlyResourceUri(uri))
                     {
                         response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
                         SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
@@ -140,7 +142,7 @@ namespace OniMcp.Server
                         return;
                     }
 
-                    if (!IsKnownModernResourceAuthority(parsedUri))
+                    if (!permittedSkill && !IsKnownModernResourceAuthority(parsedUri))
                     {
                         response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
                         SendJson(response, JsonRpcResponse.MakeError(rpcRequest.Id, McpErrorCode.InvalidParams,
@@ -302,6 +304,12 @@ namespace OniMcp.Server
             if (IsModernMetadataOnlyMethod(request.Method))
                 return true;
 
+            // The packaged Skills files contain no game state and can be read on a worker.
+            if (string.Equals(request.Method, "resources/read", StringComparison.Ordinal)
+                && OniMcp.Config.OniMcpOptions.Current.SkillsExtensionEnabled
+                && OniMcpSkillCatalog.IsKnownResource(request.Params?["uri"]?.ToString()))
+                return true;
+
             // Worker safety is an explicit audit decision. Do not infer it from
             // a tool's Mode/Risk metadata or from membership in the modern allowlist.
             if (!string.Equals(request.Method, "tools/call", StringComparison.Ordinal))
@@ -316,6 +324,7 @@ namespace OniMcp.Server
         private static bool IsModernPaginatedListMethod(string method)
         {
             return string.Equals(method, "tools/list", StringComparison.Ordinal)
+                || string.Equals(method, "skills/list", StringComparison.Ordinal)
                 || string.Equals(method, "resources/list", StringComparison.Ordinal)
                 || string.Equals(method, "resources/templates/list", StringComparison.Ordinal);
         }
@@ -323,6 +332,8 @@ namespace OniMcp.Server
         private static bool IsModernMetadataOnlyMethod(string method)
         {
             return string.Equals(method, "server/discover", StringComparison.Ordinal)
+                || string.Equals(method, "skills/list", StringComparison.Ordinal)
+                || string.Equals(method, "skills/get", StringComparison.Ordinal)
                 || string.Equals(method, "tools/list", StringComparison.Ordinal)
                 || string.Equals(method, "resources/list", StringComparison.Ordinal)
                 || string.Equals(method, "resources/templates/list", StringComparison.Ordinal);

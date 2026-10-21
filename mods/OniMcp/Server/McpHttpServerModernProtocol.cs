@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
+using OniMcp.Config;
 using OniMcp.Tools;
 using UnityEngine;
 
@@ -190,6 +191,8 @@ namespace OniMcp.Server
                 case "resources/list":
                 case "resources/templates/list":
                 case "resources/read":
+                case "skills/list":
+                case "skills/get":
                     return true;
                 default:
                     return false;
@@ -217,12 +220,19 @@ namespace OniMcp.Server
                     return CallModernReadOnlyTool(request);
 
                 case "resources/list":
-                    return CompleteModernListResult(new JObject
-                    {
-                        ["resources"] = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
-                            .Where(item => IsModernReadOnlyResourceUri(item.Uri))
-                            .OrderBy(item => item.Uri, StringComparer.Ordinal))
-                    });
+                {
+                    var resources = JArray.FromObject(OniResourceRegistry.GetResourceInfos()
+                        .Where(item => IsModernReadOnlyResourceUri(item.Uri))
+                        .OrderBy(item => item.Uri, StringComparer.Ordinal));
+                    if (OniMcpOptions.Current.SkillsExtensionEnabled)
+                        foreach (JToken resource in OniMcpSkillCatalog.ListResources())
+                            resources.Add(resource);
+                    return CompleteModernListResult(new JObject { ["resources"] = resources });
+                }
+
+                case "skills/list":
+                case "skills/get":
+                    return ProcessModernSkillsRequest(request);
 
                 case "resources/templates/list":
                     return CompleteModernListResult(new JObject
@@ -236,6 +246,12 @@ namespace OniMcp.Server
                     var @params = request.Params?.ToObject<ReadResourceParams>();
                     if (@params == null || string.IsNullOrEmpty(@params.Uri))
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams, "Missing resource uri");
+                    if (OniMcpOptions.Current.SkillsExtensionEnabled)
+                    {
+                        JObject skillFile = OniMcpSkillCatalog.Read(@params.Uri);
+                        if (skillFile != null)
+                            return CompleteModernResult(skillFile);
+                    }
                     if (!IsModernReadOnlyResourceUri(@params.Uri))
                     {
                         return JsonRpcResponse.MakeError(request.Id, McpErrorCode.InvalidParams,
@@ -401,6 +417,11 @@ namespace OniMcp.Server
                     ["listChanged"] = false
                 }
             };
+            if (OniMcpOptions.Current.SkillsExtensionEnabled)
+                capabilities["extensions"] = new JObject
+                {
+                    ["io.modelcontextprotocol/skills"] = new JObject()
+                };
             if (IsModernReadOnlyToolAvailable())
             {
                 capabilities["tools"] = new JObject
