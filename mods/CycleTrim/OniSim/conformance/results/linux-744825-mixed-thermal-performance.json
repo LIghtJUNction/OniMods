@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "complete": true,
+  "passed_predeclared_native_gates": false,
+  "gates": {
+    "vacuum_cpu_reduction_at_least_15_percent": true,
+    "vacuum_peak_rss_reduction_at_least_10_percent": true,
+    "no_other_scene_cpu_regression_above_3_percent": false
+  },
+  "scope": "Six 96x96 native fixtures, eight alternating pairs, one worker on CPU16. No game FPS or whole-game memory claim.",
+  "candidate_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "baseline_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "summary_sha256": "e224689f27b86800774caca833a6642230fd87359f2d4c74498a98d213e73ddc",
+  "input_sha256": {
+    "/home/lightjunction/.local/share/Steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/Plugins/libSimDLL.so": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+    "/home/lightjunction/Documents/GITHUB/OniMods/mods/CycleTrim/bin/Release/OniSim/liboni_sim_core.so": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+    "/home/lightjunction/Documents/GITHUB/OniMods/mods/CycleTrim/OniSim/conformance/artifacts/mixed-thermal-order/candidate-final.so": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+    "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+    "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+    "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+    "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+    "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+    "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+    "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+    "soak_cases.py": "2ce7076a1fd79aeed1f0d87beeab0b2f39192914b68b9a7348a85d9fcd7dc88e",
+    "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b",
+    "benchmark_frames.py": "45f6be82f598d3626ad5eda8bcef3258d83769a3fa57370791cd1d37da762db7"
+  },
+  "samples": 96,
+  "major_faults": 0,
+  "final_publications_match_official": true,
+  "scenes": {
+    "fluid": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.540617006,
+          "minimum": 0.42667163399999997,
+          "maximum": 0.638149937
+        },
+        "candidate": {
+          "median": 0.509403973,
+          "minimum": 0.43129332400000003,
+          "maximum": 0.5901978170000001
+        }
+      },
+      "cpu_change_percent": -5.773594365990031,
+      "peak_rss_kib": {
+        "baseline": 33660.0,
+        "candidate": 33244.0
+      },
+      "peak_rss_change_percent": -1.2358882947118288,
+      "exploratory_exact_rank_sum_two_sided_p": 0.3282051282051282
+    },
+    "thermal": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.2404807865,
+          "minimum": 0.20094856,
+          "maximum": 0.259332439
+        },
+        "candidate": {
+          "median": 0.2411595725,
+          "minimum": 0.19711353100000004,
+          "maximum": 0.276022126
+        }
+      },
+      "cpu_change_percent": 0.282262050901938,
+      "peak_rss_kib": {
+        "baseline": 33158.0,
+        "candidate": 33194.0
+      },
+      "peak_rss_change_percent": 0.10857108390132097,
+      "exploratory_exact_rank_sum_two_sided_p": 0.7984459984459984
+    },
+    "sealed": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.5048522895,
+          "minimum": 0.419021779,
+          "maximum": 0.629562023
+        },
+        "candidate": {
+          "median": 0.4626791605,
+          "minimum": 0.397219815,
+          "maximum": 0.60257827
+        }
+      },
+      "cpu_change_percent": -8.353558036107511,
+      "peak_rss_kib": {
+        "baseline": 33618.0,
+        "candidate": 33112.0
+      },
+      "peak_rss_change_percent": -1.5051460527098603,
+      "exploratory_exact_rank_sum_two_sided_p": 0.3822843822843823
+    },
+    "germ_flow": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.6912583805000001,
+          "minimum": 0.544529224,
+          "maximum": 0.774233937
+        },
+        "candidate": {
+          "median": 0.7285218699999999,
+          "minimum": 0.544361655,
+          "maximum": 0.7899791469999999
+        }
+      },
+      "cpu_change_percent": 5.3906745366394615,
+      "peak_rss_kib": {
+        "baseline": 33686.0,
+        "candidate": 33178.0
+      },
+      "peak_rss_change_percent": -1.5080448851154782,
+      "exploratory_exact_rank_sum_two_sided_p": 0.9591297591297592
+    },
+    "mixed_germs": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.748818574,
+          "minimum": 0.575061858,
+          "maximum": 0.924488784
+        },
+        "candidate": {
+          "median": 0.7100672395,
+          "minimum": 0.5624295699999999,
+          "maximum": 0.937724382
+        }
+      },
+      "cpu_change_percent": -5.1749964337823755,
+      "peak_rss_kib": {
+        "baseline": 33660.0,
+        "candidate": 33132.0
+      },
+      "peak_rss_change_percent": -1.5686274509803977,
+      "exploratory_exact_rank_sum_two_sided_p": 0.7984459984459984
+    },
+    "vacuum": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.6515048105000001,
+          "minimum": 0.532066244,
+          "maximum": 0.8041449379999999
+        },
+        "candidate": {
+          "median": 0.47059087899999996,
+          "minimum": 0.37569475799999996,
+          "maximum": 0.5338973949999999
+        }
+      },
+      "cpu_change_percent": -27.76862558561264,
+      "peak_rss_kib": {
+        "baseline": 44352.0,
+        "candidate": 33148.0
+      },
+      "peak_rss_change_percent": -25.26154401154401,
+      "exploratory_exact_rank_sum_two_sided_p": 0.0003108003108003108
+    }
+  },
+  "interpretation": "The measured germ_flow median exceeds the original no-regression threshold. Both CPU ranges overlap widely; the apparent code regression is unconfirmed. Exploratory rank-sum values do not replace or relax the acceptance gates. Host load/frequency was not recorded during sampling. Investigate with separate profiling before promotion."
+}

@@ -6,13 +6,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <StartupObject>ModernEmptyExtensionIdentifierRegressionEntry</StartupObject>
   </PropertyGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/SKILL.md" LogicalName="OniMcp.Skills.oni-mcp-control.SKILL.md" WithCulture="false" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/world-editor.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.world-editor.md" WithCulture="false" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/world-editor.zh.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.world-editor.zh.md" WithCulture="false" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/tool-reference.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.tool-reference.md" WithCulture="false" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/tool-reference.zh.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.tool-reference.zh.md" WithCulture="false" />
-  </ItemGroup>
+  <Import Project="../../mods/OniMcp/OniMcpSkillResources.props" />
 
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -62,6 +56,8 @@
     <Compile Include="../../mods/OniMcp/Server/*.cs" Link="Server/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Core/*.cs" Link="Core/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Support/McpJsonUtil.cs" Link="Support/McpJsonUtil.cs" />
+    <Compile Include="../../mods/OniMcp/Support/McpTextContentEncoder.cs" Link="Support/McpTextContentEncoder.cs" />
+    <PackageReference Include="Toon.Format" Version="1.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 </Project>

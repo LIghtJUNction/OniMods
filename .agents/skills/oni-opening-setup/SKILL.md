@@ -68,12 +68,11 @@ dupes_control domain=command action=auto_rename style=<candidate> apply=false
 
 ```
 game_control domain=speed action=pause
-colony_control domain=snapshot action=get profile=standard includeAtmosphere=false
-colony_control domain=read action=worlds
+world_editor command=read path=/active/colony/status.oni profile=minimal
 navigation_control action=get_view
 ```
 
-除非缺少细节，否则使用 `colony_control domain=snapshot action=get`，不要拆成单独的 status/dupe/food/research 调用。
+使用 `world_editor command=read path=/active/colony/status.oni profile=minimal` 获取基线状态，不要拆成单独的零散调用。
 
 ### 2. 配置错峰日程
 
@@ -165,7 +164,7 @@ colony_control domain=diagnostic action=set_auto_disinfect disabled=true applyNo
 获取当前相机/打印舱区域地图上下文：
 
 ```
-read_control domain=world action=area_snapshot preset=utilities encoding=plain includeScreenshot=false
+world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false
 ```
 
 如果区域太小或打印舱不可见，围绕观察到的起始坐标扩大到 40x30 到 60x40 格，并保持低于 `maxCells`。
@@ -233,7 +232,7 @@ plan_harness_record stage=plan summary="Opening setup plan" payload={...}
 plan_harness_validate id=<planId>
 ```
 
-如果执行了动作，用 `colony_control domain=snapshot action=get profile=brief` 和 `read_control domain=world action=area_snapshot preset=construction encoding=plain` 等可读地图验证。只有存在 harness 时才记录 harness 验证。
+如果执行了动作，用 `world_editor command=read path=/active/colony/status.oni profile=minimal` 和 `world_editor command=read path=/active/map/viewport.md compact=true` 等可读地图验证。只有存在 harness 时才记录 harness 验证。
 
 ## 执行策略
 

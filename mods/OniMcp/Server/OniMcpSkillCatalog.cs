@@ -22,7 +22,11 @@ namespace OniMcp.Server
             "references/world-editor.md",
             "references/world-editor.zh.md",
             "references/tool-reference.md",
-            "references/tool-reference.zh.md"
+            "references/tool-reference.zh.md",
+            "references/interaction.md",
+            "references/recording-and-archive.md",
+            "docs/gameplay-task-feedback.md",
+            "docs/composable-game-waits.md"
         };
 
         private sealed class SkillFile

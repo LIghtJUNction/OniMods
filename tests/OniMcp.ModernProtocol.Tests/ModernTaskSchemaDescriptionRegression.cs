@@ -18,6 +18,7 @@ internal static class ModernTaskSchemaDescriptionRegressionEntry
 
     private static void Main()
     {
+        ToonHttpBoundaryRegression.Run();
         UnsupportedProtocolVersionPreParseRegression.Run();
         RunModernTaskSchemaDescriptionRegression();
 

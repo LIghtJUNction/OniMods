@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "root_cause": "JObject automatic DateTime parsing followed by string conversion drops the UTC suffix; local-time reparsing rejects fresh UTC telemetry",
+  "fix": "Preserve ISO strings with DateParseHandling.None before explicit roundtrip UTC conversion",
+  "protocol_checks": 43,
+  "time_zones": [
+    "UTC",
+    "Asia/Taipei",
+    "America/Los_Angeles"
+  ],
+  "production_helper_executed_by_game_free_tests": true,
+  "python_capture_mapping_tests": 12,
+  "probe_sha256": "5a0f8211f436e30e76e99c832dd0a3bedbd153371d7fd435c103363b34cb2121",
+  "reference_managed_sha256": "6db652990ad1038e86b3493ed43004e12bfd61e62a4be60c787a9a9b9ac52ee1",
+  "source_sha256": {
+    "MemoryProbe.cs": "e8096b4324eb07ae16bb9c7a6dcba68420c5e0d1bd2c1ba3a1db02f8ff339c92",
+    "MemoryRequest.cs": "4e4d16d328d630193a7eb31f062e7e5f02c60c8df9935faeba78a3a5541143bb",
+    "MemoryRequestTests.cs": "05d9e30138a38f712631d9c09ad5da2204f610de15f3b7d1b2324b913f49e06e",
+    "MemoryProbe.csproj": "c564bc9763c7c1099e12b6b4bf523306ef5ba0cf958092215cdbd9a5d48d9e8c",
+    "mod.yaml": "a5c9a2e167fece88506e290d74ea25010d58c695eb6416b521fe7d9585c6e2d4",
+    "mod_info.yaml": "71fd750b527e5577496d2f2273f10cda86ecb02e678213c0c61fdc64828c4907",
+    "build.py": "bf41202602ba7dca93717e16a6ad89cb348a95ac6b91c491e2dfc5a8d73d39f3"
+  },
+  "failed_old_probe_receipt_sha256": "c5bf9ff48ab968313a4369e7ca8ce0ca4b97e91b6892a8a1d162872797f10686",
+  "failed_first_fixed_probe_compile_retained": true,
+  "first_compile_issue": "Installed game global DateTime shadows System.DateTime; fixed by fully qualified helper types",
+  "actual_fixed_probe_runtime_capture_passed": false,
+  "fixed_probe_start_refused": "FAILED: Insufficient measured memory for 1 simultaneous complete games: available+owned PSS=5346131968, required=6442450944; no sequential substitute",
+  "fixed_probe_game_instances_started": 0,
+  "original_guard_thresholds_preserved": true,
+  "scope": "Request parsing/ownership protocol and compilation; Unity/Mono counters remain unverified",
+  "previous_fixed_probe_build_sha256": "bb40e995297c138af7ebf17366bbbd38ba1820c1f13957e1c324b03c680b537c",
+  "test_json_dependency": "Newtonsoft.Json 13.0.4",
+  "dependency_version_source": "https://www.nuget.org/packages/Newtonsoft.Json/13.0.4",
+  "latest_prepared_probe_start_attempted": false,
+  "latest_capacity_preflight": {
+    "captured_at": "2026-10-21T07:09:01.016575+00:00",
+    "games_started": 0,
+    "admissions": [
+      {
+        "count": 1,
+        "passed": false,
+        "error": "Insufficient measured memory for 1 simultaneous complete games: available+owned PSS=5276398592, required=6442450944; no sequential substitute"
+      },
+      {
+        "count": 4,
+        "passed": false,
+        "error": "Insufficient measured memory for 4 simultaneous complete games: available+owned PSS=5274731520, required=22548578304; no sequential substitute"
+      }
+    ]
+  }
+}

@@ -1,0 +1,120 @@
+--- a/src/disease_tests.rs
++++ b/src/disease_tests.rs
+@@ -135,3 +135,117 @@
+         equal(&cells, &original);
+     }
+ }
++
++#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
++#[test]
++#[ignore = "explicit diagnostic only; not a performance acceptance test"]
++fn diagnose_clean_region_dispatch() {
++    use std::hint::black_box;
++    use std::time::Instant;
++
++    #[repr(C)]
++    struct Timespec {
++        seconds: i64,
++        nanoseconds: i64,
++    }
++    unsafe extern "C" {
++        fn clock_gettime(clock: std::ffi::c_int, value: *mut Timespec) -> std::ffi::c_int;
++    }
++    fn process_cpu() -> f64 {
++        let mut value = Timespec {
++            seconds: 0,
++            nanoseconds: 0,
++        };
++        // Linux x86_64 CLOCK_PROCESS_CPUTIME_ID and its native timespec layout.
++        assert_eq!(unsafe { clock_gettime(2, &mut value) }, 0);
++        value.seconds as f64 + value.nanoseconds as f64 * 1e-9
++    }
++    fn empty_dispatch(cells: &mut Cells, stride: usize, size: usize, pool: &rayon::ThreadPool) {
++        let rows = crate::parallel::CHUNK_CELLS.div_ceil(size).min(size);
++        let chunk_cells = stride * rows;
++        let extent = stride..(size + 1) * stride;
++        let environment = FloatEnv::capture();
++        pool.install(|| {
++            cells.disease_idx[extent.clone()]
++                .par_chunks_mut(chunk_cells)
++                .zip(cells.disease_count[extent.clone()].par_chunks_mut(chunk_cells))
++                .zip(cells.disease_infestation[extent.clone()].par_chunks_mut(chunk_cells))
++                .zip(cells.disease_growth[extent].par_chunks_mut(chunk_cells))
++                .enumerate()
++                .for_each(|chunk| {
++                    let _environment = environment.install();
++                    black_box(chunk);
++                });
++        });
++    }
++    fn execute(
++        role: &str,
++        cells: &mut Cells,
++        diseases: &DiseaseTable,
++        stride: usize,
++        size: usize,
++        pool: &rayon::ThreadPool,
++    ) {
++        if role == "dispatch" {
++            empty_dispatch(black_box(cells), stride, size, pool);
++        } else {
++            let selected = if role == "parallel" { Some(pool) } else { None };
++            post_process_cells(
++                black_box(cells),
++                diseases,
++                stride,
++                size + 2,
++                false,
++                (1, size + 1, 1, size + 1),
++                selected,
++            )
++            .unwrap_or_else(|error| panic!("{}", error.message));
++        }
++    }
++    let diseases = table();
++    let pool = rayon::ThreadPoolBuilder::new()
++        .num_threads(4)
++        .thread_name(|i| format!("OniSim-diag-{i}"))
++        .build()
++        .unwrap();
++    assert_eq!(pool.current_num_threads(), 4);
++    let orders = [
++        ["serial", "parallel", "dispatch"],
++        ["parallel", "dispatch", "serial"],
++        ["dispatch", "serial", "parallel"],
++        ["serial", "dispatch", "parallel"],
++        ["dispatch", "parallel", "serial"],
++        ["parallel", "serial", "dispatch"],
++    ];
++    for size in [96, 192] {
++        let stride = size + 2;
++        let mut template = fixture(stride * stride);
++        template.disease_idx.fill(u8::MAX);
++        template.disease_count.fill(0);
++        template.disease_infestation.fill(1);
++        template.disease_growth.fill(0.0);
++        for role in ["serial", "parallel", "dispatch"] {
++            let mut cells = template.clone();
++            for _ in 0..128 {
++                execute(role, &mut cells, &diseases, stride, size, &pool);
++            }
++            equal(&cells, &template);
++        }
++        for (sample, order) in orders.iter().enumerate() {
++            for role in order {
++                let mut cells = template.clone();
++                let cpu = process_cpu();
++                let start = Instant::now();
++                for _ in 0..1000 {
++                    execute(role, &mut cells, &diseases, stride, size, &pool);
++                }
++                let wall = start.elapsed().as_secs_f64();
++                let cpu = process_cpu() - cpu;
++                equal(&cells, &template);
++                println!(
++                    "CLEAN_DIAG {{\"size\":{size},\"sample\":{sample},\"role\":\"{role}\",\"iterations\":1000,\"wall_seconds\":{wall},\"cpu_seconds\":{cpu},\"state_unchanged\":true}}"
++                );
++            }
++        }
++    }
++}

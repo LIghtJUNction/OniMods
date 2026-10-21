@@ -4,11 +4,11 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::archive;
 use crate::build;
 use crate::config::{Config, SelectedMod};
+use crate::mod_config_backup;
 
 pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
@@ -81,18 +81,18 @@ fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Resul
 
         let mut found = false;
         for item in mods.iter_mut() {
-            let same_static_id = item
-                .get("staticID")
-                .and_then(Value::as_str)
-                .map(|value| value == static_id)
-                .unwrap_or(false);
             let same_dev_id = item
                 .get("label")
                 .and_then(|label| label.get("id"))
                 .and_then(Value::as_str)
                 .map(|value| value == selected.name)
                 .unwrap_or(false);
-            if same_static_id || same_dev_id {
+            let is_dev = item
+                .get("label")
+                .and_then(|label| label.get("distribution_platform"))
+                .and_then(Value::as_u64)
+                == Some(4);
+            if same_dev_id && is_dev {
                 item["enabled"] = Value::Bool(true);
                 item["status"] = Value::Number(1.into());
                 ensure_expansion_enabled(item);
@@ -122,24 +122,23 @@ fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Resul
     }
 
     let formatted = serde_json::to_string_pretty(&data)?;
-    let backup = mods_file.with_extension(format!(
-        "json.onim-backup-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| duration.as_secs())
-            .unwrap_or(0)
-    ));
-    fs::write(&backup, &content)
-        .with_context(|| format!("备份 mods.json 失败：{}", backup.display()))?;
-    fs::write(&mods_file, format!("{}\n", formatted))
-        .with_context(|| format!("写入 mods.json 失败：{}", mods_file.display()))?;
+    let update =
+        mod_config_backup::write_config(&mods_file, &content, &format!("{}\n", formatted))?;
+    let backup = update
+        .backup
+        .as_ref()
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| "配置未变化，未生成备份".to_string());
     println!(
         "✅ 已在 mods.json 启用 Dev mod：{}（启用数 {} -> {}，备份：{}）",
-        static_id,
-        before_enabled,
-        after_enabled,
-        backup.display()
+        static_id, before_enabled, after_enabled, backup
     );
+    if let Some(count) = update.pruned.filter(|count| *count > 0) {
+        println!("🧹 清理 {} 份过期配置备份，最多保留最近 5 份", count);
+    }
+    if let Some(error) = update.cleanup_error {
+        eprintln!("⚠️ 配置已启用，但备份清理未完成：{}", error);
+    }
     Ok(())
 }
 

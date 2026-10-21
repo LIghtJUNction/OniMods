@@ -16,19 +16,6 @@ namespace OniMcp.Tools
             }
         }
 
-        private struct SupportCell
-        {
-            public readonly int X;
-            public readonly int Y;
-            public readonly int Cell;
-
-            public SupportCell(int x, int y, int cell)
-            {
-                X = x;
-                Y = y;
-                Cell = cell;
-            }
-        }
         private sealed class SupportValidation
         {
             public bool Valid;

@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "candidate_native_sha256": "6ad189b35212a700b58a000c71e8d43f3ef49aedc7633f7b86a43b2a9d6640c0",
+  "unit_tests": 42,
+  "source_integrated": false,
+  "runtime_accepted": false,
+  "runs": [
+    {
+      "workers": 1,
+      "cases": 263,
+      "publications_compared": 9571,
+      "passed": true,
+      "summary_sha256": "96ebd937869c7ba550028225c42420d4ff5ecffa280fdf07e0035f98819c37e9"
+    },
+    {
+      "workers": 4,
+      "cases": 263,
+      "publications_compared": 9571,
+      "passed": true,
+      "summary_sha256": "8e992dbc2152d9e3c59837af8423abedc3399b9333e2810c976d465d768a4f90"
+    }
+  ],
+  "performance_status": "complete, rejected by original gates",
+  "complete": true,
+  "adopted": false,
+  "scope": "Isolated native cleanup-slice experiment; not whole-game performance",
+  "sizes": {
+    "96": {
+      "samples": 96,
+      "scenes": {
+        "fluid": {
+          "cpu_change_percent": -5.4840746679758805,
+          "wall_change_percent": 3.0631027059698557,
+          "peak_rss_change_percent": -0.358594310303606
+        },
+        "thermal": {
+          "cpu_change_percent": -25.30715790157114,
+          "wall_change_percent": -3.8129027275229266,
+          "peak_rss_change_percent": -0.49525628020764545
+        },
+        "sealed": {
+          "cpu_change_percent": -5.940055263386979,
+          "wall_change_percent": 5.190071004485364,
+          "peak_rss_change_percent": -0.34713909504429097
+        },
+        "germ_flow": {
+          "cpu_change_percent": 6.401583620979401,
+          "wall_change_percent": 8.43187263653078,
+          "peak_rss_change_percent": -0.0835920706950044
+        },
+        "mixed_germs": {
+          "cpu_change_percent": 10.214745337625853,
+          "wall_change_percent": 11.047656483004298,
+          "peak_rss_change_percent": 0.011971746677841288
+        },
+        "vacuum": {
+          "cpu_change_percent": -2.5170352115490235,
+          "wall_change_percent": 9.065879113401355,
+          "peak_rss_change_percent": -0.2935186294477088
+        }
+      },
+      "gates": {
+        "one_scene_cpu_reduction_at_least_5_percent": true,
+        "no_scene_cpu_regression_over_3_percent": false,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true
+      },
+      "passes_predeclared_gates": false,
+      "timed_major_faults": 1,
+      "raw_summary_sha256": "7540a2390c6bbcc9e3b79f1f752649765e84360424e3617cc6cfedfa58d52b4d"
+    },
+    "192": {
+      "samples": 60,
+      "scenes": {
+        "fluid": {
+          "cpu_change_percent": -0.8968976018622454,
+          "wall_change_percent": 3.1617832542732316,
+          "peak_rss_change_percent": -0.37492501499699626
+        },
+        "thermal": {
+          "cpu_change_percent": -7.496358040636341,
+          "wall_change_percent": 6.7422771841566975,
+          "peak_rss_change_percent": -0.3017501508750797
+        },
+        "sealed": {
+          "cpu_change_percent": -3.8857176471397192,
+          "wall_change_percent": 0.6798588985376774,
+          "peak_rss_change_percent": -0.1360647063270104
+        },
+        "germ_flow": {
+          "cpu_change_percent": -3.3979272690711326,
+          "wall_change_percent": -4.439651764788454,
+          "peak_rss_change_percent": -0.05905802450908437
+        },
+        "mixed_germs": {
+          "cpu_change_percent": -3.1573864044463384,
+          "wall_change_percent": -2.2805333702147323,
+          "peak_rss_change_percent": 0.007391529307421152
+        },
+        "vacuum": {
+          "cpu_change_percent": -4.546370908779307,
+          "wall_change_percent": 0.7911097112882404,
+          "peak_rss_change_percent": -0.23216220399319143
+        }
+      },
+      "gates": {
+        "one_scene_cpu_reduction_at_least_5_percent": true,
+        "no_scene_cpu_regression_over_3_percent": true,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true
+      },
+      "passes_predeclared_gates": false,
+      "timed_major_faults": 1606,
+      "raw_summary_sha256": "75dbfcc041d52fd42ccfeabb4d748467ebf81efe28250de263bc40cbb3261134"
+    }
+  },
+  "decision": "Reject without relaxing gates. Two dispatch-removal variants now fail elapsed-time gates; directly test their shared premise before another variant.",
+  "base_commit": "8f8cc4150ff9f85ee8c6110662144038bad7e12f",
+  "proposal_patch_sha256": "eeb42057b62918f525f71b2f9a6f44769b309cdcb9f2705cbd0f201060887068"
+}

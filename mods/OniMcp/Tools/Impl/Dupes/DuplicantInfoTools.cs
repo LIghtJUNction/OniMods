@@ -20,7 +20,7 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Aliases = new List<string> { "duplicants_info_control", "dupe_info_control" },
                 Tags = new List<string> { "dupes", "duplicants", "detail", "attributes", "needs", "status", "stuck", "trapped", "navigation", "复制人", "属性", "需求", "被困", "状态" },
-                Description = "复制人基础只读信息聚合工具：action=detail 单个详情；action=attributes 属性/特性；action=needs 需求/压力/士气；action=status_check 状态/被困检查。",
+                Description = "复制人基础只读信息聚合工具：action=detail 单个详情；action=attributes 属性/特性；action=needs 原生需求数值及 unknown/notApplicable 状态，仿生人附电量、电池库存和局部浸液风险；action=status_check 状态/被困检查。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["action"] = new McpToolParameter { Type = "string", Description = "读取类型：detail、attributes、needs、status_check", Required = true, EnumValues = new List<string> { "detail", "attributes", "needs", "status_check" } },
@@ -111,7 +111,7 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=info action=needs。获取复制人的核心需求数值，如卡路里、压力、膀胱、体温等",
+                Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=info action=needs。原生读取需求值并标注 unknown/notApplicable；仿生人附电量、电池库存、存储电池损坏状态及附近散落电池浸液风险。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["id"] = new McpToolParameter { Type = "integer", Description = "复制人 InstanceID，留空返回全部", Required = false },
@@ -233,7 +233,11 @@ namespace OniMcp.Tools
             result["worldId"] = dupe.GetMyWorldId();
             result["schedule"] = schedule?.name;
             result["currentScheduleBlock"] = schedule?.GetCurrentScheduleBlock()?.GroupId;
-            result["needs"] = GetNeedsSummary(dupe)["amounts"];
+            var needs = GetNeedsSummary(dupe);
+            result["needs"] = needs["amounts"];
+            result["needsAvailability"] = needs["availability"];
+            if (needs.ContainsKey("bionicPower"))
+                result["bionicPower"] = needs["bionicPower"];
             return result;
         }
 
@@ -261,6 +265,20 @@ namespace OniMcp.Tools
             var environment = CellEnvironment(cell);
             var current = CurrentChoreSummary(dupe);
             var reasons = new List<string>();
+            reasons.AddRange(needs.UnknownNeeds.Select(key => "needs_unknown_" + key));
+            if (needs.IsBionic && (needs.BionicPower == null || needs.BionicPower["state"]?.ToString() != "known"))
+                reasons.Add("bionic_power_unknown");
+            if (needs.IsBionic && needs.BionicPower != null)
+            {
+                if (needs.BionicPower["dupeWaterDamageState"]?.ToString() == "unknown")
+                    reasons.Add("bionic_water_state_unknown");
+                var spareDamage = needs.BionicPower["sparePowerbankDamage"] as Dictionary<string, object>;
+                if (spareDamage == null || spareDamage["state"]?.ToString() != "known")
+                    reasons.Add("powerbank_damage_state_unknown");
+                var nearbyBanks = needs.BionicPower["nearbyLoosePowerbanks"] as Dictionary<string, object>;
+                if (nearbyBanks == null || nearbyBanks["state"]?.ToString() != "known")
+                    reasons.Add("nearby_powerbank_scan_unknown");
+            }
 
             bool canReceiveMove = navigator != null && moveMonitor != null;
             bool currentCellValid = Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell);

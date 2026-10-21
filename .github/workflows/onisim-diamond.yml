@@ -1,0 +1,61 @@
+name: OniSim diamond proof and regression
+
+on:
+  pull_request:
+    paths:
+      - "mods/CycleTrim/OniSim/**"
+      - ".github/workflows/onisim-diamond.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mods/CycleTrim/OniSim/**"
+      - ".github/workflows/onisim-diamond.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  component-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.1
+      - name: Build original and optimized Rust components
+        run: python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py build
+      - name: Test the complete native Rust kernel without game files
+        working-directory: mods/CycleTrim/OniSim
+        env:
+          RUSTC_WRAPPER: ""
+          RUSTC_WORKSPACE_WRAPPER: ""
+        run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
+      - name: Run differential correctness cases
+        run: python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py verify
+  memory-probe-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.401'
+      - name: Build memory request protocol tests without game files
+        run: >-
+          dotnet build mods/CycleTrim/OniSim/conformance/memory_probe/MemoryProbe.csproj
+          -c Release --disable-build-servers -p:ProbeProtocolTests=true
+          -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -p:NuGetAudit=false
+          -p:BaseIntermediateOutputPath="$RUNNER_TEMP/memory-probe-protocol/obj/"
+          -p:OutputPath="$RUNNER_TEMP/memory-probe-protocol/bin/"
+      - name: Check UTC and non-UTC memory request boundaries
+        run: dotnet "$RUNNER_TEMP/memory-probe-protocol/bin/CycleTrim.MemoryProbe.dll"
+  lean-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean 4.19.0 through elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:v4.19.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Check all Lean proofs and logical dependencies
+        run: bash mods/CycleTrim/OniSim/lean-lab/proof/verify.sh

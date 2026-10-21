@@ -89,18 +89,17 @@
     </Reference>
   </ItemGroup>
 
-<ItemGroup>
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/SKILL.md" LogicalName="OniMcp.Skills.oni-mcp-control.SKILL.md" WithCulture="false" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/world-editor.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.world-editor.md" WithCulture="false" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/world-editor.zh.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.world-editor.zh.md" WithCulture="false" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/tool-reference.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.tool-reference.md" WithCulture="false" />
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)/../../.agents/skills/oni-gameplay/references/tool-reference.zh.md" LogicalName="OniMcp.Skills.oni-mcp-control.references.tool-reference.zh.md" WithCulture="false" />
-  </ItemGroup>
+  <Import Project="OniMcpSkillResources.props" />
 
   <!-- 项目根目录的预览图自动复制到输出 -->
   <ItemGroup>
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.png" Condition="Exists('$(MSBuildProjectDirectory)/preview.png')" />
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.jpg" Condition="Exists('$(MSBuildProjectDirectory)/preview.jpg')" />
+    <Content Include="$(MSBuildProjectDirectory)/THIRD_PARTY_NOTICES.txt">
+      <Link>THIRD_PARTY_NOTICES.txt</Link>
+      <TargetPath>THIRD_PARTY_NOTICES.txt</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -117,12 +116,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.45">
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="PLib" Version="4.24.0" GeneratePathProperty="true" />
+    <PackageReference Include="PLib" Version="4.25.0" GeneratePathProperty="true" />
+    <PackageReference Include="Toon.Format" Version="1.0.0" />
   </ItemGroup>
 
   <!-- 构建后生成元数据文件 -->
@@ -158,7 +158,7 @@
   <!-- 构建后打包 Mod 到仓库根目录 dist/ -->
   <Target Name="PackageMod" AfterTargets="GenerateModFiles">
     <PropertyGroup>
-      <DistPath>$(MSBuildProjectDirectory)/../../dist/</DistPath>
+      <DistPath Condition="'$(DistPath)' == ''">$(MSBuildProjectDirectory)/../../dist/</DistPath>
       <DistModPath>$(DistPath)$(AssemblyName)/</DistModPath>
       <ZipFile>$(DistPath)$(AssemblyName).zip</ZipFile>
     </PropertyGroup>
@@ -171,6 +171,7 @@
     <!-- 复制 mod 文件到 dist/ModName/ -->
     <ItemGroup>
       <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
+      <ModOutputFiles Include="$(OutputPath)THIRD_PARTY_NOTICES.txt" />
       <ModOutputFiles Include="$(OutputPath)mod.yaml" />
       <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
       <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />

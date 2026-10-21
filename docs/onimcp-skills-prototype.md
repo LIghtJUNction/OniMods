@@ -12,8 +12,14 @@ The one canonical URI is `skill://oni-mcp-control/SKILL.md`. The package also co
 - `skill://oni-mcp-control/references/world-editor.zh.md`
 - `skill://oni-mcp-control/references/tool-reference.md`
 - `skill://oni-mcp-control/references/tool-reference.zh.md`
+- `skill://oni-mcp-control/references/interaction.md`
+- `skill://oni-mcp-control/references/recording-and-archive.md`
+- `skill://oni-mcp-control/docs/gameplay-task-feedback.md`
+- `skill://oni-mcp-control/docs/composable-game-waits.md`
 
-The source remains the files under `.agents/skills/oni-gameplay/`. The build embeds **only** these five files under matching canonical resource names. The skill frontmatter advertises `name: oni-mcp-control`. The optional sibling colony-strategy skill is not bundled.
+The source remains the files under `.agents/skills/oni-gameplay/` and the two named documents under `docs/`. The Mod and host tests import the same explicit nine-file resource list from `OniMcpSkillResources.props`. The skill frontmatter advertises `name: oni-mcp-control`. The optional sibling colony-strategy skill is not bundled.
+
+Clients resolve relative Markdown links against the URI of the file they read before requesting `resources/read`. The source links to `../../../docs/gameplay-task-feedback.md` and `../../../../docs/composable-game-waits.md` resolve to the two canonical `docs/` resources above. The packaged source bytes, instructions and authority rules are unchanged. Incoming resource URIs must exactly match a manifest entry; the server does not normalize dot segments or expose arbitrary repository files.
 
 The server takes one immutable in-memory byte snapshot from the embedded assembly resources. `skills/list` and `skills/get` expose its exact file sizes and SHA-256 digests; `resources/read` returns those same bytes decoded as UTF-8. A fixed URI allowlist rejects all other paths. The existing HTTP authentication gate applies equally to listing, direct lookup and reading.
 
@@ -21,13 +27,13 @@ The extension does not advertise `directoryRead`. A request with a pagination cu
 
 ## Validation before general release
 
-The host test project checks the disabled/enabled HTTP route, response metadata, manifest equality, raw-file digest/size consistency, traversals and missing URIs, and the legacy transport test suite. Both OniMcp quality and pinned ONI reference builds must pass.
+The host test project checks the disabled/enabled HTTP routes, response metadata, manifest equality, raw-file digest/size consistency, relative-link closure, both English/Chinese references, traversals and missing URIs, and the legacy transport test suite. The production HTTP listener is also exercised with anonymous, invalid-token and valid-token requests across list, lookup and every resource read; this verifies the existing transport authentication gate, with no per-user visibility model added. Both OniMcp quality and pinned ONI reference builds must pass.
 
 Before enabling it by default, record all of the following:
 
 1. Run the official MCP Skills extension conformance suite against a real OniMcp modern HTTP endpoint and record its pinned runner revision.
-2. Run MCP Inspector 2.6.0 (or a pinned newer supported release) `skills/list --verify`; the verification must confirm the served frontmatter and all five digest/size values.
-3. Import this skill through one independent consuming client. Check all four references can be read without a session ID.
+2. Run MCP Inspector 2.6.0 (or a pinned newer supported release) `skills/list --verify`; the verification must confirm the served frontmatter and every manifest digest/size value.
+3. Import this skill through one independent consuming client. Check all eight supporting resources can be read without a session ID, including links resolved from the entry point and interaction reference.
 4. Test that the legacy session transport and gameplay policy are unchanged in a real ONI build.
 
 No successful external Inspector or game-runtime run is claimed by the host-only tests. Until this evidence exists, keep the experimental option disabled on production colonies.

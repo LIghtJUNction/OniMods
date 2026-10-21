@@ -127,15 +127,6 @@ namespace OniMcp.Tools
             };
         }
 
-        private static int PowerInputCell(BuildingDef def, int anchorX, int anchorY, Orientation orientation)
-        {
-            int anchorCell = Grid.XYToCell(anchorX, anchorY);
-            if (!Grid.IsValidCell(anchorCell) || def == null)
-                return Grid.InvalidCell;
-            CellOffset rotated = Rotatable.GetRotatedCellOffset(def.PowerInputOffset, orientation);
-            return Grid.OffsetCell(anchorCell, rotated);
-        }
-
         private static Dictionary<string, object> CellCoordDictionary(int cell)
         {
             return new Dictionary<string, object>

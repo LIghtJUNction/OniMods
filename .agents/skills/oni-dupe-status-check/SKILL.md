@@ -1,6 +1,6 @@
 ---
 name: oni-mcp-dupe-status-check
-description: 当用户要求检查 ONI 复制人状态、怀疑复制人卡住/被困/不可达、报告复制人在错误地点发呆或睡觉、要求救援分诊，或需要快速复制人健康/导航审计时使用。指导 agent 先用 dupes_control domain=info action=status_check，只检查被标记区域，除非用户明确授权，否则不要下达救援动作。
+description: 当用户要求检查 ONI 复制人状态、怀疑复制人卡住/被困/不可达、报告复制人在错误地点发呆或睡觉、要求救援分诊，或需要快速复制人健康/导航审计时使用。指导 agent 先用 world_editor command=read path=/active/dupes/index.oni，只检查被标记区域，除非用户明确授权，否则不要下达救援动作。
 ---
 
 # ONI MCP 复制人状态检查
@@ -9,47 +9,53 @@ description: 当用户要求检查 ONI 复制人状态、怀疑复制人卡住/�
 
 快速识别可能被困、不可达、疲劳、窒息、饥饿，或无法正常执行工作的复制人。这个技能默认以只读为主。
 
+## 通信须知
+
+MCP 请求必须使用 IPv4 地址 `http://127.0.0.1:8788/mcp/`（避免 `localhost` 解析为 IPv6 `::1` 导致超时）。直接 curl 时需携带 `Mcp-Session-Id` header 及协议版本 `2025-11-25`。
+
 ## 快速路径
 
-先使用聚合状态工具：
+使用公开 7 工具及权威虚拟文件读取复制人状态：
 
 ```
-dupes_control domain=info action=status_check radius=8 includeReachableSamples=true
+world_editor command=read path=/active/dupes/index.oni
 ```
 
-检查单个复制人：
+检查单个复制人详细信息：
 
 ```
-dupes_control domain=info action=status_check name=<dupeName> radius=10
+world_editor command=read path=/active/dupes/<dupeName>.md
 ```
 
-检查复制人是否能到达目标/基地格子：
+检查殖民地基线指标与警报（包含压力、饥饿、红警）：
 
 ```
-dupes_control domain=info action=status_check targetX=<x> targetY=<y> targetWorldId=<worldId> radius=10
+world_editor command=read path=/active/colony/status.oni profile=minimal
 ```
 
-除非 `dupes_control domain=info action=status_check` 缺少必要细节，否则不要从 `dupes_control domain=info action=detail/needs`、截图或大范围地图扫描开始。
+除非虚拟文件读取缺少必要细节，否则不要从大范围地图扫描或全图截图开始。
+
+## 需求字段缺失时
+
+`needs.amounts` 为空对象，或索引中的需求值为 `null`，表示该读取没有提供数值，不表示需求为零或复制人安全。该情况可能出现在普通复制人或仿生复制人的接口结果中。需要判断健康风险时，按索引里的风险/状态标记和单个复制人详情作针对性核查；不要把空值改写成“无风险”，也不要重复读取相同参数。
 
 ## 边界和防循环
 
 - 本技能只处理健康、路径、被困、任务阻塞和救援分诊；复制人重命名、属性分工、日程设置不使用本技能。
-- 不要把 `dupes_control domain=info action=status_check` 当作通用复制人列表工具。需要名单用 `colony_control domain=read action=dupes`，需要属性用 `dupes_control domain=info action=attributes`，需要重命名用 `dupes_control domain=command action=auto_rename`/`dupes_control domain=command action=rename`（先 `server_control domain=catalog action=search` 确认 schema）。
-- 同一参数的 `dupes_control domain=info action=status_check` 最多调用一次。若结果不够，按返回的 `scanRect`、`nextRead` 或缺失字段改用针对性读取。
-- 如果没有复制人被标记，直接报告“未发现风险”，不要追加地图、截图或属性读取。
+- 公开 7 工具核心不直接暴露 `dupes_control` 或 `colony_control`。需要名单与状态请统一使用 `world_editor command=read path=/active/dupes/index.oni`。
+- 同一参数的只读请求最多调用一次。若无风险，直接报告“未发现风险”，不要追加大范围地图或截图。
 
 ## 后续读取
 
-如果 `flagged > 0`，只检查被标记的复制人：
+如果状态索引中显示有复制人处于危险状态（如卡住、受困、窒息）：
 
 ```
-read_control domain=world action=area_snapshot x1=<scanRect[0]> y1=<scanRect[1]> x2=<scanRect[2]> y2=<scanRect[3]> worldId=<worldId> preset=construction encoding=plain includeScreenshot=false
+world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false
 ```
 
 只有需要时才补充细节：
 
-- `dupes_control domain=info action=detail id=<id>`：查看属性/日程上下文。
-- `dupes_control domain=side_screen action=todos id=<id> includeBlocked=true`：查看工作前置条件失败。
+- `world_editor command=read path=/active/dupes/<name>.md`：查看属性/状态详情。
 - `navigation_control action=focus_dupe id=<id>`：仅在用户需要视觉聚焦时使用。
 - 截图只用于视觉确认，不用于坐标推理。
 
@@ -81,9 +87,9 @@ read_control domain=world action=area_snapshot x1=<scanRect[0]> y1=<scanRect[1]>
 2. 检查被标记的 `scanRect`。
 3. 优先通过挖掘/建造支撑打开可达路径，不要盲目移动复制人。
 4. 用 `building_control domain=planning action=search_defs/materials/placement_candidates/preview` 检查支撑方案；获得明确授权后才以单 anchor `build_area` dry-run，再 confirm 执行。
-5. 动作完成后用 `dupes_control domain=info action=status_check` 验证。
+5. 动作完成后用 `world_editor command=read path=/active/dupes/index.oni` 验证状态恢复正常。
 
-除非 `dupes_control domain=info action=status_check targetX/targetY` 或 `dupes_control domain=command action=move_to` 的可达性校验确认目标可达，否则不要把复制人移动到该格子。
+不要盲目将复制人传送到未知格子；优先通过常规挖掘和建造梯子打通路径。
 
 ## 输出格式
 

@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "game_build": 744825,
+  "unity": "6000.3.5f2",
+  "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "cycletrim_dll_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "steam_launched": true,
+  "headless": true,
+  "batch_mode": true,
+  "graphics_device": "Null",
+  "camera_render_callbacks": 0,
+  "game_crash": false,
+  "cell_workers": [
+    "OniSim-cell-0",
+    "OniSim-cell-1",
+    "OniSim-cell-2",
+    "OniSim-cell-3"
+  ],
+  "native_seconds_advanced_before_save": 1.8833045959472656,
+  "native_seconds_advanced_after_reload": 1.8833045959472656,
+  "reload_clock_equal": true,
+  "reload_clock": 52.499961853027344,
+  "duplicants": 3,
+  "sample_physical_fields_equal": true,
+  "whole_grid_runtime_bitwise_comparison": false,
+  "skipped_timelapse_captures": 3,
+  "restoration": {
+    "original_files_equal": true,
+    "mod_enable_fields_restored": true,
+    "source_unchanged": true,
+    "continue_save_restored": true,
+    "test_option_absent": true,
+    "process_stopped": true
+  },
+  "startup_wait_timed_out": false,
+  "source_fixture": {
+    "origin": "Previously generated survival world; isolated copy",
+    "source_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+    "source_bytes": 1095066
+  },
+  "acceptance_scope": "One generated three-duplicant survival colony copy, four workers; headless bounded advancement, equal-clock save/reload and further advancement. No whole-grid runtime equivalence, long-term compatibility or performance claim.",
+  "mapped_native_path_sha256_verified": true
+}

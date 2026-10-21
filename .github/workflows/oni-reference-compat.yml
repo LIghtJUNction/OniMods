@@ -133,11 +133,8 @@ jobs:
           python3 scripts/extract_harmony_api_surface.py
           "$GITHUB_WORKSPACE/.oni-managed"
           --output "$GITHUB_WORKSPACE/artifacts/oni-api-surface"
-      - name: Verify Harmony target API baseline
-        run: >-
-          python3 scripts/check_harmony_api_surface_baseline.py
-          --current "$GITHUB_WORKSPACE/artifacts/oni-api-surface/index.json"
-          --baseline "$GITHUB_WORKSPACE/ci/oni-harmony-api-surface-baseline"
+      # Publish allowlisted signatures before comparison so a genuine new
+      # Harmony target remains reviewable when the baseline check fails.
       - name: Prepare signatures-only API artifact
         run: >-
           python3 scripts/prepare_oni_api_surface_artifact.py
@@ -154,6 +151,11 @@ jobs:
           path: artifacts/oni-api-surface
           if-no-files-found: error
           retention-days: 14
+      - name: Verify Harmony target API baseline
+        run: >-
+          python3 scripts/check_harmony_api_surface_baseline.py
+          --current "$GITHUB_WORKSPACE/artifacts/oni-api-surface/index.json"
+          --baseline "$GITHUB_WORKSPACE/ci/oni-harmony-api-surface-baseline"
       - name: Compile CycleTrim against .NET Standard 2.1
         shell: bash
         run: |

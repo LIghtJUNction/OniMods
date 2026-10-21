@@ -296,6 +296,8 @@ internal static class Program
                 Check("HTTP Skills extension is opt-in and keeps list/get/read coherent", () =>
                     ModernSkillHttpRegression.Run(modernMeta, port,
                         (body, method, name) => PostModern(client, body, method, name)));
+                Check("HTTP settings save preserves the Skills opt-in", () =>
+                    ModernSkillHttpRegression.VerifySettingsPost(client, port));
                 string toolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":103,\"params\":{" + modernMeta + "}}";
                 Check("HTTP modern path maps unsupported methods to HTTP 404", () =>
                 {

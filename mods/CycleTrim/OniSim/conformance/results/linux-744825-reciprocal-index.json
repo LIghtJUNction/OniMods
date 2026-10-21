@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "scope": "Rejected private cached-index placement. Complete native frames, not game FPS or a proof of compiled machine code.",
+  "candidate_sha256": "e7ab077e663733e22194ccf4e162c956c2d75fb957aa5e24101d229cf021b4f0",
+  "baseline_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "proof": {
+    "schema": 1,
+    "scope": "Natural-number reciprocal estimate and one correction, plus u64/u128 bounds. Not a proof of compiled Rust, signed mapping, cache lifetime or game behavior.",
+    "passed": true,
+    "lean_version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+    "checked_theorems": 9,
+    "logical_dependencies": [
+      "Classical.choice",
+      "Quot.sound",
+      "propext"
+    ],
+    "source_sha256": {
+      "ReciprocalIndex.lean": "5b2fd587c1f2879a58ddba93264074d670f427a427f8bc963ee4df3421bf7602",
+      "reciprocal.rs": "e65e4a51a8c9058b96d9d21e4cd3613ac971dd805921627486b71c459c86b3ef"
+    },
+    "rust_semantic_tests": {
+      "passed": 3,
+      "generated_unsigned_cases": 2000000,
+      "generated_signed_grid_cases": 600000,
+      "exhaustive_padded_dimensions": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          19
+        ],
+        [
+          63,
+          65
+        ],
+        [
+          96,
+          96
+        ],
+        [
+          256,
+          128
+        ],
+        [
+          736,
+          304
+        ]
+      ]
+    },
+    "production_adopted": false,
+    "performance_measured": false
+  },
+  "native_release_tests_passed": 34,
+  "conformance": [
+    {
+      "workers": 1,
+      "cases": 227,
+      "publications": 9103,
+      "summary_sha256": "08ddc3b27b1d75eff086f0a094d915bacc4daf7e0aaa7f06d0f488ad661f732a"
+    },
+    {
+      "workers": 4,
+      "cases": 227,
+      "publications": 9103,
+      "summary_sha256": "17261c7477c6b53e4894ee90a5f171721f9bfd2803711a760a6018e097f394ef"
+    }
+  ],
+  "performance_complete": true,
+  "samples": 96,
+  "workers": 1,
+  "cpu_affinity": [
+    16
+  ],
+  "major_faults": 0,
+  "all_timed_final_publications_match_official": true,
+  "criteria": {
+    "cpu": "At least one non-thermal scene median CPU reduction >=5%; no scene median CPU regression >3%.",
+    "memory": "No scene median current-exec peak RSS regression >3%.",
+    "correctness": "227 cases and 9103 publications with one/four workers, all timed final publications exact against official.",
+    "timing": "No concurrent game or owned compilation/correctness runs. Record host context before/after timing; context is diagnostic, not a frequency lock or permission to drop slow samples."
+  },
+  "gates": {
+    "at_least_one_nonthermal_cpu_reduction_5_percent": false,
+    "no_cpu_regression_above_3_percent": false,
+    "no_peak_rss_regression_above_3_percent": true
+  },
+  "passed_performance_gates": false,
+  "scenes": {
+    "fluid": {
+      "cpu_seconds": {
+        "baseline": 0.500296924,
+        "candidate": 0.5040706345000001
+      },
+      "cpu_change_percent": 0.7542941639193668,
+      "peak_rss_kib": {
+        "baseline": 33316.0,
+        "candidate": 33328.0
+      },
+      "peak_rss_change_percent": 0.036018729739462074
+    },
+    "thermal": {
+      "cpu_seconds": {
+        "baseline": 0.205857966,
+        "candidate": 0.213092801
+      },
+      "cpu_change_percent": 3.514479007336546,
+      "peak_rss_kib": {
+        "baseline": 33336.0,
+        "candidate": 33334.0
+      },
+      "peak_rss_change_percent": -0.005999520038402206
+    },
+    "sealed": {
+      "cpu_seconds": {
+        "baseline": 0.4842149845,
+        "candidate": 0.471981411
+      },
+      "cpu_change_percent": -2.5264756134369404,
+      "peak_rss_kib": {
+        "baseline": 33236.0,
+        "candidate": 33222.0
+      },
+      "peak_rss_change_percent": -0.04212299915753448
+    },
+    "germ_flow": {
+      "cpu_seconds": {
+        "baseline": 0.6646880319999999,
+        "candidate": 0.6795085089999999
+      },
+      "cpu_change_percent": 2.2296891604030034,
+      "peak_rss_kib": {
+        "baseline": 33346.0,
+        "candidate": 33326.0
+      },
+      "peak_rss_change_percent": -0.05997720866071088
+    },
+    "mixed_germs": {
+      "cpu_seconds": {
+        "baseline": 0.6966207155,
+        "candidate": 0.6973177510000002
+      },
+      "cpu_change_percent": 0.10005954237233272,
+      "peak_rss_kib": {
+        "baseline": 33258.0,
+        "candidate": 33294.0
+      },
+      "peak_rss_change_percent": 0.10824463287029129
+    },
+    "vacuum": {
+      "cpu_seconds": {
+        "baseline": 0.4473298765,
+        "candidate": 0.4352193315
+      },
+      "cpu_change_percent": -2.707296256345626,
+      "peak_rss_kib": {
+        "baseline": 33214.0,
+        "candidate": 33250.0
+      },
+      "peak_rss_change_percent": 0.1083880291443462
+    }
+  },
+  "cpu16_observed_endpoint_frequency_khz": {
+    "minimum": 1675926,
+    "maximum": 2681830
+  },
+  "observer_scope": "Frequency and host-load snapshots are outside the timed interval; they do not lock frequency or justify dropping samples.",
+  "summary_sha256": "beba58f2ae70fa4e1ab4bb13bf7e8d21282607a1ce7a9765224da31fdf6a24e9",
+  "production_adopted": false,
+  "runtime_validated": false,
+  "decision": "Do not adopt. No nonthermal scene reaches the predeclared 5 percent gain; the observed thermal median exceeds the 3 percent regression threshold. Retain proof and source proposal; focus further work on the profiled gas stage.",
+  "integrated_source_sha256": {
+    "reciprocal_index.rs": "444619eadd0e2e3a15f35acdaa7220d9198e0274a1dd44c89e6dc23323830508",
+    "lib.rs": "b3291c8ef98288084c53b9e347bfe95a447e161972ed22df6415399b16cf0ee8",
+    "world.rs": "1c431bf64ef761f952762b30d1265710401854abfdf50c2d9b2b1ea9043f8a67",
+    "fluid_helpers.rs": "134a828891106391c48adfc84fad0a304610cb60e3348e5f23e51cfa8fb65ab1"
+  },
+  "proposal_patch_sha256": "5a7d682ba2be3afdf45ecffb2a79160444508b7872e96529c3e4869c7d25379b",
+  "proof_source": "lean-lab/reciprocal-proof/ReciprocalIndex.lean"
+}

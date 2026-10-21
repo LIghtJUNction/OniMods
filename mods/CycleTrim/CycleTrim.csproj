@@ -6,16 +6,32 @@
     <RootNamespace>CycleTrim</RootNamespace>
     <LangVersion>7.3</LangVersion>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
     <ModTitle>CycleTrim</ModTitle>
     <ModDescription>Streamlines fetch pickup candidates, limits expensive pickup/chore refreshes for active duplicants only, and throttles stationary-critter navigation probing; IdleChore, idle duplicants, and explicit priority updates retain the vanilla immediate path. / 优化拾取候选选择，仅限制真正忙碌复制人的高开销拾取与差事刷新，并对静止小动物的导航探针调用进行节流；IdleChore、空闲复制人与显式优先更新均保留原版即时路径。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
     <ModVersion>0.3.2</ModVersion>
     <ModApiVersion>2</ModApiVersion>
+    <IncludeOniSim Condition="'$(IncludeOniSim)' == '' and '$(OS)' == 'Unix' and Exists('/proc/sys/kernel/ostype') and '$(NETCoreSdkRuntimeIdentifier)' == 'arch-x64'">true</IncludeOniSim>
+    <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">false</IncludeOniSim>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="PLib" Version="4.25.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="OniSim/**/*.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/OniSimLoader.cs" Link="OniSim/OniSimLoader.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/LinuxModule.cs" Link="OniSim/LinuxModule.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/MonoImageMapper.cs" Link="OniSim/MonoImageMapper.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/OfficialProfile.cs" Link="OniSim/OfficialProfile.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,6 +60,11 @@
   <ItemGroup>
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.png" Condition="Exists('$(MSBuildProjectDirectory)/preview.png')" />
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.jpg" Condition="Exists('$(MSBuildProjectDirectory)/preview.jpg')" />
+    <Content Include="$(MSBuildProjectDirectory)/THIRD_PARTY_NOTICES.txt" Condition="Exists('$(MSBuildProjectDirectory)/THIRD_PARTY_NOTICES.txt')">
+      <Link>THIRD_PARTY_NOTICES.txt</Link>
+      <TargetPath>THIRD_PARTY_NOTICES.txt</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <Target Name="GenerateModFiles" AfterTargets="Build">
@@ -60,7 +81,7 @@
 
   <Target Name="PackageMod" AfterTargets="GenerateModFiles">
     <PropertyGroup>
-      <DistPath>$(MSBuildProjectDirectory)/../../dist/</DistPath>
+      <DistPath Condition="'$(DistPath)' == ''">$(MSBuildProjectDirectory)/../../dist/</DistPath>
       <DistModPath>$(DistPath)$(AssemblyName)/</DistModPath>
       <ZipFile>$(DistPath)$(AssemblyName).zip</ZipFile>
     </PropertyGroup>
@@ -69,23 +90,50 @@
     <RemoveDir Directories="$(DistModPath)" />
     <Delete Files="$(ZipFile)" />
     <Delete Files="$(DistPath)$(AssemblyName)-src.tar.gz" />
+    <Delete Files="$(DistPath)delivery-validation.json" />
+    <Delete Files="$(DistPath)source-build-validation.json" />
 
     <ItemGroup>
       <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
       <ModOutputFiles Include="$(OutputPath)mod.yaml" />
       <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
+      <ModOutputFiles Include="$(OutputPath)THIRD_PARTY_NOTICES.txt" Condition="Exists('$(OutputPath)THIRD_PARTY_NOTICES.txt')" />
       <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />
       <ModOutputFiles Include="$(OutputPath)preview.jpg" Condition="Exists('$(OutputPath)preview.jpg')" />
       <ModOutputFiles Include="$(OutputPath)README.md" />
+      <ModOutputFiles Include="$(MSBuildProjectDirectory)/../../LICENSE;$(MSBuildProjectDirectory)/../../LICENSE.MIT;$(MSBuildProjectDirectory)/../../LICENSING.md;$(MSBuildProjectDirectory)/../../UPSTREAM.toml" />
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-zh.md" Condition="Exists('$(OutputPath)docs/steam-description-zh.md')" />
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+    <MakeDir Directories="$(DistModPath)OniSim" Condition="Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
+    <Copy SourceFiles="$(OutputPath)OniSim/liboni_sim_core.so" DestinationFiles="$(DistModPath)OniSim/liboni_sim_core.so" Condition="Exists('$(OutputPath)OniSim/liboni_sim_core.so')" />
+    <ItemGroup>
+      <OniSimValidation Include="$(MSBuildProjectDirectory)/OniSim/PARALLEL-VALIDATION.md;$(MSBuildProjectDirectory)/OniSim/RUNTIME-VALIDATION.md;$(MSBuildProjectDirectory)/OniSim/PROGRESS.md;$(MSBuildProjectDirectory)/OniSim/PERFORMANCE.md" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OniSimValidation)" DestinationFolder="$(DistModPath)OniSim" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
+    <MakeDir Directories="$(DistModPath)OniSim/conformance/results" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/OniSim/conformance/README.md" DestinationFolder="$(DistModPath)OniSim/conformance" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
+    <ItemGroup>
+      <OniSimConformanceReceipts Include="$(MSBuildProjectDirectory)/OniSim/conformance/results/*.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OniSimConformanceReceipts)" DestinationFolder="$(DistModPath)OniSim/conformance/results" Condition="Exists('$(DistModPath)OniSim/liboni_sim_core.so')" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/CycleTrim LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml" />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
+  </Target>
+
+  <Target Name="BuildOniSimNative" BeforeTargets="PackageMod" Condition="'$(IncludeOniSim)' == 'true'">
+    <Error Condition="'$(OS)' != 'Unix' Or !Exists('/proc/sys/kernel/ostype') Or '$(NETCoreSdkRuntimeIdentifier)' != 'arch-x64'" Text="OniSim bundling currently requires Linux x86_64." />
+    <PropertyGroup>
+      <OniSimCargoManifest>$(MSBuildProjectDirectory)/OniSim/native/Cargo.toml</OniSimCargoManifest>
+      <OniSimCargoTargetDir>$(MSBuildProjectDirectory)/obj/$(Configuration)/OniSimNative</OniSimCargoTargetDir>
+    </PropertyGroup>
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/OniSim" EnvironmentVariables="RUSTC_WRAPPER=;RUSTC_WORKSPACE_WRAPPER=" Command="cargo build --locked --release --manifest-path &quot;$(OniSimCargoManifest)&quot; --target-dir &quot;$(OniSimCargoTargetDir)&quot;" />
+    <MakeDir Directories="$(OutputPath)OniSim" />
+    <Copy SourceFiles="$(OniSimCargoTargetDir)/release/liboni_sim_core.so" DestinationFiles="$(OutputPath)OniSim/liboni_sim_core.so" />
   </Target>
 
 </Project>

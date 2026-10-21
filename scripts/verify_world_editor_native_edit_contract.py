@@ -46,8 +46,9 @@ def main() -> int:
     assert "BuildingControlTools.ControlBuilding().Handler" not in preflight_build
     parser = method_body(edits, "private static bool TryApplyInfrastructurePlan")
     for required in ("Regex.IsMatch", "Regex.Matches", "points.Count < 2", "PrefabForConnectionMap(relative)",
-                     'args["points"] = points', 'args["nativePathPlacement"] = true'):
+                     'args["points"] = points'):
         assert required in parser
+    assert 'args["nativePathPlacement"]' not in parser
     assert 'var points = ParsePathPoints(args["points"])' in auto_connect
     assert 'args["plan"]' not in method_body(auto_connect, "private static List<CellCoord> ResolveUtilityPath")
     assert "This file builds LogicWire" in reads

@@ -44,6 +44,21 @@ internal static class Program
         TestSweepEligibilityPolicy();
         TestBackwallSupportPolicy();
         TestGameSpeedPauseOwnership();
+        LoadScreenMigrationRegression.Run();
+        StepConditionRegression.Run();
+        StepResearchCompletionRegression.Run();
+        CameraNavigationRegression.Run();
+        StepPrintingPodRegression.Run();
+        UtilityPathPlacementRegression.Run();
+        ExistingFootprintRegression.Run();
+        RequestedPlacementRegression.Run();
+        ConstructionReadinessRegression.Run();
+        ConstructionRecipeAdapterRegression.Run();
+        DeferredBuildPolicyRegression.Run();
+        StepDeferredOrderRegression.Run();
+        ObservedTaskRankingRegression.Run();
+        StepUntilResultCacheRegression.Run();
+        DuplicantNeedStateRegression.Run();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
@@ -279,11 +294,22 @@ internal static class Program
             "set_speed must not drain an unrelated ONI pause reference");
         Check((bool)Body(changed)["isPaused"], "set_speed result must report the remaining external pause");
 
+        var nativeSpeedChange = new SpeedControlScreen();
+        SpeedControlScreen.Instance = nativeSpeedChange;
+        nativeSpeedChange.Pause(playSound: false);
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'set_speed',speed:2}"));
+        Check(nativeSpeedChange.PauseCount == 1 && nativeSpeedChange.IsPaused,
+            "set_speed without an MCP lease must not release a native pause");
+
         var externalOnly = new SpeedControlScreen();
         SpeedControlScreen.Instance = externalOnly;
         externalOnly.Pause();
+        var externalResume = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(!externalResume.IsError && externalOnly.PauseCount == 0 && !externalOnly.IsPaused,
+            "resume without an MCP lease must release one native ONI pause reference");
+        Check(!(bool)Body(externalResume)["isPaused"], "native resume result must report the game as running");
         GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
-        Check(externalOnly.PauseCount == 1, "resume without an MCP lease must preserve an external pause");
+        Check(externalOnly.PauseCount == 0, "repeated resume after native pause release must remain a no-op");
 
         var previousScreen = new SpeedControlScreen();
         SpeedControlScreen.Instance = previousScreen;

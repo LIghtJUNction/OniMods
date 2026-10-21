@@ -1,0 +1,3 @@
+title: "CycleTrim Texture Probe"
+description: "Explicit test-only native, Unity CPU and GPU texture comparison."
+staticID: "LIghtJUNction.CycleTrim.TextureProbe"

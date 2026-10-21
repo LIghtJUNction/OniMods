@@ -51,6 +51,12 @@ namespace OniMcp.Config
         [Option("Disable auto disinfect globally", "Keep ONI's global auto disinfect setting disabled when the mod applies this policy.", "Gameplay")]
         public bool GlobalAutoDisinfectDisabled { get; set; } = true;
 
+        [Option("Automatically dismiss tutorial notifications", "Clear native Tutorial notifications and messages created from TutorialMessage. Other message types and notifications are left alone.", "Gameplay")]
+        public bool AutoDismissTutorialNotifications { get; set; } = true;
+
+        [Option("Tool text format", "Encode JSON-shaped tool content as TOON to reduce tokens, or keep JSON. MCP protocol messages remain JSON.", "Server")]
+        public string ToolTextFormat { get; set; } = "toon";
+
         [Option("Clean up screenshots", "Automatically remove old temporary screenshots created by MCP tools.", "Screenshots")]
         public bool ScreenshotCleanupEnabled { get; set; } = true;
 
@@ -326,6 +332,9 @@ namespace OniMcp.Config
 
             options.ScreenshotRetentionMinutes = Clamp(options.ScreenshotRetentionMinutes, 1, 10080);
             options.ScreenshotMaxFiles = Clamp(options.ScreenshotMaxFiles, 1, 1000);
+            options.ToolTextFormat = string.Equals(options.ToolTextFormat, "json", StringComparison.OrdinalIgnoreCase)
+                ? "json"
+                : "toon";
             return options;
         }
 

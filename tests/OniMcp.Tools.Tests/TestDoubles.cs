@@ -164,8 +164,11 @@ internal static class Assets
     internal static BuildingDef GetBuildingDef(string id) => BuildingDefs.Find(def => def.PrefabID == id);
 }
 internal sealed class TestBuildingDef : BuildingDef { }
-internal class BuildingDef
+internal partial class BuildingDef
 {
     public string PrefabID { get; set; }
     public string Name { get; set; }
+    public float[] Mass { get; set; }
+    public string[] MaterialCategory { get; set; }
+    public float MassTier { get; set; }
 }

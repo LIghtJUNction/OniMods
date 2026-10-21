@@ -8,7 +8,7 @@ import urllib.request
 
 from loopback_http import open_url
 
-URL = "http://localhost:8788/mcp/"
+URL = "http://127.0.0.1:8788/mcp/"
 PROTOCOL = "2025-11-25"
 MODERN_PROTOCOL = "2026-07-28"
 MODERN_SAFE_TOOLS = {"benchmark"}

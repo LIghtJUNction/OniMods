@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
+using System.Text;
 using Newtonsoft.Json.Linq;
 using OniMcp.Config;
 using OniMcp.Server;
@@ -17,7 +20,6 @@ internal static class ModernSkillHttpRegression
         string discover = Request("server/discover", modernMeta, null);
         string list = Request("skills/list", modernMeta, null);
         string get = Request("skills/get", modernMeta, new JObject { ["uri"] = skillUri });
-        string read = Request("resources/read", modernMeta, new JObject { ["uri"] = skillUri });
         string resourceList = Request("resources/list", modernMeta, null);
         var previous = OniMcpOptions.Current;
         try
@@ -26,6 +28,26 @@ internal static class ModernSkillHttpRegression
                 Require(off.StatusCode == HttpStatusCode.NotFound
                     && (int)Parse(off)["error"]["code"] == -32601,
                     "disabled Skills surface must be unavailable");
+            using (var off = post(get, "skills/get", null))
+                Require(off.StatusCode == HttpStatusCode.NotFound
+                    && (int)Parse(off)["error"]["code"] == -32601,
+                    "disabled direct skill lookup must be unavailable");
+            using (var off = post(resourceList, "resources/list", null))
+                Require(!((JArray)Parse(off)["result"]["resources"])
+                    .Any(item => OniMcpSkillCatalog.IsKnownResource((string)item["uri"])),
+                    "disabled skill resources must not be listed");
+            foreach (JObject resource in (JArray)OniMcpSkillCatalog.GetSkill()["resources"])
+            {
+                string uri = (string)resource["uri"];
+                using (var off = post(Request("resources/read", modernMeta,
+                           new JObject { ["uri"] = uri }), "resources/read", uri))
+                {
+                    var payload = Parse(off);
+                    Require(off.StatusCode == HttpStatusCode.OK && payload["result"] == null
+                        && (int)payload["error"]["code"] == -32602,
+                        "disabled direct skill resource read must fail: " + uri);
+                }
+            }
             using (var off = post(discover, "server/discover", null))
                 Require(Parse(off)["result"]["capabilities"]["extensions"] == null,
                     "disabled Skills capability must not be advertised");
@@ -62,8 +84,9 @@ internal static class ModernSkillHttpRegression
             using (var response = post(resourceList, "resources/list", null))
             {
                 var resources = (JArray)Parse(response)["result"]["resources"];
-                Require(resources.Any(item => (string)item["uri"] == skillUri),
-                    "skills manifest files must be listed by resources/list");
+                Require(((JArray)listed["resources"]).All(item =>
+                    resources.Count(resource => (string)resource["uri"] == (string)item["uri"]) == 1),
+                    "every skills manifest file must be listed exactly once by resources/list");
             }
 
             foreach (JObject resource in (JArray)listed["resources"])
@@ -85,6 +108,8 @@ internal static class ModernSkillHttpRegression
             {
                 "skill://oni-mcp-control/%2e%2e/private.md",
                 "skill://oni-mcp-control/../private.md",
+                "skill://oni-mcp-control/docs/../docs/gameplay-task-feedback.md",
+                "skill://oni-mcp-control/docs/architecture-and-principles.md",
                 "skill://other/SKILL.md"
             })
             {
@@ -97,10 +122,111 @@ internal static class ModernSkillHttpRegression
                     Require(Parse(response)["error"] != null,
                         "unknown skills resource must not escape the allowlist");
             }
+
+            VerifyAuthentication(modernMeta);
         }
         finally
         {
             OniMcpOptions.Save(previous);
+        }
+    }
+
+    internal static void VerifySettingsPost(HttpClient client, int port)
+    {
+        var previous = OniMcpOptions.Current;
+        try
+        {
+            foreach (bool enabled in new[] { false, true })
+            {
+                var current = new OniMcpOptions { Port = port, ScreenshotRetentionMinutes = 30, ScreenshotMaxFiles = 10 };
+                if (enabled) current.SkillsExtensionEnabled = true;
+                OniMcpOptions.Save(current);
+                using (var form = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["host"] = "127.0.0.1", ["port"] = port.ToString(),
+                    ["screenshotRetentionMinutes"] = "60", ["screenshotMaxFiles"] = "20"
+                }))
+                using (var response = client.PostAsync("/settings/", form).GetAwaiter().GetResult())
+                {
+                    Require(response.StatusCode == HttpStatusCode.OK
+                        && response.Content.ReadAsStringAsync().GetAwaiter().GetResult().Contains("Settings saved."),
+                        "the production settings POST must accept the unrelated form changes");
+                    Require(!ReferenceEquals(OniMcpOptions.Current, current)
+                        && OniMcpOptions.Current.ScreenshotRetentionMinutes == 60
+                        && OniMcpOptions.Current.ScreenshotMaxFiles == 20,
+                        "the production settings POST must save the changed settings");
+                    Require(OniMcpOptions.Current.SkillsExtensionEnabled == enabled,
+                        "settings save must preserve SkillsExtensionEnabled=" + enabled);
+                }
+            }
+        }
+        finally
+        {
+            OniMcpOptions.Save(previous);
+        }
+    }
+
+    private static void VerifyAuthentication(string modernMeta)
+    {
+        // Start through the production listener so its captured auth options match Current.
+        var reservation = new TcpListener(IPAddress.Loopback, 0);
+        reservation.Start();
+        int port = ((IPEndPoint)reservation.LocalEndpoint).Port;
+        reservation.Stop();
+        var previous = OniMcpOptions.Current;
+        var options = new OniMcpOptions
+        {
+            Port = port, SkillsExtensionEnabled = true,
+            AuthEnabled = true, AuthToken = "skills-regression-token"
+        };
+        OniMcpOptions.Save(options);
+        var server = new McpHttpServer();
+        try
+        {
+            server.StartServer();
+            using (var client = new HttpClient
+            {
+                BaseAddress = new Uri(options.EndpointUrl), Timeout = TimeSpan.FromSeconds(5)
+            })
+            {
+                VerifyAccess(client, modernMeta, "skills/list", null);
+                VerifyAccess(client, modernMeta, "skills/get", OniMcpSkillCatalog.SkillUri);
+                VerifyAccess(client, modernMeta, "resources/list", null);
+                foreach (JObject resource in (JArray)OniMcpSkillCatalog.GetSkill()["resources"])
+                    VerifyAccess(client, modernMeta, "resources/read", (string)resource["uri"]);
+            }
+        }
+        finally
+        {
+            server.StopServer();
+            OniMcpOptions.Save(previous);
+        }
+    }
+
+    private static void VerifyAccess(HttpClient client, string modernMeta, string method, string uri)
+    {
+        foreach (string token in new[] { null, "wrong-regression-token", "skills-regression-token" })
+        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+        {
+            request.Content = new StringContent(Request(method, modernMeta,
+                uri == null ? null : new JObject { ["uri"] = uri }), Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+            request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
+            request.Headers.Add("Mcp-Method", method);
+            if (method == "resources/read") request.Headers.Add("Mcp-Name", uri);
+            if (token != null) request.Headers.Add("Authorization", "Bearer " + token);
+            using (var response = client.SendAsync(request).GetAwaiter().GetResult())
+            {
+                bool authorized = token == "skills-regression-token";
+                var payload = Parse(response);
+                Require(response.StatusCode == (authorized ? HttpStatusCode.OK : HttpStatusCode.Unauthorized)
+                    && (authorized ? payload["result"] != null : payload["result"] == null && payload["error"] != null),
+                    method + " must enforce the same HTTP authentication gate as skill resource reads");
+                if (authorized && method == "resources/read")
+                    Require((string)payload["result"]["contents"][0]["text"]
+                        == (string)OniMcpSkillCatalog.Read(uri)["contents"][0]["text"],
+                        "authorized reads must return the exact packaged resource bytes");
+            }
         }
     }
 

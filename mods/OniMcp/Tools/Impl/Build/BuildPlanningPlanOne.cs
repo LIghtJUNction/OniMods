@@ -225,7 +225,8 @@ namespace OniMcp.Tools
             anchor["coordMode"] = "relative";
         }
 
-        private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args, HashSet<int> plannedSupportCells = null, AutoDigContext autoDigContext = null)
+        private static Dictionary<string, object> TryPlanOne(string prefabId, int x, int y, JObject args,
+            HashSet<int> plannedSupportCells = null, AutoDigContext autoDigContext = null, string deferredBuildId = null)
         {
             if (!ToolUtil.GetBool(args, "dryRun", false) && Game.Instance != null && Game.Instance.SandboxModeActive)
                 return ErrorResult(prefabId, x, y, "Exit sandbox mode before issuing normal gameplay build orders.");
@@ -287,7 +288,7 @@ int cell = Grid.XYToCell(x, y);
             if (!facadeResult.Valid)
                 return ErrorResult(prefabId, x, y, facadeResult.Error);
 
-            var supportResult = ValidateSupport(def, x, y, ToolUtil.GetBool(args, "allowUnsupported", false), plannedSupportCells);
+            var supportResult = ValidateSupport(def, x, y, ToolUtil.GetBool(args, "allowUnsupported", false), plannedSupportCells, orientation);
             if (!supportResult.Valid)
                 return ErrorResult(prefabId, x, y, supportResult.Error, supportResult.ToDictionary());
 
@@ -373,6 +374,13 @@ int cell = Grid.XYToCell(x, y);
                 };
             }
 
+            // A native dig order cannot clear a solid footprint synchronously. Do not let
+            // TryPlaceRequestedBuilding overlap or replace its DigPlacer; resume from the
+            // bounded deferred queue only after the recorded native errands clear the cells.
+            if (autoDig != null && HasPendingAutoDigOrders(autoDig))
+                return DeferBuildAfterAutoDig(prefabId, x, y, args, placement, autoDig,
+                    materialResult.ToDictionary(), deferredBuildId);
+
             var executionExistingBuild = ExistingMatchingBuildAtPlacement(def, placement);
             if (executionExistingBuild != null)
             {
@@ -401,10 +409,9 @@ int cell = Grid.XYToCell(x, y);
             }
 
             Dictionary<string, object> fallbackPlacement = null;
-            var pos = BuildPlacementPosition(cell, def);
-            var go = def.TryPlace(null, pos, orientation, materialResult.Elements, facadeResult.TryPlaceId);
-            if (go == null && autoDig != null)
-                go = TryPlaceWithBuildTool(def, cell, orientation, materialResult.Elements,
+            var go = TryPlaceRequestedBuilding(def, placement, materialResult.Elements, facadeResult.TryPlaceId);
+            if (go == null && autoDig != null && !IsLinearUtilityPrefab(prefabId))
+                go = TryPlaceWithBuildTool(def, Grid.PosToCell(placement.PlacementPoint), orientation, materialResult.Elements,
                     facadeResult.ResponseId, placement, args, out fallbackPlacement);
             if (go == null)
             {

@@ -1,0 +1,146 @@
+{
+  "schema": 1,
+  "variant": "phase-barriers-v2",
+  "complete": true,
+  "scope": "96x96 native frame fixtures, not whole-game FPS",
+  "official_baseline_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "native_sha256": "9cddf6640a22a61f28d1026bdb5713b376cc46f62dd0e41f365bb6fc83ee49ff",
+  "passed_predeclared_official_comparison": false,
+  "gates": {
+    "maximum_scene_cpu_regression_3_percent": false,
+    "at_least_one_scene_cpu_reduction_10_percent": true
+  },
+  "samples": 96,
+  "final_publications_match_official": true,
+  "major_faults": 0,
+  "raw_report_sha256": "8c40cb74be557a70ec1626b1545ea4f9af616321edc052db2654fa508b588820",
+  "scenes": {
+    "fluid": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.4444066415,
+          "minimum": 0.42517887200000004,
+          "maximum": 0.45708022400000003
+        },
+        "candidate": {
+          "median": 0.4689133515,
+          "minimum": 0.450919925,
+          "maximum": 0.49467402099999996
+        },
+        "median_speedup": 0.9477372313635218
+      },
+      "cpu_change_percent": 5.514478792954769,
+      "peak_rss_kib": {
+        "baseline": 38734.0,
+        "candidate": 33276.0
+      },
+      "peak_rss_change_percent": -14.090979501213408
+    },
+    "thermal": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.165660994,
+          "minimum": 0.15742089899999998,
+          "maximum": 0.17323967299999998
+        },
+        "candidate": {
+          "median": 0.1879359755,
+          "minimum": 0.17776507300000002,
+          "maximum": 0.210527239
+        },
+        "median_speedup": 0.8814756917043806
+      },
+      "cpu_change_percent": 13.446123292004387,
+      "peak_rss_kib": {
+        "baseline": 36634.0,
+        "candidate": 33274.0
+      },
+      "peak_rss_change_percent": -9.171807610416549
+    },
+    "sealed": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.43842768499999996,
+          "minimum": 0.43652044199999995,
+          "maximum": 0.47728560700000006
+        },
+        "candidate": {
+          "median": 0.4303375805,
+          "minimum": 0.42016384900000003,
+          "maximum": 0.442079864
+        },
+        "median_speedup": 1.0187994376196479
+      },
+      "cpu_change_percent": -1.8452540240473159,
+      "peak_rss_kib": {
+        "baseline": 39264.0,
+        "candidate": 33204.0
+      },
+      "peak_rss_change_percent": -15.433985330073352
+    },
+    "germ_flow": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.573908368,
+          "minimum": 0.563808257,
+          "maximum": 0.621247798
+        },
+        "candidate": {
+          "median": 0.593009208,
+          "minimum": 0.576281598,
+          "maximum": 0.607670269
+        },
+        "median_speedup": 0.9677899773859835
+      },
+      "cpu_change_percent": 3.3282037804334585,
+      "peak_rss_kib": {
+        "baseline": 38788.0,
+        "candidate": 33294.0
+      },
+      "peak_rss_change_percent": -14.164174486954728
+    },
+    "mixed_germs": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.6073744910000001,
+          "minimum": 0.59116496,
+          "maximum": 0.631874541
+        },
+        "candidate": {
+          "median": 0.6153943605000001,
+          "minimum": 0.607854833,
+          "maximum": 0.637153622
+        },
+        "median_speedup": 0.9869679184361001
+      },
+      "cpu_change_percent": 1.3204159244152303,
+      "peak_rss_kib": {
+        "baseline": 39418.0,
+        "candidate": 33220.0
+      },
+      "peak_rss_change_percent": -15.72378101375006
+    },
+    "vacuum": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.6008068835,
+          "minimum": 0.584476698,
+          "maximum": 0.6151864199999999
+        },
+        "candidate": {
+          "median": 0.3743110985,
+          "minimum": 0.362908881,
+          "maximum": 0.391012928
+        },
+        "median_speedup": 1.6051003721440549
+      },
+      "cpu_change_percent": -37.698600202539126,
+      "peak_rss_kib": {
+        "baseline": 83610.0,
+        "candidate": 33214.0
+      },
+      "peak_rss_change_percent": -60.27508671211578
+    }
+  },
+  "interpretation": "Improvement relative to an earlier Rust core does not establish superiority to the official library. Thermal, fluid and germ-flow CPU medians exceed the 3% native limit. Keep experimental/default-off; investigate actual thermal hotspot and whole-game bottlenecks. No whole-game FPS claim."
+}
