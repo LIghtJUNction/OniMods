@@ -264,7 +264,7 @@ curl -sS -X POST http://localhost:8788/mcp/ \
 }
 ```
 
-如果 `materials.satisfied=false`，客户端应向用户展示需求、可用材料和缺口，不应继续执行建造。
+先检查结果及 `materials.valid` 和 `reasonCode`；`valid=false` 时不要继续执行。`insufficient_material` 表示目标世界本地库存不足，`invalid_material_requirement` 表示无效或无法验证的原生配方，包括 NaN/Infinity；这些拒绝均返回 `materials.satisfied=false`。无效需求的 `requiredKg=null` 不是放行信号。随后检查 `materials.satisfied`：`false` 应展示需求、库存和已知缺口，`null` 表示材料可达性仍未知。
 
 ### 放置精确建造计划
 

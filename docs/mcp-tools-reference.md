@@ -119,7 +119,7 @@ operations and are not callable as MCP tools.
 }
 ```
 
-调用方应优先检查 `materials.satisfied`。如果为 `false`，向用户返回需要材料、可用材料和缺口，而不是继续下达蓝图。
+调用方应先检查结果及 `materials.valid` 和 `reasonCode`；`valid=false` 必须停止执行。`insufficient_material` 表示目标世界本地库存不足，`invalid_material_requirement` 表示配方缺失或无效（包括 NaN/Infinity），两者均返回 `materials.satisfied=false`。需求无效时 `requiredKg=null` 不代表可以执行。随后检查 `materials.satisfied`，为 `false` 时展示需求、可用材料和已知缺口；为 `null` 时材料可达性仍未证实。
 
 ### 线路和管路
 

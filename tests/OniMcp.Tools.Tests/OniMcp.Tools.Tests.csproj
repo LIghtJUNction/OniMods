@@ -50,6 +50,14 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialReader.cs" Link="Source/BuildPlanningExistingMaterialReader.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildMaterialSufficiencyPolicy.cs" Link="Source/BuildMaterialSufficiencyPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningMaterials.cs" Link="Source/BuildPlanningMaterials.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningMaterialSelection.cs" Link="Source/BuildPlanningMaterialSelection.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningMaterialStock.cs" Link="Source/BuildPlanningMaterialStock.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialValidation.cs" Link="Source/BuildPlanningExistingMaterialValidation.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingReuse.cs" Link="Source/BuildPlanningExistingReuse.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningUtilityMaterialPreflight.cs" Link="Source/BuildPlanningUtilityMaterialPreflight.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPowerConnect.cs" Link="Source/BuildPlanningPowerConnect.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlacementIdentityPolicy.cs" Link="Source/BuildPlacementIdentityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementCoordinates.cs" Link="Source/BuildPlanningPlacementCoordinates.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementModels.cs" Link="Source/BuildPlanningPlacementModels.cs" />

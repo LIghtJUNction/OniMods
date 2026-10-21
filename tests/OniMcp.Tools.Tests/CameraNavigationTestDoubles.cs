@@ -45,7 +45,8 @@ internal sealed class ClusterManager
 {
     internal static ClusterManager Instance { get; set; }
     internal int activeWorldId;
-    internal TestCameraWorld GetWorld(int id) => id == 0 ? new TestCameraWorld
+    internal readonly Dictionary<int, TestCameraWorld> Worlds = new Dictionary<int, TestCameraWorld>();
+    internal TestCameraWorld GetWorld(int id) => Worlds.TryGetValue(id, out var world) ? world : id == 0 ? new TestCameraWorld
     {
         minimumBounds = new Vector3(0f, 0f, 0f), maximumBounds = new Vector3(300f, 500f, 0f)
     } : null;
@@ -54,6 +55,7 @@ internal sealed class ClusterManager
 
 internal sealed class TestCameraWorld
 {
+    internal WorldInventory worldInventory { get; set; }
     internal int id { get; set; }
     internal bool IsDiscovered { get; set; }
     internal bool IsDupeVisited { get; set; }

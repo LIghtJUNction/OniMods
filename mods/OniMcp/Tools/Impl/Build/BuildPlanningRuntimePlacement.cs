@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -165,9 +166,11 @@ namespace OniMcp.Tools
                 existing.Add(found);
             }
 
+            var materials = existing.Select(ExistingMaterialTag).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             return new Dictionary<string, object>
             {
                 ["prefabId"] = def.PrefabID,
+                ["material"] = materials.Count == 1 ? materials[0] : null,
                 ["mode"] = "reuse_existing_same_utility_layer",
                 ["cells"] = existing,
                 ["note"] = "A matching wire/pipe already exists on this utility layer, so this cell is treated as connected instead of placing a duplicate blueprint."
@@ -191,6 +194,7 @@ namespace OniMcp.Tools
                     ["cell"] = cellInfo.Cell,
                     ["layer"] = layer.ToString(),
                     ["id"] = prefabId,
+                    ["material"] = ExistingConstructionMaterialTag(go),
                     ["name"] = ToolUtil.CleanName(go.GetProperName())
                 };
             }

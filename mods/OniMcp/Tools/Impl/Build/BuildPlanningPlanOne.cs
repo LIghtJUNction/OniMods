@@ -256,33 +256,22 @@ int cell = Grid.XYToCell(x, y);
 
             var orientation = ParseOrientation(args["orientation"]?.ToString());
             var earlyPlacement = BuildPlacementDetails(def, x, y, worldId, orientation);
-            var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);
-            if (earlyExistingBuild != null && ExistingMaterialRequestSatisfied(def, earlyExistingBuild, args["material"]?.ToString()))
+            var earlyReuse = TryReuseExistingPlacement(def, earlyPlacement, args["material"]?.ToString());
+            if (earlyReuse != null)
             {
                 RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
-                return new Dictionary<string, object>
-                {
-                    ["planned"] = false,
-                    ["blueprintPlaced"] = false,
-                    ["alreadyPresent"] = true,
-                    ["alreadyBlueprint"] = string.Equals(earlyExistingBuild["kind"]?.ToString(), "blueprint", StringComparison.OrdinalIgnoreCase),
-                    ["alreadyBuilding"] = string.Equals(earlyExistingBuild["kind"]?.ToString(), "building", StringComparison.OrdinalIgnoreCase),
-                    ["valid"] = true,
-                    ["prefabId"] = prefabId,
-                    ["name"] = ToolUtil.CleanName(def.Name),
-                    ["x"] = x,
-                    ["y"] = y,
-                    ["anchor"] = AnchorDictionary(x, y, worldId),
-                    ["worldId"] = worldId,
-                    ["placement"] = earlyPlacement.ToDictionary(),
-                    ["footprint"] = earlyPlacement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
-                    ["existing"] = earlyExistingBuild
-                };
+                return earlyReuse;
             }
             var materialResult = SelectElements(def, args["material"]?.ToString(), worldId);
             materialResult.RequiredKg = RequiredMaterialKg(def);
             if (!materialResult.Valid)
-                return ErrorResult(prefabId, x, y, materialResult.Error, materialResult.ToDictionary());
+            {
+                var materialDetails = materialResult.ToDictionary();
+                var rejection = ErrorResult(prefabId, x, y, materialResult.Error, materialDetails);
+                rejection["materialSelection"] = materialDetails;
+                rejection["materials"] = materialDetails;
+                return rejection;
+            }
 
             var facadeResult = ResolveFacade(def, args["facade"]?.ToString() ?? args["facadeId"]?.ToString());
             if (!facadeResult.Valid)
@@ -341,6 +330,10 @@ int cell = Grid.XYToCell(x, y);
             var existingUtility = ExistingMatchingUtilityAtPlacement(def, placement);
             if (existingUtility != null)
             {
+                var materialMismatch = ExistingMaterialMismatchResult(
+                    prefabId, x, y, existingUtility, materialResult, args["material"]?.ToString());
+                if (materialMismatch != null)
+                    return materialMismatch;
                 RegisterSupportBlueprint(prefabId, x, y, plannedSupportCells);
                 return ExistingPlacementResult(def, placement, existingUtility, utility: true);
             }
@@ -393,7 +386,13 @@ int cell = Grid.XYToCell(x, y);
 
             var executionExistingUtility = ExistingMatchingUtilityAtPlacement(def, placement);
             if (executionExistingUtility != null)
+            {
+                var materialMismatch = ExistingMaterialMismatchResult(
+                    prefabId, x, y, executionExistingUtility, materialResult, args["material"]?.ToString());
+                if (materialMismatch != null)
+                    return materialMismatch;
                 return ExistingPlacementResult(def, placement, executionExistingUtility, utility: true);
+            }
 
             var executionFootprintResult = ValidateFootprint(placement);
             if (HasUnsafeExecutionConflict(executionFootprintResult))

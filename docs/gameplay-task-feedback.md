@@ -23,7 +23,7 @@ and related-world inventory are not counted as reachable supply. On build previe
 inspect the returned top-level `materialSelection`, plus
 `constructionDiagnostics.material` and `constructionDiagnostics.workPosition`:
 
-- `materialSelection` reports `requirementKnown`, `requiredKg`,
+- `materialSelection` reports `valid`, `reasonCode`, `requirementKnown`, `requiredKg`,
   `localAvailabilityStatus`, `satisfied`, `shortageKg`, `recipeSlots[]`,
   `recipeUnknownReason`, and selected/candidate material details. Each recipe slot
   reports `index`, `category`, `material`, `requiredKg`, `reachableAvailableKg`,
@@ -33,9 +33,20 @@ inspect the returned top-level `materialSelection`, plus
 - Diagnostics material status is `sufficient`, `shortage`, or `unknown`. Unknown
   requirements, missing living navigators, or local stock whose fetchability was not
   verified keep the status unknown. Do not interpret null shortage as zero shortage.
-- `material=auto` is invalid when local reachable inventory cannot cover the recipe's
-  summed material slots. An explicitly selected material can still be placed with a
-  reported shortage; it does not prove construction can proceed.
+- Every new placement, including an explicit material request, requires enough
+  target-world local inventory for all native recipe slots. Repeated slots using the
+  same material share one stock pool. Related-world stock is context only. A shortage
+  returns `valid=false`, `reasonCode=insufficient_material`, and `satisfied=false`.
+  Invalid or unknown recipe demand (including NaN/Infinity) returns
+  `reasonCode=invalid_material_requirement`, `localAvailabilityStatus=invalid`, and
+  `satisfied=false`; a null `requiredKg` is not permission to build. Check `valid`
+  and `reasonCode` before interpreting readiness or shortage fields.
+- Matching existing buildings, blueprints and utility cells need no new mass and
+  remain reusable with empty inventory. Explicit material requests must match the
+  existing material. Utility auto-connect preflights the summed mass of all distinct
+  new cells before any blueprint, dig or uproot orders; reused cells do not add demand.
+  This check does not reserve stock or prove a duplicant can reach it. Reachability
+  diagnostics can still be unknown after the local quantity check passes.
 - Work-position status is `reachable`, `unreachable`, or `unknown`. It checks the
   current living navigators against approach cells around the complete footprint.
   It does not prove that a duplicant will choose the job or that future conditions
