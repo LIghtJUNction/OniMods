@@ -65,6 +65,22 @@ instructions in these two scenes. Prioritize its hotspots for larger gains.
 Counters do not override failed elapsed-time gates or establish whole-game FPS.
 Receipts are `conformance/results/linux-744825-disease-cleanup-{sse2,sse2-fastpaths,counters}.json`.
 
+A compact immutable element-property proposal `2390ab48…` targets serial phase
+and pressure lookups. It keeps raw flow words, checked indices and the original
+records; a shared-only record wrapper prevents stale derived properties. Four
+new tests include the full u16 index domain, state/float words, cloning,
+replacement and invalid indices. All 45 release tests and both complete
+263-case / 9571-publication comparisons pass. It is not adopted: 96x96 thermal
+CPU increases 7.45% and 192x192 vacuum increases 13.14%, failing the unchanged
+full-frame gates. All 156 exact samples and live-host dispersion are retained.
+The benchmark has six authored elements, not the full actual-game table. See
+`conformance/results/linux-744825-element-fluid-properties.json` and its public
+proposal. A separate 24-sample hardware diagnostic finds only 0.96% fluid and
+1.05% mixed-germ whole-process instruction reductions (physics reductions
+1.00% / 1.16%). The lookup removes little total work and is not the next large
+performance target. Counters do not override the failed timing gates. The
+canonical source remains unchanged.
+
 The dedicated OniSim CI now also runs the complete production native crate's
 Release unit tests without game files, alongside the emitter differential suite.
 This closes a coverage gap; official-library and actual-game runs remain local,

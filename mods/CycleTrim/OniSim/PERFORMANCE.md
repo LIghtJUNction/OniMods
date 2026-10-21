@@ -37,6 +37,33 @@ Actual-game headless, graphical, whole-game CPU/RAM and concurrent complete-game
 acceptance of the new canonical native remain pending. The main distribution
 ZIP and earlier runtime receipts are separate artifacts.
 
+## Compact serial element lookup experiment
+
+The isolated `2390ab48…` candidate stores phase and raw flow in an immutable
+8-byte entry per actual element, retaining the full original record. Both
+vectors live in one wrapper that exposes no mutable record access; index
+checks and eager invalid-destination rejection remain. Dynamic exports match.
+All 45 release tests and both 263-case / 9571-publication official comparisons
+pass, including the new full-u16-domain and raw-word tests. An independent
+build from commit 47e756e plus the public patch reproduces the exact measured
+native SHA-256.
+
+The fixed CPU/wall/RSS gates fail at both sizes. Eight alternating pairs per
+scene at 96x96 show thermal CPU +7.45%, wall +10.30%; five pairs at 192x192
+show vacuum CPU +13.14%, wall +13.49%. Other scenes improve, but these results
+do not support adoption. All 156 timed final states match official and have no
+timed major faults. Other host workloads remain running; every range and sample
+is retained. The six-element authored table is not an actual-game material-table
+measurement, and these timings establish no whole-game gain. The production
+source remains 8bd415ce. A separate 24-sample CPU-core PMU run counts all
+warmed threads: fluid instructions -0.96%, cycles +1.16%; mixed-germ instructions
+-1.05%, cycles -1.44%. Physics-thread instruction changes are -1.00% / -1.16%.
+This is a small reduction in total work, not a large serial bottleneck removal.
+Counter running/enabled remains at least 98%, all final states match official,
+and the diagnostic does not override failed timing gates. See the
+[proposal](conformance/proposals/element-fluid-properties.patch) and
+[receipt](conformance/results/linux-744825-element-fluid-properties.json).
+
 ## Cleanup vectorization and main-thread attribution
 
 Two private SSE2 cleanup variants pass 45 release tests and exact official
