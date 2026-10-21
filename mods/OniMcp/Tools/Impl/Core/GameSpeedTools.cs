@@ -188,6 +188,7 @@ namespace OniMcp.Tools
             if (speedControl == null)
                 return CallToolResult.Error("SpeedControlScreen not available");
 
+            CancelStepForSpeedCommand("set_speed");
             int internalSpeed = Math.Max(0, Math.Min(speed - 1, 2));
             switch (speed)
             {
@@ -218,7 +219,12 @@ namespace OniMcp.Tools
             if (Game.Instance == null)
                 return CallToolResult.Error("Game not initialized");
 
-            AcquireMcpPause(SpeedControlScreen.Instance);
+            var speedControl = SpeedControlScreen.Instance;
+            if (speedControl == null)
+                return CallToolResult.Error("SpeedControlScreen not available");
+
+            CancelStepForSpeedCommand("pause");
+            AcquireMcpPause(speedControl);
             return CallToolResult.Text("Game paused");
         }
 
@@ -231,6 +237,7 @@ namespace OniMcp.Tools
             if (speedControl == null)
                 return CallToolResult.Error("SpeedControlScreen not available");
 
+            CancelStepForSpeedCommand("resume");
             ReleaseMcpPause(speedControl, releaseNativePause: true);
             var result = new Dictionary<string, object>
             {

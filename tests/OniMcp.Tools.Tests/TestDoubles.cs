@@ -105,6 +105,7 @@ internal sealed class GameClock
 {
     internal static GameClock Instance { get; set; } = new GameClock();
     internal float GetCurrentCycleAsPercentage() => 0.5f;
+    internal float GetTime() => 0f;
 }
 
 internal sealed class SpeedControlScreen
