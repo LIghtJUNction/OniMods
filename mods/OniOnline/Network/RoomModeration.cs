@@ -17,8 +17,8 @@ namespace OniOnline.Network
         { Id = id; Name = name; Reason = reason; AccountVerified = verified; }
     }
 
-    // This room instance only. Account bans survive fresh Hello/resume credentials;
-    // LAN revocations can only recognize the credentials already seen in this room.
+    // Account hashes can be restored from the host colony. LAN revocations can
+    // only recognize credentials already seen in this room and are never saved.
     internal sealed class RoomModeration
     {
         internal const int Limit = 256;
@@ -26,18 +26,58 @@ namespace OniOnline.Network
         {
             internal string PlayerId;
             internal string SecretHash;
-            internal string Account;
+            internal string AccountHash;
+            internal string Account; // Live transport identity only; never serialized.
             internal bool Banned;
             internal RoomBan Entry;
         }
         private readonly List<Revocation> bans = new List<Revocation>();
         private readonly Queue<Revocation> kicks = new Queue<Revocation>();
+        private string scope = Guid.NewGuid().ToString("N");
         internal RoomBan[] Bans { get { return bans.Select(r => r.Entry).ToArray(); } }
+
+        internal void Restore(string homeSystemId, string payload, bool preserveCurrentAccounts = false)
+        {
+            var saved = RoomModerationPersistence.Decode(homeSystemId, payload);
+            var restored = bans.Where(r => r.AccountHash == null).ToList();
+            foreach (var record in saved)
+                restored.Add(new Revocation { Banned = true, AccountHash = record.AccountHash,
+                    Entry = new RoomBan(record.Id, record.Name, record.Reason, true) });
+            // A room can be opened before its first colony is generated. Keep bans
+            // made in that lobby when the native save becomes available.
+            if (preserveCurrentAccounts)
+                foreach (var current in bans.Where(r => r.AccountHash != null))
+                {
+                    if (current.Account == null) throw new InvalidOperationException("moderation_already_active");
+                    string hash = RoomModerationPersistence.AccountHash(homeSystemId, current.Account);
+                    if (restored.Any(r => r.AccountHash == hash)) continue;
+                    restored.Add(new Revocation { Banned = true, Account = current.Account, AccountHash = hash,
+                        PlayerId = current.PlayerId, SecretHash = current.SecretHash, Entry = current.Entry });
+                }
+            if (restored.Count > Limit || restored.Select(r => r.Entry.Id).Distinct().Count() != restored.Count)
+                throw new InvalidOperationException("moderation_state_invalid");
+            scope = homeSystemId;
+            bans.Clear(); bans.AddRange(restored);
+        }
+
+        internal RoomBan BanForAccount(string account)
+        {
+            string hash = RoomModerationPersistence.AccountHash(scope, account);
+            return hash == null ? null : bans.FirstOrDefault(r => Protocol.EqualProof(r.AccountHash, hash))?.Entry;
+        }
+
+        internal string Capture()
+        {
+            return RoomModerationPersistence.Encode(scope, bans.Where(r => r.AccountHash != null)
+                .Select(r => new SavedAccountBan { Id = r.Entry.Id, AccountHash = r.AccountHash,
+                    Name = r.Entry.Name, Reason = r.Entry.Reason }).ToArray());
+        }
 
         internal bool Revoke(string playerId, string name, string secret, string account, bool ban, string reason)
         {
             if (ban && bans.Count >= Limit) return false;
-            var record = new Revocation { PlayerId = playerId, SecretHash = Hash(secret), Account = account,
+            var record = new Revocation { PlayerId = playerId, SecretHash = Hash(secret),
+                Account = account, AccountHash = RoomModerationPersistence.AccountHash(scope, account),
                 Banned = ban, Entry = new RoomBan(Guid.NewGuid().ToString("N"), name, reason, account != null) };
             if (ban) bans.Add(record);
             else { if (kicks.Count == Limit) kicks.Dequeue(); kicks.Enqueue(record); }
@@ -47,10 +87,11 @@ namespace OniOnline.Network
         internal string Rejection(string playerId, string initialSecret, string account)
         {
             string hash = string.IsNullOrEmpty(initialSecret) ? null : Hash(initialSecret);
+            string accountHash = RoomModerationPersistence.AccountHash(scope, account);
             var record = bans.Concat(kicks).FirstOrDefault(r =>
                 (!string.IsNullOrEmpty(playerId) && r.PlayerId == playerId) ||
                 (hash != null && Protocol.EqualProof(r.SecretHash, hash)) ||
-                (r.Banned && account != null && r.Account == account));
+                (r.Banned && accountHash != null && Protocol.EqualProof(r.AccountHash, accountHash)));
             return record == null ? null : record.Banned ? "player_banned" : "player_kicked";
         }
 

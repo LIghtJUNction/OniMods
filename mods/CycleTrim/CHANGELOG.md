@@ -4,6 +4,13 @@ Generated from `git log -- mods/CycleTrim`.
 
 ## Unreleased
 
+- 0.3.3 source: retain the queued navigation stamp when a worker dequeues just
+  before the main thread advances its tick. Linked production-patch regressions
+  cover that interleaving and late callbacks after unregistering a navigator.
+- Store validated OniSim thermal commands inline and append energy batches
+  directly, removing per-command payload allocations while preserving ABI bytes
+  and processing order. The Release native suite passes 47 tests; whole-game and
+  four-worker performance acceptance remain separate.
 - Install Harmony patches once through the native mod loader. The previous extra
   `PatchAll` duplicated callbacks, probe samples and invalidation work, and tried
   to rewrite the already-rewritten path-probe queue limit.

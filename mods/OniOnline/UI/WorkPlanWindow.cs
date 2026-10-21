@@ -29,6 +29,7 @@ namespace OniOnline.UI
         {
             internal string Text;
             internal WorkTaskIntent Plan;
+            internal DupeCommandMove Move;
         }
         private sealed class PlanRow
         {
@@ -36,6 +37,7 @@ namespace OniOnline.UI
             internal TextMeshProUGUI Label;
             internal Button Cancel;
             internal WorkTaskIntent Plan;
+            internal DupeCommandMove Move;
         }
         private readonly List<PlanRow> planRows = new List<PlanRow>();
         private readonly Dictionary<string, string> cancellations = new Dictionary<string, string>();
@@ -142,6 +144,7 @@ namespace OniOnline.UI
                 .Select(p => new PlanLine { Plan = p, Text = Format(p.ActorId, p.Cell, p.Priority,
                     CancellationStatus(p) ?? T(p.Build != null && p.Historical && !p.HistoricalActive ? "work.unconfirmed" : "work.confirmed"), p.Build) }).ToList();
             if (!merged && actorId == runtime.Session.LocalPlayerId)
+            {
                 foreach (var draft in work.OwnDrafts(planetId))
                 {
                     var status = work.GetSubmission(draft.RequestId);
@@ -149,6 +152,9 @@ namespace OniOnline.UI
                     foreach (var cell in draft.Cells)
                         lines.Add(new PlanLine { Text = Format(actorId, cell, draft.Priority, Status(status), draft.Build) });
                 }
+                foreach (var move in runtime.Multiplayer.DupeCommands.GetMoves(ownerId, planetId))
+                    lines.Add(new PlanLine { Move = move, Text = FormatMove(move) });
+            }
             int pageCount = Math.Max(1, (lines.Count + PageSize - 1) / PageSize);
             page = Math.Min(page, pageCount - 1);
             pageLabel.text = (page + 1) + " / " + pageCount;
@@ -167,13 +173,16 @@ namespace OniOnline.UI
                     label.textWrappingMode = TextWrappingModes.Normal;
                     label.overflowMode = TextOverflowModes.Ellipsis;
                     var item = new PlanRow { Root = row.gameObject, Label = label };
-                    item.Cancel = OnlineWidgets.Button(row, T("work.cancel_plan"), () => CancelPlan(item.Plan), 120);
+                    item.Cancel = OnlineWidgets.Button(row, T("work.cancel_plan"), () => CancelRow(item), 120);
                     planRows.Add(item);
                 }
                 var view = planRows[index++];
-                view.Root.SetActive(true); view.Label.text = line.Text; view.Plan = line.Plan;
+                view.Root.SetActive(true); view.Label.text = line.Text; view.Plan = line.Plan; view.Move = line.Move;
                 bool ownPlan = !merged && actorId == runtime.Session.LocalPlayerId && line.Plan != null && line.Plan.ActorId == actorId;
-                view.Cancel.gameObject.SetActive(ownPlan);
+                bool ownMove = !merged && actorId == runtime.Session.LocalPlayerId && line.Move != null &&
+                    line.Move.Receipt != null && line.Move.Receipt.State == DupeCommandState.Active;
+                view.Cancel.gameObject.SetActive(ownPlan || ownMove);
+                view.Cancel.GetComponentInChildren<TextMeshProUGUI>().text = T(ownMove ? "dupe.cancel" : "work.cancel_plan");
                 if (ownPlan)
                 {
                     var grant = work.GetReceivedGrant(ownerId, planetId);
@@ -182,12 +191,55 @@ namespace OniOnline.UI
                         work.ExecutionError(ownerId, planetId) == null && !CancellationPending(line.Plan) &&
                         (ownerId == actorId || grant != null && (grant.Permissions & RemoteWorkPermission.IssueTasks) != 0);
                 }
+                else if (ownMove) view.Cancel.interactable = line.Move.CanCancel;
             }
             for (int i = index; i < planRows.Count; i++) planRows[i].Root.SetActive(false);
         }
 
         private static string PlanKey(WorkTaskIntent plan)
         { return plan.RequestId + ":" + plan.ConfirmedRevision + ":" + plan.Key; }
+
+        private void CancelRow(PlanRow row)
+        {
+            if (row.Move == null) { CancelPlan(row.Plan); return; }
+            if (runtime.Session == null || runtime.Multiplayer == null || merged ||
+                actorId != runtime.Session.LocalPlayerId) return;
+            // Recheck in the coordinator: a receipt or permission may have changed
+            // since this row was painted. A stale row never cancels a newer move.
+            if (runtime.Multiplayer.DupeCommands.CancelMove(row.Move.Request.RequestId) == null)
+            { stateLabel.text = T("work.unavailable"); return; }
+            Refresh();
+        }
+
+        private static string FormatMove(DupeCommandMove move)
+        {
+            var request = move.Request;
+            return string.Format(T("dupe.move"), request.DupeId, request.Target.X, request.Target.Y) + " · " + MoveStatus(move);
+        }
+
+        private static string MoveStatus(DupeCommandMove move)
+        {
+            var receipt = move.Receipt;
+            if (receipt == null || receipt.Pending) return T("work.pending");
+            switch (receipt.State)
+            {
+                case DupeCommandState.Completed: return T("dupe.completed");
+                case DupeCommandState.Cancelled: return T("work.cancelled");
+                case DupeCommandState.Replaced: return T("dupe.replaced");
+                case DupeCommandState.Revoked: return T("dupe.revoked");
+                case DupeCommandState.Disconnected: return T("dupe.disconnected");
+                case DupeCommandState.WorldChanged: return T("dupe.world_changed");
+            }
+            if (receipt.OutcomeUnknown) return T("work.unconfirmed");
+            if (receipt.State != DupeCommandState.Active) return T(receipt.Accepted ? "work.confirmed" : "work.rejected");
+            if (move.Cancellation != null)
+            {
+                if (move.Cancellation.Pending) return T("work.cancelling");
+                if (move.Cancellation.OutcomeUnknown) return T("work.unconfirmed");
+                if (!move.Cancellation.Accepted) return T("dupe.active") + " · " + T("work.cancel_rejected");
+            }
+            return T("dupe.active");
+        }
 
         private RemoteWorkReceipt CancellationReceipt(WorkTaskIntent plan)
         {

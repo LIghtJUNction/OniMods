@@ -19,6 +19,12 @@ namespace CycleTrim.BrainBenchmarks
                     return 0;
                 }
 
+                if (args.Length == 1 && args[0] == "--pathprobe-dequeue")
+                {
+                    RunAsyncPathProbeDequeueRegressions();
+                    return 0;
+                }
+
                 RunTest(
                     nameof(VanillaBudgetMatchesOneDupeAndFiveCreaturesPerRenderTick),
                     VanillaBudgetMatchesOneDupeAndFiveCreaturesPerRenderTick);
@@ -113,6 +119,7 @@ namespace CycleTrim.BrainBenchmarks
                     nameof(CreatureSchedulerPreservesPriorityUntilAllowanceArrives),
                     CreatureSchedulerPreservesPriorityUntilAllowanceArrives);
                 RunTest(nameof(BusyConsumersKeepIdentityEligibility), BusyConsumersKeepIdentityEligibility);
+                RunAsyncPathProbeDequeueRegressions();
                 RunPathProbeRegressionTests();
                 return 0;
             }

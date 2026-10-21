@@ -1,8 +1,27 @@
 # OniSim status (2026-10-21)
 
-## Current source recheck at adc4b2e
+## Current source: inline thermal command queue
 
-The unchanged production native source tree
+The production thermal command queue now stores each validated fixed-size ABI
+payload inline in a 48-byte queue entry. Its 14 supported message types need at
+most 44 payload bytes. Individual commands no longer allocate a separate payload
+`Vec`, and energy batches reserve once and append directly without a temporary
+batch vector. The queue still owns copied bytes; caller buffer reuse cannot alter
+pending commands. Processing preserves type rank, arrival order within a type,
+the backwall boundary and the exact original message bytes, including float bit
+patterns.
+
+All **47 Release Rust tests pass**, including four new checks for owned payloads,
+ordering, batch ingestion and bounded rejection. This is a source-level allocation
+reduction. No whole-game FPS, RSS or one/four-worker speedup is claimed; short
+payloads can use more inline storage than their previous bare queue record. The
+four-worker overall performance gate remains open. No game was launched for this
+iteration, and the older binary hashes and runtime receipts below do not validate
+this changed native source.
+
+## Previous source recheck at adc4b2e
+
+The then-current production native source tree
 `78a3a96032d063b196a52226fcdd9dcb0ab76564` rebuilds with Rust 1.99.1 as
 `55d5a236ccf6ac311d05a63898e34faceff686495ac372d1f6c9ccd785a62fd9`.
 All 43 Release Rust tests and 57 game-free Python tests pass. Fresh runs against

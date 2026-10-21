@@ -126,7 +126,7 @@ namespace OniOnline
             public string assemblySha256;
         }
 
-        private sealed class FixtureDupeExecutor : IDupeCommandExecutor
+        private sealed class FixtureDupeExecutor : IDupeCommandExecutor, IDupeCommandLifecycle
         {
             private readonly NativeDupeCommandExecutor native = new NativeDupeCommandExecutor(true);
             internal int Calls;
@@ -139,6 +139,10 @@ namespace OniOnline
             }
             public WorkExecution Execute(WorkPlanet planet, DupeMoveRequest request)
             { Calls++; return native.Execute(planet, request); }
+            public DupeCommandState GetState(WorkPlanet planet, DupeMoveRequest request)
+            { return native.GetState(planet, request); }
+            public WorkExecution Cancel(WorkPlanet planet, DupeMoveRequest request)
+            { return native.Cancel(planet, request); }
         }
 
         [Serializable] private sealed class NativeWorkFixture

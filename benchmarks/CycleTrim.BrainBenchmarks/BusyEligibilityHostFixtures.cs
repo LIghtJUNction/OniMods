@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 
 internal class ComponentFixture
 {
@@ -40,7 +41,7 @@ internal sealed class NavGrid { }
 internal sealed class ScheduleBlock { }
 internal sealed class BrainScheduler { }
 
-internal sealed class Navigator
+internal sealed partial class Navigator
 {
     internal NavGrid NavGrid { get; set; }
     internal int CurrentNavType { get; set; }
@@ -105,7 +106,11 @@ namespace CycleTrim.Patches
 namespace HarmonyLib
 {
     [AttributeUsage(AttributeTargets.Class)]
-    internal sealed class HarmonyPatch : Attribute { }
+    internal sealed class HarmonyPatch : Attribute
+    {
+        internal HarmonyPatch() { }
+        internal HarmonyPatch(Type type, string methodName) { }
+    }
 
     internal static class AccessTools
     {
@@ -113,20 +118,26 @@ namespace HarmonyLib
 
         internal static FieldRef<TInstance, TField> FieldRefAccess<TInstance, TField>(string name)
         {
-            if (typeof(TInstance) != typeof(Brain) || typeof(TField) != typeof(ChoreConsumer)
-                || name != "choreConsumer")
-            {
+            var field = typeof(TInstance).GetField(name,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field == null || field.FieldType != typeof(TField))
                 throw new InvalidOperationException("Unexpected host field reference: " + name);
-            }
-            FieldRef<Brain, ChoreConsumer> accessor = (Brain brain) => ref brain.choreConsumer;
-            return (FieldRef<TInstance, TField>)(object)accessor;
+            var getter = new DynamicMethod("HostField_" + name, typeof(TField).MakeByRefType(),
+                new[] { typeof(TInstance) }, typeof(AccessTools).Module, true);
+            var il = getter.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldflda, field);
+            il.Emit(OpCodes.Ret);
+            return (FieldRef<TInstance, TField>)getter.CreateDelegate(typeof(FieldRef<TInstance, TField>));
         }
 
         internal static Type TypeByName(string name) { return null; }
 
-        internal static MethodInfo Method(Type type, string name, Type[] parameters)
+        internal static MethodInfo Method(Type type, string name, Type[] parameters = null)
         {
-            return type.GetMethod(name, parameters);
+            return parameters == null
+                ? type.GetMethod(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                : type.GetMethod(name, parameters);
         }
     }
 }

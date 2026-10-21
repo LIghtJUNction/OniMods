@@ -52,6 +52,7 @@ namespace OniOnline.Runtime
         private bool hostedPassword;
         private bool openMapAfterStart;
         private OnlineColonyState lastColony;
+        private OnlineColonyState moderationColony;
         private string lastColonyHomeId;
         private string lastColonyPlanetId;
         private StarSystemMapWindow systemMapWindow;
@@ -234,6 +235,8 @@ namespace OniOnline.Runtime
                 var profile = Profile();
                 if (!Protocol.ValidText(RoomName, 64)) throw new ArgumentException("invalid_room_name");
                 if (Password.Length > 128) throw new ArgumentException("password_too_long");
+                var colony = OnlineColonyState.Current;
+                if (colony != null) RoomModerationPersistence.Decode(colony.HomeSystemId, colony.SavedAccountBans);
                 if (UseSteam)
                 {
                     pendingProfile = profile; pendingPassword = Password;
@@ -275,17 +278,45 @@ namespace OniOnline.Runtime
 
         private void Attach(IRoomTransport transport, SessionProfile profile, string password, string code)
         {
-            try { Session = new RoomSession(transport, profile, password, RoomName); }
-            catch { transport.Dispose(); throw; }
+            RoomSession next = null;
+            WorldCoordinator worlds;
+            OnlineColonyState boundColony = null;
+            try
+            {
+                next = new RoomSession(transport, profile, password, RoomName);
+                boundColony = next.IsHost ? OnlineColonyState.Current : null;
+                if (boundColony != null) BindModeration(next, boundColony, false);
+                worlds = new WorldCoordinator(next);
+            }
+            catch
+            {
+                var cleanup = new RoomCleanup();
+                if (next == null) cleanup.Dispose("attach_transport", transport);
+                else cleanup.Dispose("attach_session", next);
+                ReportCleanup(cleanup);
+                throw;
+            }
+            Session = next;
+            moderationColony = boundColony;
             RoomCode = code;
             Error = null;
             ErrorDetail = null;
-            Multiplayer = new WorldCoordinator(Session);
+            Multiplayer = worlds;
             Multiplayer.Changed += () => Revision++;
             Session.Changed += () => { Revision++; Advertise(); };
             Session.GameStartRequested += () => { if (Session?.IsHost == true) BeginNativeGame(); };
             Revision++;
             Advertise();
+        }
+
+        private static void BindModeration(RoomSession session, OnlineColonyState colony, bool reload)
+        {
+            System.Action<string> save = payload => {
+                if (colony == null) throw new InvalidOperationException("moderation_save_failed");
+                colony.StoreAccountBans(payload);
+            };
+            if (reload) session.LoadModeration(colony.HomeSystemId, colony.SavedAccountBans, save);
+            else session.BindModeration(colony.HomeSystemId, colony.SavedAccountBans, save);
         }
 
         private SteamRoomDirectory SteamDirectory()
@@ -333,6 +364,7 @@ namespace OniOnline.Runtime
             // and a reentrant Leave must never dispose the same connection twice.
             var oldMultiplayer = Multiplayer; Multiplayer = null;
             var oldSession = Session; Session = null;
+            moderationColony = null;
             var oldAdvertiser = advertiser; advertiser = null;
             var oldScanner = scanner; scanner = null;
             var oldDirectory = directory; directory = null;
@@ -447,6 +479,11 @@ namespace OniOnline.Runtime
                 }
                 if (Session != null)
                 {
+                    if (Session.IsHost && colony != null && !ReferenceEquals(moderationColony, colony))
+                    {
+                        BindModeration(Session, colony, true);
+                        moderationColony = colony;
+                    }
                     Session.Pump();
                     if (Multiplayer != null) Multiplayer.Pump(Time.realtimeSinceStartupAsDouble);
                     if (Session.Closed)
@@ -481,7 +518,7 @@ namespace OniOnline.Runtime
             catch (Exception error)
             {
                 Debug.LogWarning("[OniOnline] Network service stopped: " + error);
-                Error = "network_failed";
+                Error = error.Message == "moderation_state_invalid" ? error.Message : "network_failed";
                 Leave();
             }
         }
@@ -525,7 +562,8 @@ namespace OniOnline.Runtime
             }
             catch (Exception error)
             {
-                Error = error is ArgumentException || error is InvalidOperationException ? error.Message : "network_failed";
+                Error = error is ArgumentException || error is InvalidOperationException ||
+                    (error is InvalidDataException && error.Message == "moderation_state_invalid") ? error.Message : "network_failed";
                 Debug.LogWarning("[OniOnline] Operation failed: " + error.GetType().Name);
             }
             Revision++;

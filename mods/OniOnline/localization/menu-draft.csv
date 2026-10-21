@@ -184,10 +184,10 @@ moderation.bans,封禁,封禁,Bans
 moderation.unban,解除封禁,解除封禁,Unban
 moderation.close,关闭,關閉,Close
 moderation.empty,当前房间没有封禁记录,目前房間沒有封禁紀錄,No bans in this room
-moderation.scope_steam,封禁根据 Steam 连接验证的账号生效。仅限本次开房；重建房间后清除。踢出和封禁都不会删除玩家存档。,封禁根據 Steam 連線驗證的帳號生效。僅限本次開房；重建房間後清除。踢出和封禁都不會刪除玩家存檔。,Bans use the Steam account verified by the connection. They last until this room closes. Removing players does not delete their saves.
+moderation.scope_steam,封禁根据 Steam 连接验证的账号生效。殖民地加载后，封禁随该殖民地存档保存。请正常保存游戏以保留变更。不会删除玩家存档。,封禁根據 Steam 連線驗證的帳號生效。殖民地載入後，封禁隨該殖民地存檔保存。請正常儲存遊戲以保留變更。不會刪除玩家存檔。,"Bans use the Steam account verified by the connection. Once a colony is loaded, bans are stored with it. Save the game to keep changes. Player saves are preserved."
 moderation.scope_lan,局域网仅能撤销当前房间身份。对方新建连接身份后仍可能加入；没有账号级封禁。关闭房间后清除记录。不删除玩家存档。,區域網路僅能撤銷目前房間身分。對方建立新連線身分後仍可能加入；沒有帳號級封禁。關閉房間後清除紀錄。不刪除玩家存檔。,LAN only revokes known room credentials; a fresh identity can rejoin. There is no account ban. Records last until this room closes. Saves are preserved.
 error.player_kicked,房主已将你踢出房间；本地星球仍可继续,房主已將你踢出房間；本機星球仍可繼續,The host removed you from the room. Your local colony can continue.
-error.player_banned,房主已在本次房间中封禁你,房主已在本次房間中封禁你,The host banned you from this room instance.
+error.player_banned,房主已禁止你加入这个星系,房主已禁止你加入這個星系,The host has banned you from this system.
 error.moderation_failed,未能执行管理操作；成员可能已离开或封禁列表已满,未能執行管理操作；成員可能已離開或封禁清單已滿,Could not apply the action; the member may have left or the ban list is full.
 planet.select,切换携带的星球,切換攜帶的星球,Choose another asteroid
 ui.player_count,{0} 位玩家,{0} 位玩家,{0} players
@@ -360,3 +360,13 @@ entry.no_asteroids,这个存档还没有可选择的星球。请先完成标准�
 entry.selected,已选择,已選擇,Selected
 entry.engine_manual,打印舱操作手册 · 补充条目,列印艙操作手冊 · 補充條目,Printing pod manual · Addendum
 entry.engine_chart,打开星系航图,開啟星系航圖,Open system chart
+error.moderation_state_invalid,存档中的封禁记录无效，无法开放星系。原记录已保留。,存檔中的封禁紀錄無效，無法開放星系。原紀錄已保留。,The saved ban list is invalid. The system cannot be opened. The original data is preserved.
+error.moderation_save_failed,封禁变更在当前房间生效，但未能保存到殖民地状态。,封禁變更在目前房間生效，但未能保存到殖民地狀態。,The ban change applies to this room but could not be stored in the colony.
+dupe.move,"复制人 {0} → ({1}, {2})","複製人 {0} → ({1}, {2})","Duplicant {0} → ({1}, {2})"
+dupe.cancel,取消移动,取消移動,Cancel move
+dupe.active,正在前往,正在前往,Moving
+dupe.completed,已到达,已抵達,Arrived
+dupe.replaced,已由新指令替代,已由新指令取代,Replaced by a new order
+dupe.revoked,授权已撤销，移动已停止,授權已撤銷，移動已停止,Permission revoked · Move stopped
+dupe.disconnected,连接中断，移动已停止,連線中斷，移動已停止,Disconnected · Move stopped
+dupe.world_changed,原世界已卸载,原世界已卸載,Original world unloaded

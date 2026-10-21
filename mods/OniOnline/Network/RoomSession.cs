@@ -129,6 +129,9 @@ namespace OniOnline.Network
         private readonly string resumeSecret = Protocol.NewNonce();
         private readonly Random random = new Random();
         private readonly RoomModeration moderation = new RoomModeration();
+        private System.Action<string> saveModeration;
+        private bool moderationBound;
+        private string moderationScope;
         private readonly PagedCollection<PlayerInfo> rosterAssembly = new PagedCollection<PlayerInfo>();
         private long rosterRevision;
         private int nextPlayerNumber = 1;
@@ -724,19 +727,13 @@ namespace OniOnline.Network
                 (reason.Length > 0 && !Protocol.ValidText(reason, 128)) || !seats.TryGetValue(playerId, out seat) ||
                 !moderation.Revoke(seat.Id, seat.Name, seat.Secret, seat.Account, ban, reason)) return false;
             // Revoke before notifying: queued application/chat packets can no longer execute.
-            seats.Remove(seat.Id);
-            if (seat.Connection != null)
-            {
-                Peer peer;
-                if (peers.TryGetValue(seat.Connection, out peer))
-                {
-                    peer.Authenticated = false;
-                    peer.Replay.Clear();
-                    peer.CloseAt = now + options.HandshakeTimeoutSeconds;
-                    Send(seat.Connection, new Packet { Kind = PacketKind.Removed,
-                        Name = ban ? "player_banned" : "player_kicked", Text = reason });
-                }
-            }
+            // A verified account may already own more than one admitted connection.
+            // Its ban revokes every current seat, not just the row selected in the UI.
+            var revoked = ban && seat.Account != null
+                ? seats.Values.Where(s => s.Account == seat.Account).ToArray() : new[] { seat };
+            foreach (var removed in revoked)
+                RevokeSeat(removed, ban ? "player_banned" : "player_kicked", reason);
+            if (ban) PersistModeration();
             RefreshRoster(); Notify();
             return true;
         }
@@ -744,7 +741,55 @@ namespace OniOnline.Network
         public bool Unban(string banId)
         {
             if (!IsHost || !Joined || Closed || disposed || !moderation.Unban(banId)) return false;
+            PersistModeration();
             Notify(); return true;
+        }
+
+        // Bind before the first transport poll. A bad or foreign save must not
+        // admit peers with an accidentally empty ban list.
+        internal void BindModeration(string homeSystemId, string payload, System.Action<string> save)
+        {
+            if (!IsHost || !Joined || Closed || disposed || moderationBound || peers.Count != 0 || seats.Count != 0 || save == null)
+                throw new InvalidOperationException("moderation_already_active");
+            LoadModeration(homeSystemId, payload, save);
+        }
+
+        // Called by the main thread before Pump when native load replaces the
+        // colony object. The loaded save supplies the account decisions; live
+        // LAN revocations remain scoped to this connection session.
+        internal void LoadModeration(string homeSystemId, string payload, System.Action<string> save)
+        {
+            if (!IsHost || !Joined || Closed || disposed || save == null ||
+                (moderationBound && moderationScope != homeSystemId))
+                throw new InvalidOperationException("moderation_already_active");
+            moderation.Restore(homeSystemId, payload, !moderationBound);
+            saveModeration = save; moderationScope = homeSystemId; moderationBound = true;
+            foreach (var seat in seats.Values.ToArray())
+            {
+                var ban = moderation.BanForAccount(seat.Account);
+                if (ban != null) RevokeSeat(seat, "player_banned", ban.Reason);
+            }
+            PersistModeration();
+            RefreshRoster(); Notify();
+        }
+
+        private void RevokeSeat(Seat seat, string reason, string detail)
+        {
+            seats.Remove(seat.Id);
+            if (seat.Connection == null) return;
+            Peer peer;
+            if (!peers.TryGetValue(seat.Connection, out peer)) return;
+            peer.Authenticated = false; peer.Replay.Clear();
+            peer.CloseAt = now + options.HandshakeTimeoutSeconds;
+            Send(seat.Connection, new Packet { Kind = PacketKind.Removed, Name = reason, Text = detail });
+        }
+
+        private void PersistModeration()
+        {
+            if (saveModeration == null) return;
+            try { saveModeration(moderation.Capture()); }
+            catch (Exception error) when (error is InvalidOperationException || error is IOException || error is ArgumentException)
+            { LastError = "moderation_save_failed"; LastErrorDetail = null; }
         }
 
         private void Notify() { if (Changed != null) Changed(); }

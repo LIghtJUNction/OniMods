@@ -77,6 +77,8 @@ internal static class Program
             { NetworkResilienceTests.Run(Check); Console.WriteLine("PASS " + assertions + " network resilience assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--moderation")
             { ModerationTests.Run(Check); Console.WriteLine("PASS " + assertions + " moderation assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--moderation-save")
+            { ModerationPersistenceTests.Run(Check); Console.WriteLine("PASS " + assertions + " moderation save assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--star-systems")
             { StarSystemTests.Run(Check); Console.WriteLine("PASS " + assertions + " star-system assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--network-matrix")
@@ -89,6 +91,8 @@ internal static class Program
             { DupeOriginTests.Run(Check); Console.WriteLine("PASS " + assertions + " duplicant origin assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--dupe-commands")
             { DupeCommandTests.Run(Check); Console.WriteLine("PASS " + assertions + " dupe command assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--dupe-lifecycle")
+            { DupeCommandLifecycleTests.Run(Check); Console.WriteLine("PASS " + assertions + " dupe lifecycle assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--remote-work")
             { RemoteWorkTests.Run(Check); Console.WriteLine("PASS " + assertions + " remote work assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--dupe-archive-audit")
@@ -127,6 +131,7 @@ internal static class Program
             MultiProcess();
             NetworkResilienceTests.Run(Check);
             ModerationTests.Run(Check);
+            ModerationPersistenceTests.Run(Check);
             StarSystemTests.Run(Check);
             NetworkScaleTests.Run(Check);
             DupeOriginTests.Run(Check);
@@ -136,6 +141,7 @@ internal static class Program
             WorldInterestSessionTests.Run(Check);
             WorldCellDetailsTests.Run(Check);
             DupeCommandTests.Run(Check);
+            DupeCommandLifecycleTests.Run(Check);
             NativeDuplicantImportAuditTests.Run(Check);
             NativeDuplicantRemapPlanTests.Run(Check);
             DuplicantTransferPreflightTests.Run(Check);
