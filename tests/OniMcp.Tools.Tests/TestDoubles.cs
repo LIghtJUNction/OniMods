@@ -158,7 +158,7 @@ namespace UnityEngine
 }
 
 internal enum SimHashes { TestElement }
-internal static class Assets
+internal static partial class Assets
 {
     internal static readonly List<TestBuildingDef> BuildingDefs = new List<TestBuildingDef>();
     internal static BuildingDef GetBuildingDef(string id) => BuildingDefs.Find(def => def.PrefabID == id);

@@ -39,14 +39,13 @@ namespace OniMcp.Tools
         {
             if (Immigration.Instance == null)
                 return CallToolResult.Error("Immigration system not available");
+            if (!Immigration.Instance.ImmigrantsAvailable)
+                return CallToolResult.Error("No printing pod rewards available right now");
 
             var rewards = CurrentCarePackages().ToList();
             bool initializedScreenForClaim = false;
             if (rewards.Count == 0)
             {
-                if (!Immigration.Instance.ImmigrantsAvailable)
-                    return CallToolResult.Error("No printing pod rewards available right now");
-
                 return CallToolResult.Error("No current claimable care-package reward is materialized yet. This tool no longer opens the immigrant screen automatically; wait for the reward list to appear or use action=open_immigrants manually.");
             }
 
@@ -56,6 +55,10 @@ namespace OniMcp.Tools
 
             var reward = CarePackageInfoDictionary(selected, rewards.IndexOf(selected));
             var priorityPlan = PrintingRewardPriorityPlan(telepad, reward);
+            List<ITelepadDeliverableContainer> screenContainers;
+            bool cleanupReady = TryGetImmigrantScreenContainers(out screenContainers)
+                && screenContainers.OfType<CarePackageContainer>().Any(container =>
+                    container != null && ReferenceEquals(container.Info, selected));
             if (ToolUtil.GetBool(args, "dryRun", false))
             {
                 return JsonResult(new Dictionary<string, object>
@@ -65,16 +68,29 @@ namespace OniMcp.Tools
                     ["selectedReward"] = reward,
                     ["priorityPlan"] = priorityPlan,
                     ["printingRewards"] = PrintingRewardStatus(telepad),
-                    ["initializedScreenForClaim"] = initializedScreenForClaim
+                    ["initializedScreenForClaim"] = initializedScreenForClaim,
+                    ["cleanupReady"] = cleanupReady
                 });
             }
 
             if (!ToolUtil.GetBool(args, "confirm", false))
                 return CallToolResult.Error("confirm=true required to claim printing pod care package");
+            if (!cleanupReady)
+                return CallToolResult.Error("Printing pod reward UI state is unavailable; reopen the immigrant screen before claiming");
+
+            bool screenClosed = CloseImmigrantScreen();
+            if (!screenClosed)
+                return CallToolResult.Error("Printing pod reward screen could not be closed; no reward was claimed");
 
             telepad.OnAcceptDelivery(selected);
-            Immigration.Instance.EndImmigration();
-            bool screenClosed = CloseImmigrantScreen();
+            PrintingPodClaimCleanup.Clear(screenContainers, container =>
+            {
+                if (container == null)
+                    return;
+                var gameObject = container.GetGameObject();
+                if (gameObject != null)
+                    UnityEngine.Object.Destroy(gameObject);
+            });
             return JsonResult(new Dictionary<string, object>
             {
                 ["claimed"] = true,
@@ -139,20 +155,33 @@ namespace OniMcp.Tools
 
         private static IEnumerable<CarePackageInfo> CurrentCarePackages()
         {
-            var field = typeof(CarePackageContainer).GetField("containers", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            var value = field == null ? null : field.GetValue(null) as IEnumerable<ITelepadDeliverableContainer>;
-            if (value == null)
+            var immigration = Immigration.Instance;
+            if (immigration == null || !immigration.ImmigrantsAvailable)
                 return new List<CarePackageInfo>();
 
-            return value
-                .OfType<CarePackageContainer>()
+            List<ITelepadDeliverableContainer> screenContainers;
+            if (!TryGetImmigrantScreenContainers(out screenContainers))
+                return new List<CarePackageInfo>();
+
+            return screenContainers.OfType<CarePackageContainer>()
                 .Where(container => container != null && container.Info != null)
                 .Select(container => container.Info)
                 .ToList();
         }
 
-        private static bool CloseImmigrantScreen()
+        private static bool TryGetImmigrantScreenContainers(out List<ITelepadDeliverableContainer> containers)
+        {
+            containers = null;
+            var screen = ImmigrantScreen.instance;
+            if (screen == null)
+                return false;
 
+            var field = typeof(CharacterSelectionController).GetField("containers", BindingFlags.Instance | BindingFlags.NonPublic);
+            containers = field == null ? null : field.GetValue(screen) as List<ITelepadDeliverableContainer>;
+            return containers != null;
+        }
+
+        private static bool CloseImmigrantScreen()
         {
             try
             {
@@ -167,7 +196,6 @@ namespace OniMcp.Tools
                 return false;
             }
         }
-
 
         private static Dictionary<string, object> CarePackageInfoDictionary(CarePackageInfo info, int index)
         {

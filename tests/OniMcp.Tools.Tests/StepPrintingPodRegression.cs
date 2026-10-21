@@ -12,7 +12,7 @@ internal static class StepPrintingPodRegression
         Immigration.Instance = null;
         Check(!StepPrintingPodState.IsAvailable, "uninitialized immigration is not available");
         Immigration.Instance = new Immigration { ImmigrantsAvailable = true };
-        // No immigrant screen or reward-container fixtures exist here: readiness is independent of materialization.
+        // Readiness does not require initializing the screen or materializing reward choices.
         Check(StepPrintingPodState.IsAvailable, "already-ready native immigration is available without materialized choices");
         foreach (string input in new[] { "{condition:'print'}", "{condition:'printing_pod'}", "{condition:'printable'}",
             "{condition:'immigrant'}", "{condition:'printing_pod_ready'}", "{until:{fact:'printing_pod_ready'}}" })
@@ -92,7 +92,7 @@ internal static class StepPrintingPodRegression
 }
 
 // Native read surface only; the host does not load game assemblies or initialize reward UI.
-internal sealed class Immigration
+internal sealed partial class Immigration
 {
     internal static Immigration Instance;
     internal bool ImmigrantsAvailable;
