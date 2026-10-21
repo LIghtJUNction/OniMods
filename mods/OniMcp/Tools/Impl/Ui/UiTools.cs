@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using HarmonyLib;
 using Newtonsoft.Json;
 using OniMcp.Core;
 using OniMcp.Support;
@@ -156,10 +157,12 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "ui_control", "ui_hotkey_control", "game_action_control" },
                 Tags = new List<string> { "ui", "hotkey", "action", "management", "build", "overlay" },
-                Description = "UI Action 聚合工具：action=list/trigger/open_management；读取安全 UI Action 白名单、触发白名单内动作或打开管理页面。",
+                Description = "UI Action 聚合工具：action=list/trigger/open_management/open_load_menu；读取安全 UI Action 白名单、触发白名单内动作或打开原生页面。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "list、trigger 或 open_management", Required = true, EnumValues = new List<string> { "list", "trigger", "open_management" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、trigger、open_management 或 open_load_menu（只打开加载列表；支持 dryRun，执行需 confirm）", Required = true, EnumValues = new List<string> { "list", "trigger", "open_management", "open_load_menu" } },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "open_load_menu：只预览", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "open_load_menu：执行需 true", Required = false },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "action=list 时过滤类型：all、management、overlay、build、navigation，默认 all", Required = false, EnumValues = new List<string> { "all", "management", "overlay", "build", "navigation" } },
                     ["uiAction"] = new McpToolParameter { Type = "string", Description = "action=trigger 时的 Action 枚举名，如 ManageVitals、Overlay1、BuildCategoryTiles、Escape", Required = false },
                     ["screen"] = new McpToolParameter { Type = "string", Description = "action=open_management 时的页面名", Required = false, EnumValues = ManagementScreens.Keys.OrderBy(name => name).ToList() },
@@ -180,9 +183,34 @@ namespace OniMcp.Tools
                     }
                     if (action == "open_management")
                         return OpenManagementScreen().Handler(args);
-                    return CallToolResult.Error("action must be list, trigger, or open_management");
+                    if (action == "open_load_menu")
+                        return OpenLoadMenu(args);
+                    return CallToolResult.Error("action must be list, trigger, open_management, or open_load_menu");
                 }
             };
+        }
+
+        private static CallToolResult OpenLoadMenu(Newtonsoft.Json.Linq.JObject args)
+        {
+            bool inGame = Game.Instance != null;
+            object menu = inGame ? (object)PauseScreen.Instance : MainMenu.Instance;
+            var callback = menu == null ? null : AccessTools.Method(menu.GetType(), inGame ? "OnLoad" : "LoadGame", Type.EmptyTypes);
+            if (callback == null)
+                return CallToolResult.Error("Native load-menu callback is not available");
+            if (ToolUtil.GetBool(args, "dryRun", false))
+                return CallToolResult.Text("{\"dryRun\":true,\"wouldOpen\":\"load_menu\",\"wouldLoadSave\":false}");
+            if (!ToolUtil.GetBool(args, "confirm", false))
+                return CallToolResult.Error("confirm=true is required");
+            if (inGame)
+                GameControlTools.ControlGameSpeed().Handler(new Newtonsoft.Json.Linq.JObject { ["action"] = "pause" });
+            callback.Invoke(menu, null);
+            return CallToolResult.Text(JsonConvert.SerializeObject(new
+            {
+                opened = "load_menu",
+                from = inGame ? "pause_menu" : "main_menu",
+                active = LoadScreen.Instance != null && LoadScreen.Instance.IsActive(),
+                loadedSave = false
+            }, McpJsonUtil.Settings));
         }
 
         private static Dictionary<global::Action, string> SafeActions()

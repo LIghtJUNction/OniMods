@@ -1,0 +1,166 @@
+{
+  "schema": 1,
+  "passed_predeclared_native_gates": false,
+  "gates": {
+    "germ_flow_cpu_reduction_at_least_5_percent": false,
+    "no_other_scene_cpu_regression_above_3_percent": true,
+    "no_peak_rss_increase_above_3_percent": true
+  },
+  "scope": "96x96 native frame fixtures, not whole-game FPS",
+  "samples": 96,
+  "major_faults": 0,
+  "final_publications_match_official": true,
+  "native_sha256": "f1736fbba7ee176af4be1b9d1d408b67546ee8e28f870dc4001d072d8b53b787",
+  "baseline_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "raw_report_sha256": "f48dfde5ff3fe01e259e9c6bf1ca66641d59f2712a640f48e71509c798cd6bfe",
+  "correctness": {
+    "1": {
+      "passed": true,
+      "cases": 227,
+      "publications": 9103,
+      "report_sha256": "e2f1b737ad6e135403de3813df99a5927442615ef275adceba0cf5781c63a5c3"
+    },
+    "4": {
+      "passed": true,
+      "cases": 227,
+      "publications": 9103,
+      "report_sha256": "1ca2e417591e093c678d3a1e9239fb49ceef28c19d0bc466a3f2b9be129957ee"
+    }
+  },
+  "scenes": {
+    "fluid": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.641200525,
+          "minimum": 0.6055909399999999,
+          "maximum": 0.72668398
+        },
+        "candidate": {
+          "median": 0.6366575525,
+          "minimum": 0.5859848710000001,
+          "maximum": 0.706125026
+        },
+        "median_speedup": 1.0071356610506872
+      },
+      "cpu_change_percent": -0.7085104148971233,
+      "peak_rss_kib": {
+        "baseline": 33302.0,
+        "candidate": 33288.0
+      },
+      "peak_rss_change_percent": -0.04203951714611964
+    },
+    "thermal": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.277273079,
+          "minimum": 0.242056775,
+          "maximum": 0.310474123
+        },
+        "candidate": {
+          "median": 0.272500258,
+          "minimum": 0.23687896200000003,
+          "maximum": 0.34302879899999994
+        },
+        "median_speedup": 1.0175149228666052
+      },
+      "cpu_change_percent": -1.721343095122474,
+      "peak_rss_kib": {
+        "baseline": 33302.0,
+        "candidate": 33294.0
+      },
+      "peak_rss_change_percent": -0.024022581226357254
+    },
+    "sealed": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.5945512695,
+          "minimum": 0.544518355,
+          "maximum": 0.6393349420000001
+        },
+        "candidate": {
+          "median": 0.6111586800000001,
+          "minimum": 0.537704261,
+          "maximum": 0.649584868
+        },
+        "median_speedup": 0.972826352560353
+      },
+      "cpu_change_percent": 2.793268024465978,
+      "peak_rss_kib": {
+        "baseline": 33242.0,
+        "candidate": 33230.0
+      },
+      "peak_rss_change_percent": -0.036098911016180235
+    },
+    "germ_flow": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.8675484305,
+          "minimum": 0.730758428,
+          "maximum": 0.9967714579999999
+        },
+        "candidate": {
+          "median": 0.8258259485000001,
+          "minimum": 0.745404873,
+          "maximum": 0.9109854130000001
+        },
+        "median_speedup": 1.0505221252441668
+      },
+      "cpu_change_percent": -4.809239522910969,
+      "peak_rss_kib": {
+        "baseline": 33280.0,
+        "candidate": 33330.0
+      },
+      "peak_rss_change_percent": 0.15024038461537437
+    },
+    "mixed_germs": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.9026778185000001,
+          "minimum": 0.801163989,
+          "maximum": 1.094344306
+        },
+        "candidate": {
+          "median": 0.8827377160000001,
+          "minimum": 0.832775589,
+          "maximum": 0.9509795000000001
+        },
+        "median_speedup": 1.0225889322939046
+      },
+      "cpu_change_percent": -2.2089944043529153,
+      "peak_rss_kib": {
+        "baseline": 33264.0,
+        "candidate": 33268.0
+      },
+      "peak_rss_change_percent": 0.012025012025018711
+    },
+    "vacuum": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.571392719,
+          "minimum": 0.528287873,
+          "maximum": 0.6459617390000001
+        },
+        "candidate": {
+          "median": 0.5774009675,
+          "minimum": 0.513616193,
+          "maximum": 0.6728772180000001
+        },
+        "median_speedup": 0.9895943220774045
+      },
+      "cpu_change_percent": 1.0515094610437314,
+      "peak_rss_kib": {
+        "baseline": 33156.0,
+        "candidate": 33222.0
+      },
+      "peak_rss_change_percent": 0.19905899384726755
+    }
+  },
+  "context": {
+    "endpoint_cpu_frequency_khz_min": 1399978,
+    "endpoint_cpu_frequency_khz_max": 2325862,
+    "memory_pressure_some_avg10_percent_min": 0.19,
+    "memory_pressure_some_avg10_percent_max": 9.46,
+    "interpretation": "System load and memory pressure present; endpoint frequency is not locked. All samples retained. CPU median movement does not establish a stable speedup or code regression."
+  },
+  "decision": "Not adopted: target CPU reduction below the predeclared 5% minimum; retain proposal for structural refinement, no threshold change. No game acceptance or whole-game performance claim."
+}

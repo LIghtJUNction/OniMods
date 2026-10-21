@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 
 // Only game/registry boundaries are substituted. The batch, DSL, response types,
-// and both regex entry points are compiled directly from production source.
+// speed-control entry points, and both regex entry points are compiled directly from production source.
 namespace OniMcp.Tools
 {
     public sealed class McpTool
@@ -96,6 +96,67 @@ namespace OniMcp.Tools
     }
 }
 
+internal static class GameUtil
+{
+    internal static int GetCurrentCycle() => 1;
+}
+
+internal sealed class GameClock
+{
+    internal static GameClock Instance { get; set; } = new GameClock();
+    internal float GetCurrentCycleAsPercentage() => 0.5f;
+}
+
+internal sealed class SpeedControlScreen
+{
+    internal static SpeedControlScreen Instance { get; set; }
+
+    private int pauseCount;
+    private int speed;
+
+    internal int PauseCount => pauseCount;
+    internal bool IsPaused => pauseCount > 0;
+
+    internal void Pause(bool playSound = true, bool skipPauseScreen = false)
+    {
+        pauseCount++;
+        if (pauseCount == 1)
+            UnityEngine.Time.timeScale = 0f;
+    }
+
+    internal void Unpause(bool playSound = true)
+    {
+        if (pauseCount <= 0)
+            return;
+        pauseCount--;
+        if (pauseCount == 0)
+            UnityEngine.Time.timeScale = speed + 1;
+    }
+
+    internal void SetSpeed(int value)
+    {
+        speed = value;
+        if (!IsPaused)
+            UnityEngine.Time.timeScale = speed + 1;
+    }
+
+    internal int GetSpeed() => speed;
+}
+
+namespace UnityEngine
+{
+    internal static class Time
+    {
+        internal static float timeScale = 1f;
+        internal static float realtimeSinceStartup = 0f;
+    }
+
+    internal static class Mathf
+    {
+        internal static int RoundToInt(float value) => (int)Math.Round(value, MidpointRounding.AwayFromZero);
+    }
+}
+
 internal enum SimHashes { TestElement }
 internal static class Assets
 {
@@ -103,8 +164,11 @@ internal static class Assets
     internal static BuildingDef GetBuildingDef(string id) => BuildingDefs.Find(def => def.PrefabID == id);
 }
 internal sealed class TestBuildingDef : BuildingDef { }
-internal class BuildingDef
+internal partial class BuildingDef
 {
     public string PrefabID { get; set; }
     public string Name { get; set; }
+    public float[] Mass { get; set; }
+    public string[] MaterialCategory { get; set; }
+    public float MassTier { get; set; }
 }

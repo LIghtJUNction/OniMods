@@ -1,0 +1,1166 @@
+{
+  "schema": 1,
+  "native_sha256": "8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0",
+  "scope": "Five own-process CPU-clock profiles per 96x96 scene, four workers, CPU0/2/4/6; not timing acceptance or actual-game performance",
+  "scenes": {
+    "fluid": {
+      "total_samples": 2218,
+      "native_samples": 2104,
+      "threads_with_samples": 30,
+      "lost": 0,
+      "corrupt": 0,
+      "symbols": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "samples": 770,
+          "percent_of_native_samples": 36.59695817490494
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "samples": 276,
+          "percent_of_native_samples": 13.11787072243346
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "samples": 251,
+          "percent_of_native_samples": 11.929657794676807
+        },
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+          "samples": 185,
+          "percent_of_native_samples": 8.79277566539924
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core12partial_melt5apply",
+          "samples": 103,
+          "percent_of_native_samples": 4.895437262357414
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core5fluid13update_liquid",
+          "samples": 75,
+          "percent_of_native_samples": 3.564638783269962
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "samples": 74,
+          "percent_of_native_samples": 3.517110266159696
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "samples": 56,
+          "percent_of_native_samples": 2.661596958174905
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "samples": 56,
+          "percent_of_native_samples": 2.661596958174905
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11sublimation17apply_with_source",
+          "samples": 52,
+          "percent_of_native_samples": 2.4714828897338403
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+          "samples": 33,
+          "percent_of_native_samples": 1.5684410646387832
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "samples": 20,
+          "percent_of_native_samples": 0.9505703422053232
+        },
+        {
+          "symbol": "_RINvNtCshGRDAd9iNgU_15crossbeam_epoch7default11with_handleNCNvB2_3pin0NtNtB4_5guard5GuardECscYvbG5z7GhI_10rayon_core",
+          "samples": 18,
+          "percent_of_native_samples": 0.8555133079847909
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers31add_mass_and_update_temperature",
+          "samples": 14,
+          "percent_of_native_samples": 0.6653992395437263
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core5fluid15remove_transfer",
+          "samples": 14,
+          "percent_of_native_samples": 0.6653992395437263
+        }
+      ],
+      "hot_instruction_offsets": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773d1",
+          "samples": 65
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773b5",
+          "samples": 59
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773c4",
+          "samples": 52
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7744a",
+          "samples": 45
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773bd",
+          "samples": 32
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77470",
+          "samples": 31
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77200",
+          "samples": 27
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686bd",
+          "samples": 27
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77431",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x775b2",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77213",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x772c5",
+          "samples": 19
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a16c",
+          "samples": 19
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77248",
+          "samples": 18
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686ab",
+          "samples": 18
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "elf_virtual_address_hex": "0x3bf10",
+          "samples": 18
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7741c",
+          "samples": 18
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7733b",
+          "samples": 17
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x775cf",
+          "samples": 17
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77358",
+          "samples": 16
+        }
+      ]
+    },
+    "thermal": {
+      "total_samples": 712,
+      "native_samples": 638,
+      "threads_with_samples": 30,
+      "lost": 0,
+      "corrupt": 0,
+      "symbols": [
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+          "samples": 149,
+          "percent_of_native_samples": 23.354231974921632
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+          "samples": 126,
+          "percent_of_native_samples": 19.74921630094044
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "samples": 79,
+          "percent_of_native_samples": 12.382445141065832
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "samples": 67,
+          "percent_of_native_samples": 10.501567398119123
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "samples": 65,
+          "percent_of_native_samples": 10.18808777429467
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "samples": 39,
+          "percent_of_native_samples": 6.112852664576803
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "samples": 36,
+          "percent_of_native_samples": 5.6426332288401255
+        },
+        {
+          "symbol": "_RINvNtCshGRDAd9iNgU_15crossbeam_epoch7default11with_handleNCNvB2_3pin0NtNtB4_5guard5GuardECscYvbG5z7GhI_10rayon_core",
+          "samples": 19,
+          "percent_of_native_samples": 2.9780564263322886
+        },
+        {
+          "symbol": "_RNvMs8_NtCseU2KyCBb9fL_15crossbeam_deque5dequeINtB5_7StealerNtNtCscYvbG5z7GhI_10rayon_core3job6JobRefE5stealB10_",
+          "samples": 12,
+          "percent_of_native_samples": 1.8808777429467085
+        },
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core5worldNtB2_12PhysicsWorld10publish_to",
+          "samples": 11,
+          "percent_of_native_samples": 1.7241379310344827
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step14validate_cells",
+          "samples": 5,
+          "percent_of_native_samples": 0.7836990595611285
+        },
+        {
+          "symbol": "_RNvMs8_NtCscYvbG5z7GhI_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold",
+          "samples": 5,
+          "percent_of_native_samples": 0.7836990595611285
+        },
+        {
+          "symbol": "_RNvMs5_NtCshGRDAd9iNgU_15crossbeam_epoch8internalNtB5_6Global11try_advance",
+          "samples": 3,
+          "percent_of_native_samples": 0.4702194357366771
+        },
+        {
+          "symbol": "_RINvXs_NtNtNtCskADBYZwJmSU_4core4iter8adapters5chainINtB5_5ChainINtNtNtBb_3ops5range5RangejEB10_ENtNtNtB9_6traits8iterator8Iterator8try_folduNCINvNtB7_6filter15filter_try_foldjuINtNtB15_12control_flow11ControlFlowNtNtCscYvbG5z7GhI_10rayon_core3job6JobRefENCNvMs8_NtB3t_8registryNtB4d_12WorkerThread5steal0NCINvNvB1x_8find_map5checkjB3p_NCB47_s_0E0E0B2P_EB3t_",
+          "samples": 2,
+          "percent_of_native_samples": 0.31347962382445144
+        },
+        {
+          "symbol": "_RNvXs2_NtCscYvbG5z7GhI_10rayon_core3jobINtB5_8StackJobNtNtB7_5latch9SpinLatchNCINvNvNtB7_4join12join_context6call_buNCINvNvNtNtCshAN5X2dsocZ_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB1Z_9enumerate17EnumerateProducerINtNtB1Z_3zip11ZipProducerIB3J_IB3J_INtNtNtB21_5slice6chunks17ChunksMutProducerhEIB4j_lEEB4i_EIB4j_fEEEINtNtB1Z_8for_each15ForEachConsumerNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00EEs_0E0uENtB5_3Job7executeB64_",
+          "samples": 2,
+          "percent_of_native_samples": 0.31347962382445144
+        }
+      ],
+      "hot_instruction_offsets": [
+        {
+          "symbol": "_RINvNtCshGRDAd9iNgU_15crossbeam_epoch7default11with_handleNCNvB2_3pin0NtNtB4_5guard5GuardECscYvbG5z7GhI_10rayon_core",
+          "elf_virtual_address_hex": "0xa369c",
+          "samples": 13
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "elf_virtual_address_hex": "0x43b9a",
+          "samples": 12
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a16c",
+          "samples": 12
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "elf_virtual_address_hex": "0x43b60",
+          "samples": 11
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+          "elf_virtual_address_hex": "0x4fdb9",
+          "samples": 11
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x6905d",
+          "samples": 11
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x68680",
+          "samples": 10
+        },
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+          "elf_virtual_address_hex": "0x5a111",
+          "samples": 10
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "elf_virtual_address_hex": "0x43b35",
+          "samples": 10
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x68769",
+          "samples": 9
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+          "elf_virtual_address_hex": "0x4fda8",
+          "samples": 9
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x68654",
+          "samples": 9
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a165",
+          "samples": 9
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a148",
+          "samples": 9
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686ab",
+          "samples": 9
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "elf_virtual_address_hex": "0x3b1aa",
+          "samples": 8
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7thermal18update_temperature",
+          "elf_virtual_address_hex": "0x4fdc5",
+          "samples": 8
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x68640",
+          "samples": 8
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "elf_virtual_address_hex": "0x43b20",
+          "samples": 8
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "elf_virtual_address_hex": "0x43c25",
+          "samples": 8
+        }
+      ]
+    },
+    "sealed": {
+      "total_samples": 2045,
+      "native_samples": 1927,
+      "threads_with_samples": 30,
+      "lost": 0,
+      "corrupt": 0,
+      "symbols": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "samples": 593,
+          "percent_of_native_samples": 30.773222625843278
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "samples": 266,
+          "percent_of_native_samples": 13.803840166061235
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "samples": 266,
+          "percent_of_native_samples": 13.803840166061235
+        },
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+          "samples": 186,
+          "percent_of_native_samples": 9.652309289050338
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11sublimation17apply_with_source",
+          "samples": 129,
+          "percent_of_native_samples": 6.694343539180073
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core12partial_melt5apply",
+          "samples": 120,
+          "percent_of_native_samples": 6.227296315516346
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "samples": 85,
+          "percent_of_native_samples": 4.411001556824079
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "samples": 81,
+          "percent_of_native_samples": 4.2034250129735335
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "samples": 48,
+          "percent_of_native_samples": 2.4909185262065385
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+          "samples": 27,
+          "percent_of_native_samples": 1.401141670991178
+        },
+        {
+          "symbol": "_RINvNtCshGRDAd9iNgU_15crossbeam_epoch7default11with_handleNCNvB2_3pin0NtNtB4_5guard5GuardECscYvbG5z7GhI_10rayon_core",
+          "samples": 17,
+          "percent_of_native_samples": 0.8822003113648158
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "samples": 14,
+          "percent_of_native_samples": 0.7265179034769071
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers13swap_material",
+          "samples": 12,
+          "percent_of_native_samples": 0.6227296315516346
+        },
+        {
+          "symbol": "_RNvMs8_NtCscYvbG5z7GhI_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold",
+          "samples": 11,
+          "percent_of_native_samples": 0.5708354955889985
+        },
+        {
+          "symbol": "_RNvMs8_NtCseU2KyCBb9fL_15crossbeam_deque5dequeINtB5_7StealerNtNtCscYvbG5z7GhI_10rayon_core3job6JobRefE5stealB10_",
+          "samples": 10,
+          "percent_of_native_samples": 0.5189413596263622
+        }
+      ],
+      "hot_instruction_offsets": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7744a",
+          "samples": 78
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773d1",
+          "samples": 67
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77470",
+          "samples": 50
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77358",
+          "samples": 30
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773c4",
+          "samples": 30
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686bd",
+          "samples": 28
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77657",
+          "samples": 27
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773b1",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686ab",
+          "samples": 23
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x775b2",
+          "samples": 23
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x772f1",
+          "samples": 22
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77248",
+          "samples": 22
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x772c5",
+          "samples": 21
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77288",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77200",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "elf_virtual_address_hex": "0x43c25",
+          "samples": 19
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a16c",
+          "samples": 19
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773f1",
+          "samples": 18
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x775cf",
+          "samples": 18
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77467",
+          "samples": 17
+        }
+      ]
+    },
+    "germ_flow": {
+      "total_samples": 3081,
+      "native_samples": 2928,
+      "threads_with_samples": 30,
+      "lost": 0,
+      "corrupt": 0,
+      "symbols": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "samples": 817,
+          "percent_of_native_samples": 27.903005464480874
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "samples": 409,
+          "percent_of_native_samples": 13.968579234972678
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "samples": 292,
+          "percent_of_native_samples": 9.972677595628415
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "samples": 264,
+          "percent_of_native_samples": 9.01639344262295
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "samples": 261,
+          "percent_of_native_samples": 8.913934426229508
+        },
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+          "samples": 192,
+          "percent_of_native_samples": 6.557377049180328
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core12partial_melt5apply",
+          "samples": 105,
+          "percent_of_native_samples": 3.5860655737704916
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core5fluid13update_liquid",
+          "samples": 92,
+          "percent_of_native_samples": 3.1420765027322406
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "samples": 88,
+          "percent_of_native_samples": 3.0054644808743167
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11sublimation17apply_with_source",
+          "samples": 69,
+          "percent_of_native_samples": 2.3565573770491803
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "samples": 65,
+          "percent_of_native_samples": 2.219945355191257
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "samples": 54,
+          "percent_of_native_samples": 1.8442622950819672
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+          "samples": 45,
+          "percent_of_native_samples": 1.5368852459016393
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "samples": 17,
+          "percent_of_native_samples": 0.5806010928961749
+        },
+        {
+          "symbol": "_RINvNtCshGRDAd9iNgU_15crossbeam_epoch7default11with_handleNCNvB2_3pin0NtNtB4_5guard5GuardECscYvbG5z7GhI_10rayon_core",
+          "samples": 16,
+          "percent_of_native_samples": 0.546448087431694
+        }
+      ],
+      "hot_instruction_offsets": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773b5",
+          "samples": 94
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773d1",
+          "samples": 91
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x78727",
+          "samples": 68
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7744a",
+          "samples": 62
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773c4",
+          "samples": 48
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a0f9",
+          "samples": 42
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77470",
+          "samples": 38
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686bd",
+          "samples": 36
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773bd",
+          "samples": 36
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a0f2",
+          "samples": 30
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x785eb",
+          "samples": 27
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "elf_virtual_address_hex": "0x78ced",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77431",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x78722",
+          "samples": 23
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x78590",
+          "samples": 21
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686ab",
+          "samples": 21
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77288",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a0fd",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773f1",
+          "samples": 19
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77200",
+          "samples": 18
+        }
+      ]
+    },
+    "mixed_germs": {
+      "total_samples": 3235,
+      "native_samples": 3058,
+      "threads_with_samples": 30,
+      "lost": 0,
+      "corrupt": 0,
+      "symbols": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "samples": 1005,
+          "percent_of_native_samples": 32.8646173969915
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "samples": 410,
+          "percent_of_native_samples": 13.40745585349902
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "samples": 305,
+          "percent_of_native_samples": 9.973839110529758
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "samples": 291,
+          "percent_of_native_samples": 9.516023544800523
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "samples": 249,
+          "percent_of_native_samples": 8.142576847612819
+        },
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+          "samples": 192,
+          "percent_of_native_samples": 6.278613472858077
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core12partial_melt5apply",
+          "samples": 132,
+          "percent_of_native_samples": 4.316546762589928
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "samples": 105,
+          "percent_of_native_samples": 3.433616742969261
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11sublimation17apply_with_source",
+          "samples": 78,
+          "percent_of_native_samples": 2.5506867233485937
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "samples": 59,
+          "percent_of_native_samples": 1.9293655984303466
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "samples": 42,
+          "percent_of_native_samples": 1.3734466971877044
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+          "samples": 39,
+          "percent_of_native_samples": 1.2753433616742968
+        },
+        {
+          "symbol": "_RINvNtCshGRDAd9iNgU_15crossbeam_epoch7default11with_handleNCNvB2_3pin0NtNtB4_5guard5GuardECscYvbG5z7GhI_10rayon_core",
+          "samples": 20,
+          "percent_of_native_samples": 0.6540222367560498
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "samples": 18,
+          "percent_of_native_samples": 0.5886200130804448
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers13swap_material",
+          "samples": 16,
+          "percent_of_native_samples": 0.5232177894048398
+        }
+      ],
+      "hot_instruction_offsets": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773b5",
+          "samples": 107
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773d1",
+          "samples": 98
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x78727",
+          "samples": 63
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773c4",
+          "samples": 58
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7744a",
+          "samples": 55
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a0f9",
+          "samples": 54
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77470",
+          "samples": 44
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773bd",
+          "samples": 34
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686bd",
+          "samples": 33
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a0f2",
+          "samples": 33
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x775c8",
+          "samples": 32
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "elf_virtual_address_hex": "0x78ced",
+          "samples": 31
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x7872c",
+          "samples": 30
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77213",
+          "samples": 28
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77431",
+          "samples": 26
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7741c",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77288",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77200",
+          "samples": 23
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x772c5",
+          "samples": 23
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "elf_virtual_address_hex": "0x7a0fd",
+          "samples": 22
+        }
+      ]
+    },
+    "vacuum": {
+      "total_samples": 1844,
+      "native_samples": 1747,
+      "threads_with_samples": 30,
+      "lost": 0,
+      "corrupt": 0,
+      "symbols": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "samples": 685,
+          "percent_of_native_samples": 39.210074413279905
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "samples": 198,
+          "percent_of_native_samples": 11.333714939896966
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "samples": 196,
+          "percent_of_native_samples": 11.219232970807099
+        },
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+          "samples": 160,
+          "percent_of_native_samples": 9.158557527189467
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11sublimation17apply_with_source",
+          "samples": 137,
+          "percent_of_native_samples": 7.842014882655982
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "samples": 100,
+          "percent_of_native_samples": 5.724098454493418
+        },
+        {
+          "symbol": "_RNvXs_NtNtNtCskADBYZwJmSU_4core3ops8function5implsRNCNCNvNtCsesrpLENfIw6_12oni_sim_core7disease18post_process_cells00INtB6_5FnMutTTjTTTQShQSlEB29_EQSfEEEE8call_mutBV_",
+          "samples": 74,
+          "percent_of_native_samples": 4.235832856325128
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "samples": 46,
+          "percent_of_native_samples": 2.633085289066972
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+          "samples": 43,
+          "percent_of_native_samples": 2.4613623354321694
+        },
+        {
+          "symbol": "_RINvNtCshGRDAd9iNgU_15crossbeam_epoch7default11with_handleNCNvB2_3pin0NtNtB4_5guard5GuardECscYvbG5z7GhI_10rayon_core",
+          "samples": 27,
+          "percent_of_native_samples": 1.5455065827132226
+        },
+        {
+          "symbol": "_RNvMs8_NtCseU2KyCBb9fL_15crossbeam_deque5dequeINtB5_7StealerNtNtCscYvbG5z7GhI_10rayon_core3job6JobRefE5stealB10_",
+          "samples": 11,
+          "percent_of_native_samples": 0.6296508299942759
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step14validate_cells",
+          "samples": 9,
+          "percent_of_native_samples": 0.5151688609044076
+        },
+        {
+          "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core5worldNtB2_12PhysicsWorld10publish_to",
+          "samples": 7,
+          "percent_of_native_samples": 0.4006868918145392
+        },
+        {
+          "symbol": "_RNvMs8_NtCscYvbG5z7GhI_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold",
+          "samples": 5,
+          "percent_of_native_samples": 0.28620492272467085
+        },
+        {
+          "symbol": "_RINvXs_NtNtNtCskADBYZwJmSU_4core4iter8adapters5chainINtB5_5ChainINtNtNtBb_3ops5range5RangejEB10_ENtNtNtB9_6traits8iterator8Iterator8try_folduNCINvNtB7_6filter15filter_try_foldjuINtNtB15_12control_flow11ControlFlowNtNtCscYvbG5z7GhI_10rayon_core3job6JobRefENCNvMs8_NtB3t_8registryNtB4d_12WorkerThread5steal0NCINvNvB1x_8find_map5checkjB3p_NCB47_s_0E0E0B2P_EB3t_",
+          "samples": 4,
+          "percent_of_native_samples": 0.2289639381797367
+        }
+      ],
+      "hot_instruction_offsets": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7744a",
+          "samples": 106
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773d1",
+          "samples": 74
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773c4",
+          "samples": 63
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77470",
+          "samples": 39
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "elf_virtual_address_hex": "0x76aae",
+          "samples": 33
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "elf_virtual_address_hex": "0x76a70",
+          "samples": 30
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77315",
+          "samples": 29
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "elf_virtual_address_hex": "0x76b80",
+          "samples": 28
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x686bd",
+          "samples": 26
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x773bd",
+          "samples": 26
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77213",
+          "samples": 25
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77650",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x772f1",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7733b",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "elf_virtual_address_hex": "0x76ba7",
+          "samples": 23
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77467",
+          "samples": 22
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "elf_virtual_address_hex": "0x76ac5",
+          "samples": 22
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+          "elf_virtual_address_hex": "0x76b1d",
+          "samples": 22
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77200",
+          "samples": 21
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x77379",
+          "samples": 21
+        }
+      ]
+    }
+  },
+  "all_30_final_states_match_official": true,
+  "lost": 0,
+  "corrupt": 0,
+  "sampler_source_sha256": "f143307cbecd1aecfb1f4dd8645395770db534e3177b59b594794649621445a7",
+  "symbolizer_source_sha256": "6feaa9d879d97ed3a5dc6b12c0ea7c4cbf02b28bc29ae8df9d611e58e2e599db",
+  "thread_sample_groups": {
+    "fluid": {
+      "orchestration": 24,
+      "physics": 2033,
+      "pool": 161
+    },
+    "thermal": {
+      "orchestration": 9,
+      "physics": 565,
+      "pool": 138
+    },
+    "sealed": {
+      "orchestration": 20,
+      "physics": 1858,
+      "pool": 167
+    },
+    "germ_flow": {
+      "orchestration": 28,
+      "physics": 2641,
+      "pool": 412
+    },
+    "mixed_germs": {
+      "orchestration": 33,
+      "physics": 2756,
+      "pool": 446
+    },
+    "vacuum": {
+      "orchestration": 22,
+      "physics": 1664,
+      "pool": 158
+    }
+  },
+  "limitations": [
+    "1 ms software sampling has observer and skid bias; no precise instruction stall attribution",
+    "Native symbol percentages exclude Python and other libraries",
+    "Five profiles per scene use authored six-element 96x96 fixtures, not an actual colony",
+    "Instrumented wall/CPU observations are not performance acceptance"
+  ]
+}

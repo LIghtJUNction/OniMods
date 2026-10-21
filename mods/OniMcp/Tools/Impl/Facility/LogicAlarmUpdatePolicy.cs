@@ -9,7 +9,7 @@ namespace OniMcp.Tools
             JObject args,
             Action<string> setName,
             Action<string> setTooltip,
-            Action<string> setType,
+            Action<NotificationType> setType,
             out string error)
         {
             error = null;
@@ -19,9 +19,9 @@ namespace OniMcp.Tools
             bool hasType = args["type"] != null;
             string name = hasName ? Truncate(args["name"].ToString(), 30) : null;
             string tooltip = hasTooltip ? Truncate(args["tooltip"].ToString(), 90) : null;
-            string normalizedType = null;
+            NotificationType notificationType = NotificationType.Neutral;
 
-            if (hasType && !TryNormalizeType(args["type"].ToString(), out normalizedType))
+            if (hasType && !TryParseType(args["type"].ToString(), out notificationType))
             {
                 error = "type must be bad, neutral, or duplicant_threatening";
                 return false;
@@ -32,28 +32,28 @@ namespace OniMcp.Tools
             if (hasTooltip)
                 setTooltip(tooltip);
             if (hasType)
-                setType(normalizedType);
+                setType(notificationType);
 
             return true;
         }
 
-        private static bool TryNormalizeType(string value, out string normalized)
+        private static bool TryParseType(string value, out NotificationType type)
         {
             switch ((value ?? string.Empty).Trim().ToLowerInvariant())
             {
                 case "bad":
-                    normalized = "bad";
+                    type = NotificationType.Bad;
                     return true;
                 case "neutral":
-                    normalized = "neutral";
+                    type = NotificationType.Neutral;
                     return true;
                 case "duplicant_threatening":
                 case "duplicantthreatening":
                 case "threat":
-                    normalized = "duplicant_threatening";
+                    type = NotificationType.DuplicantThreatening;
                     return true;
                 default:
-                    normalized = null;
+                    type = NotificationType.Neutral;
                     return false;
             }
         }

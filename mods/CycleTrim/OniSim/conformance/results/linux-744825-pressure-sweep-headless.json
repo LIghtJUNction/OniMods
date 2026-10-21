@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "source_revision": "5eb76a39a6b44deccc77c5dd876b1b1c6d6cd11e",
+  "native_sha256": "2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f",
+  "managed_sha256": "d0437d55ac62af5b7a422aaf7e000713c68e1455ffe1f461890073f530100d90",
+  "steam_launched": true,
+  "complete_game_count": 1,
+  "headless_save_reload_passed": true,
+  "full_headless_acceptance_complete": false,
+  "batch_mode": true,
+  "graphics_device": "Null",
+  "camera_render_callbacks": 0,
+  "first_headless_verified": true,
+  "actual_loaded_assembly_and_native_mapping_audited": true,
+  "steps": {
+    "step_before_save": {
+      "before_seconds": 50.61665725708008,
+      "after_seconds": 51.56664276123047,
+      "native_seconds_advanced": 0.9499855041503906,
+      "paused_after": true
+    },
+    "step_after_save": {
+      "before_seconds": 51.56664276123047,
+      "after_seconds": 52.766624450683594,
+      "native_seconds_advanced": 1.199981689453125,
+      "paused_after": true
+    },
+    "step_after_reload": {
+      "before_seconds": 51.56664276123047,
+      "after_seconds": 52.51662826538086,
+      "native_seconds_advanced": 0.9499855041503906,
+      "paused_after": true
+    }
+  },
+  "checkpoint_clock": 51.56664276123047,
+  "reloaded_clock": 51.56664276123047,
+  "reload_clock_equal": true,
+  "source_save_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+  "source_save_unchanged": true,
+  "configured_workers": 4,
+  "actual_worker_thread_names_captured": false,
+  "owned_game_and_chain_processes_reclaimed": 4,
+  "owned_supervisor_and_controller_exited": true,
+  "sampled_owned_tree_peak_pss_plus_swap_pss_kib": 4285769,
+  "memory_scope": "Sampled entire owned tree; not an upper bound or proof of savings/leak",
+  "memory_probe_capture_passed": false,
+  "memory_probe_error": "Old probe rejected fresh paused telemetry because automatic date conversion lost UTC suffix",
+  "fixed_probe_runtime_capture_pending": true,
+  "graphical_acceptance": false,
+  "four_game_concurrency": false,
+  "whole_game_performance_measured": false,
+  "private_roundtrip_sha256": "8235ebc9792629b564141a10a3776f49f6fc70ef6974100389f887780ffbf7d4"
+}

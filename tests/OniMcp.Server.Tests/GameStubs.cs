@@ -49,6 +49,8 @@ namespace OniMcp.Config
         public bool AuthEnabled { get; set; }
         public string AuthToken { get; set; }
         public bool GlobalAutoDisinfectDisabled { get; set; }
+        // Protocol tests select text encoding explicitly; most exercise JSON mode.
+        public string ToolTextFormat { get; set; } = "json";
         public bool ScreenshotCleanupEnabled { get; set; }
         public int ScreenshotRetentionMinutes { get; set; }
         public int ScreenshotMaxFiles { get; set; }

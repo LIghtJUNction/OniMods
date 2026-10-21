@@ -34,7 +34,9 @@ def main() -> None:
     safety = (BUILD / "BuildPlanningPlacementSafety.cs").read_text(encoding="utf-8")
     obstructions = (BUILD / "BuildPlanningObstructions.cs").read_text(encoding="utf-8")
     geometry = (BUILD / "BuildPlanningPlacementGeometry.cs").read_text(encoding="utf-8")
-    models = (BUILD / "BuildPlanningTools.cs").read_text(encoding="utf-8")
+    coordinates = (BUILD / "BuildPlanningPlacementCoordinates.cs").read_text(encoding="utf-8")
+    identity = (BUILD / "BuildPlacementIdentityPolicy.cs").read_text(encoding="utf-8")
+    models = (BUILD / "BuildPlanningPlacementModels.cs").read_text(encoding="utf-8")
     plan_one = (BUILD / "BuildPlanningPlanOne.cs").read_text(encoding="utf-8")
 
     classifier = body(safety, "private static bool UsesNativeBridgeEndpointRegistration")
@@ -61,6 +63,7 @@ def main() -> None:
     assert "if (EqualsIgnoreCase(actualPrefabId, def.PrefabID))" not in conflicts
 
     targets = body(safety, "private static IEnumerable<BridgeEndpointTarget> NativeBridgeEndpointTargets")
+    assert "Grid.PosToCell(placement.PlacementPoint)" in targets
     for required in (
         "def.UtilityInputOffset",
         "def.UtilityOutputOffset",
@@ -83,26 +86,49 @@ def main() -> None:
     assert "IsUtilityPrefab(def.PrefabID) && !UsesNativeBridgeEndpointRegistration(def)" in building
     assert "PlacementSafetyFootprint(def, placement)" in building
     oriented_footprint = body(safety, "private static IEnumerable<FootprintCell> PlacementSafetyFootprint")
-    assert "def.PlacementOffsets" in oriented_footprint
-    assert "Rotatable.GetRotatedCellOffset(offset, placement.Orientation)" in oriented_footprint
+    assert "return placement.Footprint" in oriented_footprint
+    offsets = body(coordinates, "private static IEnumerable<CellOffset> NativePlacementOffsets")
+    assert "def.PlacementOffsets" in offsets
+    assert "Rotatable.GetRotatedCellOffset(offset, orientation)" in offsets
+    requested_footprint = body(coordinates, "private static IEnumerable<FootprintCell> FootprintCells")
+    assert "NativePlacementOffsets(def, orientation)" in requested_footprint
     footprint = body(obstructions, "private static List<Dictionary<string, object>> FindFootprintObstructions")
     assert "var safetyFootprint = PlacementSafetyFootprint(placementDef, placement).ToList()" in footprint
     assert "bool endpointBridge = UsesNativeBridgeEndpointRegistration(placementDef)" in footprint
     assert "(utility && !endpointBridge) || IsUtilityPrefab(id)" in footprint
 
     signature = "private static PlacementDetails BuildPlacementDetails(BuildingDef def, int x, int y, int worldId,"
-    placement_builder = body(geometry, signature)
-    assert "Orientation orientation = Orientation.Neutral" in geometry
+    placement_builder = body(coordinates, signature)
+    assert "Orientation orientation = Orientation.Neutral" in coordinates
     assert "Orientation = orientation" in placement_builder
+    assert "FootprintCells(def, x, y, worldId, orientation)" in placement_builder
+    assert "BuildPlacementPosition(cell, def, orientation)" in placement_builder
     placement_model = body(models, "private sealed class PlacementDetails")
     assert "public Orientation Orientation" in placement_model
     assert plan_one.count("BuildPlacementDetails(def, x, y, worldId, orientation)") == 2
+
+    actual_placement = body(geometry, "private static Dictionary<string, object> ActualPlacementDetails")
+    ordered(actual_placement, "go.GetComponent<Rotatable>()", "rotatable.GetOrientation()", '["orientation"]',
+            '["orientationRelevant"]')
+    comparison = body(geometry, "private static Dictionary<string, object> ComparePlacement")
+    ordered(comparison, "BuildPlacementIdentityPolicy.Evaluate(", '["valid"] = identity.Valid',
+            '["orientationMatches"] = identity.OrientationMatches', '["expectedOrientation"]', '["actualOrientation"]')
+    policy = body(identity, "internal static BuildPlacementIdentityResult Evaluate")
+    assert "actualX == expectedX && actualY == expectedY" in policy
+    assert "actualWorldId < 0 || expectedWorldId < 0 || actualWorldId == expectedWorldId" in policy
+    assert "!orientationRelevant" in policy
+    assert "StringComparison.OrdinalIgnoreCase" in policy
 
     planning = body(plan_one, "private static Dictionary<string, object> TryPlanOne")
     assert planning.count("ValidateFootprint(") >= 2
     ordered(planning, "var executionFootprintResult = ValidateFootprint(placement)",
             "HasUnsafeExecutionConflict(executionFootprintResult)",
-            "def.TryPlace(")
+            "TryPlaceRequestedBuilding(def, placement,")
+    native_place = body(coordinates, "private static GameObject TryPlaceRequestedBuilding")
+    assert "def.TryPlace(null, placement.PlacementPoint, placement.Orientation" in native_place
+    assert "BuildPlacementPosition(" not in native_place  # do not offset an already-converted point
+    origin = body(coordinates, "private static int NativePlacementOriginCell")
+    assert "offsets.Min(p => p.x)" in origin and "offsets.Min(p => p.y)" in origin
 
     assert "TryBuildVirtualFileInstantBuild" not in planning
     assert "blueprint.DeleteObject()" not in planning

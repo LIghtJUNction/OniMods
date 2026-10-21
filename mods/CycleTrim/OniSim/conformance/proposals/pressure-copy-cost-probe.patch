@@ -1,0 +1,116 @@
+--- a/mods/CycleTrim/OniSim/native/src/pressure_tiles_tests.rs
++++ b/mods/CycleTrim/OniSim/native/src/pressure_tiles_tests.rs
+@@ -401,3 +401,113 @@
+         }
+     }
+ }
++
++#[test]
++#[ignore = "Explicit pressure-copy cost experiment, not ordinary correctness acceptance"]
++fn pressure_copy_cost_probe() {
++    let mode = std::env::var("CYCLETRIM_COST_MODE").unwrap();
++    assert!(["serial", "copy_only", "parallel"].contains(&mode.as_str()));
++    let output = std::env::var("CYCLETRIM_COST_OUTPUT").unwrap();
++    let elements = elements();
++    let diseases = diseases();
++    let mut world =
++        PhysicsWorld::new(256, 128, 42, &elements).unwrap_or_else(|e| panic!("{}", e.message));
++    world.write.element.fill(3);
++    world.write.mass.fill(1.0);
++    world.write.temperature.fill(300.0);
++    world.dirty.fill(false);
++    world.dirty_flags.fill(0);
++    world.read.copy_from(&world.write);
++    world.scan_direction = 1;
++    let region = Region {
++        min_x: 1,
++        max_x: 256,
++        min_y: 1,
++        max_y: 128,
++        ..Region::default()
++    };
++    let pool = rayon::ThreadPoolBuilder::new()
++        .num_threads(4)
++        .build()
++        .unwrap();
++    let mut patches: Vec<_> = (0..4).map(|_| Scratch::new(&elements).unwrap()).collect();
++    let mut graph = dag::Graph::new();
++    let bands = (254 + 2 * 126) / BAND + 1;
++    let rows = 127_usize.div_ceil(ROWS);
++    assert!(graph.prepare(bands, rows));
++    let mut events = EventQueues::default();
++    let environment = FloatEnv::capture();
++    let iterations = 64;
++    let mut start = std::time::Instant::now();
++    for iteration in 0..iterations + 4 {
++        if iteration == 4 {
++            start = std::time::Instant::now();
++        }
++        events.clear();
++        match mode.as_str() {
++            "serial" => {
++                super::super::pressure_cells(region, 1, world.stride, false, |cell| {
++                    super::super::pressure_cell(
++                        &mut world,
++                        &elements,
++                        &diseases,
++                        &mut events,
++                        cell,
++                    );
++                });
++            }
++            "copy_only" => {
++                assert!(graph.prepare(bands, rows));
++                dag::run(
++                    &mut world,
++                    &elements,
++                    &mut events,
++                    region,
++                    &pool,
++                    &mut patches,
++                    &mut graph,
++                    &|s| {
++                        std::hint::black_box(&mut s.world);
++                    },
++                );
++            }
++            "parallel" => {
++                assert!(graph.prepare(bands, rows));
++                dag::run(
++                    &mut world,
++                    &elements,
++                    &mut events,
++                    region,
++                    &pool,
++                    &mut patches,
++                    &mut graph,
++                    &|s| s.execute(&elements, &diseases, environment),
++                );
++            }
++            _ => unreachable!(),
++        }
++    }
++    let wall = start.elapsed().as_secs_f64();
++    std::hint::black_box(&world);
++    assert!(
++        world
++            .write
++            .mass
++            .iter()
++            .all(|v| v.to_bits() == 1_f32.to_bits())
++    );
++    assert!(
++        world
++            .write
++            .temperature
++            .iter()
++            .all(|v| v.to_bits() == 300_f32.to_bits())
++    );
++    assert!(world.write.disease_count.iter().all(|&v| v == 0));
++    assert!(world.write.disease_idx.iter().all(|&v| v == 255));
++    assert!(world.write.disease_infestation.iter().all(|&v| v == 0));
++    assert!(world.write.disease_growth.iter().all(|v| v.to_bits() == 0));
++    assert!(world.flow.iter().flatten().all(|v| v.to_bits() == 0));
++    assert!(events.substance_change_info.is_empty());
++    std::fs::write(output, format!("{{\"mode\":\"{}\",\"iterations\":{},\"wall_seconds\":{:.9},\"unchanged_state_verified\":true}}\n", mode,iterations,wall)).unwrap();
++}

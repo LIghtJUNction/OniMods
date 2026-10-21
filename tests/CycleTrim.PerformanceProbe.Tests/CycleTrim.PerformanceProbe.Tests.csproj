@@ -9,6 +9,7 @@
     <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../mods/CycleTrim/ModInfo.cs" Link="ModInfo.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeCounter.cs" Link="PerformanceProbeCounter.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs" Link="PerformanceProbeGenerationCounter.cs" />
   </ItemGroup>

@@ -45,6 +45,11 @@ world_editor command=pwd|cd|ls|read|zoom|grep|symbols|search|edit|blueprint|batc
 | `/active/buildings/index.md` | 已完成建筑参数索引 | 只读 |
 | `/active/buildings/instances/<prefab>-<InstanceID>.md` | 稳定的单建筑参数文件 | 单条规范字段行 |
 | `/active/buildings/plans.oni` | 建筑计划文本 | plan 补丁 |
+| `/active/resources/inventory.oni` | 当前世界库存水平与碎片清单 | 只读 |
+| `/active/resources/food.oni` | 当前世界食物储备、千卡与保质期 | 只读 |
+| `/active/infrastructure/rooms.oni` | 当前世界房间划分与覆盖明细 | 只读 |
+| `/active/infrastructure/power.md` | 电网基础设施地图与连接视图 | 精确地图视图 |
+| `/active/dupes/index.oni` | 复制人状态、健康度与被困分诊索引 | 只读 |
 | `/active/infrastructure/*.oni` | 公共管线连接计划 | plan 补丁 |
 | `/active/infrastructure/*.md` | 基础设施地图视图 | 精确地图预检；连接符号编辑会拒绝 |
 
@@ -57,7 +62,7 @@ world_editor command=pwd|cd|ls|read|zoom|grep|symbols|search|edit|blueprint|batc
 解释地图字码、根据建筑/元素/实体名称生成字码，或读取连接/overlay 字码前，必须先在 commentary 中说明 gameplay skill 要求权威查询，并把当前所有未知字码/名称一次批量提交：
 
 ```text
-search_control domain=glyphs queries=["砖","?","┼","氧气"] direction=auto matchMode=auto
+world_editor command=symbols queries=["砖","?","┼","氧气"] direction=auto matchMode=auto
 ```
 
 禁止根据中文字符、旧 legend 或记忆猜测。`count=0` 必须保持“未知”。上下文相关字码需传 `view=temperature|oxygen|light|decor|disease|radiation|crop|...`。仅可复用同一运行时、同一轮中已经查询过的结果。
@@ -65,13 +70,13 @@ search_control domain=glyphs queries=["砖","?","┼","氧气"] direction=auto m
 正查、反查与批量示例：
 
 ```text
-search_control domain=glyphs queries=["砖","零"] direction=code_to_meaning view=temperature
-search_control domain=glyphs queries=["砖","┼"] direction=code_to_meaning view=logic
-search_control domain=glyphs queries=["砖块","研究站","氧气"] direction=meaning_to_code
-search_control domain=glyphs queries=["■","液","不","易","可","难"] direction=auto view=oxygen perQueryLimit=20
+world_editor command=symbols queries=["砖","零"] direction=code_to_meaning view=temperature
+world_editor command=symbols queries=["砖","┼"] direction=code_to_meaning view=logic
+world_editor command=symbols queries=["砖块","研究站","氧气"] direction=meaning_to_code
+world_editor command=symbols queries=["■","液","不","易","可","难"] direction=auto view=oxygen perQueryLimit=20
 ```
 
-兼容入口 `world_editor command=symbols` 支持相同查询字段，但 gameplay 必须优先使用 `search_control domain=glyphs`。
+`world_editor command=symbols` 是七工具核心公开接口，支持批量、正反向和覆盖层字码查询。只有当 `tools/list` 明确列出 `search_control` 时，才能直接使用后者；不能通过 `server_control` 批量调用隐藏入口。
 
 ## 通用补丁协议
 
@@ -302,8 +307,16 @@ rename name="Dig" newName="矿工"
 紧凑读取保留范围、格子和图例，省去逐格详情、连线详情和建筑文件清单。
 编辑时使用 `format=edit compact=false`，SEARCH 和 REPLACE 必须有相同表头与 Y 行集，
 重复行会被拒绝。蓝图材料来自完整建造配方，不再使用地形材料代替。
+地图和单格读取默认使用紧凑输出。紧凑地图会使用 RLE，并指向
+`/active/symbols/glyphs.md` 或 `world_editor command=symbols` 查询当前字码含义；
+不要凭字形猜测含义。可读/未知格计数只概括请求范围内可见的格子；
+液体中的复制人按不同复制人去重计数。这些都不是全图统计。
+要展开地图可用 `compact=false` 或 `format=edit`；单格的完整引导和碎片详情也可用
+`compact=false` 获取。
 管线使用原生实际连接数据：`?` 是数据未知，`*` 是确认没有连接，箭头表示单端连接。
 仅有管线蓝图不代表网络已经连通。
+
+地图物体 token 可能遮住正下方的元素。若物体脚下的液体、地形或碎片会影响决策，下达命令前只读取该格的 `/active/map/cell_X_Y.md` 详情。一次实际观察中，打印舱脚下的单格详情显示 0.08 kg 污染水和两块 `DisposableElectrobank_RawMetal`；后来正常执行带时间上限的 `step_until`（`orders_complete`）后，该格显示 Oxygen，两块碎片仍在。这只是一次观察记录，不是固定地图模板；模拟推进后应重读具体格子。
 
 操作循环：暂停 → 小范围读取 → 预览 → 提交一次原生操作 → 短时间正常运行 → 暂停 → 重读。
 检查 `phase`、`partial`、`reportedActions` 和 `requiresVerification`。

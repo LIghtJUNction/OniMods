@@ -30,6 +30,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                     return 0;
                 }
 
+                ModLoadRegression.Run();
                 RecordsCountTotalMeanAndMax();
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();

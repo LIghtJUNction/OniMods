@@ -66,6 +66,12 @@ namespace CycleTrim.Patches
 
         private static bool IsRequested()
         {
+            // Steam forwards launch arguments to an already-running client, but
+            // does not forward the caller's environment into the game process.
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--cycletrim-perf-probe") >= 0)
+            {
+                return true;
+            }
             var value = Environment.GetEnvironmentVariable(EnvironmentVariable);
             return string.Equals(value, "1", StringComparison.Ordinal)
                 || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)

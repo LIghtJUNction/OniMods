@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "complete": true,
+  "scope": "96x96 native frame fixtures, not whole-game FPS",
+  "native_sha256": "8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0",
+  "cpus": [
+    0,
+    2,
+    4,
+    6
+  ],
+  "baseline_workers": 1,
+  "candidate_workers": 4,
+  "samples": 96,
+  "scenes": {
+    "fluid": {
+      "cpu_change_percent": 9.280341434644734,
+      "wall_change_percent": -1.218324263350501,
+      "peak_rss_change_percent": 0.39048420040850296
+    },
+    "thermal": {
+      "cpu_change_percent": 32.77207381526528,
+      "wall_change_percent": -0.9227500862178162,
+      "peak_rss_change_percent": 0.40848200877035
+    },
+    "sealed": {
+      "cpu_change_percent": 10.88936139062171,
+      "wall_change_percent": -1.5976555501076017,
+      "peak_rss_change_percent": 0.4094412331406616
+    },
+    "germ_flow": {
+      "cpu_change_percent": -1.8308696162264604,
+      "wall_change_percent": -14.682507580358273,
+      "peak_rss_change_percent": 0.4328483828303531
+    },
+    "mixed_germs": {
+      "cpu_change_percent": 19.741714460219463,
+      "wall_change_percent": 3.7512754361488154,
+      "peak_rss_change_percent": 0.30078806472959574
+    },
+    "vacuum": {
+      "cpu_change_percent": 16.27919380406093,
+      "wall_change_percent": 2.308356224247876,
+      "peak_rss_change_percent": 0.3432287589570704
+    }
+  },
+  "gates": {
+    "all_finals_match_official": true,
+    "four_workers_observed": true,
+    "positive_total_worker_ticks_each_sample": false,
+    "one_scene_wall_reduction_at_least_5_percent": true,
+    "no_scene_wall_regression_over_3_percent": false,
+    "no_scene_cpu_regression_over_10_percent": false,
+    "no_scene_peak_rss_increase_over_3_percent": true
+  },
+  "passes_predeclared_gates": false,
+  "timed_major_faults": 0,
+  "raw_report_sha256": "7420375ff104203815bc3206dd5e9882ed5ac71b4b3a63f8b9063ce8a84c8768",
+  "interpretation": "Small native scenes show significant CPU overhead with four workers; not whole-game speedup. All raw noisy samples retained; positive aggregate thread ticks do not prove every thread exceeded tick resolution. Larger-world scaling and cutoff selection remain pending."
+}

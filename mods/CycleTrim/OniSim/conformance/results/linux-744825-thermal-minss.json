@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "native_sha256": "8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0",
+  "scope": "Pinned official ABI publications; not actual-game runtime acceptance",
+  "release_tests": 41,
+  "stable_source_rebuild": true,
+  "expanded_conformance": {
+    "1": {
+      "exit_code": 0,
+      "passed": true,
+      "cases": 263,
+      "publications": 9571
+    },
+    "4": {
+      "exit_code": 0,
+      "passed": true,
+      "cases": 263,
+      "publications": 9571
+    }
+  },
+  "focused_cases_per_worker_count": 32,
+  "focused_workers": [
+    1,
+    4
+  ],
+  "focused_all_passed": true,
+  "known_bad": {
+    "canonical_C301_cell_failures": 2,
+    "pre_fix_5ff_cell_failures_per_worker_count": 2,
+    "pre_fix_5ff_backwall_failures": 7,
+    "f32_only_fb0_remaining_backwall_failures_per_worker_count": 4
+  },
+  "fix": "Match MINSS conductivity operand order and MINSD/MAXSD cap/clamp operand order in both cell/backwall paths, preserving original normal arithmetic",
+  "source_integrated": true,
+  "production_promoted": false,
+  "runtime_acceptance": false,
+  "whole_game_speedup_established": false,
+  "canonical_rebuild_matches_tested_binary": true,
+  "canonical_harness_matches_expanded_test_run": true,
+  "game_free_harness_tests": 47
+}

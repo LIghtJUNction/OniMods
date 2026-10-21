@@ -121,12 +121,12 @@ ln -s /usr/bin/mkdir "$HEALTHY_BIN/mkdir"
 ln -s /usr/bin/cat "$HEALTHY_BIN/cat"
 
 run_case healthy_fast '303
-' 0 'mcp=ready url=http://localhost:8788/mcp/ pid=303 existing_process=true' "$HEALTHY_BIN"
+' 0 'mcp=ready url=http://127.0.0.1:8788/mcp/ pid=303 existing_process=true' "$HEALTHY_BIN"
 [ ! -f "$TEST_ROOT/healthy_fast/steam-requested" ]
 [ -f "$TEST_ROOT/healthy_fast/game/unity.lock" ]
 
 run_case delayed_success '101 102
-' 0 'mcp=ready url=http://localhost:8788/mcp/ pid=202 postlaunch_process=true'
+' 0 'mcp=ready url=http://127.0.0.1:8788/mcp/ pid=202 postlaunch_process=true'
 [ -f "$TEST_ROOT/delayed_success/steam-requested" ]
 grep -Fx 'steam://run/457140' "$TEST_ROOT/delayed_success/steam-args" >/dev/null
 if grep -F 'ONI_STEAM_APP_ID' "$LAUNCHER" >/dev/null; then

@@ -1,0 +1,5 @@
+'ContactCache.flags_absorb' depends on axioms: [propext, Quot.sound]
+'ContactCache.earlier_result_effects_retained' depends on axioms: [propext, Quot.sound]
+'ContactCache.replay_without_new_effects' depends on axioms: [propext]
+'ContactCache.memoized_replay' depends on axioms: [propext, Quot.sound]
+'ContactCache.arbitrary_continuation' depends on axioms: [propext, Quot.sound]

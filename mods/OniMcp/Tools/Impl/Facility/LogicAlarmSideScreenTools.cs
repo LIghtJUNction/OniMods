@@ -59,12 +59,7 @@ namespace OniMcp.Tools
                         args,
                         value => alarm.notificationName = value,
                         value => alarm.notificationTooltip = value,
-                        value =>
-                        {
-                            NotificationType type;
-                            if (TryParseNotificationType(value, out type))
-                                alarm.notificationType = type;
-                        },
+                        value => alarm.notificationType = value,
                         out updateError))
                     {
                         return CallToolResult.Error(updateError);

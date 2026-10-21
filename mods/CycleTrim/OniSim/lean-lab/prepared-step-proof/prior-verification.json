@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "theorems": 3,
+  "source_sha256": "3bef87a81dd48fbf71ebec5cd7896bc4ec81b99cd5e172343907e60e54523134",
+  "scope": "Pure identical state preflight elimination before first advance, preserved elapsed rejection and arbitrary later validation/advance. No step-preserves-valid-state invariant is assumed. Rust borrowing/compiler correspondence is separate.",
+  "sorry_or_admit": false
+}

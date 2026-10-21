@@ -177,6 +177,7 @@ namespace OniMcp.Tools
                     var previewArgs = (JObject)args.DeepClone();
                     previewArgs["dryRun"] = true;
                     var result = TryPlanOne(args["prefabId"]?.ToString(), x, y, previewArgs);
+                    AddConstructionDiagnostics(result, args["prefabId"]?.ToString(), x, y, ToolUtil.ResolveWorldId(previewArgs));
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
             };
@@ -214,7 +215,7 @@ namespace OniMcp.Tools
                     ["autoDigObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true，遇到自然固体自动标记挖掘", Required = false },
                     ["autoUprootObstructions"] = new McpToolParameter { Type = "boolean", Description = "默认 true，遇到可铲植物自动标记铲除", Required = false },
                     ["maxAutoDigCells"] = new McpToolParameter { Type = "integer", Description = "最多自动标记挖掘/铲除格，默认 100，最大 500", Required = false },
-                    ["nativePathPlacement"] = new McpToolParameter { Type = "boolean", Description = "Default true. Use ONI's native utility drag placement for the whole path before falling back to per-cell placement.", Required = false }
+                    ["nativePathPlacement"] = new McpToolParameter { Type = "boolean", Description = "Deprecated compatibility input; utility paths always use validated per-cell blueprints without activating a player tool.", Required = false }
                 },
                 Handler = args =>
                 {
@@ -259,16 +260,6 @@ return CallToolResult.Error("utility_auto_connect only supports linear utility p
                     if (!pathSafety.Valid)
                         return CallToolResult.Error(JsonConvert.SerializeObject(
                             UtilityPathConflictResult(def, path, pathSafety, "path_preflight"), McpJsonUtil.Settings));
-if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
-                    {
-                        var nativePath = TryPlaceUtilityPathNative(def, path, args);
-                        if (EqualsIgnoreCase(nativePath.TryGetValue("reasonCode", out object reasonCode) ? reasonCode?.ToString() : null, "utility_path_conflict"))
-                            return CallToolResult.Error(JsonConvert.SerializeObject(nativePath, McpJsonUtil.Settings));
-                        if (GetBool(nativePath, "success") && GetBool(nativePath, "complete"))
-                            return CallToolResult.Text(JsonConvert.SerializeObject(nativePath, McpJsonUtil.Settings));
-                        if (!GetBool(nativePath, "shouldFallback"))
-                            return CallToolResult.Error(JsonConvert.SerializeObject(nativePath, McpJsonUtil.Settings));
-                    }
                     var fallbackSafety = ValidateUtilityPathSafety(def, path, worldId);
                     if (!fallbackSafety.Valid)
                         return CallToolResult.Error(JsonConvert.SerializeObject(
@@ -284,6 +275,7 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                     foreach (var point in path)
                     {
                         var result = TryPlanOne(def.PrefabID, point.x, point.y, args, plannedSupportCells, autoDigContext);
+                        AddConstructionDiagnostics(result, def.PrefabID, point.x, point.y, worldId);
                         bool ok = result.ContainsKey("planned") && (bool)result["planned"];
                         bool validPlacement = result.ContainsKey("valid") && (bool)result["valid"];
                     bool alreadyPresent = result.ContainsKey("alreadyPresent") && (bool)result["alreadyPresent"];
@@ -306,16 +298,21 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                     bool placementConflict = errors.Any(item =>
                         EqualsIgnoreCase(item.TryGetValue("reasonCode", out object itemReason) ? itemReason?.ToString() : null, "utility_path_conflict")
                         || EqualsIgnoreCase(item.TryGetValue("reasonCode", out itemReason) ? itemReason?.ToString() : null, "placement_conflict"));
-                    string networkError = null; bool networkConnected = dryRun || !IsCompletedUtilityPath(def, path) || ValidateCompletedUtilityPathNetwork(def, path, out networkError);
-                    if (!networkConnected) errors.Add(new Dictionary<string, object> { ["reasonCode"] = "utility_network_incomplete", ["error"] = networkError });
+                    string networkError = null;
+                    bool networkConnected = errors.Count == 0;
+                    if (!dryRun && errors.Count == 0)
+                        networkConnected = FinalizeUtilityPathConnections(def, path, worldId, out networkError);
+                    if (networkConnected && !dryRun && errors.Count == 0 && IsCompletedUtilityPath(def, path))
+                        networkConnected = ValidateCompletedUtilityPathNetwork(def, path, out networkError);
+                    if (!networkConnected && networkError != null) errors.Add(new Dictionary<string, object> { ["reasonCode"] = "utility_network_incomplete", ["error"] = networkError });
                     int connectedCells = dryRun ? valid : CountUtilityPathCells(def, path, worldId);
-                    bool complete = dryRun ? errors.Count == 0 && valid == path.Count : connectedCells >= path.Count && networkConnected;
+                    bool complete = errors.Count == 0 && (dryRun ? valid == path.Count : connectedCells >= path.Count && networkConnected);
                     var response = new Dictionary<string, object>
                     {
                         ["prefabId"] = def.PrefabID,
                         ["dryRun"] = dryRun,
                         ["committed"] = !dryRun && (planned > 0 || reused > 0 || autoMarked > 0),
-                        ["placementMode"] = dryRun ? "dry_run_validation" : "cell_by_cell_fallback",
+                        ["placementMode"] = dryRun ? "dry_run_validation" : "cell_by_cell",
                         ["pathMode"] = "continuous_manhattan_path",
                 ["pathCells"] = path.Count,
                 ["planned"] = planned,
@@ -333,6 +330,7 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                 ["path"] = path.Select(p => new { x = p.x, y = p.y }).ToList(),
                 ["segments"] = BuildPathSegments(path),
                 ["errors"] = errors.Take(50).ToList(),
+                ["batchConstructionDiagnostics"] = BatchConstructionDiagnostics(results),
                 ["results"] = results
             };
                     if (placementConflict)
@@ -430,6 +428,7 @@ if (!dryRun && ToolUtil.GetBool(args, "nativePathPlacement", true))
                             scannedAnchors++;
                             var previewArgs = (JObject)scanArgs.DeepClone();
                             var preview = TryPlanOne(prefabId, x, y, previewArgs);
+                            AddConstructionDiagnostics(preview, prefabId, x, y, worldId);
                             bool valid = GetDictionaryBool(preview, "valid");
                             bool warningOnly = valid && GetNestedBool(preview, "support", "warningOnly");
                             int score = ScorePlacementCandidate(preview, valid, warningOnly);

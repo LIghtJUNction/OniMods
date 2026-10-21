@@ -1,0 +1,20 @@
+[package]
+name = "oni-sim-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "CycleTrim native simulation core for Oxygen Not Included; runtime validation is ongoing"
+license-file = "../../../../LICENSE"
+
+[lib]
+name = "oni_sim_core"
+crate-type = ["cdylib"]
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+rayon = "1.12.0"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

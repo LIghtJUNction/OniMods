@@ -1,0 +1,170 @@
+--- a/mods/CycleTrim/OniSim/native/src/float_env.rs
++++ b/mods/CycleTrim/OniSim/native/src/float_env.rs
+@@ -24,6 +24,10 @@
+                 options(nostack, preserves_flags));
+         }
+         Self(value)
++    }
++
++    pub(crate) fn all_exceptions_masked(self) -> bool {
++        cfg!(target_arch = "x86_64") && self.0 & 0x1f80 == 0x1f80
+     }
+ 
+     pub(crate) fn install(self) -> FloatEnvGuard {
+@@ -77,6 +81,17 @@
+     use rayon::prelude::*;
+ 
+     #[test]
++    fn reordering_requires_every_exception_to_be_masked() {
++        let original = FloatEnv::capture();
++        for bit in [0x80, 0x100, 0x200, 0x400, 0x800, 0x1000] {
++            let _guard = FloatEnv((original.0 | 0x1f80) & !bit & !0x3f).install();
++            assert!(!FloatEnv::capture().all_exceptions_masked());
++        }
++        let _guard = FloatEnv(original.0 | 0x1f80).install();
++        assert!(FloatEnv::capture().all_exceptions_masked());
++    }
++
++    #[test]
+     fn tasks_inherit_submitter_rounding_and_restore_pool_environment() {
+         let pool = rayon::ThreadPoolBuilder::new()
+             .num_threads(2)
+--- a/mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs
++++ b/mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs
+@@ -101,6 +101,51 @@
+     }
+ }
+ 
++// First validate scheduling independently of parallel execution. All conflicting
++// tasks retain native order; same-wave cells have disjoint 2x2 footprints.
++// With unmasked exceptions, retain literal order to preserve trap sequencing.
++fn pressure_cells(
++    region: Region,
++    direction: i32,
++    stride: usize,
++    wavefront: bool,
++    mut visit: impl FnMut(usize),
++) {
++    let width = (region.max_x - region.min_x) as usize;
++    let height = (region.max_y - region.min_y) as usize;
++    if width == 0 || height == 0 {
++        return;
++    }
++    if !wavefront {
++        for y in region.min_y..region.max_y {
++            let row = y as usize * stride;
++            let (mut cell, stop) = if direction > 0 {
++                (row + region.min_x as usize, row + region.max_x as usize)
++            } else {
++                (row + region.max_x as usize, row + region.min_x as usize)
++            };
++            while cell != stop {
++                visit(cell);
++                cell = cell.wrapping_add_signed(direction as isize);
++            }
++        }
++        return;
++    }
++    for wave in 0..width + 2 * (height - 1) {
++        let first_y = wave.saturating_sub(width - 1).div_ceil(2);
++        let last_y = (wave / 2).min(height - 1);
++        for y in first_y..=last_y {
++            let x = wave - 2 * y;
++            let physical_x = if direction > 0 {
++                region.min_x as usize + x
++            } else {
++                region.max_x as usize - x
++            };
++            visit((region.min_y as usize + y) * stride + physical_x);
++        }
++    }
++}
++
+ /// Native pressure reverse scans begin at x=max_x and stop before x=min_x;
+ /// the forward scan begins at min_x and stops before max_x. This selects each
+ /// horizontal edge from the side indicated by scan_direction.
+@@ -111,18 +156,16 @@
+     events: &mut EventQueues,
+     region: Region,
+ ) {
+-    for y in region.min_y..region.max_y {
+-        let row = y as usize * world.stride;
+-        let (mut cell, stop) = if world.scan_direction > 0 {
+-            (row + region.min_x as usize, row + region.max_x as usize)
+-        } else {
+-            (row + region.max_x as usize, row + region.min_x as usize)
+-        };
+-        while cell != stop {
++    let wavefront = crate::float_env::FloatEnv::capture().all_exceptions_masked();
++    pressure_cells(
++        region,
++        world.scan_direction,
++        world.stride,
++        wavefront,
++        |cell| {
+             pressure_cell(world, elements, diseases, events, cell);
+-            cell = cell.wrapping_add_signed(world.scan_direction as isize);
+-        }
+-    }
++        },
++    );
+     let (min_x, max_x, min_y, max_y) = displacement_bounds(world, region);
+     for y in min_y..max_y {
+         for x in min_x..max_x {
+@@ -259,3 +302,56 @@
+         }
+     }
+ }
++
++#[cfg(test)]
++mod pressure_schedule_tests {
++    use super::*;
++    use std::collections::HashMap;
++
++    #[test]
++    fn wavefront_visits_each_cell_once_and_preserves_all_overlapping_pairs() {
++        for width in [0, 1, 2, 3, 7, 16] {
++            for height in [0, 1, 2, 3, 8, 17] {
++                for direction in [-1, 1] {
++                    for (min_x, min_y) in [(1, 1), (3, 5)] {
++                        let region = Region {
++                            min_x,
++                            min_y,
++                            max_x: min_x + width,
++                            max_y: min_y + height,
++                            ..Region::default()
++                        };
++                        let mut original = Vec::new();
++                        let mut reordered = Vec::new();
++                        pressure_cells(region, direction, 64, false, |c| original.push(c));
++                        pressure_cells(region, direction, 64, true, |c| reordered.push(c));
++                        let mut expected = original.clone();
++                        expected.sort_unstable();
++                        let mut actual = reordered.clone();
++                        actual.sort_unstable();
++                        assert_eq!(actual, expected);
++                        assert_eq!(actual.len(), (width * height) as usize);
++                        actual.dedup();
++                        assert_eq!(actual.len(), expected.len());
++                        let positions: HashMap<_, _> = reordered
++                            .iter()
++                            .enumerate()
++                            .map(|(index, &cell)| (cell, index))
++                            .collect();
++                        let footprint = |c: usize| {
++                            let side = c.wrapping_add_signed(direction as isize);
++                            [c, side, c + 64, side + 64]
++                        };
++                        for (index, &left) in original.iter().enumerate() {
++                            for &right in &original[index + 1..] {
++                                if footprint(left).iter().any(|c| footprint(right).contains(c)) {
++                                    assert!(positions[&left] < positions[&right]);
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++        }
++    }
++}

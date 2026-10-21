@@ -175,7 +175,7 @@ def verify_glyph_lookup_contract(
     world_ref = (root / ".agents" / "skills" / "oni-gameplay" / "references" / "world-editor.md").read_text(encoding="utf-8")
     world_ref_zh = (root / ".agents" / "skills" / "oni-gameplay" / "references" / "world-editor.zh.md").read_text(encoding="utf-8")
     for text, label in ((skill, "skill"), (world_ref, "English world-editor reference"), (world_ref_zh, "Chinese world-editor reference")):
-        require(text, "search_control domain=glyphs queries=[", f"{label} mandatory batch lookup")
+        require(text, "world_editor command=symbols queries=[", f"{label} mandatory public batch lookup")
         require(text, "direction=auto", f"{label} auto direction")
         require(text, "code_to_meaning", f"{label} forward lookup example")
         require(text, "meaning_to_code", f"{label} reverse lookup example")

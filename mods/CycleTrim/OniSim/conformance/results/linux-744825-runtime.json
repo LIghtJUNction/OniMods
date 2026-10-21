@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "native_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "cycletrim_dll_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "steam_launched": true,
+  "reload_clock_equal": true,
+  "game_ready": false,
+  "whole_game_performance_measured": false,
+  "full_compatibility": false,
+  "game_build": 744825,
+  "headless": true,
+  "batch_mode": true,
+  "graphics_device": "Null",
+  "camera_render_callbacks": 0,
+  "game_crash": false,
+  "cell_workers": [
+    "OniSim-cell-0",
+    "OniSim-cell-1",
+    "OniSim-cell-2",
+    "OniSim-cell-3"
+  ],
+  "native_seconds_advanced_before_save": 0.9499855041503906,
+  "native_seconds_advanced_after_reload": 0.9499855041503906,
+  "reload_clock": 52.51662826538086,
+  "whole_grid_runtime_bitwise_comparison": false,
+  "restoration": {
+    "isolated_native_and_managed_roots_verified": true,
+    "source_unchanged": true,
+    "process_stopped": true,
+    "mapped_candidate_pair_verified": true
+  },
+  "source_fixture": {
+    "initial_save_sha256": "06a8c65b86ff87b3aa2e689230a690825d49d7a3185f84467eb7c42ef6dd3957",
+    "checkpoint_sha256": "a463806c79510acbe79d29574ca6335fca700e78e3c220749fe7b1b60ec8c3ad"
+  },
+  "mapped_native_path_sha256_verified": true,
+  "acceptance_scope": "One isolated three-duplicant survival-fixture chain, Steam headless, four actual cell workers, positive bounded progression, new non-overwriting checkpoint, clock rollback on reload and further progression. Cleanup applies to isolated profiles and unchanged input saves; no whole-game equivalence or performance claim.",
+  "raw_receipt_sha256": "09bdf75b3a17074c48a29771e908c682aaab3504d896ac0996711b427427136c"
+}

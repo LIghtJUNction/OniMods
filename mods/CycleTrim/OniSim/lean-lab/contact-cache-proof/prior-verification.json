@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "theorems": 5,
+  "source_sha256": "417792576e84e41f7d96ea92c1ee2f9b670f7dae6433eb16f9f3a3722db8ad0b",
+  "scope": "Abstract raw-word evaluation with sticky exception OR, unchanged control and errno. Actual bounded libm properties, Rust guard and compiler are explicit assumptions, not formally verified.",
+  "external_prover_required": false,
+  "sorry_or_admit": false
+}
