@@ -25,6 +25,12 @@ jobs:
           toolchain: 1.99.1
       - name: Build original and optimized Rust components
         run: python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py build
+      - name: Test the complete native Rust kernel without game files
+        working-directory: mods/CycleTrim/OniSim
+        env:
+          RUSTC_WRAPPER: ""
+          RUSTC_WORKSPACE_WRAPPER: ""
+        run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
       - name: Run differential correctness cases
         run: python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py verify
   lean-proof:
