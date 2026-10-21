@@ -106,34 +106,29 @@ namespace OniMcp.Tools
                 };
             }
 
+            int planned = GetInt(connectPayload, "planned");
+            int reused = GetInt(connectPayload, "reusedExisting");
+            int autoDigQueued = GetInt(connectPayload, "autoMarkedObstructions");
+            int failed = Math.Max(GetInt(connectPayload, "failed"), connectResult.IsError ? 1 : 0);
             return new Dictionary<string, object>
             {
                 ["enabled"] = true,
-                ["status"] = connectPayload.ContainsKey("failed") && Convert.ToInt32(connectPayload["failed"]) > 0
-                    ? "partially_connected"
+                ["status"] = failed > 0
+                    ? (planned > 0 || reused > 0 || autoDigQueued > 0 ? "partially_connected" : "connection_failed")
                     : "connected_or_planned",
                 ["dryRun"] = IsDryRun(args),
                 ["input"] = CellCoordDictionary(inputCell),
                 ["source"] = CellCoordDictionary(sourceCell),
                 ["pathMode"] = "continuous_manhattan_path",
                 ["pathCells"] = path.Count,
-                ["planned"] = GetInt(connectPayload, "planned"),
-                ["reused"] = GetInt(connectPayload, "reusedExisting"),
-                ["failed"] = GetInt(connectPayload, "failed"),
-                ["autoDigQueued"] = GetInt(connectPayload, "autoMarkedObstructions"),
+                ["planned"] = planned,
+                ["reused"] = reused,
+                ["failed"] = failed,
+                ["autoDigQueued"] = autoDigQueued,
                 ["path"] = path.Select(p => new { x = p.x, y = p.y }).ToList(),
                 ["segments"] = BuildPathSegments(path),
                 ["connectResult"] = connectPayload
             };
-        }
-
-        private static int PowerInputCell(BuildingDef def, int anchorX, int anchorY, Orientation orientation)
-        {
-            int anchorCell = Grid.XYToCell(anchorX, anchorY);
-            if (!Grid.IsValidCell(anchorCell) || def == null)
-                return Grid.InvalidCell;
-            CellOffset rotated = Rotatable.GetRotatedCellOffset(def.PowerInputOffset, orientation);
-            return Grid.OffsetCell(anchorCell, rotated);
         }
 
         private static Dictionary<string, object> CellCoordDictionary(int cell)

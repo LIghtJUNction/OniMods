@@ -1,0 +1,200 @@
+{
+  "schema": 1,
+  "native_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "cycletrim_dll_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "steam_launched": true,
+  "reload_clock_equal": true,
+  "game_ready": false,
+  "whole_game_performance_measured": false,
+  "full_compatibility": false,
+  "probe_sha256": "b7a183a833efcf46238d8b95adea93f4dec8aeb7704dac9a6ac281bab3ae94da",
+  "test_controller_sha256": "596075ed57246976a2701f74fc6a9535598e0186ac342f7992767084639551a6",
+  "probe_source_sha256": {
+    "TextureProbe.cs": "519c74c9dd9df391a284511bad072192fc8b50c360bd94aa47c9b53fab42cf5e",
+    "TextureProbe.csproj": "f48b8a04efdb1a23e0d4e0b319f79563341053f80f9a77607881e923cd6f60d3",
+    "mod.yaml": "b8ba44419a59b72fa011b951b5b69a59e0a6a804e81a11bc1ebcc6a1678a80fb",
+    "mod_info.yaml": "71fd750b527e5577496d2f2273f10cda86ecb02e678213c0c61fdc64828c4907",
+    "build.py": "8a1f11615ed2f5b6194fe7c2a346b4ea9babf5b0dc52418c9f22c3cefbff8a20"
+  },
+  "restoration": {
+    "isolated_native_and_managed_roots_verified": true,
+    "source_unchanged": true,
+    "process_stopped": true,
+    "mapped_candidate_pair_verified": true
+  },
+  "owned_process_stopped": true,
+  "saved_without_overwrite": true,
+  "save_sha256": "178e7e828ce50989e5c2a19f3dbd5834f4143127d5c3ed9f0bc3ec925f3076a2",
+  "observation": {
+    "request": 1,
+    "complete": true,
+    "graphicsDevice": "OpenGLCore",
+    "frame": 33,
+    "width": 736,
+    "height": 304,
+    "textures": {
+      "Flow": {
+        "bytes": 1789952,
+        "format": "RGFloat",
+        "nativeSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "unityCpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 1789952,
+        "gpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "gpuEqual": true
+      },
+      "Liquid": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "b2895e6c2fcd8fe3b78580af56cea1780c65f2ab8ca72e7475bc5bba7c278052",
+        "unityCpuSha256": "b2895e6c2fcd8fe3b78580af56cea1780c65f2ab8ca72e7475bc5bba7c278052",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "b2895e6c2fcd8fe3b78580af56cea1780c65f2ab8ca72e7475bc5bba7c278052",
+        "gpuEqual": true
+      },
+      "LiquidData": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "228cccf4c6b5bc584a3e7c4d56d599c9f590719f4b29a5ea1897fcb4842e5521",
+        "unityCpuSha256": "228cccf4c6b5bc584a3e7c4d56d599c9f590719f4b29a5ea1897fcb4842e5521",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "228cccf4c6b5bc584a3e7c4d56d599c9f590719f4b29a5ea1897fcb4842e5521",
+        "gpuEqual": true
+      },
+      "MaterialData": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "37cb336ce738caa114edd133ab28bea877fa2e74559551af9e322178b0acb54f",
+        "unityCpuSha256": "37cb336ce738caa114edd133ab28bea877fa2e74559551af9e322178b0acb54f",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "37cb336ce738caa114edd133ab28bea877fa2e74559551af9e322178b0acb54f",
+        "gpuEqual": true
+      },
+      "ExposedToSunlight": {
+        "bytes": 223744,
+        "format": "R8",
+        "nativeSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "unityCpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 223744,
+        "gpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "gpuEqual": true
+      }
+    },
+    "passed": true,
+    "capturedAt": "2026-10-20T22:20:18.1854330Z"
+  },
+  "observation_after_reload": {
+    "request": 2,
+    "complete": true,
+    "graphicsDevice": "OpenGLCore",
+    "frame": 1356,
+    "width": 736,
+    "height": 304,
+    "textures": {
+      "Flow": {
+        "bytes": 1789952,
+        "format": "RGFloat",
+        "nativeSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "unityCpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 1789952,
+        "gpuSha256": "d5108f5dbf4c55c9144dc787841261151b7b53b378e4f0e6413cef7c956d24fa",
+        "gpuEqual": true
+      },
+      "Liquid": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "b5133c2aa238d69679e3b828469037ec101e0bdf0327a9cc9d4097da3edc399f",
+        "unityCpuSha256": "b5133c2aa238d69679e3b828469037ec101e0bdf0327a9cc9d4097da3edc399f",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "b5133c2aa238d69679e3b828469037ec101e0bdf0327a9cc9d4097da3edc399f",
+        "gpuEqual": true
+      },
+      "LiquidData": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "6597aeda53776734e98a7246a12a9ed7d470c69093e94cfe704ce0636e991eaf",
+        "unityCpuSha256": "6597aeda53776734e98a7246a12a9ed7d470c69093e94cfe704ce0636e991eaf",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "6597aeda53776734e98a7246a12a9ed7d470c69093e94cfe704ce0636e991eaf",
+        "gpuEqual": true
+      },
+      "MaterialData": {
+        "bytes": 894976,
+        "format": "RGBA32",
+        "nativeSha256": "58ed92ef74d49a9897d16717fd706216db65b70e47229e112ef2040e38f5a1a4",
+        "unityCpuSha256": "58ed92ef74d49a9897d16717fd706216db65b70e47229e112ef2040e38f5a1a4",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 894976,
+        "gpuSha256": "58ed92ef74d49a9897d16717fd706216db65b70e47229e112ef2040e38f5a1a4",
+        "gpuEqual": true
+      },
+      "ExposedToSunlight": {
+        "bytes": 223744,
+        "format": "R8",
+        "nativeSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "unityCpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "cpuEqual": true,
+        "gpuComplete": true,
+        "gpuBytes": 223744,
+        "gpuSha256": "b315ee2cfb5d2f7d833cd5878425142d6f623312825fec61c2f44ea96771db0d",
+        "gpuEqual": true
+      }
+    },
+    "passed": true,
+    "capturedAt": "2026-10-20T22:21:26.9186500Z"
+  },
+  "reload_clock": 53.566612243652344,
+  "cell_workers": [
+    "OniSim-cell-0",
+    "OniSim-cell-1",
+    "OniSim-cell-2",
+    "OniSim-cell-3"
+  ],
+  "visual_inspection_passed": true,
+  "screenshot_sha256": "797ae92d4b50880fc0012bdbad861cc91850c36e7d0e94c61f5232700cb0f1fa",
+  "window_geometry": {
+    "address": "0x562433410240",
+    "pid": 2811717,
+    "mapped": true,
+    "size": [
+      2048,
+      1280
+    ],
+    "at": [
+      0,
+      0
+    ],
+    "monitor": 0,
+    "fullscreen": 2,
+    "xwayland": true,
+    "class": "OxygenNotIncluded",
+    "monitor_geometry": {
+      "width": 2560,
+      "height": 1600,
+      "scale": 1.25,
+      "transform": 0
+    },
+    "png_size": [
+      2560,
+      1600
+    ]
+  },
+  "scope": "One isolated Steam OpenGLCore fixture, four actual cell workers; normal save/load, complete property textures before/after reload and actual screenshot inspection. All owned processes exited. No broad compatibility, long-run or whole-game performance claim.",
+  "raw_receipt_sha256": "92de4dc3ca9ba8e1b82bdf8236ca59e3c00e8d358c1fdc91b04a9c80db7194aa"
+}

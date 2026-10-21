@@ -27,6 +27,14 @@ A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected 
 - Behavior-safe by default for long-running colonies.
 - CycleTrim no longer intercepts `SmartReservoir` automation signaling; vanilla repeated notifications are preserved for stock reservoirs and third-party buildings that reuse the component.
 
+### OniSim native simulation core
+
+OniSim is CycleTrim's native simulation core, with source under [`OniSim/`](OniSim/). Linux x86_64 builds include its native library by default and attempt to map `Assembly-CSharp`'s `SimDLL` imports to OniSim at startup. The PLib CycleTrim Mod option “Use OniSim simulation core” is enabled by default; turn it off and restart ONI to keep the vanilla SimDLL mapping. Mapping cannot be hot-reverted. `CYCLETRIM_ONISIM_ENABLE=0`, `false`, or `off` remains available as a startup override to disable it.
+
+Use only with a disposable test save. OniSim has not passed full message coverage, save/load, DLC, other-Mod, or real-game runtime acceptance and is not a complete replacement yet. The loader accepts only the statically inspected ONI `Assembly-CSharp` and Mono fingerprints; other game versions are refused with a log message.
+
+Linux x86_64 builds include OniSim by default; use `IncludeOniSim=false` to create a package without it. Enable or disable runtime mapping in the game's Mod settings, then restart as prompted by PLib. `CYCLETRIM_ONISIM_ENABLE=0` can force-disable it before startup; `1` explicitly permits loading. `CYCLETRIM_ONISIM_NATIVE_PATH` may override the bundled library with an absolute `.so` path; when unset, the loader uses `OniSim/liboni_sim_core.so` beside the Mod assembly.
+
 ## Benchmark summary
 
 | Scenario | Metric | Before -> After | Improvement |

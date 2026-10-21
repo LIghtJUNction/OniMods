@@ -12,11 +12,25 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <Compile Include="../../mods/OniMcp/Core/McpContentTypes.cs" Link="Source/McpContentTypes.cs" />
     <Compile Include="../../mods/OniMcp/Core/McpTypes.cs" Link="Source/McpTypes.cs" />
+    <Compile Include="../../mods/OniMcp/Core/IDeferredMcpResponse.cs" Link="Source/IDeferredMcpResponse.cs" />
     <Compile Include="../../mods/OniMcp/Support/McpJsonUtil.cs" Link="Source/McpJsonUtil.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepCondition.cs" Link="Source/StepCondition.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepResearchTracker.cs" Link="Source/StepResearchTracker.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepUntilResultCache.cs" Link="Source/StepUntilResultCache.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepDeferredOrderTracker.cs" Link="Source/StepDeferredOrderTracker.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ConstructionReadinessPolicy.cs" Link="Source/ConstructionReadinessPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/ConstructionRecipeAdapter.cs" Link="Source/ConstructionRecipeAdapter.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningDeferredBuildPolicy.cs" Link="Source/BuildPlanningDeferredBuildPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/ObservedTaskRanking.cs" Link="Source/ObservedTaskRanking.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/DuplicantNeedStatePolicy.cs" Link="Source/DuplicantNeedStatePolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameSpeedTools.cs" Link="Source/GameSpeedTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepPrintingPodState.cs" Link="Source/StepPrintingPodState.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Entry/BenchmarkTools.cs" Link="Source/BenchmarkTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Bio/HarvestMarkPolicy.cs" Link="Source/HarvestMarkPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Bio/FarmingUprootTools.cs" Link="Source/FarmingUprootTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingFootprint.cs" Link="Source/BuildPlanningExistingFootprint.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningUtilityPathConnections.cs" Link="Source/BuildPlanningUtilityPathConnections.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningUtilityPathReadiness.cs" Link="Source/BuildPlanningUtilityPathReadiness.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningBackwallSupportPolicy.cs" Link="Source/BuildPlanningBackwallSupportPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameControlTools.cs" Link="Source/GameControlTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameplayRequestPolicy.cs" Link="Source/GameplayRequestPolicy.cs" />
@@ -37,6 +51,19 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildMaterialSufficiencyPolicy.cs" Link="Source/BuildMaterialSufficiencyPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningMaterials.cs" Link="Source/BuildPlanningMaterials.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningMaterialSelection.cs" Link="Source/BuildPlanningMaterialSelection.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningMaterialStock.cs" Link="Source/BuildPlanningMaterialStock.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialValidation.cs" Link="Source/BuildPlanningExistingMaterialValidation.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingReuse.cs" Link="Source/BuildPlanningExistingReuse.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningUtilityMaterialPreflight.cs" Link="Source/BuildPlanningUtilityMaterialPreflight.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPowerConnect.cs" Link="Source/BuildPlanningPowerConnect.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlacementIdentityPolicy.cs" Link="Source/BuildPlacementIdentityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementCoordinates.cs" Link="Source/BuildPlanningPlacementCoordinates.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementModels.cs" Link="Source/BuildPlanningPlacementModels.cs" />
+    <Compile Include="../../mods/OniMcp/Patches/LoadScreenPreviewPolicy.cs" Link="Source/LoadScreenPreviewPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Entry/NavigationControlTools.cs" Link="Source/NavigationControlTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Navigation/CameraTools.cs" Link="Source/CameraTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Navigation/CameraFramingPolicy.cs" Link="Source/CameraFramingPolicy.cs" />
   </ItemGroup>
 </Project>

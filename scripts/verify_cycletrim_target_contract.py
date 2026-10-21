@@ -51,6 +51,11 @@ def main() -> int:
         return 1
 
     try:
+        loader = method_body(decompile(assembly, "KMod.UserMod2"), "void OnLoad(Harmony harmony)")
+        if len(re.findall(r"harmony\.PatchAll\(assembly\)", loader)) != 1:
+            print("FAIL: UserMod2.OnLoad single PatchAll contract drifted", file=sys.stderr)
+            return 1
+        print("PASS: installed UserMod2.OnLoad installs the mod assembly once")
         # FetchManager / sensor pipeline: candidate selection and sorting should remain compatible.
         fetch_source = decompile(assembly, "FetchManager")
         fetch_failures = []

@@ -1,0 +1,350 @@
+{
+  "schema": 1,
+  "scope": "Borrowed disjoint-row pressure candidate; native fixtures only, no game FPS claim",
+  "production_adopted": false,
+  "game_runtime_validated": false,
+  "libraries": {
+    "baseline": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+    "candidate": "5c8572300bad89a5a2932c4b7fccadb8a9133e15ac25e48807967b9549e4f6a2"
+  },
+  "source_sha256": {
+    "float_env.rs": "b53b853ec29d1f0817353a5668f0ddadfd699a353f9d14f543743db6ef168ea2",
+    "simulation_step_fluid.rs": "8bc6f72ea8186348e1f76a1aca2699c57f8d6edd4f5644e4260c8af33df1af70",
+    "pressure_borrowed.rs": "45b138a431af1af3096ab722516c520cfe8a8f47c54887f43b7f62f39499a28b",
+    "pressure_borrowed_kernel.rs": "7086e39747b2b5427dc6885b810b9112ef3db6b6bc4eb5a4bae8fcd96693a87b",
+    "pressure_borrowed_tests.rs": "feb0addeb970d2853b26251ae91c895fd1b4cca1703673a00fa7c274b19552d8"
+  },
+  "proposal_patch_sha256": "a471fc1deacaeaffde4512597ffc88a01fe9273f385c0547282814d3081ff4b0",
+  "criteria": {
+    "scope": "Disjoint borrowed row fragments; no physics-cell gather/commit copies. Only reference headers and bounded notification lists are transported.",
+    "acceptance": "Both full official differential matrices and all FP-control tests; eight alternating four-worker pairs: at least 5 percent lower wall time in fluid and germ_flow, no scene wall regression above 3 percent, CPU increase no more than 10 percent per scene, RSS increase no more than 2 MiB per scene.",
+    "memory": "At most eight tile views of 17 rows, fixed-size row plans and at most 1536 notification indices per worker. No world-sized scratch allocation.",
+    "fallback": "Original serial pressure for one worker, insufficient work, unmasked exceptions or fallible notification-cache preflight failure. Empty immutable pressure work is skipped."
+  },
+  "unit_tests": {
+    "passed": 33,
+    "log_sha256": "5c6eeba887d7861d08c432f61a2dd6881f6daa094d5aac633565bd65eb4882b1",
+    "serial_parallel_comparisons": 576,
+    "fp_control_combinations": 16
+  },
+  "conformance": [
+    {
+      "workers_requested": 1,
+      "passed": true,
+      "libraries": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "5c8572300bad89a5a2932c4b7fccadb8a9133e15ac25e48807967b9549e4f6a2"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "cases": 224,
+      "publications_compared": 8440,
+      "summary_sha256": "2d7dd979f3bdb65a20f3c8d0c4b81000dfd90145c9441a0cf39b801cf6ff18ee"
+    },
+    {
+      "workers_requested": 4,
+      "passed": true,
+      "libraries": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "5c8572300bad89a5a2932c4b7fccadb8a9133e15ac25e48807967b9549e4f6a2"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "cases": 224,
+      "publications_compared": 8440,
+      "summary_sha256": "23301cfaf3e67aa9d52fa721761dfa564d14ec8ce8d4b1a69275949cfea738e7"
+    }
+  ],
+  "proof": {
+    "receipt_sha256": "04f69b2ab8a8b1983614bfc125d26a3351bb071a0a6f2cb799fd9cf3097d4310",
+    "checked_theorems": 26,
+    "scope": "Abstract schedule and footprint models; does not prove compiled kernel or entire borrowed implementation"
+  },
+  "timing": {
+    "completed": false,
+    "requested_pairs_per_scene": 8,
+    "cpu_affinity": [
+      16,
+      17,
+      18,
+      19
+    ],
+    "workers": 4,
+    "interruption": "Benchmark guard detected concurrent ONI PID 2354755; process exited 1 and no successful summary was emitted.",
+    "decision": "Withhold adoption. Partial paired observations show substantial regression; they are not the requested complete performance acceptance.",
+    "scenes": {
+      "fluid": {
+        "completed_pairs": 4,
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.6468437735000001,
+            "minimum": 0.5193453509999999,
+            "maximum": 0.669143195
+          },
+          "candidate": {
+            "median": 1.1717001945,
+            "minimum": 0.922735214,
+            "maximum": 1.2330725230000001
+          },
+          "candidate_change_percent": 81.14114141658347
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.6096657585003413,
+            "minimum": 0.49399950199585874,
+            "maximum": 0.6266162920073839
+          },
+          "candidate": {
+            "median": 0.707182557998749,
+            "minimum": 0.5581364889949327,
+            "maximum": 0.7389802660036366
+          },
+          "candidate_change_percent": 15.99512489241317
+        },
+        "vm_hwm_kib": {
+          "baseline": 33104.0,
+          "candidate": 33298.0
+        }
+      },
+      "thermal": {
+        "completed_pairs": 4,
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.2695010365,
+            "minimum": 0.223335998,
+            "maximum": 0.3147904429999999
+          },
+          "candidate": {
+            "median": 0.26374629250000003,
+            "minimum": 0.21774482600000003,
+            "maximum": 0.324187402
+          },
+          "candidate_change_percent": -2.135332789341604
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.24245748900284525,
+            "minimum": 0.20245065199560486,
+            "maximum": 0.2801052639988484
+          },
+          "candidate": {
+            "median": 0.2385859554997296,
+            "minimum": 0.19691732800856698,
+            "maximum": 0.28588938199391123
+          },
+          "candidate_change_percent": -1.596788583037012
+        },
+        "vm_hwm_kib": {
+          "baseline": 32692.0,
+          "candidate": 32692.0
+        }
+      },
+      "sealed": {
+        "completed_pairs": 4,
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.5906097724999999,
+            "minimum": 0.524697959,
+            "maximum": 0.6313975709999999
+          },
+          "candidate": {
+            "median": 1.04060377,
+            "minimum": 0.883112752,
+            "maximum": 1.562006613
+          },
+          "candidate_change_percent": 76.19142426228649
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.555429665997508,
+            "minimum": 0.49554029399587307,
+            "maximum": 0.5913011000084225
+          },
+          "candidate": {
+            "median": 0.62452857199969,
+            "minimum": 0.5301739830028964,
+            "maximum": 0.9640210670040688
+          },
+          "candidate_change_percent": 12.440622140354328
+        },
+        "vm_hwm_kib": {
+          "baseline": 33146.0,
+          "candidate": 33318.0
+        }
+      },
+      "germ_flow": {
+        "completed_pairs": 4,
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.828137082,
+            "minimum": 0.668353961,
+            "maximum": 1.13499563
+          },
+          "candidate": {
+            "median": 1.2800508615,
+            "minimum": 1.0841481039999998,
+            "maximum": 1.507765384
+          },
+          "candidate_change_percent": 54.56992439085102
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.7419611929944949,
+            "minimum": 0.6026052709930809,
+            "maximum": 1.0056378650042461
+          },
+          "candidate": {
+            "median": 0.7963319744958426,
+            "minimum": 0.6770445290021598,
+            "maximum": 0.9385967089910991
+          },
+          "candidate_change_percent": 7.327981842542419
+        },
+        "vm_hwm_kib": {
+          "baseline": 33408.0,
+          "candidate": 33584.0
+        }
+      },
+      "mixed_germs": {
+        "completed_pairs": 4,
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.8603925365,
+            "minimum": 0.7865091309999999,
+            "maximum": 0.944751401
+          },
+          "candidate": {
+            "median": 1.4079183195,
+            "minimum": 1.236836936,
+            "maximum": 1.5349022959999998
+          },
+          "candidate_change_percent": 63.636742506773246
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.7762026175041683,
+            "minimum": 0.7116976940014865,
+            "maximum": 0.8504424199927598
+          },
+          "candidate": {
+            "median": 0.873616018499888,
+            "minimum": 0.7676250779913971,
+            "maximum": 0.9549838810053188
+          },
+          "candidate_change_percent": 12.54999645697492
+        },
+        "vm_hwm_kib": {
+          "baseline": 33460.0,
+          "candidate": 33592.0
+        }
+      },
+      "vacuum": {
+        "completed_pairs": 3,
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.769537517,
+            "minimum": 0.739774213,
+            "maximum": 0.7843659980000002
+          },
+          "candidate": {
+            "median": 1.4561128340000002,
+            "minimum": 1.13865526,
+            "maximum": 1.4685831809999998
+          },
+          "candidate_change_percent": 89.21921307704098
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.7285395370126935,
+            "minimum": 0.702588692001882,
+            "maximum": 0.7394290769880172
+          },
+          "candidate": {
+            "median": 0.878968552002334,
+            "minimum": 0.6910215399984736,
+            "maximum": 0.8807605410111137
+          },
+          "candidate_change_percent": 20.648023524771265
+        },
+        "vm_hwm_kib": {
+          "baseline": 43908,
+          "candidate": 43748
+        }
+      }
+    },
+    "sample_sha256": {
+      "0-fluid-baseline.json": "1afb205725f9d3101c965fe51ee232e5dc5fa8fcc2869f7ae3012a6057775a3a",
+      "0-fluid-candidate.json": "b6d348eb3b3b19bf9ec23f40b4baa8f2ff638048334a41b6653beda317cb7829",
+      "0-germ_flow-baseline.json": "5d3fc0562b846a157c90a16095c420897ed9ca941b37fdf70821f570ff1d0a56",
+      "0-germ_flow-candidate.json": "b1e984640dcaa89bec0d0bd114ad1fcdfc9412817c392017683691d49529b991",
+      "0-mixed_germs-baseline.json": "c99b8b4471506d0f570e683a784eabf97b22c3c8a21f8dfbfa9ee2d2a527305b",
+      "0-mixed_germs-candidate.json": "a8f9bb7ff3e0f82208f7b58c0aec184c19753c7416e1ace93ca69bb267dd2b93",
+      "0-sealed-baseline.json": "f3b324f2387cef75f22067d6e9d1a35b525429af18b1c0620e9967f25b2c6dc8",
+      "0-sealed-candidate.json": "7a0b1fcd1cfca0a7387f712f33280339c0547b7f8e739a46f425b7b53e73f939",
+      "0-thermal-baseline.json": "a41560e976f651f6252b7c457a5ffdf08147400306f0227e726d7d3f7b81d729",
+      "0-thermal-candidate.json": "151032e64ae01f01c03cc5610fec7b33f8396ab4336ca4ab3f9aadc6e67b2231",
+      "0-vacuum-baseline.json": "75589a11d70e64f973b43d4d56db58ec3451f971d44d25a2172772c1aa14097e",
+      "0-vacuum-candidate.json": "f3512c0e067a3d5b581c9ea83e5814446e73e60feb0caad91f47634e5352d2c0",
+      "1-fluid-baseline.json": "73bf1a66ca4886ca736420a6ffa412f490f49cad404a9ef80e8ece204d1b684e",
+      "1-fluid-candidate.json": "bae65720c09b82a65b756ec90ffdb47ea3649bf8fa4b516515c226fdbcccd9d0",
+      "1-germ_flow-baseline.json": "a35978afda7a2740f1320a7e52add704f10640b7fa97125891231a13e3fc7d2d",
+      "1-germ_flow-candidate.json": "8c33ecd4b84cd8f5d4346e7b0e13612df35dc3039e40d6c94008da39948b9e56",
+      "1-mixed_germs-baseline.json": "f7393e98f3523212735e3b48e1726ca618ea7640304dff37563efe559678c76d",
+      "1-mixed_germs-candidate.json": "a9b09f025aba8cde7988ea89fda035af934816b21b34760a797f99b16ab8fe8a",
+      "1-sealed-baseline.json": "4b6eac1d6c5ca5dd7dc94ceaf4c93df2d8a6ccaeda659f79c17b0a4d35eafca6",
+      "1-sealed-candidate.json": "7363920c80d45e98f6539d77357233f09c8b96db91c3b6af44e78a0f4270afb7",
+      "1-thermal-baseline.json": "e39b0618a5f84787510d062916bb5872d8185174b8d9511c3ccd70b424c07460",
+      "1-thermal-candidate.json": "081b36c3d8ec9a1fe78ac835f255bccd49dd543beab5352a4c1f48df27f863f0",
+      "1-vacuum-baseline.json": "5242a21ce5ce51d65c9c82823696ce55a4d92be359c993fdaee9be78e6c84edf",
+      "1-vacuum-candidate.json": "d0d00da9569e4a87a306d7174b2e71f74c7410bd348f1fa28204a951a3065203",
+      "2-fluid-baseline.json": "db41a0f2d95f60ee04040b315494fbf66131abe72ef4ed5e9c74bab5df7bc4bd",
+      "2-fluid-candidate.json": "6ffb6c3b1e932e5ac8548a73b0fe77648cc3b1b9201c8d30a73518f694740b34",
+      "2-germ_flow-baseline.json": "6d829586e4555d11051173cf7e07cb720c01b99a76e83821baccdd7e930e3cd4",
+      "2-germ_flow-candidate.json": "39e6ca609029675bfba79afd15a51097f055162f8378d4149a63f98ffa9d1b01",
+      "2-mixed_germs-baseline.json": "be7561603e2df0d4f6e17ee31de88a371502d34229dca01747d9f51584382405",
+      "2-mixed_germs-candidate.json": "e9323b74d2467d32b449ca6976b5a0faef3ef6828a3ae7dc2dce6ba303f511a7",
+      "2-sealed-baseline.json": "ddcb849526c9fb75b0a224c285642488111a0f1a6cbdbf2804f20439694c728b",
+      "2-sealed-candidate.json": "2264b9cdc94782951006636db8653c97702804f1118a32a32107fd6a262b6fd5",
+      "2-thermal-baseline.json": "3483a78224196a796bab73432330705eeeb44cd4895d6adb9e95c6acf508439e",
+      "2-thermal-candidate.json": "017e3ac63f01b4f4cfb3a6b00bcb7cea02aa38bd5a7873b406134a90842cc81d",
+      "2-vacuum-baseline.json": "9071c4b8e678cd2d78a8c0e26403704fbba0679a9b382faab11878ea767f5803",
+      "2-vacuum-candidate.json": "8f16ff4ec3df6a3921a93941a796f34933a0a7d12870032cb5efcc844f1d778c",
+      "3-fluid-baseline.json": "f4ca6c3253dde790243e637d56395e6060bbdb4035e5dd9d8ffc3e3f298b9a11",
+      "3-fluid-candidate.json": "61a3ee7781b81d3a2688fb80d341a7e1dc219b098a2e36bd8f27590e5c4dc059",
+      "3-germ_flow-baseline.json": "95757023dcca2a1721704d775688e4bb0ba4ccb6085211e9a5d5dedaa0706cea",
+      "3-germ_flow-candidate.json": "43a6746014fbe66c2a5013710e3c6718a4c224b67989f0e36ae667871c57cd33",
+      "3-mixed_germs-baseline.json": "979bfbf0b0ba3ee0e89baa65cd53f41468acd7d85d4e5066f5223bc3026ac4fa",
+      "3-mixed_germs-candidate.json": "a16447994dee65fa2bb4921307022be4d3f19b6b92eb6e79c6601b67549b24f8",
+      "3-sealed-baseline.json": "e6ee3174df35135ca58d51d1ba9ce43aa6aa83438c85c6a1f06e18a3ae7372ec",
+      "3-sealed-candidate.json": "a215801f3321dff3ae0cdfc7419fedcc59f1a05789c322ee09ab01f0599ce88c",
+      "3-thermal-baseline.json": "b75a51af083ea073332e1ae7e3cb472ae9bbfb5ce45d46794375a58b33dc43a4",
+      "3-thermal-candidate.json": "becd1a37eeeacfcc55cd62174e75779e22ca0e5c1bece4974f609a3670973e30",
+      "3-vacuum-candidate.json": "5f59007d7a7b7ee7722ea5670dc37ba053b4584c4cb100ee544db327b9677470",
+      "reference-fluid.json": "06f3320792a5a04162c8519cda2dc1a6f446831710ef5bfc379c7e6c947d4255",
+      "reference-germ_flow.json": "7ffa419354824b72eeb79345a641ee9d4012266b16279e74fcf3db86cf955726",
+      "reference-mixed_germs.json": "83725b9ec9258fe8f5a443d2c38fa9a96e093f82559571fa961907eb5b229c53",
+      "reference-sealed.json": "d5d485928ca5539bdbeaefd6b40ed9b24bf8a5da37109fad3d4c8eb5256a7484",
+      "reference-thermal.json": "a14b6d81ad0359f81c031653ae66c7197ac9ac6cc5a847ec2f5f92026b378793",
+      "reference-vacuum.json": "b39f4234d5de2b226461150aed5a8f44d5867c14615974548386cec0025b8fce"
+    }
+  },
+  "decision": "Correctness matrices pass. Complete timing and headless/graphical acceptance remain unmet; prioritize notification-dedup candidate with completed native performance gates."
+}

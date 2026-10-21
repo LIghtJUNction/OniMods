@@ -13,16 +13,19 @@ namespace OniMcp.Tools
     /// <summary>
     /// Browser-inspired condition-waiting execution (step_until).
     /// Runs the game at fast speed until target orders complete, dupes become idle,
-    /// an alert triggers, or a timeout is reached, then automatically pauses
+    /// an automated alarm or native alert triggers, or a timeout is reached, then automatically pauses
     /// and returns a compact execution delta summary.
     /// </summary>
     public static partial class GameControlTools
     {
         private static StepUntilWatcher _activeWatcher;
         private static readonly object _watcherLock = new object();
+        private static readonly StepUntilResultCache _completedResults = new StepUntilResultCache(8);
 
         public static CallToolResult StepUntil(JObject args)
         {
+            if (!StepCondition.TryParse(args, out var condition, out string conditionError))
+                return CallToolResult.Error(conditionError);
             if (Game.Instance == null)
                 return CallToolResult.Error("Game not initialized");
 
@@ -32,29 +35,42 @@ namespace OniMcp.Tools
 
             int speed = 3;
             var speedToken = args?["speed"];
-            if (speedToken != null && int.TryParse(speedToken.ToString(), out int parsedSpeed) && parsedSpeed >= 1 && parsedSpeed <= 3)
-                speed = parsedSpeed;
-
-            string condition = (args?["condition"]?.ToString() ?? "orders_complete").Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(condition)) condition = "orders_complete";
+            if (speedToken != null)
+            {
+                if (!int.TryParse(speedToken.ToString(), out speed) || speed < 1 || speed > 3)
+                    return CallToolResult.Error("step_until speed must be 1, 2, or 3.");
+            }
 
             float maxGameSeconds = 60f;
             var maxGameToken = args?["maxGameSeconds"] ?? args?["maxSeconds"];
-            if (maxGameToken != null && float.TryParse(maxGameToken.ToString(), out float parsedGameSec))
-                maxGameSeconds = Mathf.Clamp(parsedGameSec, 1f, 600f);
+            if (maxGameToken != null)
+            {
+                if (!TryStepSeconds(maxGameToken, out float seconds)) return CallToolResult.Error("maxGameSeconds must be finite.");
+                maxGameSeconds = Mathf.Clamp(seconds, 1f, 600f);
+            }
 
             float maxWallSeconds = 15f;
             var maxWallToken = args?["maxWallSeconds"] ?? args?["wallTimeout"];
-            if (maxWallToken != null && float.TryParse(maxWallToken.ToString(), out float parsedWallSec))
-                maxWallSeconds = Mathf.Clamp(parsedWallSec, 0.5f, 30f);
+            if (maxWallToken != null)
+            {
+                if (!TryStepSeconds(maxWallToken, out float seconds)) return CallToolResult.Error("maxWallSeconds must be finite.");
+                maxWallSeconds = Mathf.Clamp(seconds, 0.5f, 30f);
+            }
 
             bool wait = true;
             var waitToken = args?["wait"];
-            if (waitToken != null && bool.TryParse(waitToken.ToString(), out bool parsedWait))
-                wait = parsedWait;
+            if (waitToken != null && !bool.TryParse(waitToken.ToString(), out wait))
+                return CallToolResult.Error("wait must be a boolean.");
 
             var targetCells = ExtractTargetCells(args);
+            int worldId = ToolUtil.ResolveWorldId(args);
+            var bridge = MainThreadBridge.Instance;
+            if (bridge == null)
+                return CallToolResult.Error("MainThreadBridge not available");
+            object requestedCondition = args?["until"] != null ? (object)condition.ToJson()
+                : (args?["condition"]?.ToString() ?? "orders_complete");
 
+            _completedResults.BindGame(Game.Instance, ResolveStepRootWorld());
             lock (_watcherLock)
             {
                 if (_activeWatcher != null)
@@ -64,80 +80,198 @@ namespace OniMcp.Tools
                 }
             }
 
-            ReleaseMcpPause(speedControl);
-            speedControl.SetSpeed(Math.Max(0, Math.Min(speed - 1, 2)));
-
-            var bridge = MainThreadBridge.Instance;
-            if (bridge == null)
-                return CallToolResult.Error("MainThreadBridge not available");
-
             DeferredCallToolResult deferred = wait ? new DeferredCallToolResult() : null;
 
+            string requestId = Guid.NewGuid().ToString("N");
+            Game gameIdentity = Game.Instance;
+            object rootWorld = ResolveStepRootWorld();
+            object worldIdentity = ResolveStepWorld(worldId);
+            var loadIdentity = new StepUntilLoadIdentity(gameIdentity, rootWorld, worldIdentity);
+            Dictionary<string, object> completion = null;
             var watcher = bridge.gameObject.AddComponent<StepUntilWatcher>();
-            watcher.Initialize(condition, speed, maxGameSeconds, maxWallSeconds, targetCells, delta =>
+            try
             {
-                lock (_watcherLock)
+                watcher.Initialize(requestId, loadIdentity, condition, requestedCondition, speed, maxGameSeconds, maxWallSeconds, worldId, targetCells, delta =>
                 {
-                    if (ReferenceEquals(_activeWatcher, watcher))
-                        _activeWatcher = null;
-                }
+                    Dictionary<string, object> terminal = delta;
+                    if (loadIdentity.MatchesSave(Game.Instance, ResolveStepRootWorld()))
+                    {
+                        _completedResults.Add(requestId, gameIdentity, rootWorld, delta);
+                        if (_completedResults.TryGet(requestId, gameIdentity, rootWorld, out var stored)) terminal = stored;
+                    }
+                    else
+                    {
+                        terminal = StepUntilResultCache.WithCompletionMetadata(delta, DateTimeOffset.UtcNow);
+                    }
+                    var speedControlAtCompletion = SpeedControlScreen.Instance;
+                    terminal = StepUntilResultView.WithCurrentPause(terminal,
+                        speedControlAtCompletion == null || speedControlAtCompletion.IsPaused);
+                    completion = terminal;
+                    lock (_watcherLock)
+                    {
+                        if (ReferenceEquals(_activeWatcher, watcher))
+                            _activeWatcher = null;
+                    }
 
-                if (deferred != null)
-                {
-                    string json = JsonConvert.SerializeObject(delta, McpJsonUtil.Settings);
-                    deferred.Complete(CallToolResult.Text(json));
-                }
-            });
+                    if (deferred != null)
+                    {
+                        string json = JsonConvert.SerializeObject(terminal, McpJsonUtil.Settings);
+                        deferred.Complete(CallToolResult.Text(json));
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Object.Destroy(watcher);
+                AcquireMcpPause(speedControl);
+                return CallToolResult.Error("Could not capture step_until baseline: " + e.Message);
+            }
 
             lock (_watcherLock)
             {
                 _activeWatcher = watcher;
             }
 
+            // An already-ready printing condition must finish before releasing the pause, in either wait mode.
+            if (watcher.TryCompleteBeforeResume())
+                return deferred ?? CallToolResult.Text(JsonConvert.SerializeObject(completion, McpJsonUtil.Settings));
+
+            // Validate and capture the baseline before releasing our pause.
+            ReleaseMcpPause(speedControl, releaseNativePause: true);
+            speedControl.SetSpeed(Math.Max(0, Math.Min(speed - 1, 2)));
+
             if (!wait)
             {
-                var initialStatus = new Dictionary<string, object>
-                {
-                    ["status"] = "running",
-                    ["speed"] = speed,
-                    ["condition"] = condition,
-                    ["maxGameSeconds"] = maxGameSeconds,
-                    ["maxWallSeconds"] = maxWallSeconds,
-                    ["targetCellCount"] = targetCells.Count,
-                    ["message"] = "Game running until condition is met; use action=step_status or action=pause"
-                };
+                var initialStatus = watcher.GetStatus();
+                initialStatus["status"] = "running";
+                initialStatus["message"] = "Game running until condition is met; use action=step_status or action=pause";
                 return CallToolResult.Text(JsonConvert.SerializeObject(initialStatus, McpJsonUtil.Settings));
             }
 
             return deferred;
         }
 
+        public static CallToolResult StepFacts(JObject args)
+        {
+            if (Game.Instance == null) return CallToolResult.Error("Game not initialized");
+            int worldId = ToolUtil.ResolveWorldId(args);
+            var orders = new StepOrderTracker(worldId, ExtractTargetCells(args));
+            var result = new Dictionary<string, object>
+            {
+                ["worldId"] = worldId,
+                ["isPaused"] = SpeedControlScreen.Instance == null || SpeedControlScreen.Instance.IsPaused,
+                ["idleFacts"] = StepDupeFactsJson(ReadStepDupeFacts(worldId)),
+                ["pendingOrders"] = orders.ToJson(),
+                ["immigrantsAvailable"] = StepPrintingPodState.IsAvailable
+            };
+            return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
+        }
+
         public static CallToolResult StepStatus(JObject args)
         {
+            _completedResults.BindGame(Game.Instance, ResolveStepRootWorld());
             StepUntilWatcher watcher;
-            lock (_watcherLock)
+            lock (_watcherLock) watcher = _activeWatcher;
+
+            if (watcher != null && !watcher.IsForCurrentLoad(Game.Instance, ResolveStepRootWorld(), ResolveStepWorld(watcher.WorldId)))
             {
-                watcher = _activeWatcher;
+                watcher.Cancel("scene_unloaded");
+                lock (_watcherLock) if (ReferenceEquals(_activeWatcher, watcher)) _activeWatcher = null;
+                watcher = null;
             }
 
-            if (watcher == null || !watcher.IsRunning)
+            string requestedId = args?["requestId"]?.ToString();
+            Dictionary<string, object> completed = null;
+            if (!string.IsNullOrWhiteSpace(requestedId)
+                && _completedResults.TryGet(requestedId, Game.Instance, ResolveStepRootWorld(), out completed))
+                return SerializeCompletedStepResult(completed);
+
+            if (watcher != null && watcher.IsRunning
+                && (string.IsNullOrWhiteSpace(requestedId) || requestedId == watcher.RequestId))
             {
-                var speedControl = SpeedControlScreen.Instance;
-                var inactive = new Dictionary<string, object>
+                var activeStatus = watcher.GetStatus();
+                activeStatus["status"] = "running";
+                activeStatus["found"] = true;
+                activeStatus["activeRequestId"] = watcher.RequestId;
+                return CallToolResult.Text(JsonConvert.SerializeObject(activeStatus, McpJsonUtil.Settings));
+            }
+
+            if (!string.IsNullOrWhiteSpace(requestedId))
+            {
+                return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
                 {
-                    ["active"] = false,
-                    ["isPaused"] = speedControl != null ? speedControl.IsPaused : true,
-                    ["speed"] = speedControl != null ? speedControl.GetSpeed() + 1 : 0
-                };
-                return CallToolResult.Text(JsonConvert.SerializeObject(inactive, McpJsonUtil.Settings));
+                    ["active"] = false, ["found"] = false, ["status"] = "not_found",
+                    ["isPaused"] = CurrentStepPaused(), ["currentIsPaused"] = CurrentStepPaused(),
+                    ["requestId"] = requestedId,
+                    ["activeRequestId"] = watcher != null && watcher.IsRunning ? watcher.RequestId : null
+                }, McpJsonUtil.Settings));
             }
 
-            return CallToolResult.Text(JsonConvert.SerializeObject(watcher.GetStatus(), McpJsonUtil.Settings));
+            string latestId = _completedResults.LatestId;
+            if (!string.IsNullOrWhiteSpace(latestId)
+                && _completedResults.TryGet(latestId, Game.Instance, ResolveStepRootWorld(), out completed))
+                return SerializeCompletedStepResult(completed);
+
+            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+            {
+                ["active"] = false, ["found"] = false, ["status"] = "idle",
+                ["isPaused"] = CurrentStepPaused(), ["currentIsPaused"] = CurrentStepPaused(),
+                ["requestId"] = null,
+                ["activeRequestId"] = watcher != null && watcher.IsRunning ? watcher.RequestId : null
+            }, McpJsonUtil.Settings));
         }
 
         public static CallToolResult StepCancel(JObject args)
         {
+            _completedResults.BindGame(Game.Instance, ResolveStepRootWorld());
+            string requestedId = args?["requestId"]?.ToString();
             StepUntilWatcher watcher;
+            lock (_watcherLock) watcher = _activeWatcher;
+            if (watcher != null && !watcher.IsForCurrentLoad(Game.Instance, ResolveStepRootWorld(), ResolveStepWorld(watcher.WorldId)))
+            {
+                watcher.Cancel("scene_unloaded");
+                lock (_watcherLock) if (ReferenceEquals(_activeWatcher, watcher)) _activeWatcher = null;
+                watcher = null;
+            }
+
+            Dictionary<string, object> completed = null;
+            bool hasCompleted = !string.IsNullOrWhiteSpace(requestedId)
+                && _completedResults.TryGet(requestedId, Game.Instance, ResolveStepRootWorld(), out completed);
+            string action = StepUntilCancelPolicy.Resolve(requestedId, watcher != null && watcher.IsRunning ? watcher.RequestId : null, hasCompleted);
+            if (action == "completed")
+                return SerializeCompletedStepResult(completed);
+            if (action == "not_found")
+                return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                {
+                    ["found"] = false, ["status"] = "not_found", ["requestId"] = requestedId,
+                    ["isPaused"] = CurrentStepPaused(), ["currentIsPaused"] = CurrentStepPaused(),
+                    ["activeRequestId"] = watcher != null && watcher.IsRunning ? watcher.RequestId : null
+                }, McpJsonUtil.Settings));
+
+            if (action == "cancel_active")
+            {
+                if (watcher == null || !watcher.IsRunning
+                    || !watcher.IsForCurrentLoad(Game.Instance, ResolveStepRootWorld(), ResolveStepWorld(watcher.WorldId)))
+                    return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["found"] = false, ["status"] = "not_found", ["requestId"] = requestedId,
+                        ["isPaused"] = CurrentStepPaused(), ["currentIsPaused"] = CurrentStepPaused(),
+                        ["activeRequestId"] = watcher != null && watcher.IsRunning ? watcher.RequestId : null
+                    }, McpJsonUtil.Settings));
+
+                lock (_watcherLock) if (ReferenceEquals(_activeWatcher, watcher)) _activeWatcher = null;
+                watcher.Cancel("cancelled_by_user");
+                if (_completedResults.TryGet(requestedId, Game.Instance, ResolveStepRootWorld(), out completed))
+                    return SerializeCompletedStepResult(completed);
+                return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                {
+                    ["found"] = true, ["active"] = false, ["status"] = "cancelled",
+                    ["requestId"] = requestedId, ["stopReason"] = "cancelled_by_user"
+                }, McpJsonUtil.Settings));
+            }
+
+            // No handle preserves the original convenience behavior: cancel the active
+            // request, or pause manually if there is no watcher.
             lock (_watcherLock)
             {
                 watcher = _activeWatcher;
@@ -147,12 +281,43 @@ namespace OniMcp.Tools
             if (watcher != null)
             {
                 watcher.Cancel("cancelled_by_user");
+                if (_completedResults.TryGet(watcher.RequestId, Game.Instance, ResolveStepRootWorld(), out completed))
+                    return SerializeCompletedStepResult(completed);
                 return CallToolResult.Text("Active step_until cancelled and game paused.");
             }
 
             Pause();
             return CallToolResult.Text("No active step_until found. Game paused.");
         }
+
+        private static bool CurrentStepPaused()
+        {
+            var speedControl = SpeedControlScreen.Instance;
+            return speedControl == null || speedControl.IsPaused;
+        }
+
+        private static CallToolResult SerializeCompletedStepResult(Dictionary<string, object> completed)
+        {
+            var current = StepUntilResultView.WithCurrentPause(completed, CurrentStepPaused());
+            return CallToolResult.Text(JsonConvert.SerializeObject(current, McpJsonUtil.Settings));
+        }
+
+        private static object ResolveStepRootWorld()
+        {
+            var clusterManager = ClusterManager.Instance;
+            return clusterManager == null ? null : clusterManager.GetWorld(0);
+        }
+
+        private static object ResolveStepWorld(int worldId)
+        {
+            var clusterManager = ClusterManager.Instance;
+            return clusterManager == null ? null : clusterManager.GetWorld(worldId);
+        }
+
+        private static bool TryStepSeconds(JToken token, out float seconds) =>
+            float.TryParse(token.ToString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out seconds)
+            && !float.IsNaN(seconds) && !float.IsInfinity(seconds);
 
         private static bool HasRectInput(JObject args) =>
             args != null && (!string.IsNullOrWhiteSpace(args["areaId"]?.ToString())
@@ -190,300 +355,6 @@ namespace OniMcp.Tools
             }
 
             return cells;
-        }
-
-        private sealed class StepUntilWatcher : MonoBehaviour
-        {
-            private string _condition;
-            private int _targetSpeed;
-            private float _maxGameSeconds;
-            private float _maxWallSeconds;
-            private HashSet<int> _targetCells;
-            private Action<Dictionary<string, object>> _onComplete;
-
-            private int _startCycle;
-            private float _startGameTime;
-            private float _startWallTime;
-            private int _initialDigCount;
-            private bool _completed;
-
-            public bool IsRunning => !_completed;
-
-            public void Initialize(string condition, int speed, float maxGameSeconds, float maxWallSeconds,
-                HashSet<int> targetCells, Action<Dictionary<string, object>> onComplete)
-            {
-                _condition = condition;
-                _targetSpeed = speed;
-                _maxGameSeconds = maxGameSeconds;
-                _maxWallSeconds = maxWallSeconds;
-                _targetCells = targetCells ?? new HashSet<int>();
-                _onComplete = onComplete;
-
-                _startCycle = GameUtil.GetCurrentCycle();
-                _startGameTime = GameClock.Instance != null ? GameClock.Instance.GetTime() : 0f;
-                _startWallTime = Time.realtimeSinceStartup;
-                _initialDigCount = Components.Diggables != null ? Components.Diggables.Count : 0;
-            }
-
-            public Dictionary<string, object> GetStatus()
-            {
-                float currentGameTime = GameClock.Instance != null ? GameClock.Instance.GetTime() : 0f;
-                float elapsedGame = Math.Max(0f, currentGameTime - _startGameTime);
-                float elapsedWall = Math.Max(0f, Time.realtimeSinceStartup - _startWallTime);
-
-                return new Dictionary<string, object>
-                {
-                    ["active"] = !_completed,
-                    ["condition"] = _condition,
-                    ["speed"] = _targetSpeed,
-                    ["elapsedGameSeconds"] = Math.Round(elapsedGame, 1),
-                    ["elapsedWallSeconds"] = Math.Round(elapsedWall, 1),
-                    ["maxGameSeconds"] = _maxGameSeconds,
-                    ["maxWallSeconds"] = _maxWallSeconds,
-                    ["targetCellsRemaining"] = CountRemainingTargetCells()
-                };
-            }
-
-            public void Cancel(string reason)
-            {
-                if (_completed) return;
-                Finish(reason);
-            }
-
-            private void Update()
-            {
-                if (_completed) return;
-
-                var speedControl = SpeedControlScreen.Instance;
-                if (speedControl != null && speedControl.IsPaused)
-                {
-                    Finish("external_pause");
-                    return;
-                }
-
-                float currentGameTime = GameClock.Instance != null ? GameClock.Instance.GetTime() : 0f;
-                float elapsedGame = Math.Max(0f, currentGameTime - _startGameTime);
-                float elapsedWall = Math.Max(0f, Time.realtimeSinceStartup - _startWallTime);
-
-                // 1. Wall-clock timeout (safety guard against hanging)
-                if (elapsedWall >= _maxWallSeconds)
-                {
-                    Finish("timeout_wall_clock");
-                    return;
-                }
-
-                // 2. Game-time limit reached
-                if (elapsedGame >= _maxGameSeconds)
-                {
-                    Finish("timeout_game_time");
-                    return;
-                }
-
-                // 3. Red alert or critical dupe safety
-                if (ShouldCheckAlert())
-                {
-                    string alertReason = CheckAlerts();
-                    if (alertReason != null)
-                    {
-                        Finish("alert:" + alertReason);
-                        return;
-                    }
-                }
-
-                // 4. Cycle boundary / night
-                if (ShouldCheckCycleEnd())
-                {
-                    int currentCycle = GameUtil.GetCurrentCycle();
-                    if (currentCycle > _startCycle)
-                    {
-                        Finish("cycle_end");
-                        return;
-                    }
-                }
-
-                // 5. Targeted cells or global orders complete
-                if (ShouldCheckOrders())
-                {
-                    if (AreOrdersComplete())
-                    {
-                        Finish("orders_complete");
-                        return;
-                    }
-                }
-
-                // 6. Duplicant idle
-                if (ShouldCheckDupeIdle())
-                {
-                    var idleDupe = FindIdleDuplicant();
-                    if (idleDupe != null)
-                    {
-                        Finish("dupe_idle:" + idleDupe);
-                        return;
-                    }
-                }
-            }
-
-            private bool ShouldCheckAlert() => _condition.Contains("alert") || _condition.Contains("any") || _condition.Contains("orders");
-            private bool ShouldCheckCycleEnd() => _condition.Contains("cycle") || _condition.Contains("night") || _condition.Contains("any");
-            private bool ShouldCheckOrders() => _condition.Contains("order") || _condition.Contains("any");
-            private bool ShouldCheckDupeIdle() => _condition.Contains("idle") || _condition.Contains("any");
-
-            private bool AreOrdersComplete()
-            {
-                if (_targetCells != null && _targetCells.Count > 0)
-                {
-                    return CountRemainingTargetCells() == 0;
-                }
-
-                // Global fallback: check if diggables finished
-                int currentDigs = Components.Diggables != null ? Components.Diggables.Count : 0;
-                if (_initialDigCount > 0 && currentDigs == 0)
-                    return true;
-
-                return false;
-            }
-
-            private int CountRemainingTargetCells()
-            {
-                if (_targetCells == null || _targetCells.Count == 0)
-                    return 0;
-
-                int remaining = 0;
-                foreach (int cell in _targetCells)
-                {
-                    if (!Grid.IsValidCell(cell))
-                        continue;
-
-                    // If solid and diggable, still active
-                    if (Grid.Solid[cell] && Grid.Objects[cell, (int)ObjectLayer.DigPlacer] != null)
-                    {
-                        remaining++;
-                        continue;
-                    }
-
-                    // If has unfinished construction
-                    var buildingUnderConstruction = Grid.Objects[cell, (int)ObjectLayer.Building];
-                    if (buildingUnderConstruction != null && buildingUnderConstruction.GetComponent<Constructable>() != null)
-                    {
-                        remaining++;
-                    }
-                }
-
-                return remaining;
-            }
-
-            private string CheckAlerts()
-            {
-                if (ClusterManager.Instance?.activeWorld?.AlertManager != null &&
-                    ClusterManager.Instance.activeWorld.AlertManager.IsRedAlert())
-                {
-                    return "red_alert";
-                }
-
-                if (Components.LiveMinionIdentities != null)
-                {
-                    foreach (var dupe in Components.LiveMinionIdentities.Items)
-                    {
-                        if (dupe == null) continue;
-                        float breath = DupeAmountUtil.AmountValueByName(dupe, "Breath", 100f);
-                        if (breath < 20f)
-                            return $"{dupe.GetProperName()}_suffocating";
-
-                        float hp = DupeAmountUtil.AmountValueByName(dupe, "HitPoints", 100f);
-                        if (hp < 35f)
-                            return $"{dupe.GetProperName()}_low_health";
-                    }
-                }
-
-                return null;
-            }
-
-            private string FindIdleDuplicant()
-            {
-                if (Components.LiveMinionIdentities == null)
-                    return null;
-
-                foreach (var dupe in Components.LiveMinionIdentities.Items)
-                {
-                    if (dupe == null) continue;
-                    var driver = dupe.GetComponent<ChoreDriver>();
-                    if (driver != null && driver.GetCurrentChore() == null)
-                    {
-                        // Check if in work schedule block
-                        var schedulable = dupe.GetComponent<Schedulable>();
-                        var group = schedulable?.GetSchedule()?.GetCurrentScheduleBlock()?.GroupId;
-                        if (string.Equals(group, "Work", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return dupe.GetProperName();
-                        }
-                    }
-                }
-
-                return null;
-            }
-
-            private void Finish(string stopReason)
-            {
-                if (_completed) return;
-                _completed = true;
-
-                // Auto-pause the game immediately
-                var speedControl = SpeedControlScreen.Instance;
-                if (speedControl != null)
-                {
-                    AcquireMcpPause(speedControl);
-                }
-
-                float currentGameTime = GameClock.Instance != null ? GameClock.Instance.GetTime() : 0f;
-                float elapsedGame = Math.Max(0f, currentGameTime - _startGameTime);
-                float elapsedWall = Math.Max(0f, Time.realtimeSinceStartup - _startWallTime);
-                int endCycle = GameUtil.GetCurrentCycle();
-
-                var idleDupes = new List<string>();
-                if (Components.LiveMinionIdentities != null)
-                {
-                    foreach (var dupe in Components.LiveMinionIdentities.Items)
-                    {
-                        if (dupe == null) continue;
-                        var driver = dupe.GetComponent<ChoreDriver>();
-                        if (driver != null && driver.GetCurrentChore() == null)
-                            idleDupes.Add(dupe.GetProperName());
-                    }
-                }
-
-                int remainingOrders = CountRemainingTargetCells();
-
-                var delta = new Dictionary<string, object>
-                {
-                    ["stopReason"] = stopReason,
-                    ["condition"] = _condition,
-                    ["isPaused"] = true,
-                    ["elapsedGameSeconds"] = Math.Round(elapsedGame, 1),
-                    ["elapsedWallSeconds"] = Math.Round(elapsedWall, 1),
-                    ["startCycle"] = _startCycle,
-                    ["endCycle"] = endCycle,
-                    ["remainingTargetOrders"] = remainingOrders,
-                    ["idleDuplicants"] = idleDupes,
-                    ["alerts"] = CheckAlerts() ?? "none"
-                };
-
-                try
-                {
-                    _onComplete?.Invoke(delta);
-                }
-                finally
-                {
-                    Destroy(this);
-                }
-            }
-
-            private void OnDestroy()
-            {
-                if (!_completed)
-                {
-                    Finish("destroyed");
-                }
-            }
         }
     }
 }

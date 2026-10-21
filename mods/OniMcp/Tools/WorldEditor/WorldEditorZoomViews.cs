@@ -126,34 +126,15 @@ namespace OniMcp.Tools
             float defaultPadding = mode == "detail" ? 0.75f : mode == "overview" ? 4f : 1.5f;
             float padding = Math.Max(0f, ToolUtil.GetFloat(args, "paddingCells") ?? defaultPadding);
             float aspect = Math.Max(0.5f, Screen.width / Math.Max(1f, (float)Screen.height));
-            float vertical = height * 0.5f + padding;
-            float horizontalAsVertical = (width * 0.5f + padding) / aspect;
-            float raw = Math.Max(vertical, horizontalAsVertical);
-            if (mode == "detail")
-                raw *= 0.72f;
-            else if (mode == "overview")
-                raw *= 1.28f;
-
             float minZoom = ToolUtil.GetFloat(args, "minCameraZoom")
                 ?? (mode == "detail" ? 2.8f : mode == "overview" ? 10f : 4f);
             float maxZoom = ToolUtil.GetFloat(args, "maxCameraZoom") ?? 80f;
-            return Mathf.Clamp(raw, minZoom, Math.Max(minZoom, maxZoom));
+            return CameraFramingPolicy.ForBounds(width, height, aspect, padding, mode, minZoom, maxZoom);
         }
 
         private static string ResolveFocusMode(JObject args, int width, int height)
         {
-            string requested = FirstZoomText(args, "focusMode", "cameraMode", "zoomMode");
-            if (requested.Equals("detail", StringComparison.OrdinalIgnoreCase)
-                || requested.Equals("local", StringComparison.OrdinalIgnoreCase)
-                || requested.Equals("close", StringComparison.OrdinalIgnoreCase))
-                return "detail";
-            if (requested.Equals("overview", StringComparison.OrdinalIgnoreCase)
-                || requested.Equals("global", StringComparison.OrdinalIgnoreCase)
-                || requested.Equals("wide", StringComparison.OrdinalIgnoreCase))
-                return "overview";
-
-            int cells = Math.Max(1, width * height);
-            return cells <= 360 ? "detail" : "overview";
+            return CameraFramingPolicy.ResolveMode(FirstZoomText(args, "focusMode", "cameraMode", "zoomMode"));
         }
 
         private static bool TryReadMapFocusBounds(

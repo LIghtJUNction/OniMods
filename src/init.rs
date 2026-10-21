@@ -45,6 +45,7 @@ pub fn run(
     mod_version: String,
     _config_path: Option<PathBuf>,
 ) -> Result<()> {
+    crate::config::validate_mod_directory_name(&name)?;
     let cwd = env::current_dir()?;
     let template = cwd.join(TEMPLATE_DIR);
 

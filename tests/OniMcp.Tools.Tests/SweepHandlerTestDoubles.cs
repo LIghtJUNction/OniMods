@@ -6,16 +6,20 @@ using UnityEngine;
 
 // Game objects and unrelated tools are fixtures. SweepArea, its ordering,
 // counters, response assembly, and area routing are compiled from production.
-internal sealed class SweepTestPickupable
+internal class Pickupable
 {
     internal GameObject gameObject { get; } = new GameObject();
     internal int Cell { get; set; }
+    internal int cachedCell => Cell;
     internal int WorldId { get; set; }
+    internal int GetMyWorldId() => WorldId;
     internal object storage { get; set; }
     internal KPrefabID KPrefabID => GetComponent<KPrefabID>();
     internal PrimaryElement PrimaryElement => GetComponent<PrimaryElement>();
     internal T GetComponent<T>() where T : class => gameObject.GetComponent<T>();
 }
+
+internal sealed class SweepTestPickupable : Pickupable { }
 
 internal sealed class Clearable
 {
@@ -37,10 +41,11 @@ internal sealed class SweepTestPriority
     internal int Value { get; set; } = 3;
 }
 
-internal sealed class KPrefabID
+internal sealed partial class KPrefabID
 {
     internal HashSet<string> Tags { get; } = new HashSet<string>();
     internal bool HasTag(string tag) => Tags.Contains(tag);
+    internal bool HasTag(Tag tag) => Tags.Contains(tag.Name);
 }
 
 internal static class GameTags

@@ -149,6 +149,7 @@ namespace UnityEngine
     {
         internal static float timeScale = 1f;
         internal static float realtimeSinceStartup = 0f;
+        internal static int frameCount { get; set; }
     }
 
     internal static class Mathf
@@ -160,13 +161,17 @@ namespace UnityEngine
 internal enum SimHashes { TestElement }
 internal static class Assets
 {
+    internal static UnityEngine.GameObject GetPrefab(Tag tag) => null;
     internal static readonly List<TestBuildingDef> BuildingDefs = new List<TestBuildingDef>();
     internal static BuildingDef GetBuildingDef(string id) => BuildingDefs.Find(def => def.PrefabID == id);
 }
 internal sealed class TestBuildingDef : BuildingDef { }
-internal class BuildingDef
+internal partial class BuildingDef
 {
     public string PrefabID { get; set; }
     public string Name { get; set; }
     public float[] Mass { get; set; }
+    public string[] MaterialCategory { get; set; }
+    public float MassTier { get; set; }
+    internal List<Tag> DefaultElements() => ElementLoader.Elements.Keys.Select(name => new Tag(name)).ToList();
 }

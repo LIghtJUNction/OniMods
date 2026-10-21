@@ -20,7 +20,7 @@ namespace OniMcp.Tools
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "action 或 feedback", Required = true, EnumValues = new List<string> { "action", "feedback" } },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=action: list/trigger/open_management；domain=feedback: notification/popup/speech_bubble/marker", Required = true },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=action: list/trigger/open_management/open_load_menu；domain=feedback: notification/popup/speech_bubble/marker", Required = true },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "domain=action action=list 时过滤类型：all/management/overlay/build/navigation；其他 domain 按子工具语义使用", Required = false },
                     ["uiAction"] = new McpToolParameter { Type = "string", Description = "domain=action action=trigger 时的 Action 枚举名", Required = false },
                     ["screen"] = new McpToolParameter { Type = "string", Description = "domain=action action=open_management 时的页面名", Required = false },

@@ -3,6 +3,17 @@
     <ItemGroup>
       <InputAssemblies Include="$(OutputPath)$(TargetName)$(TargetExt)" />
       <InputAssemblies Include="$(OutputPath)PLib.dll" />
+      <InputAssemblies Include="$(OutputPath)ToonFormat.dll" />
+      <InputAssemblies Include="$(OutputPath)System.Text.Json.dll" />
+      <InputAssemblies Include="$(OutputPath)System.Text.Encodings.Web.dll" Condition="Exists('$(OutputPath)System.Text.Encodings.Web.dll')" />
+      <ToonDependency Include="$(OutputPath)Microsoft.Bcl.AsyncInterfaces.dll" Condition="Exists('$(OutputPath)Microsoft.Bcl.AsyncInterfaces.dll')" />
+      <ToonDependency Include="$(OutputPath)System.Buffers.dll" Condition="Exists('$(OutputPath)System.Buffers.dll')" />
+      <ToonDependency Include="$(OutputPath)System.IO.Pipelines.dll" Condition="Exists('$(OutputPath)System.IO.Pipelines.dll')" />
+      <ToonDependency Include="$(OutputPath)System.Memory.dll" Condition="Exists('$(OutputPath)System.Memory.dll')" />
+      <ToonDependency Include="$(OutputPath)System.Numerics.Vectors.dll" Condition="Exists('$(OutputPath)System.Numerics.Vectors.dll')" />
+      <ToonDependency Include="$(OutputPath)System.Runtime.CompilerServices.Unsafe.dll" Condition="Exists('$(OutputPath)System.Runtime.CompilerServices.Unsafe.dll')" />
+      <ToonDependency Include="$(OutputPath)System.Threading.Tasks.Extensions.dll" Condition="Exists('$(OutputPath)System.Threading.Tasks.Extensions.dll')" />
+      <InputAssemblies Include="@(ToonDependency)" />
     </ItemGroup>
 
     <Message Text="Merging PLib.dll into $(OutputPath)$(TargetName)$(TargetExt)" Importance="high" />
@@ -15,6 +26,6 @@
       TargetKind="SameAsPrimaryAssembly"
       OutputFile="$(OutputPath)$(TargetName)$(TargetExt)" />
 
-    <Delete Files="$(OutputPath)PLib.dll;$(OutputPath)PLib.xml" />
+    <Delete Files="$(OutputPath)PLib.dll;$(OutputPath)PLib.xml;$(OutputPath)ToonFormat.dll;$(OutputPath)ToonFormat.xml;$(OutputPath)System.Text.Json.dll;$(OutputPath)System.Text.Encodings.Web.dll;@(ToonDependency)" />
   </Target>
 </Project>

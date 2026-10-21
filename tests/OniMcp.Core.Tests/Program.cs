@@ -16,10 +16,13 @@ internal static class Program
     {
         Run("registry initialization can retry after a factory failure", InitializationRetry);
         Run("JSON-RPC preserves null id and success result", JsonRpcNulls);
+        Run("tool JSON text uses configurable TOON encoding", ToolTextEncoding);
+        Run("nested tool results preserve structure and ordinary text", NestedResultText);
         Run("tool state scopes separate sessions from stateless handles", ToolStateScopes);
         Run("task descriptions require nonempty JSON strings", TaskDescriptions);
         Run("invalid tool names return errors", InvalidNames);
         Run("tool calls still enforce coordinate and task constraints", ToolConstraints);
+        Run("camera coordinate exception preserves gameplay boundaries", CameraCoordinateRegression.Run);
         Run("tool cache respects visibility after all-tools access", CacheVisibility);
         Run("public catalog preserves schemas and internal operation isolation", MetadataIsolation);
         Run("all static resources dispatch to their registered operation", StaticResources);
@@ -27,7 +30,7 @@ internal static class Program
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
         Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
-        Console.WriteLine(failures == 0 ? "All 13 core regression groups passed." : failures + " regression groups failed.");
+        Console.WriteLine(failures == 0 ? "All 16 core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 
@@ -76,6 +79,67 @@ internal static class Program
         Require(success.Property("result") != null && success["result"].Type == JTokenType.Null, "Success omitted result:null.");
         Require(success.Property("error") == null, "Success unexpectedly contains error.");
         Require((int)Serialize(JsonRpcResponse.Success(4, false))["id"] == 4, "Numeric id changed.");
+    }
+
+    private static void ToolTextEncoding()
+    {
+        const string json = "{\"items\":[{\"id\":1,\"name\":\"Ada\"},{\"id\":2,\"name\":\"Bob\"}]}";
+        McpTextContentEncoder.Configure("toon");
+        var internalResult = CallToolResult.Text("{\"ops\":[{\"action\":\"map_edit\",\"result\":{\"applied\":2}}]}");
+        var internalPayload = JObject.Parse(internalResult.Content[0].Text);
+        Require((int)internalPayload["ops"][0]["result"]["applied"] == 2, "Internal map-edit composition no longer receives parseable JSON text.");
+        Require(internalResult.Content[0].Text.StartsWith("{", StringComparison.Ordinal), "TOON was applied before the HTTP response boundary.");
+
+        var response = JsonRpcResponse.Success(7, new JObject
+        {
+            ["content"] = new JArray(new JObject { ["type"] = "text", ["text"] = json }),
+            ["isError"] = false,
+            ["structuredContent"] = new JObject { ["items"] = new JArray(1, 2) }
+        });
+        var wire = JObject.Parse(JsonConvert.SerializeObject(McpTextContentEncoder.FormatJsonRpcResponse(response), McpJsonUtil.Settings));
+        Require((string)wire["jsonrpc"] == "2.0" && (int)wire["id"] == 7, "JSON-RPC envelope changed during text encoding.");
+        Require((string)wire["result"]["content"][0]["text"] == "items[2]{id,name}:\n  1,Ada\n  2,Bob", "Wire text was not encoded using TOON's tabular array form.");
+        Require(wire["result"]["structuredContent"].Type == JTokenType.Object
+            && wire["result"]["structuredContent"]["items"].Type == JTokenType.Array,
+            "structuredContent JSON types were changed.");
+
+        McpTextContentEncoder.Configure("json");
+        var jsonWire = JObject.Parse(JsonConvert.SerializeObject(McpTextContentEncoder.FormatJsonRpcResponse(response), McpJsonUtil.Settings));
+        Require((string)jsonWire["result"]["content"][0]["text"] == json, "JSON mode did not preserve the original text.");
+
+        McpTextContentEncoder.Configure("toon");
+        const string plainText = "not JSON: leave this readable";
+        var plainResponse = JsonRpcResponse.Success(1, CallToolResult.Text(plainText));
+        var plainWire = JObject.Parse(JsonConvert.SerializeObject(McpTextContentEncoder.FormatJsonRpcResponse(plainResponse), McpJsonUtil.Settings));
+        Require((string)plainWire["result"]["content"][0]["text"] == plainText, "Plain text was changed by the formatter.");
+        var errorResponse = JsonRpcResponse.Success(1, CallToolResult.Error(json));
+        var errorWire = JObject.Parse(JsonConvert.SerializeObject(McpTextContentEncoder.FormatJsonRpcResponse(errorResponse), McpJsonUtil.Settings));
+        Require((bool)errorWire["result"]["isError"] && (string)errorWire["result"]["content"][0]["text"] == "items[2]{id,name}:\n  1,Ada\n  2,Bob",
+            "Error envelope or structured text encoding changed.");
+
+        var catalog = JsonRpcResponse.Success(8, new JObject { ["tools"] = new JArray() });
+        Require(ReferenceEquals(catalog, McpTextContentEncoder.FormatJsonRpcResponse(catalog)), "Catalog responses were needlessly copied by the text formatter.");
+        var markdown = JsonRpcResponse.Success(9, CallToolResult.Text("# Cell\n\nThis is plain Markdown."));
+        Require(ReferenceEquals(markdown, McpTextContentEncoder.FormatJsonRpcResponse(markdown)), "Plain Markdown took the structured JSON encoding path.");
+        var protocolError = JsonRpcResponse.MakeError(10, -32601, "No such method");
+        Require(ReferenceEquals(protocolError, McpTextContentEncoder.FormatJsonRpcResponse(protocolError)), "Protocol errors were unnecessarily converted.");
+    }
+
+    private static void NestedResultText()
+    {
+        var child = McpJsonUtil.ParseResultText("{\"applied\":3,\"date\":\"2026-10-20\",\"remaining\":[1,2]}");
+        Require(child.Type == JTokenType.Object && (int)child["applied"] == 3, "Child JSON was escaped as opaque text.");
+        Require(child["date"].Type == JTokenType.String, "A JSON string was changed into a date value.");
+        Require(McpJsonUtil.ParseResultText("[1,2]").Type == JTokenType.Array, "Child arrays lost their structure.");
+        foreach (string text in new[] { "{unfinished", "[1,2] trailing text", "# Ordinary report", "42" })
+        {
+            var value = McpJsonUtil.ParseResultText(text);
+            Require(value.Type == JTokenType.String && (string)value == text, "Invalid or ordinary child text was changed: " + text);
+        }
+        var nested = new JObject { ["result"] = child };
+        McpTextContentEncoder.Configure("toon");
+        string toon = McpTextContentEncoder.EncodeIfJson(nested.ToString(Formatting.None));
+        Require(toon.Contains("applied: 3") && !toon.Contains("\\\"applied\\\""), "Nested results still contain escaped JSON in TOON output.");
     }
 
     private static void ToolStateScopes()
@@ -183,7 +247,7 @@ internal static class Program
         {
             Require(info.InputSchema.Required.Count(name => name == "task") == 1
                 && info.InputSchema.Required.Contains("action"), "Required schema fields changed: " + info.Name);
-            Require(info.InputSchema.Properties.ContainsKey("x") == (info.Name == "world_editor"),
+            Require(info.InputSchema.Properties.ContainsKey("x") == (info.Name == "world_editor" || info.Name == "navigation_control"),
                 "Coordinate schema boundary changed: " + info.Name);
             Require(info.Execution.TaskSupport == "optional", "Task support changed: " + info.Name);
             if (info.Name != "benchmark" && info.Name != "world_editor")

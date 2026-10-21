@@ -1,0 +1,194 @@
+--- a/mods/CycleTrim/OniSim/native/src/events.rs
++++ b/mods/CycleTrim/OniSim/native/src/events.rs
+@@ -8,15 +8,23 @@
+ macro_rules! queues {
+     ($($field:ident: $kind:ty),* $(,)?) => {
+         #[derive(Default)]
+-        pub(crate) struct EventQueues { $(pub(crate) $field: Vec<$kind>),* }
++        pub(crate) struct EventQueues {
++            $(pub(crate) $field: Vec<$kind>,)*
++            change_seen: Vec<u64>,
++            change_limit: usize,
++        }
+ 
+         impl EventQueues {
+-            pub(crate) fn clear(&mut self) { $(self.$field.clear();)* }
++            pub(crate) fn clear(&mut self) {
++                $(self.$field.clear();)*
++                self.change_seen.clear();
++                self.change_limit = 0;
++            }
+ 
+             // Cache these ranges while the unpublished/leased GameData is
+             // owned here. Once returned to the worker, alias checks must use
+             // the cache rather than borrow that worker-owned object again.
+-            pub(crate) fn storage_ranges(&self) -> [(usize, usize); 29] {
++            pub(crate) fn storage_ranges(&self) -> [(usize, usize); 30] {
+                 [$(
+                     if self.$field.capacity() == 0 {
+                         (0, 0)
+@@ -24,7 +32,11 @@
+                         (self.$field.as_ptr() as usize,
+                          self.$field.capacity() * std::mem::size_of::<$kind>())
+                     },
+-                )*]
++                )*
++                    if self.change_seen.capacity() == 0 { (0, 0) } else {
++                        (self.change_seen.as_ptr() as usize, self.change_seen.capacity() * 8)
++                    },
++                ]
+             }
+ 
+             pub(crate) fn overlaps_storage(&self, start: usize, length: usize) -> bool {
+@@ -33,7 +45,10 @@
+                         start, length, self.$field.as_ptr() as usize,
+                         self.$field.capacity() * std::mem::size_of::<$kind>(),
+                     )) ||
+-                )* false
++                )* (self.change_seen.capacity() != 0 && crate::bytes::overlaps(
++                    start, length, self.change_seen.as_ptr() as usize,
++                    self.change_seen.capacity() * 8,
++                ))
+             }
+ 
+             pub(crate) fn publish_to(&self, grid: &mut Grid) -> Result<()> {
+@@ -201,7 +216,30 @@
+         self.substance_changed(game_cell, u16::MAX, u16::MAX);
+     }
+ 
++    pub(crate) fn track_grid_changes(&mut self, cells: usize) {
++        // At most 2 MiB per unpublished buffer. Allocation pressure retains
++        // the original append/sort/deduplicate path without partial mutation.
++        self.change_limit = 0;
++        self.change_seen.clear();
++        let words = cells.div_ceil(64);
++        if words > 262_144 || self.change_seen.try_reserve_exact(words).is_err() {
++            return;
++        }
++        self.change_seen.resize(words, 0);
++        self.change_limit = cells;
++    }
++
+     pub(crate) fn substance_changed(&mut self, game_cell: i32, old: u16, new: u16) {
++        if let Ok(index) = usize::try_from(game_cell)
++            && index < self.change_limit
++        {
++            let word = &mut self.change_seen[index / 64];
++            let mask = 1_u64 << (index % 64);
++            if *word & mask != 0 {
++                return;
++            }
++            *word |= mask;
++        }
+         self.substance_change_info.push(SubstanceChangeInfo {
+             cell_idx: game_cell,
+             old_elem_idx: old,
+@@ -258,3 +296,96 @@
+             .push(BackwallShouldTransitionInfo { game_cell });
+     }
+ }
++
++#[cfg(test)]
++mod change_tracking_tests {
++    use super::*;
++
++    fn ids(events: &EventQueues) -> Vec<i32> {
++        let mut values = events
++            .substance_change_info
++            .iter()
++            .map(|event| event.cell_idx)
++            .collect::<Vec<_>>();
++        values.sort_unstable();
++        values.dedup();
++        values
++    }
++
++    #[test]
++    fn early_dedup_preserves_cell_membership_with_resets_merges_and_invalid_ids() {
++        for cells in [0, 1, 63, 64, 65, 129] {
++            let mut tracked = EventQueues::default();
++            let mut ordinary = EventQueues::default();
++            tracked.track_grid_changes(cells);
++            let mut random = 0x12345678u32;
++            for iteration in 0..4096 {
++                random ^= random << 13;
++                random ^= random >> 17;
++                random ^= random << 5;
++                let cell = (random as usize % (cells + 3)) as i32 - 1;
++                tracked.substance_changed(cell, iteration as u16, !(iteration as u16));
++                ordinary.substance_changed(cell, iteration as u16, !(iteration as u16));
++                if iteration % 97 == 0 {
++                    // Untracked temporary queues append records directly.
++                    let value = SubstanceChangeInfo {
++                        cell_idx: cell,
++                        old_elem_idx: 255,
++                        new_elem_idx: 255,
++                    };
++                    tracked.substance_change_info.push(value);
++                    ordinary.substance_change_info.push(value);
++                }
++                assert_eq!(ids(&tracked), ids(&ordinary));
++                if iteration % 511 == 0 {
++                    tracked.clear();
++                    ordinary.clear();
++                    tracked.track_grid_changes(cells);
++                }
++            }
++        }
++    }
++
++    #[test]
++    fn tracker_is_bounded_and_private_storage_participates_in_alias_checks() {
++        let mut events = EventQueues::default();
++        events.track_grid_changes(129);
++        assert_eq!(events.change_seen.len(), 3);
++        let start = events.change_seen.as_ptr() as usize;
++        assert!(events.overlaps_storage(start, 1));
++        assert_eq!(
++            events.storage_ranges()[29],
++            (start, events.change_seen.capacity() * 8)
++        );
++        events.clear();
++        events.track_grid_changes(usize::MAX);
++        assert_eq!(events.change_limit, 0);
++        events.substance_change(0);
++        events.substance_change(0);
++        assert_eq!(events.substance_change_info.len(), 2);
++    }
++}
++
++#[cfg(test)]
++mod tracker_capacity_regression {
++    use super::EventQueues;
++
++    #[test]
++    fn growing_dimensions_never_exceed_tracker_word_budget() {
++        const WORDS: usize = 262_144;
++        let mut events = EventQueues::default();
++        // A capacity just above half the budget makes amortized growth
++        // double beyond the advertised bound on the next larger world.
++        for words in [WORDS / 2 + 1, WORDS, 1, 0, WORDS + 1] {
++            events.track_grid_changes(words * 64);
++            assert!(events.change_seen.capacity() <= WORDS);
++            if words <= WORDS {
++                assert_eq!(events.change_seen.len(), words);
++                assert_eq!(events.change_limit, words * 64);
++            } else {
++                assert_eq!(events.change_limit, 0);
++                assert!(events.change_seen.is_empty());
++            }
++        }
++    }
++}
+--- a/mods/CycleTrim/OniSim/native/src/frames_engine.rs
++++ b/mods/CycleTrim/OniSim/native/src/frames_engine.rs
+@@ -87,6 +87,9 @@
+         // empty batch. Releasing per ProcessFrame would change generations.
+         crate::conduit_ffi::release_queued_handles()?;
+         output.events.clear();
++        output
++            .events
++            .track_grid_changes(self.world.width * self.world.height);
+         // Step clears flow once before all ProcessNextFrame calls, including
+         // when no game frames are available. Substeps never clear these flows.
+         self.world.flow.fill([0.0; 4]);

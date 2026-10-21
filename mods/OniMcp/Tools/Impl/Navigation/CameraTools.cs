@@ -44,7 +44,7 @@ namespace OniMcp.Tools
                 Risk = "low",
                 Aliases = new List<string> { "camera", "camera_tools", "screenshot_control" },
                 Tags = new List<string> { "camera", "screenshot", "overlay", "world", "navigation" },
-                Description = "相机聚合工具：action=get_view/set_active_world/set_view/move/switch_view/focus_cell/focus_dupe/screenshot/coordinate_screenshot",
+                Description = "相机聚合工具：action=get_view/set_active_world/set_view/set_zoom/move/switch_view/focus_cell/focus_dupe/screenshot/coordinate_screenshot",
                 Parameters = CameraControlParams(),
                 Handler = args =>
                 {
@@ -59,6 +59,8 @@ namespace OniMcp.Tools
                             return SetActiveWorld().Handler(args);
                         case "set_view":
                             return SetCameraView().Handler(args);
+                        case "set_zoom":
+                            return SetCameraZoom(args);
                         case "move":
                             return MoveCamera().Handler(args);
                         case "switch_view":
@@ -75,7 +77,7 @@ namespace OniMcp.Tools
                         case "coord_screenshot":
                             return TakeCoordinateScreenshot().Handler(args);
                         default:
-                            return CallToolResult.Error("action must be get_view, set_active_world, set_view, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot");
+                            return CallToolResult.Error("action must be get_view, set_active_world, set_view, set_zoom, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot");
                     }
                 }
             };
@@ -102,6 +104,7 @@ namespace OniMcp.Tools
                     {
                         ["position"] = new { x = Math.Round(pos.x, 2), y = Math.Round(pos.y, 2), z = Math.Round(pos.z, 2) },
                         ["orthographicSize"] = Math.Round(Camera.main.orthographicSize, 2),
+                        ["targetOrthographicSize"] = Math.Round(camera.targetOrthographicSize, 2),
                         ["activeWorldId"] = ClusterManager.Instance?.activeWorldId ?? -1,
                         ["screen"] = new { width = Screen.width, height = Screen.height }
                     };
@@ -190,29 +193,34 @@ namespace OniMcp.Tools
                 {
                     ["x"] = new McpToolParameter { Type = "number", Description = "目标 X 坐标", Required = true },
                     ["y"] = new McpToolParameter { Type = "number", Description = "目标 Y 坐标", Required = true },
-                    ["zoom"] = new McpToolParameter { Type = "number", Description = "相机正交缩放，默认 10", Required = false },
-                    ["snap"] = new McpToolParameter { Type = "boolean", Description = "是否立即跳转，默认 true", Required = false }
+                    ["zoom"] = new McpToolParameter { Type = "number", Description = "相机正交半高；省略时保持当前缩放", Required = false },
+                    ["snap"] = new McpToolParameter { Type = "boolean", Description = "是否立即跳转，默认 true", Required = false },
+                    ["duration"] = new McpToolParameter { Type = "number", Description = "平滑移动时间常数（秒），默认 0.5", Required = false }
                 },
                 Handler = args =>
                 {
                     var camera = CameraController.Instance;
-                    if (camera == null)
+                    if (camera == null || Camera.main == null)
                         return CallToolResult.Error("Camera not available");
 
                     float? x = ToolUtil.GetFloat(args, "x");
                     float? y = ToolUtil.GetFloat(args, "y");
                     if (!x.HasValue || !y.HasValue)
                         return CallToolResult.Error("x and y are required");
+                    if (!Finite(x.Value) || !Finite(y.Value))
+                        return CallToolResult.Error("x and y must be finite numbers");
 
-                    float zoom = ToolUtil.GetFloat(args, "zoom") ?? 10f;
+                    float zoom = ToolUtil.GetFloat(args, "zoom") ?? Camera.main.orthographicSize;
+                    float duration = ToolUtil.GetFloat(args, "duration") ?? 0.5f;
+                    if (!ValidZoomAndDuration(zoom, duration))
+                        return CallToolResult.Error("zoom and duration must be finite positive numbers");
                     bool snap = ToolUtil.GetBool(args, "snap", true);
                     var pos = new Vector3(x.Value, y.Value, -100f);
-                    if (snap)
-                        camera.SnapTo(pos, zoom);
-                    else
-                        camera.CameraGoTo(pos, 2f, true);
+                    if (!InsideActiveWorld(pos))
+                        return CallToolResult.Error("Target is outside the active world; use set_active_world to switch to a discovered world first");
+                    ApplyCameraView(camera, pos, zoom, snap, duration);
 
-                    return CallToolResult.Text($"Camera moved to ({x.Value}, {y.Value}) zoom={zoom}");
+                    return CameraViewResult(camera, pos, zoom, snap);
                 }
             };
         }
@@ -269,24 +277,20 @@ namespace OniMcp.Tools
                     {
                         float dx = ToolUtil.GetFloat(args, "dx") ?? 0f;
                         float dy = ToolUtil.GetFloat(args, "dy") ?? 0f;
-                        if (Math.Abs(dx) < 0.001f && Math.Abs(dy) < 0.001f)
-                            return CallToolResult.Error("dx or dy is required for pan mode");
+                        if (Math.Abs(dx) < 0.001f && Math.Abs(dy) < 0.001f && args["zoom"] == null)
+                            return CallToolResult.Error("dx, dy, or zoom is required for pan mode");
 
                         target = new Vector3(current.x + dx, current.y + dy, -100f);
                     }
 
                     float zoom = ToolUtil.GetFloat(args, "zoom") ?? Camera.main.orthographicSize;
+                    float duration = ToolUtil.GetFloat(args, "duration") ?? 0.5f;
+                    if (!Finite(target.x) || !Finite(target.y) || !ValidZoomAndDuration(zoom, duration))
+                        return CallToolResult.Error("camera coordinates must be finite; zoom and duration must be finite positive numbers");
+                    if (!InsideActiveWorld(target))
+                        return CallToolResult.Error("Target is outside the active world; use set_active_world to switch to a discovered world first");
                     bool snap = ToolUtil.GetBool(args, "snap", mode == "jump");
-                    if (snap)
-                    {
-                        camera.SnapTo(target, zoom);
-                    }
-                    else
-                    {
-                        float duration = Math.Max(0.05f, ToolUtil.GetFloat(args, "duration") ?? 0.5f);
-                        camera.CameraGoTo(target, duration, true);
-                        Camera.main.orthographicSize = zoom;
-                    }
+                    ApplyCameraView(camera, target, zoom, snap, duration);
 
                     var result = new Dictionary<string, object>
                     {
@@ -294,12 +298,80 @@ namespace OniMcp.Tools
                         ["from"] = new { x = Math.Round(current.x, 2), y = Math.Round(current.y, 2), z = Math.Round(current.z, 2) },
                         ["target"] = new { x = Math.Round(target.x, 2), y = Math.Round(target.y, 2), z = Math.Round(target.z, 2) },
                         ["zoom"] = Math.Round(zoom, 2),
+                        ["targetOrthographicSize"] = Math.Round(camera.targetOrthographicSize, 2),
                         ["snap"] = snap
                     };
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
             };
         }
+
+        private static CallToolResult SetCameraZoom(Newtonsoft.Json.Linq.JObject args)
+        {
+            var camera = CameraController.Instance;
+            if (camera == null || Camera.main == null)
+                return CallToolResult.Error("Camera not available");
+            float? zoom = ToolUtil.GetFloat(args, "zoom");
+            float duration = ToolUtil.GetFloat(args, "duration") ?? 0.5f;
+            if (!zoom.HasValue || !ValidZoomAndDuration(zoom.Value, duration))
+                return CallToolResult.Error("zoom is required and must be finite and positive; duration must be finite and positive");
+            bool snap = ToolUtil.GetBool(args, "snap", true);
+            var position = camera.transform.GetPosition();
+            ApplyCameraView(camera, position, zoom.Value, snap, duration);
+            return CameraViewResult(camera, position, zoom.Value, snap);
+        }
+
+        private static void ApplyCameraView(CameraController camera, Vector3 target, float zoom, bool snap, float duration)
+        {
+            var speed = SpeedControlScreen.Instance;
+            bool wasPaused = speed != null && speed.IsPaused;
+            try
+            {
+                if (snap)
+                    camera.SnapTo(target, zoom);
+                else
+                {
+                    // CameraGoTo resets the native zoom target to 10. A write to
+                    // Camera.main alone is undone by the next native camera frame.
+                    camera.SetTargetPos(target, zoom, true);
+                    camera.SetOverrideZoomSpeed(1f / Math.Max(0.05f, duration));
+                }
+            }
+            finally
+            {
+                // Native cinematic "unpause next move" must not resume gameplay
+                // as a side effect of an MCP camera request.
+                if (wasPaused && speed != null && !speed.IsPaused)
+                    speed.Pause(false);
+            }
+        }
+
+        private static CallToolResult CameraViewResult(CameraController camera, Vector3 target, float zoom, bool snap)
+        {
+            return CallToolResult.Text(JsonConvert.SerializeObject(new
+            {
+                target = new { x = Math.Round(target.x, 2), y = Math.Round(target.y, 2) },
+                zoom = Math.Round(zoom, 2),
+                orthographicSize = Math.Round(Camera.main.orthographicSize, 2),
+                targetOrthographicSize = Math.Round(camera.targetOrthographicSize, 2),
+                snap
+            }, McpJsonUtil.Settings));
+        }
+
+        private static bool ValidZoomAndDuration(float zoom, float duration)
+        {
+            return Finite(zoom) && zoom > 0f && Finite(duration) && duration > 0f;
+        }
+
+        private static bool InsideActiveWorld(Vector3 target)
+        {
+            var cluster = ClusterManager.Instance;
+            var world = cluster?.GetWorld(cluster.activeWorldId);
+            return world != null && target.x >= world.minimumBounds.x && target.y >= world.minimumBounds.y
+                && target.x < world.maximumBounds.x + 1f && target.y < world.maximumBounds.y + 1f;
+        }
+
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
     }
 }

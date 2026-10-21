@@ -5,7 +5,7 @@ using System.Collections.Generic;
 // compiled from production source; these tests are not Unity/ONI acceptance.
 namespace UnityEngine
 {
-    internal sealed class GameObject
+    internal sealed partial class GameObject
     {
         private readonly Dictionary<Type, object> components = new Dictionary<Type, object>();
 
@@ -29,6 +29,11 @@ internal struct Tag
     internal string Name { get; }
     internal bool IsValid => !string.IsNullOrEmpty(Name);
     internal static Tag Invalid => new Tag(null);
+    internal string ProperNameStripLink() => Name;
+    public static bool operator ==(Tag first, Tag second) => first.Name == second.Name;
+    public static bool operator !=(Tag first, Tag second) => first.Name != second.Name;
+    public override bool Equals(object value) => value is Tag other && this == other;
+    public override int GetHashCode() => Name == null ? 0 : Name.GetHashCode();
 }
 
 internal sealed class Constructable

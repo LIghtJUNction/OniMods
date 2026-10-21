@@ -1,51 +1,96 @@
 using System;
+using System.Collections.Generic;
 using OniMcp.Tools;
+using UnityEngine;
 
 internal static class BuildMaterialSufficiencyRegression
 {
+    private static int assertions;
+
     internal static void Run()
     {
-        var def = new BuildingDef { Mass = new[] { 50f, 25f } };
-        float required = BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(def);
-        Check(required == 50f, "material demand must use the actual primary recipe mass");
-        Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(49.999f, required),
-            "normal build material below the required mass must be rejected");
-        Check(BuildMaterialSufficiencyPolicy.IsSatisfied(50f, required),
-            "exactly the required build mass must remain executable");
-        Check(BuildMaterialSufficiencyPolicy.IsSatisfied(75f, required),
-            "material above the required build mass must remain executable");
-        Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(75f, required * 2),
-            "enough mass for one segment cannot authorize two new path cells");
-        Check(BuildMaterialSufficiencyPolicy.IsSatisfied(100f, required * 2),
-            "exact aggregate path mass must remain executable");
-        Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(0f, required),
-            "known mass requirements cannot be bypassed by empty inventory");
-        Check(BuildMaterialSufficiencyPolicy.IsSatisfied(0f, 0f),
-            "unknown/non-positive material requirements must not invent a blocker");
-        Check(BuildMaterialSufficiencyPolicy.IsSatisfied(0f, -1f),
-            "negative unknown requirements remain non-blocking");
-        Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(-1f, required),
-            "negative inventory cannot satisfy positive mass");
-        Check(BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(null) == 0f
-            && BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(new BuildingDef()) == 0f
-            && BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(new BuildingDef { Mass = new float[0] }) == 0f,
-            "missing recipe metadata remains an unknown zero requirement");
+        var inventory = Reset();
+        var single = Recipe(new[] { 50f }, new[] { "BuildableRaw" });
+        inventory.Local["SandStone"] = 49.999f;
+        inventory.Related["SandStone"] = 500f;
+        var shortage = Select(single, "SandStone");
+        Check(!(bool)shortage["valid"], "related-world stock cannot authorize a locally short explicit placement");
+        Check((string)shortage["reasonCode"] == "insufficient_material" && Equals(shortage["satisfied"], false),
+            "a rejected shortage must be explicit in the serialized material result");
+        Check(Convert.ToSingle(shortage["selectedLocalInventoryKg"]) < 50f
+            && Convert.ToSingle(shortage["selectedForeignWorldInventoryKgContextOnly"]) > 450f,
+            "foreign inventory remains context only");
+        foreach (float amount in new[] { 50f, 75f })
+        {
+            inventory.Local["SandStone"] = amount;
+            Check((bool)Select(single, "SandStone")["valid"], "exact and excess local mass must be accepted");
+        }
+        inventory.Local["SandStone"] = 0f;
+        Check(!(bool)Select(single, "SandStone")["valid"], "foreign-only explicit stock must fail");
+        Check(!(bool)Select(single, "auto")["valid"], "foreign-only auto stock must fail");
+
+        inventory.Local["SandStone"] = 50f;
+        var repeated = Recipe(new[] { 50f, 25f }, new[] { "BuildableRaw", "BuildableRaw" });
+        Check(!(bool)Select(repeated, "SandStone")["valid"], "repeated material slots must count local stock once");
+        inventory.Local["SandStone"] = 75f;
+        Check((bool)Select(repeated, "SandStone")["valid"], "the complete repeated-slot mass must pass");
+
+        var mixed = Recipe(new[] { 50f, 25f }, new[] { "BuildableRaw", "RefinedMetal" });
+        inventory.Local["CopperOre"] = 24f;
+        inventory.Related["CopperOre"] = 100f;
+        Check(!(bool)Select(mixed, "auto")["valid"], "every native material slot must be supplied locally");
+        inventory.Local["CopperOre"] = 25f;
+        var complete = Select(mixed, "auto");
+        Check((bool)complete["valid"] && ((List<Dictionary<string, object>>)complete["recipeSlots"]).Count == 2,
+            "different material slots retain their native recipe identities");
 
         foreach (float invalid in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
         {
-            float invalidRequired = BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(new BuildingDef { Mass = new[] { invalid } });
-            Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(100f, invalidRequired),
-                "non-finite recipe mass must not be sanitized into a valid zero requirement");
-            Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(invalid, required),
-                "non-finite inventory must not authorize placement");
-            Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(invalid, 0f),
-                "non-finite inventory remains invalid with unknown recipe metadata");
+            foreach (string material in new[] { "SandStone", "auto", "BuildableRaw" })
+            {
+                var result = Select(Recipe(new[] { invalid }, new[] { "BuildableRaw" }), material);
+                Check(!(bool)result["valid"] && Equals(result["satisfied"], false)
+                    && (string)result["reasonCode"] == "invalid_material_requirement",
+                    "non-finite native demand must be invalid and unsatisfied for " + material);
+                Check(result["requiredKg"] == null && (string)result["localAvailabilityStatus"] == "invalid",
+                    "invalid demand must not look like an unknown executable requirement");
+            }
         }
+        UtilityMaterialPreflightRegression.Run();
+        Reset();
+        Console.WriteLine("Build material production regression checks passed: " + assertions);
+    }
+
+    internal static WorldInventory Reset()
+    {
+        BuildPlanningTools.ResetMaterialStockForTest();
+        Components.Pickupables.Items.Clear();
+        Components.LiveMinionIdentities.Items.Clear();
+        ElementLoader.Elements.Clear();
+        var raw = new Element();
+        raw.Categories.Add(new Tag("BuildableRaw"));
+        ElementLoader.Elements["SandStone"] = raw;
+        var metal = new Element();
+        metal.Categories.Add(new Tag("RefinedMetal"));
+        ElementLoader.Elements["CopperOre"] = metal;
+        var inventory = new WorldInventory();
+        ClusterManager.Instance = new ClusterManager();
+        ClusterManager.Instance.Worlds[0] = new TestCameraWorld { worldInventory = inventory };
+        return inventory;
+    }
+
+    internal static BuildingDef Recipe(float[] mass, string[] categories)
+        => new BuildingDef { PrefabID = "Wire", Name = "Wire", Mass = mass, MaterialCategory = categories };
+
+    private static Dictionary<string, object> Select(BuildingDef def, string material)
+    {
+        Time.frameCount++;
+        return BuildPlanningTools.TestMaterialSelection(def, material, 0);
     }
 
     private static void Check(bool condition, string message)
     {
-        if (!condition)
-            throw new InvalidOperationException(message);
+        assertions++;
+        if (!condition) throw new InvalidOperationException("Build material production regression: " + message);
     }
 }

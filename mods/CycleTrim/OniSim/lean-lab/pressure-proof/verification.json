@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "checked_at_utc": "2026-10-20T18:23:30.779539+00:00",
+  "lean_version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+  "passed": true,
+  "modules": [
+    {
+      "source": "DiseaseMerge.lean",
+      "theorems": [
+        "DiseaseMerge.optimized_eq_general",
+        "DiseaseMerge.same_species_nonpositive_clears",
+        "DiseaseMerge.same_species_positive_preserves_metadata"
+      ],
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "source": "PressureSchedule.lean",
+      "theorems": [
+        "PressureSchedule.disjoint_tasks_commute",
+        "PressureSchedule.distinct_same_wave_disjoint",
+        "PressureSchedule.earlier_inversion_disjoint",
+        "PressureSchedule.insert_membership",
+        "PressureSchedule.insertion_preserves_execution",
+        "PressureSchedule.ordered_overlap_increases_wave",
+        "PressureSchedule.same_wave_overlap_equal",
+        "PressureSchedule.sort_membership",
+        "PressureSchedule.view_after_disjoint",
+        "PressureSchedule.wave_sort_preserves_execution"
+      ],
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "source": "NotificationMembership.lean",
+      "theorems": [
+        "NotificationMembership.clear_sound",
+        "NotificationMembership.fold_membership",
+        "NotificationMembership.raw_append_sound",
+        "NotificationMembership.record_membership",
+        "NotificationMembership.record_sound"
+      ],
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "source": "PressureEnumeration.lean",
+      "theorems": [
+        "PressureEnumeration.emitted_coordinate_reconstructs_unique_wave",
+        "PressureEnumeration.every_cell_is_in_window",
+        "PressureEnumeration.every_cell_wave_is_visited",
+        "PressureEnumeration.window_exact"
+      ],
+      "axioms": [
+        "Classical.choice",
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "source": "PressureTiles.lean",
+      "theorems": [
+        "PressureTiles.distinct_overlapping_tiles_increase_level",
+        "PressureTiles.overlapping_order_monotone_tiles",
+        "PressureTiles.same_level_overlapping_tasks_share_tile",
+        "PressureTiles.tile_footprint_width_bound"
+      ],
+      "axioms": [
+        "Classical.choice",
+        "Quot.sound",
+        "propext"
+      ]
+    }
+  ],
+  "source_sha256": {
+    "DiseaseMerge.lean": "c27d5f175fc06d849bcf7ca921a081a95d150935e22db7ef85e54881216894cd",
+    "PressureSchedule.lean": "b7c15596b5c469934a610b64de79c86c29b9adae520de488b4d271da15fe6e66",
+    "NotificationMembership.lean": "e4d0fae297a3e59953695e6223cbae95e4af362e455580004b7545528a6637e4",
+    "PressureEnumeration.lean": "8de5e01675f32b64e57905701e6c0a3e35d1930413844ebe725ed2265124db01",
+    "PressureTiles.lean": "59b6541198b31b09c5f6a8223a69932edb6a378755dad3bcfb0e6aeec150aa5c",
+    "verify.py": "5f7eaef1a358d9bed9be47b338eff9d0dd5daffcbcf3d2b478d96a477f4fb3fd"
+  },
+  "checked_theorems": 26,
+  "production_pressure_parallel_implemented": false,
+  "scope": "Pure disease-state equivalence, wave-sort execution equivalence for local transitions, finite coordinate enumeration, fixed skew-tile dependencies and notification membership models; not a Rust ownership, event-merge, machine-overflow, complete tiled-executor or game-equivalence proof"
+}

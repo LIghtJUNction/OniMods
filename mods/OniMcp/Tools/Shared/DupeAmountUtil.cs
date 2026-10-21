@@ -5,18 +5,32 @@ namespace OniMcp.Tools
 {
     internal static class DupeAmountUtil
     {
+        public static bool TryGetAmountValue(MinionIdentity dupe, Amount amount, out float value)
+        {
+            value = 0f;
+            if (amount == null)
+                return false;
+            try
+            {
+                var instance = dupe?.GetComponent<Amounts>()?.Get(amount);
+                if (instance == null)
+                    return false;
+                value = ToolUtil.SafeFloat(instance.value);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static bool TryGetStressValue(MinionIdentity dupe, out float value)
         {
             value = 0f;
             try
             {
-                var amounts = dupe?.GetComponent<Amounts>();
                 var stressAmount = Db.Get()?.Amounts?.Stress;
-                var stress = stressAmount == null ? null : amounts?.Get(stressAmount);
-                if (stress == null)
-                    return false;
-                value = ToolUtil.SafeFloat(stress.value);
-                return true;
+                return TryGetAmountValue(dupe, stressAmount, out value);
             }
             catch
             {
@@ -33,20 +47,19 @@ namespace OniMcp.Tools
 
         public static float AmountValueByName(MinionIdentity dupe, string query, float fallback = 0f)
         {
-            var amounts = dupe?.GetComponent<Amounts>();
-            if (amounts == null)
+            var amounts = Db.Get()?.Amounts;
+            if (amounts == null || string.IsNullOrWhiteSpace(query))
                 return fallback;
-
-            foreach (var amount in amounts.ModifierList)
+            var candidates = new[]
             {
-                if (amount == null || amount.amount == null)
-                    continue;
-                string id = amount.amount.Id ?? "";
-                string name = amount.amount.Name ?? "";
-                if (Contains(id, query) || Contains(name, query))
-                    return ToolUtil.SafeFloat(amount.value);
-            }
-
+                amounts.Stamina, amounts.Calories, amounts.Stress, amounts.Bladder,
+                amounts.Breath, amounts.Temperature, amounts.HitPoints,
+                amounts.BionicInternalBattery, amounts.BionicOxygenTank
+            };
+            foreach (var amount in candidates)
+                if (amount != null && (Contains(amount.Id, query) || Contains(amount.Name, query))
+                    && TryGetAmountValue(dupe, amount, out var value))
+                    return value;
             return fallback;
         }
 

@@ -28,6 +28,16 @@ ONI 性能优化 Mod。该 Mod 针对缺氧的几个高频模拟路径做降频�
 - 以稳定性优先，避免影响原版关键玩法。
 - CycleTrim 不再接管 `SmartReservoir` 的 automation 信号发送；储液罐/气库及复用该组件的第三方建筑保留原版重复通知语义。
 
+### OniSim 原生仿真内核
+
+OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Linux x86_64 构建默认把原生库打入 Mod 包，并在启动阶段尝试把 `Assembly-CSharp` 的 `SimDLL` 导入映射到 OniSim。PLib 的 CycleTrim Mod 设置中“Use OniSim simulation core”默认开启；关闭后重启 ONI，启动时就会保留原版 SimDLL。映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的强制关闭开关。
+
+疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。源码内的验收记录见 [`OniSim/PARALLEL-VALIDATION.md`](OniSim/PARALLEL-VALIDATION.md)。
+
+隔离实测已通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/RUNTIME-VALIDATION.md`](OniSim/RUNTIME-VALIDATION.md)。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。加载器只接受已静态检查的 ONI `Assembly-CSharp` 与 Mono 文件指纹；其他游戏版本会拒绝映射并在日志中说明原因。
+
+Linux x86_64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。正常情况下通过游戏 Mod 设置页启用或关闭，并按 PLib 提示重启 ONI。`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前强制关闭，`1` 可显式允许加载。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内 `.so`；未设置时使用 Mod 目录下的 `OniSim/liboni_sim_core.so`。
+
 ## 性能实测摘要
 
 以下为固定场景增量测试（非全局通用），硬件与存档不同会有差异：
@@ -80,6 +90,7 @@ dotnet run --no-build --no-restore -c Release --project benchmarks/CycleTrim.Bra
 ```text
 mods/CycleTrim/
 ├── ModInfo.cs          # KMod 入口
+├── OniSim/             # 原生仿真核心、C ABI 与加载器
 ├── Core/               # 与游戏补丁无关的核心逻辑（如 BrainRateCap）
 ├── Patches/            # Harmony 补丁
 ├── docs/               # Steam 描述等

@@ -30,26 +30,117 @@ def require_order(text: str, markers: tuple[str, ...], label: str) -> None:
         cursor = position + len(marker)
 
 
-def verify_existing_material_reuse(plan_one: str) -> None:
-    early_guard = (
-        'if (earlyExistingBuild != null && ExistingMaterialRequestSatisfied('
-        'def, earlyExistingBuild, args["material"]?.ToString()))'
+def verify_auto_material_selection(materials: str) -> None:
+    """Lock the native per-slot recipe and local-stock guards, not a stale first-item choice."""
+    select_elements = extract_block(materials, "private static MaterialSelection SelectElements")
+    auto_selection = extract_block(select_elements, "if (auto)")
+    require_order(
+        auto_selection,
+        (
+            "var recipe = ConstructionRecipeAdapter.Read(def.Mass, def.MaterialCategory);",
+            "var autoCandidates = AvailableMaterials(def, worldId, includeUnavailable: true);",
+            "if (recipe.Known)",
+            "ConstructionRecipeAdapter.SelectAvailable(",
+            "recipe,",
+            "autoCandidates,",
+            "MaterialMatchesAnyCategory(item.Tag, ParseMaterialCategoryExpression(category).ToList())",
+            "item => item.AvailableKg > 0f",
+            "item => item.ReachableLooseKg > 0f",
+            "if (slotMaterials == null)",
+            "var underSupplied = Enumerable.Range(0, recipe.Slots.Count)",
+            ".GroupBy(index => slotMaterials[index].Tag.Name",
+            "group.Sum(index => recipe.Slots[index].RequiredKg)",
+            "if (underSupplied != null)",
+            "var elements = slotMaterials.Select(item => item.Tag).ToList();",
+            'return ValidatedMaterialSelection(elements, "auto",',
+            'return MaterialSelection.Invalid("Native construction recipe is unknown;',
+        ),
+        "automatic construction must select all recipe slots from local inventory and reject unknown recipes",
     )
+    for marker, label in (
+        ("if (slotMaterials == null)", "missing recipe slot"),
+        ("if (underSupplied != null)", "aggregated material shortage"),
+    ):
+        guard = extract_block(auto_selection, marker)
+        if "return MaterialSelection.Invalid(" not in guard:
+            fail(f"automatic selection must reject {label} before placement")
+
+    inventory = extract_block(materials, "private static List<BuildMaterialInfo> AvailableMaterials")
+    require_order(
+        inventory,
+        (
+            "CandidateMaterialTags(def, worldId)",
+            ".Where(item => item.ValidForBuilding)",
+            ".Where(item => includeUnavailable || item.AvailableKg > 0f)",
+            ".OrderByDescending(item => item.ReachableLooseKg)",
+        ),
+        "available materials must be world-scoped and filtered by stock",
+    )
+
+
+def verify_auto_material_selection_regressions(materials: str) -> None:
+    """Ensure the source contract rejects unsafe changes to each availability gate."""
+    verify_auto_material_selection(materials)
+    mutations = (
+        ("skip stock predicate", "item => item.AvailableKg > 0f,", "item => true,"),
+        ("accept unknown recipe", "if (recipe.Known)", "if (true)"),
+        ("drop full candidate set", "var autoCandidates = AvailableMaterials(def, worldId, includeUnavailable: true);",
+         "var autoCandidates = AvailableMaterials(def, worldId, includeUnavailable: false);"),
+        ("ignore missing slot", "if (slotMaterials == null)", "if (false)"),
+        ("ignore aggregated shortage", "if (underSupplied != null)", "if (false)"),
+        ("ignore repeated material across slots", ".GroupBy(index => slotMaterials[index].Tag.Name,",
+         ".GroupBy(index => index.ToString(),"),
+        ("select no materials", "var elements = slotMaterials.Select(item => item.Tag).ToList();",
+         "var elements = new List<Tag>();"),
+        ("accept recipe without slots",
+         'return MaterialSelection.Invalid("Native construction recipe is unknown; cannot select a complete material set.",',
+         'return MaterialSelection.Invalid("unknown",'),
+        ("ignore inventory filtering", ".Where(item => includeUnavailable || item.AvailableKg > 0f)",
+         ".Where(item => includeUnavailable || true)"),
+    )
+    for label, before, after in mutations:
+        if before not in materials:
+            fail(f"material regression fixture no longer matches source: {label}")
+        changed = materials.replace(before, after, 1)
+        with redirect_stderr(StringIO()):
+            try:
+                verify_auto_material_selection(changed)
+            except SystemExit:
+                continue
+        fail(f"material recipe verifier accepted unsafe change: {label}")
+    print(f"OK: {len(mutations)} native recipe and stock guard mutations were rejected")
+
+
+def verify_existing_material_reuse(plan_one: str, reuse: str) -> None:
     require_order(
         plan_one,
         (
-            "var earlyExistingBuild = ExistingMatchingBuildAtPlacement(def, earlyPlacement);",
-            early_guard,
+            'var earlyReuse = TryReuseExistingPlacement(def, earlyPlacement, args["material"]?.ToString());',
+            "if (earlyReuse != null)",
+            "return earlyReuse;",
             'var materialResult = SelectElements(def, args["material"]?.ToString(), worldId);',
+            "if (!materialResult.Valid)",
+            "TryPlaceRequestedBuilding(def, placement,",
         ),
-        "early reuse must test the explicit material in the branch condition",
+        "existing matched placements must be reused before any new material demand",
+    )
+    require_order(
+        reuse,
+        (
+            "ExistingMatchingBuildAtPlacement(def, placement)",
+            "existingBuild ?? ExistingMatchingUtilityAtPlacement(def, placement)",
+            "if (existing == null || !ExistingMaterialRequestSatisfied(def, existing, requestedMaterial))",
+            "return null;",
+            "ExistingPlacementResult(def, placement, existing, utility: existingBuild == null)",
+        ),
+        "early build and utility reuse must preserve explicit material identity",
     )
 
     # Check each actual reuse block. A global count can be satisfied by an
     # unrelated call and cannot prove that both paths reject before completion.
-    for target in ("existingBuild", "executionExistingBuild"):
+    for target in ("existingBuild", "executionExistingBuild", "existingUtility", "executionExistingUtility"):
         branch = extract_block(plan_one, f"if ({target} != null)")
-        reuse = "RegisterSupportBlueprint" if target == "existingBuild" else "return ExistingPlacementResult"
+        completion_marker = "RegisterSupportBlueprint" if target in ("existingBuild", "existingUtility") else "return ExistingPlacementResult"
         require_order(
             branch,
             (
@@ -57,25 +148,21 @@ def verify_existing_material_reuse(plan_one: str) -> None:
                 f'prefabId, x, y, {target}, materialResult, args["material"]?.ToString());',
                 "if (materialMismatch != null)",
                 "return materialMismatch;",
-                reuse,
+                completion_marker,
             ),
             f"{target} must reject its own material mismatch before reuse or completion",
         )
 
 
-def verify_existing_material_reuse_regressions(plan_one: str) -> None:
+def verify_existing_material_reuse_regressions(plan_one: str, reuse: str) -> None:
     """Mutation checks for the source guard, not ONI runtime acceptance."""
-    verify_existing_material_reuse(plan_one)
-    early_test = (
-        ' && ExistingMaterialRequestSatisfied('
-        'def, earlyExistingBuild, args["material"]?.ToString())'
-    )
-    mutations = [("missing early guard", plan_one.replace(early_test, "", 1))]
-    for target in ("existingBuild", "executionExistingBuild"):
+    verify_existing_material_reuse(plan_one, reuse)
+    mutations = [("missing early guard", plan_one.replace("if (earlyReuse != null)", "if (true)", 1))]
+    for target in ("existingBuild", "executionExistingBuild", "existingUtility", "executionExistingUtility"):
         branch = extract_block(plan_one, f"if ({target} != null)")
-        reuse = "RegisterSupportBlueprint" if target == "existingBuild" else "return ExistingPlacementResult"
+        completion_marker = "RegisterSupportBlueprint" if target in ("existingBuild", "existingUtility") else "return ExistingPlacementResult"
         guard_start = branch.index("                var materialMismatch")
-        completion_start = branch.rfind("\n", 0, branch.index(reuse)) + 1
+        completion_start = branch.rfind("\n", 0, branch.index(completion_marker)) + 1
         guard = branch[guard_start:completion_start]
         completion_end = branch.index("\n", completion_start) + 1
         late_guard = (
@@ -96,7 +183,7 @@ def verify_existing_material_reuse_regressions(plan_one: str) -> None:
             fail(f"material guard regression did not change its fixture: {label}")
         with redirect_stderr(StringIO()):
             try:
-                verify_existing_material_reuse(mutated)
+                verify_existing_material_reuse(mutated, reuse)
             except SystemExit:
                 continue
         fail(f"material guard verifier accepted broken source: {label}")
@@ -108,11 +195,15 @@ def verify_building_blueprint_safety(
 ) -> None:
     build_root = root / "mods" / "OniMcp" / "Tools" / "Impl" / "Build"
     paths = {
-        "native": build_root / "BuildPlanningNativeUtilityPath.cs",
         "placement": build_root / "BuildPlanningActionPlacement.cs",
         "plan_one": build_root / "BuildPlanningPlanOne.cs",
         "materials": build_root / "BuildPlanningMaterials.cs",
+        "selection": build_root / "BuildPlanningMaterialSelection.cs",
+        "stock": build_root / "BuildPlanningMaterialStock.cs",
+        "reuse": build_root / "BuildPlanningExistingReuse.cs",
+        "material_preflight": build_root / "BuildPlanningUtilityMaterialPreflight.cs",
         "runtime": build_root / "BuildPlanningRuntimePlacement.cs",
+        "coordinates": build_root / "BuildPlanningPlacementCoordinates.cs",
     }
     for path in paths.values():
         if not path.is_file():
@@ -123,25 +214,6 @@ def verify_building_blueprint_safety(
     else:
         selected = sources
 
-    native_method = extract_block(
-        selected[paths["native"]],
-        "private static Dictionary<string, object> TryPlaceUtilityPathNative",
-    )
-    require_order(native_method, ("ValidateUtilityPathSafety", "SelectElements", "SelectUtilityBuildTool"),
-                  "native path safety and materials must precede tool execution")
-    if "IsFreeBuildContext" in native_method:
-        fail("native utility paths cannot bypass material rules")
-
-    require_order(
-        native_method,
-        ("materialResult.RequiredKg = RequiredMaterialKg(def) * path.Count;",
-         "if (!materialResult.Valid)", "SelectUtilityBuildTool"),
-        "native utility path must reject aggregate shortfall before activating the tool",
-    )
-    native_material_failure = extract_block(native_method, "if (!materialResult.Valid)")
-    require_order(native_material_failure, ('result["shouldFallback"] = false;', "return result;"),
-                  "native material failure must prohibit per-cell fallback")
-
     auto_connect = extract_block(
         selected[paths["placement"]],
         "public static McpTool AutoConnectUtility()",
@@ -149,24 +221,17 @@ def verify_building_blueprint_safety(
     require_order(
         auto_connect,
         (
-            "TryPlaceUtilityPathNative",
-            'GetBool(nativePath, "success")',
-            'GetBool(nativePath, "shouldFallback")',
+            "ValidateUtilityPathSafety",
+            "PreflightUtilityPathMaterials(def, path, worldId, args, out var pathMaterials)",
+            "if (materialError != null)",
+            "return CallToolResult.Error(JsonConvert.SerializeObject(materialError, McpJsonUtil.Settings));",
             "foreach (var point in path)",
             "TryPlanOne(def.PrefabID, point.x, point.y",
         ),
-        "utility auto-connect must continue from native fallback into per-cell planning",
+        "utility auto-connect must validate the whole path before per-cell planning",
     )
-    require_order(
-        auto_connect,
-        ("int newPathCells", "pathSafety.ExistingSamePrefabCells", "if (newPathCells > 0)",
-         "pathMaterial.RequiredKg = RequiredMaterialKg(def) * newPathCells;",
-         "if (!pathMaterial.Valid)", "return CallToolResult.Error", "TryPlaceUtilityPathNative"),
-        "new-cell aggregate material gate must precede both native and fallback placement",
-    )
-    if "Distinct().Count()" not in auto_connect:
-        fail("aggregate material budgeting must count repeated path cells only once")
-
+    if "TryPlaceUtilityPathNative" in auto_connect:
+        fail("utility auto-connect must not activate shared player input tools")
     path_loop = extract_block(auto_connect, "foreach (var point in path)")
     if "TryPlanOne(def.PrefabID, point.x, point.y" not in path_loop:
         fail("utility fallback path loop must call TryPlanOne for each cell")
@@ -175,14 +240,12 @@ def verify_building_blueprint_safety(
         selected[paths["plan_one"]],
         "private static Dictionary<string, object> TryPlanOne",
     )
-    require_order(
-        plan_one,
-        ("materialResult.RequiredKg = RequiredMaterialKg(def);", "if (!materialResult.Valid)", "def.TryPlace("),
-        "per-building material shortfall must be rejected before placement",
-    )
-    require_order(plan_one, ("ValidateFootprint", "def.TryPlace(", 'return ErrorResult(prefabId, x, y, "Placement failed"',
+    require_order(plan_one, ("ValidateFootprint", "TryPlaceRequestedBuilding(def, placement,", 'return ErrorResult(prefabId, x, y, "Placement failed"',
                               '["blueprintPlaced"] = true,', '["buildingCompleted"] = false,'),
                   "native placement must report blueprints, not completed work")
+    native_place = extract_block(selected[paths["coordinates"]], "private static GameObject TryPlaceRequestedBuilding")
+    if "def.TryPlace(null, placement.PlacementPoint, placement.Orientation, elements, facadeId)" not in native_place:
+        fail("native placement must use the single converted preview point and requested orientation")
     for forbidden in ("TryBuildVirtualFileInstantBuild", "InstantCompletionFailureResult", "completedImmediately"):
         if forbidden in plan_one:
             fail("removed completion path: " + forbidden)
@@ -195,12 +258,14 @@ def verify_building_blueprint_safety(
     auto_selection = extract_block(select_elements, "if (auto)")
     if "IsFreeBuildContext" in materials:
         fail("material selection must never bypass inventory")
-    if "available.FirstOrDefault()" not in auto_selection:
-        fail("automatic selection must use available inventory")
+    verify_auto_material_selection(materials)
     if "MaterialSelection.Success(" in select_elements:
         fail("SelectElements success exits must use the unified validation helper")
-    if select_elements.count("return ValidatedMaterialSelection(") != 3:
-        fail("all three SelectElements success exits must use the unified validation helper")
+    # Native recipes now have four success paths: automatic, category,
+    # explicit slot-complete and explicit fallback for an unknown recipe.
+    # Each path must pass through the same material validation helper.
+    if select_elements.count("return ValidatedMaterialSelection(") != 4:
+        fail("all four SelectElements success exits must use the unified validation helper")
 
     validated_success = extract_block(
         materials,
@@ -211,23 +276,58 @@ def verify_building_blueprint_safety(
         (
             "if (elements == null || elements.Count == 0)",
             "ElementLoader.GetElement(elements[0]) == null",
-            "return MaterialSelection.Success(",
+            "var result = MaterialSelection.Success(",
+            "result.RequireMassForPlacements(1);",
+            "return result;",
         ),
         "material success validation must reject missing or non-element primary materials",
     )
     if validated_success.count("return MaterialSelection.Invalid(") < 2:
         fail("material success validation must reject empty and invalid primary elements")
 
-    required_reader = extract_block(materials, "private static float RequiredMaterialKg")
-    if "BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(def)" not in required_reader:
-        fail("material demand must read the actual BuildingDef.Mass recipe")
-    material_selection = extract_block(materials, "private sealed class MaterialSelection")
-    for token in ("requiredKg = value;", "Selected.AvailableKg : 0f", "BuildMaterialSufficiencyPolicy.IsSatisfied(",
-                  'ReasonCode = "insufficient_material";', '["reasonCode"] = ReasonCode,'):
-        if token not in material_selection:
-            fail("material sufficiency wiring missing: " + token)
+    verify_existing_material_reuse(plan_one, selected[paths["reuse"]])
 
-    verify_existing_material_reuse(plan_one)
+    require_order(
+        selected[paths["selection"]],
+        (
+            "public void RequireMassForPlacements(int count)",
+            "BuildMaterialSufficiencyPolicy.IsSatisfied(Recipe,",
+            "SlotMaterials.Select(item => item.Tag.Name)",
+            "SlotMaterials.Select(item => item.AvailableKg)",
+            "Valid = false;",
+            "ReasonCode = reasonCode;",
+        ),
+        "every selected native slot must reach the shared material policy",
+    )
+    require_order(
+        selected[paths["stock"]],
+        (
+            "stock.LocalWorldInventoryKg = ToolUtil.SafeFloat(",
+            "GetTotalAmount(tag, includeRelatedWorlds: false)",
+            "stock.RelatedWorldInventoryKg = ToolUtil.SafeFloat(",
+            "GetTotalAmount(tag, includeRelatedWorlds: true)",
+        ),
+        "related-world inventory must remain separate from local placement stock",
+    )
+    if "AvailableKg = Math.Max(stock.LocalWorldInventoryKg, stock.LooseKg)" not in materials:
+        fail("selected material availability must be local stock only")
+    require_order(
+        selected[paths["material_preflight"]],
+        (
+            "var seenCells = new HashSet<int>();",
+            "if (!seenCells.Add(Grid.XYToCell(point.x, point.y)))",
+            "ExistingMatchingBuildAtPlacement(def, placement)",
+            "?? ExistingMatchingUtilityAtPlacement(def, placement)",
+            "if (!ExistingMaterialRequestSatisfied(def, existing, requested))",
+            "continue;",
+            "newCells++;",
+            "if (newCells == 0)",
+            "return null;",
+            "materialSelection = SelectElements(def, requested, worldId);",
+            "materialSelection.RequireMassForPlacements(newCells);",
+        ),
+        "path demand must count only distinct new cells after material-aware reuse",
+    )
 
     runtime_existing = extract_block(
         selected[paths["runtime"]],
@@ -245,7 +345,30 @@ def main() -> None:
         plan_path.read_text(encoding="utf-8"),
         "private static Dictionary<string, object> TryPlanOne",
     )
-    verify_existing_material_reuse_regressions(plan_one)
+    reuse_path = root / "mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingReuse.cs"
+    verify_existing_material_reuse_regressions(plan_one, reuse_path.read_text(encoding="utf-8"))
+    materials_path = root / "mods/OniMcp/Tools/Impl/Build/BuildPlanningMaterials.cs"
+    verify_auto_material_selection_regressions(materials_path.read_text(encoding="utf-8"))
+    sources = {path: path.read_text(encoding="utf-8") for path in materials_path.parent.glob("*.cs")}
+    for name, before, after in (
+        ("BuildPlanningActionPlacement.cs", "if (materialError != null)", "if (false)"),
+        ("BuildPlanningMaterials.cs", "result.RequireMassForPlacements(1);", "// gate removed"),
+        ("BuildPlanningMaterialStock.cs", "includeRelatedWorlds: false", "includeRelatedWorlds: true"),
+        ("BuildPlanningUtilityMaterialPreflight.cs", "RequireMassForPlacements(newCells)", "RequireMassForPlacements(1)"),
+        ("BuildPlanningExistingReuse.cs", " || !ExistingMaterialRequestSatisfied(def, existing, requestedMaterial)", ""),
+    ):
+        path = materials_path.parent / name
+        if before not in sources[path]:
+            fail(f"material gate mutation no longer matches source: {name}")
+        changed = dict(sources)
+        changed[path] = changed[path].replace(before, after, 1)
+        with redirect_stderr(StringIO()):
+            try:
+                verify_building_blueprint_safety(root, changed)
+            except SystemExit:
+                continue
+        fail(f"material gate verifier accepted unsafe mutation: {name}")
+    print("OK: 5 placement material-gate wiring mutations were rejected")
     print("OK: normal utility paths use native placement and preserve material identity")
 
 

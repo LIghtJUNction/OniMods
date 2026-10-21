@@ -25,7 +25,12 @@ internal static class GameControlRoutingRegression
         foreach (string parameter in new[] { "force", "element", "massKg", "prefabId", "storyId", "temperatureK", "diseaseCount" })
             Require(!tool.Parameters.ContainsKey(parameter), "removed parameter must not consume tool context: " + parameter);
         Require(!tool.Parameters["domain"].EnumValues.Contains("sandbox"), "schema must not advertise a removed route");
-        Require(tool.Parameters.Count <= 34, "game control schema must remain bounded");
+        var stepInputs = new[] { "until", "condition", "maxGameSeconds", "maxWallSeconds", "wait", "targetCells", "requestId" };
+        foreach (string parameter in stepInputs)
+            Require(tool.Parameters.ContainsKey(parameter), "condition execution input must be discoverable: " + parameter);
+        Require(tool.Parameters["until"].Type == "object", "until must advertise structured expressions");
+        Require(tool.Parameters["requestId"].Type == "string", "wait handles must be discoverable as strings");
+        Require(tool.Parameters.Count - stepInputs.Length <= 34, "unrelated game control inputs must stay within their existing schema budget");
         Require(tool.Handler(null).IsError, "missing domain must return an error");
 
         GameControlRouteTestDoubles.Calls = 0;
@@ -36,6 +41,7 @@ internal static class GameControlRoutingRegression
         Require(!tool.Handler(new JObject { ["domain"] = "speed", ["action"] = "resume" }).IsError
             && SpeedControlScreen.Instance.PauseCount == 0, "normal resume routing must release the MCP pause lease");
         Require(!tool.Handler(new JObject { ["domain"] = "speed", ["action"] = "step_until" }).IsError, "step_until routing must succeed");
+        Require(!tool.Handler(new JObject { ["domain"] = "speed", ["action"] = "step_facts" }).IsError, "step_facts read routing must succeed");
         Require(!tool.Handler(new JObject { ["domain"] = "speed", ["action"] = "step_status" }).IsError, "step_status routing must succeed");
         Require(!tool.Handler(new JObject { ["domain"] = "speed", ["action"] = "step_cancel" }).IsError, "step_cancel routing must succeed");
         Console.WriteLine("PASS: survival-only game control routing and compact schema");
@@ -67,6 +73,7 @@ namespace OniMcp.Tools
         public static McpTool ControlGameSave() => GameControlRouteTestDoubles.Tool();
         public static McpTool ControlDlcActivation() => GameControlRouteTestDoubles.Tool();
         internal static CallToolResult StepUntil(JObject args) => GameControlRouteTestDoubles.Tool().Handler(args);
+        internal static CallToolResult StepFacts(JObject args) => GameControlRouteTestDoubles.Tool().Handler(args);
         internal static CallToolResult StepStatus(JObject args) => GameControlRouteTestDoubles.Tool().Handler(args);
         internal static CallToolResult StepCancel(JObject args) => GameControlRouteTestDoubles.Tool().Handler(args);
     }

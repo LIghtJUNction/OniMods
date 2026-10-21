@@ -1,0 +1,687 @@
+{
+  "schema": 1,
+  "complete": true,
+  "native_sha256": "2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f",
+  "baseline_workers": 1,
+  "candidate_workers": 4,
+  "cpus": [
+    0,
+    2,
+    4,
+    6
+  ],
+  "scope": "Complete native-frame same-library scaling, not simultaneous games or whole-game FPS",
+  "sizes": {
+    "96": {
+      "samples": 96,
+      "scenes": {
+        "fluid": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 0.423897695,
+              "minimum": 0.31423752499999996,
+              "maximum": 0.5294044330000001,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.4391588595,
+              "minimum": 0.39163173500000004,
+              "maximum": 0.49572132699999993,
+              "samples": 8
+            }
+          },
+          "cpu_change_percent": 3.6001999255976136,
+          "wall_observations": {
+            "baseline": {
+              "median": 0.44072969449916855,
+              "minimum": 0.3191368410043651,
+              "maximum": 0.5336006959987571,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.40113821149861906,
+              "minimum": 0.3545571349968668,
+              "maximum": 0.4531398609979078,
+              "samples": 8
+            }
+          },
+          "wall_change_percent": -8.983166665350295,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 33324.0,
+              "minimum": 33236,
+              "maximum": 33388,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 33480.0,
+              "minimum": 33436,
+              "maximum": 33512,
+              "samples": 8
+            }
+          },
+          "peak_rss_change_percent": 0.46813107670147236
+        },
+        "thermal": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 0.13860472150000003,
+              "minimum": 0.100422809,
+              "maximum": 0.153925103,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.159203167,
+              "minimum": 0.12023171400000002,
+              "maximum": 0.19402610800000003,
+              "samples": 8
+            }
+          },
+          "cpu_change_percent": 14.861287030543169,
+          "wall_observations": {
+            "baseline": {
+              "median": 0.14566930000000866,
+              "minimum": 0.11166152700025123,
+              "maximum": 0.1611605719954241,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.12531653250334784,
+              "minimum": 0.09923238900955766,
+              "maximum": 0.1546917450032197,
+              "samples": 8
+            }
+          },
+          "wall_change_percent": -13.971899018296652,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 33290.0,
+              "minimum": 33248,
+              "maximum": 33404,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 33466.0,
+              "minimum": 33396,
+              "maximum": 33512,
+              "samples": 8
+            }
+          },
+          "peak_rss_change_percent": 0.5286872934815223
+        },
+        "sealed": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 0.367895145,
+              "minimum": 0.33593857000000005,
+              "maximum": 0.43802585099999997,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.393785807,
+              "minimum": 0.3440513780000001,
+              "maximum": 0.44708015999999995,
+              "samples": 8
+            }
+          },
+          "cpu_change_percent": 7.03751119085847,
+          "wall_observations": {
+            "baseline": {
+              "median": 0.37418335099937394,
+              "minimum": 0.35672969100414775,
+              "maximum": 0.44827945400902536,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.3535269510030048,
+              "minimum": 0.31549378200725187,
+              "maximum": 0.3987444270023843,
+              "samples": 8
+            }
+          },
+          "wall_change_percent": -5.520395266438161,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 33276.0,
+              "minimum": 33220,
+              "maximum": 33320,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 33390.0,
+              "minimum": 33292,
+              "maximum": 33440,
+              "samples": 8
+            }
+          },
+          "peak_rss_change_percent": 0.34258925351604574
+        },
+        "germ_flow": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 0.455458285,
+              "minimum": 0.398285281,
+              "maximum": 0.5588071539999999,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.5912320719999999,
+              "minimum": 0.528276644,
+              "maximum": 0.645967524,
+              "samples": 8
+            }
+          },
+          "cpu_change_percent": 29.810367155797792,
+          "wall_observations": {
+            "baseline": {
+              "median": 0.46755077749548946,
+              "minimum": 0.4028928769985214,
+              "maximum": 0.5718348020018311,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.5238102615112439,
+              "minimum": 0.46947315099532716,
+              "maximum": 0.5698268470005132,
+              "samples": 8
+            }
+          },
+          "wall_change_percent": 12.032807285043434,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 33378.0,
+              "minimum": 33296,
+              "maximum": 33412,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 33476.0,
+              "minimum": 33452,
+              "maximum": 33520,
+              "samples": 8
+            }
+          },
+          "peak_rss_change_percent": 0.2936065671999444
+        },
+        "mixed_germs": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 0.4699778885,
+              "minimum": 0.410772679,
+              "maximum": 0.690044558,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.6243974125,
+              "minimum": 0.5668681900000001,
+              "maximum": 0.6620468580000001,
+              "samples": 8
+            }
+          },
+          "cpu_change_percent": 32.85676364325383,
+          "wall_observations": {
+            "baseline": {
+              "median": 0.47640195099666016,
+              "minimum": 0.41685555900039617,
+              "maximum": 0.6996906579879578,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.5580754729962791,
+              "minimum": 0.5042443020065548,
+              "maximum": 0.5879092440009117,
+              "samples": 8
+            }
+          },
+          "wall_change_percent": 17.143826096587823,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 33308.0,
+              "minimum": 33188,
+              "maximum": 33432,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 33414.0,
+              "minimum": 33392,
+              "maximum": 33480,
+              "samples": 8
+            }
+          },
+          "peak_rss_change_percent": 0.3182418638165041
+        },
+        "vacuum": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 0.27885543749999997,
+              "minimum": 0.222431864,
+              "maximum": 0.355123831,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.34214019149999997,
+              "minimum": 0.26577436899999995,
+              "maximum": 0.376777349,
+              "samples": 8
+            }
+          },
+          "cpu_change_percent": 22.694466554915227,
+          "wall_observations": {
+            "baseline": {
+              "median": 0.2871965835001902,
+              "minimum": 0.23290825399453752,
+              "maximum": 0.36424185801297426,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 0.30080304000148317,
+              "minimum": 0.23645607600337826,
+              "maximum": 0.3338575379893882,
+              "samples": 8
+            }
+          },
+          "wall_change_percent": 4.737680488905949,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 33242.0,
+              "minimum": 33200,
+              "maximum": 33316,
+              "samples": 8
+            },
+            "candidate": {
+              "median": 33374.0,
+              "minimum": 33332,
+              "maximum": 33424,
+              "samples": 8
+            }
+          },
+          "peak_rss_change_percent": 0.3970880211780381
+        }
+      },
+      "strict_gates": {
+        "all_finals_match_official": true,
+        "four_workers_observed": true,
+        "positive_total_worker_runtime_each_sample": true,
+        "one_scene_wall_reduction_at_least_5_percent": true,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true,
+        "no_scene_cpu_regression_over_3_percent": false
+      },
+      "historical_scaling_gates": {
+        "all_finals_match_official": true,
+        "four_workers_observed": true,
+        "positive_total_worker_runtime_each_sample": true,
+        "one_scene_wall_reduction_at_least_5_percent": true,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true,
+        "no_scene_cpu_regression_over_10_percent": false
+      },
+      "passes_new_strict_gates": false,
+      "passes_historical_scaling_gates": false,
+      "raw_summary_sha256": "14f9dd186e12e1b813bd56582c9b81061c16ef957dd13c75f3e6b65c2b6219a3",
+      "timed_major_faults": 0
+    },
+    "192": {
+      "samples": 60,
+      "scenes": {
+        "fluid": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 1.419258223,
+              "minimum": 1.3340985349999999,
+              "maximum": 1.5696869690000002,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 1.5419545540000001,
+              "minimum": 1.4830390649999998,
+              "maximum": 1.731867947,
+              "samples": 5
+            }
+          },
+          "cpu_change_percent": 8.645102703061823,
+          "wall_observations": {
+            "baseline": {
+              "median": 1.4267552889941726,
+              "minimum": 1.3421398649952607,
+              "maximum": 1.5761652829969535,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 1.487802002011449,
+              "minimum": 1.436055373007548,
+              "maximum": 1.6801551480020862,
+              "samples": 5
+            }
+          },
+          "wall_change_percent": 4.278709424677363,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 53248,
+              "minimum": 53188,
+              "maximum": 53340,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 53288,
+              "minimum": 53068,
+              "maximum": 53404,
+              "samples": 5
+            }
+          },
+          "peak_rss_change_percent": 0.07512019230768718
+        },
+        "thermal": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 0.47322649099999997,
+              "minimum": 0.372958892,
+              "maximum": 0.48341168700000003,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 0.47104986200000004,
+              "minimum": 0.41324916,
+              "maximum": 0.5121856089999999,
+              "samples": 5
+            }
+          },
+          "cpu_change_percent": -0.4599550197201263,
+          "wall_observations": {
+            "baseline": {
+              "median": 0.47891669800446834,
+              "minimum": 0.3810508570022648,
+              "maximum": 0.500443658005679,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 0.41381966100016143,
+              "minimum": 0.3651987810007995,
+              "maximum": 0.4536991799977841,
+              "samples": 5
+            }
+          },
+          "wall_change_percent": -13.592559473401266,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 52944,
+              "minimum": 52908,
+              "maximum": 52984,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 53080,
+              "minimum": 53032,
+              "maximum": 53104,
+              "samples": 5
+            }
+          },
+          "peak_rss_change_percent": 0.25687518887882455
+        },
+        "sealed": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 1.34736372,
+              "minimum": 1.070338951,
+              "maximum": 1.422827386,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 1.3819067790000001,
+              "minimum": 1.357564005,
+              "maximum": 1.4565547210000003,
+              "samples": 5
+            }
+          },
+          "cpu_change_percent": 2.5637516052458453,
+          "wall_observations": {
+            "baseline": {
+              "median": 1.3592017920018407,
+              "minimum": 1.0716276700113667,
+              "maximum": 1.434240400994895,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 1.3293386930017732,
+              "minimum": 1.3086154460033868,
+              "maximum": 1.3910038509930018,
+              "samples": 5
+            }
+          },
+          "wall_change_percent": -2.1971056230057573,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 52832,
+              "minimum": 52744,
+              "maximum": 52908,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 53012,
+              "minimum": 52976,
+              "maximum": 53032,
+              "samples": 5
+            }
+          },
+          "peak_rss_change_percent": 0.34070260448213485
+        },
+        "germ_flow": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 1.710343012,
+              "minimum": 1.6399202319999997,
+              "maximum": 2.1655222810000003,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 2.013070366,
+              "minimum": 1.885657422,
+              "maximum": 2.19081249,
+              "samples": 5
+            }
+          },
+          "cpu_change_percent": 17.699803599396358,
+          "wall_observations": {
+            "baseline": {
+              "median": 1.7231296619866043,
+              "minimum": 1.6497147980117006,
+              "maximum": 2.181640865994268,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 1.832818769995356,
+              "minimum": 1.7203190119907958,
+              "maximum": 2.0029202259902377,
+              "samples": 5
+            }
+          },
+          "wall_change_percent": 6.365690895384546,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 54072,
+              "minimum": 53964,
+              "maximum": 54080,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 54204,
+              "minimum": 54116,
+              "maximum": 54256,
+              "samples": 5
+            }
+          },
+          "peak_rss_change_percent": 0.24411895250777693
+        },
+        "mixed_germs": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 1.9297229270000003,
+              "minimum": 1.80524851,
+              "maximum": 2.169526705,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 2.037646019,
+              "minimum": 2.0189261189999996,
+              "maximum": 2.0713327140000004,
+              "samples": 5
+            }
+          },
+          "cpu_change_percent": 5.592672942316113,
+          "wall_observations": {
+            "baseline": {
+              "median": 1.9376374980056426,
+              "minimum": 1.8620183039893163,
+              "maximum": 2.2041494799923385,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 1.8568713370041223,
+              "minimum": 1.837471614999231,
+              "maximum": 1.8827482289925683,
+              "samples": 5
+            }
+          },
+          "wall_change_percent": -4.168280242545396,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 54020,
+              "minimum": 53920,
+              "maximum": 54068,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 54124,
+              "minimum": 54116,
+              "maximum": 54180,
+              "samples": 5
+            }
+          },
+          "peak_rss_change_percent": 0.19252128841169558
+        },
+        "vacuum": {
+          "cpu_observations": {
+            "baseline": {
+              "median": 1.1139462889999998,
+              "minimum": 0.8922374619999999,
+              "maximum": 1.235515586,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 1.093176593,
+              "minimum": 1.0076938489999998,
+              "maximum": 1.205300085,
+              "samples": 5
+            }
+          },
+          "cpu_change_percent": -1.8645150313885472,
+          "wall_observations": {
+            "baseline": {
+              "median": 1.1331529729941394,
+              "minimum": 0.8987576049985364,
+              "maximum": 1.2488699370005634,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 1.0470812029961962,
+              "minimum": 0.955276993001462,
+              "maximum": 1.1509330600092653,
+              "samples": 5
+            }
+          },
+          "wall_change_percent": -7.5957767441155895,
+          "peak_rss_observations": {
+            "baseline": {
+              "median": 51540,
+              "minimum": 51196,
+              "maximum": 52216,
+              "samples": 5
+            },
+            "candidate": {
+              "median": 51724,
+              "minimum": 51488,
+              "maximum": 52368,
+              "samples": 5
+            }
+          },
+          "peak_rss_change_percent": 0.3570042685292929
+        }
+      },
+      "strict_gates": {
+        "all_finals_match_official": true,
+        "four_workers_observed": true,
+        "positive_total_worker_runtime_each_sample": true,
+        "one_scene_wall_reduction_at_least_5_percent": true,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true,
+        "no_scene_cpu_regression_over_3_percent": false
+      },
+      "historical_scaling_gates": {
+        "all_finals_match_official": true,
+        "four_workers_observed": true,
+        "positive_total_worker_runtime_each_sample": true,
+        "one_scene_wall_reduction_at_least_5_percent": true,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true,
+        "no_scene_cpu_regression_over_10_percent": false
+      },
+      "passes_new_strict_gates": false,
+      "passes_historical_scaling_gates": false,
+      "raw_summary_sha256": "54e101981adac2307ab8ce8d6eeab6d0b3c6bbd82e7bc890d54b7e083cf7d2e1",
+      "timed_major_faults": 0
+    }
+  },
+  "default_thread_policy_changed": false,
+  "decision": "Four-worker correctness and activity are verified, but complete-frame scaling fails both strict and historical gates; do not claim overall parallel speedup or change policy from this noisy run",
+  "hardware_diagnostic": {
+    "samples": 36,
+    "scenes": {
+      "germ_flow": {
+        "totals": {
+          "baseline": {
+            "instructions": 4357501030.5,
+            "cycles": 938086573.5
+          },
+          "candidate": {
+            "instructions": 4450655349.0,
+            "cycles": 1012354661.0
+          }
+        },
+        "instructions_change_percent": 2.13779223109698,
+        "cycles_change_percent": 7.9169758525490685
+      },
+      "mixed_germs": {
+        "totals": {
+          "baseline": {
+            "instructions": 4366186021.5,
+            "cycles": 987733845.5
+          },
+          "candidate": {
+            "instructions": 4459522677.5,
+            "cycles": 1052096715.0
+          }
+        },
+        "instructions_change_percent": 2.1377159731718054,
+        "cycles_change_percent": 6.516215860500241
+      },
+      "thermal": {
+        "totals": {
+          "baseline": {
+            "instructions": 1218259288.0,
+            "cycles": 232881921.5
+          },
+          "candidate": {
+            "instructions": 1228005070.0,
+            "cycles": 258728389.5
+          }
+        },
+        "instructions_change_percent": 0.7999760064213879,
+        "cycles_change_percent": 11.098529174580008
+      }
+    },
+    "all_final_publications_match_official": true,
+    "raw_summary_sha256": "b10d4d60568e5d9650639c14a75f7059d139c08ac63c4979ddd44455f2ee8e4c",
+    "scope": "Userspace CPU-core PMU counters on CPU0/2/4/6, all warmed process threads, six alternating pairs. Running/enabled >=98%. Diagnostic only; does not replace or relax the existing CPU-time gate.",
+    "interpretation": "Extra instructions are small relative to measured CPU/elapsed regressions. Counters do not isolate scheduling, clock or cache effects and do not override failed timing gates."
+  }
+}

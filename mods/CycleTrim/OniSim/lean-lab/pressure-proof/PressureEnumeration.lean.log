@@ -1,0 +1,6 @@
+'PressureEnumeration.window_exact' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PressureEnumeration.every_cell_is_in_window' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PressureEnumeration.every_cell_wave_is_visited' depends on axioms: [propext, Quot.sound]
+'PressureEnumeration.emitted_coordinate_reconstructs_unique_wave' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]

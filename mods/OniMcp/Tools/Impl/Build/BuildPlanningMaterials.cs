@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using UnityEngine;
 
 namespace OniMcp.Tools
 {
@@ -18,32 +16,96 @@ namespace OniMcp.Tools
             var available = AvailableMaterials(def, worldId, includeUnavailable: false).ToList();
             if (auto)
             {
-                var selected = available.FirstOrDefault();
-                if (selected != null)
-                    return ValidatedMaterialSelection(new List<Tag> { selected.Tag }, "auto", requested, selected, available);
+                var recipe = ConstructionRecipeAdapter.Read(def.Mass, def.MaterialCategory);
+                var autoCandidates = AvailableMaterials(def, worldId, includeUnavailable: true);
+                if (recipe.Known)
+                {
+                    var slotMaterials = ConstructionRecipeAdapter.SelectAvailable(
+                        recipe,
+                        autoCandidates,
+                        (item, category) => MaterialMatchesAnyCategory(item.Tag, ParseMaterialCategoryExpression(category).ToList()),
+                        item => item.AvailableKg > 0f,
+                        item => item.ReachableLooseKg > 0f ? 1000000000f + item.ReachableLooseKg : item.AvailableKg);
+                    if (slotMaterials == null)
+                        return MaterialSelection.Invalid("No locally available material for every native construction slot.",
+                            requested, available, autoCandidates.Take(20).ToList(), recipe,
+                            reasonCode: "insufficient_material");
+                    var underSupplied = Enumerable.Range(0, recipe.Slots.Count)
+                        .GroupBy(index => slotMaterials[index].Tag.Name, StringComparer.OrdinalIgnoreCase)
+                        .FirstOrDefault(group => slotMaterials[group.First()].AvailableKg
+                            + 0.001f < group.Sum(index => recipe.Slots[index].RequiredKg));
+                    if (underSupplied != null)
+                    {
+                        var shortMaterial = slotMaterials[underSupplied.First()];
+                        return MaterialSelection.Invalid(
+                            "Local material shortage for '" + shortMaterial.Tag.Name + "': requires "
+                                + Math.Round(underSupplied.Sum(index => recipe.Slots[index].RequiredKg), 3)
+                                + " kg, local total is " + Math.Round(shortMaterial.AvailableKg, 3) + " kg.",
+                            requested, available, autoCandidates.Take(20).ToList(), recipe, slotMaterials, slotMaterials[0],
+                            reasonCode: "insufficient_material");
+                    }
+                    var elements = slotMaterials.Select(item => item.Tag).ToList();
+                    return ValidatedMaterialSelection(elements, "auto", requested, slotMaterials[0], available, recipe, slotMaterials);
+                }
 
-                return MaterialSelection.Invalid(
-                    "No available build material in current world inventory",
-                    requested,
-                    available,
-                    AvailableMaterials(def, worldId, includeUnavailable: true).Take(20).ToList());
+                return MaterialSelection.Invalid("Native construction recipe is unknown; cannot select a complete material set.",
+                    requested, available, autoCandidates.Take(20).ToList(), recipe,
+                    reasonCode: "invalid_material_requirement");
             }
 
             var requestedCategory = MaterialCategoryTags(def).FirstOrDefault(category => EqualsIgnoreCase(category.Name, requested));
             if (requestedCategory.IsValid)
             {
-                var categoryMatch = available
+                var categoryMatch = AvailableMaterials(def, worldId, includeUnavailable: true)
                     .Where(item => MaterialMatchesCategory(item.Tag, requestedCategory))
-                    .OrderByDescending(item => item.AvailableKg)
+                    .OrderByDescending(item => item.ReachableLooseKg)
+                    .ThenByDescending(item => item.AvailableKg)
                     .FirstOrDefault();
                 if (categoryMatch != null)
-                    return ValidatedMaterialSelection(new List<Tag> { categoryMatch.Tag }, "category:" + requestedCategory.Name, requested, categoryMatch, available);
+                {
+                    var recipe = ConstructionRecipeAdapter.Read(def.Mass, def.MaterialCategory);
+                    var slotMaterials = new List<BuildMaterialInfo>();
+                    var elements = new List<Tag>();
+                    if (recipe.Known)
+                    {
+                        foreach (var slot in recipe.Slots)
+                        {
+                            var categories = ParseMaterialCategoryExpression(slot.Category).ToList();
+                            if (!MaterialMatchesAnyCategory(categoryMatch.Tag, categories))
+                                return MaterialSelection.Invalid("Requested category cannot satisfy construction slot " + slot.Index + ".",
+                                    requested, available, AvailableMaterials(def, worldId, true).Take(20).ToList());
+                            elements.Add(categoryMatch.Tag);
+                            slotMaterials.Add(categoryMatch);
+                        }
+                        return ValidatedMaterialSelection(elements, "category:" + requestedCategory.Name, requested,
+                            categoryMatch, available, recipe, slotMaterials);
+                    }
+                    return MaterialSelection.Invalid("Native construction recipe is invalid or incomplete.",
+                        requested, available, new List<BuildMaterialInfo> { categoryMatch }, recipe,
+                        reasonCode: "invalid_material_requirement");
+                }
             }
 
             var match = AvailableMaterials(def, worldId, includeUnavailable: true)
                 .FirstOrDefault(item => EqualsIgnoreCase(item.Tag.Name, requested)
                     || EqualsIgnoreCase(item.Name, requested)
 );
+            if (match == null)
+            {
+                Tag requestedTag = new Tag(requested);
+                Tag elementTag = requestedTag;
+                if (ElementLoader.GetElement(elementTag) == null)
+                {
+                    var prefab = Assets.GetPrefab(requestedTag);
+                    var primary = prefab != null ? prefab.GetComponent<PrimaryElement>() : null;
+                    if (primary != null)
+                        elementTag = new Tag(primary.ElementID.ToString());
+                }
+                var categories = MaterialCategoryTags(def).ToList();
+                if (elementTag.IsValid && ElementLoader.GetElement(elementTag) != null
+                    && (categories.Count == 0 || MaterialMatchesAnyCategory(elementTag, categories)))
+                    match = MaterialInfoForTag(def, worldId, elementTag);
+            }
             var candidates = AvailableMaterials(def, worldId, includeUnavailable: true).Take(20).ToList();
             if (match == null || !match.ValidForBuilding)
             {
@@ -54,16 +116,25 @@ namespace OniMcp.Tools
                     candidates);
             }
 
-            if (match.AvailableKg <= 0f)
+            var selectedRecipe = ConstructionRecipeAdapter.Read(def.Mass, def.MaterialCategory);
+            if (selectedRecipe.Known)
             {
-                return MaterialSelection.Invalid(
-                    $"Material '{match.Tag.Name}' is valid for {def.PrefabID}, but none is currently available",
-                    requested,
-                    available,
-                    candidates);
+                var elements = new List<Tag>();
+                var slotMaterials = new List<BuildMaterialInfo>();
+                foreach (var slot in selectedRecipe.Slots)
+                {
+                    var categories = ParseMaterialCategoryExpression(slot.Category).ToList();
+                    if (!MaterialMatchesAnyCategory(match.Tag, categories))
+                        return MaterialSelection.Invalid(
+                            "Material '" + requested + "' does not satisfy native construction slot " + slot.Index + " (" + slot.Category + ")",
+                            requested, available, candidates);
+                    elements.Add(match.Tag);
+                    slotMaterials.Add(match);
+                }
+                return ValidatedMaterialSelection(elements, "explicit", requested, match, available, selectedRecipe, slotMaterials);
             }
-
-            return ValidatedMaterialSelection(new List<Tag> { match.Tag }, "explicit", requested, match, available);
+            return ValidatedMaterialSelection(new List<Tag> { match.Tag }, "explicit", requested, match, available,
+                selectedRecipe, new List<BuildMaterialInfo> { match });
         }
 
         private static MaterialSelection ValidatedMaterialSelection(
@@ -71,7 +142,9 @@ namespace OniMcp.Tools
             string mode,
             string requested,
             BuildMaterialInfo selected,
-            List<BuildMaterialInfo> available)
+            List<BuildMaterialInfo> available,
+            ConstructionRecipe recipe = null,
+            List<BuildMaterialInfo> slotMaterials = null)
         {
             if (elements == null || elements.Count == 0)
                 return MaterialSelection.Invalid("No material selected.", requested, available, new List<BuildMaterialInfo>());
@@ -84,39 +157,73 @@ namespace OniMcp.Tools
                     available,
                     (available ?? new List<BuildMaterialInfo>()).Take(20).ToList());
 
-            return MaterialSelection.Success(elements, mode, requested, selected, available);
+            var result = MaterialSelection.Success(elements, mode, requested, selected, available, recipe, slotMaterials);
+            result.RequireMassForPlacements(1);
+            return result;
         }
 
         private static List<BuildMaterialInfo> AvailableMaterials(BuildingDef def, int worldId, bool includeUnavailable)
         {
-            var categories = MaterialCategoryTags(def).ToList();
             var candidates = CandidateMaterialTags(def, worldId)
                 .Where(tag => tag.IsValid)
                 .Distinct()
                 .Select(tag =>
                 {
-                    var matches = categories.Where(category => MaterialMatchesCategory(tag, category)).ToList();
-                    return new BuildMaterialInfo
-                    {
-                        Tag = tag,
-                        Name = tag.ProperNameStripLink(),
-                        AvailableKg = AvailableAmount(worldId, tag),
-                        ValidForBuilding = categories.Count == 0 || matches.Count > 0,
-                        Categories = matches
-                    };
+                    return MaterialInfoForTag(def, worldId, tag);
                 })
                 .Where(item => item.ValidForBuilding)
                 .Where(item => includeUnavailable || item.AvailableKg > 0f)
-                .OrderByDescending(item => item.AvailableKg)
+                .OrderByDescending(item => item.ReachableLooseKg)
+                .ThenByDescending(item => item.AvailableKg)
                 .ThenBy(item => item.Tag.Name)
                 .ToList();
 
             return candidates;
         }
 
+        private static BuildMaterialInfo MaterialInfoForTag(BuildingDef def, int worldId, Tag tag)
+        {
+            var categories = MaterialCategoryTags(def).ToList();
+            var matches = categories.Where(category => MaterialMatchesCategory(tag, category)).ToList();
+            var snapshot = GetBuildStockSnapshot(worldId);
+            var stock = snapshot.For(tag);
+            return new BuildMaterialInfo
+            {
+                Tag = tag,
+                Name = tag.ProperNameStripLink(),
+                // WorldInventory.TotalAmount includes Pickupables; use max to tolerate a
+                // same-frame index refresh delay without double-counting the component scan.
+                AvailableKg = Math.Max(stock.LocalWorldInventoryKg, stock.LooseKg),
+                ReachableLooseKg = stock.ReachableLooseKg,
+                LooseKg = stock.LooseKg,
+                StoredKg = stock.StoredKg,
+                UnverifiedLocalKg = ConstructionReadinessPolicy.LocalUnverifiedStock(
+                    stock.LocalWorldInventoryKg, stock.LooseKg, stock.ReachableLooseKg, stock.StoredKg),
+                RelatedForeignKg = ConstructionReadinessPolicy.ForeignInventoryContext(
+                    stock.RelatedWorldInventoryKg, stock.LocalWorldInventoryKg),
+                LocalWorldInventoryKg = stock.LocalWorldInventoryKg,
+                RelatedWorldInventoryKg = stock.RelatedWorldInventoryKg,
+                HasActiveNavigator = snapshot.ActiveNavigatorCount > 0,
+                ValidForBuilding = categories.Count == 0 || matches.Count > 0,
+                Categories = matches
+            };
+        }
+
         private static float RequiredMaterialKg(BuildingDef def)
         {
-            return BuildMaterialSufficiencyPolicy.RequiredPrimaryMass(def);
+            if (def == null)
+                return 0f;
+
+            try
+            {
+                return ConstructionRecipeAdapter.Read(def.Mass, def.MaterialCategory).TotalMassKg;
+            }
+            catch
+            {
+                // Keep material diagnostics best-effort across ONI builds.
+            }
+
+            return 0f;
         }
 
         private static IEnumerable<Tag> CandidateMaterialTags(BuildingDef def, int worldId)
@@ -146,41 +253,13 @@ namespace OniMcp.Tools
                 }
             }
 
-            foreach (var tag in InventoryMaterialTags(def, worldId))
-                yield return tag;
-        }
-
-        private static IEnumerable<Tag> InventoryMaterialTags(BuildingDef def, int worldId)
-        {
             var categories = MaterialCategoryTags(def).ToList();
             if (categories.Count == 0)
                 yield break;
-
-            foreach (var pickupable in Components.Pickupables.Items)
+            foreach (var tag in GetBuildStockSnapshot(worldId).Tags)
             {
-                if (pickupable == null || pickupable.gameObject == null)
-                    continue;
-
-                int itemWorldId = PickupableWorldId(pickupable);
-                if (worldId >= 0 && itemWorldId != worldId)
-                    continue;
-
-                var kpid = pickupable.KPrefabID ?? pickupable.GetComponent<KPrefabID>();
-                var primary = pickupable.PrimaryElement ?? pickupable.GetComponent<PrimaryElement>();
-                Tag prefabTag = kpid?.PrefabTag ?? Tag.Invalid;
-                Tag elementTag = primary != null ? new Tag(primary.ElementID.ToString()) : Tag.Invalid;
-
-                if (MaterialMatchesAnyCategory(prefabTag, categories))
-                    yield return prefabTag;
-                if (MaterialMatchesAnyCategory(elementTag, categories))
-                    yield return elementTag;
-                if (kpid != null && categories.Any(category => kpid.HasTag(category)))
-                {
-                    if (elementTag.IsValid)
-                        yield return elementTag;
-                    if (prefabTag.IsValid)
-                        yield return prefabTag;
-                }
+                if (MaterialMatchesAnyCategory(tag, categories))
+                    yield return tag;
             }
         }
 
@@ -253,97 +332,19 @@ namespace OniMcp.Tools
             return kpid != null && kpid.HasTag(category);
         }
 
-        private static int PickupableWorldId(Pickupable pickupable)
-        {
-            int cell = pickupable.cachedCell;
-            if (Grid.IsValidCell(cell) && Grid.IsWorldValidCell(cell))
-                return Grid.WorldIdx[cell];
-            return pickupable.GetMyWorldId();
-        }
-
-        private static float AvailableAmount(int worldId, Tag tag)
-        {
-            if (!tag.IsValid || ClusterManager.Instance == null)
-                return 0f;
-            var world = ClusterManager.Instance.GetWorld(worldId >= 0 ? worldId : ClusterManager.Instance.activeWorldId);
-            if (world == null || world.worldInventory == null)
-                return 0f;
-
-            float amount = ToolUtil.SafeFloat(world.worldInventory.GetTotalAmount(tag, includeRelatedWorlds: true));
-            foreach (var pickupable in Components.Pickupables.Items)
-            {
-                if (pickupable == null || pickupable.KPrefabID == null)
-                    continue;
-                if (pickupable.storage != null || pickupable.KPrefabID.HasTag(GameTags.Stored))
-                    continue;
-                if (!pickupable.KPrefabID.HasTag(tag))
-                    continue;
-                if (PickupableWorldId(pickupable) != world.id)
-                    continue;
-
-                if (pickupable.PrimaryElement != null)
-                    amount += ToolUtil.SafeFloat(pickupable.PrimaryElement.Mass);
-            }
-            return amount;
-        }
-
-        private static FacadeSelection ResolveFacade(BuildingDef def, string facade)
-        {
-            if (string.IsNullOrWhiteSpace(facade))
-                return FacadeSelection.Default();
-
-            var facadeId = facade.Trim();
-            if (facadeId.Equals("default", StringComparison.OrdinalIgnoreCase) || facadeId == "DEFAULT_FACADE")
-                return FacadeSelection.Default();
-
-            if (def.AvailableFacades == null || !def.AvailableFacades.Contains(facadeId))
-                return FacadeSelection.Invalid($"Facade '{facadeId}' is not available for {def.PrefabID}");
-
-            var permit = Db.Get().Permits.TryGet(facadeId);
-            if (permit == null)
-                return FacadeSelection.Invalid($"Facade '{facadeId}' has no permit resource");
-
-            if (!permit.IsUnlocked())
-                return FacadeSelection.Invalid($"Facade '{facadeId}' is locked");
-
-            return FacadeSelection.Custom(facadeId);
-        }
-        private struct FacadeSelection
-        {
-            public readonly bool Valid;
-            public readonly string TryPlaceId;
-            public readonly string ResponseId;
-            public readonly string Error;
-
-            private FacadeSelection(bool valid, string tryPlaceId, string responseId, string error)
-            {
-                Valid = valid;
-                TryPlaceId = tryPlaceId;
-                ResponseId = responseId;
-                Error = error;
-            }
-
-            public static FacadeSelection Default()
-            {
-                return new FacadeSelection(true, null, "DEFAULT_FACADE", null);
-            }
-
-            public static FacadeSelection Custom(string facadeId)
-            {
-                return new FacadeSelection(true, facadeId, facadeId, null);
-            }
-
-            public static FacadeSelection Invalid(string error)
-            {
-                return new FacadeSelection(false, null, null, error);
-            }
-        }
-
         private sealed class BuildMaterialInfo
         {
             public Tag Tag;
             public string Name;
             public float AvailableKg;
+            public float LocalWorldInventoryKg;
+            public float RelatedWorldInventoryKg;
+            public float ReachableLooseKg;
+            public float LooseKg;
+            public float StoredKg;
+            public float UnverifiedLocalKg;
+            public float RelatedForeignKg;
+            public bool HasActiveNavigator;
             public bool ValidForBuilding;
             public List<Tag> Categories = new List<Tag>();
 
@@ -353,109 +354,21 @@ namespace OniMcp.Tools
                 {
                     ["tag"] = Tag.Name,
                     ["name"] = Name,
-                    ["availableKg"] = Math.Round(ToolUtil.SafeFloat(AvailableKg), 3),
+                    ["availableKg"] = Math.Round(ToolUtil.SafeFloat(ReachableLooseKg), 3),
+                    ["localInventoryKg"] = Math.Round(ToolUtil.SafeFloat(AvailableKg), 3),
+                ["localWorldInventoryKg"] = Math.Round(ToolUtil.SafeFloat(LocalWorldInventoryKg), 3),
+                    ["relatedWorldInventoryKgContextOnly"] = Math.Round(ToolUtil.SafeFloat(RelatedWorldInventoryKg), 3),
+                    ["foreignWorldInventoryKgContextOnly"] = Math.Round(ToolUtil.SafeFloat(RelatedForeignKg), 3),
+                    ["reachableLooseKg"] = Math.Round(ToolUtil.SafeFloat(ReachableLooseKg), 3),
+                    ["looseKg"] = Math.Round(ToolUtil.SafeFloat(LooseKg), 3),
+                    ["unverifiedLocalStockKg"] = Math.Round(ToolUtil.SafeFloat(UnverifiedLocalKg), 3),
+                    ["storedKgNotCountedAsReachable"] = Math.Round(ToolUtil.SafeFloat(StoredKg), 3),
+                    ["hasActiveNavigator"] = HasActiveNavigator,
                     ["validForBuilding"] = ValidForBuilding,
                     ["categories"] = Categories.Select(tag => tag.Name).OrderBy(name => name).ToList()
                 };
             }
         }
 
-        private sealed class MaterialSelection
-        {
-            private float requiredKg;
-
-            public bool Valid;
-            public string Mode;
-            public string Requested;
-            public List<Tag> Elements = new List<Tag>();
-            public BuildMaterialInfo Selected;
-            public List<BuildMaterialInfo> Available = new List<BuildMaterialInfo>();
-            public List<BuildMaterialInfo> Candidates = new List<BuildMaterialInfo>();
-            public string ReasonCode;
-            public string Error;
-
-            public float RequiredKg
-            {
-                get { return requiredKg; }
-                set
-                {
-                    requiredKg = value;
-                    if (!Valid)
-                        return;
-
-                    float selectedAvailableKg = Selected != null ? Selected.AvailableKg : 0f;
-                    if (BuildMaterialSufficiencyPolicy.IsSatisfied(
-                        selectedAvailableKg,
-                        requiredKg))
-                        return;
-
-                    Valid = false;
-                    ReasonCode = "insufficient_material";
-                    string selectedName = Selected != null ? Selected.Tag.Name : "selected material";
-                    Error = $"Insufficient build material: {selectedName} has {Math.Round(selectedAvailableKg, 3)} kg available but {Math.Round(requiredKg, 3)} kg is required.";
-                }
-            }
-
-            public static MaterialSelection Success(List<Tag> elements, string mode, string requested, BuildMaterialInfo selected, List<BuildMaterialInfo> available)
-            {
-                return new MaterialSelection
-                {
-                    Valid = true,
-                    Mode = mode,
-                    Requested = string.IsNullOrWhiteSpace(requested) ? "auto" : requested,
-                    Elements = elements ?? new List<Tag>(),
-                    Selected = selected,
-                    Available = available ?? new List<BuildMaterialInfo>(),
-                    RequiredKg = 0f
-                };
-            }
-
-            public static MaterialSelection Invalid(string error, string requested, List<BuildMaterialInfo> available, List<BuildMaterialInfo> candidates)
-            {
-                return new MaterialSelection
-                {
-                    Valid = false,
-                    Mode = "invalid",
-                    Requested = string.IsNullOrWhiteSpace(requested) ? "auto" : requested,
-                    Error = error,
-                    Available = available ?? new List<BuildMaterialInfo>(),
-                    Candidates = candidates ?? new List<BuildMaterialInfo>(),
-                    RequiredKg = 0f
-                };
-            }
-
-            public Dictionary<string, object> ToDictionary()
-            {
-                float selectedAvailableKg = Selected != null ? ToolUtil.SafeFloat(Selected.AvailableKg) : 0f;
-                bool hasRequiredKg = RequiredKg > 0f;
-                object satisfied = hasRequiredKg ? (object)(selectedAvailableKg >= RequiredKg) : null;
-                float shortageKg = hasRequiredKg ? Math.Max(0f, RequiredKg - selectedAvailableKg) : 0f;
-
-                return new Dictionary<string, object>
-                {
-                    ["valid"] = Valid,
-                    ["mode"] = Mode,
-                    ["requested"] = Requested,
-                    ["reasonCode"] = ReasonCode,
-                    ["requirementKnown"] = hasRequiredKg,
-                    ["requiredKg"] = hasRequiredKg ? (object)Math.Round(ToolUtil.SafeFloat(RequiredKg), 3) : null,
-                    ["selectedAvailableKg"] = Selected != null ? (object)Math.Round(selectedAvailableKg, 3) : null,
-                    ["satisfied"] = satisfied,
-                    ["shortageKg"] = hasRequiredKg ? (object)Math.Round(shortageKg, 3) : null,
-                    ["selected"] = Selected != null ? Selected.ToDictionary() : null,
-                    ["elements"] = Elements.Select(tag => tag.Name).ToList(),
-                    ["availableMaterials"] = Available.Take(20).Select(item => item.ToDictionary()).ToList(),
-                    ["candidateMaterials"] = Candidates.Take(20).Select(item => item.ToDictionary()).ToList(),
-                    ["fallbackMaterial"] = Available.Count > 0 ? Available[0].Tag.Name : null,
-                    ["next"] = Valid
-                        ? "Material is usable."
-                        : Available.Count > 0
-                            ? "Retry with material=auto or material=" + Available[0].Tag.Name + " if exact material is not required."
-                            : "No usable material is currently available; inspect inventory/material candidates before retrying.",
-                    ["suggestion"] = Available.Count > 0 ? "Use material=auto or material=" + Available[0].Tag.Name : "No available material; inspect read_control domain=resources action=inventory/building_control domain=planning action=materials",
-                    ["error"] = Error
-                };
-            }
-        }
     }
 }
