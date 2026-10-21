@@ -39,6 +39,7 @@ internal sealed class SweepTestPriority
 
 internal sealed partial class KPrefabID
 {
+    internal int InstanceID { get; set; }
     internal HashSet<string> Tags { get; } = new HashSet<string>();
     internal bool HasTag(string tag) => Tags.Contains(tag);
 }

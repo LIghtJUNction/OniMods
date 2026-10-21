@@ -6,7 +6,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <StartupObject>BenchmarkMetadataRegressionEntry</StartupObject>
+    <StartupObject>LogicAlarmRegressionEntry</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -52,6 +52,9 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialReader.cs" Link="Source/BuildPlanningExistingMaterialReader.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/LogicAlarmUpdatePolicy.cs" Link="Source/LogicAlarmUpdatePolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/LogicAlarmSideScreenTools.cs" Link="Source/LogicAlarmSideScreenTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/MiscSideScreenTargetLookup.cs" Link="Source/MiscSideScreenTargetLookup.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlacementIdentityPolicy.cs" Link="Source/BuildPlacementIdentityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementCoordinates.cs" Link="Source/BuildPlanningPlacementCoordinates.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementModels.cs" Link="Source/BuildPlanningPlacementModels.cs" />

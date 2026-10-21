@@ -212,27 +212,6 @@ namespace OniMcp.Tools
             return -1;
         }
 
-        private static bool TryParseNotificationType(string value, out NotificationType type)
-        {
-            switch ((value ?? "").Trim().ToLowerInvariant())
-            {
-                case "bad":
-                    type = NotificationType.Bad;
-                    return true;
-                case "neutral":
-                    type = NotificationType.Neutral;
-                    return true;
-                case "duplicant_threatening":
-                case "duplicantthreatening":
-                case "threat":
-                    type = NotificationType.DuplicantThreatening;
-                    return true;
-                default:
-                    type = NotificationType.Neutral;
-                    return false;
-            }
-        }
-
         private static string NotificationTypeName(NotificationType type)
         {
             if (type == NotificationType.Bad)

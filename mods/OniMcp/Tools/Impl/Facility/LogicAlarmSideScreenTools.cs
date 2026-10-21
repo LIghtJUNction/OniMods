@@ -54,17 +54,17 @@ namespace OniMcp.Tools
                     var alarm = go.GetComponent<LogicAlarm>();
                     var before = LogicAlarmInfo(alarm);
 
-                    if (args["name"] != null)
-                        alarm.notificationName = Truncate(args["name"].ToString(), 30);
-                    if (args["tooltip"] != null)
-                        alarm.notificationTooltip = Truncate(args["tooltip"].ToString(), 90);
-                    if (args["type"] != null)
+                    string updateError;
+                    if (!LogicAlarmUpdatePolicy.TryApplyTextAndType(
+                        args,
+                        value => alarm.notificationName = value,
+                        value => alarm.notificationTooltip = value,
+                        value => alarm.notificationType = value,
+                        out updateError))
                     {
-                        NotificationType type;
-                        if (!TryParseNotificationType(args["type"].ToString(), out type))
-                            return CallToolResult.Error("type must be bad, neutral, or duplicant_threatening");
-                        alarm.notificationType = type;
+                        return CallToolResult.Error(updateError);
                     }
+
                     if (args["pauseOnNotify"] != null)
                         alarm.pauseOnNotify = ToolUtil.GetBool(args, "pauseOnNotify", alarm.pauseOnNotify);
                     if (args["zoomOnNotify"] != null)
