@@ -137,7 +137,7 @@ run_publisher() {
   local context_app_id="$CREATOR_APP_ID"
   local argument
   for argument in "$@"; do
-    if [[ "$argument" == "--consumer-context" || "$argument" == "--verify-installed" ]]; then
+    if [[ "$argument" == "--consumer-context" || "$argument" == "--verify-installed" || "$argument" == "--metadata-only" ]]; then
       context_app_id="$CONSUMER_APP_ID"
     fi
   done

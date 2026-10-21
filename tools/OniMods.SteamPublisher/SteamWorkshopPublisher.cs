@@ -62,11 +62,12 @@ internal static partial class SteamWorkshopPublisher
 
     internal static SteamUGCDetails_t QueryItem(
         ulong workshopId, string titleContains, bool requirePrivate,
-        bool requirePublic = false)
+        bool requirePublic = false, string language = "english")
     {
         var fileId = new PublishedFileId_t(workshopId);
         var query = SteamUGC.CreateQueryUGCDetailsRequest([fileId], 1);
-        Require(SteamUGC.SetLanguage(query, "english"), "SetLanguage");
+        Require(SteamUGC.SetLanguage(query, language), "SetLanguage");
+        Require(SteamUGC.SetReturnLongDescription(query, true), "SetReturnLongDescription");
         SteamUGC.SetAllowCachedResponse(query, 0);
         try
         {
@@ -174,8 +175,6 @@ internal static partial class SteamWorkshopPublisher
                 + $"id={result.m_nPublishedFileId.m_PublishedFileId}, "
                 + $"legalAgreement={result.m_bUserNeedsToAcceptWorkshopLegalAgreement}");
         }
-        SubmitLanguageUpdate("english", metadata.EnglishDescription);
-        SubmitLanguageUpdate("schinese", metadata.ChineseDescription);
     }
 
     internal static void VerifyInstalledLegacy(
@@ -339,10 +338,16 @@ internal static partial class SteamWorkshopPublisher
         Require(SteamUGC.SetItemDescription(handle, description), "SetItemDescription");
         Console.WriteLine($"updateLanguage={language}");
         ValidateUploadResult(WaitForUpload(handle, string.Empty));
+        var observed = QueryItem(WorkshopTarget.WorkshopId, WorkshopTarget.TitleContains,
+            requirePrivate: false, language: language);
+        if (!string.Equals(observed.m_rgchDescription, description, StringComparison.Ordinal))
+            throw new InvalidOperationException("Steam description readback differs for " + language);
+        Console.WriteLine($"verifiedLanguage={language}");
     }
 
     private static UGCUpdateHandle_t StartUpdate()
     {
+        SteamAppContext.VerifyActive(SteamAppRole.Consumer);
         return SteamUGC.StartItemUpdate(
             new AppId_t(WorkshopTarget.ConsumerAppId),
             new PublishedFileId_t(WorkshopTarget.WorkshopId));
