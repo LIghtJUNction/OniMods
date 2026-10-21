@@ -48,11 +48,20 @@ def run(command: list[str], log_name: str) -> None:
         raise SystemExit(result.returncode)
 
 
+def cargo_build_command(offline: bool) -> list[str]:
+    command = ["cargo", "build", "--release", "--locked"]
+    if offline:
+        command.append("--offline")
+    return command + ["--manifest-path", str(MANIFEST)]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("phase", choices=["all", "build", "verify", "benchmark", "allocations", "summary"], default="all", nargs="?")
     parser.add_argument("--target-dir", type=Path, default=Path("/tmp/onisim-diamond-build"))
     parser.add_argument("--cpu", type=int)
+    parser.add_argument("--offline", action="store_true",
+                        help="Require dependencies to be cached; builds always preserve Cargo.lock")
     args = parser.parse_args()
     args.target_dir = args.target_dir.resolve()
     RESULTS.mkdir(parents=True, exist_ok=True)
@@ -74,14 +83,14 @@ def main() -> None:
     allocation_target = args.target_dir / "allocation"
     executable = timing_target / "release/onisim-diamond-validation"
     allocation_executable = allocation_target / "release/onisim-diamond-validation"
-    build_base = ["cargo", "build", "--release", "--offline", "--manifest-path", str(MANIFEST)]
+    build_base = cargo_build_command(args.offline)
     if args.phase in ("all", "build"):
         run([sys.executable, str(LAB / "harness/prepare_sources.py")], "prepare-sources.log")
         run(build_base + ["--target-dir", str(timing_target)], "build-timing.log")
-        run(build_base + ["--locked", "--features", "allocation_stats", "--target-dir", str(allocation_target)], "build-allocation.log")
+        run(build_base + ["--features", "allocation_stats", "--target-dir", str(allocation_target)], "build-allocation.log")
     commands = {
         "build_timing": build_base + ["--target-dir", str(timing_target)],
-        "build_allocation": build_base + ["--locked", "--features", "allocation_stats", "--target-dir", str(allocation_target)],
+        "build_allocation": build_base + ["--features", "allocation_stats", "--target-dir", str(allocation_target)],
         "verify": [str(executable), "verify", str(RESULTS / "correctness.json")],
         "benchmark": [str(executable), "benchmark", str(RESULTS / "raw-samples.csv")],
         "allocations": [str(allocation_executable), "allocations", str(RESULTS / "allocations.csv")],

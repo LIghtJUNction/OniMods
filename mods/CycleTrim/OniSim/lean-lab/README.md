@@ -278,6 +278,9 @@ LEAN_BIN=/path/to/lean-4.19.0/bin/lean bash mods/CycleTrim/OniSim/lean-lab/proof
 RUSTUP_TOOLCHAIN=1.99.1 python3 mods/CycleTrim/OniSim/lean-lab/harness/run.py all
 ```
 
+构建始终使用 `--locked` 固定依赖；首次运行允许下载锁文件中的 Rayon 等依赖。
+缓存准备好后，可给 `run.py` 加 `--offline`，要求完全离线构建。
+
 若沿用源码项目的 RTK 约定，可在命令前加 `rtk bypass`。
 Lean 仅依赖随安装提供的 `Std`；原始 Rust 测试组件没有外部 crate；当前生产并行接入及验证组件使用 Cargo.lock 锁定的 Rayon。
 `harness/README.md` 列出分阶段执行和 CPU 选择方法。
