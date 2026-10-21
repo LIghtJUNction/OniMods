@@ -327,14 +327,15 @@ internal static partial class SteamWorkshopPublisher
 
     internal static void SubmitLocalizedMetadata(WorkshopMetadata metadata)
     {
-        SubmitLanguageUpdate("english", metadata.EnglishDescription);
-        SubmitLanguageUpdate("schinese", metadata.ChineseDescription);
+        SubmitLanguageUpdate("english", metadata.Title, metadata.EnglishDescription);
+        SubmitLanguageUpdate("schinese", metadata.Title, metadata.ChineseDescription);
     }
 
-    private static void SubmitLanguageUpdate(string language, string description)
+    private static void SubmitLanguageUpdate(string language, string title, string description)
     {
         var handle = StartUpdate();
         Require(SteamUGC.SetItemUpdateLanguage(handle, language), "SetItemUpdateLanguage");
+        Require(SteamUGC.SetItemTitle(handle, title), "SetItemTitle");
         Require(SteamUGC.SetItemDescription(handle, description), "SetItemDescription");
         Console.WriteLine($"updateLanguage={language}");
         ValidateUploadResult(WaitForUpload(handle, string.Empty));
