@@ -25,7 +25,10 @@ namespace OniSim.CycleTrim
         {
             if (assembly == null || assembly.GetName().Name != "Assembly-CSharp")
                 throw new InvalidOperationException("The loader requires the loaded official Assembly-CSharp assembly.");
-            RequireDigest(assembly.Location, AssemblySha256, "Assembly-CSharp");
+            if (NativePlatform.IsLinux)
+                RequireDigest(assembly.Location, AssemblySha256, "Assembly-CSharp");
+            else
+                PortableProfile.Validate(assembly);
         }
 
         internal static string MonoPath(string assemblyPath)

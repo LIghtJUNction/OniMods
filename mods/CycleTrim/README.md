@@ -34,7 +34,7 @@ OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)�
 
 疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。源码内的验收记录见 [`OniSim/PARALLEL-VALIDATION.md`](OniSim/PARALLEL-VALIDATION.md)。
 
-隔离实测已通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/RUNTIME-VALIDATION.md`](OniSim/RUNTIME-VALIDATION.md)。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。加载器只接受已静态检查的 ONI `Assembly-CSharp` 与 Mono 文件指纹；其他游戏版本会拒绝映射并在日志中说明原因。
+隔离实测已通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/RUNTIME-VALIDATION.md`](OniSim/RUNTIME-VALIDATION.md)。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。Linux 保留已检查的 `Assembly-CSharp` 和 Mono 整文件指纹检查；Windows/macOS 要求 ONI 744825 正式版、相同的原生接口与消息结构布局。其他版本或布局会拒绝映射并在日志中说明原因。
 
 Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。正常情况下通过游戏 Mod 设置页启用或关闭，并按 PLib 提示重启 ONI。`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前强制关闭，`1` 可显式允许加载。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内 `.so`；未设置时使用 Mod 目录下 `OniSim/<platform>/` 中的 `.dll`、`.dylib` 或 `.so`。macOS 需要 x64 游戏进程（Apple Silicon 上使用 Rosetta）。三平台 CI 构建与宿主加载器测试不等于全平台 ONI 实机验收。
 

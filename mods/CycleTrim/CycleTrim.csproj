@@ -34,6 +34,7 @@
     <Compile Include="OniSim/managed/OniSim.Mod/NativePlatform.cs" Link="OniSim/NativePlatform.cs" />
     <Compile Include="OniSim/managed/OniSim.Mod/MonoImageMapper.cs" Link="OniSim/MonoImageMapper.cs" />
     <Compile Include="OniSim/managed/OniSim.Mod/OfficialProfile.cs" Link="OniSim/OfficialProfile.cs" />
+    <Compile Include="OniSim/managed/OniSim.Mod/PortableProfile.cs" Link="OniSim/PortableProfile.cs" />
   </ItemGroup>
 
   <ItemGroup>

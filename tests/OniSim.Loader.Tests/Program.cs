@@ -1,6 +1,18 @@
 using System.Runtime.InteropServices;
 using OniSim.CycleTrim;
 
+if (args.Length == 2 && (args[0] == "--profile" || args[0] == "--check-profile"))
+{
+    string assemblyPath = Path.GetFullPath(args[1]);
+    var resolver = new System.Reflection.PathAssemblyResolver(Directory.GetFiles(Path.GetDirectoryName(assemblyPath), "*.dll"));
+    using var context = new System.Reflection.MetadataLoadContext(resolver, "mscorlib");
+    var assembly = context.LoadFromAssemblyPath(assemblyPath);
+    Console.WriteLine("portableAbiSha256=" + PortableProfile.Fingerprint(assembly));
+    if (args[0] == "--check-profile") PortableProfile.Validate(assembly);
+    return;
+}
+
+PortableProfileTests.Run();
 NativePlatform.RequireSupported();
 var directory = Path.Combine(Path.GetTempPath(), "onisim-loader-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(directory);

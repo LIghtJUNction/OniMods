@@ -21,7 +21,7 @@ when unset, the loader uses the platform library under `OniSim/linux-x64/`,
 `OniSim/windows-x64/` or `OniSim/macos-x64/` beside the Mod assembly.
 These switches control mapping; they do not establish gameplay compatibility.
 
-The preflight requires x64 Unity Mono and the exact inspected game assembly fingerprint in `OfficialProfile.cs`. Linux additionally checks its inspected Unity Mono fingerprint. Other platforms bind public embedding exports only from the already-loaded game-local Unity runtime. It requires no `Game` instance,
+The preflight requires x64 Unity Mono. Linux retains the exact inspected game assembly and Unity Mono fingerprints in `OfficialProfile.cs`. Windows/macOS require release build 744825 and the canonical SimDLL import/message-layout fingerprint in `PortableProfile.cs`; assembly MVIDs and PE headers do not affect that ABI check. Other platforms bind public embedding exports only from the already-loaded game-local Unity runtime. It requires no `Game` instance,
 gets the existing Mono module with `RTLD_NOLOAD`, and enumerates loaded assemblies
 to locate the exact `Assembly-CSharp` MonoImage by filename. It rejects missing
 images, unsupported profiles, missing exports, and non-v1 native ABI before the
