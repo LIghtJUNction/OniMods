@@ -19,6 +19,7 @@ internal sealed class Telepad
 {
     internal GameObject gameObject { get; } = new GameObject();
     internal readonly List<CarePackageInfo> Deliveries = new List<CarePackageInfo>();
+    internal Action BeforeNextPositionRead { get; set; }
     internal void OnAcceptDelivery(CarePackageInfo info)
     {
         Deliveries.Add(info);
@@ -90,7 +91,13 @@ internal static partial class Components
 
 internal static partial class Grid
 {
-    internal static int PosToCell(Telepad target) => XYToCell(1, 1);
+    internal static int PosToCell(Telepad target)
+    {
+        var beforeRead = target.BeforeNextPositionRead;
+        target.BeforeNextPositionRead = null;
+        beforeRead?.Invoke();
+        return XYToCell(1, 1);
+    }
 }
 
 internal static partial class Assets

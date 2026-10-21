@@ -41,6 +41,16 @@ internal static class PrintingPodClaimHandlerRegression
         Check(result.IsError && NoWrites(telepad) && screen.HideAttempts == 0,
             "unconfirmed claim must not close the screen or deliver a reward");
 
+        // The production priority plan reads the pod position after reward
+        // enumeration but before cleanup preflight. Invalidate that selected
+        // choice at the game boundary so this cannot take the empty-list exit.
+        telepad.BeforeNextPositionRead = () => screen.Choices.Remove(current);
+        result = FacilitySideScreenTools.TestClaim(Confirmed(), telepad);
+        Check(result.IsError && result.Content[0].Text.Contains("reward UI state is unavailable")
+            && screen.Choices.Count == 0 && NoWrites(telepad) && screen.HideAttempts == 0,
+            "lost selected reward must fail cleanup preflight before closing, delivery, immigration end, or destruction");
+        screen.Choices.Add(current);
+
         screen.ThrowOnHide = true;
         result = FacilitySideScreenTools.TestClaim(Confirmed(), telepad);
         Check(result.IsError && NoWrites(telepad) && screen.Choices.Count == 1 && screen.HideAttempts == 1,
