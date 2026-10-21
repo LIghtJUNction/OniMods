@@ -445,7 +445,7 @@ namespace OniMcp.Tools
         private static Dictionary<string, object> CompactAmounts(MinionIdentity dupe)
         {
             var result = new Dictionary<string, object>();
-            var amounts = dupe.GetComponent<Amounts>();
+            var amounts = dupe.GetAmounts();
             if (amounts == null)
                 return result;
 

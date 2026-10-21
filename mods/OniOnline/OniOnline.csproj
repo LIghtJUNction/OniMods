@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>OniOnline</AssemblyName>
+    <RootNamespace>OniOnline</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <Version>0.3.1</Version>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <NuGetAudit>false</NuGetAudit>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="obj/**/*.cs;bin/**/*.cs;.local-tests/**/*.cs;dist/**/*.cs" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="PLib" Version="4.25.0" />
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48" PrivateAssets="all" />
+    <Reference Include="Newtonsoft.Json"><HintPath>$(OniManagedPath)/Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(OniManagedPath)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(OniManagedPath)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(OniManagedPath)/Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net"><HintPath>$(OniManagedPath)/com.rlabrecque.steamworks.net.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(OniManagedPath)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(OniManagedPath)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(OniManagedPath)/UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(OniManagedPath)/UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(OniManagedPath)/UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(OniManagedPath)/UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(OniManagedPath)/UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(OniManagedPath)/Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="localization/menu-draft.csv;assets/online-background-concept.png;assets/online-card-v2.png;assets/online-lobby-v2.png;assets/onionline-logo-v1.png;assets/onionline-icon-v1.png;preview.png;assets/ART.md;README.md;DESIGN.md;STAR-SYSTEMS.md;PERMISSIONS.md;CYCLETRIM-INTEGRATION.md;PHASE1-VALIDATION.md;THIRD_PARTY_NOTICES.txt;mod.yaml;mod_info.yaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(OnlineRuntimeProbe)' == 'true'">
+    <DefineConstants>$(DefineConstants);ONIONLINE_RUNTIME_PROBE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(OnlineRuntimeProbe)' == 'true'">
+    <Compile Include="../../tests/OniOnline.Tests/RuntimeProbe.cs" Link="RuntimeProbe.cs" />
+    <Compile Include="../../tests/OniOnline.Tests/RuntimeProbeExtras.cs" Link="RuntimeProbeExtras.cs" />
+    <Compile Include="../../tests/OniOnline.Tests/RuntimeProbeBuilding.cs" Link="RuntimeProbeBuilding.cs" />
+    <Compile Include="../../tests/OniOnline.Tests/NativeLifecycleProbe.cs" Link="NativeLifecycleProbe.cs" />
+    <Compile Include="../../tests/OniOnline.Tests/NativeNavigationQuiescenceProbe.cs" Link="NativeNavigationQuiescenceProbe.cs" />
+    <Compile Include="../../tests/OniOnline.Tests/NativeNavigationExperimentEligibility.cs" Link="NativeNavigationExperimentEligibility.cs" />
+    <Compile Include="../../tests/OniOnline.Tests/NativeBuildingBridgeProbe.cs" Link="NativeBuildingBridgeProbe.cs" />
+    <Compile Include="../../tests/OniOnline.Tests/NativeDuplicantReadOnlyDiagnostics.cs" Link="NativeDuplicantReadOnlyDiagnostics.cs" />
+    <Compile Include="../../tests/OniOnline.Tests/NativeDuplicantRoundTripPreparation.cs" Link="NativeDuplicantRoundTripPreparation.cs" />
+    <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(OniManagedPath)/UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(OniManagedPath)/UnityEngine.JSONSerializeModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="CopyLicenseFiles" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/../../LICENSE;$(MSBuildProjectDirectory)/../../LICENSING.md" DestinationFolder="$(OutputPath)" />
+  </Target>
+  <Target Name="PackageMod" DependsOnTargets="Build">
+    <Error Condition="'$(OnlineRuntimeProbe)' == 'true'" Text="Runtime probe builds must never be packaged." />
+  </Target>
+  <Target Name="PackageOniOnlineArtifacts" AfterTargets="Build"
+    DependsOnTargets="MergePLibIntoOniOnline;CopyLicenseFiles" Condition="'$(OnlineRuntimeProbe)' != 'true'">
+    <PropertyGroup>
+      <PackagePath>$(MSBuildProjectDirectory)/dist</PackagePath>
+      <PackageRoot>$(PackagePath)/OniOnline</PackageRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(PackagePath)" />
+    <RemoveDir Directories="$(PackageRoot)" />
+    <MakeDir Directories="$(PackageRoot)" />
+    <Copy SourceFiles="$(OutputPath)OniOnline.dll" DestinationFolder="$(PackageRoot)" />
+    <Copy SourceFiles="$(OutputPath)LICENSE;$(OutputPath)LICENSING.md" DestinationFolder="$(PackageRoot)" />
+    <Copy SourceFiles="@(Content->'$(OutputPath)%(Identity)')" DestinationFiles="@(Content->'$(PackageRoot)/%(Identity)')" />
+    <Delete Files="$(PackagePath)/OniOnline.zip" />
+    <ZipDirectory SourceDirectory="$(PackageRoot)" DestinationFile="$(PackagePath)/OniOnline.zip" Overwrite="true" />
+    <MakeDir Directories="$(MSBuildProjectDirectory)/../../dist" />
+    <Copy SourceFiles="$(PackagePath)/OniOnline.zip" DestinationFolder="$(MSBuildProjectDirectory)/../../dist" />
+  </Target>
+</Project>

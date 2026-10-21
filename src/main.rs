@@ -39,8 +39,8 @@ enum Commands {
     Setup,
     /// 从模板创建新 Mod
     Init {
-        /// Mod 名称（英文，无空格）
-        name: String,
+        /// Mod 名称（英文，无空格）；在空目录中省略时使用 OniModTemplate
+        name: Option<String>,
         /// 作者名
         #[arg(short, long)]
         author: Option<String>,
@@ -199,5 +199,17 @@ fn main() -> Result<()> {
             Ok(())
         }
         _ => unreachable!(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cli;
+    use clap::Parser;
+
+    #[test]
+    fn init_command_accepts_an_optional_name() {
+        assert!(Cli::try_parse_from(["onim", "init"]).is_ok());
+        assert!(Cli::try_parse_from(["onim", "init", "ExampleMod"]).is_ok());
     }
 }

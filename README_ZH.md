@@ -70,6 +70,8 @@
 
 [![OniMcp 捐赠进度](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=zh-CN&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
 
+捐款，加速一切。
+
 <details>
 <summary>展开 Mod 介绍</summary>
 

@@ -12,7 +12,7 @@ namespace OniMcp.Tools
                 return false;
             try
             {
-                var instance = dupe?.GetComponent<Amounts>()?.Get(amount);
+                var instance = dupe?.GetAmounts()?.Get(amount);
                 if (instance == null)
                     return false;
                 value = ToolUtil.SafeFloat(instance.value);

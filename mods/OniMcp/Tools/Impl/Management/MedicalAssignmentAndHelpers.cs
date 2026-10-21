@@ -243,7 +243,7 @@ namespace OniMcp.Tools
             var sicknesses = dupe.gameObject.GetSicknesses();
             var sicknessItems = SicknessList(sicknesses);
             var medicalBed = FindAssignedMedicalBed(dupe);
-            var amounts = dupe.GetComponent<Amounts>();
+            var amounts = dupe.GetAmounts();
             var stress = amounts?.Get(Db.Get().Amounts.Stress);
             var radiation = Game.IsDlcActiveForCurrentSave("EXPANSION1_ID") ? amounts?.Get(Db.Get().Amounts.RadiationBalance) : null;
             bool injured = health != null && health.hitPoints < health.maxHitPoints;

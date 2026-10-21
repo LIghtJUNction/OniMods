@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <NuGetAudit>false</NuGetAudit>
+    <!-- Concrete crypto providers are required by Unity Mono's net48 environment. -->
+    <NoWarn>$(NoWarn);SYSLIB0021;SYSLIB0023</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="obj/**/*.cs;bin/**/*.cs" />
+    <Compile Remove="RuntimeProbe*.cs" />
+    <Compile Remove="NativeLifecycleProbe.cs" />
+    <Compile Remove="NativeNavigationQuiescenceProbe.cs" />
+    <Compile Remove="NativeNavigationExperimentEligibility.cs;NativeBuildingBridgeProbe.cs" />
+    <Compile Remove="NativeDuplicantReadOnlyDiagnostics.cs" />
+    <Compile Remove="NativeDuplicantRoundTripPreparation.cs" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/NativeDuplicantImportAudit.cs" Link="Multiplayer/NativeDuplicantImportAudit.cs" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/NativeDuplicantRemapPlan.cs" Link="Multiplayer/NativeDuplicantRemapPlan.cs" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/NativeDuplicantRemapMaterializer.cs" Link="Multiplayer/NativeDuplicantRemapMaterializer.cs" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/DuplicantTransferPreflightPolicy.cs" Link="Multiplayer/DuplicantTransferPreflightPolicy.cs" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/RemoteWorkPersistence.cs" Link="Multiplayer/RemoteWorkPersistence.cs" />
+    <Compile Include="../../mods/OniOnline/Network/*.cs" Link="Network/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Core/*.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/RemoteWorkTypes.cs;../../mods/OniOnline/Multiplayer/RemoteWorkAuthority.cs;../../mods/OniOnline/Multiplayer/RemoteWorkWire.cs;../../mods/OniOnline/Multiplayer/RemoteWorkCoordinator.cs" Link="Multiplayer/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/TeamColony*.cs;../../mods/OniOnline/Multiplayer/WorldInterest*.cs" Link="Multiplayer/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/WorldCellDetails*.cs;../../mods/OniOnline/Multiplayer/DupeCommand*.cs" Link="Multiplayer/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/PlanetManifest.cs;../../mods/OniOnline/Multiplayer/SystemWire.cs;../../mods/OniOnline/Multiplayer/StarSystemCoordinator.cs" Link="Multiplayer/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/WorldSnapshot.cs;../../mods/OniOnline/Multiplayer/WorldWire.cs;../../mods/OniOnline/Multiplayer/SnapshotAssembler.cs;../../mods/OniOnline/Multiplayer/SnapshotTransferSender.cs;../../mods/OniOnline/Multiplayer/IWorldSource.cs;../../mods/OniOnline/Multiplayer/WorldReplication.cs;../../mods/OniOnline/Multiplayer/SharedTimeController.cs;../../mods/OniOnline/Multiplayer/INativeTimeControl.cs" Link="Multiplayer/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

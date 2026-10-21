@@ -30,7 +30,8 @@ internal static class Program
         Run("resource templates reject query operation overrides", TemplateConstraints);
         Run("resource errors return valid JSON content", ResourceErrors);
         Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
-        Console.WriteLine(failures == 0 ? "All 16 core regression groups passed." : failures + " regression groups failed.");
+        Run("speech Markdown keeps formatting balanced", SpeechTextRegression.Run);
+        Console.WriteLine(failures == 0 ? "All 17 core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 

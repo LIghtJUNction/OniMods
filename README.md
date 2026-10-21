@@ -118,6 +118,8 @@ Support OniMcp development and testing: [Donate](https://donate.lmm.best/?projec
 
 [![OniMcp donation progress](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=en&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
 
+Donations speed everything up.
+
 `OniMcp` is designed as a **safe, MCP-native operations layer** for Oxygen Not Included:
 
 - **`world_editor`**: world-like text file editing workflow; apply SEARCH/REPLACE style edits to virtual save artifacts

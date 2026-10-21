@@ -139,7 +139,7 @@ namespace OniMcp.Tools
         private static KeyNeeds KeyNeedValues(MinionIdentity dupe)
         {
             var result = new KeyNeeds();
-            var amounts = dupe.GetComponent<Amounts>();
+            var amounts = dupe.GetAmounts();
             var native = Db.Get()?.Amounts;
             result.HasAmounts = amounts != null;
             result.IsBionic = DuplicantNeedReadout.IsBionic(dupe);

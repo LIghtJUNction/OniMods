@@ -121,6 +121,9 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
     <PackageReference Include="PLib" Version="4.25.0" GeneratePathProperty="true" />
     <PackageReference Include="Toon.Format" Version="1.0.0" />
+    <PackageReference Include="Markdig" Version="1.4.2" />
+    <!-- Unity Mono does not provide the ValueTuple facade assumed by net48 NuGet resolution. -->
+    <PackageReference Include="System.ValueTuple" Version="4.6.1" GeneratePathProperty="true" ExcludeAssets="all" />
   </ItemGroup>
 
   <!-- 构建后生成元数据文件 -->

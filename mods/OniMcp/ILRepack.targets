@@ -4,7 +4,9 @@
       <InputAssemblies Include="$(OutputPath)$(TargetName)$(TargetExt)" />
       <InputAssemblies Include="$(OutputPath)PLib.dll" />
       <InputAssemblies Include="$(OutputPath)ToonFormat.dll" />
+      <InputAssemblies Include="$(OutputPath)Markdig.dll" />
       <InputAssemblies Include="$(OutputPath)System.Text.Json.dll" />
+      <InputAssemblies Include="$(PkgSystem_ValueTuple)/lib/net462/System.ValueTuple.dll" />
       <InputAssemblies Include="$(OutputPath)System.Text.Encodings.Web.dll" Condition="Exists('$(OutputPath)System.Text.Encodings.Web.dll')" />
       <ToonDependency Include="$(OutputPath)Microsoft.Bcl.AsyncInterfaces.dll" Condition="Exists('$(OutputPath)Microsoft.Bcl.AsyncInterfaces.dll')" />
       <ToonDependency Include="$(OutputPath)System.Buffers.dll" Condition="Exists('$(OutputPath)System.Buffers.dll')" />
@@ -26,6 +28,6 @@
       TargetKind="SameAsPrimaryAssembly"
       OutputFile="$(OutputPath)$(TargetName)$(TargetExt)" />
 
-    <Delete Files="$(OutputPath)PLib.dll;$(OutputPath)PLib.xml;$(OutputPath)ToonFormat.dll;$(OutputPath)ToonFormat.xml;$(OutputPath)System.Text.Json.dll;$(OutputPath)System.Text.Encodings.Web.dll;@(ToonDependency)" />
+    <Delete Files="$(OutputPath)PLib.dll;$(OutputPath)PLib.xml;$(OutputPath)ToonFormat.dll;$(OutputPath)ToonFormat.xml;$(OutputPath)Markdig.dll;$(OutputPath)Markdig.xml;$(OutputPath)System.Text.Json.dll;$(OutputPath)System.Text.Encodings.Web.dll;@(ToonDependency)" />
   </Target>
 </Project>

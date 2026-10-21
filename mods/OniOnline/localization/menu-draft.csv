@@ -1,0 +1,358 @@
+key,zh-CN,zh-TW,en
+mode.online,联机,連線,Online
+menu.browse_lobbies,浏览星系,瀏覽星系,Browse star systems
+menu.create_room,创建星系,建立星系,Create star system
+menu.join_room,加入星系,加入星系,Join system
+menu.join_by_code,使用房间码加入,使用房間代碼加入,Join by room code
+menu.join_by_address,IP 与端口直连,IP 與連接埠直連,Join by IP and port
+room.copy_code,复制房间码,複製房間代碼,Copy room code
+room.password,房间密码,房間密碼,Room password
+room.continue_alone,继续游戏,繼續遊戲,Continue
+room.player_name,玩家名字,玩家名稱,Player name
+room.claim_planet,选择我的星球,選擇我的星球,Choose my asteroid
+room.planet_owner,控制玩家,控制玩家,Controlled by
+settings.enable_online,开启联机,啟用連線,Enable online play
+settings.network,联机设置,連線設定,Network settings
+settings.lan,局域网,區域網路,LAN
+settings.steam_p2p,Steam P2P,Steam P2P,Steam P2P
+settings.custom_relay,自定义中转服务器,自訂中繼伺服器,Custom relay server
+settings.fog_of_war,战争迷雾,戰爭迷霧,Fog of war
+permissions.own_only,仅接受我的指令,僅接受我的指令,Only my commands
+permissions.allowed_players,授权玩家,授權玩家,Allowed players
+combat.attack_target,指定攻击目标,指定攻擊目標,Choose attack target
+combat.retaliate,自动回击,自動反擊,Retaliate automatically
+time.pause_all,暂停所有星球,暫停所有星球,Pause all asteroids
+time.vote_resume,同意恢复游戏,同意繼續遊戲,Approve resuming
+time.vote_speed,同意更改倍速,同意變更速度,Approve speed change
+time.pause,暂停全房间,暫停整個房間,Pause room
+time.resume_vote,同意恢复,同意繼續,Approve resume
+time.speed_vote,同意倍速 {0}×,同意速度 {0}×,Approve {0}× speed
+time.paused,联机已暂停,連線遊戲已暫停,Online game paused
+time.running,房间已恢复,房間已繼續,Room running
+time.waiting_players,等待其他玩家进入殖民地,等待其他玩家進入殖民地,Waiting for other players to enter their colonies
+time.vote_count,恢复同意：{0}/{1},繼續同意：{0}/{1},Resume votes: {0}/{1}
+time.syncing,等待房间状态,等待房間狀態,Waiting for room state
+time.owner_offline,星球主人离线，等待恢复,星球主人離線，等待恢復,Asteroid owner offline; waiting for reconnection
+world.open,星球,星球,Asteroids
+world.title,星球观察,星球觀察,Asteroid view
+world.sharing,共享我的星球,分享我的星球,Share my asteroid
+world.sharing_hint,开启后，仅向房间成员分享自己已探索的区域。未探索的格子保持隐藏。,啟用後，僅向房間成員分享自己已探索的區域。未探索的格子保持隱藏。,Share explored areas with room members. Unexplored cells remain hidden.
+world.read_only,星球观察,星球觀察,Planet view
+world.no_worlds,暂无可查看的星球,暫無可檢視的星球,No asteroids available to view
+world.select_world,选择星球,選擇星球,Choose an asteroid
+world.not_shared,尚未共享星球,尚未分享星球,Asteroid not shared
+world.waiting,等待星球数据,等待星球資料,Waiting for asteroid data
+world.reconnecting,连接中断，等待恢复,連線中斷，等待恢復,Connection interrupted; waiting to reconnect
+world.connected,数据连接正常,資料連線正常,Data connection active
+world.local,本地星球,本機星球,Local asteroid
+world.last_received,最后收到：{0},最後收到：{0},Last received: {0}
+world.inspect_hint,点击格子查看信息,點選格子查看資訊,Select a cell to inspect it
+world.unknown_cell,尚未探索，无法查看此处信息。,尚未探索，無法查看此處資訊。,Unexplored; no information available.
+world.cell_details,X {0} · Y {1}  {2} · {3} kg · {4} °C,X {0} · Y {1}  {2} · {3} kg · {4} °C,X {0} · Y {1}  {2} · {3} kg · {4} °C
+world.dupes,复制人：{0},複製人：{0},Duplicants: {0}
+world.refresh,刷新,重新整理,Refresh
+world.invalid_snapshot,无法读取星球数据,無法讀取星球資料,Could not read asteroid data
+dependency.cycletrim_required,需要安装并启用 CycleTrim,需要安裝並啟用 CycleTrim,CycleTrim must be installed and enabled
+dependency.spaced_out_required,需要启用眼冒金星 DLC,需要啟用眼冒金星 DLC,Spaced Out! DLC must be active
+dependency.capability_missing,CycleTrim 缺少本房间所需的联机能力,CycleTrim 缺少此房間所需的連線能力,CycleTrim lacks a required capability for this room
+hosting.trusted_node,可信托管电脑,可信託管電腦,Trusted simulation host
+hosting.active,离线托管中,離線託管中,Offline simulation hosting active
+hosting.syncing,正在同步最新状态,正在同步最新狀態,Synchronizing latest state
+hosting.return_control,接管我的星球,接管我的星球,Resume hosting my asteroid
+permissions.dupe_commands,小人指挥权限,複製人指揮權限,Duplicant command permissions
+permissions.asteroid_access,星球访问权限,星球存取權限,Asteroid access permissions
+permissions.visitor,访客,訪客,Visitor
+permissions.collaborator,协作者,協作者,Collaborator
+permissions.caretaker,殖民地代管者,殖民地代管者,Colony caretaker
+permissions.accept_work,允许参与其他玩家的工作,允許參與其他玩家的工作,Allow work for other players
+permissions.use_facilities,使用开放设施,使用開放設施,Use shared facilities
+permissions.take_resources,取用物资,取用物資,Take resources
+permissions.build,施工,施工,Construction
+permissions.deconstruct,拆除,拆除,Deconstruction
+ui.close,关闭,關閉,Close
+ui.phase1_notice,支持通信、授权观察与挖掘协作；星球迁移和火箭互访仍在开发。,支援通訊、授權觀察與挖掘協作；星球遷移和火箭互訪仍在開發。,"Chat, share views and plan digs together. Planet transfers and rocket visits are still in development."
+ui.enabled,已开启,已啟用,Enabled
+ui.disabled,已关闭,已停用,Disabled
+ui.room_name,星系名称,星系名稱,Star system name
+ui.port,端口,連接埠,Port
+ui.optional,可留空,可留空,Optional
+ui.refresh,刷新,重新整理,Refresh
+ui.cancel,取消,取消,Cancel
+ui.room_code,创建或加入后显示房间码,建立或加入後顯示房間代碼,Room code appears after creating or joining
+ui.start_game,开始游戏,開始遊戲,Start game
+ui.enter_game,继续开局,繼續開局,Continue setup
+ui.leave,离开房间,離開房間,Leave room
+ui.chat_placeholder,输入消息后按回车发送,輸入訊息後按 Enter 傳送,Type a message and press Enter
+ui.send,发送,傳送,Send
+ui.connecting,正在连接,正在連線,Connecting
+ui.connected,已连接,已連線,Connected
+ui.reconnecting,正在重新连接,正在重新連線,Reconnecting
+ui.next_retry,{0} 秒后重试,{0} 秒後重試,Retrying in {0}s
+ui.reconnected,连接已恢复,連線已恢復,Connection restored
+ui.reconnect_failed,重新连接失败,重新連線失敗,Could not reconnect
+ui.connection_quality,连接状态,連線狀態,Connection status
+ui.latency,延迟 {0} 毫秒,延遲 {0} 毫秒,Latency {0} ms
+ui.packet_loss,丢包 {0}%,封包遺失 {0}%,Packet loss {0}%
+ui.slow_connection,网络较慢，正在等待数据,網路較慢，正在等待資料,Slow connection; waiting for data
+ui.synchronizing,正在同步,正在同步,Synchronizing
+ui.waiting_for_sync,等待同步完成,等待同步完成,Waiting for synchronization
+ui.not_connected,未连接,未連線,Not connected
+ui.no_players,尚未加入房间,尚未加入房間,Not in a room
+ui.no_rooms,暂无房间。可刷新大厅或使用房间码直连。,暫無房間。可重新整理大廳或使用房間代碼直連。,No rooms found. Refresh or join using a room code.
+ui.lobby_subtitle,与朋友在星海相遇,與朋友在星海相遇,Meet friends among the stars
+ui.profile,玩家,玩家,Player
+ui.connection,连接方式,連線方式,Connection
+ui.room_settings,星系设置,星系設定,Star system settings
+ui.room_list,可加入的星系,可加入的星系,Available star systems
+ui.direct_join,房间码直连,房間代碼直連,Join by code
+ui.join_hint,粘贴房间码或输入 IP:端口,貼上房間代碼或輸入 IP:連接埠,Paste a room code or enter IP:port
+ui.empty_title,暂无房间,暫無房間,No rooms found
+ui.empty_hint,刷新查找房间，或使用房间码加入。,重新整理尋找房間，或使用房間代碼加入。,Refresh the list or join with a room code.
+ui.members,房间成员,房間成員,Room members
+ui.invite,邀请朋友,邀請朋友,Invite friends
+ui.chat_title,房间聊天,房間聊天,Room chat
+ui.chat_empty,暂无消息,暫無訊息,No messages yet
+ui.host,房主,房主,Host
+ui.you,你,你,You
+ui.open_slot,等待朋友加入,等待朋友加入,Waiting for a friend
+ui.room_tag,联机大厅,連線大廳,Online lobby
+ui.preview,开发预览,開發預覽,Development preview
+ui.password_hint,加入有密码的房间时也填写这里,加入有密碼的房間時也填寫這裡,Also enter the password here when joining
+ui.wait_host,等待房主开始游戏,等待房主開始遊戲,Waiting for the host to start
+error.online_disabled,请先开启联机,請先啟用連線,Enable online play first
+error.invalid_name,玩家名字不能为空且最多 32 个字符,玩家名稱不能為空且最多 32 個字元,Player name must contain 1 to 32 characters
+error.invalid_room_name,房间名称不能为空且最多 64 个字符,房間名稱不能為空且最多 64 個字元,Room name must contain 1 to 64 characters
+error.invalid_address,房间码或 IP 与端口格式错误,房間代碼或 IP 與連接埠格式錯誤,Invalid room code or IP and port
+error.password_too_long,密码最多 128 个字符,密碼最多 128 個字元,Password is limited to 128 characters
+error.wrong_password,房间密码错误,房間密碼錯誤,Incorrect room password
+error.version_mismatch,双方的游戏或 CycleTrim 版本不一致,雙方的遊戲或 CycleTrim 版本不一致,Game or CycleTrim versions do not match
+error.protocol_mismatch,联机协议版本不兼容,連線協定版本不相容,Incompatible network protocol
+error.invalid_packet,收到无效网络消息,收到無效網路訊息,Invalid network message
+error.handshake_required,连接验证未完成,連線驗證未完成,Connection handshake required
+error.connection_rejected,房间拒绝了连接,房間拒絕了連線,Connection rejected
+error.room_full,房间已满（最多 4 人）,房間已滿（最多 4 人）,Room is full (4 players maximum)
+error.host_only,该操作仅允许房主执行,此操作僅允許房主執行,Only the host can perform this action
+error.chat_rate_limited,消息发送过快,訊息傳送過快,Chat rate limit exceeded
+error.invalid_chat_or_rate,消息为空或过长或发送太快,訊息為空或過長或傳送太快,Message is empty or too long or sent too quickly
+error.already_connected,请先离开当前房间,請先離開目前房間,Leave the current room first
+error.already_in_game,已有殖民地正在运行；不会自动切换存档,已有殖民地正在執行；不會自動切換存檔,A colony is already running; it will not be replaced automatically
+error.connect_failed,无法连接房间；请检查地址与防火墙,無法連線至房間；請檢查位址與防火牆,Could not connect; check the address and firewall
+error.listen_failed,房间监听失败,房間監聽失敗,Room listener failed
+error.host_disconnected,与房主的连接已断开,與房主的連線已中斷,Connection to the host was lost
+error.reconnecting,连接中断，正在重新连接,連線中斷，正在重新連線,Connection interrupted; reconnecting
+error.reconnect_expired,重新连接超时，请重新加入房间,重新連線逾時，請重新加入房間,Reconnect timed out; join the room again
+error.resume_invalid,无法恢复原来的连接，请重新加入房间,無法恢復原來的連線，請重新加入房間,Could not restore the connection; join the room again
+error.host_left,房主已离开房间,房主已離開房間,The host has left the room
+error.host_changed,房主已变更，请重新加入房间,房主已變更，請重新加入房間,The host has changed; join the room again
+error.chat_queue_full,待发送消息过多，请等待网络恢复,待傳送訊息過多，請等待網路恢復,Too many pending messages; wait for the connection to recover
+error.chat_delivery_failed,消息未能送达,訊息未能送達,Message could not be delivered
+error.chat_history_expired,断线期间的部分消息已无法恢复,斷線期間的部分訊息已無法恢復,Some messages sent while disconnected are no longer available
+error.connection_closed,连接已关闭,連線已關閉,Connection closed
+error.network_failed,网络操作失败；请检查连接设置,網路操作失敗；請檢查連線設定,Network operation failed; check connection settings
+error.steam_unavailable,Steam 联机接口不可用；可尝试局域网直连,Steam 連線介面無法使用；可嘗試區域網路直連,Steam networking is unavailable; LAN direct connection is available
+error.steam_send_failed,Steam 消息发送失败,Steam 訊息傳送失敗,Steam message delivery failed
+error.steam_lobby_failed,Steam 大厅操作失败,Steam 大廳操作失敗,Steam lobby operation failed
+error.lan_discovery_unavailable,局域网发现不可用；仍可复制房间码直连,區域網路探索無法使用；仍可複製房間代碼直連,LAN discovery unavailable; direct room-code connection still works
+error.dependencies_required,需要有效玩家名并启用 CycleTrim 与眼冒金星,需要有效玩家名稱並啟用 CycleTrim 與眼冒金星,A valid player name and active CycleTrim and Spaced Out! are required
+time.local_pause,先解除本地暂停，再同意恢复,先解除本機暫停，再同意恢復,Release local pause before voting
+ui.player_offline,离线,離線,Offline
+room.public_steam,公开大厅,公開大廳,Public lobbies
+room.waiting,等待中,等待中,Waiting
+room.in_progress,游戏中,遊戲中,In progress
+room.join_running,中途加入,中途加入,Join game
+room.full,已满员,已滿員,Full
+system.home,我的星系,我的星系,My star system
+system.default_name,{0}'s 星系,{0}'s 星系,{0}'s System
+system.map,星系与旅行,星系與旅行,Systems and travel
+system.open,开放我的星系,開放我的星系,Open my star system
+system.browse,寻找其他星系,尋找其他星系,Find other star systems
+system.chat,通讯与房间,通訊與房間,Comms and room
+system.offline,现在是自己的星系。不开房也能继续生活。,現在是自己的星系。不開房也能繼續生活。,You are home. Your colony continues without opening a room.
+time.independent,各星球独立暂停与推进,各星球獨立暫停與推進,Each asteroid runs and pauses independently
+engine.title,行星发动机,行星發動機,Planetary Engine
+engine.tooltip,阅读打印舱内的行星发动机操作条目，打开星图。,閱讀列印艙內的行星發動機操作條目，開啟星圖。,Read the printing pod entry and open the star map.
+engine.story,打印舱的使用手册里夹着一页折起来的说明书。展开后，上面写着：“本设备亦可用于调整行星位置。”下方有一行小字：请勿在行星外侧站立。,列印艙的使用手冊裡夾著一頁摺起來的說明書。展開後，上面寫著：「本設備亦可用於調整行星位置。」下方有一行小字：請勿在行星外側站立。,"A folded page is tucked inside the printing pod manual. It reads: ""This device may also be used to adjust planetary position."" The fine print says: ""Please remain inside the planet."""
+engine.preview,星际航路尚未开放。此版本可开放星系、通讯与观察，尚不能搬运星球。,星際航路尚未開放。此版本可開放星系、通訊與觀察，尚不能搬運星球。,"Interstellar routes are not open yet. This preview supports rooms, comms and observation; moving an asteroid is not available."
+options.prefer_steam,优先显示 Steam 公开大厅,優先顯示 Steam 公開大廳,Prefer Steam public lobbies
+options.prefer_steam_hint,启动时优先使用 Steam 发现公开星系。关闭后默认使用局域网；仍可手动切换。,啟動時優先使用 Steam 尋找公開星系。關閉後預設使用區域網路；仍可手動切換。,Prefer Steam discovery at startup. Disable to default to LAN; manual switching remains available.
+moderation.title,星系成员管理,星系成員管理,System member management
+moderation.manage,管理,管理,Manage
+moderation.reason,原因（可选；最多 128 字）,原因（選填；最多 128 字）,Reason (optional; up to 128 characters)
+moderation.kick,踢出房间,踢出房間,Kick from room
+moderation.ban,踢出并封禁,踢出並封禁,Kick and ban
+moderation.bans,封禁,封禁,Bans
+moderation.unban,解除封禁,解除封禁,Unban
+moderation.close,关闭,關閉,Close
+moderation.empty,当前房间没有封禁记录,目前房間沒有封禁紀錄,No bans in this room
+moderation.scope_steam,封禁根据 Steam 连接验证的账号生效。仅限本次开房；重建房间后清除。踢出和封禁都不会删除玩家存档。,封禁根據 Steam 連線驗證的帳號生效。僅限本次開房；重建房間後清除。踢出和封禁都不會刪除玩家存檔。,Bans use the Steam account verified by the connection. They last until this room closes. Removing players does not delete their saves.
+moderation.scope_lan,局域网仅能撤销当前房间身份。对方新建连接身份后仍可能加入；没有账号级封禁。关闭房间后清除记录。不删除玩家存档。,區域網路僅能撤銷目前房間身分。對方建立新連線身分後仍可能加入；沒有帳號級封禁。關閉房間後清除紀錄。不刪除玩家存檔。,LAN only revokes known room credentials; a fresh identity can rejoin. There is no account ban. Records last until this room closes. Saves are preserved.
+error.player_kicked,房主已将你踢出房间；本地星球仍可继续,房主已將你踢出房間；本機星球仍可繼續,The host removed you from the room. Your local colony can continue.
+error.player_banned,房主已在本次房间中封禁你,房主已在本次房間中封禁你,The host banned you from this room instance.
+error.moderation_failed,未能执行管理操作；成员可能已离开或封禁列表已满,未能執行管理操作；成員可能已離開或封禁清單已滿,Could not apply the action; the member may have left or the ban list is full.
+planet.select,切换携带的星球,切換攜帶的星球,Choose another asteroid
+ui.player_count,{0} 位玩家,{0} 位玩家,{0} players
+error.planet_system_full,星系内没有可用落点；仍可留在这里浏览,星系內沒有可用落點；仍可留在這裡瀏覽,No arrival positions remain in this system. You can continue browsing.
+planet.selected,携带星球：,攜帶星球：,Selected asteroid:
+planet.none,尚未就绪,尚未就緒,Not ready
+planet.owned_name,{0} 的 {1},{0} 的 {1},{0}'s {1}
+planet.remote_view,查看这颗星球的授权观察画面；未共享内部不会显示。,查看這顆星球的授權觀察畫面；未共享內部不會顯示。,View this asteroid with its owner-approved visibility. Unshared interiors remain hidden.
+planet.return_home,返回自己的星系,返回自己的星系,Return to my system
+planet.close_system,关闭公开星系,關閉公開星系,Close public system
+planet.home_ready,星球由本机计算；身份随原生存档保存。,星球由本機計算；身分隨原生存檔儲存。,Your computer simulates your asteroid. Its identity is stored in your native save.
+planet.admitted,星球已入驻；点成员查看授权地图。,星球已入駐；點成員查看授權地圖。,Asteroid admitted. Select a member to observe their authorized map.
+planet.waiting,等待房主接纳星球；此时可以聊天。,等待房主接納星球；此時可以聊天。,Waiting for asteroid admission. Chat is available.
+error.planet_invalid_manifest,星球身份或尺寸无效；未登记入驻,星球身分或尺寸無效；未登記入駐,Invalid asteroid identity or size; admission was not registered.
+error.planet_identity_version,存档中的联机身份版本不受支持,存檔中的連線身分版本不受支援,The online identity version in this save is unsupported.
+error.planet_not_ready,请先载入自己的殖民地并选择一个星球,請先載入自己的殖民地並選擇一個星球,Load your colony and select an asteroid first.
+error.planet_duplicate_branch,这颗星球或同一联机分支已在星系中,這顆星球或同一連線分支已在星系中,This asteroid or its online branch is already in the system.
+error.planet_selection_locked,先返回自己的星系，再更换携带的星球,先返回自己的星系，再更換攜帶的星球,Return home before selecting another asteroid.
+error.planet_colony_changed,已载入另一个殖民地；原房间连接已关闭,已載入另一個殖民地；原房間連線已關閉,A different colony was loaded; the previous room connection was closed.
+map.players,玩家与星球,玩家與星球,Players and asteroids
+map.choose_position,点击星图空位置选择裂隙出口,點擊星圖空位置選擇裂隙出口,Select an empty hex for the rift exit
+map.position,裂隙出口：{0} / {1},裂隙出口：{0} / {1},Rift exit: {0} / {1}
+map.create_planet,创建一颗新星球,建立一顆新星球,Create a new asteroid
+map.load_planet,选择已有存档,選擇既有存檔,Choose an existing save
+map.rift_arrive,携带星球穿过裂隙,攜帶星球穿過裂隙,Bring my asteroid through the rift
+map.observe,观察选中的星球,觀察選取的星球,Observe selected asteroid
+map.initializing,等待星球初始化,等待星球初始化,Waiting for asteroid initialization
+map.preview,正在浏览星系。选择落点后可携带自己的星球加入。,正在瀏覽星系。選擇落點後可攜帶自己的星球加入。,Previewing this system. Select a landing to bring your own asteroid.
+error.planet_choose_position,请先选择一个空位置并等待房主确认,請先選擇一個空位置並等待房主確認,Select an empty position and wait for host confirmation first.
+error.planet_invalid_position,落点超出这个星系的边界,落點超出這個星系的邊界,The landing is outside this system.
+error.planet_position_taken,这个位置已被另一位玩家占用，请重新选择,這個位置已被另一位玩家占用，請重新選擇,Another player claimed this position. Select another hex.
+error.left_room,已返回自己的星系,已返回自己的星系,Returned to your home system
+error.leave_unconfirmed,尚未确认离开结果；未加入其他星系，请稍后重试,尚未確認離開結果；未加入其他星系，請稍後重試,Departure was not confirmed. No other system was joined; try again later.
+work.title,指令视图,指令視圖,Task plans
+work.mine,我的计划,我的計畫,My plans
+work.member,查看成员计划,查看成員計畫,Member plans
+work.merged,最终合并指令,最終合併指令,Merged orders
+work.personal,个人计划,個人計畫,Personal plans
+work.hint,我的计划立即显示；只有已确认的计划才进入合并视图。查看其他成员的计划需要授权。,我的計畫立即顯示；只有已確認的計畫才進入合併視圖。查看其他成員的計畫需要授權。,Your plans appear immediately. Confirmed plans enter the merged view. Viewing another member requires permission.
+work.confirmed,已确认,已確認,Confirmed
+work.dig,挖掘,挖掘,Dig
+work.draft,本地草稿,本機草稿,Local draft
+work.pending,正在同步…,正在同步…,Syncing…
+work.unconfirmed,结果待核对,結果待核對,Awaiting confirmation
+work.unavailable,联机执行尚未开放,連線執行尚未開放,Online execution unavailable
+work.rejected,未获接受,未獲接受,Rejected
+work.empty,当前视图没有计划，或尚未获准查看。,目前視圖沒有計畫，或尚未獲准查看。,"No plans in this view, or viewing is not authorized."
+work.propose_dig,拟定挖掘计划,擬定挖掘計畫,Plan a dig
+art.navigation,滚轮缩放 · 右键拖动 · 点击星位,滾輪縮放 · 右鍵拖動 · 點擊星位,Scroll to zoom · Right-drag to pan · Click a hex
+art.players_count,{0} 位成员,{0} 位成員,{0} members
+art.system_map,星系航图,星系航圖,System chart
+art.previous_page,上一页,上一頁,Previous page
+art.next_page,下一页,下一頁,Next page
+art.waiting_landing,尚未选择星位,尚未選擇星位,Landing not selected
+world.transfer_busy,地图传输繁忙，正在等待空闲,地圖傳輸忙碌，正在等待空閒,Map transfer busy; waiting for capacity
+team.title,团队与共同管理,團隊與共同管理,Team and shared control
+team.create,建立团队,建立團隊,Create team
+team.accept,接受团队邀请,接受團隊邀請,Accept invitation
+team.leave,离开团队,離開團隊,Leave team
+team.players,成员与在线玩家,成員與線上玩家,Members and online players
+team.permissions,独立授权,獨立授權,Separate permissions
+team.select_player,选择一位玩家,選擇一位玩家,Select a player
+team.invite,邀请加入团队,邀請加入團隊,Invite to team
+team.view_plans,查看其他成员的计划,檢視其他成員的計畫,View other members’ plans
+team.issue_tasks,发布挖掘等任务,發布挖掘等任務,Publish tasks such as digging
+team.command_dupes,指挥复制人（操作未开放）,指揮複製人（操作未開放）,Command duplicants (unavailable)
+team.administrator,管理员,管理員,Administrator
+team.transfer,交接管理权,交接管理權,Hand over administration
+team.member,团队成员,團隊成員,Team member
+team.nonmember,尚未加入团队,尚未加入團隊,Outside the team
+team.online,在线,線上,Online
+team.offline,离线 · 保留原授权,離線 · 保留原授權,Offline · permissions retained
+team.offline_member,离线成员,離線成員,Offline member
+team.previous,上一页,上一頁,Previous
+team.next,下一页,下一頁,Next
+team.state_none,尚未加入团队。房主可为本机已加载的星球建立团队。,尚未加入團隊。房主可為本機已載入的星球建立團隊。,Outside the team. The host can create a team for its loaded planet.
+team.state_running,房主正在计算 · {0} 位团队成员在线,房主正在運算 · {0} 位團隊成員線上,Host simulation running · {0} team members online
+team.state_stopped,房主的计算服务不可用，新的团队指令已暂停。,房主的運算服務無法使用，新的團隊指令已暫停。,Host simulation unavailable. New team commands are paused.
+team.state_waiting,没有团队成员在线，等待成员返回。,沒有團隊成員線上，等待成員返回。,Waiting for a team member to come online.
+team.state_invited,你收到了团队邀请。接受邀请后，各项操作权限仍需分别授权。,你收到了團隊邀請。接受邀請後，各項操作權限仍需分別授權。,You are invited. Accepting does not automatically grant task or duplicant permissions.
+team.permission_hint,各项权限互相独立。暂时离线保留原授权和已下达的任务；主动离队会撤销该成员的授权。,各項權限互相獨立。暫時離線保留原授權和已下達的任務；主動離隊會撤銷該成員的授權。,Permissions are separate. Going offline retains permissions and accepted tasks; leaving the team revokes permissions.
+team.last_administrator,最后一位管理员需先交接，再离开团队。,最後一位管理員需先交接，再離開團隊。,The last administrator must hand over administration before leaving.
+team.pending,请求已发出，等待房主确认。,請求已送出，等待房主確認。,Request sent. Waiting for the host to confirm.
+team.admin_only,只有团队管理员可以邀请玩家和修改成员权限。,只有團隊管理員可以邀請玩家和修改成員權限。,Only team administrators can invite players or change member permissions.
+team.native_notice,可预先配置复制人指挥权限；直接移动等操作尚未开放。授权挖掘由当地复制人按原生规则执行。,可預先設定複製人指揮權限；直接移動等操作尚未開放。授權挖掘由當地複製人按原生規則執行。,Duplicant permissions can be configured. Direct commands are not available yet; authorized digs use normal local duplicant behavior.
+team.host_notice,当前只支持房主本机已加载星球的团队管理；客人星球托管尚未开放。,目前只支援房主本機已載入星球的團隊管理；客人星球託管尚未開放。,Teams currently manage only the host’s loaded planet. Guest planet hosting is not available yet.
+team.error_host_native,需要房主本机已加载并已加入星系的星球。,需要房主本機已載入並已加入星系的星球。,A loaded and admitted host planet is required.
+team.error_authority_changed,星球或存档已更换，旧团队已停用。请重新建立房间。,星球或存檔已更換，舊團隊已停用。請重新建立房間。,The planet or save changed. The old team is inactive; create a new room.
+team.error_budget,团队请求暂时过多，请等待已有请求完成。,團隊請求暫時過多，請等待既有請求完成。,Too many team requests. Wait for pending requests to finish.
+team.error_denied,房主未接受这项修改。请检查管理员身份、邀请或授权是否仍然有效。,房主未接受這項修改。請檢查管理員身分、邀請或授權是否仍然有效。,"The host rejected this change. Check your administrator role, invitation, and permissions."
+team.error_unavailable,团队暂时不可用，请等待连接或房主的星球恢复。,團隊暫時無法使用，請等待連線或房主的星球恢復。,The team is unavailable. Wait for the connection or host planet to recover.
+work.allow_map,授权地图,授權地圖,Share map
+work.allow_plans,授权查看计划,授權查看計畫,Share plans
+work.allow_tasks,授权下达任务,授權下達任務,Allow orders
+team.error_receipt_budget,当前团队不能再接受新的管理操作，请重新建立房间。,目前團隊無法再接受新的管理操作，請重新建立房間。,This team cannot accept further management changes. Create a new room.
+view.temperature,温度视图,溫度視圖,Temperature
+view.waiting_region,正在请求视野内的数据…,正在請求視野內的資料…,Loading visible region…
+view.region_live,按需同步 · 只读观察,按需同步 · 唯讀觀察,Live region · read only
+view.region,X {0} Y {1} · {2}×{3},X {0} Y {1} · {2}×{3},X {0} Y {1} · {2}×{3}
+view.waiting_details,正在请求此格的详细数据…,正在請求此格的詳細資料…,Loading cell details…
+view.cell_pending,X {0} · Y {1} · 正在请求详细数据…,X {0} · Y {1} · 正在請求詳細資料…,X {0} · Y {1} · Loading details…
+work.result_uncertain,有指令结果尚未核实，当前不能确认最终执行状态。,有指令結果尚未核實，目前不能確認最終執行狀態。,Some order results are uncertain. The final execution state cannot yet be confirmed.
+team.members_tab,成员权限,成員權限,Member permissions
+team.my_dupes_tab,我的复制人,我的複製人,My duplicants
+team.dupe_delegation,复制人原拥有者的委派,複製人原擁有者的委派,Delegation by the original owner
+team.select_owned_dupe,选择你拥有的复制人,選擇你擁有的複製人,Select one of your duplicants
+team.owned_dupe_count,本星球已登记 {0} 位属于你的复制人，已交给团队共同指挥 {1} 位。,本星球已登記 {0} 位屬於你的複製人，已交給團隊共同指揮 {1} 位。,Your registered duplicants on this planet: {0}. Shared with the team: {1}.
+team.no_owned_dupes,本星球暂时没有已登记、属于你的复制人。其他玩家的复制人需要由原拥有者自行委派。,本星球暫時沒有已登記、屬於你的複製人。其他玩家的複製人需要由原擁有者自行委派。,You have no registered duplicants on this planet. Other owners must delegate their own duplicants.
+team.registered_dupe_number,已登记的复制人 {0},已登記的複製人 {0},Registered duplicant {0}
+team.dupe_delegated,已交给团队共同指挥,已交給團隊共同指揮,Shared with the team
+team.dupe_not_delegated,尚未委派给团队,尚未委派給團隊,Not delegated to the team
+team.delegate_selected,将这位复制人交给团队共同指挥,將這位複製人交給團隊共同指揮,Share this duplicant with the team
+team.revoke_selected,撤回这位复制人的团队共同授权,撤回這位複製人的團隊共同授權,Revoke this duplicant’s team delegation
+team.delegate_all_owned,委派我的全部已登记复制人,委派我的全部已登記複製人,Share all my registered duplicants
+team.revoke_all_owned,撤回我的全部团队共同授权,撤回我的全部團隊共同授權,Revoke all my team delegations
+team.cancel_delegation_batch,停止后续批量操作,停止後續批次操作,Stop remaining batch operations
+team.delegation_batch_pending,正在逐位请求委派变更，还剩 {0} 位。已确认的授权不会因停止操作而撤销。,正在逐位請求委派變更，還剩 {0} 位。已確認的授權不會因停止操作而撤銷。,Requesting changes one duplicant at a time: {0} remaining. Stopping does not undo confirmed changes.
+team.dupe_owner_hint,团队共同指挥需要同时具备成员的“指挥复制人”权限和原拥有者对此复制人的明确委派。这里仅更改你的团队共同授权，不转移复制人归属，也不会代替其他玩家授权。原生操作尚未开放。,團隊共同指揮需要同時具備成員的「指揮複製人」權限和原擁有者對此複製人的明確委派。這裡僅更改你的團隊共同授權，不轉移複製人歸屬，也不會代替其他玩家授權。原生操作尚未開放。,Team control requires both the member’s command permission and the owner’s explicit delegation for that duplicant. This changes only your team delegation and preserves ownership. Native commands are not available yet.
+taskview.hint,左键选格或拖选，点击挖掘提交；右键拖动视野。,左鍵選格或拖選，點擊挖掘提交；右鍵拖動視野。,"Click or drag to select, then plan a dig. Right-drag to pan."
+taskview.legend,斜线：草稿 · 方框：同步中 · 交叉：已确认 · 红色：未接受,斜線：草稿 · 方框：同步中 · 交叉：已確認 · 紅色：未接受,Slash: draft · Box: syncing · Cross: confirmed · Red: rejected
+taskview.priority,优先级 {0},優先級 {0},Priority {0}
+taskview.selected,已选 {0} 格 · 优先级 {1} · 点击挖掘提交,已選 {0} 格 · 優先級 {1} · 點擊挖掘提交,{0} cells selected · Priority {1} · Plan a dig to submit
+taskview.too_large,每次最多选择 {0} 格，请缩小选区。,每次最多選擇 {0} 格，請縮小選區。,Select at most {0} cells per order. Reduce the selection.
+taskview.unexplored,选区包含未探索格子，请重新选择。,選區包含未探索格子，請重新選擇。,The selection includes unexplored cells. Select again.
+taskview.solid_only,挖掘选区必须全部是固体地形。,挖掘選區必須全部是固體地形。,Select solid terrain for digging.
+taskview.stale_selection,观察状态已变化，请等待地图更新后重新选格。,觀察狀態已變化，請等待地圖更新後重新選格。,"The observed world changed. Wait for the map, then select again."
+taskview.local_draft,已保留本地草稿，尚未发送；请检查授权与连接。,已保留本機草稿，尚未傳送；請檢查授權與連線。,Local draft kept but not sent. Check permission and connection.
+taskview.not_authorized,未获准下达任务；草稿保留在我的计划中。,未獲准下達任務；草稿保留在我的計畫中。,Task permission was denied. Your draft remains in My plans.
+taskview.native_conflict,该处已有其他任务或建筑，计算主机未接受此计划。,該處已有其他任務或建築，計算主機未接受此計畫。,An existing order or construction conflicts with this plan.
+taskview.capacity,计划队列已满，暂时无法新增草稿。,計畫佇列已滿，暫時無法新增草稿。,The plan queue is full. A new draft cannot be added.
+taskview.layer_denied,尚未获准查看这一层计划，请向星球管理者申请授权。,尚未獲准查看這一層計畫，請向星球管理者申請授權。,This plan layer is not authorized. Ask the planet manager for access.
+taskview.with_plans,观察与任务计划,觀察與任務計畫,Observation and task plans
+lobby.inspect,查看星系,查看星系,Inspect system
+lobby.network_settings,连接设置,連線設定,Connection settings
+chat.latest,最新消息,最新訊息,Latest messages
+chat.system,系统通讯,系統通訊,System message
+entry.overview,星系概览,星系概覽,System overview
+entry.capabilities,保留自己的殖民地，与星系成员通信、分享视野和协作任务。,保留自己的殖民地，與星系成員通訊、分享視野及協作任務。,"Keep your colony, talk to other members, share views and work together."
+entry.browse,浏览公开星系,瀏覽公開星系,Browse systems
+entry.choose_source,准备加入,準備加入,Prepare to join
+entry.your_asteroid,我的星球,我的星球,My asteroid
+entry.join,加入星系,加入星系,Join system
+entry.choose_position_step,1  选择星位,1  選擇星位,1  Choose a hex
+entry.choose_planet_step,2  选择星球,2  選擇星球,2  Choose an asteroid
+entry.confirm_step,3  加入星系,3  加入星系,3  Join system
+entry.position_ready,已保留星位：{0} / {1},已保留星位：{0} / {1},Reserved hex: {0} / {1}
+entry.position_pending,正在申请星位：{0} / {1},正在申請星位：{0} / {1},Requesting hex: {0} / {1}
+entry.position_reserved,星位已保留,星位已保留,Hex reserved
+entry.waiting_confirmation,等待星系确认…,等待星系確認…,Waiting for system…
+entry.connected,已加入星系。选择成员的星球，查看其分享的视野。,已加入星系。選擇成員的星球，查看其分享的視野。,You have joined this system. Select a member's asteroid to see their shared view.
+entry.preview,选择空星位，再挑选自己的星球。也可以先与成员聊聊。,選擇空星位，再挑選自己的星球。也可以先與成員聊聊。,"Choose an empty hex, then your asteroid. You can also talk to the members first."
+entry.leaving,正在离开星系…,正在離開星系…,Leaving system…
+entry.leave_preview,离开这个星系,離開這個星系,Leave this system
+entry.selected_asteroid,选择的星球,選擇的星球,Selected asteroid
+entry.no_planet,先准备一颗自己的星球,先準備一顆自己的星球,Choose your own asteroid
+entry.keep_colony,星球保留在自己的存档中。当前可通信、分享视野和协作任务；星球搬迁尚未开放。,星球保留在自己的存檔中。目前可通訊、分享視野及協作任務；星球搬遷尚未開放。,"Your asteroid stays in your save. Chat, shared views and tasks are available; asteroid transfer is not available yet."
+entry.choose_position_first,先点击星图上的空星位，再创建星球或选择存档。,先點擊星圖上的空星位，再建立星球或選擇存檔。,Choose an empty hex before creating an asteroid or choosing a save.
+entry.create_first,使用标准的新游戏流程选择星球和复制人，或载入已有存档。,使用標準的新遊戲流程選擇星球和複製人，或載入既有存檔。,"Use the normal new game setup to choose your asteroid and Duplicants, or load an existing save."
+entry.load_help,正在游玩时不能更换存档。请先通过游戏菜单返回主菜单，再选择已有存档。,正在遊玩時不能更換存檔。請先透過遊戲選單返回主選單，再選擇既有存檔。,"To choose a different save, return to the main menu using the game menu."
+entry.selected_member,选中的星球,選取的星球,Selected asteroid
+entry.unknown_player,星系成员,星系成員,System member
+entry.recenter,居中,置中,Center
+entry.available_asteroids,选择自己的星球,選擇自己的星球,Choose your asteroid
+entry.current_save,当前存档中已发现的星球。选择一颗作为你在这个星系中的星球。,目前存檔中已發現的星球。選擇一顆作為你在這個星系中的星球。,Choose one of the discovered asteroids in your current save for this system.
+entry.no_asteroids,这个存档还没有可选择的星球。请先完成标准开局。,這個存檔還沒有可選擇的星球。請先完成標準開局。,No asteroid is ready yet. Complete the normal colony setup first.
+entry.selected,已选择,已選擇,Selected
+entry.engine_manual,打印舱操作手册 · 补充条目,列印艙操作手冊 · 補充條目,Printing pod manual · Addendum
+entry.engine_chart,打开星系航图,開啟星系航圖,Open system chart

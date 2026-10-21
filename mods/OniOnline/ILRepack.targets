@@ -1,0 +1,12 @@
+<Project>
+  <Target Name="MergePLibIntoOniOnline" AfterTargets="Build" BeforeTargets="PackageMod;PackageOniOnlineArtifacts" Condition="Exists('$(OutputPath)PLib.dll')">
+    <ItemGroup>
+      <OnlineMergeAssemblies Include="$(OutputPath)$(TargetName)$(TargetExt)" />
+      <OnlineMergeAssemblies Include="$(OutputPath)PLib.dll" />
+    </ItemGroup>
+    <ILRepack Parallel="true" DebugInfo="true" AllowDuplicateResources="true"
+      LibraryPath="$(OniManagedPath)" InputAssemblies="@(OnlineMergeAssemblies)"
+      TargetKind="SameAsPrimaryAssembly" OutputFile="$(OutputPath)$(TargetName)$(TargetExt)" />
+    <Delete Files="$(OutputPath)PLib.dll;$(OutputPath)PLib.xml" />
+  </Target>
+</Project>

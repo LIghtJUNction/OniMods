@@ -52,7 +52,7 @@ namespace OniMcp.Tools
         private static Dictionary<string, object> GetNeedsSummary(MinionIdentity dupe)
         {
             var amounts = new Dictionary<string, object>();
-            var amountInstance = dupe.GetComponent<Amounts>();
+            var amountInstance = dupe.GetAmounts();
             if (amountInstance != null)
             {
                 foreach (var amount in amountInstance.ModifierList)
@@ -137,7 +137,7 @@ namespace OniMcp.Tools
                 return result;
 
             var batteryDefinition = Db.Get()?.Amounts?.BionicInternalBattery;
-            var batteryAmount = batteryDefinition == null ? null : dupe.GetComponent<Amounts>()?.Get(batteryDefinition);
+            var batteryAmount = batteryDefinition == null ? null : dupe.GetAmounts()?.Get(batteryDefinition);
             result["chargeJ"] = Math.Round(ToolUtil.SafeFloat(monitor.CurrentCharge), 1);
             result["capacityJ"] = batteryAmount == null ? null : (object)Math.Round(ToolUtil.SafeFloat(batteryAmount.GetMax()), 1);
             result["online"] = monitor.IsOnline;
