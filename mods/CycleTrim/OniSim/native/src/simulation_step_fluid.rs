@@ -11,99 +11,6 @@ fn old_phase(world: &PhysicsWorld, elements: &ElementTable, cell: usize) -> u8 {
         & 3
 }
 
-fn pressure_target(
-    world: &PhysicsWorld,
-    elements: &ElementTable,
-    source_element: u16,
-    source_phase: u8,
-    cell: usize,
-) -> bool {
-    let element = world.read.element[cell];
-    let state = elements.elements[element as usize].record.state;
-    world.read.properties[cell] & 1 == 0
-        && world.write.element[cell] == element
-        && state & 2 == 0
-        && (state & 3 != source_phase || element == source_element)
-}
-
-fn pressure_cell(
-    world: &mut PhysicsWorld,
-    elements: &ElementTable,
-    diseases: &DiseaseTable,
-    events: &mut EventQueues,
-    cell: usize,
-) -> bool {
-    let element = world.read.element[cell];
-    let record = &elements.elements[element as usize].record;
-    let source_phase = record.state & 3;
-    let coefficient = record.flow;
-    if world.read.properties[cell] & 1 != 0
-        || world.write.element[cell] != element
-        || record.state & 2 != 0
-    {
-        return false;
-    }
-    let direction = world.scan_direction;
-    let side = cell.wrapping_add_signed(direction as isize);
-    let horizontal = if pressure_target(world, elements, element, source_phase, side) {
-        direction as f32
-            * crate::gas::update_pressure(
-                world,
-                elements,
-                diseases,
-                events,
-                cell,
-                element,
-                source_phase,
-                coefficient,
-                side,
-            )
-    } else {
-        0.0
-    };
-    world.flow[cell][1] += horizontal;
-    world.flow[side][0] -= horizontal;
-    let upper = cell + world.stride;
-    let vertical = if world.write.element[cell] == element
-        && pressure_target(world, elements, element, source_phase, upper)
-    {
-        crate::gas::update_pressure(
-            world,
-            elements,
-            diseases,
-            events,
-            cell,
-            element,
-            source_phase,
-            coefficient,
-            upper,
-        )
-    } else {
-        0.0
-    };
-    world.flow[cell][2] += vertical;
-    world.flow[upper][3] -= vertical;
-    if (old_phase(world, elements, upper) | old_phase(world, elements, side)) != 3
-        && world.write.element[cell] == element
-        && pressure_target(world, elements, element, source_phase, side + world.stride)
-    {
-        crate::gas::update_pressure(
-            world,
-            elements,
-            diseases,
-            events,
-            cell,
-            element,
-            source_phase,
-            coefficient,
-            side + world.stride,
-        );
-    }
-    // All cell-mutating pressure calls are below the early-return guard.
-    // Conservatively retain the copy even if no target accepted a transfer.
-    true
-}
-
 /// Native pressure reverse scans begin at x=max_x and stop before x=min_x;
 /// the forward scan begins at min_x and stops before max_x. This selects each
 /// horizontal edge from the side indicated by scan_direction.
@@ -117,19 +24,7 @@ pub(crate) fn gas_phase(
     events: &mut EventQueues,
     region: Region,
 ) -> bool {
-    let mut changed = false;
-    for y in region.min_y..region.max_y {
-        let row = y as usize * world.stride;
-        let (mut cell, stop) = if world.scan_direction > 0 {
-            (row + region.min_x as usize, row + region.max_x as usize)
-        } else {
-            (row + region.max_x as usize, row + region.min_x as usize)
-        };
-        while cell != stop {
-            changed |= pressure_cell(world, elements, diseases, events, cell);
-            cell = cell.wrapping_add_signed(world.scan_direction as isize);
-        }
-    }
+    let mut changed = crate::pressure_sweep::run(world, elements, diseases, events, region);
     let (min_x, max_x, min_y, max_y) = displacement_bounds(world, region);
     for y in min_y..max_y {
         for x in min_x..max_x {

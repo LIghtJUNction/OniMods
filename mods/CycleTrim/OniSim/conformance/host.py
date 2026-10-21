@@ -75,9 +75,9 @@ def encode_elements(items: list[dict]) -> bytes:
                          item.get("off_gas_probability", 0), item.get("light_absorption", 0),
                          item.get("radiation_absorption", 0), item.get("radiation_per_1000_mass", 0))
         struct.pack_into("<fff", raw, 152, 300, 0, 1)
-        # JSON's NaN literal loses the authored payload. Keep selected thermal
-        # fields as explicit wire words for independent IEEE boundary fixtures.
-        offsets = dict(conductivity=16, solid_surface=24, liquid_surface=28, gas_surface=32)
+        # JSON's NaN literal loses the authored payload. Keep selected fields
+        # as explicit wire words for independent IEEE boundary fixtures.
+        offsets = dict(conductivity=16, solid_surface=24, liquid_surface=28, gas_surface=32, flow=36)
         overrides = item.get("float_word_overrides", {})
         if not isinstance(overrides, dict):
             raise ValueError("Float-word overrides must be a field-to-u32 object")

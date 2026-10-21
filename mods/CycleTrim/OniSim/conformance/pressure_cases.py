@@ -70,4 +70,26 @@ def pressure_cases():
             seed=index, steps=12, diseases=[{}], fill=dict(element="Oxygen", mass=1, temperature=300),
             regions=regions,
         ))
+    # Pressure metadata keeps the exact wire word, including signaling NaNs.
+    # Localized gas/liquid pairs exercise transfer and clamp ordering without
+    # replacing the helper with a separate arithmetic model.
+    flow_words = (0, 0x80000000, 1, 0x80000001, 0x007fffff, 0x00800000,
+                  0x3dcccccd, 0x7f800000, 0xff800000, 0x7fc01234,
+                  0x7f800001, 0xff800001)
+    for material in ("Oxygen", "Water"):
+        for word in flow_words:
+            table = elements()
+            for item in table:
+                item["conductivity"] = 0
+                if item["name"] == material:
+                    item["float_word_overrides"] = dict(flow=word)
+            result.append(dict(
+                name=f"pressure-flow-word-{material.lower()}-{word:08x}",
+                width=7, height=5, seed=42, steps=3, diseases=[{}], elements=table,
+                fill=dict(element="Unobtanium", mass=1000, temperature=300),
+                regions=[dict(x=x, y=2, width=1, height=1,
+                              cell=dict(element=material, mass=mass, temperature=temperature,
+                                        disease=0, disease_count=count))
+                         for x, mass, temperature, count in [(2, 4, 330, 17), (3, 1, 300, 2)]],
+            ))
     return result

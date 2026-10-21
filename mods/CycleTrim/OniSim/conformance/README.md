@@ -1,7 +1,21 @@
 # Native differential fixtures
 
-Latest source correction: the mixed-material thermal multiplication order now
-matches the original instruction sequence. The current native `c301cc3e…`
+Current source-built native: `2772e526…`. The borrowed pressure-sweep source
+passes 43 release Rust tests and 50 pure Python tests. Both 2772e526 and preceding
+8bd415ce pass the expanded 287 cases / 9739 publications at one and four workers.
+The 24 new flow-metadata fixtures retain exact signed-zero, subnormal, infinity
+and quiet/signaling NaN words. The public-patch build and canonical build both
+reproduce the measured native identity. See
+[the current receipt](results/linux-744825-pressure-sweep-borrows.json).
+
+Incremental native timing against 8bd415ce passes the fixed CPU/wall/RSS gates
+at 96x96 and 192x192. This does not establish direct official-library timing,
+whole-game performance, graphical acceptance or four simultaneous full games.
+Current actual-game acceptance remains pending. Sections below describe earlier
+binaries and retain their original test counts and scope.
+
+Earlier source correction: the mixed-material thermal multiplication order now
+matches the original instruction sequence. The then-current native `c301cc3e…`
 passes 227 cases and 9103 publications with [one](results/linux-744825-workers1.json)
 and [four](results/linux-744825-workers4.json) workers; all 31 release
 unit tests also pass. The three new interleaved-phase soak fixtures fail against
@@ -18,7 +32,7 @@ overlapping regions, both traversal orders at the 32-cell boundary, 24 frame
 batches and four native save/reload rounds. Selected runs pass all four cases /
 308 publications for c301cc3e and the private 9a04afbd inline proposal, each with
 one and four workers. This supplements the earlier 227-case full-suite receipts;
-a complete 231-case run has not yet been performed. See the
+at that time, a complete 231-case run had not yet been performed. See the
 [multi-region supplement](results/linux-744825-multi-region-soak.json). These
 remain authored native inputs, not realistic DLC-world/colony acceptance.
 

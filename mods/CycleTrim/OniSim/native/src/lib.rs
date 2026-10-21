@@ -1,3 +1,4 @@
+mod pressure_sweep;
 use std::ffi::{c_char, c_void};
 
 mod bytes;

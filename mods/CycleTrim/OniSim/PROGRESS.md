@@ -3,6 +3,36 @@
 ## Current development source
 
 The canonical development native is now
+`2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f`.
+The pressure sweep borrows fixed-length storage once, retaining checked indices,
+original floating expressions, serial transfer/notification order and padded-edge
+projection. It adds no heap storage or world copies. The former transfer caller
+has been migrated and removed; shared projection logic serves both notification
+paths. Transfer/cell source bodies match the baseline after adapter-name changes.
+
+All 43 release Rust tests and 50 game-free Python tests pass. Twenty-four new
+raw-flow-word fixtures include signed zero, subnormals, infinities and quiet/
+signaling NaNs. Both the baseline and new core pass the expanded 287 cases /
+9739 publications at one and four workers. An independent build from committed
+base e0e0fe7 plus the archived proposal reproduces the exact measured native.
+
+Incremental complete-frame tests against 8bd415ce on CPU0/2/4/6 with four workers
+pass the unchanged CPU/wall/RSS gates at both sizes: 96x96 has 96 samples and
+192x192 has 60. CPU medians fall 2.56-16.31% in the five nonthermal 96x96 scenes
+and 5.15-13.48% at 192x192. Thermal increases 0.70% / 2.50%, below the 3% limit.
+All final states match official and no timed major faults occur. A separate
+24-sample PMU diagnostic observes whole-process instructions -13.38% fluid /
+-12.36% mixed-germs, cycles -8.19% / -8.20%; physics instructions fall about
+13.7-13.8%. Host load/frequency dispersion and fixture scope still apply.
+
+Actual-game headless, graphical, whole-game CPU/RAM and four simultaneous-game
+acceptance of this new identity remain pending. Prior package/profile receipts
+bind older natives and cannot approve 2772e526. See
+`conformance/results/linux-744825-pressure-sweep-borrows.json`.
+
+## Previous 8bd development source
+
+The preceding development native was
 `8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0`.
 Twelve native source files and the expanded thermal case registration were
 integrated after checking the C301 source-archive ancestor and preserving
@@ -64,6 +94,15 @@ fall 0.15%. The serial physics thread accounts for about 90-97% of retired
 instructions in these two scenes. Prioritize its hotspots for larger gains.
 Counters do not override failed elapsed-time gates or establish whole-game FPS.
 Receipts are `conformance/results/linux-744825-disease-cleanup-{sse2,sse2-fastpaths,counters}.json`.
+
+A fresh canonical 8bd415ce profile covers all six 96x96 scenes, five repeats
+per scene with four workers on CPU0/2/4/6. All 30 final states match official;
+13,135 CPU-clock samples contain 12,402 native IPs with no loss/corruption.
+Pressure transfer takes 27.90-39.21% of native samples in the five nonthermal
+scenes. This supports examining repeated pressure-storage setup, not a claim
+of precise stall or actual-game attribution. Instrumented timings are excluded
+from performance acceptance. See
+`conformance/results/linux-744825-canonical-frame-profile.json`.
 
 A compact immutable element-property proposal `2390ab48…` targets serial phase
 and pressure lookups. It keeps raw flow words, checked indices and the original

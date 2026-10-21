@@ -6,9 +6,19 @@ use crate::world::{Cells, PhysicsWorld};
 pub(crate) use crate::numeric::{cvtt_f32_i32 as cvtt, smax, smin};
 
 pub(crate) fn game_index(world: &PhysicsWorld, cell: usize) -> Option<i32> {
-    let stride = world.stride as i64;
+    game_index_for_shape(world.width, world.height, world.stride, cell)
+}
+
+#[inline]
+pub(crate) fn game_index_for_shape(
+    width: usize,
+    height: usize,
+    stride: usize,
+    cell: usize,
+) -> Option<i32> {
+    let stride = stride as i64;
     let index = (cell as i64 / stride - 1) * (stride - 2) + cell as i64 % stride - 1;
-    (index >= 0 && index < (world.width * world.height) as i64).then_some(index as i32)
+    (index >= 0 && index < (width * height) as i64).then_some(index as i32)
 }
 
 pub(crate) fn notify(world: &mut PhysicsWorld, events: &mut EventQueues, cell: usize) {

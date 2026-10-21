@@ -1,15 +1,54 @@
 # Native frame performance work
 
 The canonical source-built native candidate is
-`8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0`.
+`2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f`.
 The numeric helper is adopted in source and retained in the current candidate.
 The earlier C301/EA8 native/managed pair passed targeted Steam headless and graphical
 small-colony acceptance; see RUNTIME-VALIDATION.md. Those receipts do not approve
 the new native identity. These earlier runs had host load
-and paging, so no whole-game FPS improvement is established. Experimental
+and paging, so no whole-game FPS improvement is established. Rejected
 variants below have separate identities and are not production replacements.
 
-## Current development comparison
+## Current borrowed pressure sweep
+
+The adopted 2772e526 source borrows the fixed-size pressure arrays once per
+serial sweep. Inlining reuses this storage context without copying worlds or
+adding heap buffers. Checked indexing, floating expressions, transfer order,
+ordered notification/deduplication and dirty bits remain. The old transfer
+entry point has no remaining callers and is removed.
+
+Forty-three release Rust tests and 50 pure Python tests pass. New exact-flow-word
+fixtures extend the official corpus to 287 cases / 9739 publications; both old
+and new natives pass at one/four workers. An independent build from e0e0fe7 plus
+the public patch reproduces the exact measured 2772e526 file. Source-body and
+export comparisons support review but do not replace executed conformance.
+
+Eight alternating pairs per scene at 96x96 and five at 192x192 compare against
+8bd415ce on CPU0/2/4/6, four workers on both sides. All 156 final states match
+official, with no timed major faults. Both sizes pass all fixed native gates.
+
+| Scene | 96x96 CPU change | 192x192 CPU change |
+| --- | ---: | ---: |
+| Fluid | -2.56% | -9.36% |
+| Thermal | +0.70% | +2.50% |
+| Sealed | -8.44% | -5.15% |
+| Germ flow | -7.50% | -10.66% |
+| Mixed germs | -7.87% | -9.11% |
+| Vacuum | -16.31% | -13.48% |
+
+The separate 24-sample CPU-core PMU run observes fluid instructions -13.38%,
+cycles -8.19%; mixed-germ instructions -12.36%, cycles -8.20%. Physics-thread
+instructions fall -13.81% / -13.72%; all final states match official and counter
+running/enabled is at least 98%. These counts support reduced main-thread work.
+
+Other host workloads remain running. All sample ranges, load/frequency records
+and RSS observations are retained. These incremental Rust fixture results are
+not direct official-library timing or whole-game FPS/RAM improvements. Runtime
+and concurrent complete-game acceptance remain pending. See the
+[exact receipt](conformance/results/linux-744825-pressure-sweep-borrows.json) and
+[base-bound proposal](conformance/proposals/pressure-sweep-borrows.patch).
+
+## Previous 8bd development comparison
 
 The corrected 8bd415ce native passes 41 release tests and both expanded
 263-case / 9571-publication official comparison suites, with one and four
@@ -36,6 +75,26 @@ has its own binary identity and fresh official CPU measurements above.
 Actual-game headless, graphical, whole-game CPU/RAM and concurrent complete-game
 acceptance of the new canonical native remain pending. The main distribution
 ZIP and earlier runtime receipts are separate artifacts.
+
+## Previous 8bd hotspot samples
+
+Thirty separate profiles sample preceding 8bd415ce on CPU0/2/4/6 with four
+workers, five repeats of each 96x96 scene. The 1 ms own-process userspace CPU
+clock sampler records 13,135 samples, including 12,402 in the native library,
+with no loss, corruption or thread errors. Every final state matches the pinned
+official library. Instrumented timing is not used for acceptance.
+
+Pressure transfer accounts for 36.60% of native samples in fluid, 30.77% sealed,
+27.90% germ-flow, 32.86% mixed-germs and 39.21% vacuum. Thermal instead samples
+PreparedStep::run (23.35%) and temperature update (19.75%) most heavily. These
+are symbol shares in authored fixtures, not whole-game bottleneck shares or
+precise stall attribution. Sampling and observer bias remain.
+
+The transfer disassembly still constructs and checks multiple common-length
+slices on every call. The now-adopted isolated proposal borrows these fields for a
+whole serial pressure sweep, keeping checked accesses and exact transfer order;
+it does not copy worlds or dispatch tiles. See the
+[canonical profile receipt](conformance/results/linux-744825-canonical-frame-profile.json).
 
 ## Compact serial element lookup experiment
 

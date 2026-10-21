@@ -11,7 +11,7 @@ class ElementWordsTests(unittest.TestCase):
         element = elements()[1]
         original = encode_elements([element])
         for field, offset in dict(conductivity=16, solid_surface=24,
-                                  liquid_surface=28, gas_surface=32).items():
+                                  liquid_surface=28, gas_surface=32, flow=36).items():
             for word in (0x80000000, 0x7f800000, 0x7fc01234, 0x7f800001):
                 actual = encode_elements([dict(element, float_word_overrides={field: word})])
                 expected = bytearray(original)
@@ -28,6 +28,20 @@ class ElementWordsTests(unittest.TestCase):
                       {'conductivity': 0x100000000}, {'conductivity': 1.0}):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 encode_elements([dict(elements()[1], float_word_overrides=value)])
+
+    def test_pressure_flow_catalog_preserves_exact_words(self):
+        from pressure_cases import pressure_cases
+        cases = [case for case in pressure_cases()
+                 if case['name'].startswith('pressure-flow-word-')]
+        self.assertEqual(len(cases), 24)
+        self.assertEqual(len({case['name'] for case in cases}), 24)
+        for case in cases:
+            material = case['regions'][0]['cell']['element']
+            index = next(i for i, item in enumerate(case['elements'])
+                         if item['name'] == material)
+            raw = encode_elements(case['elements'])
+            word = int(case['name'].rsplit('-', 1)[1], 16)
+            self.assertEqual(struct.unpack_from('<I', raw, 4 + 164 * index + 36)[0], word)
 
     def test_boundary_catalog_is_unique_and_encodable(self):
         cases = thermal_boundary_cases()
