@@ -39,8 +39,13 @@ namespace OniOnline.Multiplayer
         private static readonly FieldInfo trackerInstance = typeof(KPrefabIDTracker).GetField("Instance", BindingFlags.Static | BindingFlags.NonPublic);
         private readonly DupeOriginLedger ledger;
         private readonly System.Func<int, string> planetForWorld;
-        private readonly Dictionary<string, MinionIdentity> live = new Dictionary<string, MinionIdentity>(StringComparer.Ordinal);
+        private Dictionary<string, MinionIdentity> live = new Dictionary<string, MinionIdentity>(StringComparer.Ordinal);
         private readonly HashSet<int> unknownReported = new HashSet<int>();
+        private readonly HashSet<int> seenNativeIds = new HashSet<int>();
+        private string birthOwner;
+        private ClusterManager birthCluster;
+        private Dictionary<int, WorldContainer> birthWorlds = new Dictionary<int, WorldContainer>();
+        internal bool BirthReady { get; private set; }
         internal NativeDupeOrigins(DupeOriginLedger ledger, System.Func<int, string> planetForWorld)
         { this.ledger = ledger; this.planetForWorld = planetForWorld; }
         internal bool InitializeLegacy(string ownerId, out string error)
@@ -58,6 +63,7 @@ namespace OniOnline.Multiplayer
         { return AcceptBatch(entries, ownerId, true, out error); }
         private bool AcceptBatch(NativeDupeLoadEntry[] entries, string ownerId, bool newGame, out string error)
         {
+            SuspendBirths();
             error = null;
             if (ledger.Blocked) { error = ledger.Error; return false; }
             if ((newGame && (!ledger.LegacyPending || entries == null || entries.Length == 0)) || entries == null || entries.Length > DupeOriginCodec.MaxRecords)
@@ -78,6 +84,8 @@ namespace OniOnline.Multiplayer
                 byId.Add(entry.NativeId, entry);
             }
             var loadedPlanets = new Dictionary<int, string>();
+            var cluster = ClusterManager.Instance;
+            var preparedWorlds = new Dictionary<int, WorldContainer>();
             foreach (var entry in entries)
             {
                 if (loadedPlanets.ContainsKey(entry.SavedWorldId)) continue;
@@ -85,6 +93,7 @@ namespace OniOnline.Multiplayer
                 if (!DupeOriginCodec.ValidId(planet))
                 { error = "dupe_origin_legacy_planet_unresolved"; return false; }
                 loadedPlanets.Add(entry.SavedWorldId, planet);
+                preparedWorlds.Add(entry.SavedWorldId, cluster.GetWorld(entry.SavedWorldId));
             }
             var prepared = new Dictionary<string, MinionIdentity>(StringComparer.Ordinal);
             if (ledger.LegacyPending)
@@ -115,8 +124,59 @@ namespace OniOnline.Multiplayer
             }
             // No partial reference registration on a rejected batch. No later Live scan
             // can recover an ID that was not observed in this exact native load.
+            live = prepared;
+            birthOwner = ownerId;
+            birthCluster = cluster; birthWorlds = preparedWorlds;
+            seenNativeIds.UnionWith(byId.Keys);
+            seenNativeIds.UnionWith(ledger.CaptureDocument().Bindings.Select(b => b.NativeInstanceId));
+            BirthReady = true;
+            return true;
+        }
+        internal void SuspendBirths()
+        {
+            BirthReady = false;
+            birthOwner = null;
+            birthCluster = null; birthWorlds.Clear();
             live.Clear();
-            foreach (var pair in prepared) live.Add(pair.Key, pair.Value);
+            unknownReported.Clear();
+        }
+        internal bool BirthWorldReady(int worldId)
+        {
+            WorldContainer world;
+            return BirthReady && birthCluster != null && ReferenceEquals(birthCluster, ClusterManager.Instance) &&
+                birthWorlds.TryGetValue(worldId, out world) && world != null && ReferenceEquals(world, birthCluster.GetWorld(worldId));
+        }
+        internal void ObserveNativeIds(IEnumerable<int> ids)
+        { seenNativeIds.UnionWith(ids); }
+        // Only the closed synchronous recruitment observer supplies this admission.
+        internal bool AcceptBirth(MinionIdentity dupe, int nativeId, int worldId, string planetId, string ownerId, out string error)
+        {
+            error = "dupe_origin_birth_native_conflict";
+            KPrefabID id; int world; MinionIdentity unique; DupeOriginRecord existing;
+            if (!BirthWorldReady(worldId) || ledger.Blocked || ledger.LegacyPending || !DupeOriginCodec.ValidId(ownerId) ||
+                ownerId != birthOwner || ownerId != LocalOwnerProfile.PersistentOwnerId ||
+                !DupeOriginCodec.ValidId(planetId) || !TryNative(dupe, out id, out world) ||
+                id.InstanceID != nativeId || world != worldId || planetForWorld(world) != planetId ||
+                !TryUniqueLive(nativeId, out unique) || !ReferenceEquals(unique, dupe)) return false;
+            if (ledger.TryResolve(nativeId, world, planetId, out existing))
+            {
+                var binding = ledger.GetBinding(existing.StableDupeId);
+                if (binding.AdmissionKind != DupeAdmissionKind.NativeLocal || existing.Kind != DupeOriginKind.NativeLocal ||
+                    existing.OriginalOwnerId != ownerId || existing.OriginPlanetId != planetId ||
+                    !IsCurrentKnownObject(existing.StableDupeId, nativeId, world)) return false;
+                error = null; return true;
+            }
+            if (seenNativeIds.Contains(nativeId)) return false;
+            // Allocate the replacement live index before committing the durable pair.
+            var prepared = new Dictionary<string, MinionIdentity>(live.Count + 1, StringComparer.Ordinal);
+            foreach (var pair in live) prepared.Add(pair.Key, pair.Value);
+            DupeOriginRecord origin;
+            if (!ledger.TryRegisterVerifiedNativeBirth(ownerId, new NativeDupeOriginBinding {
+                NativeInstanceId = nativeId, NativeWorldId = world, CurrentPlanetId = planetId,
+                AdmissionKind = DupeAdmissionKind.NativeLocal, AdmissionTransferId = "" }, out origin, out error)) return false;
+            prepared.Add(origin.StableDupeId, dupe);
+            live = prepared;
+            seenNativeIds.Add(nativeId);
             return true;
         }
         private static bool Tracked(KPrefabID id)
@@ -145,6 +205,7 @@ namespace OniOnline.Multiplayer
             if (ledger.Blocked || ledger.LegacyPending) return;
             foreach (var binding in ledger.CaptureDocument().Bindings)
             {
+                if (binding.NativeWorldId == DupeOriginCodec.RetiredWorldId) continue;
                 MinionIdentity dupe, unique; KPrefabID id; int world;
                 if (!live.TryGetValue(binding.StableDupeId, out dupe) || !TryNative(dupe, out id, out world)) continue;
                 if (!TryUniqueLive(id.InstanceID, out unique) || !ReferenceEquals(unique, dupe)) continue;
@@ -216,13 +277,18 @@ namespace OniOnline.Multiplayer
                 // Unknown/missing index, an unexplained location, and duplicate IDs are not
                 // evidence of death. Preserve those mappings; their online commands fail closed.
                 if (DupeOriginRetentionPolicy.MayRemoveBinding(everConfirmed, exactObjectDestroyed, matchingLiveNativeId))
-                { string error; ledger.TryRemoveVerifiedBinding(binding, out error); }
+                {
+                    // Keep the native ID reserved across saves; 255 is never a live world.
+                    var retired = binding.Copy(); retired.NativeWorldId = DupeOriginCodec.RetiredWorldId;
+                    string error;
+                    if (ledger.TryRebindVerifiedNative(binding, retired, out error)) live.Remove(binding.StableDupeId);
+                }
             }
         }
         private void ReportUnknown(int nativeId)
         {
             if (unknownReported.Add(nativeId)) Debug.LogWarning("[OniOnline] Online duplicant command denied: missing verified origin/binding. " +
-                "Automatic native-birth registration is not implemented; unknown new duplicants are not assigned to the computation host.");
+                "Only verified closed recruitment/load batches establish ownership; unknown objects are not assigned to the computation host.");
         }
         private static bool TryNative(MinionIdentity dupe, out KPrefabID id, out int world)
         {
