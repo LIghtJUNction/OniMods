@@ -76,9 +76,61 @@ internal static class DupeOriginTests
         check(DupeOwnershipPolicy.CanControl(visitor, ownerA, null, false, true), "explicit entity team delegation permits another registered owner");
         check(!DupeOwnershipPolicy.CanControl(visitor, null, null, false, true) && !DupeOwnershipPolicy.CanControl(null, ownerA, ownerA, true, true),
             "missing actor registration or missing origin never falls back to host");
+        NativeBirths(check);
         Retention(check);
         RegisteredOwners(check);
         TeamOwnerProjection(check);
+    }
+    private static void NativeBirths(System.Action<bool, string> check)
+    {
+        string error; DupeOriginRecord origin, restored;
+        var candidate = new NativeDupeOriginBinding { NativeInstanceId = 70, NativeWorldId = 0,
+            CurrentPlanetId = Id(20), AdmissionKind = DupeAdmissionKind.NativeLocal };
+        var pending = DupeOriginLedger.Load(0, null, Id(10));
+        var blocked = DupeOriginLedger.Load(77, "preserve bytes", Id(10));
+        check(!pending.TryRegisterVerifiedNativeBirth(Id(1), candidate, out origin, out error) && pending.LegacyPending &&
+            pending.CapturePayload() == null, "birth cannot bootstrap an incomplete legacy load");
+        check(!blocked.TryRegisterVerifiedNativeBirth(Id(1), candidate, out origin, out error) &&
+            blocked.CapturePayload() == "preserve bytes", "birth cannot replace a blocked sidecar");
+        var ledger = DupeOriginLedger.Load(0, null, Id(10));
+        check(ledger.TryBootstrapLegacyLocal(Id(1), Array.Empty<NativeDupeOriginBinding>(), out error), "birth fixture initialized");
+        check(ledger.TryRegisterVerifiedNativeBirth(Id(1), candidate, out origin, out error) && origin != null &&
+            origin.Kind == DupeOriginKind.NativeLocal && origin.OriginalOwnerId == Id(1) && origin.OriginPlanetId == Id(20) &&
+            origin.OriginHomeSystemId == Id(10), "verified birth commits the original owner, planet and home");
+        string payload = ledger.CapturePayload(), stable = origin.StableDupeId;
+        check(candidate.StableDupeId == null && ledger.CaptureDocument().Origins.Length == 1 &&
+            ledger.CaptureDocument().Bindings.Length == 1, "birth adds one origin and one binding without modifying its candidate");
+        check(!ledger.TryRegisterVerifiedNativeBirth(Id(2), candidate, out restored, out error) && restored == null &&
+            ledger.CapturePayload() == payload, "duplicate native ID cannot create or reassign a second identity");
+        var collision = candidate.Copy(); collision.NativeWorldId = 1; collision.CurrentPlanetId = Id(21);
+        check(!ledger.TryRegisterVerifiedNativeBirth(Id(1), collision, out restored, out error) && ledger.CapturePayload() == payload,
+            "native ID reuse is rejected even on a different planet");
+        var imported = candidate.Copy(); imported.NativeInstanceId = 71; imported.AdmissionKind = DupeAdmissionKind.Imported;
+        var transferred = candidate.Copy(); transferred.NativeInstanceId = 72; transferred.AdmissionTransferId = Id(40);
+        var identified = candidate.Copy(); identified.NativeInstanceId = 73; identified.StableDupeId = Id(30);
+        var invalidWorld = candidate.Copy(); invalidWorld.NativeInstanceId = 74; invalidWorld.NativeWorldId = 255;
+        foreach (var invalid in new[] { imported, transferred, identified, invalidWorld })
+            check(!ledger.TryRegisterVerifiedNativeBirth(Id(1), invalid, out restored, out error) && restored == null &&
+                ledger.CapturePayload() == payload, "non-birth candidate is rejected without partial persistence");
+        check(DupeOriginLedger.Load(1, payload, Id(10)).TryResolve(70, 0, Id(20), out restored) &&
+            restored.SameAs(origin) && restored.StableDupeId == stable, "new birth survives the existing codec save/readback");
+        origin.OriginalOwnerId = Id(2);
+        check(ledger.CapturePayload() == payload, "returned birth record cannot mutate durable ownership");
+        var binding = ledger.GetBinding(stable); var retired = binding.Copy(); retired.NativeWorldId = DupeOriginCodec.RetiredWorldId;
+        check(ledger.TryRebindVerifiedNative(binding, retired, out error), "confirmed native retirement keeps an ID tombstone");
+        ledger = DupeOriginLedger.Load(1, ledger.CapturePayload(), Id(10)); payload = ledger.CapturePayload();
+        check(!ledger.TryResolve(70, DupeOriginCodec.RetiredWorldId, Id(20), out restored) &&
+            !ledger.TryRegisterVerifiedNativeBirth(Id(1), candidate, out restored, out error) && ledger.CapturePayload() == payload,
+            "retired native ID remains unresolvable and cannot be reused after save/readback");
+        var revived = retired.Copy(); revived.NativeWorldId = 0;
+        check(!ledger.TryRebindVerifiedNative(retired, revived, out error) && ledger.CapturePayload() == payload,
+            "native rebind cannot revive a retired identity");
+        check(!ledger.TryRemoveVerifiedBinding(retired, out error) && ledger.CapturePayload() == payload,
+            "binding removal cannot release a retired native ID");
+        revived.AdmissionKind = DupeAdmissionKind.Imported; revived.AdmissionTransferId = Id(40);
+        check(!ledger.TryCommitVerifiedImports(new[] { new VerifiedDupeImport { Origin = ledger.CaptureDocument().Origins[0],
+            Binding = revived, ExpectedPreviousBinding = retired } }, out error) && ledger.CapturePayload() == payload,
+            "verified import cannot replace a retired binding even with matching immutable provenance");
     }
     private static void Retention(System.Action<bool, string> check)
     {

@@ -9,7 +9,18 @@
     <!-- Concrete crypto providers are required by Unity Mono's net48 environment. -->
     <NoWarn>$(NoWarn);SYSLIB0021;SYSLIB0023</NoWarn>
   </PropertyGroup>
-  <ItemGroup>
+  <PropertyGroup Condition="'$(OriginAdapterTests)' == 'true'">
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);ONIONLINE_ORIGIN_ADAPTER_TESTS</DefineConstants>
+    <StartupObject>NativeDupeOriginAdapterTests</StartupObject>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(OriginAdapterTests)' == 'true'">
+    <Compile Include="NativeDupeOriginAdapterTests.cs" />
+    <Compile Include="../../mods/OniOnline/Core/DupeOriginLedger.cs" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/NativeDupeOrigins.cs" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/NativeDupeBirthObserver.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(OriginAdapterTests)' != 'true'">
     <Compile Remove="obj/**/*.cs;bin/**/*.cs" />
     <Compile Remove="RuntimeProbe*.cs" />
     <Compile Remove="NativeLifecycleProbe.cs" />

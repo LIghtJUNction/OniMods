@@ -72,6 +72,14 @@ def main() -> int:
             for path in projects
         )
         checks.append((
+            "OniOnline native-origin adapter regressions",
+            build_project_command(
+                ROOT / "tests/OniOnline.Tests/OniOnline.Tests.csproj",
+                dotnet,
+                args.skip_synthetic_performance,
+            ) + ["-p:OriginAdapterTests=true"],
+        ))
+        checks.append((
             "OniOnline multiplayer collector regressions",
             [sys.executable, str(ROOT / "tests/OniOnline.Tests/test_multiplayer_runtime.py"), "-v"],
         ))

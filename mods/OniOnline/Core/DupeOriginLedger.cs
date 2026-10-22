@@ -119,7 +119,7 @@ namespace OniOnline.Core
         internal bool TryResolve(int nativeId, int worldId, string planetId, out DupeOriginRecord origin)
         {
             origin = null;
-            if (Blocked || LegacyPending || document == null) return false;
+            if (Blocked || LegacyPending || document == null || worldId < 0 || worldId >= DupeOriginCodec.RetiredWorldId) return false;
             var binding = document.Bindings.FirstOrDefault(b => b.NativeInstanceId == nativeId && b.NativeWorldId == worldId && b.CurrentPlanetId == planetId);
             if (binding == null) return false;
             var known = document.Origins.FirstOrDefault(o => o.StableDupeId == binding.StableDupeId);
@@ -128,10 +128,32 @@ namespace OniOnline.Core
         }
         internal NativeDupeOriginBinding GetBinding(string stableDupeId)
         { return Blocked || LegacyPending ? null : document.Bindings.FirstOrDefault(b => b.StableDupeId == stableDupeId)?.Copy(); }
+        // The native adapter must prove the completed recruitment and exact new object.
+        // Commit its immutable origin and binding together; ordinary load never calls this.
+        internal bool TryRegisterVerifiedNativeBirth(string ownerId, NativeDupeOriginBinding candidate,
+            out DupeOriginRecord origin, out string error)
+        {
+            origin = null; error = null;
+            if (Blocked || LegacyPending || !DupeOriginCodec.ValidId(ownerId) || candidate == null ||
+                !string.IsNullOrEmpty(candidate.StableDupeId) || candidate.AdmissionKind != DupeAdmissionKind.NativeLocal ||
+                !string.IsNullOrEmpty(candidate.AdmissionTransferId) || candidate.NativeInstanceId < 0 ||
+                candidate.NativeWorldId < 0 || candidate.NativeWorldId >= DupeOriginCodec.RetiredWorldId || !DupeOriginCodec.ValidId(candidate.CurrentPlanetId) ||
+                document.Bindings.Any(b => b.NativeInstanceId == candidate.NativeInstanceId))
+            { error = "dupe_origin_birth_denied"; return false; }
+            var binding = candidate.Copy(); binding.StableDupeId = Guid.NewGuid().ToString("N"); binding.AdmissionTransferId = "";
+            var record = new DupeOriginRecord { StableDupeId = binding.StableDupeId, OriginalOwnerId = ownerId,
+                OriginPlanetId = binding.CurrentPlanetId, OriginHomeSystemId = document.HomeSystemId, Kind = DupeOriginKind.NativeLocal };
+            var next = document.Copy();
+            next.Origins = next.Origins.Concat(new[] { record }).ToArray();
+            next.Bindings = next.Bindings.Concat(new[] { binding }).ToArray();
+            if (!TryCommit(next, out error)) return false;
+            origin = record.Copy(); return true;
+        }
         internal bool TryRebindVerifiedNative(NativeDupeOriginBinding expectedOld, NativeDupeOriginBinding replacement, out string error)
         {
             error = null;
-            if (Blocked || LegacyPending || expectedOld == null || replacement == null || expectedOld.StableDupeId != replacement.StableDupeId ||
+            if (Blocked || LegacyPending || expectedOld == null || expectedOld.NativeWorldId == DupeOriginCodec.RetiredWorldId ||
+                replacement == null || expectedOld.StableDupeId != replacement.StableDupeId ||
                 expectedOld.AdmissionKind != replacement.AdmissionKind || expectedOld.AdmissionTransferId != replacement.AdmissionTransferId)
             { error = "dupe_origin_rebind_denied"; return false; }
             var current = document.Bindings.FirstOrDefault(b => b.StableDupeId == expectedOld.StableDupeId);
@@ -160,6 +182,8 @@ namespace OniOnline.Core
                 { error = "dupe_origin_immutable_conflict"; return false; }
                 NativeDupeOriginBinding prior;
                 bool hasPrior = bindings.TryGetValue(entry.Origin.StableDupeId, out prior);
+                if (hasPrior && prior.NativeWorldId == DupeOriginCodec.RetiredWorldId)
+                { error = "dupe_origin_retired_binding"; return false; }
                 if (hasPrior != (entry.ExpectedPreviousBinding != null) || (hasPrior && !prior.SameAs(entry.ExpectedPreviousBinding)))
                 { error = "dupe_origin_stale_binding"; return false; }
                 origins[entry.Origin.StableDupeId] = entry.Origin.Copy(); bindings[entry.Origin.StableDupeId] = entry.Binding.Copy();
@@ -169,7 +193,8 @@ namespace OniOnline.Core
         internal bool TryRemoveVerifiedBinding(NativeDupeOriginBinding expectedOld, out string error)
         {
             error = null;
-            if (Blocked || LegacyPending || expectedOld == null) { error = "dupe_origin_remove_denied"; return false; }
+            if (Blocked || LegacyPending || expectedOld == null || expectedOld.NativeWorldId == DupeOriginCodec.RetiredWorldId)
+            { error = "dupe_origin_remove_denied"; return false; }
             var current = document.Bindings.FirstOrDefault(b => b.StableDupeId == expectedOld.StableDupeId);
             if (current == null || !current.SameAs(expectedOld)) { error = "dupe_origin_stale_binding"; return false; }
             var next = document.Copy(); next.Bindings = next.Bindings.Where(b => b.StableDupeId != expectedOld.StableDupeId).ToArray();
@@ -187,6 +212,7 @@ namespace OniOnline.Core
     internal static class DupeOriginCodec
     {
         internal const int MaxRecords = 16384;
+        internal const int RetiredWorldId = 255;
         internal const int MaxBytes = 4 * 1024 * 1024;
         private const int Magic = 0x4f444e4f;
         internal static bool ValidId(string value)

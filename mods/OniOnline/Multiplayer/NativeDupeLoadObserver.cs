@@ -38,6 +38,7 @@ namespace OniOnline.Multiplayer
         }
         internal static Scope Begin(SaveLoader loader)
         {
+            NativeDupeBirthObserver.SuspendForLoad();
             if (current != null) { current.Fail("nested_public_load"); return null; }
             var scope = new Scope { Loader = loader };
             current = scope;
@@ -55,6 +56,7 @@ namespace OniOnline.Multiplayer
         }
         internal static Scope BeginReader(SaveLoader loader)
         {
+            NativeDupeBirthObserver.SuspendForLoad();
             var scope = current;
             if (scope == null) return null;
             if (!ReferenceEquals(scope.Loader, loader) || scope.ReaderActive || ++scope.Readers != 1)
@@ -63,6 +65,7 @@ namespace OniOnline.Multiplayer
         }
         internal static Scope BeginManager(SaveManager manager)
         {
+            NativeDupeBirthObserver.SuspendForLoad();
             var scope = current;
             if (scope == null) return null;
             if (!scope.ReaderActive || scope.ManagerActive || !ReferenceEquals(scope.Loader.saveManager, manager) || ++scope.Managers != 1)
@@ -74,6 +77,7 @@ namespace OniOnline.Multiplayer
         }
         internal static Root BeginRoot(GameObject prefab, Vector3 position)
         {
+            NativeDupeBirthObserver.Invalidate(); // Includes standalone/imported root loads.
             var scope = current;
             if (scope == null) return null;
             if (!scope.ReaderActive || !scope.ManagerActive)

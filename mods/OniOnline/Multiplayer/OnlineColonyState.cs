@@ -35,6 +35,7 @@ namespace OniOnline.Multiplayer
         [Serialize] private string dupeOriginPayload;
         private DupeOriginLedger dupeOrigins;
         private NativeDupeOrigins nativeDupeOrigins;
+        private Game originGame;
         private bool originFailureReported;
         private string originInitializationError;
         private bool initialized;
@@ -91,6 +92,8 @@ namespace OniOnline.Multiplayer
 
         protected override void OnCleanUp()
         {
+            NativeDupeBirthObserver.Cancel(this);
+            SuspendNativeBirths();
             NativeDupeNewGameObserver.Cancel(this);
             base.OnCleanUp();
         }
@@ -105,14 +108,16 @@ namespace OniOnline.Multiplayer
         [OnSerializing]
         private void BeforeSave()
         {
+            NativeDupeBirthObserver.Invalidate(); // Do not span a native serialization boundary.
             Ensure();
             if (ClusterManager.Instance != null) CapturePlanet();
             workJournal = NativeWorkJournal.CaptureSavedState(this, ownerId);
             if (EnsureNativeOrigins()) nativeDupeOrigins.CaptureKnownObjectsForSave();
             if (dupeOrigins != null)
             {
+                string payload = dupeOrigins.CapturePayload();
                 dupeOriginSchema = dupeOrigins.SchemaToSave;
-                dupeOriginPayload = dupeOrigins.CapturePayload();
+                dupeOriginPayload = payload;
             }
         }
 
@@ -135,7 +140,7 @@ namespace OniOnline.Multiplayer
             EnsureOriginState();
             int priorPlanets = planets.Count;
             bool accepted = false;
-            try { accepted = nativeDupeOrigins.AcceptNormalLoad(entries, ownerId, out error); return accepted; }
+            try { accepted = nativeDupeOrigins.AcceptNormalLoad(entries, ownerId, out error); if (accepted) originGame = Game.Instance; return accepted; }
             finally { if (!accepted && planets.Count > priorPlanets) planets.RemoveRange(priorPlanets, planets.Count - priorPlanets); }
         }
         internal bool AcceptNewGameOrigins(NativeDupeLoadEntry[] entries, out string error)
@@ -143,8 +148,22 @@ namespace OniOnline.Multiplayer
             EnsureOriginState();
             int priorPlanets = planets.Count;
             bool accepted = false;
-            try { accepted = nativeDupeOrigins.AcceptNewGame(entries, ownerId, out error); return accepted; }
+            try { accepted = nativeDupeOrigins.AcceptNewGame(entries, ownerId, out error); if (accepted) originGame = Game.Instance; return accepted; }
             finally { if (!accepted && planets.Count > priorPlanets) planets.RemoveRange(priorPlanets, planets.Count - priorPlanets); }
+        }
+        internal void SuspendNativeBirths()
+        { originGame = null; nativeDupeOrigins?.SuspendBirths(); }
+        // Observational: a delivery cannot manufacture a planet identity or bootstrap a load.
+        internal bool TryGetBirthContext(int worldId, out NativeDupeOrigins adapter, out string planetId, out string birthOwner)
+        {
+            adapter = null; planetId = null; birthOwner = null;
+            if (!initialized || !ReferenceEquals(Current, this) || originGame == null || !ReferenceEquals(originGame, Game.Instance) ||
+                nativeDupeOrigins == null || !nativeDupeOrigins.BirthWorldReady(worldId) ||
+                dupeOrigins.Blocked || dupeOrigins.LegacyPending || originInitializationError != null ||
+                ownerId != LocalOwnerProfile.PersistentOwnerId) return false;
+            var identity = planets.FirstOrDefault(p => p.NativeWorldId == worldId);
+            if (identity == null) return false;
+            adapter = nativeDupeOrigins; planetId = identity.PlanetId; birthOwner = ownerId; return true;
         }
         private void Update()
         {

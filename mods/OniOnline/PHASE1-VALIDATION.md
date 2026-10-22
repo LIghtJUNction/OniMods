@@ -2,6 +2,18 @@
 
 状态核对于 2026-10-21。以下先列当前开发状态和本轮证据，后面的日期章节保留历史结果；历史协议号、人数限制、入口行为和测试条数不代表当前源码或累计验收总数。
 
+## 2026-10-23：后续原生招募归属（宿主通过，游戏运行待验）
+
+按本机 744825 签名接入 `Telepad.OnAcceptDelivery(ITelepadDeliverable)` → `MinionStartingStats.Deliver(Vector3)` 的同步调用。只有确切的新对象已返回、原方法确实执行且外层正常完成后，才登记 NativeLocal。care package、普通 OnSpawn、load/import 不构成出生证明。属主必须匹配已接受批次的存档属主与本地 profile；星球须已有身份和同寿命的确切世界引用。读档、导入、保存、清理或世界替换打断调用时不登记。
+
+确认销毁后保留原生编号的退休绑定，使用既有 codec 的世界值 255；退休绑定不可解析或复活，保存回读后也不能重新认领其编号。旧版本已删除的编号历史无法还原。schema 与物理存档布局不变，拒绝不会改写归属 payload；编码成功后才更新序列化字段。
+
+本地验证基线为 `14743761282874a26134dd673f26b93bd3fab764`。生产 ledger、adapter、observer 的宿主适配器 **92 条断言通过，警告按错误处理**；完整 OniOnline 宿主套件 **3638 条断言通过**，包括真实同机 TCP、三个独立客户端进程和弱网重连；使用本机 744825 Managed 引用的 Release 构建通过，**0 warning / 0 error**。仓库 **51 项源码检查**及完整 `git diff --check` 通过。
+
+`scripts/check_mods.py` 在默认宿主套件之外自动追加同一项目的适配器模式，沿用 `ImportDirectoryBuildProps=false` 和 `TreatWarningsAsErrors=true`；适配器失败会使整体检查失败，`--static-only` 不运行 C#。单独复跑：`dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -p:OriginAdapterTests=true`。覆盖重复登记、外来属主、普通加载/导入、编号复用、中断加载、保存回读，以及交付后进入待销毁、原生 ID 冲突和加载状态。
+
+Unity/Game/Colony 边界使用 doubles。**真正的 Harmony 安装、Unity 招募和真实游戏存读档均未验收**；宿主进程、源码检查和引用构建不能替代游戏运行验收。完整迁移及双账号 P2P 仍待验证；建筑、直接移动及迁移开关不变。
+
 ## 2026-10-21 当前源码与验收边界
 
 当前 0.3.3 开发源码使用房间协议 **8**；挖掘继续使用工作协议 **4**，建筑消息使用 **5**，精确取消消息使用 **6**，复制人指令消息使用 **2**。建筑及直接移动的原生执行默认关闭。没有固定四人准入上限；星系空位约束星球登记，元数据分页、采样、发送队列和内存预算约束实际承载。Online 入口先浏览公开星系，进入星图预览后选位、确认；有存档可选择其中一颗星球，无存档使用原生选星球、世界生成和初始复制人选择流程。默认星系名来自玩家账号显示名，星球、家园星系、自定义名称及所选原生星球随存档保存。登记身份、选位与观察数据不等于迁移完整殖民地。
