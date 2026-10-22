@@ -224,6 +224,17 @@ def main() -> int:
         "no fresh probe report after reportSequence 1",
     )
 
+    ranking = analyzer.hotspot_summary([boundary_first, boundary_second], required)
+    require(ranking["observedSeconds"] == .2, "summary uses only intervals after the selected baseline")
+    require(all(t["freshCalls"] == 2 and abs(t["inclusiveSeconds"] - .000004) < 1e-12
+                for t in ranking["targets"]), "summary excludes all cumulative pre-baseline work")
+    require(all(abs(t["meanMillisecondsPerCall"] - .002) < 1e-12 for t in ranking["targets"]),
+            "summary converts stopwatch ticks into milliseconds per call")
+    require_value_error(lambda: analyzer.hotspot_summary([first], required), "at least two")
+    zero_duration = copy.deepcopy(boundary_second)
+    zero_duration["intervalDurationTicks"] = 0
+    require_value_error(lambda: analyzer.hotspot_summary([boundary_first, zero_duration], required),
+                        "positive observed interval")
     print("PASS CycleTrim performance probe analyzer regressions")
     return 0
 

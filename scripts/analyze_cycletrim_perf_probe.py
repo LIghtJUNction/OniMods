@@ -341,9 +341,48 @@ def select_series_after_sequence(report_items: list[dict], after_sequence: int) 
     return selected
 
 
+def hotspot_summary(report_items: list[dict], required: tuple[str, ...]) -> dict:
+    """Rank measured targets, rebased at the first selected cumulative snapshot."""
+    failures = validate_series(report_items, required)
+    if failures:
+        raise ValueError("; ".join(failures))
+    frequency = report_items[-1]["stopwatchFrequency"]
+    duration = sum(r["intervalDurationTicks"] for r in report_items[1:]) / frequency
+    if duration <= 0:
+        raise ValueError("A positive observed interval is required")
+    first, _ = _targets_by_name(report_items[0])
+    last, _ = _targets_by_name(report_items[-1])
+    targets = []
+    for name in required:
+        calls = last[name]["calls"] - first[name]["calls"]
+        seconds = (last[name]["totalTicks"] - first[name]["totalTicks"]) / frequency
+        targets.append({"name": name, "thread": last[name].get("thread"), "freshCalls": calls,
+                        "inclusiveSeconds": seconds,
+                        "meanMillisecondsPerCall": seconds * 1000 / calls if calls else None,
+                        "callsPerObservedSecond": calls / duration,
+                        "inclusiveSecondsPerObservedSecond": seconds / duration,
+                        "externalPatched": last[name].get("externalPatched"),
+                        "patchOwners": last[name].get("patchOwners")})
+    return {"schema": 1, "observedSeconds": duration,
+            "captureGeneration": report_items[-1].get("captureGeneration"),
+            "baselineSequence": report_items[0]["reportSequence"],
+            "lastSequence": report_items[-1]["reportSequence"],
+            "gcCollections": {name: sum(r["gc"][name] for r in report_items[1:])
+                              for name in ("gen0Delta", "gen1Delta", "gen2Delta")},
+            "lastManagedHeapBytes": report_items[-1]["gc"]["heapBytes"],
+            "targets": sorted(targets, key=lambda t: t["inclusiveSeconds"], reverse=True),
+            "limits": "Inclusive wall durations can overlap or span multiple threads; do not sum them into CPU time. "
+            "Observed time includes pauses and probe overhead. This is hotspot attribution, not FPS or speedup. "
+            "Mean per call is not a latency percentile; only targets requested by --require are ranked."}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("log", type=Path, help="Player.log or another ONI log containing probe output")
+    parser.add_argument(
+        "--summary-json", type=Path,
+        help="with --series, write a new hotspot ranking rebased to the first selected report",
+    )
     parser.add_argument(
         "--require",
         action="append",
@@ -388,6 +427,10 @@ def main() -> int:
         parser.error(f"log not found: {args.log}")
     if args.after_sequence is not None and not args.series:
         parser.error("--after-sequence requires --series")
+    if args.summary_json is not None and not args.series:
+        parser.error("--summary-json requires --series")
+    if args.summary_json is not None and args.summary_json.exists():
+        parser.error("Choose a new summary path; existing evidence is preserved")
 
     try:
         report_items = reports(args.log.read_text(encoding="utf-8", errors="replace"))
@@ -419,6 +462,17 @@ def main() -> int:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)
         return 1
+
+    if args.summary_json is not None:
+        try:
+            summary = hotspot_summary(report_items, required)
+        except ValueError as error:
+            print(f"FAIL: {error}", file=sys.stderr)
+            return 1
+        args.summary_json.parent.mkdir(parents=True, exist_ok=True)
+        with args.summary_json.open("x") as stream:
+            json.dump(summary, stream, indent=2, allow_nan=False)
+            stream.write("\n")
 
     for target in report["targets"]:
         if target.get("fastTrackPatched"):

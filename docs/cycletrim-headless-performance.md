@@ -1,5 +1,8 @@
 # CycleTrim and OniHarness: first headless performance iteration
 
+For current hotspot, thread/PSI, Python/FFI, syscall and matched-save A/B
+procedures, see [CycleTrim measurement](cycletrim-measurement.md).
+
 CycleTrim called `PatchAll` after the installed ONI loader's `OnLoad` had already
 installed the same assembly. The second installation duplicated callbacks and
 probe samples, and attempted to rewrite an already-rewritten queue-limit
