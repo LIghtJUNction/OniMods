@@ -17,6 +17,10 @@ OniMcp)
   EXPECTED_ID="3807166922"
   TITLE_CONTAINS="OniMcp"
   ;;
+OniOnline)
+  EXPECTED_ID="0"
+  TITLE_CONTAINS="OniOnline"
+  ;;
 *)
   echo "Unsupported publish target: $MOD_KEY" >&2
   exit 2
@@ -28,6 +32,9 @@ DRY_RUN=false
 PREFLIGHT_ONLY=false
 SKIP_TESTS=false
 ALLOW_DIRTY=false
+FIRST_MODE=""
+FIRST_PLAN=""
+FIRST_PLAN_HASH=""
 
 usage() {
   cat <<'EOF'
@@ -37,6 +44,11 @@ Usage: scripts/publish_cycletrim_steam.sh [options]
   --preflight-only  Query both Steam App contexts without uploading
   --skip-tests   Skip contract, binary, benchmark, and Rust tests
   --allow-dirty  Permit publishing an uncommitted worktree
+  --prepare-first-item  OniOnline only: prepare an offline, immutable first-item plan
+  --create-first-item   OniOnline only: create the reviewed Private Legacy item once
+  --publish-first-item  OniOnline only: publish the verified Private Legacy item
+  --plan <path>         First-item plan path (required for all first-item stages)
+  --expected-plan-sha256 <hash>  Reviewed plan SHA (required for create/publish)
   -h, --help     Show this help
 
 The publisher uses the logged-in Steam client and uploads a single legacy ZIP.
@@ -55,6 +67,15 @@ while (($#)); do
     ;;
   --skip-tests) SKIP_TESTS=true ;;
   --allow-dirty) ALLOW_DIRTY=true ;;
+  --prepare-first-item | --create-first-item | --publish-first-item)
+    [[ -z "$FIRST_MODE" ]] || { echo "Choose one first-item stage" >&2; exit 2; }
+    FIRST_MODE="$1"
+    ;;
+  --plan | --expected-plan-sha256)
+    [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || { echo "Missing value for $1" >&2; exit 2; }
+    if [[ "$1" == "--plan" ]]; then FIRST_PLAN="$2"; else FIRST_PLAN_HASH="$2"; fi
+    shift
+    ;;
   -h | --help)
     usage
     exit 0
@@ -70,6 +91,14 @@ done
 
 if [[ "$DRY_RUN" == true && "$PREFLIGHT_ONLY" == true ]]; then
   echo "--dry-run and --preflight-only cannot be combined" >&2
+  exit 2
+fi
+if [[ "$MOD_KEY" == "OniOnline" && -z "$FIRST_MODE" ]] || [[ "$MOD_KEY" != "OniOnline" && -n "$FIRST_MODE" ]]; then
+  echo "OniOnline requires an explicit first-item stage; existing-item targets cannot use it" >&2
+  exit 2
+fi
+if [[ -n "$FIRST_MODE" && ( "$DRY_RUN" == true || "$PREFLIGHT_ONLY" == true || -z "$FIRST_PLAN" ) ]]; then
+  echo "First-item stages require --plan and cannot combine with --dry-run/--preflight-only" >&2
   exit 2
 fi
 
@@ -92,6 +121,7 @@ with open(sys.argv[1], "rb") as handle:
 print(config.get("mods", {}).get(sys.argv[2], {}).get("publishedfileid", ""))
 PY
   )"
+  if [[ "$MOD_KEY" == "OniOnline" && -z "$configured_id" ]]; then configured_id="0"; fi
   if [[ "$configured_id" != "$EXPECTED_ID" ]]; then
     echo "Refusing upload: $MOD_KEY publishedfileid is '$configured_id', expected '$EXPECTED_ID'" >&2
     exit 1
@@ -137,7 +167,7 @@ run_publisher() {
   local context_app_id="$CREATOR_APP_ID"
   local argument
   for argument in "$@"; do
-    if [[ "$argument" == "--consumer-context" || "$argument" == "--verify-installed" || "$argument" == "--metadata-only" ]]; then
+    if [[ "$argument" == "--consumer-context" || "$argument" == "--verify-installed" || "$argument" == "--metadata-only" || "$argument" == "--publish-first-item" ]]; then
       context_app_id="$CONSUMER_APP_ID"
     fi
   done
@@ -225,6 +255,29 @@ client_preflight() {
 }
 
 validate_target
+
+if [[ -n "$FIRST_MODE" ]]; then
+  require_clean_worktree
+  if [[ "$FIRST_MODE" == "--prepare-first-item" ]]; then
+    if [[ "$SKIP_TESTS" != true ]]; then
+      (cd "$ROOT" && dotnet run --project tests/OniOnline.Tests -c Release)
+      (cd "$ROOT" && dotnet run --project tests/OniMods.SteamPublisher.Tests -c Release)
+    fi
+    (cd "$ROOT" && cargo run --quiet --release -- --config "$ROOT/onim.toml" --mod OniOnline publish --non-interactive --auto-note --dry-run)
+    dotnet build "$PUBLISHER_PROJECT" -c Release >/dev/null
+    run_publisher --prepare-first-item --vdf "$VDF_PATH" --output "$FIRST_PLAN"
+  else
+    [[ -n "$FIRST_PLAN_HASH" ]] || { echo "Create/publish requires reviewed --expected-plan-sha256" >&2; exit 2; }
+    pgrep -x steam >/dev/null 2>&1 || { echo "Steam must already be running" >&2; exit 1; }
+    dotnet build "$PUBLISHER_PROJECT" -c Release >/dev/null
+    if [[ "$FIRST_MODE" == "--create-first-item" ]]; then
+      run_publisher --create-first-item --plan "$FIRST_PLAN" --expected-plan-sha256 "$FIRST_PLAN_HASH" --confirm-first-create-once
+    else
+      run_publisher --publish-first-item --plan "$FIRST_PLAN" --expected-plan-sha256 "$FIRST_PLAN_HASH" --confirm-first-publication
+    fi
+  fi
+  exit 0
+fi
 
 if [[ "$PREFLIGHT_ONLY" == true ]]; then
   pgrep -x steam >/dev/null 2>&1 || {

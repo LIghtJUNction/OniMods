@@ -12,8 +12,8 @@ workshop_title = "OniMcp"
 [mods.CycleTrim]
 path = "mods/CycleTrim"
 publishedfileid = "3807166689"
-workshop_title = "CycleTrim (Early Development)"
+workshop_title = "CycleTrim"
 
 [mods.OniOnline]
 path = "mods/OniOnline"
-workshop_title = "OniOnline (Preview)"
+workshop_title = "OniOnline"

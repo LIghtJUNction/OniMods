@@ -417,6 +417,10 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
 
     let publishedfileid = if let Some(ref id) = selected.config.publishedfileid {
         id.clone()
+    } else if dry_run && selected.name == "OniOnline" {
+        // First creation is handled by the reviewed, one-shot Legacy publisher.
+        // ID 0 here only prepares metadata and never reaches a Steam upload.
+        "0".to_string()
     } else if non_interactive || dry_run {
         anyhow::bail!("无人值守发布要求在 onim.toml 配置 publishedfileid");
     } else {

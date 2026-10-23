@@ -17,6 +17,8 @@ if (oniPlanSha == cyclePlanSha)
 }
 RunPromotionCase();
 RunCycleTrimPromotionCase();
+RunFirstPublicationCase();
+RunPackagedDescriptionLayoutCase();
 
 var directory = Path.Combine(Path.GetTempPath(),
     "onim-candidate-journal-" + Guid.NewGuid().ToString("N"));
@@ -84,6 +86,41 @@ finally
     {
         Directory.Delete(directory, recursive: true);
     }
+}
+
+static void RunPackagedDescriptionLayoutCase()
+{
+    var root = Path.Combine(Path.GetTempPath(), "onim-description-layout-" + Guid.NewGuid().ToString("N"));
+    try
+    {
+        Directory.CreateDirectory(Path.Combine(root, "docs"));
+        var preview = Path.Combine(root, "preview.png");
+        File.WriteAllBytes(preview, [0x89, 0x50, 0x4E, 0x47]);
+        File.WriteAllText(Path.Combine(root, "docs", "steam-description-en.md"), "English package description\n");
+        File.WriteAllText(Path.Combine(root, "docs", "steam-description-zh.md"), "中文包说明\n");
+        var vdf = Path.Combine(root, "workshop.vdf");
+        static string Escape(string text) => text.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+        File.WriteAllText(vdf, string.Join('\n',
+            "\"workshopitem\"", "{", "\"appid\" \"457140\"",
+            $"\"publishedfileid\" \"{WorkshopTarget.WorkshopId}\"",
+            $"\"contentfolder\" \"{Escape(root)}\"", $"\"previewfile\" \"{Escape(preview)}\"",
+            "\"title\" \"OniOnline description test\"", "\"description\" \"Combined fallback\"",
+            "\"changenote\" \"Test\"", "}"));
+        var docs = WorkshopMetadataReader.Read(vdf);
+        if (docs.EnglishDescription != "English package description" || docs.ChineseDescription != "中文包说明")
+            throw new InvalidOperationException("Packaged docs descriptions were replaced by the combined VDF fallback");
+        File.WriteAllText(Path.Combine(root, "steam-description-en.md"), "Legacy root description");
+        var legacy = WorkshopMetadataReader.Read(vdf);
+        if (legacy.EnglishDescription != "Legacy root description" || legacy.ChineseDescription != "中文包说明")
+            throw new InvalidOperationException("Legacy root description precedence changed");
+        File.Delete(Path.Combine(root, "steam-description-en.md"));
+        Directory.Delete(Path.Combine(root, "docs"), recursive: true);
+        var fallback = WorkshopMetadataReader.Read(vdf);
+        if (fallback.EnglishDescription != "Combined fallback" || fallback.ChineseDescription != "Combined fallback")
+            throw new InvalidOperationException("Description fallback failed when no localized file was packaged");
+        Console.WriteLine("packaged docs, legacy root descriptions and combined fallback passed");
+    }
+    finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
 }
 
 static string RunPlanCase(
@@ -531,4 +568,324 @@ static void ExpectRecoveryJournalRejection(string path, string planSha256)
         || error.Message.Contains("different reviewed plan", StringComparison.Ordinal))
     {
     }
+}
+
+static void RunFirstPublicationCase()
+{
+    var target = new Dictionary<string, string>
+    {
+        ["ONIM_PUBLISH_NAME"] = "OniOnline",
+        ["ONIM_PUBLISH_WORKSHOP_ID"] = "0",
+        ["ONIM_PUBLISH_CREATOR_APP_ID"] = "636750",
+        ["ONIM_PUBLISH_CONSUMER_APP_ID"] = "457140",
+        ["ONIM_PUBLISH_EXPECTED_OWNER"] = "76561199137573787",
+    };
+    var previous = target.Keys.ToDictionary(
+        name => name, Environment.GetEnvironmentVariable);
+    var root = Path.Combine(Path.GetTempPath(),
+        "onionline-first-publication-" + Guid.NewGuid().ToString("N"));
+    try
+    {
+        foreach (var (name, value) in target)
+        {
+            Environment.SetEnvironmentVariable(name, value);
+        }
+        var content = Path.Combine(root, "OniOnline");
+        Directory.CreateDirectory(content);
+        var dllPath = Path.Combine(content, "OniOnline.dll");
+        File.WriteAllBytes(dllPath, [1, 2, 3]);
+        var yamlPath = Path.Combine(content, "mod.yaml");
+        const string yaml = "title: OniOnline\nstaticID: LIghtJUNction.OniOnline\n";
+        File.WriteAllText(yamlPath, yaml);
+        File.WriteAllText(Path.Combine(content, "mod_info.yaml"), "version: 0.1.0\n");
+        var previewPath = Path.Combine(root, "preview.png");
+        byte[] previewBytes = [0x89, 0x50, 0x4E, 0x47];
+        File.WriteAllBytes(previewPath, previewBytes);
+        var metadata = new WorkshopMetadata(content, previewPath,
+            "OniOnline (Early Development)", "Reviewed English body", "已审阅的中文说明", "Test");
+        var plan = FirstPublicationPlan.Create(metadata);
+        var zipBytes = File.ReadAllBytes(plan.ZipPath);
+        var repeated = FirstPublicationPlan.Create(metadata);
+        if (plan.PlanSha256 != repeated.PlanSha256
+            || !zipBytes.SequenceEqual(File.ReadAllBytes(repeated.ZipPath))
+            || plan.Title != metadata.Title
+            || plan.EnglishDescription != metadata.EnglishDescription
+            || plan.ChineseDescription != metadata.ChineseDescription
+            || !plan.Tags.SequenceEqual(new[] { "tweaks", "Spaced Out!" })
+            || plan.ZipBytes != zipBytes.Length
+            || plan.ZipSha256 != Convert.ToHexString(SHA256.HashData(zipBytes))
+            || plan.PreviewSha256 != Convert.ToHexString(SHA256.HashData(previewBytes)))
+        {
+            throw new InvalidOperationException("First-publication plan lost reviewed metadata, artifact hashes or determinism");
+        }
+        using (var archive = ZipFile.OpenRead(plan.ZipPath))
+        {
+            var names = archive.Entries.Select(entry => entry.FullName).ToHashSet();
+            if (!names.SetEquals(new[] { "OniOnline.dll", "mod.yaml", "mod_info.yaml" }))
+            {
+                throw new InvalidOperationException("First-publication ZIP changed its ONI root layout");
+            }
+        }
+        var planPath = Path.Combine(root, "reviewed-plan.json");
+        plan.Save(planPath);
+        ExpectFirstPublicationException<IOException>(
+            () => plan.Save(planPath), "overwriting an existing reviewed plan");
+        if (FirstPublicationPlan.Load(planPath, plan.PlanSha256).PlanSha256 != plan.PlanSha256)
+        {
+            throw new InvalidOperationException("First-publication plan failed saved readback");
+        }
+        ExpectFirstPublicationException<InvalidOperationException>(
+            () => FirstPublicationPlan.Load(planPath, new string('F', 64)), "a different reviewed SHA");
+
+        foreach (var changed in new[]
+        {
+            metadata with { Title = metadata.Title + " revised" },
+            metadata with { EnglishDescription = metadata.EnglishDescription + " revised" },
+            metadata with { ChineseDescription = metadata.ChineseDescription + "（修订）" },
+        })
+        {
+            if (FirstPublicationPlan.Create(changed).PlanSha256 == plan.PlanSha256)
+            {
+                throw new InvalidOperationException("Reviewed metadata changed without changing the first-publication SHA");
+            }
+        }
+        foreach (var tampered in new[]
+        {
+            plan with { Title = "OniOnline changed" },
+            plan with { ChineseDescription = "changed" },
+            plan with { Tags = ["changed"] },
+            plan with { ZipBytes = plan.ZipBytes + 1 },
+        })
+        {
+            var tamperedPath = Path.Combine(root, Guid.NewGuid().ToString("N") + ".json");
+            tampered.Save(tamperedPath);
+            ExpectFirstPublicationException<InvalidOperationException>(
+                () => FirstPublicationPlan.Load(tamperedPath, plan.PlanSha256), "tampered plan content");
+        }
+        File.WriteAllBytes(dllPath, [9, 8, 7]);
+        var changedPackage = FirstPublicationPlan.Create(metadata);
+        if (changedPackage.PlanSha256 == plan.PlanSha256 || changedPackage.ZipSha256 == plan.ZipSha256)
+        {
+            throw new InvalidOperationException("Different ZIP bytes retained the reviewed first-publication SHA");
+        }
+        ExpectFirstPublicationException<InvalidOperationException>(
+            () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "a valid ZIP changed after review");
+        File.WriteAllBytes(plan.ZipPath, zipBytes);
+        File.WriteAllBytes(previewPath, [1, 2, 3]);
+        ExpectFirstPublicationException<InvalidOperationException>(
+            () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "a preview changed after review");
+        File.WriteAllBytes(previewPath, previewBytes);
+
+        foreach (var (name, invalidValue) in new[]
+        {
+            ("ONIM_PUBLISH_NAME", "OniMcp"),
+            ("ONIM_PUBLISH_WORKSHOP_ID", "3731864673"),
+            ("ONIM_PUBLISH_CREATOR_APP_ID", "457140"),
+            ("ONIM_PUBLISH_CONSUMER_APP_ID", "636750"),
+            ("ONIM_PUBLISH_EXPECTED_OWNER", "1"),
+        })
+        {
+            Environment.SetEnvironmentVariable(name, invalidValue);
+            ExpectFirstPublicationException<InvalidOperationException>(
+                FirstPublicationPlan.RequireTarget, "a different target " + name);
+            ExpectFirstPublicationException<InvalidOperationException>(
+                () => FirstPublicationPlan.Load(planPath, plan.PlanSha256), "readback with a different target " + name);
+            Environment.SetEnvironmentVariable(name, target[name]);
+        }
+        foreach (var invalid in new[]
+        {
+            metadata with { Title = "CycleTrim" },
+            metadata with { Title = "OniOnline" + new string('x', 120) },
+            metadata with { EnglishDescription = "" },
+            metadata with { ChineseDescription = "" },
+            metadata with { EnglishDescription = new string('x', 8001) },
+            metadata with { ChineseDescription = new string('中', 8001) },
+        })
+        {
+            ExpectFirstPublicationException<InvalidOperationException>(
+                () => FirstPublicationPlan.Create(invalid), "invalid first-publication metadata");
+        }
+        var unsupportedPreview = Path.Combine(root, "preview.gif");
+        File.WriteAllBytes(unsupportedPreview, previewBytes);
+        ExpectFirstPublicationException<InvalidOperationException>(
+            () => FirstPublicationPlan.Create(metadata with { PreviewFile = unsupportedPreview }), "an unsupported preview format");
+        foreach (var invalidPreview in new[] { Array.Empty<byte>(), new byte[10 * 1024 * 1024 + 1] })
+        {
+            File.WriteAllBytes(previewPath, invalidPreview);
+            ExpectFirstPublicationException<InvalidOperationException>(
+                () => FirstPublicationPlan.Create(metadata), "an empty or oversized preview");
+        }
+        File.WriteAllBytes(previewPath, previewBytes);
+        File.WriteAllText(yamlPath, "staticID: LIghtJUNction.CycleTrim\n");
+        ExpectFirstPublicationException<InvalidOperationException>(
+            () => FirstPublicationPlan.Create(metadata), "a different mod staticID");
+        File.WriteAllText(yamlPath, yaml);
+        RunFirstPublicationJournalCase(Path.Combine(root, "journals"), plan.PlanSha256);
+        Console.WriteLine("OniOnline first-publication plan identity, hashes, limits and artifact readback passed");
+    }
+    finally
+    {
+        foreach (var (name, value) in previous)
+        {
+            Environment.SetEnvironmentVariable(name, value);
+        }
+        if (Directory.Exists(root))
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+}
+
+static void RunFirstPublicationJournalCase(string directory, string planSha)
+{
+    ExpectFirstPublicationException<ArgumentException>(
+        () => FirstPublicationJournal.Begin(directory, "short"), "a short journal plan hash");
+    ExpectFirstPublicationException<ArgumentException>(
+        () => FirstPublicationJournal.Begin(directory, new string('Z', 64)), "a non-hex journal plan hash");
+    var journal = FirstPublicationJournal.Begin(directory, planSha);
+    if (journal.Path != FirstPublicationJournal.JournalPath(directory))
+    {
+        throw new InvalidOperationException("First-publication journal used a different path");
+    }
+    var initialLines = File.ReadAllLines(journal.Path);
+    using (var intent = JsonDocument.Parse(initialLines.Single()))
+    {
+        if (intent.RootElement.GetProperty("event").GetString() != "first-create-intent"
+            || intent.RootElement.GetProperty("target").GetString() != FirstPublicationPlan.StaticId
+            || intent.RootElement.GetProperty("planSha256").GetString() != planSha)
+        {
+            throw new InvalidOperationException("First-publication create intent was not durable before the callback");
+        }
+    }
+    ExpectFirstPublicationException<IOException>(
+        () => FirstPublicationJournal.Begin(directory, planSha), "a repeated create request");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.ReadCreatedId(journal.Path, planSha), "a missing create callback");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.RecordPrivateVerified(journal.Path, planSha), "private verification before creation");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.BeginPublic(journal.Path, planSha), "public intent before creation");
+    const ulong createdId = 3808000001;
+    journal.RecordCallback("k_EResultOK", createdId, false);
+    if (FirstPublicationJournal.ReadCreatedId(journal.Path, planSha) != createdId)
+    {
+        throw new InvalidOperationException("First-publication journal lost its created item ID");
+    }
+    var otherSha = (planSha[0] == 'A' ? "B" : "A") + planSha[1..];
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.ReadCreatedId(journal.Path, otherSha), "a journal from a different plan");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.RecordPrivateVerified(journal.Path, otherSha), "private verification with a different plan");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.BeginPublic(journal.Path, otherSha), "public intent with a different plan");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.BeginPublic(journal.Path, planSha), "public intent without private readback");
+    FirstPublicationJournal.RecordPrivateVerified(journal.Path, planSha);
+    FirstPublicationJournal.RecordPrivateVerified(journal.Path, planSha);
+    if (File.ReadAllLines(journal.Path).Length != 3)
+    {
+        throw new InvalidOperationException("Repeated private readback appended another journal event");
+    }
+    using (var writer = new FileStream(journal.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
+    {
+        ExpectFirstPublicationException<IOException>(
+            () => FirstPublicationJournal.BeginPublic(journal.Path, planSha), "a public write while another writer owns the journal");
+    }
+    var (publicJournal, publicId) = FirstPublicationJournal.BeginPublic(journal.Path, planSha);
+    if (publicId != createdId || File.ReadAllLines(journal.Path).Length != 4)
+    {
+        throw new InvalidOperationException("Public intent was not recorded before returning its item ID");
+    }
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.BeginPublic(journal.Path, planSha), "a repeated public request");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.RecordPrivateVerified(journal.Path, planSha), "private verification after public intent");
+    publicJournal.RecordPublicVerified();
+    if (FirstPublicationJournal.ReadCreatedId(journal.Path, planSha) != createdId)
+    {
+        throw new InvalidOperationException("Verified public journal lost its item ID");
+    }
+    var expectedEvents = new[]
+    {
+        "first-create-intent", "first-create-callback", "first-private-verified",
+        "first-public-intent", "first-public-verified",
+    };
+    var events = File.ReadAllLines(journal.Path).Select(line =>
+    {
+        using var row = JsonDocument.Parse(line);
+        return row.RootElement.GetProperty("event").GetString();
+    });
+    if (!events.SequenceEqual(expectedEvents))
+    {
+        throw new InvalidOperationException("First-publication journal changed its complete event sequence");
+    }
+    ExpectFirstPublicationException<IOException>(
+        () => FirstPublicationJournal.Begin(directory, planSha), "re-creation after successful publication");
+
+    foreach (var (result, id, legalAgreement) in new[]
+    {
+        ("k_EResultFail", createdId, false),
+        ("k_EResultOK", 0UL, false),
+        ("k_EResultOK", ulong.MaxValue, false),
+        ("k_EResultOK", createdId, true),
+    })
+    {
+        var rejected = FirstPublicationJournal.Begin(
+            Path.Combine(directory, Guid.NewGuid().ToString("N")), planSha);
+        rejected.RecordCallback(result, id, legalAgreement);
+        ExpectFirstPublicationJournalBlocked(rejected.Path, planSha);
+    }
+    foreach (var callbackBeforeUncertain in new[] { false, true })
+    {
+        var uncertainDirectory = Path.Combine(directory, Guid.NewGuid().ToString("N"));
+        var uncertain = FirstPublicationJournal.Begin(uncertainDirectory, planSha);
+        if (callbackBeforeUncertain)
+        {
+            uncertain.RecordCallback("k_EResultOK", createdId, false);
+        }
+        uncertain.RecordUncertain("Steam callback timed out");
+        ExpectFirstPublicationJournalBlocked(uncertain.Path, planSha);
+        ExpectFirstPublicationException<IOException>(
+            () => FirstPublicationJournal.Begin(uncertainDirectory, planSha), "re-creation after an uncertain result");
+    }
+    var repeatedCallback = FirstPublicationJournal.Begin(
+        Path.Combine(directory, "repeated-callback"), planSha);
+    repeatedCallback.RecordCallback("k_EResultOK", createdId, false);
+    repeatedCallback.RecordCallback("k_EResultOK", createdId, false);
+    ExpectFirstPublicationJournalBlocked(repeatedCallback.Path, planSha);
+    var outOfOrder = FirstPublicationJournal.Begin(
+        Path.Combine(directory, "out-of-order"), planSha);
+    outOfOrder.RecordCallback("k_EResultOK", createdId, false);
+    outOfOrder.RecordPublicVerified();
+    ExpectFirstPublicationJournalBlocked(outOfOrder.Path, planSha);
+    Console.WriteLine("OniOnline first-publication one-shot creation, ordered verification and exclusive public intent passed");
+}
+
+static void ExpectFirstPublicationJournalBlocked(string path, string planSha)
+{
+    var before = File.ReadAllBytes(path);
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.ReadCreatedId(path, planSha), "an ineligible journal item ID");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.RecordPrivateVerified(path, planSha), "private verification of an ineligible journal");
+    ExpectFirstPublicationException<InvalidOperationException>(
+        () => FirstPublicationJournal.BeginPublic(path, planSha), "public intent for an ineligible journal");
+    if (!before.SequenceEqual(File.ReadAllBytes(path)))
+    {
+        throw new InvalidOperationException("Rejected journal recovery changed the retained evidence");
+    }
+}
+
+static void ExpectFirstPublicationException<TException>(Action action, string scenario)
+    where TException : Exception
+{
+    try
+    {
+        action();
+    }
+    catch (Exception error) when (error is TException)
+    {
+        return;
+    }
+    throw new InvalidOperationException("First publication accepted " + scenario);
 }

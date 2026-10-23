@@ -25,6 +25,7 @@ internal static class Program
 
     private static int Run(string[] args)
     {
+        if (FirstPublicationRunner.IsMode(args)) return FirstPublicationRunner.Run(args);
         var queryOwned = args.Contains("--query-owned", StringComparer.Ordinal);
         var queryOnly = args.Contains("--query-only", StringComparer.Ordinal) || queryOwned;
         var consumerContext = args.Contains("--consumer-context", StringComparer.Ordinal);
