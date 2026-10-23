@@ -2,6 +2,8 @@
 //! Static official ABI: GameData constructor 0x3a730, publication 0x32530,
 //! and CopySimDataToGame 0x58600. Every GameData owns its own fixed allocations.
 
+#[path = "presentation_flow.rs"]
+mod flow;
 #[path = "presentation_liquid.rs"]
 mod liquid;
 #[path = "presentation_sun.rs"]
@@ -36,18 +38,15 @@ impl PresentationBuffers {
     /// This never reallocates the arrays whose addresses managed code retains.
     pub(crate) fn update(&mut self, world: &PhysicsWorld, elements: &ElementTable) -> Result<()> {
         self.validate(world, elements)?;
-        for public in 0..self.flow.len() {
-            let cell = world.internal_index(public);
-            let scale = if world.read.element[cell] != world.write.element[cell] {
-                0.0
-            } else if world.write.mass[cell] > 1.0 {
-                1.0 / world.write.mass[cell]
-            } else {
-                1.0
-            };
-            let [right, left, down, up] = world.flow[cell];
-            self.flow[public] = [(right - left) * scale, (up - down) * scale];
-        }
+        flow::update(
+            &mut self.flow,
+            world.width,
+            world.height,
+            &world.read.element,
+            &world.write.element,
+            &world.write.mass,
+            &world.flow,
+        );
         sun::update(&mut self.exposed, world, elements);
         liquid::update(
             &mut self.liquid,
