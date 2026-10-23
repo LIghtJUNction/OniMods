@@ -7,6 +7,52 @@ use std::process::Command;
 
 const CONFIG_FILE: &str = "onim.toml";
 const BUILD_PROPS: &str = "Directory.Build.props";
+const DEFAULT_CONFIG: &str = r#"# onim 配置文件
+# 游戏路径在 Directory.Build.props 中统一管理
+
+# 默认 Mod（不指定 -m 时使用）
+default_mod = "OniModTemplate"
+
+[mods.OniModTemplate]
+path = "mods/OniModTemplate"
+"#;
+
+fn existing_config_file(path: &Path) -> Result<bool> {
+    match fs::symlink_metadata(path) {
+        Ok(_) if path.is_file() => Ok(true),
+        Ok(_) => anyhow::bail!("现有路径不是有效配置文件，未修改：{}", path.display()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error).with_context(|| format!("检查 {} 失败", path.display())),
+    }
+}
+
+fn write_if_missing(path: &Path, content: &str) -> Result<bool> {
+    match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+    {
+        Ok(mut file) => {
+            file.write_all(content.as_bytes())
+                .with_context(|| format!("写入 {} 失败", path.display()))?;
+            Ok(true)
+        }
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+            existing_config_file(path)?;
+            Ok(false)
+        }
+        Err(error) => Err(error).with_context(|| format!("创建 {} 失败", path.display())),
+    }
+}
+
+fn write_config_if_missing(path: &Path) -> Result<()> {
+    if write_if_missing(path, DEFAULT_CONFIG)? {
+        println!("📝 创建 {} ...", CONFIG_FILE);
+    } else {
+        println!("📄 保留现有 {}", CONFIG_FILE);
+    }
+    Ok(())
+}
 
 fn check_command(cmd: &str) -> bool {
     Command::new("sh")
@@ -80,6 +126,17 @@ fn validate_game_path(path: &Path) -> Result<Vec<String>> {
 pub fn run() -> Result<()> {
     println!("🛠️  onim 项目初始化\n");
 
+    let cwd = env::current_dir()?;
+    let config_path = cwd.join(CONFIG_FILE);
+    let props_path = cwd.join(BUILD_PROPS);
+    existing_config_file(&config_path)?;
+    if existing_config_file(&props_path)? {
+        write_config_if_missing(&config_path)?;
+        println!("📄 保留现有 {}", BUILD_PROPS);
+        println!("\n✅ 配置文件已就绪；运行 onim doctor 检查现有游戏路径。");
+        return Ok(());
+    }
+
     // 检查依赖
     println!("📋 检查依赖...");
     let mut missing = vec![];
@@ -112,10 +169,6 @@ pub fn run() -> Result<()> {
         anyhow::bail!("缺少依赖");
     }
     println!("✅ 所有依赖已安装\n");
-
-    let cwd = env::current_dir()?;
-    let config_path = cwd.join(CONFIG_FILE);
-    let props_path = cwd.join(BUILD_PROPS);
 
     // 1. 检查/询问游戏路径
     let mut game_path = None;
@@ -183,18 +236,7 @@ pub fn run() -> Result<()> {
     }
 
     // 3. 写入 onim.toml（只包含 Mod 列表，游戏路径在 Directory.Build.props 中）
-    let toml_content = r#"# onim 配置文件
-# 游戏路径在 Directory.Build.props 中统一管理
-
-# 默认 Mod（不指定 -m 时使用）
-default_mod = "OniModTemplate"
-
-[mods.OniModTemplate]
-path = "mods/OniModTemplate"
-"#;
-
-    println!("\n📝 写入 {} ...", CONFIG_FILE);
-    fs::write(&config_path, toml_content).with_context(|| format!("写入 {} 失败", CONFIG_FILE))?;
+    write_config_if_missing(&config_path)?;
 
     // 4. 写入 Directory.Build.props
     let sep = std::path::MAIN_SEPARATOR_STR;
@@ -223,11 +265,17 @@ path = "mods/OniModTemplate"
         managed_relative
     );
 
-    println!("📝 写入 {} ...", BUILD_PROPS);
-    fs::write(&props_path, props_content).with_context(|| format!("写入 {} 失败", BUILD_PROPS))?;
+    let created_props = write_if_missing(&props_path, &props_content)?;
+    if created_props {
+        println!("📝 创建 {} ...", BUILD_PROPS);
+    } else {
+        println!("📄 保留现有 {}；所选游戏路径未写入。", BUILD_PROPS);
+    }
 
     println!("\n✅ 初始化完成！");
-    println!("   游戏路径：{}", game_path.display());
+    if created_props {
+        println!("   游戏路径：{}", game_path.display());
+    }
     println!("   配置文件：{}", config_path.display());
     println!("   MSBuild 配置：{}", props_path.display());
     println!();
