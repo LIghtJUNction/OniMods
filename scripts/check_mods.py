@@ -63,7 +63,6 @@ def main() -> int:
         projects = sorted((ROOT / "tests").glob("*/*.csproj"))
         if not projects:
             parser.error("no Mod regression projects found under tests/")
-        projects.append(ROOT / "benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj")
         checks.extend(
             (
                 str(path.relative_to(ROOT)),

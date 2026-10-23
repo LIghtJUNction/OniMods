@@ -5,7 +5,6 @@ on:
     paths:
       - 'mods/**'
       - 'tests/**'
-      - 'benchmarks/CycleTrim.BrainBenchmarks/**'
       - 'scripts/**'
       - 'tools/OniMods.SteamPublisher/**'
       - 'ci/**'
@@ -24,7 +23,6 @@ on:
     paths:
       - 'mods/**'
       - 'tests/**'
-      - 'benchmarks/CycleTrim.BrainBenchmarks/**'
       - 'scripts/**'
       - 'tools/OniMods.SteamPublisher/**'
       - 'ci/**'
@@ -71,13 +69,3 @@ jobs:
         run: python3 scripts/verify_cycletrim_fasttrack_fetch_contract.py --verify-upstream
       - name: Verify pinned FastTrack stationary-critter compatibility contract
         run: python3 scripts/verify_cycletrim_fasttrack_stationary_contract.py --verify-upstream
-      - name: Run CycleTrim synthetic benchmarks
-        run: >-
-          dotnet run
-          --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj
-          --configuration Release
-          -p:ImportDirectoryBuildProps=false
-          -p:TreatWarningsAsErrors=true
-          -- --benchmark
-      - name: Repeat CycleTrim NavGrid gate across processes
-        run: python3 scripts/run_cycletrim_navgrid_stability.py --runs 5

@@ -117,7 +117,7 @@ run_tests() {
     (cd "$ROOT" && cargo run --quiet --release -- \
       --config "$ROOT/onim.toml" --mod CycleTrim build --release)
     (cd "$ROOT" && python scripts/verify_cycletrim_release_binary.py)
-    (cd "$ROOT" && dotnet run --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj)
+    (cd "$ROOT" && dotnet run --project tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true)
   else
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Debug -warnaserror)
     (cd "$ROOT" && dotnet build mods/OniMcp/OniMcp.csproj -c Release -warnaserror)

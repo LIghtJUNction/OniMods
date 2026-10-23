@@ -75,14 +75,7 @@ Brain 限流已接入生产 Harmony 补丁，但只作用于原版普通 `Creatu
 - 队列背压按 worker 与 in-flight 动态计算，范围 `1..4`；1 worker 空闲时 quota=2、忙碌时 quota=1。
 - 10,000 请求合成矩阵（**不是游戏内 FPS**）：目标命中率 `0/25/50/75/90%` 时，实际 PathProbe 执行为 `10000/7701/5501/3301/2000`，避免 clone 为 `0/2299/4499/6699/8000`；理论 probe 工作下降 `0/22.99/44.99/66.99/80.00%`。8 次有界回退使实际降幅低于名义命中率。
 
-可复现命令：
-
-```bash
-dotnet run --no-restore -c Release --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj
-dotnet run --no-build --no-restore -c Release --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj -- --benchmark
-```
-
-可直接使用 `benchmark` 技能让 agent 自动跑完整基准测试并返回标准化 JSON 结果。
+上述数字来自已退役的合成基准项目，保留为历史测量记录。当前宿主回归位于 `tests/`；历史数字不代表当前游戏性能。
 
 完整场景明细见：[dist/CycleTrim/README.md](../../dist/CycleTrim/README.md)（打包产物中的实测段落）。
 
