@@ -47,7 +47,8 @@ namespace OniOnline.UI
         private void Update()
         {
             if (button == null) return;
-            bool ready = NativeGameplayUi.Ready;
+            var runtime = OnlineRuntime.Instance;
+            bool ready = NativeGameplayUi.Ready && runtime != null && runtime.ChatAvailable;
             if (button.gameObject.activeSelf != ready) button.gameObject.SetActive(ready);
             string current = OnlineInputControls.ChatBinding;
             if (binding == current) return;

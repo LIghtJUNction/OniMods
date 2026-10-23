@@ -45,6 +45,15 @@ namespace OniOnline.Runtime
         internal bool CycleTrimPresent;
         internal bool Busy { get { return directory != null && directory.Busy; } }
         internal bool Searching { get { return UseSteam && directory?.Searching == true; } }
+        internal bool ChatAvailable
+        {
+            get
+            {
+                var session = Session;
+                return Enabled && session != null && session.Joined && !session.Closed &&
+                    !session.Leaving && !session.Reconnecting;
+            }
+        }
         internal readonly List<RoomListing> Listings = new List<RoomListing>();
         private SteamRoomDirectory directory;
         private LanDiscovery advertiser;
@@ -300,7 +309,7 @@ namespace OniOnline.Runtime
 
         internal void ShowChat()
         {
-            if (!NativeGameplayUi.Ready) return;
+            if (!NativeGameplayUi.Ready || !ChatAvailable) return;
             HideWindow();
             if (chatWindow == null) chatWindow = OnlineChatWindow.Create(this);
             chatWindow.FocusComposer();
