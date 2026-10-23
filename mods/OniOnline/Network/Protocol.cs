@@ -43,7 +43,7 @@ namespace OniOnline.Network
 
     public static class Protocol
     {
-        public const int Version = 8;
+        public const int Version = 9;
         public const int MaxPacketBytes = 8192;
         public const int RosterPageSize = 32;
         public const int MaxChatLength = 512;

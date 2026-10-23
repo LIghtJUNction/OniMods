@@ -10,6 +10,7 @@ internal sealed class DeterministicRoomNetwork : IDisposable
     internal sealed class Faults
     {
         internal double Delay;
+        internal Func<string, string, double> LinkDelay;
         internal double Jitter;
         internal double Drop;
         internal double Duplicate;
@@ -162,7 +163,7 @@ internal sealed class DeterministicRoomNetwork : IDisposable
         if (Settings.DropBeforeDelivery != null && Settings.DropBeforeDelivery(source.IsHost, bytes))
         { Dropped++; return true; }
         if (Settings.Blackhole) { Dropped++; return true; }
-        double arrival = Now + Settings.Delay + (random.NextDouble() * 2 - 1) * Settings.Jitter;
+        double arrival = Now + Settings.Delay + (Settings.LinkDelay == null ? 0 : Settings.LinkDelay(source.Key, target.Key)) + (random.NextDouble() * 2 - 1) * Settings.Jitter;
         arrival = Math.Max(Now, arrival);
         bool lost = random.NextDouble() < Settings.Drop;
         bool duplicate = random.NextDouble() < Settings.Duplicate;

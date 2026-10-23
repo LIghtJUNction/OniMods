@@ -5,6 +5,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Linq;
 using HarmonyLib;
+using Klei.CustomSettings;
 using Newtonsoft.Json;
 using OniOnline.Runtime;
 using OniOnline.Multiplayer;
@@ -23,6 +24,9 @@ namespace OniOnline
             public int command;
             public string scene;
             public string screen;
+            public string gameMode;
+            public bool sandboxDisabled;
+            public bool onlineCreationTitle;
             public string dependencyError;
             public string error;
             public string commandError;
@@ -64,6 +68,28 @@ namespace OniOnline
             public bool planetAdmitted;
             public bool riftReserved;
             public bool systemMapWindow;
+            public bool nativeMapActions;
+            public bool nativeMapReady;
+            public bool nativeMapHomeView;
+            public bool nativeMapLocalSystem;
+            public bool nativeMapRemoteHoverGuardActive;
+            public int nativeMapHoveredObjectCount;
+            public int[] nativeMapHoveredHex;
+            public bool nativeMapToolHasSelection;
+            public bool nativeMapCachedHasEntity;
+            public bool chatOverlayOpen;
+            public bool worldOverviewOpen;
+            public int nativeMapActionCount;
+            public string nativeMapButtonSource;
+            public bool nativeMapCloseButtonAssigned;
+            public int nativeMapToolbarColumns;
+            public float nativeMapPanelLeft;
+            public float[] nativeMapToolbarBounds;
+            public bool nativeDebugInputEnabled;
+            public string chatShortcutBinding;
+            public bool chatShortcutConflicts;
+            public string voiceShortcutBinding;
+            public bool voiceShortcutConflicts;
             public bool workPlanWindow;
             public bool teamWindow;
             public string[] asteroidNames;
@@ -419,7 +445,12 @@ namespace OniOnline
                 case "share": runtime.Multiplayer.SetSharing(command.value == "true"); break;
                 case "worlds": runtime.ShowWorldOverview(); break;
                 case "starmap": runtime.OpenStarMap(); break;
-                case "system_map": runtime.ShowSystemMap(); break;
+                case "system_map":
+                    runtime.ShowSystemMap();
+                    var nativeMapPanel = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.StarSystemPanel>();
+                    if (nativeMapPanel == null || !nativeMapPanel.Ready || nativeMapPanel.ActionCount != 5)
+                        throw new InvalidOperationException("Native map controls did not finish initialization.");
+                    break;
                 case "work_plans":
                     if (runtime.SelectedPlanet == null || runtime.Session == null)
                         throw new InvalidOperationException("A joined native colony is required.");
@@ -440,10 +471,12 @@ namespace OniOnline
                 case "native_building_probe": StartNativeBuildingProbe(runtime); break;
                 case "native_dupe_round_trip_prepare": PrepareNativeDuplicantRoundTrip(runtime, command.value); break;
                 case "archive_selected_starter": CaptureNativeStarterArchive(runtime); break;
-                case "native_new": runtime.CreateSystemFromLobby(); break;
+                case "native_new_game":
+                    Click(MainMenu.Instance, "Button_NewGame");
+                    break;
                 case "map_select":
                     string[] coordinates = command.value.Split(',');
-                    UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.StarSystemMapWindow>().Map.Select(int.Parse(coordinates[0]), int.Parse(coordinates[1]));
+                    ClusterMapScreen.Instance.GetComponent<OniOnline.UI.SystemHexMap>().Select(int.Parse(coordinates[0]), int.Parse(coordinates[1]));
                     break;
                 case "rift_confirm": runtime.ConfirmRift(); break;
                 case "work_native_fixture": CreateNativeWorkFixture(runtime); break;
@@ -524,10 +557,9 @@ namespace OniOnline
                     break;
                 case "map_host":
                     runtime.ShowSystemMap();
-                    var mapPanel = UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.StarSystemMapWindow>();
-                    var nameInput = (TMP_InputField)AccessTools.Field(typeof(OniOnline.UI.StarSystemMapWindow), "nameInput").GetValue(mapPanel);
-                    nameInput.text = "行星发动机测试星系";
-                    ((UnityEngine.UI.Button)AccessTools.Field(typeof(OniOnline.UI.StarSystemMapWindow), "host").GetValue(mapPanel)).onClick.Invoke();
+                    runtime.RoomName = "行星发动机测试星系";
+                    runtime.SaveHomeName();
+                    ClusterMapScreen.Instance.GetComponentsInChildren<KButton>(true).First(b => b.name == "OniOnlineConnection").SignalClick(KKeyCode.Mouse0);
                     break;
                 case "select_pod":
                     if (ClusterMapScreen.Instance.IsScreenActive()) ManagementMenu.Instance.ToggleClusterMap();
@@ -1307,15 +1339,19 @@ namespace OniOnline
             var current = flow == null ? null : AccessTools.Field(typeof(NewGameFlow), "currentScreen").GetValue(flow) as KScreen;
             var starterSelection = UnityEngine.Object.FindObjectsByType<MinionSelectScreen>(FindObjectsSortMode.None)
                 .FirstOrDefault(s => s.gameObject.activeInHierarchy);
-            var engineWindow = UnityEngine.Object.FindObjectsByType<OniOnline.UI.StarSystemWindow>(FindObjectsSortMode.None)
-                .FirstOrDefault(window => window.gameObject.activeInHierarchy);
-            var engineLabels = engineWindow == null ? Array.Empty<TextMeshProUGUI>() :
-                engineWindow.GetComponentsInChildren<TextMeshProUGUI>().Where(label => label.gameObject.activeInHierarchy).ToArray();
+            var codex = ManagementMenu.Instance?.codexScreen;
+            bool engineEntryActive = codex != null && codex.gameObject.activeInHierarchy &&
+                codex.activeEntryID == PlanetEngineCodex.EntryId;
+            var engineLabels = !engineEntryActive ? Array.Empty<LocText>() :
+                codex.GetComponentsInChildren<LocText>().Where(label => label.gameObject.activeInHierarchy).ToArray();
             var snapshot = new Snapshot
             {
                 pid = Process.GetCurrentProcess().Id, command = sequence, scene = SceneManager.GetActiveScene().name,
                 screen = starterSelection != null ? "MinionSelectScreen" : current != null && current.gameObject.activeInHierarchy
                     ? current.GetType().Name : Game.Instance != null ? "Game" : "MainMenu",
+                gameMode = CustomGameSettings.Instance?.customGameMode.ToString(),
+                sandboxDisabled = CustomGameSettings.Instance?.GetCurrentQualitySetting(CustomGameSettingConfigs.SandboxMode)?.id == "Disabled",
+                onlineCreationTitle = current is ColonyDestinationSelectScreen && current.transform.Find("OniOnlineCreationHeader") != null,
                 dependencyError = runtime.DependencyError, error = runtime.Error ?? runtime.Session?.LastError,
                 commandError = commandError, roomCode = runtime.RoomCode,
                 gameVersion = runtime.GameVersion, cycleTrimVersion = runtime.CycleTrimVersion,
@@ -1337,7 +1373,7 @@ namespace OniOnline
                 starMap = ClusterMapScreen.Instance != null && ClusterMapScreen.Instance.IsScreenActive(),
                 starSystemPanel = UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.StarSystemPanel>() != null,
                 printingEngineButton = Game.Instance != null && MenuButtons().Any(b => b.Key.text == OnlineText.Get("engine.title")),
-                engineStory = engineLabels.Any(label => label.text == OnlineText.Get("engine.story")) &&
+                engineStory = engineEntryActive && engineLabels.Any(label => label.text == OnlineText.Get("engine.story")) &&
                     engineLabels.Any(label => label.text == OnlineText.Get("engine.preview")),
                 gameTime = GameClock.Instance != null ? GameClock.Instance.GetTime() : 0,
                 localStepFinished = stepArmed && Time.realtimeSinceStartupAsDouble > runUntil && SpeedControlScreen.Instance.IsPaused,
@@ -1346,7 +1382,31 @@ namespace OniOnline
                 systemId = system?.SystemId, admittedPlanets = system?.Members.Count(m => m.Planet != null) ?? 0,
                 planetAdmitted = runtime.Multiplayer?.StarSystem.Admitted == true,
                 riftReserved = system?.Members.Any(m => m.PeerId == runtime.Session?.LocalPlayerId && m.Planet == null) == true,
-                systemMapWindow = UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.StarSystemMapWindow>() != null,
+                systemMapWindow = false,
+                nativeMapActions = ClusterMapScreen.Instance?.transform.Find("OniOnlineNativeMapActions") != null,
+                nativeMapReady = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.StarSystemPanel>()?.Ready == true,
+                nativeMapHomeView = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.SystemHexMap>()?.HomeView == true,
+                nativeMapLocalSystem = OniOnline.UI.SystemHexMap.IsLocalSystem(runtime),
+                nativeMapRemoteHoverGuardActive = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.SystemHexMap>()?.RemoteInteractionActive == true,
+                nativeMapHoveredObjectCount = OniOnline.UI.NativeRemoteHoverObjectsPatch.HoveredCount,
+                nativeMapHoveredHex = ClusterMapScreen.Instance?.HasCurrentHover() == true ? new[] {
+                    ClusterMapScreen.Instance.GetCurrentHoverLocation().q, ClusterMapScreen.Instance.GetCurrentHoverLocation().r } : new int[0],
+                nativeMapToolHasSelection = ClusterMapSelectTool.Instance != null && ClusterMapSelectTool.Instance.GetSelected() != null,
+                nativeMapCachedHasEntity = ClusterMapScreen.Instance != null &&
+                    AccessTools.Field(typeof(ClusterMapScreen), "m_selectedEntity").GetValue(ClusterMapScreen.Instance) as ClusterGridEntity != null,
+                chatOverlayOpen = runtime.ChatOpen,
+                worldOverviewOpen = UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.WorldOverviewWindow>()?.IsScreenActive() == true,
+                nativeMapActionCount = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.StarSystemPanel>()?.ActionCount ?? 0,
+                nativeMapButtonSource = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.StarSystemPanel>()?.ButtonTemplateSource,
+                nativeMapCloseButtonAssigned = ClusterMapScreen.Instance != null && ClusterMapScreen.Instance.closeButton != null,
+                nativeMapToolbarColumns = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.StarSystemPanel>()?.ToolbarColumns ?? 0,
+                nativeMapPanelLeft = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.StarSystemPanel>()?.NativePanelLeft ?? 0,
+                nativeMapToolbarBounds = ClusterMapScreen.Instance?.GetComponent<OniOnline.UI.StarSystemPanel>()?.ToolbarBounds,
+                nativeDebugInputEnabled = DebugHandler.enabled,
+                chatShortcutBinding = OnlineInputControls.ChatBinding,
+                chatShortcutConflicts = OnlineInputControls.ChatBindingConflicts,
+                voiceShortcutBinding = OnlineInputControls.VoiceBinding,
+                voiceShortcutConflicts = OnlineInputControls.VoiceBindingConflicts,
                 workPlanWindow = UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.WorkPlanWindow>() != null,
                 teamWindow = UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.TeamColonyWindow>() != null,
                 asteroidNames = WorldSelector.Instance == null ? new string[0] : WorldSelector.Instance.GetComponentsInChildren<LocText>()

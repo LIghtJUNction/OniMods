@@ -19,6 +19,7 @@ namespace OniOnline.Multiplayer
         private Dictionary<int, WorldInterestEntity> entities = new Dictionary<int, WorldInterestEntity>();
         private Dictionary<int, WorldInterestCell> pendingCells;
         private Dictionary<int, WorldInterestEntity> pendingEntities;
+        private Dictionary<int, WorldInterestEntity> pendingDesiredEntities;
         private WorldInterestDelta pending;
         private readonly HashSet<int> unconfirmedEntities = new HashSet<int>();
 
@@ -47,7 +48,7 @@ namespace OniOnline.Multiplayer
 
         public void RequireResync()
         {
-            reset = true; pending = null; pendingCells = null; pendingEntities = null;
+            reset = true; pending = null; pendingCells = null; pendingEntities = null; pendingDesiredEntities = null;
             cells.Clear(); entities.Clear(); numericTick = -1; cellCursor = entityCursor = 0;
             unconfirmedEntities.Clear();
         }
@@ -60,7 +61,7 @@ namespace OniOnline.Multiplayer
             foreach (var entity in pending.Entities) unconfirmedEntities.Remove(entity.Id);
             foreach (var id in pending.RemovedEntities) unconfirmedEntities.Remove(id);
             acknowledgedSequence = pending.Sequence;
-            pending = null; pendingCells = null; pendingEntities = null; reset = false;
+            pending = null; pendingCells = null; pendingEntities = null; pendingDesiredEntities = null; reset = false;
             return true;
         }
 
@@ -80,6 +81,15 @@ namespace OniOnline.Multiplayer
                 if (Visible(cell.Index) && cell.Explored && authorized(cell.Index)) explored.Add(cell.Index);
             foreach (var pair in cells)
                 if (!explored.Contains(pair.Key)) { RequireResync(); break; }
+            var desiredEntities = new Dictionary<int, WorldInterestEntity>();
+            if ((subscription.Channels & WorldInterestChannels.Entities) != 0)
+                foreach (var source in frame.Entities)
+                    if (explored.Contains(source.CellIndex))
+                    {
+                        if (desiredEntities.Count >= MaxVisibleEntities || desiredEntities.ContainsKey(source.Id))
+                            throw new ArgumentException("invalid_interest_entities");
+                        desiredEntities.Add(source.Id, source);
+                    }
             if (pending != null)
             {
                 bool safe = pending.EstimatedBytes <= byteBudget;
@@ -88,7 +98,9 @@ namespace OniOnline.Multiplayer
                 // Motion supersedes its pending packet after the reset baseline is acknowledged.
                 // Unacknowledged entity IDs remain dirty, including disappearances and return-to-baseline positions.
                 bool partialMotionReset = reset && WorldInterestDelta.HeaderBytes + (long)frame.Entities.Count * WorldInterestDelta.EntityBytes > byteBudget;
-                if (safe && (!latestMotion || partialMotionReset)) return pending;
+                // A retry over a slow end-to-end route must keep its original ACK valid.
+                // Compare the complete target state, not a possibly partial packet baseline.
+                if (safe && (!latestMotion || partialMotionReset || SameEntities(desiredEntities, pendingDesiredEntities))) return pending;
                 if (!safe) RequireResync();
                 else { pending = null; pendingCells = null; pendingEntities = null; }
             }
@@ -114,15 +126,6 @@ namespace OniOnline.Multiplayer
                     (numericalDue || detail || (previous.Fields & WorldInterestChannels.Mass) == 0 ? source.Mass : previous.Mass) : 0;
                 desiredCells.Add(source.Index, current);
             }
-            var desiredEntities = new Dictionary<int, WorldInterestEntity>();
-            if ((subscription.Channels & WorldInterestChannels.Entities) != 0)
-                foreach (var source in frame.Entities)
-                    if (explored.Contains(source.CellIndex))
-                    {
-                        if (desiredEntities.Count >= MaxVisibleEntities || desiredEntities.ContainsKey(source.Id))
-                            throw new ArgumentException("invalid_interest_entities");
-                        desiredEntities.Add(source.Id, source);
-                    }
             if (latestMotion)
             {
                 var debt = new HashSet<int>(unconfirmedEntities); debt.UnionWith(desiredEntities.Keys);
@@ -176,6 +179,7 @@ namespace OniOnline.Multiplayer
                 Sequence = ++nextSequence, BaseSequence = acknowledgedSequence, Tick = frame.Tick, Reset = reset,
                 Cells = changedCells.ToArray(), RemovedCells = removedCells.ToArray(),
                 Entities = changedEntities.ToArray(), RemovedEntities = removedEntities.ToArray() };
+            pendingDesiredEntities = latestMotion ? desiredEntities : null;
             foreach (var entity in pending.Entities) unconfirmedEntities.Add(entity.Id);
             foreach (var id in pending.RemovedEntities) unconfirmedEntities.Add(id);
             return pending;
@@ -209,5 +213,15 @@ namespace OniOnline.Multiplayer
         { return a.Index == b.Index && a.Fields == b.Fields && a.Color == b.Color && a.ElementHash == b.ElementHash && a.Mass == b.Mass && a.Temperature == b.Temperature; }
         internal static bool Same(WorldInterestEntity a, WorldInterestEntity b)
         { return a.Id == b.Id && a.CellIndex == b.CellIndex && a.Kind == b.Kind && a.X == b.X && a.Y == b.Y; }
+        private static bool SameEntities(Dictionary<int, WorldInterestEntity> a, Dictionary<int, WorldInterestEntity> b)
+        {
+            if (b == null || a.Count != b.Count) return false;
+            foreach (var pair in a)
+            {
+                WorldInterestEntity previous;
+                if (!b.TryGetValue(pair.Key, out previous) || !Same(pair.Value, previous)) return false;
+            }
+            return true;
+        }
     }
 }

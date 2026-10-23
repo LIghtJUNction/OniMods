@@ -61,7 +61,7 @@ internal static class MultiplayerIntegrationTests
                 CycleTrimVersion = "0.3.2", SpacedOut = true }, "", "Integration", reconnect: reconnect,
                 options: new SessionOptions { RetryJitter = () => 0.5 });
             Time = new SharedTimeController(Session, Source, Native);
-            Worlds = new WorldReplication(Session, Source);
+            Worlds = new WorldReplication(Session, Source, allowRemoteSnapshots: true);
         }
         internal void Pump(double now)
         {

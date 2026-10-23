@@ -8,6 +8,7 @@ namespace OniOnline.Multiplayer
     internal sealed class WorldInterestSession : IDisposable
     {
         internal const int ObserverMemoryBudget = 16 * 1024 * 1024, OutboxByteBudget = 512 * 1024;
+        internal const double MotionIntervalSeconds = 1, VisualIntervalSeconds = 2;
         private readonly RoomSession session;
         private readonly Func<string, string> authorityForPlanet;
         private readonly Func<string, PlanetManifest> manifestForPlanet;
@@ -33,6 +34,8 @@ namespace OniOnline.Multiplayer
             internal WorldInterestSubscription Subscription;
             internal WorldInterestPublisher Visual, Motion;
             internal double Expires, BindAt, VisualAt, MotionAt;
+            internal double VisualRetryAt, MotionRetryAt;
+            internal long VisualSentSequence, MotionSentSequence;
             internal bool Bound;
             internal int Memory;
         }
@@ -70,7 +73,9 @@ namespace OniOnline.Multiplayer
         internal bool Subscribe(string authorityPeer, string planetId, WorldInterestSubscription value)
         {
             PlanetManifest manifest = manifestForPlanet(planetId);
-            if (disposed || manifest == null || authorityForPlanet(planetId) != authorityPeer || authorityPeer == session.LocalPlayerId || !Connected(authorityPeer)) return false;
+            if (disposed || manifest == null || authorityForPlanet(planetId) != authorityPeer || authorityPeer == session.LocalPlayerId ||
+                !session.Players.Any(player => player.Id == authorityPeer)) return false;
+            // Retain a known authority's latest viewport during reconnect; Pump sends only once it is connected.
             var valid = value.ValidatedCopy(manifest.Width, manifest.Height);
             CancelCurrent();
             owner = authorityPeer; planet = planetId; subscription = valid;
@@ -81,6 +86,17 @@ namespace OniOnline.Multiplayer
         {
             CancelCurrent(); owner = planet = nonce = boundEpoch = null; subscription = null;
             VisualReplica = MotionReplica = null; Stale = true; LastError = null; Notify();
+        }
+
+        internal void RevalidateObservers()
+        {
+            if (disposed) return;
+            foreach (var observer in observers.Values.ToArray())
+                if (!canObserve(observer.Peer, observer.Planet))
+                {
+                    RemoveObserver(observer.Peer);
+                    Deny(observer.Peer, observer.Planet, observer.Nonce, observer.Request, "world_interest_denied");
+                }
         }
 
         private void NewRequest()
@@ -172,6 +188,8 @@ namespace OniOnline.Multiplayer
                 observer.Bound = false; observer.BindAt = 0;
                 observer.Visual = new WorldInterestPublisher(frame.Width, frame.Height, VisualSubscription(observer.Subscription));
                 observer.Motion = new WorldInterestPublisher(frame.Width, frame.Height, MotionSubscription(observer.Subscription), latestMotion: true);
+                observer.VisualSentSequence = observer.MotionSentSequence = 0;
+                observer.VisualRetryAt = observer.MotionRetryAt = 0;
                 Purge(observer.Peer, observer.Nonce);
             }
             if (!observer.Bound)
@@ -184,22 +202,44 @@ namespace OniOnline.Multiplayer
             {
                 // The native source has already filtered explored cells and cell-level permissions.
                 // Planet-wide rights were checked once above on this same owning thread.
-                var delta = observer.Motion.Build(frame, 5000, index => true);
-                if (delta != null) QueueDelta(observer, delta, true);
-                observer.MotionAt = now + .1;
+                // Keep sampling at the motion cadence, but do not supersede a sent
+                // sequence before its ACK can cross a slow connection. Otherwise
+                // no ACK can ever match and unchanged entities flood reliable TCP.
+                if (observer.MotionSentSequence == 0 || now >= observer.MotionRetryAt)
+                {
+                    var delta = observer.Motion.Build(frame, 5000, index => true);
+                    if (delta != null)
+                    {
+                        QueueDelta(observer, delta, true);
+                        observer.MotionSentSequence = delta.Sequence;
+                        observer.MotionRetryAt = now + RetryDelay();
+                    }
+                }
+                observer.MotionAt = now + MotionIntervalSeconds;
             }
             if (visualDue)
             {
                 var delta = observer.Visual.Build(frame, 5000, index => true);
-                if (delta != null) QueueDelta(observer, delta, false);
-                observer.VisualAt = now + .5;
+                if (delta != null && (delta.Sequence != observer.VisualSentSequence || now >= observer.VisualRetryAt))
+                {
+                    QueueDelta(observer, delta, false);
+                    observer.VisualSentSequence = delta.Sequence;
+                    observer.VisualRetryAt = now + RetryDelay();
+                }
+                observer.VisualAt = now + VisualIntervalSeconds;
             }
         }
+
+        // ACK loss still recovers without creating a new request or starving the
+        // other lane. Fast ACKs release the next sample immediately; retries use
+        // two observed round trips, bounded to a 2-10 second recovery window.
+        private double RetryDelay()
+        { return Math.Max(2, Math.Min(10, session.SmoothedRttMilliseconds / 500)); }
 
         private void DeferUnavailable(Observer observer)
         {
             if (!observer.Bound) observer.BindAt = now + .5;
-            else { observer.MotionAt = now + .1; observer.VisualAt = now + .5; }
+            else { observer.MotionAt = now + MotionIntervalSeconds; observer.VisualAt = now + VisualIntervalSeconds; }
         }
 
         private void QueueDelta(Observer observer, WorldInterestDelta delta, bool motion)
@@ -307,7 +347,9 @@ namespace OniOnline.Multiplayer
                 observer.Planet != message.PlanetId || observer.Epoch != message.Epoch || observer.SourceGeneration != message.SourceGeneration ||
                 observer.Binding != message.BindingNumber) return;
             if (message.Sequence == 0) { observer.Bound = true; observer.BindAt = double.MaxValue; return; }
-            (message.Motion ? observer.Motion : observer.Visual)?.Acknowledge(message.Epoch, observer.Subscription.Revision, message.Sequence);
+            bool accepted = (message.Motion ? observer.Motion : observer.Visual)?.Acknowledge(
+                message.Epoch, observer.Subscription.Revision, message.Sequence) == true;
+            if (accepted && message.Motion) observer.MotionSentSequence = 0;
         }
 
         private void AcceptBind(string sender, WorldInterestSessionMessage message)

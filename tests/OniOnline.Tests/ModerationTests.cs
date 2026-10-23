@@ -38,7 +38,7 @@ internal static class ModerationTests
         internal Room()
         {
             Host = new RoomSession(Network.Host, Profile("Host"), "", "Moderation");
-            Worlds.Add(new WorldReplication(Host, new Source()));
+            Worlds.Add(new WorldReplication(Host, new Source(), allowRemoteSnapshots: true));
         }
         internal IRoomTransport Connect(string account)
         {
@@ -50,7 +50,7 @@ internal static class ModerationTests
         {
             var client = new RoomSession(Connect(account), Profile(name), "", reconnect: () => Connect(account));
             Clients.Add(client);
-            Worlds.Add(new WorldReplication(client, new Source()));
+            Worlds.Add(new WorldReplication(client, new Source(), allowRemoteSnapshots: true));
             return client;
         }
         internal void Step()

@@ -162,6 +162,8 @@ namespace OniOnline.UI
         internal static TMP_InputField Input(Transform parent, string value, string placeholder, float width = -1)
         {
             var item = Rect("Input", parent);
+            // TMP creates its caret in OnEnable, after textComponent has been assigned.
+            item.SetActive(false);
             var image = Surface(item, Color.white, true);
             var input = item.AddComponent<TMP_InputField>();
             input.targetGraphic = image;
@@ -194,6 +196,7 @@ namespace OniOnline.UI
             input.caretColor = TextColor;
             input.selectionColor = new Color(0.65f, 0.4f, 0.52f, 0.6f);
             Size(item, width, 40, width < 0 ? 1 : 0);
+            item.SetActive(true);
             return input;
         }
 
@@ -253,23 +256,31 @@ namespace OniOnline.UI
         internal static GameObject CreateLauncher(OnlineRuntime runtime)
         {
             var root = CanvasRoot("OniOnlineChatLauncher", 29990);
-            var button = Button(root.transform, OnlineText.Get("system.map"), () => runtime.OpenStarMap(), 136);
+            var button = Button(root.transform, "", runtime.ShowChat, 220);
+            button.name = "OpenOniOnlineChat";
             var rect = (RectTransform)button.transform;
             rect.anchorMin = rect.anchorMax = new Vector2(1, 1);
-            rect.pivot = new Vector2(1, 1); rect.anchoredPosition = new Vector2(-18, -18);
-            rect.sizeDelta = new Vector2(136, 34);
-            root.AddComponent<OnlineLauncherVisibility>().Button = button.gameObject;
+            rect.pivot = new Vector2(1, 1); rect.anchoredPosition = new Vector2(-18, -62);
+            rect.sizeDelta = new Vector2(220, 34);
+            root.AddComponent<OnlineLauncherVisibility>().Initialize(runtime, button);
             return root;
         }
     }
 
     internal sealed class OnlineLauncherVisibility : MonoBehaviour
     {
-        internal GameObject Button;
+        private Button button;
+        private TextMeshProUGUI label;
+        private OnlineRuntime runtime;
+        internal void Initialize(OnlineRuntime owner, Button value)
+        { runtime = owner; button = value; label = value.GetComponentInChildren<TextMeshProUGUI>(); }
         private void Update()
         {
-            bool visible = Game.Instance != null && Game.Instance.baseAlreadyCreated;
-            if (Button != null && Button.activeSelf != visible) Button.SetActive(visible);
+            bool visible = Game.Instance != null && Game.Instance.baseAlreadyCreated && !Game.Instance.IsLoading();
+            if (button == null) return;
+            if (button.gameObject.activeSelf != visible) button.gameObject.SetActive(visible);
+            if (visible) label.text = runtime.Voice?.IsTalking == true ? OnlineText.Get("voice.talking") :
+                OnlineText.Get("chat.button") + " (" + OnlineInputControls.ChatBinding + ")";
         }
     }
 }

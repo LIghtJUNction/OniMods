@@ -1,5 +1,6 @@
 // Only an explicit probe build includes this file. It never starts a game or peer.
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -31,6 +32,64 @@ namespace OniOnline
             public string saveSha256 { get; set; }
             public long saveBytes { get; set; }
             public long saveWriteUnixMilliseconds { get; set; }
+            public bool sharing { get; set; }
+            public string ownerPeerId { get; set; }
+            public string planetId { get; set; }
+            public int x { get; set; }
+            public int y { get; set; }
+            public int width { get; set; }
+            public int height { get; set; }
+            public int index { get; set; }
+        }
+
+        [Serializable] private sealed class MultiplayerCellProof
+        {
+            public int index, elementHash, fields;
+            public uint color;
+            public float temperature, mass;
+            public bool explored;
+        }
+
+        [Serializable] private sealed class MultiplayerEntityProof
+        {
+            public int id, cellIndex, kind;
+            public float x, y;
+        }
+
+        [Serializable] private sealed class MultiplayerRegionProof
+        { public int x, y, width, height; }
+
+        [Serializable] private sealed class MultiplayerSourceProof
+        {
+            public string planetId, lineageId, ownerPeerId, epoch;
+            public int nativeWorldId, width, height;
+            public MultiplayerRegionProof region;
+            public MultiplayerCellProof[] cells;
+            public MultiplayerEntityProof[] entities;
+            public int[] hiddenIndices;
+            public MultiplayerCellProof detail;
+        }
+
+        [Serializable] private sealed class MultiplayerDetailProof
+        {
+            public string epoch;
+            public int width, height;
+            public MultiplayerCellProof cell;
+        }
+
+        [Serializable] private sealed class MultiplayerObservationProof
+        {
+            public int version = 1;
+            public bool originalSharing, sharing, cleanupComplete;
+            public string cleanupError;
+            public MultiplayerSourceProof source;
+            public string ownerPeerId, planetId, boundEpoch, interestError, detailsError;
+            public long visualSequence, motionSequence;
+            public bool stale, detailsStale;
+            public int activeObservers, activeDetailObservers;
+            public MultiplayerCellProof[] cells;
+            public MultiplayerEntityProof[] entities;
+            public MultiplayerDetailProof detail;
         }
 
         [Serializable] private sealed class MultiplayerChatProof
@@ -50,6 +109,7 @@ namespace OniOnline
             public int worldId, worldCells, pendingChats;
             public string[] connectedPlayers;
             public MultiplayerChatProof[] messages;
+            public MultiplayerObservationProof observation;
         }
 
         private readonly string multiplayerRunNonce = Guid.NewGuid().ToString("N");
@@ -62,6 +122,143 @@ namespace OniOnline
         private string multiplayerGameHash, multiplayerCycleTrimHash;
         private bool multiplayerArmed, multiplayerFinished, multiplayerChatSent;
         private double multiplayerLeaseEnd;
+        private WorldCoordinator multiplayerCoordinator;
+        private MultiplayerSourceProof multiplayerSource;
+        private bool multiplayerOriginalSharing, multiplayerCleanupComplete;
+        private string multiplayerCleanupError;
+        private long multiplayerObservationRevision;
+
+        private static MultiplayerCellProof MultiplayerCell(WorldInterestCell cell)
+        {
+            return new MultiplayerCellProof { index = cell.Index, elementHash = cell.ElementHash, color = cell.Color,
+                fields = (int)cell.Fields, temperature = cell.Temperature, mass = cell.Mass, explored = cell.Explored };
+        }
+
+        private static MultiplayerEntityProof MultiplayerEntity(WorldInterestEntity entity)
+        {
+            return new MultiplayerEntityProof { id = entity.Id, cellIndex = entity.CellIndex, kind = entity.Kind,
+                x = entity.X, y = entity.Y };
+        }
+
+        private int MultiplayerNativeCell(int x, int y)
+        { return Grid.XYToCell(multiplayerWorld.WorldOffset.x + x, multiplayerWorld.WorldOffset.y + y); }
+
+        private bool MultiplayerExplored(int x, int y)
+        {
+            int cell = MultiplayerNativeCell(x, y);
+            return Grid.IsValidCell(cell) && Grid.WorldIdx[cell] == multiplayerWorld.id && Grid.Visible[cell] != 0;
+        }
+
+        private void PrepareMultiplayerObservation(OnlineRuntime runtime)
+        {
+            var coordinator = runtime.Multiplayer;
+            MultiplayerNeed(coordinator != null && coordinator.StarSystem.Admitted, "registered_planet_required");
+            MultiplayerNeed(coordinator.Work.Authority.Synchronize(), "native_authority_required");
+            var planet = coordinator.Work.Authority.Planet;
+            var manifest = coordinator.StarSystem.State?.Members.SingleOrDefault(m => m.PeerId == multiplayerSession.LocalPlayerId)?.Planet;
+            MultiplayerNeed(planet != null && manifest != null && planet.PlanetId == manifest.PlanetId &&
+                planet.NativeWorldId == multiplayerWorld.id && manifest.NativeWorldId == multiplayerWorld.id &&
+                planet.OwnerPeerId == multiplayerSession.LocalPlayerId, "selected_native_planet_required");
+            MultiplayerNeed(multiplayerSession.Players.Where(p => p.Id != multiplayerSession.LocalPlayerId).All(p =>
+                !coordinator.Work.Authority.HasPermission(p.Id, RemoteWorkPermission.ViewMap)), "existing_view_grant_refused");
+            MultiplayerNeed(coordinator.Interest.PlanetId == null && coordinator.CellDetails.Current == null &&
+                coordinator.Interest.ActiveObservers == 0 && coordinator.CellDetails.ActiveObservers == 0,
+                "idle_observation_required");
+
+            int width = multiplayerWorld.WorldSize.x, height = multiplayerWorld.WorldSize.y;
+            MultiplayerNeed(width == manifest.Width && height == manifest.Height && width >= 2 && height >= 2,
+                "native_dimensions_changed");
+            WorldInterestRegion region = new WorldInterestRegion();
+            bool found = false;
+            // Read the owner's persistent exploration state. No terrain or exploration is changed.
+            for (int y = 0; y < height && !found; y++)
+                for (int x = 0; x < width && !found; x++)
+                {
+                    if (!MultiplayerExplored(x, y) || !((x > 0 && !MultiplayerExplored(x - 1, y)) ||
+                        (x + 1 < width && !MultiplayerExplored(x + 1, y)) || (y > 0 && !MultiplayerExplored(x, y - 1)) ||
+                        (y + 1 < height && !MultiplayerExplored(x, y + 1)))) continue;
+                    region = new WorldInterestRegion { Width = Math.Min(16, width), Height = Math.Min(12, height) };
+                    region.X = Math.Max(0, Math.Min(width - region.Width, x - region.Width / 2));
+                    region.Y = Math.Max(0, Math.Min(height - region.Height, y - region.Height / 2));
+                    found = true;
+                }
+            MultiplayerNeed(found, "mixed_exploration_region_required");
+            var hidden = new List<int>();
+            for (int y = region.Y; y < region.Y + region.Height; y++)
+                for (int x = region.X; x < region.X + region.Width; x++)
+                {
+                    int cell = MultiplayerNativeCell(x, y);
+                    if (Grid.IsValidCell(cell) && Grid.WorldIdx[cell] == multiplayerWorld.id && Grid.Visible[cell] == 0)
+                        hidden.Add(y * width + x);
+                }
+            var frame = new NativeWorldInterestSource().Capture(planet, new WorldInterestSubscription
+            { Revision = 1, Region = region }, (long)(GameClock.Instance.GetTime() * 5), 1, index => true);
+            MultiplayerNeed(frame.Cells.Count > 0 && hidden.Count > 0, "mixed_exploration_region_required");
+            var detailCell = frame.Cells[0];
+            int detailNative = MultiplayerNativeCell(detailCell.Index % width, detailCell.Index / width);
+            detailCell.Fields = WorldInterestChannels.Visual | WorldInterestChannels.Temperature | WorldInterestChannels.Mass;
+            detailCell.Temperature = Grid.Temperature[detailNative]; detailCell.Mass = Grid.Mass[detailNative];
+            MultiplayerNeed(WorldInterestPublisher.Finite(detailCell.Temperature) && detailCell.Temperature >= 0 &&
+                WorldInterestPublisher.Finite(detailCell.Mass) && detailCell.Mass >= 0, "native_details_unavailable");
+            multiplayerCoordinator = coordinator; multiplayerOriginalSharing = coordinator.ShareOwnWorld;
+            multiplayerCleanupComplete = false; multiplayerCleanupError = null; multiplayerObservationRevision = 0;
+            multiplayerSource = new MultiplayerSourceProof { planetId = planet.PlanetId, lineageId = manifest.LineageId,
+                ownerPeerId = multiplayerSession.LocalPlayerId, epoch = planet.AuthorityEpoch, nativeWorldId = planet.NativeWorldId,
+                width = width, height = height, region = new MultiplayerRegionProof
+                { x = region.X, y = region.Y, width = region.Width, height = region.Height },
+                cells = frame.Cells.OrderBy(c => c.Index).Select(MultiplayerCell).ToArray(),
+                entities = frame.Entities.OrderBy(e => e.Id).Select(MultiplayerEntity).ToArray(),
+                hiddenIndices = hidden.ToArray(), detail = MultiplayerCell(detailCell) };
+        }
+
+        private void CleanupMultiplayerObservation(OnlineRuntime runtime)
+        {
+            multiplayerCleanupComplete = false; multiplayerCleanupError = null;
+            try
+            {
+                MultiplayerNeed(multiplayerCoordinator != null && runtime.Multiplayer == multiplayerCoordinator &&
+                    runtime.Session == multiplayerSession, "cleanup_coordinator_changed");
+                multiplayerCoordinator.Interest.Stop(); multiplayerCoordinator.CellDetails.Stop();
+                var planet = multiplayerCoordinator.Work.Authority.Planet;
+                bool originalSource = Game.Instance == multiplayerGame && ClusterManager.Instance != null &&
+                    ClusterManager.Instance.activeWorldId == multiplayerWorld.id &&
+                    ClusterManager.Instance.GetWorld(multiplayerWorld.id) == multiplayerWorld &&
+                    multiplayerSource != null && planet != null && planet.PlanetId == multiplayerSource.planetId &&
+                    planet.AuthorityEpoch == multiplayerSource.epoch && MultiplayerSaveUnchanged(true);
+                if (!originalSource)
+                {
+                    // Never reopen a different world/save using the old test's grant.
+                    multiplayerCoordinator.SetSharing(false);
+                    throw new InvalidOperationException("multiplayer_cleanup_source_changed");
+                }
+                multiplayerCoordinator.SetSharing(multiplayerOriginalSharing);
+                multiplayerCleanupComplete = true;
+            }
+            catch (Exception error) { multiplayerCleanupError = error.GetType().Name + ": " + error.Message; }
+        }
+
+        private MultiplayerObservationProof CaptureMultiplayerObservation(OnlineRuntime runtime)
+        {
+            var coordinator = runtime.Multiplayer;
+            var interest = coordinator?.Interest;
+            var details = coordinator?.CellDetails;
+            var detail = details?.Current;
+            return new MultiplayerObservationProof { originalSharing = multiplayerOriginalSharing,
+                sharing = coordinator != null && coordinator.ShareOwnWorld,
+                cleanupComplete = multiplayerCleanupComplete, cleanupError = multiplayerCleanupError, source = multiplayerSource,
+                ownerPeerId = interest?.OwnerId, planetId = interest?.PlanetId, boundEpoch = interest?.BoundEpoch,
+                visualSequence = interest?.VisualReplica?.Sequence ?? 0, motionSequence = interest?.MotionReplica?.Sequence ?? 0,
+                stale = interest == null || interest.Stale, interestError = interest?.LastError,
+                cells = interest?.VisualReplica == null ? new MultiplayerCellProof[0] :
+                    interest.VisualReplica.Cells.Values.OrderBy(c => c.Index).Select(MultiplayerCell).ToArray(),
+                entities = interest?.MotionReplica == null ? new MultiplayerEntityProof[0] :
+                    interest.MotionReplica.Entities.Values.OrderBy(e => e.Id).Select(MultiplayerEntity).ToArray(),
+                detail = detail == null ? null : new MultiplayerDetailProof
+                { epoch = detail.Epoch, width = detail.Width, height = detail.Height, cell = MultiplayerCell(detail.Cell) },
+                detailsStale = details == null || details.Stale,
+                detailsError = details?.LastError, activeObservers = interest?.ActiveObservers ?? 0,
+                activeDetailObservers = details?.ActiveObservers ?? 0 };
+        }
 
         private static string MultiplayerHash(string value)
         {
@@ -98,7 +295,10 @@ namespace OniOnline
 
         private string ResolveMultiplayerSave(string relative)
         {
-            MultiplayerNeed(relative != null && relative.StartsWith("multiplayer-disposable/", StringComparison.Ordinal) &&
+            // Harness already approves its isolated profile's OniHarness/test.sav.
+            // Accept that same disposable location without changing its native allowlist.
+            MultiplayerNeed(relative != null && (relative.StartsWith("multiplayer-disposable/", StringComparison.Ordinal) ||
+                relative.StartsWith("OniHarness/", StringComparison.Ordinal)) &&
                 relative.EndsWith(".sav", StringComparison.OrdinalIgnoreCase) && !relative.Contains("\\") &&
                 !relative.Split('/').Any(p => p == "." || p == ".." || p.Length == 0), "disposable_save_path_required");
             string root = Path.GetFullPath(output).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
@@ -150,6 +350,14 @@ namespace OniOnline
             MultiplayerNeed(SharedTimeController.Active == null, "shared_time_enabled");
             MultiplayerNeed(SpeedControlScreen.Instance.IsPaused, "local_pause_required");
             MultiplayerNeed(MultiplayerSaveUnchanged(false), "active_save_changed");
+            if (multiplayerSource != null)
+            {
+                var planet = runtime.Multiplayer?.Work.Authority.Planet;
+                MultiplayerNeed(runtime.Multiplayer == multiplayerCoordinator && planet != null &&
+                    planet.PlanetId == multiplayerSource.planetId && planet.AuthorityEpoch == multiplayerSource.epoch &&
+                    planet.NativeWorldId == multiplayerSource.nativeWorldId && planet.OwnerPeerId == multiplayerSource.ownerPeerId,
+                    "observation_source_changed");
+            }
         }
 
         private bool TryExecuteMultiplayerProbe(OnlineRuntime runtime, Command command)
@@ -190,7 +398,11 @@ namespace OniOnline
                 multiplayerFailure = null; multiplayerFinished = false; multiplayerChatSent = false;
                 multiplayerArmed = true;
                 multiplayerLeaseEnd = Time.realtimeSinceStartupAsDouble + 120;
-                try { RequireMultiplayerState(runtime); MultiplayerNeed(MultiplayerSaveUnchanged(true), "save_hash_mismatch"); }
+                try
+                {
+                    RequireMultiplayerState(runtime); MultiplayerNeed(MultiplayerSaveUnchanged(true), "save_hash_mismatch");
+                    PrepareMultiplayerObservation(runtime);
+                }
                 catch { multiplayerArmed = false; throw; }
                 return true;
             }
@@ -198,17 +410,47 @@ namespace OniOnline
             if (command.action == "multiplayer_finish")
             {
                 try { RequireMultiplayerState(runtime); MultiplayerNeed(MultiplayerSaveUnchanged(true), "save_hash_changed"); multiplayerFinished = true; }
-                finally { multiplayerArmed = false; }
+                finally { CleanupMultiplayerObservation(runtime); multiplayerArmed = false; }
                 return true;
             }
-            RequireMultiplayerState(runtime);
-            if (command.action == "multiplayer_chat")
+            try
             {
-                MultiplayerNeed(!multiplayerChatSent, "chat_already_sent");
-                string text = "[oni-multiplayer:" + request.nonce + ":" + multiplayerPermit.slot + "]:" + multiplayerAccountHash;
-                MultiplayerNeed(runtime.Session.SendChat(text), "chat_not_accepted"); multiplayerChatSent = true;
+                RequireMultiplayerState(runtime);
+                if (command.action == "multiplayer_chat")
+                {
+                    MultiplayerNeed(!multiplayerChatSent, "chat_already_sent");
+                    string text = "[oni-multiplayer:" + request.nonce + ":" + multiplayerPermit.slot + "]:" + multiplayerAccountHash;
+                    MultiplayerNeed(runtime.Session.SendChat(text), "chat_not_accepted"); multiplayerChatSent = true;
+                }
+                else if (command.action == "multiplayer_share") multiplayerCoordinator.SetSharing(request.sharing);
+                else if (command.action == "multiplayer_observe")
+                {
+                    multiplayerCoordinator.CellDetails.Stop();
+                    MultiplayerNeed(multiplayerCoordinator.Interest.Subscribe(request.ownerPeerId, request.planetId,
+                        new WorldInterestSubscription { Revision = ++multiplayerObservationRevision,
+                            Region = new WorldInterestRegion { X = request.x, Y = request.y, Width = request.width, Height = request.height } }),
+                        "viewport_not_accepted");
+                }
+                else if (command.action == "multiplayer_details")
+                {
+                    var interest = multiplayerCoordinator.Interest;
+                    MultiplayerNeed(!interest.Stale && interest.OwnerId == request.ownerPeerId && interest.PlanetId == request.planetId &&
+                        multiplayerCoordinator.CellDetails.Watch(request.ownerPeerId, request.planetId, interest.BoundEpoch, request.index),
+                        "detail_watch_not_accepted");
+                }
+                else if (command.action == "multiplayer_stop")
+                { multiplayerCoordinator.Interest.Stop(); multiplayerCoordinator.CellDetails.Stop(); }
+                else throw new InvalidOperationException("multiplayer_unknown_command");
+                // Every command is challenge-bound and validated while paused. An idle
+                // or lost collector still expires after this bounded recovery window.
+                multiplayerLeaseEnd = Time.realtimeSinceStartupAsDouble + 120;
             }
-            else throw new InvalidOperationException("multiplayer_unknown_command");
+            catch
+            {
+                CleanupMultiplayerObservation(runtime);
+                multiplayerFailure = "multiplayer_command_failed"; multiplayerArmed = false;
+                throw;
+            }
             return true;
         }
 
@@ -222,7 +464,8 @@ namespace OniOnline
             }
             catch (Exception)
             {
-                multiplayerFailure = "multiplayer_live_guard_failed"; multiplayerArmed = false;
+                multiplayerFailure = "multiplayer_live_guard_failed";
+                CleanupMultiplayerObservation(runtime); multiplayerArmed = false;
             }
         }
 
@@ -251,7 +494,8 @@ namespace OniOnline
                 pendingChats = session?.PendingChatCount ?? 0,
                 messages = session == null || prefix == null ? new MultiplayerChatProof[0] : session.Chat
                     .Where(c => c.Text.StartsWith(prefix, StringComparison.Ordinal)).Select(c => new MultiplayerChatProof
-                    { playerId = c.PlayerId, text = c.Text, sequence = c.Sequence, messageId = c.MessageId }).ToArray()
+                    { playerId = c.PlayerId, text = c.Text, sequence = c.Sequence, messageId = c.MessageId }).ToArray(),
+                observation = CaptureMultiplayerObservation(runtime)
             };
         }
     }

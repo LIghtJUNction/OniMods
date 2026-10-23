@@ -21,6 +21,7 @@ namespace OniOnline.Runtime
         internal bool Searching { get; private set; }
         internal event Action<IRoomTransport, string> Ready;
         internal event Action<string> Failed;
+        internal event Action<string> SearchFailed;
         internal event Action<RoomListing[]> Found;
 
         internal SteamRoomDirectory()
@@ -114,7 +115,11 @@ namespace OniOnline.Runtime
         {
             Searching = false;
             if (disposed) return;
-            if (failure) { Fail("steam_lobby_failed"); return; }
+            if (failure)
+            {
+                if (SearchFailed != null) SearchFailed("steam_lobby_failed");
+                return;
+            }
             var rooms = new List<RoomListing>();
             for (int i = 0; i < Math.Min(result.m_nLobbiesMatching, 32); i++)
             {

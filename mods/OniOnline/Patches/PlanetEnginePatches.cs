@@ -10,20 +10,9 @@ namespace OniOnline.Patches
     {
         private static void Postfix(ClusterMapScreen __instance, bool show)
         {
-            if (!show || OnlineRuntime.Instance == null) return;
-            StarSystemPanel.Attach(__instance);
-        }
-    }
-
-    [HarmonyPatch(typeof(ClusterMapScreen), nameof(ClusterMapScreen.OnKeyDown))]
-    internal static class StarSystemNameInputPatch
-    {
-        private static bool Prefix(ClusterMapScreen __instance, KButtonEvent e)
-        {
-            var panel = __instance.GetComponent<StarSystemPanel>();
-            if (panel == null || !panel.IsEditing || e.IsAction(global::Action.Escape)) return true;
-            e.Consumed = true;
-            return false;
+            if (OnlineRuntime.Instance == null) return;
+            if (show) StarSystemPanel.Attach(__instance);
+            else __instance.GetComponent<StarSystemPanel>()?.CloseOnlineView();
         }
     }
 

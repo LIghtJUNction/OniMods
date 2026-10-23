@@ -16,6 +16,8 @@ def main():
     parser.add_argument("--protocol-client-assembly", type=Path,
                         help="Use an isolated OniOnline.Tests.dll build for protocol participants")
     parser.add_argument("--generate-colony", action="store_true")
+    parser.add_argument("--direct-create-system", action="store_true",
+                        help="Verify New Game Online creates a native Survival colony without opening the lobby browser")
     parser.add_argument("--steam-lobby", action="store_true")
     parser.add_argument("--world-sync", action="store_true", help="Verify real native publisher to read-only .NET observer")
     parser.add_argument("--star-map", action="store_true", help="Verify native star map and printing-pod engine entry")
@@ -40,6 +42,8 @@ def main():
                         help="Continue this probe's own already-generated, paused starter selection")
     parser.add_argument("--resume-frontend", action="store_true", help="Continue this probe's existing native new-game screens")
     args = parser.parse_args()
+    if args.direct_create_system and (args.resume_from_characters or args.resume_frontend):
+        parser.error("--direct-create-system requires a fresh main-menu run")
     if args.native_work_revocation and not (args.native_work and args.generate_colony):
         parser.error("--native-work-revocation requires --native-work and --generate-colony")
     if args.native_remote_work and (not args.generate_colony or args.native_work or args.save_identity):
@@ -100,7 +104,7 @@ def main():
         temporary.replace(output / "command.json")
         if not wait_ack:
             return None
-        transition = action in {"start", "survival", "online", "native_new", "generate", "embark", "save_test"}
+        transition = action in {"start", "survival", "online", "native_new_game", "generate", "embark", "save_test"}
         return wait(lambda s: s.get("command", 0) >= sequence, "probe command " + action,
                     timeout=120 if transition else 20, max_age=120 if transition else 10)
 
@@ -150,19 +154,30 @@ def main():
         wait(lambda s: "保持原样" in s.get("chat", ""), "game UI sends Chinese chat")
         screenshot()
         if not args.resume_from_characters:
-            if not args.resume_frontend:
-                command("start")
-            wait(lambda s: s.get("screen") in ("ModeSelectScreen", "ClusterCategorySelectionScreen"),
-                 "host start enters native new-game flow")
-            if status().get("screen") == "ModeSelectScreen":
+            if args.direct_create_system:
+                command("native_new_game")
+                wait(lambda s: s.get("screen") == "ModeSelectScreen" and not s.get("onlineCreationTitle"),
+                     "ordinary New Game still offers native difficulty selection")
                 command("survival")
-            wait(lambda s: s.get("onlineCategory"), "Online category with artwork exists")
-            screenshot()
+                wait(lambda s: s.get("onlineCategory"), "New Game offers the Online creation category")
+                command("online")
+                wait(lambda s: s.get("screen") == "ColonyDestinationSelectScreen"
+                     and s.get("gameMode") == "Survival" and s.get("sandboxDisabled") and s.get("onlineCreationTitle"),
+                     "New Game Online selects native Survival destination creation with sandbox disabled")
+                screenshot()
+            else:
+                if not args.resume_frontend:
+                    command("start")
+                wait(lambda s: s.get("screen") in ("ModeSelectScreen", "ClusterCategorySelectionScreen"),
+                     "host start enters native new-game flow")
+                if status().get("screen") == "ModeSelectScreen":
+                    command("survival")
+                wait(lambda s: s.get("onlineCategory"), "Online category with artwork exists")
+                screenshot()
 
-            command("online")
-            wait(lambda s: s.get("popup"), "Online opens the public-system browser before native initialization")
-            command("native_new")
-            wait(lambda s: s.get("screen") == "ColonyDestinationSelectScreen", "new colony uses native Spaced Out destination selection")
+                command("online")
+                wait(lambda s: s.get("screen") == "ColonyDestinationSelectScreen" and not s.get("popup")
+                     and s.get("onlineCreationTitle"), "New Game Online creates a colony without opening the lobby browser")
             wait(lambda s: s.get("players") == 4, "room connection survives frontend transitions")
 
         if args.generate_colony:
@@ -230,7 +245,7 @@ def main():
                 command("select_pod")
                 wait(lambda s: s.get("printingEngineButton"), "native printing pod offers Planetary Engine entry")
                 command("engine_entry")
-                wait(lambda s: s.get("starMap") and s.get("engineStory"), "printing pod entry opens the story on the native star map")
+                wait(lambda s: s.get("engineStory"), "printing pod entry opens the story in the native Codex article")
                 screenshot()
                 command("native_step")
                 wait(lambda s: s.get("localStepFinished") and s.get("localStepProgress", 0) > 0,

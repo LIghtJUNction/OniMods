@@ -11,6 +11,7 @@ namespace OniOnline.Multiplayer
     {
         private readonly RoomSession session;
         private readonly IWorldSource source;
+        private readonly bool allowRemoteSnapshots;
         private readonly SnapshotAssembler assembler = new SnapshotAssembler();
         private readonly SnapshotTransferSender sender;
         private readonly Dictionary<string, WorldViewEntry> worlds = new Dictionary<string, WorldViewEntry>(StringComparer.Ordinal);
@@ -23,6 +24,7 @@ namespace OniOnline.Multiplayer
         private string rosterKey = "";
         private string sourceEpoch;
         private string publicationEpoch;
+        private WorldDescriptor lastPublishedDescriptor;
         private string selectedOwner;
         private long controlRevision;
         private long snapshotSequence;
@@ -48,10 +50,11 @@ namespace OniOnline.Multiplayer
             }
         }
 
-        internal WorldReplication(RoomSession session, IWorldSource source)
+        internal WorldReplication(RoomSession session, IWorldSource source, bool allowRemoteSnapshots = false)
         {
             this.session = session ?? throw new ArgumentNullException("session");
             this.source = source ?? throw new ArgumentNullException("source");
+            this.allowRemoteSnapshots = allowRemoteSnapshots;
             sender = new SnapshotTransferSender(SendTo);
             session.ApplicationMessageReceived += Handle;
         }
@@ -79,9 +82,10 @@ namespace OniOnline.Multiplayer
             else if (!source.IsAvailable && worlds.ContainsKey(session.LocalPlayerId)) WithdrawLocal();
             if (session.IsHost && now >= nextCatalog)
             {
+                bool sent = true;
                 foreach (var entry in worlds.Values)
-                    BroadcastDescriptor(entry.Descriptor);
-                nextCatalog = now + 5;
+                    sent &= BroadcastDescriptor(entry.Descriptor);
+                nextCatalog = allowRemoteSnapshots ? now + 5 : sent ? double.MaxValue : now + 1;
             }
             if (observing && selectedOwner != null && selectedOwner != session.LocalPlayerId && now >= nextRequest)
             { SendRequest(selectedOwner); nextRequest = now + 10; }
@@ -100,13 +104,15 @@ namespace OniOnline.Multiplayer
             ShareOwnWorld = value;
             sender.ClearOwner(session.LocalPlayerId ?? "");
             nextMetadata = nextFrame = 0;
-            if (source.IsAvailable && session.Joined) PublishLocal(value);
+            if (source.IsAvailable && session.Joined)
+                PublishLocal(value && (allowRemoteSnapshots || (observing && selectedOwner == session.LocalPlayerId)));
             Notify();
         }
 
         public void RequestWorld(string ownerId)
         {
             if (!session.Players.Any(p => p.Id == ownerId)) return;
+            if (!allowRemoteSnapshots && ownerId != session.LocalPlayerId) return;
             observing = true;
             selectedOwner = ownerId;
             if (ownerId == session.LocalPlayerId)
@@ -141,12 +147,16 @@ namespace OniOnline.Multiplayer
                 snapshot.World.Epoch = publicationEpoch;
                 snapshot.World.ControlRevision = controlRevision;
                 UpdateDescriptor(snapshot.World);
-                BroadcastDescriptor(snapshot.World);
+                // The native viewport path has no use for a remote simulation clock.
+                // Catalog state changes and new/resumed members trigger publication instead.
+                if ((allowRemoteSnapshots || !SameCatalogDescriptor(lastPublishedDescriptor, snapshot.World)) &&
+                    BroadcastDescriptor(snapshot.World))
+                    lastPublishedDescriptor = WorldWire.CopyDescriptor(snapshot.World);
                 if (full && snapshot.World.Shared)
                 {
                     StoreSnapshot(snapshot);
-                    if (session.IsHost) QueueForObservers(snapshot);
-                    else
+                    if (allowRemoteSnapshots && session.IsHost) QueueForObservers(snapshot);
+                    else if (allowRemoteSnapshots)
                     {
                         var host = HostId();
                         if (host != null) SetTransferPressure(!sender.TryQueue(host, snapshot, now));
@@ -169,6 +179,7 @@ namespace OniOnline.Multiplayer
             worlds.Remove(session.LocalPlayerId);
             sender.ClearOwner(session.LocalPlayerId);
             sourceEpoch = null;
+            lastPublishedDescriptor = null;
             Notify();
         }
 
@@ -179,18 +190,27 @@ namespace OniOnline.Multiplayer
             else session.SendApplication(data);
         }
 
-        private void BroadcastDescriptor(WorldDescriptor world)
+        private bool BroadcastDescriptor(WorldDescriptor world)
         {
             var data = WorldWire.EncodeDescriptor(world);
-            if (session.IsHost) Broadcast(world.OwnerId, data);
-            else if (world.OwnerId == session.LocalPlayerId) session.SendApplication(data);
+            if (session.IsHost) return Broadcast(world.OwnerId, data);
+            return world.OwnerId != session.LocalPlayerId || session.SendApplication(data);
         }
 
-        private void Broadcast(string owner, byte[] data)
+        private bool Broadcast(string owner, byte[] data)
         {
+            bool sent = true;
             foreach (var player in session.Players)
                 if (player.Connected && player.Id != session.LocalPlayerId && player.Id != owner)
-                    SendTo(player.Id, owner, data);
+                    sent &= SendTo(player.Id, owner, data);
+            return sent;
+        }
+
+        private static bool SameCatalogDescriptor(WorldDescriptor a, WorldDescriptor b)
+        {
+            return a != null && b != null && a.Id == b.Id && a.OwnerId == b.OwnerId && a.Name == b.Name &&
+                a.Epoch == b.Epoch && a.ControlRevision == b.ControlRevision && a.NativeWorldId == b.NativeWorldId &&
+                a.Width == b.Width && a.Height == b.Height && a.Shared == b.Shared;
         }
 
         private bool SendTo(string target, string owner, byte[] data)
@@ -207,6 +227,10 @@ namespace OniOnline.Multiplayer
             { sender.AcceptAck(owner, data, now); return; }
             WorldMessage message;
             if (!WorldWire.TryDecode(data, out message) || !session.Players.Any(p => p.Id == owner && p.Connected)) return;
+            // The native viewport path exchanges world descriptors here, never whole-world state.
+            // An older peer cannot opt this instance back into bulk snapshots with a request.
+            if (!allowRemoteSnapshots && (message.Kind == WorldMessageKind.SnapshotRequest ||
+                message.Kind == WorldMessageKind.SnapshotChunk)) return;
             if (message.Kind == WorldMessageKind.SnapshotRequest)
             { OnRequest(owner, message.OwnerId, data); return; }
             if (message.OwnerId != owner || owner == session.LocalPlayerId) return;
@@ -233,7 +257,7 @@ namespace OniOnline.Multiplayer
             if (message.Kind == WorldMessageKind.Descriptor)
             {
                 UpdateDescriptor(assembler.GetDescriptor(message.WorldId));
-                if (session.IsHost) Broadcast(owner, data);
+                if (session.IsHost && !Broadcast(owner, data)) nextCatalog = 0;
             }
             else if (message.Kind == WorldMessageKind.Withdraw)
             {
@@ -254,6 +278,7 @@ namespace OniOnline.Multiplayer
 
         private void OnRequest(string requester, string requestedOwner, byte[] payload)
         {
+            if (!allowRemoteSnapshots) return;
             if (!session.Players.Any(p => p.Id == requestedOwner && p.Connected)) return;
             if (session.IsHost)
             {
@@ -351,6 +376,7 @@ namespace OniOnline.Multiplayer
             {
                 sender.Reset();
                 nextMetadata = nextFrame = nextCatalog = nextRequest = 0;
+                lastPublishedDescriptor = null;
                 foreach (var player in players) assembler.ResetOwner(player.Id);
             }
             wasJoined = session.Joined;

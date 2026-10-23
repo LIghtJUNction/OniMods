@@ -227,19 +227,6 @@ namespace OniOnline.UI
                 if (Protocol.ValidText(value, 32)) PlayerPrefs.SetString("OniOnline.Nickname", value);
             });
             OnlineWidgets.Space(left, 2);
-            Section(left, "CreateSystemHeader", T("menu.create_room"));
-            Caption(left, T("ui.room_name"), 16, 24).color = OnlineWidgets.MutedColor;
-            var roomName = OnlineWidgets.Input(left, runtime.RoomName, T("ui.room_name"));
-            roomName.name = "CreateSystemName";
-            roomName.characterLimit = 64;
-            roomName.onValueChanged.AddListener(value => runtime.RoomName = value);
-            connectionControls.Add(roomName);
-            var create = OnlineWidgets.Button(left, T("menu.create_room"), runtime.CreateSystemFromLobby, -1);
-            create.name = "CreateSystem";
-            OnlineWidgets.Size(create.gameObject, -1, 44);
-            OnlineWidgets.Tint(create, OnlineWidgets.AccentColor);
-            connectionControls.Add(create);
-            OnlineWidgets.Space(left, 4);
             networkSettingsButton = OnlineWidgets.Button(left, T("lobby.network_settings") + "  +", ToggleNetworkSettings, -1);
             networkSettingsButton.name = "NetworkSettingsToggle";
             CompactButton(networkSettingsButton);
@@ -391,7 +378,7 @@ namespace OniOnline.UI
             CompactButton(latestChat, 15);
             OnlineWidgets.Tint(latestChat, OnlineWidgets.AccentColor);
             latestChat.gameObject.SetActive(false);
-            chatTranscript = new OnlineChatTranscript(chatScroll, chatBody, latestChat);
+            chatTranscript = new OnlineChatTranscript(chatScroll, chatBody, latestChat, runtime.ChatFontSize);
             return page;
         }
 

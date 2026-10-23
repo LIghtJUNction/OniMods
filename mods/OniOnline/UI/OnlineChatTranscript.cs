@@ -25,15 +25,17 @@ namespace OniOnline.UI
         private readonly ScrollRect scroll;
         private readonly Transform content;
         private readonly Button latest;
+        private readonly int fontSize;
         private readonly List<Entry> entries = new List<Entry>();
         private string roomId;
         private bool layoutPending, followPending, unread;
         private Entry readingAnchor;
         private float readingAnchorY, previousOffset;
 
-        internal OnlineChatTranscript(ScrollRect scroll, Transform content, Button latest)
+        internal OnlineChatTranscript(ScrollRect scroll, Transform content, Button latest, int fontSize)
         {
             this.scroll = scroll; this.content = content; this.latest = latest;
+            this.fontSize = fontSize;
             scroll.onValueChanged.AddListener(_ => RefreshLatestButton());
         }
 
@@ -144,14 +146,14 @@ namespace OniOnline.UI
             OnlineWidgets.Size(entry.Sender.gameObject, -1, 26, 1);
             entry.Sender.textWrappingMode = TextWrappingModes.NoWrap;
             entry.Sender.overflowMode = TextOverflowModes.Ellipsis;
-            entry.Body = OnlineWidgets.Label(root, line.Text, 18);
+            entry.Body = OnlineWidgets.Label(root, line.Text, fontSize);
             entry.Body.name = "ChatMessageBody";
             entry.Body.alignment = TextAlignmentOptions.TopLeft;
             entry.Body.textWrappingMode = TextWrappingModes.Normal;
             entry.Body.overflowMode = TextOverflowModes.Overflow;
             entry.Body.margin = new Vector4(36, 0, 0, 2);
             var bodyLayout = entry.Body.gameObject.AddComponent<LayoutElement>();
-            bodyLayout.minWidth = 0; bodyLayout.minHeight = 25; bodyLayout.flexibleHeight = 0;
+            bodyLayout.minWidth = 0; bodyLayout.minHeight = fontSize + 7; bodyLayout.flexibleHeight = 0;
             // Neither sender names nor message bodies ever enable TMP rich text.
             entry.Body.richText = entry.Sender.richText = false;
             return entry;

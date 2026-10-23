@@ -26,6 +26,17 @@ namespace OniOnline.UI
     {
         private static readonly Color32 UnknownColor = new Color32(13, 14, 18, 255);
         private static readonly Regex LinkTags = new Regex("<[^>]*>", RegexOptions.Compiled);
+        private static bool ExperimentalWorkTools
+        {
+            get
+            {
+#if ONIONLINE_RUNTIME_PROBE
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
         private readonly Dictionary<int, WorldCell> visibleCells = new Dictionary<int, WorldCell>();
         private readonly List<GameObject> dupeMarkers = new List<GameObject>();
         private readonly Dictionary<int, RectTransform> entityMarkers = new Dictionary<int, RectTransform>();
@@ -217,8 +228,13 @@ namespace OniOnline.UI
             listScroll.GetComponent<LayoutElement>().minHeight = 120;
             listScroll.GetComponent<LayoutElement>().flexibleHeight = 1;
             refreshButton = OnlineWidgets.Button(sidebar, T("world.refresh"), RefreshSelected, -1);
+            var chat = OnlineWidgets.Button(sidebar, T("ui.chat_title"), OpenChat, -1);
+            chat.gameObject.name = "OpenRoomChat";
+            OnlineWidgets.Tint(chat, OnlineWidgets.AccentColor);
             plansButton = OnlineWidgets.Button(sidebar, T("work.title"), () => OpenPlans(false), -1);
-            OnlineWidgets.Button(sidebar, T("team.title"), () => OnlineRuntime.Instance?.ShowTeam(), -1);
+            plansButton.gameObject.SetActive(ExperimentalWorkTools);
+            var team = OnlineWidgets.Button(sidebar, T("team.title"), () => OnlineRuntime.Instance?.ShowTeam(), -1);
+            team.gameObject.SetActive(ExperimentalWorkTools);
             var main = OnlineWidgets.Column(body.transform, "WorldView", 0, 6);
             OnlineWidgets.Size(main.gameObject, -1, 0, 1).flexibleHeight = 1;
             selectedTitle = Caption(main, T("world.select_world"), 21, 28);
@@ -246,9 +262,13 @@ namespace OniOnline.UI
             mapAspect.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             mapAspect.aspectRatio = 1;
             var pointer = map.AddComponent<WorldMapPointer>();
-            pointer.Click = SelectTaskCell;
-            pointer.SelectionStart = SelectTaskCell;
-            pointer.SelectionMove = DragTaskSelection;
+            if (ExperimentalWorkTools)
+            {
+                pointer.Click = SelectTaskCell;
+                pointer.SelectionStart = SelectTaskCell;
+                pointer.SelectionMove = DragTaskSelection;
+            }
+            else pointer.Click = InspectCell;
             pointer.Hover = InspectCell;
             pointer.Exit = StopHover;
             pointer.Pan = DragMap;
@@ -256,6 +276,7 @@ namespace OniOnline.UI
             var overlay = OnlineWidgets.Rect("TaskOverlay", mapRect);
             OnlineWidgets.Stretch((RectTransform)overlay.transform);
             taskOverlay = overlay.AddComponent<WorldTaskOverlay>(); taskOverlay.raycastTarget = false;
+            overlay.SetActive(ExperimentalWorkTools);
             emptyLabel = OnlineWidgets.Label(viewport.transform, T("world.no_worlds"), 18);
             Fill(emptyLabel.rectTransform, 24, 12, 24, 12);
             emptyLabel.alignment = TextAlignmentOptions.Center;
@@ -278,6 +299,7 @@ namespace OniOnline.UI
             memberTasks.gameObject.name = "TaskLayerMember";
             mergedTasks = OnlineWidgets.Button(layers, T("work.merged"), () => SetTaskLayer(2), -1);
             mergedTasks.gameObject.name = "TaskLayerMerged";
+            layers.gameObject.SetActive(ExperimentalWorkTools);
             var taskTools = OnlineWidgets.Row(main, 40);
             lowerPriority = OnlineWidgets.Button(taskTools, "−", () => SetTaskPriority(taskPriority - 1), 36);
             lowerPriority.gameObject.name = "TaskPriorityDecrease";
@@ -289,13 +311,15 @@ namespace OniOnline.UI
             digPlanButton.gameObject.name = "TaskSubmitDig";
             OnlineWidgets.Tint(digPlanButton, OnlineWidgets.AccentColor);
             digPlanButton.interactable = false;
+            taskTools.gameObject.SetActive(ExperimentalWorkTools);
             taskStatus = Caption(main, T("taskview.hint"), 15, 42);
             taskStatus.gameObject.name = "TaskFeedback";
             taskStatus.textWrappingMode = TextWrappingModes.Normal; taskStatus.color = OnlineWidgets.MutedColor;
+            taskStatus.gameObject.SetActive(ExperimentalWorkTools);
             details = Caption(main, T("world.inspect_hint"), 16, 52);
             details.textWrappingMode = TextWrappingModes.Normal;
             details.color = OnlineWidgets.MutedColor;
-            taskEvents = Coordinator?.Work;
+            taskEvents = ExperimentalWorkTools ? Coordinator?.Work : null;
             if (taskEvents != null)
             { taskEvents.Changed += InvalidateTasks; taskEvents.SubmissionChanged += OnTaskSubmission; }
             Refresh();
@@ -312,7 +336,7 @@ namespace OniOnline.UI
                 DrawMotion();
                 RefreshRemoteDetails();
             }
-            if (Coordinator?.Work != null && FindSelectedPlanet() != null && Time.unscaledTime >= nextTaskPoll)
+            if (ExperimentalWorkTools && Coordinator?.Work != null && FindSelectedPlanet() != null && Time.unscaledTime >= nextTaskPoll)
             {
                 nextTaskPoll = Time.unscaledTime + 3;
                 PollTaskLayer();
@@ -351,7 +375,7 @@ namespace OniOnline.UI
             if (!temperatureButton.interactable && displayedSnapshot?.World != null)
                 viewportLabel.text = Format("view.region", region.X, region.Y, region.Width, region.Height);
             selectedTitle.text = selected.Descriptor.Name ?? "";
-            selectedOwner.text = (selected.OwnerName ?? "") + " · " + T("taskview.with_plans");
+            selectedOwner.text = (selected.OwnerName ?? "") + " · " + T(ExperimentalWorkTools ? "taskview.with_plans" : "world.read_only");
             stateLabel.text = WorldStatus(selected);
             stateLabel.color = selected.Connected || selected.IsLocal ? OnlineWidgets.OnlineColor : OnlineWidgets.MutedColor;
             if (selected.LastReceivedUtc != System.DateTime.MinValue)
@@ -393,7 +417,9 @@ namespace OniOnline.UI
             ClearMap();
             if (manifest == null)
             {
-                model.RequestWorld(entry.Descriptor.OwnerId);
+                // Remote state is requested only after the authenticated planet manifest
+                // can bound a viewport. Missing metadata never falls back to a whole-world transfer.
+                if (entry.IsLocal) model.RequestWorld(entry.Descriptor.OwnerId);
                 return;
             }
             Coordinator.StopLegacyObservation();
@@ -706,6 +732,7 @@ namespace OniOnline.UI
 
         private void OpenPlans(bool draftDig)
         {
+            if (!ExperimentalWorkTools) return;
             var planet = FindSelectedPlanet();
             var runtime = OnlineRuntime.Instance;
             if (planet == null || runtime == null) return;
@@ -719,6 +746,14 @@ namespace OniOnline.UI
             string owner = selectedOwnerId;
             Close();
             runtime.ShowWorkPlans(owner, planet.PlanetId, cell);
+        }
+
+        private void OpenChat()
+        {
+            var runtime = OnlineRuntime.Instance;
+            if (runtime == null) return;
+            // Chat overlays the current authorized view; its subscription stays alive.
+            runtime.ShowChat();
         }
 
         private void DetachTaskEvents()
@@ -831,6 +866,7 @@ namespace OniOnline.UI
         }
         private void SubmitDigSelection()
         {
+            if (!ExperimentalWorkTools) return;
             string error;
             var cells = SelectedTaskCells(out error);
             if (error != null || cells.Length == 0) { taskMessage = error; taskDirty = true; return; }
@@ -856,6 +892,7 @@ namespace OniOnline.UI
         {
             taskDirty = false;
             if (taskOverlay == null) return;
+            if (!ExperimentalWorkTools) { taskOverlay.Clear(); return; }
             var work = Coordinator?.Work; var manifest = FindSelectedPlanet(); var session = OnlineRuntime.Instance?.Session;
             string error;
             WorkCell[] selected = SelectedTaskCells(out error);
@@ -916,7 +953,8 @@ namespace OniOnline.UI
         private void RefreshSelected()
         {
             if (remotePlanet != null) ScheduleSubscription();
-            else if (!string.IsNullOrEmpty(selectedOwnerId)) model.RequestWorld(selectedOwnerId);
+            else if (model.Worlds.Any(entry => entry.IsLocal && entry.Descriptor.OwnerId == selectedOwnerId))
+                model.RequestWorld(selectedOwnerId);
         }
 
         private void ShowEmpty(string key)
@@ -1086,8 +1124,11 @@ namespace OniOnline.UI
         private bool leftDragged;
         internal Action<float> Zoom;
         internal System.Action Exit;
+        private static bool CanInteract
+        { get { return !OnlineInputControls.EditingText && OnlineRuntime.Instance?.ChatOpen != true; } }
         private bool TryPosition(PointerEventData data, out Vector2 position)
         {
+            if (!CanInteract) { position = Vector2.zero; return false; }
             return RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)transform,
                 data.position, data.pressEventCamera, out position);
         }
@@ -1103,16 +1144,17 @@ namespace OniOnline.UI
             if (data.button == PointerEventData.InputButton.Left && TryPosition(data, out position)) SelectionStart?.Invoke(position);
         }
         public void OnBeginDrag(PointerEventData data)
-        { if (data.button == PointerEventData.InputButton.Left) leftDragged = true; }
+        { if (CanInteract && data.button == PointerEventData.InputButton.Left) leftDragged = true; }
         public void OnPointerMove(PointerEventData data)
         {
             Vector2 position;
             if (!data.dragging && TryPosition(data, out position)) Hover?.Invoke(position);
         }
         public void OnPointerExit(PointerEventData data) { Exit?.Invoke(); }
-        public void OnScroll(PointerEventData data) { Zoom?.Invoke(data.scrollDelta.y); }
+        public void OnScroll(PointerEventData data) { if (CanInteract) Zoom?.Invoke(data.scrollDelta.y); }
         public void OnDrag(PointerEventData data)
         {
+            if (!CanInteract) return;
             if (data.button == PointerEventData.InputButton.Left)
             {
                 Vector2 position;

@@ -8,9 +8,10 @@ using Steamworks;
 
 namespace OniOnline.Runtime
 {
-    internal sealed class SteamRoomTransport : IRoomTransport, IReconnectableRoomTransport, IAuthenticatedRoomTransport, IRoomCleanupStatus
+    internal sealed class SteamRoomTransport : IRoomTransport, IReconnectableRoomTransport, IAuthenticatedRoomTransport, IRealtimeRoomTransport, IRoomCleanupStatus
     {
         private const int Channel = 27140;
+        private const int RealtimeChannel = 27142;
         private readonly CSteamID lobby;
         private readonly CSteamID owner;
         private readonly ulong self;
@@ -142,7 +143,13 @@ namespace OniOnline.Runtime
                     inbox.Enqueue(new TransportEvent { Kind = TransportEventKind.Connected, Peer = id.ToString() });
             foreach (ulong id in peers.Where(id => !members.Contains(id)).ToArray()) Disconnect(id.ToString());
 
-            int count = SteamNetworkingMessages.ReceiveMessagesOnChannel(Channel, incoming, incoming.Length);
+            ReceiveChannel(Channel, false, incoming.Length);
+            ReceiveChannel(RealtimeChannel, true, 16);
+        }
+
+        private void ReceiveChannel(int channel, bool realtime, int maximum)
+        {
+            int count = SteamNetworkingMessages.ReceiveMessagesOnChannel(channel, incoming, maximum);
             for (int i = 0; i < count; i++)
             {
                 try
@@ -150,17 +157,30 @@ namespace OniOnline.Runtime
                     var message = SteamNetworkingMessage_t.FromIntPtr(incoming[i]);
                     ulong id = message.m_identityPeer.GetSteamID64();
                     if (!peers.Contains(id) || IsBlocked(id)) continue;
-                    if (message.m_cbSize <= 0 || message.m_cbSize > Protocol.MaxPacketBytes || inbox.Count >= 256)
-                    { Disconnect(id.ToString()); continue; }
+                    if (message.m_cbSize <= 0 || message.m_cbSize > Protocol.MaxPacketBytes || inbox.Count >= (realtime ? 192 : 256))
+                    { if (!realtime) Disconnect(id.ToString()); continue; }
                     var bytes = new byte[message.m_cbSize];
                     Marshal.Copy(message.m_pData, bytes, 0, bytes.Length);
-                    inbox.Enqueue(new TransportEvent { Kind = TransportEventKind.Message, Peer = id.ToString(), Data = bytes });
+                    inbox.Enqueue(new TransportEvent { Kind = TransportEventKind.Message, Peer = id.ToString(), Data = bytes, Realtime = realtime });
                 }
                 finally { SteamNetworkingMessage_t.Release(incoming[i]); incoming[i] = IntPtr.Zero; }
             }
         }
 
         public bool Send(string peer, byte[] data)
+        { return SendPacket(peer, data, Channel, Steamworks.Constants.k_nSteamNetworkingSend_Reliable, true); }
+
+        public bool SendRealtime(string peer, byte[] data)
+        {
+            try
+            {
+                return SendPacket(peer, data, RealtimeChannel,
+                    Steamworks.Constants.k_nSteamNetworkingSend_Unreliable | Steamworks.Constants.k_nSteamNetworkingSend_NoNagle, false);
+            }
+            catch (Exception) { return false; }
+        }
+
+        private bool SendPacket(string peer, byte[] data, int channel, int flags, bool reportFailure)
         {
             ulong id;
             if (disposed || data == null || data.Length < 1 || data.Length > Protocol.MaxPacketBytes ||
@@ -172,9 +192,9 @@ namespace OniOnline.Runtime
             try
             {
                 var result = SteamNetworkingMessages.SendMessageToUser(ref identity, pin.AddrOfPinnedObject(),
-                    (uint)data.Length, Steamworks.Constants.k_nSteamNetworkingSend_Reliable, Channel);
+                    (uint)data.Length, flags, channel);
                 if (result == EResult.k_EResultOK) return true;
-                inbox.Enqueue(new TransportEvent { Kind = TransportEventKind.Error, Error = "steam_send_failed" });
+                if (reportFailure) inbox.Enqueue(new TransportEvent { Kind = TransportEventKind.Error, Error = "steam_send_failed" });
                 return false;
             }
             finally { pin.Free(); }
@@ -187,7 +207,14 @@ namespace OniOnline.Runtime
             blocked[id] = clock.Elapsed.TotalSeconds + 2;
             var identity = new SteamNetworkingIdentity();
             identity.SetSteamID64(id);
-            try { if (SteamRoomCleanup.ClientAvailable) SteamNetworkingMessages.CloseChannelWithUser(ref identity, Channel); }
+            try
+            {
+                if (SteamRoomCleanup.ClientAvailable)
+                {
+                    try { SteamNetworkingMessages.CloseChannelWithUser(ref identity, Channel); }
+                    finally { SteamNetworkingMessages.CloseChannelWithUser(ref identity, RealtimeChannel); }
+                }
+            }
             finally { inbox.Enqueue(new TransportEvent { Kind = TransportEventKind.Disconnected, Peer = peer }); }
         }
 
@@ -211,6 +238,10 @@ namespace OniOnline.Runtime
                 cleanup.Run("channel_close", () => {
                     var identity = new SteamNetworkingIdentity(); identity.SetSteamID64(id);
                     if (!SteamNetworkingMessages.CloseChannelWithUser(ref identity, Channel)) cleanup.Note("channel_close", "not_closed");
+                });
+                cleanup.Run("realtime_channel_close", () => {
+                    var identity = new SteamNetworkingIdentity(); identity.SetSteamID64(id);
+                    if (!SteamNetworkingMessages.CloseChannelWithUser(ref identity, RealtimeChannel)) cleanup.Note("realtime_channel_close", "not_closed");
                 });
             }
             cleanup.Dispose("session_callback", request);

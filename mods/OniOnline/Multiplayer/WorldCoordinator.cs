@@ -39,13 +39,18 @@ namespace OniOnline.Multiplayer
             room = session;
             var planetSource = new NativePlanetSource();
             var source = new NativeWorldSource(() => OnlineColonyState.Current?.SelectedNativeWorldId ?? -1);
-            replication = new WorldReplication(session, source);
+            replication = new WorldReplication(session, source, allowRemoteSnapshots: false);
             replication.Changed += Notify;
             StarSystem = new StarSystemCoordinator(session, planetSource);
             StarSystem.Changed += Notify;
             var workContext = new NativeWorkContext(session, StarSystem);
             nativeWorkContext = workContext;
-            Work = new RemoteWorkCoordinator(session, workContext, new NativeWorkExecutor(),
+#if ONIONLINE_RUNTIME_PROBE
+            var nativeExecutor = new NativeWorkExecutor(true);
+#else
+            var nativeExecutor = new NativeWorkExecutor(false);
+#endif
+            Work = new RemoteWorkCoordinator(session, workContext, nativeExecutor,
                 planetId => StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId)?.PeerId);
             Work.Changed += Notify;
             Teams = new TeamColonyCoordinator(session, () =>
@@ -238,6 +243,7 @@ namespace OniOnline.Multiplayer
             RemoteWorkPermission direct, team;
             directPermissions.TryGetValue(actor, out direct); teamPermissions.TryGetValue(actor, out team);
             Work.SetPermissions(actor, direct | team);
+            Interest?.RevalidateObservers();
         }
         public void Show(string ownerId = null)
         {
@@ -253,7 +259,11 @@ namespace OniOnline.Multiplayer
             Interest.Stop();
             CellDetails.Stop();
         }
-        public void SetSharing(bool value) { replication.SetSharing(value); }
+        public void SetSharing(bool value)
+        {
+            replication.SetSharing(value);
+            Interest.RevalidateObservers();
+        }
         public void RequestWorld(string ownerId) { replication.RequestWorld(ownerId); }
         internal void StopLegacyObservation() { replication.StopObserving(); }
         private void Notify() { Revision++; if (Changed != null) Changed(); }

@@ -17,12 +17,14 @@ namespace OniOnline.Network
 
     public sealed class SessionOptions
     {
+        public const int MaxChatHistoryLimit = 500;
         public double HandshakeTimeoutSeconds = 30;
         public double HeartbeatIntervalSeconds = 3;
         public double PeerTimeoutSeconds = 30;
         public double ReconnectWindowSeconds = 300;
         public double SeatReservationSeconds = 300;
         public double ChatRetrySeconds = 3;
+        public int ChatHistoryLimit = 100;
         public Func<double> RetryJitter;
     }
 
@@ -191,7 +193,8 @@ namespace OniOnline.Network
             this.options = options ?? new SessionOptions();
             if (!ValidSeconds(this.options.HandshakeTimeoutSeconds) || !ValidSeconds(this.options.HeartbeatIntervalSeconds) ||
                 !ValidSeconds(this.options.PeerTimeoutSeconds) || !ValidSeconds(this.options.ReconnectWindowSeconds) ||
-                !ValidSeconds(this.options.SeatReservationSeconds) || !ValidSeconds(this.options.ChatRetrySeconds))
+                !ValidSeconds(this.options.SeatReservationSeconds) || !ValidSeconds(this.options.ChatRetrySeconds) ||
+                this.options.ChatHistoryLimit < 1 || this.options.ChatHistoryLimit > SessionOptions.MaxChatHistoryLimit)
                 throw new ArgumentException("invalid_session_options");
             this.profile = profile;
             this.password = password ?? "";
@@ -243,16 +246,25 @@ namespace OniOnline.Network
                         if (!peers.TryGetValue(item.Peer, out peer)) continue;
                         if (peer.CloseAt > 0)
                         {
-                            if (IsHost && peer.Leaving)
+                            if (IsHost && peer.Leaving && !item.Realtime)
                             {
                                 try { if (Protocol.Decode(item.Data).Kind == PacketKind.Leave) Send(item.Peer, new Packet { Kind = PacketKind.LeaveAck }); }
                                 catch (Exception error) when (error is InvalidDataException || error is ArgumentException) { }
                             }
                             continue;
                         }
-                        try { Receive(item.Peer, peer, Protocol.Decode(item.Data)); }
+                        try
+                        {
+                            var packet = Protocol.Decode(item.Data);
+                            if (item.Realtime && (!RealtimeReady || !peer.Authenticated || packet.Kind != PacketKind.Application ||
+                                !RoomVoiceWire.IsVoicePayload(packet.Payload))) continue;
+                            Receive(item.Peer, peer, packet);
+                        }
                         catch (Exception error) when (error is InvalidDataException || error is ArgumentException || error is FormatException)
-                        { Reject(item.Peer, peer, "invalid_packet"); }
+                        {
+                            if (!item.Realtime) Reject(item.Peer, peer,
+                                error is InvalidDataException && error.Message == "protocol_mismatch" ? "protocol_mismatch" : "invalid_packet");
+                        }
                     }
                 }
             }
@@ -261,8 +273,9 @@ namespace OniOnline.Network
             foreach (var entry in peers.ToArray())
             {
                 Peer peer = entry.Value;
-                if (peer.CloseAt > 0 ? now >= peer.CloseAt : now - peer.LastSeen > options.PeerTimeoutSeconds ||
-                    (!peer.Authenticated && now - peer.ConnectedAt > options.HandshakeTimeoutSeconds))
+                if (peer.CloseAt > 0 ? now >= peer.CloseAt : peer.Authenticated
+                    ? now - peer.LastSeen > options.PeerTimeoutSeconds
+                    : now - peer.ConnectedAt > options.HandshakeTimeoutSeconds)
                 {
                     if (transport != null) transport.Disconnect(entry.Key);
                     RemovePeer(entry.Key, false);
@@ -504,7 +517,7 @@ namespace OniOnline.Network
                     if (packet.PlayerId == localId && packet.MessageId > 0) pendingChat.Remove(packet.MessageId);
                     if (packet.Sequence > sequence && !receivedChat.ContainsKey(packet.Sequence))
                     {
-                        if (receivedChat.Count >= 128) throw new InvalidDataException();
+                        if (receivedChat.Count >= SessionOptions.MaxChatHistoryLimit) throw new InvalidDataException();
                         receivedChat.Add(packet.Sequence, packet);
                         Packet next;
                         while (receivedChat.TryGetValue(sequence + 1, out next))
@@ -668,7 +681,7 @@ namespace OniOnline.Network
 
         private void AddChat(Packet packet)
         {
-            if (chat.Count >= 100) chat.RemoveAt(0);
+            if (chat.Count >= options.ChatHistoryLimit) chat.RemoveAt(0);
             chat.Add(new ChatLine { Sequence = packet.Sequence, PlayerId = packet.PlayerId, Name = packet.Name, Text = packet.Text, MessageId = packet.MessageId });
             Notify();
         }
@@ -686,6 +699,34 @@ namespace OniOnline.Network
             return seats.TryGetValue(playerId, out seat) && seat.Connection != null &&
                 Send(seat.Connection, new Packet { Kind = PacketKind.Application, PlayerId = localId, Payload = payload });
         }
+
+        internal bool SendRealtimeApplication(byte[] payload)
+        {
+            if (IsHost || !RealtimeReady || !RoomVoiceWire.IsVoicePayload(payload) || payload.Length > Protocol.MaxApplicationBytes) return false;
+            var realtime = transport as IRealtimeRoomTransport;
+            return realtime != null && realtime.SendRealtime(transport.HostPeer,
+                Protocol.Encode(new Packet { Kind = PacketKind.Application, PlayerId = localId, Payload = payload }));
+        }
+
+        internal bool ForwardRealtimeApplication(string senderPlayerId, string targetPlayerId, byte[] payload)
+        {
+            if (!IsHost || !RealtimeReady || senderPlayerId == null || targetPlayerId == null || !RoomVoiceWire.IsVoicePayload(payload) ||
+                payload.Length > Protocol.MaxApplicationBytes) return false;
+            Seat sender;
+            Peer senderPeer;
+            if (senderPlayerId != localId && (!seats.TryGetValue(senderPlayerId, out sender) || sender.Connection == null ||
+                !peers.TryGetValue(sender.Connection, out senderPeer) || !senderPeer.Authenticated || senderPeer.CloseAt != 0)) return false;
+            Seat target;
+            Peer targetPeer;
+            if (!seats.TryGetValue(targetPlayerId, out target) || target.Connection == null ||
+                !peers.TryGetValue(target.Connection, out targetPeer) || !targetPeer.Authenticated || targetPeer.CloseAt != 0) return false;
+            var realtime = transport as IRealtimeRoomTransport;
+            return realtime != null && realtime.SendRealtime(target.Connection,
+                Protocol.Encode(new Packet { Kind = PacketKind.Application, PlayerId = senderPlayerId, Payload = payload }));
+        }
+
+        private bool RealtimeReady
+        { get { return !Closed && !disposed && Joined && !Reconnecting && !Leaving && transport != null; } }
 
         public bool ForwardApplication(string senderPlayerId, string targetPlayerId, byte[] payload)
         {

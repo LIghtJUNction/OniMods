@@ -13,11 +13,25 @@ namespace OniOnline
         {
             PUtil.InitLibrary();
             OnlineText.Load(path);
-            Strings.Add("STRINGS.ONIONLINE.OPTIONS.PREFERSTEAM.NAME", OnlineText.Get("options.prefer_steam"));
-            Strings.Add("STRINGS.ONIONLINE.OPTIONS.PREFERSTEAM.DESC", OnlineText.Get("options.prefer_steam_hint"));
+            OnlineInputControls.RegisterActions();
+            RegisterOptionText("PREFERSTEAM", "prefer_steam");
+            RegisterOptionText("LANPORT", "lan_port");
+            RegisterOptionText("HANDSHAKE", "handshake_timeout");
+            RegisterOptionText("PEERTIMEOUT", "peer_timeout");
+            RegisterOptionText("RECONNECT", "reconnect_window");
+            RegisterOptionText("CHATHISTORY", "chat_history");
+            RegisterOptionText("CHATFONT", "chat_font");
+            RegisterOptionText("VOICEENABLED", "voice_enabled");
+            RegisterOptionText("VOICEVOLUME", "voice_volume");
             // UserMod2.OnLoad patches this assembly once.
             base.OnLoad(harmony);
             new POptions().RegisterOptions(this, typeof(OnlineOptions));
+        }
+
+        private static void RegisterOptionText(string name, string key)
+        {
+            Strings.Add("STRINGS.ONIONLINE.OPTIONS." + name + ".NAME", OnlineText.Get("options." + key));
+            Strings.Add("STRINGS.ONIONLINE.OPTIONS." + name + ".DESC", OnlineText.Get("options." + key + "_hint"));
         }
 
         public override void OnAllModsLoaded(Harmony harmony, IReadOnlyList<KMod.Mod> mods)

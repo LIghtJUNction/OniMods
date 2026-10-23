@@ -69,6 +69,22 @@ internal static class Program
         try
         {
             if (args.Length == 1 && args[0] == "--tcp-worker-budget") return TcpWorkerBudgetTests.Run();
+            if (args.Length == 1 && args[0] == "--loaded-colony-start")
+            { LoadedColonyRoomStartTests.Run(Check); Console.WriteLine("PASS " + assertions + " loaded-colony start assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--local-star-map")
+            { LocalStarMapCatalogTests.Run(Check); Console.WriteLine("PASS " + assertions + " local star-map assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--online-options")
+            { OnlineOptionsTests.Run(Check); Console.WriteLine("PASS " + assertions + " online options assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--star-map-directory")
+            { StarMapDirectoryTests.Run(Check); Console.WriteLine("PASS " + assertions + " star-map directory assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--voice")
+            { RoomVoiceTests.Run(Check); Console.WriteLine("PASS " + assertions + " room voice assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--viewport-only-world")
+            { ViewportOnlyWorldReplicationTests.Run(Check); Console.WriteLine("PASS " + assertions + " viewport-only world assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--steam-directory")
+            { SteamRoomDirectoryTests.Run(Check); Console.WriteLine("PASS " + assertions + " Steam directory assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--readonly-latency")
+            { ReadOnlyLatencyTests.Run(Check); Console.WriteLine("PASS " + assertions + " read-only high-latency assertions"); return 0; }
             if (args.Length > 0 && args[0] == "--peer") return PeerProcess(args);
             if (args.Length > 0 && args[0] == "--native-interest-peer") return NativeInterestPeer.Run(args);
             if (args.Length > 0 && args[0] == "--native-work-peer") return NativeRemoteWorkPeer.Run(args);
@@ -121,6 +137,13 @@ internal static class Program
                 .Select(a => a.Address.ToString()).FirstOrDefault() ?? "127.0.0.1";
             ProtocolTests();
             ChatAndStart();
+            LoadedColonyRoomStartTests.Run(Check);
+            LocalStarMapCatalogTests.Run(Check);
+            StarMapDirectoryTests.Run(Check);
+            OnlineOptionsTests.Run(Check);
+            RoomVoiceTests.Run(Check);
+            ViewportOnlyWorldReplicationTests.Run(Check);
+            SteamRoomDirectoryTests.Run(Check);
             WrongCredentials();
             CapacityAndAuthority();
             DisconnectAndRejoin();
@@ -140,6 +163,7 @@ internal static class Program
             WorldInterestTests.Run(Check);
             WorldInterestSessionTests.Run(Check);
             WorldCellDetailsTests.Run(Check);
+            ReadOnlyLatencyTests.Run(Check);
             DupeCommandTests.Run(Check);
             DupeCommandLifecycleTests.Run(Check);
             NativeDuplicantImportAuditTests.Run(Check);
@@ -284,9 +308,14 @@ internal static class Program
         Check(catalog.Get("ui.send", null) == "Send", "missing locale falls back to English");
         Check(catalog.Get("mode.online", "zh_klei") == "联机" && catalog.Get("mode.online", "zh-Hant") == "連線" &&
             catalog.Get("mode.online", "en-US") == "Online", "Online game category is localized in all three languages");
+        Check(catalog.Get("menu.browse_lobbies", "zh_klei") == "浏览游戏大厅" &&
+            catalog.Get("menu.browse_lobbies", "en-US") == "Browse game lobbies", "lobby entry describes browsing games rather than creating a system");
         Check(catalog.Get("room.join_running", "en-US") == "Join game", "late-join lobby action is localized");
-        Check(catalog.Get("engine.preview", "zh_klei").StartsWith("星际航路"), "quoted comma-bearing row preserves Chinese engine status");
-        Check(catalog.Get("engine.preview", "en-US").Contains("rooms, comms"), "quoted English commas are retained as one field");
+        Check(catalog.Get("engine.preview", "zh_klei").StartsWith("你的星球与本地存档绑定。"), "Chinese engine status describes locally owned planets");
+        Check(catalog.Get("engine.preview", "en-US").Contains("They cannot control your planet."), "English engine status preserves read-only authority");
+        var quoted = new TextCatalog(new[] { "quoted,\"中文,状态\",\"繁體,狀態\",\"rooms, comms\"" });
+        Check(quoted.Get("quoted", "zh_klei") == "中文,状态" && quoted.Get("quoted", "en-US") == "rooms, comms",
+            "quoted CSV commas are retained as one field independently of product copy");
         Check(catalog.Get("engine.story", "en-US").StartsWith("A folded") &&
             catalog.Get("engine.story", "en-US").Contains("\"This device"), "CSV quoting unescapes story punctuation without displaying delimiters");
     }
@@ -533,7 +562,7 @@ internal static class Program
         if (args.Length > 5) profile.CycleTrimVersion = args[5];
         int holdSeconds = args.Length > 7 ? int.Parse(args[7]) : 0;
         using (var client = new RoomSession(TcpRoomTransport.Join(args[1], int.Parse(args[2])), profile, args.Length > 6 ? args[6] : "房间密钥"))
-        using (var worlds = args.Length > 8 ? new OniOnline.Multiplayer.WorldReplication(client, new ObserverSource()) : null)
+        using (var worlds = args.Length > 8 ? new OniOnline.Multiplayer.WorldReplication(client, new ObserverSource(), allowRemoteSnapshots: true) : null)
         {
             bool sent = false;
             long observed = 0;

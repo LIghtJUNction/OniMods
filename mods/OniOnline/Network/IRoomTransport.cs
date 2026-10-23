@@ -10,6 +10,7 @@ namespace OniOnline.Network
         public string Peer;
         public byte[] Data;
         public string Error;
+        public bool Realtime;
     }
 
     public interface IReconnectableRoomTransport
@@ -22,6 +23,13 @@ namespace OniOnline.Network
     public interface IAuthenticatedRoomTransport
     {
         string GetAuthenticatedIdentity(string peer);
+    }
+
+    // Ephemeral media may be dropped under pressure and is never replayed after
+    // reconnect. Implementations keep its queue separate from reliable control.
+    public interface IRealtimeRoomTransport
+    {
+        bool SendRealtime(string peer, byte[] data);
     }
 
     // Pumped by the owning thread. Transport workers never call game/UI code.

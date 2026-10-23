@@ -1,6 +1,6 @@
 key,zh-CN,zh-TW,en
 mode.online,联机,連線,Online
-menu.browse_lobbies,浏览星系,瀏覽星系,Browse star systems
+menu.browse_lobbies,浏览游戏大厅,瀏覽遊戲大廳,Browse game lobbies
 menu.create_room,创建星系,建立星系,Create star system
 menu.join_room,加入星系,加入星系,Join system
 menu.join_by_code,使用房间码加入,使用房間代碼加入,Join by room code
@@ -126,7 +126,7 @@ error.invalid_address,房间码或 IP 与端口格式错误,房間代碼或 IP �
 error.password_too_long,密码最多 128 个字符,密碼最多 128 個字元,Password is limited to 128 characters
 error.wrong_password,房间密码错误,房間密碼錯誤,Incorrect room password
 error.version_mismatch,双方的游戏或 CycleTrim 版本不一致,雙方的遊戲或 CycleTrim 版本不一致,Game or CycleTrim versions do not match
-error.protocol_mismatch,联机协议版本不兼容,連線協定版本不相容,Incompatible network protocol
+error.protocol_mismatch,联机协议版本不兼容，请双方安装相同测试版本,連線協定版本不相容，請雙方安裝相同測試版本,Incompatible network protocol. Both players must install the same test version.
 error.invalid_packet,收到无效网络消息,收到無效網路訊息,Invalid network message
 error.handshake_required,连接验证未完成,連線驗證未完成,Connection handshake required
 error.connection_rejected,房间拒绝了连接,房間拒絕了連線,Connection rejected
@@ -170,11 +170,24 @@ system.chat,通讯与房间,通訊與房間,Comms and room
 system.offline,现在是自己的星系。不开房也能继续生活。,現在是自己的星系。不開房也能繼續生活。,You are home. Your colony continues without opening a room.
 time.independent,各星球独立暂停与推进,各星球獨立暫停與推進,Each asteroid runs and pauses independently
 engine.title,行星发动机,行星發動機,Planetary Engine
-engine.tooltip,阅读打印舱内的行星发动机操作条目，打开星图。,閱讀列印艙內的行星發動機操作條目，開啟星圖。,Read the printing pod entry and open the star map.
+engine.tooltip,在游戏数据库中阅读行星发动机条目。,在遊戲資料庫中閱讀行星發動機條目。,Read the Planetary Engine article in the in-game database.
 engine.story,打印舱的使用手册里夹着一页折起来的说明书。展开后，上面写着：“本设备亦可用于调整行星位置。”下方有一行小字：请勿在行星外侧站立。,列印艙的使用手冊裡夾著一頁摺起來的說明書。展開後，上面寫著：「本設備亦可用於調整行星位置。」下方有一行小字：請勿在行星外側站立。,"A folded page is tucked inside the printing pod manual. It reads: ""This device may also be used to adjust planetary position."" The fine print says: ""Please remain inside the planet."""
-engine.preview,星际航路尚未开放。此版本可开放星系、通讯与观察，尚不能搬运星球。,星際航路尚未開放。此版本可開放星系、通訊與觀察，尚不能搬運星球。,"Interstellar routes are not open yet. This preview supports rooms, comms and observation; moving an asteroid is not available."
+engine.preview,你的星球与本地存档绑定。每个房间是一名主机的星系；你可以带着自己的星球加入或离开房间。其他玩家只能在授权后观察和聊天，不能控制你的星球。,你的星球與本機存檔綁定。每個房間是一名主機的星系；你可以帶著自己的星球加入或離開房間。其他玩家只能在授權後觀察和聊天，不能控制你的星球。,Your planet stays with your local save. Each room belongs to its host's star system. Bring your own planet when joining or leaving; other players may only observe with permission and chat. They cannot control your planet.
+engine.chart_help,需要创建或浏览房间时，请打开原生星图中的联机入口。这个条目只提供说明，不消耗打印机会。,需要建立或瀏覽房間時，請開啟原生星圖中的連線入口。這個條目只提供說明，不消耗列印機會。,To create or browse rooms use the multiplayer entry in the native star map. This article is informational and does not consume a Printing Pod reward.
 options.prefer_steam,优先显示 Steam 公开大厅,優先顯示 Steam 公開大廳,Prefer Steam public lobbies
 options.prefer_steam_hint,启动时优先使用 Steam 发现公开星系。关闭后默认使用局域网；仍可手动切换。,啟動時優先使用 Steam 尋找公開星系。關閉後預設使用區域網路；仍可手動切換。,Prefer Steam discovery at startup. Disable to default to LAN; manual switching remains available.
+options.lan_port,默认局域网端口,預設區域網路連接埠,Default LAN port
+options.lan_port_hint,新启动游戏时的开房端口（1–65535）。大厅内仍可单独修改；重启后生效。,新啟動遊戲時的開房連接埠（1–65535）。大廳內仍可個別修改；重啟後生效。,Initial hosting port (1–65535). The lobby can override it. Requires a game restart.
+options.handshake_timeout,加入握手等待（秒）,加入交握等待（秒）,Join handshake timeout (seconds)
+options.handshake_timeout_hint,加入后等待身份验证的时间（15–120 秒）。较慢网络可调高；新连接生效。,加入後等待身分驗證的時間（15–120 秒）。較慢網路可調高；新連線生效。,Wait for authentication after connecting (15–120 seconds). Increase for slow networks. Applies to new connections.
+options.peer_timeout,掉线判定等待（秒）,斷線判定等待（秒）,Peer timeout (seconds)
+options.peer_timeout_hint,已连接玩家多久没有回应才判定掉线（15–180 秒）。默认 30 秒；新连接生效。,已連線玩家多久沒有回應才判定斷線（15–180 秒）。預設 30 秒；新連線生效。,Treat an authenticated peer as disconnected after this silence (15–180 seconds). Default 30. Applies to new connections.
+options.reconnect_window,自动重连保留时间（秒）,自動重連保留時間（秒）,Reconnect grace period (seconds)
+options.reconnect_window_hint,断线后的重试时间及房主席位保留时间（30–1800 秒）。至少等于掉线判定等待；新连接生效，房主决定实际席位保留。,斷線後的重試時間及房主席位保留時間（30–1800 秒）。至少等於斷線判定等待；新連線生效，房主決定實際席位保留。,Retry disconnected sessions and retain host seats for 30–1800 seconds. Never shorter than peer timeout. Applies to new connections; the host controls seat retention.
+options.chat_history,聊天记录保留条数,聊天紀錄保留則數,Chat history limit
+options.chat_history_hint,每个房间在内存中保留最近 20–500 条消息。新连接生效；新加入玩家最多补收房主保留的记录，不写入存档。,每個房間在記憶體中保留最近 20–500 則訊息。新連線生效；新加入玩家最多補收房主保留的紀錄，不寫入存檔。,Keep the latest 20–500 messages in memory per room. Applies to new connections. Joining players can recover only the host's retained history; chat is not saved to disk.
+options.chat_font,聊天正文字号,聊天正文字級,Chat message font size
+options.chat_font_hint,聊天正文的文字大小（14–28）。不改变消息长度限制；重启后生效。,聊天正文的文字大小（14–28）。不改變訊息長度限制；重啟後生效。,Message body font size (14–28). Does not change message length limits. Requires a game restart.
 moderation.title,星系成员管理,星系成員管理,System member management
 moderation.manage,管理,管理,Manage
 moderation.reason,原因（可选；最多 128 字）,原因（選填；最多 128 字）,Reason (optional; up to 128 characters)
@@ -330,7 +343,7 @@ chat.latest,最新消息,最新訊息,Latest messages
 chat.system,系统通讯,系統通訊,System message
 entry.overview,星系概览,星系概覽,System overview
 entry.capabilities,保留自己的殖民地，与星系成员通信、分享视野和协作任务。,保留自己的殖民地，與星系成員通訊、分享視野及協作任務。,"Keep your colony, talk to other members, share views and work together."
-entry.browse,浏览公开星系,瀏覽公開星系,Browse systems
+entry.browse,浏览游戏大厅,瀏覽遊戲大廳,Browse game lobbies
 entry.choose_source,准备加入,準備加入,Prepare to join
 entry.your_asteroid,我的星球,我的星球,My asteroid
 entry.join,加入星系,加入星系,Join system
@@ -370,3 +383,34 @@ dupe.replaced,已由新指令替代,已由新指令取代,Replaced by a new orde
 dupe.revoked,授权已撤销，移动已停止,授權已撤銷，移動已停止,Permission revoked · Move stopped
 dupe.disconnected,连接中断，移动已停止,連線中斷，移動已停止,Disconnected · Move stopped
 dupe.world_changed,原世界已卸载,原世界已卸載,Original world unloaded
+native.legend,本机未登记 {0} · 未探索 {1} · 数字代表玩家,本機未登記 {0} · 未探索 {1} · 數字代表玩家,Local unregistered {0} · Unexplored {1} · Numbers identify players
+native.display_only,本机原生星体仅展示 · 跨星球旅行尚未开放,本機原生星體僅展示 · 跨星球旅行尚未開放,Local asteroids: display only · Travel unavailable
+native.unregistered,未登记星球,未登記星球,Unregistered asteroid
+native.unexplored,未探索,未探索,Unexplored
+native.discovered,已发现星球,已發現星球,Discovered asteroid
+native.selected,本机原生星体,本機原生星體,Local native asteroid
+native.coordinates,"原生坐标 ({0}, {1})","原生座標 ({0}, {1})","Native coordinates ({0}, {1})"
+creation.online_title,联机 · 创建星系（生存）,連線 · 建立星系（生存）,Online · Create star system (Survival)
+native.remote_list,远端星系只显示已发布的成员信息，不复制一张本机星图。位置规则暂未定，可先申请坐标后加入。,遠端星系只顯示已發布的成員資訊，不複製一張本機星圖。位置規則暫未定，可先申請座標後加入。,Remote preview lists published members. It does not reuse your local chart as a remote system. Reserve coordinates before joining.
+native.reserve_position,申请星位,申請星位,Reserve position
+native.remote_preview,星系成员预览：可先聊天，再选择自己的星球加入。,星系成員預覽：可先聊天，再選擇自己的星球加入。,"System members: chat first, then join with your own asteroid."
+chat.button,聊天,聊天,Chat
+chat.join_first,加入星系后即可聊天,加入星系後即可聊天,Join a star system to chat
+input.chat,OniOnline：打开聊天,OniOnline：開啟聊天,OniOnline: Open chat
+input.voice,OniOnline：按住说话,OniOnline：按住說話,OniOnline: Push to talk
+voice.disabled,语音已关闭（可在模组设置中开启）,語音已關閉（可在模組設定中開啟）,Voice disabled (enable in mod options)
+voice.talking,麦克风正在传音,麥克風正在傳音,Microphone transmitting
+voice.hold_hint,退出输入后按住 {0} 说话 · 设置 → 控制 → 模组可改键,結束輸入後按住 {0} 說話 · 設定 → 控制 → 模組可改鍵,"Finish editing, then hold {0} to talk. Rebind in Options > Controls > Mods."
+options.voice_enabled,启用房间语音,啟用房間語音,Enable room voice
+options.voice_enabled_hint,只在按住说话键时采集麦克风。默认 Ctrl+V；在游戏设置 → 控制 → 模组中改键。关闭后停止录音和播放，立即生效。,只在按住說話鍵時擷取麥克風。預設 Ctrl+V；可在遊戲設定 → 控制 → 模組中改鍵。關閉後停止錄音與播放，立即生效。,Capture the microphone only while push-to-talk is held. Default Ctrl+V; rebind in game Options > Controls > Mods. Disable to stop capture and playback immediately.
+options.voice_volume,房间语音播放音量,房間語音播放音量,Room voice playback volume
+options.voice_volume_hint,其他玩家语音的播放音量（0–100）。0 为静音，不改变游戏或直播音量，立即生效。,其他玩家語音的播放音量（0–100）。0 為靜音，不改變遊戲或直播音量，立即生效。,Other players’ voice volume (0–100). Zero mutes playback without changing game or stream volume. Applies immediately.
+error.voice_steam_unavailable,语音需要 Steam 已连接，并且麦克风可用,語音需要 Steam 已連線，而且麥克風可用,Voice requires Steam to be connected and an available microphone
+error.voice_capture_failed,无法采集麦克风，请检查系统录音设备与权限,無法擷取麥克風，請檢查系統錄音裝置與權限,Microphone capture failed; check the recording device and permissions
+error.voice_decode_failed,收到的语音无法播放，请确认双方模组版本一致,收到的語音無法播放，請確認雙方模組版本一致,Could not play received voice; ensure both players use the same mod version
+error.input_binding_conflict,聊天或语音键位与其它操作冲突，请在设置 → 控制中调整,聊天或語音按鍵與其它操作衝突，請在設定 → 控制中調整,Chat or voice key conflicts with another action. Adjust it in Options > Controls.
+error.voice_capture_overflow,语音缓存过大，已停止麦克风；请重启游戏后再试,語音快取過大，已停止麥克風；請重新啟動遊戲後再試,Voice buffer overflow. The microphone has stopped; restart the game before trying again.
+native.room_chart,房间星系,房間星系,Room system
+native.home_chart,我的星系,我的星系,My system
+native.select_asteroid,选择此星球,選擇此星球,Select this asteroid
+native.select_position,点选空位,點選空位,Select an empty hex

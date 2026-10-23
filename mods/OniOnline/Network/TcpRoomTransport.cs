@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,13 +11,20 @@ using System.Threading.Tasks;
 
 namespace OniOnline.Network
 {
-    public sealed class TcpRoomTransport : IRoomTransport, IReconnectableRoomTransport
+    public sealed class TcpRoomTransport : IRoomTransport, IReconnectableRoomTransport, IRealtimeRoomTransport
     {
+        private sealed class RealtimeFrame
+        {
+            internal byte[] Data;
+            internal long Created;
+        }
+
         private sealed class Connection
         {
             internal string Id;
             internal TcpClient Client;
             internal readonly Queue<byte[]> Outbox = new Queue<byte[]>();
+            internal readonly Queue<RealtimeFrame> RealtimeOutbox = new Queue<RealtimeFrame>();
             internal readonly SemaphoreSlim OutboxReady = new SemaphoreSlim(0);
             internal bool WritesCompleted;
             internal int Closed;
@@ -105,7 +113,10 @@ namespace OniOnline.Network
             var connection = new Connection { Id = id, Client = client };
             if (!connections.TryAdd(id, connection)) { client.Close(); return; }
             if (Volatile.Read(ref disposed) != 0) { Close(connection); return; }
-            Enqueue(new TransportEvent { Kind = TransportEventKind.Connected, Peer = id });
+            // RoomSession can time out only peers whose Connected event it sees.
+            // Reject admission under inbox pressure rather than retain an orphan socket.
+            if (!Enqueue(new TransportEvent { Kind = TransportEventKind.Connected, Peer = id }))
+            { Close(connection); return; }
             Task.Run(() => ReadLoop(connection));
             connection.Writer = Task.Run(() => WriteLoop(connection));
         }
@@ -113,7 +124,7 @@ namespace OniOnline.Network
         private bool Enqueue(TransportEvent item)
         {
             if (Volatile.Read(ref disposed) != 0) return false;
-            if (Interlocked.Increment(ref eventCount) > 256)
+            if (Interlocked.Increment(ref eventCount) > (item.Realtime ? 192 : 256))
             {
                 Interlocked.Decrement(ref eventCount);
                 return false;
@@ -131,11 +142,12 @@ namespace OniOnline.Network
                 while (Volatile.Read(ref connection.Closed) == 0)
                 {
                     await ReadExactly(stream, header).ConfigureAwait(false);
-                    int length = (header[0] << 24) | (header[1] << 16) | (header[2] << 8) | header[3];
+                    bool realtime = (header[0] & 0x80) != 0;
+                    int length = ((header[0] & 0x7f) << 24) | (header[1] << 16) | (header[2] << 8) | header[3];
                     if (length <= 0 || length > Protocol.MaxPacketBytes) throw new InvalidDataException();
                     var data = new byte[length];
                     await ReadExactly(stream, data).ConfigureAwait(false);
-                    if (!Enqueue(new TransportEvent { Kind = TransportEventKind.Message, Peer = connection.Id, Data = data }))
+                    if (!Enqueue(new TransportEvent { Kind = TransportEventKind.Message, Peer = connection.Id, Data = data, Realtime = realtime }) && !realtime)
                         break;
                 }
             }
@@ -164,18 +176,25 @@ namespace OniOnline.Network
                     // Idle peers must not occupy thread-pool workers. With one blocking
                     // consumer per socket, a larger room starves its own handshakes.
                     await connection.OutboxReady.WaitAsync().ConfigureAwait(false);
-                    byte[] data;
+                    byte[] data = null;
+                    bool realtime = false;
                     lock (connection.Outbox)
                     {
                         if (Volatile.Read(ref connection.Closed) != 0) return;
-                        if (connection.Outbox.Count == 0)
+                        if (connection.Outbox.Count > 0) data = connection.Outbox.Dequeue();
+                        else if (connection.RealtimeOutbox.Count > 0)
                         {
-                            if (connection.WritesCompleted) return;
-                            continue;
+                            var frame = connection.RealtimeOutbox.Dequeue();
+                            if (Stopwatch.GetTimestamp() - frame.Created <= Stopwatch.Frequency * 0.3)
+                            {
+                                data = frame.Data;
+                                realtime = true;
+                            }
                         }
-                        data = connection.Outbox.Dequeue();
+                        if (data == null && connection.WritesCompleted) return;
                     }
-                    var header = new[] { (byte)(data.Length >> 24), (byte)(data.Length >> 16), (byte)(data.Length >> 8), (byte)data.Length };
+                    if (data == null) continue;
+                    var header = new[] { (byte)((data.Length >> 24) | (realtime ? 0x80 : 0)), (byte)(data.Length >> 16), (byte)(data.Length >> 8), (byte)data.Length };
                     await stream.WriteAsync(header, 0, 4).ConfigureAwait(false);
                     await stream.WriteAsync(data, 0, data.Length).ConfigureAwait(false);
                 }
@@ -203,6 +222,22 @@ namespace OniOnline.Network
             return false;
         }
 
+        public bool SendRealtime(string peer, byte[] data)
+        {
+            if (string.IsNullOrEmpty(peer) || data == null || data.Length == 0 || data.Length > Protocol.MaxPacketBytes) return false;
+            Connection connection;
+            if (!connections.TryGetValue(peer, out connection) || Volatile.Read(ref connection.Closed) != 0) return false;
+            lock (connection.Outbox)
+            {
+                if (Volatile.Read(ref connection.Closed) != 0 || connection.WritesCompleted) return false;
+                bool replaced = connection.RealtimeOutbox.Count >= 3;
+                if (replaced) connection.RealtimeOutbox.Dequeue();
+                connection.RealtimeOutbox.Enqueue(new RealtimeFrame { Data = (byte[])data.Clone(), Created = Stopwatch.GetTimestamp() });
+                if (!replaced) connection.OutboxReady.Release();
+                return true;
+            }
+        }
+
         private void Close(Connection connection)
         {
             if (Interlocked.Exchange(ref connection.Closed, 1) != 0) return;
@@ -212,6 +247,7 @@ namespace OniOnline.Network
             {
                 connection.WritesCompleted = true;
                 connection.Outbox.Clear();
+                connection.RealtimeOutbox.Clear();
                 connection.OutboxReady.Release();
             }
             connection.Client.Close();
@@ -249,6 +285,7 @@ namespace OniOnline.Network
                 lock (connection.Outbox)
                 {
                     connection.WritesCompleted = true;
+                    connection.RealtimeOutbox.Clear();
                     connection.OutboxReady.Release();
                 }
             }

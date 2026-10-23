@@ -38,6 +38,9 @@ internal static class TcpWorkerBudgetTests
             if (timer.ElapsedMilliseconds > 1000) throw new Exception("Room shutdown exceeded its shared drain deadline.");
             Wait(sessions, () => sessions.Skip(1).All(s => s.Closed && s.LastError == "host_left"),
                 "graceful host departure reaches every guest");
+            SaturatedInboxRejectsUnannouncedConnection();
+            RealtimeInboxKeepsControlCapacity();
+            RealtimeQueueDropsStaleFrames();
             StalledWriterShutdown();
             Console.WriteLine("PASS real TCP: 12 peers, 4 worker threads, bidirectional chat and graceful shutdown.");
             return 0;
@@ -52,6 +55,55 @@ internal static class TcpWorkerBudgetTests
 
     private static SessionProfile Profile(string name)
     { return new SessionProfile { Name = name, GameVersion = "744825", CycleTrimVersion = "0.3.2", SpacedOut = true }; }
+
+    private static void SaturatedInboxRejectsUnannouncedConnection()
+    {
+        using (var host = TcpRoomTransport.Host(IPAddress.Loopback, 0))
+        using (var fillingPeer = new TcpClient())
+        using (var rejectedPeer = new TcpClient())
+        using (var healthyPeer = new TcpClient())
+        {
+            fillingPeer.Connect(IPAddress.Loopback, host.Port);
+            WaitFor(() => (int)Field(host, "eventCount") == 1, "first connection reaches the transport inbox");
+            // Keep the real main-thread inbox full without creating hundreds of
+            // sockets. These are transport frames; no RoomSession parses them.
+            var frames = new byte[255 * 5];
+            for (int index = 0; index < 255; index++)
+            { frames[index * 5 + 3] = 1; frames[index * 5 + 4] = (byte)index; }
+            fillingPeer.GetStream().Write(frames, 0, frames.Length);
+            WaitFor(() => (int)Field(host, "eventCount") == 256, "inbox reaches its existing event limit");
+
+            rejectedPeer.Connect(IPAddress.Loopback, host.Port);
+            WaitFor(() => rejectedPeer.Client.Poll(0, SelectMode.SelectRead) && rejectedPeer.Available == 0,
+                "inbox-full connection is closed instead of retained without a Connected event");
+            if (Connections(host).Count != 1)
+                throw new Exception("Inbox rejection retained an unannounced TCP connection.");
+
+            int announced = 0;
+            TransportEvent item;
+            while (host.TryReceive(out item))
+                if (item.Kind == TransportEventKind.Connected) announced++;
+            if (announced != 1)
+                throw new Exception("Saturated inbox changed the already accepted connection events.");
+
+            healthyPeer.Connect(IPAddress.Loopback, host.Port);
+            byte[] proof = { 0, 0, 0, 3, 3, 1, 4 };
+            healthyPeer.GetStream().Write(proof, 0, proof.Length);
+            string healthyId = null;
+            bool delivered = false;
+            WaitFor(() =>
+            {
+                while (host.TryReceive(out item))
+                {
+                    if (item.Kind == TransportEventKind.Connected) healthyId = item.Peer;
+                    if (item.Kind == TransportEventKind.Message && item.Peer == healthyId &&
+                        item.Data.SequenceEqual(new byte[] { 3, 1, 4 })) delivered = true;
+                }
+                return healthyId != null && delivered;
+            }, "listener accepts and delivers a fresh connection after inbox pressure clears");
+            Console.WriteLine("PASS real TCP: full inbox closes an unannounced socket; listener recovers after draining.");
+        }
+    }
 
     private static void StalledWriterShutdown()
     {
@@ -132,6 +184,100 @@ internal static class TcpWorkerBudgetTests
             }
             finally { foreach (var reader in readers) reader.Dispose(); }
         }
+    }
+
+    private static void RealtimeInboxKeepsControlCapacity()
+    {
+        using (var host = TcpRoomTransport.Host(IPAddress.Loopback, 0))
+        using (var peer = new TcpClient())
+        {
+            peer.Connect(IPAddress.Loopback, host.Port);
+            WaitFor(() => Connections(host).Count == 1 && (int)Field(host, "eventCount") == 1,
+                "realtime pressure peer is announced");
+            var frames = new byte[512 * 5];
+            for (int index = 0; index < 512; index++)
+            { frames[index * 5] = 0x80; frames[index * 5 + 3] = 1; frames[index * 5 + 4] = (byte)index; }
+            peer.GetStream().Write(frames, 0, frames.Length);
+            byte[] proof = { 0, 0, 0, 3, 7, 8, 9 };
+            peer.GetStream().Write(proof, 0, proof.Length);
+            WaitFor(() => (int)Field(host, "eventCount") == 193,
+                "realtime frames leave reliable inbox capacity");
+            bool reliableReceived = false;
+            int realtimeReceived = 0;
+            TransportEvent item;
+            while (host.TryReceive(out item))
+            {
+                if (item.Kind == TransportEventKind.Message && item.Realtime) realtimeReceived++;
+                if (item.Kind == TransportEventKind.Message && !item.Realtime && item.Data.SequenceEqual(new byte[] { 7, 8, 9 }))
+                    reliableReceived = true;
+                if (item.Kind == TransportEventKind.Disconnected) throw new Exception("Realtime pressure disconnected a healthy control stream.");
+            }
+            if (!reliableReceived || realtimeReceived != 191 || Connections(host).Count != 1)
+                throw new Exception("Realtime pressure displaced reliable control or exceeded its inbox budget.");
+            Console.WriteLine("PASS real TCP: 512 realtime frames preserve reliable control and the connection.");
+        }
+    }
+
+    private static void RealtimeQueueDropsStaleFrames()
+    {
+        const int reliableCount = 16;
+        using (var host = TcpRoomTransport.Host(IPAddress.Loopback, 0))
+        using (var peer = new TcpClient { ReceiveBufferSize = 1024, ReceiveTimeout = 3000 })
+        {
+            peer.Connect(IPAddress.Loopback, host.Port);
+            WaitFor(() => Connections(host).Count == 1, "realtime queue peer connects");
+            var connection = Connections(host)[0];
+            ((TcpClient)Field(connection, "Client")).SendBufferSize = 1024;
+            string id = (string)Field(connection, "Id");
+            var reliable = new byte[Protocol.MaxPacketBytes];
+            reliable[0] = 42;
+            for (int index = 0; index < reliableCount; index++)
+                if (!host.Send(id, reliable)) throw new Exception("Realtime queue fixture exceeded reliable capacity.");
+            int previous = -1;
+            var stable = Stopwatch.StartNew();
+            WaitFor(() =>
+            {
+                int count = Pending(connection);
+                if (count == 0 || count != previous) { previous = count; stable.Restart(); return false; }
+                return stable.ElapsedMilliseconds >= 100;
+            }, "reliable writer stalls before realtime media is queued");
+            for (int index = 0; index < 512; index++)
+                if (!host.SendRealtime(id, new byte[] { (byte)index }))
+                    throw new Exception("Realtime queue replacement rejected a healthy connection.");
+            var realtimeQueue = Field(connection, "RealtimeOutbox");
+            lock (Field(connection, "Outbox"))
+                if (((ICollection)realtimeQueue).Count > 3)
+                    throw new Exception("Realtime queue exceeded three pending frames.");
+            Thread.Sleep(350);
+            if (!host.Send(id, new byte[] { 99 })) throw new Exception("Realtime pressure closed the reliable stream.");
+            var stream = peer.GetStream();
+            for (int index = 0; index <= reliableCount; index++)
+            {
+                var header = ReadBytes(stream, 4);
+                if ((header[0] & 0x80) != 0) throw new Exception("Stale realtime media overtook reliable control.");
+                int length = (header[0] << 24) | (header[1] << 16) | (header[2] << 8) | header[3];
+                byte[] data = ReadBytes(stream, length);
+                if (index == reliableCount && !data.SequenceEqual(new byte[] { 99 }))
+                    throw new Exception("Final reliable marker was lost under media pressure.");
+            }
+            if (peer.Client.Poll(200000, SelectMode.SelectRead))
+                throw new Exception("Expired realtime frames were sent after reliable backlog drained.");
+            if (Connections(host).Count != 1) throw new Exception("Dropping stale realtime frames closed the connection.");
+            Console.WriteLine("PASS real TCP: 512 media submissions stay bounded, expire, and never displace reliable control.");
+        }
+    }
+
+    private static byte[] ReadBytes(NetworkStream stream, int count)
+    {
+        if (count < 1 || count > Protocol.MaxPacketBytes) throw new Exception("Invalid test frame length.");
+        var data = new byte[count];
+        for (int offset = 0; offset < count;)
+        {
+            int read = stream.Read(data, offset, count - offset);
+            if (read == 0) throw new Exception("TCP fixture connection closed before its frame completed.");
+            offset += read;
+        }
+        return data;
     }
 
     private static List<object> Connections(TcpRoomTransport transport)

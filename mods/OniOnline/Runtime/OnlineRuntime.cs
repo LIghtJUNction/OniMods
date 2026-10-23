@@ -5,10 +5,12 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using HarmonyLib;
 using OniOnline.Network;
 using OniOnline.UI;
 using OniOnline.Multiplayer;
+using OniOnline.Core;
 using Steamworks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -26,6 +28,10 @@ namespace OniOnline.Runtime
         internal string Nickname;
         internal string RoomName = "OniOnline";
         internal string Port = "27140";
+        internal int ChatFontSize { get; private set; } = 18;
+        internal bool VoiceEnabled = true;
+        internal int VoiceVolume = 100;
+        internal OnlineVoice Voice;
         internal string Password = "";
         internal string JoinCode = "";
         internal string RoomCode = "";
@@ -41,6 +47,8 @@ namespace OniOnline.Runtime
         private LanDiscovery advertiser;
         private LanDiscovery scanner;
         private OnlineWindow window;
+        private OnlineChatWindow chatWindow;
+        private GameObject chatLauncher;
         private ClusterCategorySelectionScreen category;
         private double nextAdvert;
         private double nextSearch;
@@ -48,6 +56,7 @@ namespace OniOnline.Runtime
         private string modPath;
         private SessionProfile pendingProfile;
         private string pendingPassword;
+        private readonly LoadedColonyRoomStart hostStart = new LoadedColonyRoomStart();
         private int hostedPort;
         private bool hostedPassword;
         private bool openMapAfterStart;
@@ -55,7 +64,7 @@ namespace OniOnline.Runtime
         private OnlineColonyState moderationColony;
         private string lastColonyHomeId;
         private string lastColonyPlanetId;
-        private StarSystemMapWindow systemMapWindow;
+        internal StarMapDirectorySession StarMapDirectory { get; private set; }
         private WorkPlanWindow workPlanWindow;
         private TeamColonyWindow teamWindow;
         private bool awaitingSystemPreview;
@@ -104,14 +113,22 @@ namespace OniOnline.Runtime
 
         internal void ShowSystemMap()
         {
-            if (ClusterMapScreen.Instance != null) ClusterMapScreen.Instance.GetComponent<StarSystemPanel>()?.CloseWindow();
-            CloseWorkPlans();
-            CloseTeam();
-            HideWindow();
-            if (systemMapWindow == null) systemMapWindow = StarSystemMapWindow.Create(this);
+            CloseWorkPlans(); CloseTeam(); HideWindow();
+            if (Game.Instance == null || ClusterMapScreen.Instance == null)
+            {
+                // A native chart only exists after a real colony has loaded.
+                // Keep the existing room controls until native initialization completes.
+                ShowWindow();
+                return;
+            }
+            if (!ClusterMapScreen.Instance.IsScreenActive()) ManagementMenu.Instance.ToggleClusterMap();
+            StarSystemPanel.Attach(ClusterMapScreen.Instance).Open();
         }
         private void CloseSystemMap()
-        { var old = systemMapWindow; systemMapWindow = null; if (old != null) old.Close(); }
+        {
+            ClusterMapScreen.Instance?.GetComponent<StarSystemPanel>()?.CloseOnlineView();
+            StarMapDirectory?.Stop();
+        }
 
         internal void BrowseSystems()
         {
@@ -175,13 +192,36 @@ namespace OniOnline.Runtime
             CycleTrimVersion = cycleTrim?.packagedModInfo?.version ?? "";
             if (string.IsNullOrEmpty(CycleTrimVersion)) CycleTrimPresent = false;
             Enabled = PlayerPrefs.GetInt("OniOnline.Enabled", 0) == 1;
-            var options = POptions.ReadSettings<OnlineOptions>() ?? new OnlineOptions();
+            var options = (POptions.ReadSettings<OnlineOptions>() ?? new OnlineOptions()).Normalize();
             UseSteam = options.PreferSteamLobbies && SteamManager.Initialized;
+            Port = options.DefaultLanPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            ChatFontSize = options.ChatFontSize;
+            VoiceEnabled = options.VoiceEnabled;
+            VoiceVolume = options.VoiceVolume;
             Nickname = PlayerPrefs.GetString("OniOnline.Nickname", SteamManager.Initialized ? SteamFriends.GetPersonaName() : Environment.UserName);
             if (Nickname.Length > 32) Nickname = Nickname.Substring(0, char.IsHighSurrogate(Nickname[31]) ? 31 : 32);
             RoomName = DefaultHomeName;
             SceneManager.sceneLoaded += OnSceneLoaded;
+            Voice = OnlineVoice.Attach(this);
+            OnlineInputControls.Attach(this);
+            chatLauncher = OnlineWidgets.CreateLauncher(this);
+            LogLoadedAssembly();
             Debug.Log("[OniOnline] Preview loaded: native star map, Planetary Engine entry, public rooms and independent local time; observations only, no colony migration.");
+        }
+
+        private static void LogLoadedAssembly()
+        {
+            try
+            {
+                var assembly = typeof(OnlineRuntime).Assembly;
+                using (var input = File.OpenRead(assembly.Location))
+                using (var sha = new SHA256Managed())
+                    Debug.Log("[OniOnline] Loaded assembly: version=" + assembly.GetName().Version +
+                        "; location=" + assembly.Location + "; sha256=" +
+                        BitConverter.ToString(sha.ComputeHash(input)).Replace("-", "").ToLowerInvariant());
+            }
+            catch (Exception error)
+            { Debug.LogWarning("[OniOnline] Loaded assembly identity unavailable: " + error.GetType().Name); }
         }
 
         internal void ShowWindow()
@@ -198,6 +238,22 @@ namespace OniOnline.Runtime
             window.Deactivate();
             Destroy(window.transform.root.gameObject);
             window = null;
+        }
+
+        internal bool ChatOpen { get { return chatWindow != null && chatWindow.IsScreenActive(); } }
+
+        internal void ShowChat()
+        {
+            HideWindow();
+            if (chatWindow == null) chatWindow = OnlineChatWindow.Create(this);
+            chatWindow.FocusComposer();
+        }
+
+        internal void HideChat()
+        {
+            var old = chatWindow;
+            chatWindow = null;
+            if (old != null) old.Close();
         }
 
         internal void SetEnabled(bool enabled)
@@ -228,6 +284,9 @@ namespace OniOnline.Runtime
         }
 
         internal void Host()
+        { Host(null); }
+
+        private void Host(OnlineColonyState startColony)
         {
             Attempt(() =>
             {
@@ -237,21 +296,30 @@ namespace OniOnline.Runtime
                 if (Password.Length > 128) throw new ArgumentException("password_too_long");
                 var colony = OnlineColonyState.Current;
                 if (colony != null) RoomModerationPersistence.Decode(colony.HomeSystemId, colony.SavedAccountBans);
-                if (UseSteam)
+                hostStart.Begin(startColony);
+                try
                 {
-                    pendingProfile = profile; pendingPassword = Password;
-                    SteamDirectory().Host(RoomName, Password.Length > 0);
+                    if (UseSteam)
+                    {
+                        pendingProfile = profile; pendingPassword = Password;
+                        SteamDirectory().Host(RoomName, Password.Length > 0);
+                    }
+                    else
+                    {
+                        int port;
+                        if (!int.TryParse(Port, out port) || port < 1 || port > 65535) throw new ArgumentException("invalid_address");
+                        var transport = TcpRoomTransport.Host(IPAddress.Any, port);
+                        hostedPort = transport.Port;
+                        hostedPassword = Password.Length > 0;
+                        Attach(transport, profile, Password, "oni://" + LocalAddress() + ":" + transport.Port);
+                        try { advertiser = new LanDiscovery(true); Advertise(); }
+                        catch (SocketException) { Error = "lan_discovery_unavailable"; }
+                    }
                 }
-                else
+                catch
                 {
-                    int port;
-                    if (!int.TryParse(Port, out port) || port < 1 || port > 65535) throw new ArgumentException("invalid_address");
-                    var transport = TcpRoomTransport.Host(IPAddress.Any, port);
-                    hostedPort = transport.Port;
-                    hostedPassword = Password.Length > 0;
-                    Attach(transport, profile, Password, "oni://" + LocalAddress() + ":" + transport.Port);
-                    try { advertiser = new LanDiscovery(true); Advertise(); }
-                    catch (SocketException) { Error = "lan_discovery_unavailable"; }
+                    hostStart.Cancel();
+                    throw;
                 }
             });
         }
@@ -261,6 +329,7 @@ namespace OniOnline.Runtime
             Attempt(() =>
             {
                 if (Session != null || Busy) throw new InvalidOperationException("already_connected");
+                hostStart.Cancel();
                 var profile = Profile();
                 if (Password.Length > 128) throw new ArgumentException("password_too_long");
                 var address = RoomAddress.Parse(JoinCode);
@@ -283,13 +352,15 @@ namespace OniOnline.Runtime
             OnlineColonyState boundColony = null;
             try
             {
-                next = new RoomSession(transport, profile, password, RoomName);
+                var options = POptions.ReadSettings<OnlineOptions>() ?? new OnlineOptions();
+                next = new RoomSession(transport, profile, password, RoomName, options: options.CreateSessionOptions());
                 boundColony = next.IsHost ? OnlineColonyState.Current : null;
                 if (boundColony != null) BindModeration(next, boundColony, false);
                 worlds = new WorldCoordinator(next);
             }
             catch
             {
+                hostStart.Cancel();
                 var cleanup = new RoomCleanup();
                 if (next == null) cleanup.Dispose("attach_transport", transport);
                 else cleanup.Dispose("attach_session", next);
@@ -302,9 +373,16 @@ namespace OniOnline.Runtime
             Error = null;
             ErrorDetail = null;
             Multiplayer = worlds;
+            StarMapDirectory = new StarMapDirectorySession(next, () => {
+                var chart = LocalNativeStarMap.Capture(Multiplayer?.StarSystem.State, Session?.LocalPlayerId);
+                return chart.Entries.Where(e => e.Discovered).Select(e => new StarMapEntry { Q = e.Q, R = e.R,
+                    Name = e.Name, Discovered = e.Discovered }).ToArray();
+            });
+            StarMapDirectory.Changed += () => Revision++;
             Multiplayer.Changed += () => Revision++;
             Session.Changed += () => { Revision++; Advertise(); };
             Session.GameStartRequested += () => { if (Session?.IsHost == true) BeginNativeGame(); };
+            hostStart.Complete(Session, OnlineColonyState.Current);
             Revision++;
             Advertise();
         }
@@ -329,7 +407,8 @@ namespace OniOnline.Runtime
                 Attempt(() => Attach(transport, pendingProfile, pendingPassword, code));
                 pendingPassword = null; pendingProfile = null;
             };
-            directory.Failed += reason => { Error = reason; pendingPassword = null; pendingProfile = null; Revision++; };
+            directory.Failed += reason => { Error = reason; hostStart.Cancel(); pendingPassword = null; pendingProfile = null; Revision++; };
+            directory.SearchFailed += reason => { Error = reason; Revision++; };
             directory.Found += rooms =>
             {
                 Listings.RemoveAll(r => r.Code.StartsWith("oni://steam/", StringComparison.OrdinalIgnoreCase) ||
@@ -364,15 +443,18 @@ namespace OniOnline.Runtime
             // and a reentrant Leave must never dispose the same connection twice.
             var oldMultiplayer = Multiplayer; Multiplayer = null;
             var oldSession = Session; Session = null;
+            var oldStarMapDirectory = StarMapDirectory; StarMapDirectory = null;
             moderationColony = null;
             var oldAdvertiser = advertiser; advertiser = null;
             var oldScanner = scanner; scanner = null;
             var oldDirectory = directory; directory = null;
             pendingProfile = null; pendingPassword = null;
+            hostStart.Cancel();
             RoomCode = ""; awaitingSystemPreview = false;
             var cleanup = new RoomCleanup();
             cleanup.Run("work_window", CloseWorkPlans);
             cleanup.Run("team_window", CloseTeam);
+            cleanup.Dispose("star_map_directory", oldStarMapDirectory);
             cleanup.Dispose("world_coordinator", oldMultiplayer);
             cleanup.Dispose("room_session", oldSession);
             cleanup.Dispose("lan_advertiser", oldAdvertiser);
@@ -407,18 +489,25 @@ namespace OniOnline.Runtime
         internal void SelectOnline(ClusterCategorySelectionScreen screen)
         {
             category = screen;
-            BrowseSystems();
+            openMapAfterStart = true;
+            BeginNativeGame(creatingSystem: true);
         }
 
         internal void OpenStarMap(bool showEngine = false)
         {
             if (Game.Instance == null) { ShowSystemMap(); return; }
-            if (!Game.Instance.baseAlreadyCreated || Game.Instance.IsLoading() || ClusterMapScreen.Instance == null) return;
+            if (!Game.Instance.baseAlreadyCreated || Game.Instance.IsLoading()) return;
             HideWindow();
+            if (showEngine)
+            {
+                CloseSystemMap();
+                PlanetEngineCodex.Open();
+                return;
+            }
+            if (ClusterMapScreen.Instance == null) return;
             if (!ClusterMapScreen.Instance.IsScreenActive()) ManagementMenu.Instance.ToggleClusterMap();
-            var panel = StarSystemPanel.Attach(ClusterMapScreen.Instance);
-            if (showEngine) { CloseSystemMap(); panel.ShowEngine(); }
-            else ShowSystemMap();
+            StarSystemPanel.Attach(ClusterMapScreen.Instance);
+            ShowSystemMap();
         }
 
         internal void HostFromStarMap()
@@ -427,18 +516,10 @@ namespace OniOnline.Runtime
             if (SelectedPlanet == null) { Error = "planet_not_ready"; Revision++; return; }
             SaveHomeName();
             if (!Enabled) SetEnabled(true);
-            Host();
-            if (Session != null && Session.IsHost && Session.Joined) Session.StartGame();
+            Host(OnlineColonyState.Current);
         }
 
-        internal void CreateSystemFromLobby()
-        {
-            if (Game.Instance != null && Game.Instance.baseAlreadyCreated) { OpenStarMap(); return; }
-            openMapAfterStart = true;
-            BeginNativeGame();
-        }
-
-        private void BeginNativeGame()
+        private void BeginNativeGame(bool creatingSystem = false)
         {
             if (DependencyError != null) { Error = DependencyError; Revision++; return; }
             // Never discard a loaded colony in response to a network packet.
@@ -448,16 +529,56 @@ namespace OniOnline.Runtime
             {
                 var chosen = category;
                 category = null;
+                if (creatingSystem) CustomGameSettings.Instance.SetSurvivalDefaults();
                 AccessTools.Method(typeof(ClusterCategorySelectionScreen), "OnClickOption")
                     .Invoke(chosen, new object[] { ProcGen.ClusterLayout.ClusterCategory.SpacedOutStyle });
+                if (creatingSystem) ShowOnlineCreationTitle(MainMenu.Instance?.GetComponent<NewGameFlow>());
                 return;
             }
             var menu = MainMenu.Instance;
             if (menu != null && menu.IsActive())
             {
                 var button = AccessTools.Field(typeof(MainMenu), "Button_NewGame").GetValue(menu) as KButton;
-                if (button != null && button.isInteractable) button.SignalClick(KKeyCode.Mouse0);
+                if (button != null && button.isInteractable)
+                {
+                    button.SignalClick(KKeyCode.Mouse0);
+                    if (creatingSystem) SelectNativeOnlineDefaults(menu.GetComponent<NewGameFlow>());
+                }
             }
+        }
+
+        private static void SelectNativeOnlineDefaults(NewGameFlow flow)
+        {
+            // Let native prefab initialization load cluster data before choosing
+            // Survival. Advance after BeginFlow returns, not reentrantly in OnSpawn.
+            var current = AccessTools.Field(typeof(NewGameFlow), "currentScreen");
+            var mode = flow == null ? null : current.GetValue(flow) as ModeSelectScreen;
+            if (mode == null || !mode.gameObject.activeInHierarchy) return;
+            // OnSpawn runs on Unity Start, so its button callbacks need not be
+            // attached yet. The native method applies the defaults and advances.
+            AccessTools.Method(typeof(ModeSelectScreen), "OnClickSurvival").Invoke(mode, null);
+            var online = current.GetValue(flow) as ClusterCategorySelectionScreen;
+            if (online != null && online.gameObject.activeInHierarchy)
+                AccessTools.Method(typeof(ClusterCategorySelectionScreen), "OnClickOption")
+                    .Invoke(online, new object[] { ProcGen.ClusterLayout.ClusterCategory.SpacedOutStyle });
+            ShowOnlineCreationTitle(flow);
+        }
+
+        private static void ShowOnlineCreationTitle(NewGameFlow flow)
+        {
+            var screen = flow == null ? null : AccessTools.Field(typeof(NewGameFlow), "currentScreen").GetValue(flow) as ColonyDestinationSelectScreen;
+            if (screen == null || screen.transform.Find("OniOnlineCreationHeader") != null) return;
+            var banner = OnlineWidgets.Rect("OniOnlineCreationHeader", screen.transform);
+            var rect = (RectTransform)banner.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1);
+            rect.pivot = new Vector2(0.5f, 1);
+            rect.anchoredPosition = new Vector2(0, -12);
+            rect.sizeDelta = new Vector2(520, 34);
+            banner.AddComponent<UnityEngine.UI.LayoutElement>().ignoreLayout = true;
+            OnlineWidgets.Surface(banner, OnlineWidgets.PanelColor, true).raycastTarget = false;
+            var label = OnlineWidgets.Label(banner.transform, OnlineText.Get("creation.online_title"), 20);
+            label.alignment = TMPro.TextAlignmentOptions.Center;
+            OnlineWidgets.Stretch(label.rectTransform);
         }
 
         private void Update()
@@ -486,6 +607,7 @@ namespace OniOnline.Runtime
                     }
                     Session.Pump();
                     if (Multiplayer != null) Multiplayer.Pump(Time.realtimeSinceStartupAsDouble);
+                    StarMapDirectory?.Pump(Time.realtimeSinceStartupAsDouble);
                     if (Session.Closed)
                     {
                         string reason = Session.LastError;
@@ -602,13 +724,15 @@ namespace OniOnline.Runtime
         { var old = teamWindow; teamWindow = null; if (old != null) old.Close(); }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-        { HideWindow(); CloseSystemMap(); CloseWorkPlans(); CloseTeam(); Multiplayer?.CloseWorldView(); category = null; }
+        { HideWindow(); HideChat(); CloseSystemMap(); CloseWorkPlans(); CloseTeam(); Multiplayer?.CloseWorldView(); category = null; }
         private void OnDestroy()
         {
             destroying = true;
             var cleanup = new RoomCleanup();
             cleanup.Run("scene_unsubscribe", () => SceneManager.sceneLoaded -= OnSceneLoaded);
             cleanup.Run("leave", Leave);
+            cleanup.Run("chat_window", HideChat);
+            cleanup.Run("chat_launcher", () => { if (chatLauncher != null) Destroy(chatLauncher); });
             cleanup.Run("system_map", CloseSystemMap);
             cleanup.Run("work_window", CloseWorkPlans);
             cleanup.Run("team_window", CloseTeam);
