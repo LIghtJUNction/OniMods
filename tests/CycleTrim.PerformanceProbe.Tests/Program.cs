@@ -31,6 +31,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 }
 
                 ModLoadRegression.Run();
+                BusyRefreshGateRegression.Run();
                 RecordsCountTotalMeanAndMax();
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();
