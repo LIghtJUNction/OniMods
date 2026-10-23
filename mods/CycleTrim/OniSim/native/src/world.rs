@@ -5,6 +5,10 @@ use crate::tables::ElementTable;
 pub(crate) use crate::world_cells::Cells;
 use crate::world_cells::filled;
 
+#[cfg(test)]
+#[path = "world_publication_tests.rs"]
+mod publication_tests;
+
 #[derive(Clone, Copy, Default)]
 pub(crate) struct Region {
     pub(crate) min_x: i32,
@@ -274,26 +278,54 @@ impl PhysicsWorld {
     }
 
     pub(crate) fn publish_to(&self, grid: &mut Grid) {
-        for public in 0..grid.len() {
-            let internal = self.internal_index(public);
-            grid.element[public] = self.write.element[internal];
-            grid.temperature[public] = self.write.temperature[internal];
-            grid.mass[public] = self.write.mass[internal];
-            grid.properties[public] = self.write.properties[internal];
-            grid.insulation[public] = self.write.insulation[internal];
-            grid.strength[public] = self.write.strength[internal];
-            grid.radiation[public] = self.write.radiation[internal];
-            grid.accumulated_flow[public] = self.accumulated_flow[internal];
-            grid.disease_idx[public] = self.write.disease_idx[internal];
-            grid.disease_count[public] = self.write.disease_count[internal];
-            grid.set_disease_runtime(
-                public,
-                self.write.disease_infestation[internal],
-                self.write.disease_growth[internal],
-            );
-            grid.backwall_element[public] = self.backwall_element[internal];
-            grid.backwall_mass[public] = self.backwall_mass[internal];
-            grid.backwall_temperature[public] = self.backwall_temperature[internal];
+        assert_eq!(
+            (grid.width as usize, grid.height as usize),
+            (self.width, self.height)
+        );
+        let public_count = self.width * self.height;
+        let padded_count = self.stride * self.padded_height;
+        // GameData owns unpublished, stable destination arrays. Copy one SoA
+        // stream at a time, skipping padded side cells without per-cell /% or
+        // simultaneously interleaving thirteen independent destination streams.
+        macro_rules! copy_rows {
+            ($target:ident, $source:expr) => {
+                assert_eq!(grid.$target.len(), public_count);
+                assert_eq!($source.len(), padded_count);
+                for (destination, source) in grid
+                    .$target
+                    .chunks_exact_mut(self.width)
+                    .zip($source.chunks_exact(self.stride).skip(1))
+                {
+                    destination.copy_from_slice(&source[1..1 + self.width]);
+                }
+            };
+        }
+        copy_rows!(element, self.write.element);
+        copy_rows!(temperature, self.write.temperature);
+        copy_rows!(mass, self.write.mass);
+        copy_rows!(properties, self.write.properties);
+        copy_rows!(insulation, self.write.insulation);
+        copy_rows!(strength, self.write.strength);
+        copy_rows!(radiation, self.write.radiation);
+        copy_rows!(accumulated_flow, self.accumulated_flow);
+        copy_rows!(disease_idx, self.write.disease_idx);
+        copy_rows!(disease_count, self.write.disease_count);
+        copy_rows!(backwall_element, self.backwall_element);
+        copy_rows!(backwall_mass, self.backwall_mass);
+        copy_rows!(backwall_temperature, self.backwall_temperature);
+
+        // Only infestation and growth are published into the packed disease
+        // record. Its other reserved bytes, and both padding arrays, stay intact.
+        for y in 0..self.height {
+            let source = (y + 1) * self.stride + 1;
+            let destination = y * self.width;
+            for x in 0..self.width {
+                grid.set_disease_runtime(
+                    destination + x,
+                    self.write.disease_infestation[source + x],
+                    self.write.disease_growth[source + x],
+                );
+            }
         }
     }
 }

@@ -28,7 +28,9 @@ pub(super) fn update(exposed: &mut [u8], world: &PhysicsWorld, elements: &Elemen
             let mut remaining = 1.0;
             for row in (y..top).rev() {
                 let public = row * world.width + column;
-                let current = world.internal_index(public);
+                // row/column are already known and validated. Reconstructing
+                // them from public would divide and take a remainder per cell.
+                let current = (row + 1) * world.stride + column + 1;
                 let above = current + world.stride;
                 let flags = world.write.properties[current];
                 let index = if flags & 0x30 == 0x30 {
@@ -56,3 +58,7 @@ pub(super) fn update(exposed: &mut [u8], world: &PhysicsWorld, elements: &Elemen
         }
     }
 }
+
+#[cfg(test)]
+#[path = "presentation_sun_tests.rs"]
+mod tests;
