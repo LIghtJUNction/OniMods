@@ -33,7 +33,6 @@ world_editor command=pwd|cd|ls|read|zoom|grep|symbols|search|edit|blueprint|batc
 |---|---|---|
 | `/active/index.md` | 只读殖民地索引与可选初始状态 | 只读 |
 | `/active/map/viewport.md` | 框选矩形中的地形、建筑与标记 | 地图 token |
-| `/active/map/index.md` | 可编辑视口地图别名 | 地图 token |
 | `/active/map/layers/layer_<yMin>_<yMax>.md` | 当前活动覆盖层渲染的高度切片 | 地图 token，连接符号除外 |
 | `/active/symbols/glyphs.md` | 生成的 token 字码表 | 只读 |
 | `/active/ops/tools.md` | 当前公开 typed operation 文件与工具 | 只读 |
@@ -118,7 +117,7 @@ Y=165: ...
 
 在 SEARCH 中包含 **全部三种** `百位X`、`十位X`、`个位X` 表头，并附带相关 Y 行。预检会从来源精确推导矩形，不依赖相机移动/聚焦/当前镜头；匹配前会内部强制 `format=edit compact=false`。
 
-该“精确源坐标”行为适用于 `/active/map/viewport.md`、其别名 `/active/map/index.md`、`/active/map/layers/layer_<yMin>_<yMax>.md` 与基础设施 Markdown 地图。它不会让只读 `/active/index.md` 变为可写。
+该“精确源坐标”行为适用于 `/active/map/viewport.md`、`/active/map/layers/layer_<yMin>_<yMax>.md` 与基础设施 Markdown 地图。它不会让只读 `/active/index.md` 变为可写。
 
 如果 SEARCH 试图携带任意 X 表头，但表头缺失、格式错误、不一致或其他非法时，预检会直接失败，不会回退为视口相对匹配。
 
