@@ -14,6 +14,8 @@ description: "Develop, review, test, and package the OniOnline multiplayer frame
 - 不把宿主测试、Release 构建或 ZIP 内容当成真实游戏验收。Unity/Harmony、生效的安装 DLL、图形 UI、输入法、存读档、Steam P2P 和双客户端必须分别报告。
 - ONI 只能通过 Steam 启动。禁止 SteamCMD `workshop_build_item`、`SteamUGC.SetItemContent` 或目录模式 Workshop 发布；发布只能走仓库规定的单文件 Legacy ZIP 流程。
 - 没有明确的实机授权、容量通过和一次性测试存档时，不启动或重启游戏，不替换用户正在玩的存档和 DLL。
+- 如果当前请求只要求代码、技能或局部验证，先做只读检查并明确不启动游戏：
+  `rtk proxy git status --short`、`rtk proxy pgrep -af 'OxygenNotIncluded|OxygenNotIncluded.exe' || true`。不要因为发现残留进程就自行结束它。
 
 ## 设计不变量
 
@@ -48,11 +50,15 @@ description: "Develop, review, test, and package the OniOnline multiplayer frame
 ```sh
 rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --sdk
 rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --compatibility
+rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --mod-sync-declarations
+rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --mod-sync-contracts
+rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --mod-content-sync
+rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --mod-content-digest
 rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --mod-sync-session
 rtk proxy dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release --no-restore -- --gameplay-admission
 ```
 
-测试新增行为，不要只测内部字段。至少覆盖正常路径、断线/重连、旧 generation、权限撤销、未知 schema、预算上限和重复消息。第三方玩法还要验证 `Bind → unbind → Select → Bind` 后旧会话失效、`SessionChanged` 重新触发，插件重新从 `Current` 取会话。
+上面的宿主专项会共享 `obj/bin`，必须按顺序串行执行，不能并发启动多个 `dotnet run`；逐项记录退出码和 `PASS … assertions` 输出。模组同步按“声明 → 合同 → 内容传输 → 内容摘要 → 会话准入”顺序跑。测试新增行为，不要只测内部字段。至少覆盖正常路径、断线/重连、旧 generation、权限撤销、未知 schema、预算上限和重复消息。第三方玩法还要验证 `Bind → unbind → Select → Bind` 后旧会话失效、`SessionChanged` 重新触发，插件重新从 `Current` 取会话。
 
 ### 3. 构建并检查实际产物
 

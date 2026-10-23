@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | SDK/玩法/生命周期 | `--sdk` | 认证消息、玩法规则、存档槽、旧会话释放 | Unity 生命周期、原生 UI |
 | DLC/游戏版本 | `--compatibility` | 能力合同、未知构建 fail-closed、codec 边界 | 任意版本真实游戏加载 |
-| 入场模组同步 | `--mod-sync-contracts`、`--mod-sync-session` | 清单、分页、恢复、准入 generation | Steam Workshop 下载/重启后加载 |
+| 入场模组同步 | 依次运行 `--mod-sync-declarations`、`--mod-sync-contracts`、`--mod-content-sync`、`--mod-content-digest`、`--mod-sync-session` | 清单、策略声明、内容摘要/传输、分页、恢复、准入 generation | Steam Workshop 下载/重启后加载 |
 | 星球准入 | `--gameplay-admission` | 身份、权限、撤权、授权观察边界 | 原生星球迁移 |
 | 网络恢复 | `--resilience`、`--network-matrix` | TCP、弱网、重连、重复/乱序、预算 | 两台真实 ONI |
 | 世界/观察 | `--world-interest`、`--world-sync` | 生产快照、观察授权、快照恢复 | 真实 Unity 渲染和 FPS |
@@ -48,3 +48,7 @@ rtk proxy onim -m OniOnline build --release
 6. 两个真实游戏客户端分别报告 Steam 身份、实际加载 DLL、房间、聊天、保存/重启和恢复结果。
 
 任何一项只由宿主测试、探针、截图旧候选或协议客户端证明，都只能标为“局部证据”。
+
+### 专项执行规则
+
+这些 `dotnet run` 专项测试共用同一组 `obj/bin` 输出目录，必须串行运行；并发启动会制造文件锁竞争（例如 MSB3026/MSB3101），不能把锁警告或被污染的输出当作协议回归结果。每个专项都要保留退出码和 `PASS … assertions` 行，缺少其中任一项就标为未完成。
