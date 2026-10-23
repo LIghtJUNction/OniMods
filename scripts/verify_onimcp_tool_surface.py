@@ -32,15 +32,8 @@ EXPECTED_INTERNAL = {
     "search_control",
 }
 
-EXPECTED_ALIASES = {
-    "benchmark": (),
-    "building_control": ("buildings_control", "building_system_control"),
-    "game_control": ("game_system_control",),
-    "navigation_control": ("spatial_control", "view_control"),
-    "orders_control": ("orders", "orders_unified_control", "orders_action_control", "map_orders_control"),
-    "server_control": ("mcp_server_control", "server_diagnostics_control", "mcp_client_request_control", "tools_catalog_control", "tools_call_many", "agent_program_execute"),
-    "world_editor": ("oni_editor", "map_editor", "save_editor"),
-}
+# Retired aliases must not silently reappear in the single supported protocol.
+EXPECTED_ALIASES = {name: () for name in EXPECTED_REGISTERED}
 
 EXPECTED_OPERATION_FILES = {
     "ops/any.md": "",
