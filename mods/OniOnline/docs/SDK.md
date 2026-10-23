@@ -43,6 +43,8 @@ static void OnSessionChanged()
 
 `session.AdmissionGeneration` 是本端当前准入代次，未就绪时为零。`Changed` 也会通知代次变化。即使两次检查都得到 `Ready == true`，代次变化仍要求释放旧的发布和订阅，重新取得描述信息；示例包含这条处理。这个数字只用于本端失效检查，不能用作跨玩家身份。
 
+适配器离开或切换玩法时先解除当前绑定；框架会释放旧的 `GameplaySession`，再通知 `SessionChanged`。插件应在回调中丢弃旧订阅，并从 `Current` 取得新会话，不要缓存旧对象继续发送。
+
 完整合同见[模组状态同步](SDK-MOD-SYNC.md)、[原生模组对齐](MOD-CONTENT-SYNC.md)和[版本与能力协商](FRAMEWORK-COMPATIBILITY.md)。
 
 ## 原生存档

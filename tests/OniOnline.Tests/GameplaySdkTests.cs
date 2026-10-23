@@ -21,7 +21,7 @@ internal static class GameplaySdkTests
         internal readonly RoomSession[] Rooms;
         internal readonly GameplaySession[] Sdk;
         internal readonly GameplayStateStore[] Saves;
-        internal Fixture(int count = 3, bool mismatch = false)
+        internal Fixture(int count = 3, bool mismatch = false, string gameplayId = null)
         {
             Rooms = new RoomSession[count]; Sdk = new GameplaySession[count]; Saves = new GameplayStateStore[count];
             for (int i = 0; i < count; i++)
@@ -29,7 +29,7 @@ internal static class GameplaySdkTests
                 int index = i;
                 Rooms[i] = new RoomSession(i == 0 ? Network.Host : Network.Connect(), new SessionProfile
                 { Name = "Sdk" + i, GameVersion = "744825", CycleTrimVersion = "0.3.2", SpacedOut = true,
-                    GameplayId = mismatch && i != 0 ? "test.other-mode" : GameplayFramework.BuiltInId }, "", "SDK fixture");
+                    GameplayId = gameplayId ?? (mismatch && i != 0 ? "test.other-mode" : GameplayFramework.BuiltInId) }, "", "SDK fixture");
                 Saves[i] = GameplayStateStore.Load(0, null);
                 Sdk[i] = new GameplaySession(Rooms[i], () => new StarSystemState { Name = "Original" }, () => Saves[index]);
             }
@@ -52,6 +52,7 @@ internal static class GameplaySdkTests
         check(GameplayFramework.RegisteredIds.Contains(GameplayFramework.BuiltInId), "bundled gameplay is registered through the public SDK");
         bool duplicate = false; try { GameplayFramework.Register(new Mode("test.other-mode")); } catch (InvalidOperationException) { duplicate = true; }
         check(duplicate, "duplicate gameplay IDs cannot replace a registered rules implementation");
+        Lifecycle(check);
         using (var fixture = new Fixture(2, true))
             check(fixture.Rooms[1].LastError == "gameplay_mismatch" && fixture.Rooms[0].Players.Length == 1,
                 "a peer running different gameplay cannot obtain a seat");
@@ -104,6 +105,41 @@ internal static class GameplaySdkTests
         Saves(check);
         Rules(check);
         Console.WriteLine("SDK: authenticated production sessions, plugin fault isolation, bounded messages, native-save containers and bundled admission rules. No Unity/native migration claim.");
+    }
+    private static void Lifecycle(Action<bool, string> check)
+    {
+        check(GameplayFramework.Current == null, "SDK lifecycle starts without a bound gameplay session");
+        int changes = 0;
+        System.Action changed = () => changes++;
+        GameplayFramework.SessionChanged += changed;
+        try
+        {
+            using (var first = new Fixture(2))
+            {
+                GameplayFramework.Bind(first.Sdk[0]);
+                check(ReferenceEquals(GameplayFramework.Current, first.Sdk[0]) && first.Sdk[0].Ready,
+                    "adapter binds the first gameplay session");
+                GameplayFramework.Bind(null);
+                check(GameplayFramework.Current == null && !first.Sdk[0].Ready &&
+                    !first.Sdk[0].SendToHost("lifecycle.old", new byte[0]),
+                    "unbind disposes the old session and blocks late messages");
+            }
+            GameplayFramework.Select("test.other-mode");
+            using (var replacement = new Fixture(2, false, "test.other-mode"))
+            {
+                GameplayFramework.Bind(replacement.Sdk[0]);
+                check(ReferenceEquals(GameplayFramework.Current, replacement.Sdk[0]) &&
+                    GameplayFramework.Current.GameplayId == "test.other-mode" && changes == 3,
+                    "a new gameplay can be selected and rebound after leave");
+                GameplayFramework.Bind(null);
+            }
+        }
+        finally
+        {
+            GameplayFramework.Bind(null);
+            GameplayFramework.Select(GameplayFramework.BuiltInId);
+            GameplayFramework.SessionChanged -= changed;
+        }
     }
     private static void Saves(Action<bool, string> check)
     {

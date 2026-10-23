@@ -68,7 +68,13 @@ namespace OniOnline.Sdk
         internal static void Bind(GameplaySession session)
         {
             if (ReferenceEquals(Current, session)) return;
+            var previous = Current;
             Current = session;
+            // Binding is the adapter's ownership boundary. Replacing the
+            // current session must release its RoomSession subscriptions before
+            // notifying plugins, otherwise an old gameplay can still consume
+            // messages after a leave/rejoin or gameplay switch.
+            if (previous != null) previous.Dispose();
             var handlers = SessionChanged;
             if (handlers == null) return;
             foreach (System.Action handler in handlers.GetInvocationList())
