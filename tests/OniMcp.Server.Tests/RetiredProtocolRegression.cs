@@ -297,10 +297,10 @@ internal static class RetiredProtocolRegression
             var json = Json(response);
             Require((int)json["error"]["code"] == -32022,
                 "Retired request returned an unexpected JSON-RPC error: " + method);
-            Require(json["id"]?.Type == JTokenType.Null,
+            Require(version == null || json["id"]?.Type == JTokenType.Null,
                 "Pre-parse retired request echoed an id: " + method);
-            Require((string)json["error"]["data"]["requested"] == Retired || version != Retired,
-                "Retired protocol identifier disappeared");
+            Require((string)json["error"]["data"]["requested"] == (version ?? Retired),
+                "Rejected protocol identifier disappeared");
             var supported = json["error"]["data"]["supported"] as JArray;
             Require(supported != null && supported.Values<string>().SequenceEqual(new[] { Current }),
                 "Retired request advertised unsupported protocols");
