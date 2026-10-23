@@ -118,7 +118,11 @@ namespace OniOnline.Sdk
         private byte NativeCapabilityBits(string playerId)
         {
             byte bits = 0;
-            foreach (string capability in room.PeerCapabilitiesFor(playerId)) bits |= NativeCapabilityBit(capability);
+            // Cross-guest native traffic is relayed by the host. Advertise the
+            // negotiated path (host/peer intersection), not the peer's raw
+            // declaration, so a host without an adapter cannot authorize a
+            // capability it cannot carry.
+            foreach (string capability in room.CapabilitiesFor(playerId)) bits |= NativeCapabilityBit(capability);
             return bits;
         }
         public ModSyncPlan GetPlan(string playerId)

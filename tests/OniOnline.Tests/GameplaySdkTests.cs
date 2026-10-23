@@ -167,6 +167,10 @@ internal static class GameplaySdkTests
         var a = new PlanetManifest { PlanetId = "planet-a", LineageId = "branch-a", OwnerId = "owner-a", HomeSystemId = "home-a", NativeWorldId = 1 };
         var b = new PlanetManifest { PlanetId = "planet-b", LineageId = "branch-b", OwnerId = "owner-b", HomeSystemId = "home-b", NativeWorldId = 1 };
         var current = new[] { new PlanetClaim("player-a", a) };
+        var exposed = current[0].Planet;
+        exposed.PlanetId = "mutated"; exposed.Name = "mutated";
+        check(current[0].Planet.PlanetId == "planet-a" && current[0].Planet.Name == null && a.PlanetId == "planet-a",
+            "planet admission claims expose defensive snapshots rather than mutable roster state");
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-b", b), current) == null, "different players may own independent native planets");
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-b", a), current) == "planet_duplicate_branch", "another player cannot claim an existing planet");
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-a", b), current) == "planet_selection_locked", "one player cannot attach a second planet while admitted");

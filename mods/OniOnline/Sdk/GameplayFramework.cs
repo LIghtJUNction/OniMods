@@ -16,10 +16,14 @@ namespace OniOnline.Sdk
 
     public sealed class PlanetClaim
     {
+        private readonly PlanetManifest planet;
         public string PlayerId { get; }
-        public PlanetManifest Planet { get; }
+        // Admission rules receive a snapshot, not a mutable reference into the
+        // coordinator's roster. Returning a copy also prevents one rule from
+        // mutating the input observed by its own later checks.
+        public PlanetManifest Planet { get { return planet.Copy(); } }
         public PlanetClaim(string playerId, PlanetManifest planet)
-        { PlayerId = playerId; Planet = planet?.Copy() ?? throw new ArgumentNullException(nameof(planet)); }
+        { PlayerId = playerId; this.planet = planet?.Copy() ?? throw new ArgumentNullException(nameof(planet)); }
     }
 
     public static class GameplayFramework

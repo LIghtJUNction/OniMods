@@ -559,7 +559,16 @@ namespace OniOnline.Runtime
                     // refreshed its loaded evidence. Re-capture at a bounded
                     // cadence; this does not enable a mod or mutate mods.json.
                     try { modContentSync.RefreshNativeCatalog(); }
-                    catch (ObjectDisposedException) { modContentSync = null; }
+                    catch (ObjectDisposedException)
+                    {
+                        // The Steam callback may race a generation/room cleanup.
+                        // Drop both the controller and its stale confirmation UI so
+                        // the next frame can rebuild the plan instead of showing an
+                        // empty, already-disposed status window.
+                        ModSyncRuntimePolicy.DisposeContentSync(ref modContentSync);
+                        modSyncDialog?.Dispose(); modSyncDialog = null;
+                        shownModSyncPlan = null;
+                    }
                     nextModContentRefresh = now + 2;
                 }
                 var lines = modContentSync == null ? new string[0] : modContentSync.Status.Take(8).Select(s => {

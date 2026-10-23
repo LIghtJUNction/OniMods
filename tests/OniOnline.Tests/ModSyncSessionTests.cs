@@ -364,6 +364,24 @@ internal static class ModSyncSessionTests
             check(!room.Sync[1].SupportsNativeCapability(b, SessionCapabilities.NativePlanetV1),
                 "revoked guest admission cannot retain an advertised native capability");
         }
+        Func<int, SessionProfile> relayProfiles = index => {
+            var profile = Profile("RelayCaps" + index);
+            var required = profile.RequiredCapabilities;
+            string[] native = index == 0
+                ? new[] { SessionCapabilities.NativePlanetV1 }
+                : new[] { SessionCapabilities.NativePlanetV1, SessionCapabilities.NativeObservationV1 };
+            profile.Capabilities = profile.Capabilities.Concat(native).ToArray();
+            profile.RequiredCapabilities = required;
+            return profile;
+        };
+        using (var room = new Fixture(new[] { Manifest(), Manifest(), Manifest() }, true, relayProfiles))
+        {
+            string a = room.Rooms[1].LocalPlayerId, b = room.Rooms[2].LocalPlayerId;
+            room.Until(() => room.Ready && room.Sync[1].IsReady(b) && room.Sync[2].IsReady(a));
+            check(!room.Sync[1].SupportsNativeCapability(b, SessionCapabilities.NativeObservationV1) &&
+                !room.Sync[1].SupportsNativeCapability(room.Rooms[0].LocalPlayerId, SessionCapabilities.NativeObservationV1),
+                "cross-guest native capability is denied when the host cannot relay that adapter feature");
+        }
     }
     private static byte[] Page(byte[] template, string nonce, int total, int offset, byte[] chunk)
     {
