@@ -15,7 +15,10 @@ pub fn run(cfg: &Config, selected: &SelectedMod, release: bool) -> Result<()> {
     println!("📦 构建 Mod: {} ({})", selected.name, mod_project.display());
 
     let mut cmd = Command::new("dotnet");
-    cmd.arg("build").current_dir(&mod_project);
+    cmd.args(["build", "--disable-build-servers"])
+        .env("DOTNET_CLI_USE_MSBUILD_SERVER", "false")
+        .env("MSBUILDUSESERVER", "0")
+        .current_dir(&mod_project);
 
     if release {
         cmd.args(["-c", "Release"]);
