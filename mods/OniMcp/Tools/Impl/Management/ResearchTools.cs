@@ -49,7 +49,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "list_research" },
                 Description = "兼容入口：请优先使用 colony_control domain=management kind=research action=list。列出或搜索可研究科技。query 可匹配科技 ID、名称、解锁建筑 ID/名称或搜索词",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -97,7 +96,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "set_research" },
                 Description = "兼容入口：请优先使用 colony_control domain=management kind=research action=set。选择当前研究目标。优先用 id 精确指定，也可用 query 搜索科技或解锁建筑",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -168,7 +166,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "clear_research", "research_cancel", "research_queue_clear" },
                 Tags = new List<string> { "research", "queue", "cancel", "clear", "management", "researchscreen" },
                 Description = "兼容入口：请优先使用 colony_control domain=management kind=research action=clear。取消当前研究队列，等价于 ResearchScreen 的取消研究按钮；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -226,7 +223,6 @@ namespace OniMcp.Tools
                 Group = "research",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "research_queue_control", "research_management" },
                 Tags = new List<string> { "research", "queue", "tech", "management", "researchscreen" },
                 Description = "统一查看、搜索、设置和清空研究队列。action=status/list/set/clear；status 查看当前队列，list 搜索科技，set 选择当前研究，clear 需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -2,6 +2,7 @@
 // protocol type is compiled from production source, including HttpListener transport.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 
@@ -47,7 +48,6 @@ namespace OniMcp.Config
         public string Host { get; set; } = "127.0.0.1";
         public int Port { get; set; }
         public bool AuthEnabled { get; set; }
-        public bool SkillsExtensionEnabled { get; set; }
         public string AuthToken { get; set; }
         public bool GlobalAutoDisinfectDisabled { get; set; }
         // Protocol tests select text encoding explicitly; most exercise JSON mode.
@@ -109,114 +109,10 @@ namespace OniMcp.Tools
         public static int MiddlewareCalls;
         public static string LastName;
         public static JObject LastArguments;
-        public static bool ModernToolsEnabled;
-        public static bool InvalidModernHeaderSchema;
-
         public static List<McpToolInfo> GetToolInfos()
         {
-            if (!ModernToolsEnabled)
-                return new List<McpToolInfo>();
-
-            var benchmarkProperties = new Dictionary<string, SchemaProperty>
-            {
-                ["task"] = new SchemaProperty { Type = "string", Description = "Visible task description" },
-                ["region"] = new SchemaProperty { Type = "string", McpHeader = "Region" },
-                ["enabled"] = new SchemaProperty { Type = "boolean", McpHeader = "Enabled" },
-                ["limit"] = new SchemaProperty { Type = "integer", McpHeader = "Limit" },
-                ["options"] = new SchemaProperty
-                {
-                    Type = "object",
-                    Properties = new Dictionary<string, SchemaProperty>
-                    {
-                        ["scope"] = new SchemaProperty { Type = "string", McpHeader = "Scope" }
-                    }
-                }
-            };
-            if (InvalidModernHeaderSchema)
-                benchmarkProperties["ratio"] = new SchemaProperty { Type = "number", McpHeader = "Ratio" };
-
-            return new List<McpToolInfo>
-            {
-                new McpToolInfo
-                {
-                    Name = "world_editor",
-                    Description = "write-capable stub",
-                    Execution = new ToolExecution { TaskSupport = "optional" },
-                    InputSchema = new InputSchema { Properties = new Dictionary<string, SchemaProperty>() }
-                },
-                new McpToolInfo
-                {
-                    Name = "benchmark",
-                    Description = "read-only benchmark stub",
-                    Execution = new ToolExecution { TaskSupport = "optional" },
-                    InputSchema = new InputSchema
-                    {
-                        Properties = benchmarkProperties,
-                        Required = new List<string> { "task" }
-                    }
-                }
-            };
-        }
-
-        public static bool TryGetTool(string name, out McpTool tool)
-        {
-            tool = null;
-            if (!ModernToolsEnabled || !string.Equals(name, "benchmark", StringComparison.Ordinal))
-                return false;
-
-            tool = new McpTool
-            {
-                Name = "benchmark",
-                Handler = arguments =>
-                {
-                    Calls++;
-                    LastName = "benchmark";
-                    LastArguments = arguments;
-                    return CallToolResult.Text("ok");
-                }
-            };
-            return true;
-        }
-
-        public static bool HasCoordinateArguments(JToken token)
-        {
-            if (token == null)
-                return false;
-            if (token.Type == JTokenType.Object)
-            {
-                foreach (var property in ((JObject)token).Properties())
-                {
-                    if (IsCoordinateParameter(property.Name) || HasCoordinateArguments(property.Value))
-                        return true;
-                }
-            }
-            else if (token.Type == JTokenType.Array)
-            {
-                foreach (var item in (JArray)token)
-                {
-                    if (HasCoordinateArguments(item))
-                        return true;
-                }
-            }
-            return false;
-        }
-
-        public static bool IsCoordinateTool(string name)
-        {
-            return string.Equals(name, "coordinate_control", StringComparison.Ordinal)
-                || string.Equals(name, "world_editor", StringComparison.Ordinal);
-        }
-
-        private static bool IsCoordinateParameter(string name)
-        {
-            switch (name)
-            {
-                case "x": case "y": case "x1": case "y1": case "x2": case "y2":
-                case "dx": case "dy": case "cell": case "cells": case "points": case "anchors":
-                    return true;
-                default:
-                    return false;
-            }
+            return new[] { "server_control", "world_editor", "navigation_control", "building_control", "game_control", "orders_control", "benchmark" }
+                .Select(name => new McpToolInfo { Name = name, InputSchema = new InputSchema() }).ToList();
         }
 
         public static CallToolResult CallTool(string name, JObject arguments)

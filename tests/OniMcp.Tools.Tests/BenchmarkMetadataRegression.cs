@@ -47,7 +47,6 @@ internal static class BenchmarkMetadataRegressionEntry
             Group = "server",
             Mode = "read/execute",
             Risk = "medium",
-            Aliases = new List<string> { "mcp_server_control" },
             Parameters = new Dictionary<string, McpToolParameter>
             {
                 ["action"] = new McpToolParameter { Type = "string", Required = true }
@@ -130,8 +129,8 @@ internal static class BenchmarkMetadataRegressionEntry
             ["iterations"] = 1,
             ["tool"] = "world_editor"
         });
-        if (lookupAlias.IsError)
-            throw new InvalidOperationException("benchmark lookup alias was rejected unexpectedly");
+        if (!lookupAlias.IsError)
+            throw new InvalidOperationException("benchmark accepted the removed lookup case alias");
 
         CallToolResult toolNameAlias = benchmark.Handler(new JObject
         {
@@ -140,23 +139,31 @@ internal static class BenchmarkMetadataRegressionEntry
             ["tool"] = "mcp_server_control",
             ["includeDetails"] = true
         });
-        if (toolNameAlias.IsError)
-            throw new InvalidOperationException("benchmark rejected a registered tool-name alias");
-
         JObject aliasBody = JObject.Parse(toolNameAlias.Content[0].Text);
         JObject aliasResult = (JObject)aliasBody["results"]?[0];
-        if (!string.Equals((string)aliasResult?["tool"], "mcp_server_control", StringComparison.Ordinal))
-            throw new InvalidOperationException("benchmark no longer reports the requested alias in its tool field");
+        if ((string)aliasResult?["status"] != "failed" || (int?)aliasResult?["foundCount"] != 0)
+            throw new InvalidOperationException("benchmark accepted a removed tool-name alias");
 
-        JObject aliasDetails = aliasResult?["details"] as JObject;
-        if (!string.Equals((string)aliasDetails?["group"], "server", StringComparison.Ordinal)
-            || !string.Equals((string)aliasDetails?["mode"], "read/execute", StringComparison.Ordinal)
-            || !string.Equals((string)aliasDetails?["risk"], "medium", StringComparison.Ordinal)
-            || (int?)aliasDetails?["aliasCount"] != 1
-            || (int?)aliasDetails?["parameterCount"] != 1)
+        CallToolResult canonical = benchmark.Handler(new JObject
+        {
+            ["cases"] = "toolLookup",
+            ["iterations"] = 1,
+            ["tool"] = "server_control",
+            ["includeDetails"] = true
+        });
+        JObject canonicalResult = (JObject)JObject.Parse(canonical.Content[0].Text)["results"]?[0];
+        if (canonical.IsError || (string)canonicalResult?["status"] != "passed")
+            throw new InvalidOperationException("benchmark rejected the canonical tool name");
+
+        JObject details = canonicalResult?["details"] as JObject;
+        if ((string)details?["group"] != "server"
+            || (string)details?["mode"] != "read/execute"
+            || (string)details?["risk"] != "medium"
+            || details?["aliasCount"] != null
+            || (int?)details?["parameterCount"] != 1)
         {
             throw new InvalidOperationException(
-                "benchmark alias lookup did not report metadata from the resolved canonical tool");
+                "benchmark canonical lookup metadata changed");
         }
     }
 }

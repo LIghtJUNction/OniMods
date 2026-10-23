@@ -24,6 +24,7 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/ObservedTaskRanking.cs" Link="Source/ObservedTaskRanking.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Dupes/DuplicantNeedStatePolicy.cs" Link="Source/DuplicantNeedStatePolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameSpeedTools.cs" Link="Source/GameSpeedTools.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Core/NewGameOpeningPolicy.cs" Link="Source/NewGameOpeningPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameStepUntilCancellation.cs" Link="Source/GameStepUntilCancellation.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameStepUntilWatcher.cs" Link="Source/GameStepUntilWatcher.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/StepPrintingPodState.cs" Link="Source/StepPrintingPodState.cs" />

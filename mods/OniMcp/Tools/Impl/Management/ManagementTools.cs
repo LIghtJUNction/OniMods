@@ -13,7 +13,6 @@ namespace OniMcp.Tools
                 Group = "management",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "colony_management_control", "management_screen_control" },
                 Tags = new List<string> { "management", "schedule", "diet", "research", "medical" },
                 Description = "殖民地管理聚合入口：domain=schedule/diet/research/medical；路由日程、饮食权限、研究队列和医疗管理，保留各子工具原 action 与确认规则。",
                 Parameters = new Dictionary<string, McpToolParameter>

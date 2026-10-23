@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "infrastructure",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "infrastructure_read" },
                 Tags = new List<string> { "power", "electricity", "rooms", "infrastructure", "电力", "房间", "基础设施" },
                 Description = "电力/房间只读聚合入口：action=power_summary/power_ports/ports/rooms；ports 返回电力、液管、气管、信号、运输端口。",
                 Parameters = InfrastructureReadParams(),
@@ -46,30 +45,6 @@ namespace OniMcp.Tools
             };
         }
 
-        public static McpTool GetBuildingPowerPortsCompat()
-        {
-            var tool = GetBuildingPowerPorts();
-            tool.Hidden = true;
-            tool.Description = "兼容入口：请使用 read_control domain=infrastructure action=power_ports。";
-            return tool;
-        }
-
-        public static McpTool GetPowerSummaryCompat()
-        {
-            var tool = GetPowerSummary();
-            tool.Hidden = true;
-            tool.Description = "兼容入口：请使用 read_control domain=infrastructure action=power_summary。";
-            return tool;
-        }
-
-        public static McpTool ListRoomsCompat()
-        {
-            var tool = ListRooms();
-            tool.Hidden = true;
-            tool.Description = "兼容入口：请使用 read_control domain=infrastructure action=rooms。";
-            return tool;
-        }
-
         public static McpTool GetBuildingPowerPorts()
         {
             return new McpTool
@@ -78,7 +53,6 @@ namespace OniMcp.Tools
                 Group = "power",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "power_ports_list", "building_power_connection_points", "power_connection_points" },
                 Tags = new List<string> { "power", "electricity", "ports", "connector", "wire", "电力", "接口", "接线" },
                 Description = "列出指定区域内已建建筑和蓝图建筑的电力接口格：锚点、输入/输出端口、相对偏移和可接线状态，方便直接接线而不是猜文本地图",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>

@@ -24,7 +24,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "get_game_time" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 game_control domain=speed action=time",
                 Parameters = new Dictionary<string, McpToolParameter>(),
@@ -52,31 +51,6 @@ namespace OniMcp.Tools
             };
         }
 
-        public static McpTool SetGameSpeed()
-        {
-            return new McpTool
-            {
-                Name = "game_set_speed",
-                Group = "game",
-                Mode = "execute",
-                Risk = "low",
-                Hidden = true,
-                Aliases = new List<string> { "set_game_speed" },
-                Description = "兼容入口：请优先使用 game_control domain=speed action=set_speed",
-                Parameters = new Dictionary<string, McpToolParameter>
-                {
-                    ["speed"] = new McpToolParameter
-                    {
-                        Type = "integer",
-                        Description = "游戏速度等级: 0=暂停, 1=正常, 2=快进, 3=超快",
-                        Required = true,
-                        EnumValues = new List<string> { "0", "1", "2", "3" }
-                    }
-                },
-                Handler = args => SetSpeed(args)
-            };
-        }
-
         public static McpTool ControlGameSpeed()
         {
             return new McpTool
@@ -85,7 +59,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "game_control_speed", "game_pause_resume_speed" },
                 Tags = new List<string> { "game", "speed", "pause", "resume", "time" },
                 Description = "统一读取游戏时间并控制暂停/恢复/速度/步进。action=time、pause、resume、set_speed、step_until、step_status、step_facts、step_cancel；step_until 类似 Playwright waitForCondition，以快进推进直到工单完成、小人发呆、警报或超时后自动暂停并返回增量差异报告。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -139,38 +112,6 @@ namespace OniMcp.Tools
             };
         }
 
-
-        public static McpTool PauseGame()
-        {
-            return new McpTool
-            {
-                Name = "game_pause",
-                Group = "game",
-                Mode = "execute",
-                Risk = "low",
-                Hidden = true,
-                Aliases = new List<string> { "pause_game" },
-                Description = "兼容入口：请优先使用 game_control domain=speed action=pause",
-                Parameters = new Dictionary<string, McpToolParameter>(),
-                Handler = args => Pause()
-            };
-        }
-
-        public static McpTool ResumeGame()
-        {
-            return new McpTool
-            {
-                Name = "game_resume",
-                Group = "game",
-                Mode = "execute",
-                Risk = "low",
-                Hidden = true,
-                Aliases = new List<string> { "resume_game" },
-                Description = "兼容入口：请优先使用 game_control domain=speed action=resume",
-                Parameters = new Dictionary<string, McpToolParameter>(),
-                Handler = args => Resume()
-            };
-        }
 
         private static CallToolResult SetSpeed(JObject args)
         {

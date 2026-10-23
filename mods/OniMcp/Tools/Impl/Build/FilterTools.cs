@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Group = "filters",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "building_filters_list", "filterable_controls_list" },
                 Tags = new List<string> { "filters", "filterable", "tree-filter", "element-filter", "side-screen", "conduit" },
                 Description = "兼容入口：请优先使用 building_control domain=filter action=list。列出玩家可配置过滤器：气/液/固体管道过滤器、元素传感器、储存/树形过滤器和平铺 tag 过滤器",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -83,7 +82,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "element_filter_set", "filterable_set" },
                 Tags = new List<string> { "filters", "filterable", "element-filter", "sensor", "conduit" },
                 Description = "兼容入口：请优先使用 building_control domain=filter action=set kind=single",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -104,7 +102,6 @@ namespace OniMcp.Tools
                 Group = "filters",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "filters_set", "building_filter_set" },
                 Tags = new List<string> { "filters", "filterable", "tree-filter", "flat-tag-filter", "element-filter", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=filter action=set。kind=single 设置单选 Filterable；kind=tree/flat 设置 TreeFilterable/FlatTagFilterable 多选标签。",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -143,7 +140,6 @@ namespace OniMcp.Tools
                 Group = "filters",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "filters_control", "building_filter_control" },
                 Tags = new List<string> { "filters", "filterable", "tree-filter", "flat-tag-filter", "element-filter", "side-screen", "conduit" },
                 Description = "过滤器聚合工具：action=list/set；读取可配置过滤器，或设置 single/tree/flat 过滤标签。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -182,7 +178,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "tree_filter_set", "flat_tag_filter_set", "multi_filter_set" },
                 Tags = new List<string> { "filters", "tree-filter", "flat-tag-filter", "storage", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=filter action=set kind=tree 或 kind=flat",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "inventory_control", "resource_management_control" },
                 Tags = new List<string> { "resources", "inventory", "food", "items", "search", "pin", "notification" },
                 Description = "资源统一入口：action=inventory/food/search_items/pins/set_pin。set_pin 写入需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -115,7 +114,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "get_inventory" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=inventory",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -254,7 +252,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "get_food_inventory" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=food",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -356,7 +353,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "find_items", "resources_find_items", "pickupables_search", "map_items_search" },
                 Tags = new List<string> { "items", "pickupables", "resources", "search", "map", "物品", "搜索", "全图" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=search_items",
                 Parameters = new Dictionary<string, McpToolParameter>

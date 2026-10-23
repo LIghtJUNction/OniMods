@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "empty_pipe_area", "orders_empty_pipe" },
                 Description = "兼容入口：请优先使用 orders_control domain=designation action=empty_conduits。按区域标记气管、液管或运输轨道清空内容，对应游戏 Empty Pipe 工具",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -101,7 +100,6 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "orders_cut_conduits", "cut_conduits" },
                 Description = "兼容入口：请优先使用 orders_control domain=designation action=cut_conduits。按格子或矩形区域剪断管路/电线/运输轨道，实际下达拆除对应段的命令，需要 confirm=true",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {

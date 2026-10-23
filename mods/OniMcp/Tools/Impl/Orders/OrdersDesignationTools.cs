@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "cancel_area", "orders_cancel" },
                 Description = "兼容入口：请优先使用 orders_control domain=area action=cancel。取消矩形区域内玩家已下达的订单：挖掘、建造、拆除、清扫、收获、攻击、抓捕等可取消对象",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {

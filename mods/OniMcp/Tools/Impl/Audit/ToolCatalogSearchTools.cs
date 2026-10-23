@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Hidden = true,
                 Description = "按关键词、分组、读写模式或风险等级检索 ONI MCP 工具；支持中英文意图词，brief 模式用于低 token 工具发现",
-                Aliases = new List<string> { "tool_search", "tools_find", "find_tools" },
                 Tags = new List<string> { "catalog", "search", "discovery", "intent", "low-token", "工具检索" },
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -80,8 +79,6 @@ namespace OniMcp.Tools
             {
                 if (NormalizeToolLookup(tool.Name) == raw)
                     score += 1000;
-                if (tool.Aliases != null && tool.Aliases.Any(alias => NormalizeToolLookup(alias) == raw))
-                    score += 900;
                 if (NormalizeToolLookup(tool.Name).Contains(raw))
                     score += 120;
             }
@@ -93,7 +90,6 @@ namespace OniMcp.Tools
                 tool.Group ?? "",
                 tool.Mode ?? "",
                 tool.Risk ?? "",
-                string.Join(" ", tool.Aliases),
                 string.Join(" ", tool.Tags),
                 string.Join(" ", tool.Parameters.Keys)
             }).ToLowerInvariant();
@@ -125,8 +121,7 @@ namespace OniMcp.Tools
             if (string.IsNullOrEmpty(normalized))
                 return null;
             var match = OniToolRegistry.GetVisibleTools()
-                .FirstOrDefault(tool => NormalizeToolLookup(tool.Name) == normalized
-                    || (tool.Aliases != null && tool.Aliases.Any(alias => NormalizeToolLookup(alias) == normalized)));
+                .FirstOrDefault(tool => NormalizeToolLookup(tool.Name) == normalized);
             return match?.Name;
         }
 

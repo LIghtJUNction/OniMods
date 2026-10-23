@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "search",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "find_control", "search_action_control" },
                 Tags = new List<string> { "search", "find", "targeting", "action-hints", "workflow" },
                 Description = "Dedicated read-only search entrypoint. Searches tools, world objects, resources, buildings, dupes, or authoritative map glyph mappings.",
                 Parameters = new Dictionary<string, McpToolParameter>

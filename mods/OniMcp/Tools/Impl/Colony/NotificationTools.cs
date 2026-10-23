@@ -26,7 +26,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "notification_screen_list", "hud_notifications_list" },
                 Tags = new List<string> { "notifications", "alerts", "hud", "messages", "focus" },
                 Description = "兼容入口：请优先使用 colony_control domain=notification action=list。列出当前 NotificationScreen/NotificationManager 中的玩家通知，包括可聚焦目标、消息、可清除状态和类型",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -68,7 +67,6 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "notifications_control", "hud_notification_control" },
                 Tags = new List<string> { "notifications", "alerts", "hud", "messages", "focus", "dismiss" },
                 Description = "统一读取、点击和清除 HUD 通知。action=list/click/dismiss；click 会聚焦/选择目标或打开消息，dismiss 会清除可清除通知。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -110,7 +108,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "low",
                 Hidden = true,
-                Aliases = new List<string> { "notification_focus", "hud_notification_click" },
                 Tags = new List<string> { "notifications", "alerts", "hud", "messages", "focus", "selection" },
                 Description = "兼容入口：请优先使用 colony_control domain=notification action=click。复现玩家点击通知：聚焦/选择通知目标，执行 custom click callback，或打开消息通知对话框；clearOnClick 通知会被清除",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -150,7 +147,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "notification_clear", "hud_notification_dismiss" },
                 Tags = new List<string> { "notifications", "alerts", "hud", "messages", "dismiss" },
                 Description = "兼容入口：请优先使用 colony_control domain=notification action=dismiss。清除可 dismiss 的通知；allWithSameTitle=true 等价于点击通知组的 dismiss 按钮",
                 Parameters = new Dictionary<string, McpToolParameter>

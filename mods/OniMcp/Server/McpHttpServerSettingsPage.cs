@@ -58,7 +58,6 @@ namespace OniMcp.Server
                 var options = new OniMcpOptions
                 {
                     SecurityMigrationVersion = current.SecurityMigrationVersion,
-                    SkillsExtensionEnabled = current.SkillsExtensionEnabled,
                     Host = host,
                     Port = port,
                     AuthEnabled = form.ContainsKey("authEnabled") && form["authEnabled"] == "true",

@@ -214,7 +214,10 @@ internal static class Program
             ["task"] = "inspect",
             ["target"] = new JObject { ["x"] = 4 }
         }).IsError, "Nested coordinates escaped validation.");
-        Require(!OniToolRegistry.CallTool("legacy_game_control", new JObject { ["task"] = "inspect" }).IsError, "Alias dispatch failed.");
+        Require(!OniToolRegistry.CallTool("game_control", new JObject { ["task"] = "inspect" }).IsError, "Canonical dispatch failed.");
+        int calls = GameStubs.HandlerCalls;
+        Require(OniToolRegistry.CallTool("legacy_game_control", new JObject { ["task"] = "inspect" }).IsError
+            && GameStubs.HandlerCalls == calls, "Retired alias reached the handler.");
     }
 
     private static void CacheVisibility()
@@ -244,6 +247,13 @@ internal static class Program
             "Public catalog membership changed.");
         Require(infos.Select(info => info.Name).SequenceEqual(OniToolRegistry.GetVisibleTools().Select(tool => tool.Name)),
             "Catalog order differs from visible registry order.");
+        foreach (string name in new[] { "mcp_server_control", "tools_call_many", "oni_editor", "map_editor", "spatial_control", "view_control", "buildings_control" })
+        {
+            int calls = GameStubs.HandlerCalls;
+            Require(!OniToolRegistry.TryGetTool(name, out _)
+                && OniToolRegistry.CallTool(name, new JObject { ["task"] = "inspect" }).IsError
+                && GameStubs.HandlerCalls == calls, "Removed tool alias still dispatches: " + name);
+        }
         foreach (var info in infos)
         {
             Require(info.InputSchema.Required.Count(name => name == "task") == 1

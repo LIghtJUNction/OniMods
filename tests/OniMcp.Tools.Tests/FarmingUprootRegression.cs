@@ -92,9 +92,8 @@ internal static class FarmingUprootRegression
         Check(protectedPlant.MarkCalls == 0 && protectedPlant.gameObject.PriorityWrites == 0,
             "a non-uprootable plant must not be marked or reprioritized");
         McpTool tool = FarmingTools.UprootArea();
-        Check(tool.Hidden && tool.Name == "plants_uproot_area"
-            && tool.Aliases.Contains("farming_uproot_area") && tool.Aliases.Contains("plants_cancel_uproot"),
-            "existing tool name and compatibility aliases must remain");
+        Check(tool.Hidden && tool.Name == "plants_uproot_area",
+            "the current internal uproot operation must remain available");
     }
 
     private static void InvalidAreaDoesNotMutate()

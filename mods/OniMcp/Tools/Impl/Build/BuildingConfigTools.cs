@@ -18,13 +18,12 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "dangerous",
-                Aliases = new List<string> { "buildings_config_control", "building_side_screen_control" },
                 Tags = new List<string> { "buildings", "config", "automation", "side-screen", "door", "access", "visual", "colors" },
-                Description = "建筑配置组合工具：action=list/list_automation/set_enabled/set_toggle/set_threshold/set_slider/set_valve_flow/set_limit_valve/set_logic_timer/set_logic_ribbon_bit/set_door_state/get_access/set_access/copy_settings/batch_set/batch_set_automation/visual",
+                Description = "建筑配置组合工具：action=list/list_automation/set_enabled/set_toggle/set_threshold/set_slider/set_valve_flow/set_limit_valve/set_logic_timer/set_logic_ribbon_bit/set_door_state/get_access/set_access/copy_settings/visual；批量调用使用 server_control domain=batch action=call_many",
                 Parameters = BuildingConfigControlParams(),
                 Handler = args =>
                 {
-                    string operation = (args["action"]?.ToString() ?? args["operation"]?.ToString() ?? "list").Trim().ToLowerInvariant();
+                    string operation = (args["action"]?.ToString() ?? "list").Trim().ToLowerInvariant();
                     switch (operation)
                     {
                         case "list":
@@ -69,12 +68,6 @@ namespace OniMcp.Tools
                         case "copy_settings":
                         case "copy":
                             return CopySettings().Handler(args);
-                        case "batch_set":
-                        case "batch":
-                            return ConfigBatchTools.BatchSetBuildingConfigs().Handler(args);
-                        case "batch_set_automation":
-                        case "automation_batch":
-                            return ConfigBatchTools.BatchSetAutomationControls().Handler(args);
                         case "state_list":
                         case "list_state":
                             return ForwardStateControl(args, "list");
@@ -85,7 +78,7 @@ namespace OniMcp.Tools
                         case "visual_control":
                             return ForwardVisualControl(args);
                         default:
-                            return CallToolResult.Error("action must be list, list_automation, set_enabled, set_toggle, set_threshold, set_slider, set_valve_flow, set_limit_valve, set_logic_timer, set_logic_ribbon_bit, set_door_state, get_access, set_access, copy_settings, batch_set, batch_set_automation, state_list, state_set, or visual");
+                            return CallToolResult.Error("action must be list, list_automation, set_enabled, set_toggle, set_threshold, set_slider, set_valve_flow, set_limit_valve, set_logic_timer, set_logic_ribbon_bit, set_door_state, get_access, set_access, copy_settings, state_list, state_set, or visual; use server_control domain=batch action=call_many for batches");
                     }
                 }
             };
@@ -118,7 +111,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "buildings_controls_list", "building_configurables" },
                 Tags = new List<string> { "buildings", "config", "threshold", "door", "access", "automation", "side-screen" },
                 Description = "兼容入口：请使用 building_control domain=config action=list",
                 Hidden = true,
@@ -189,7 +181,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "automation_threshold_set", "sensor_threshold_set" },
                 Tags = new List<string> { "buildings", "automation", "sensor", "threshold", "slider" },
                 Description = "兼容入口：请使用 building_control domain=config action=set_threshold",
                 Hidden = true,
@@ -243,7 +234,6 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "logic_controls_list", "power_controls_list" },
                 Tags = new List<string> { "automation", "logic", "power", "controls", "side-screen" },
                 Description = "兼容入口：请使用 building_control domain=config action=list_automation",
                 Hidden = true,

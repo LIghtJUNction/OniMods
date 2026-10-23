@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "ui_unified_control", "player_feedback_control" },
                 Tags = new List<string> { "ui", "action", "feedback", "hint", "marker", "management", "overlay" },
                 Description = "UI 聚合入口：domain=action/feedback。action 读取或触发安全 UI Action，feedback 创建通知/浮字/复制人聊天气泡/地图标记。",
                 Parameters = new Dictionary<string, McpToolParameter>

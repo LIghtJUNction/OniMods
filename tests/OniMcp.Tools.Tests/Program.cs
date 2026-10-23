@@ -40,6 +40,7 @@ internal static class Program
         TestRegexBoundaries();
         TestWorldEditorCellObjectPolicy();
         GameControlRoutingRegression.Run();
+        NewGameOpeningRegression.Run();
         TestExistingMaterialPolicy();
         TestSweepEligibilityPolicy();
         TestBackwallSupportPolicy();

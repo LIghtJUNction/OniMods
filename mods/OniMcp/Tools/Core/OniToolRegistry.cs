@@ -15,7 +15,6 @@ namespace OniMcp.Tools
     {
         private static readonly Dictionary<string, McpTool> _tools = new Dictionary<string, McpTool>();
         private static readonly Dictionary<string, McpTool> _internalOperations = new Dictionary<string, McpTool>();
-        private static readonly Dictionary<string, string> _aliases = new Dictionary<string, string>();
         private static bool _initialized;
         private static readonly OniToolRegistryCache ToolCache = new OniToolRegistryCache();
         private static List<McpToolInfo> _cachedToolInfos;
@@ -47,12 +46,6 @@ namespace OniMcp.Tools
         {
             ToolMetadata.ApplyDefaults(tool);
             _tools[tool.Name] = tool;
-            foreach (var alias in tool.Aliases)
-            {
-                if (!string.IsNullOrEmpty(alias))
-                    _aliases[alias] = tool.Name;
-            }
-
             ToolCache.Clear();
             _cachedToolInfos = null;
         }
@@ -87,11 +80,7 @@ namespace OniMcp.Tools
             if (string.IsNullOrWhiteSpace(name))
                 return false;
 
-            if (_tools.TryGetValue(name, out tool))
-                return true;
-
-            string canonicalName;
-            return _aliases.TryGetValue(name, out canonicalName) && _tools.TryGetValue(canonicalName, out tool);
+            return _tools.TryGetValue(name, out tool);
         }
 
         /// <summary>
@@ -127,8 +116,7 @@ namespace OniMcp.Tools
                         {
                             Type = param.Value.Type,
                             Description = param.Value.Description,
-                            Enum = param.Value.SchemaEnumValues,
-                            McpHeader = param.Value.McpHeader
+                            Enum = param.Value.SchemaEnumValues
                         };
                         if (param.Value.Required)
                             required.Add(param.Key);
@@ -174,7 +162,7 @@ namespace OniMcp.Tools
         {
             if (string.IsNullOrWhiteSpace(name))
                 return CallToolResult.Error("Operation name is required.");
-            if (_tools.ContainsKey(name) || _aliases.ContainsKey(name))
+            if (_tools.ContainsKey(name))
                 return CallToolCore(name, arguments, allowValidatedCoordinates);
             if (!_internalOperations.TryGetValue(name, out var operation))
                 return CallToolResult.Error($"Operation not found: {name}");
@@ -209,46 +197,27 @@ namespace OniMcp.Tools
             var middlewareNotifications = ToolCallMiddleware.DrainNotifications();
             if (string.IsNullOrWhiteSpace(name))
                 return ToolCallMiddleware.Inject(CallToolResult.Error("Tool name is required."), middlewareNotifications);
-            bool usedLegacyAlias = false;
             if (!_tools.TryGetValue(name, out var tool))
-            {
-                if (!_aliases.TryGetValue(name, out var canonicalName) || !_tools.TryGetValue(canonicalName, out tool))
-                    return ToolCallMiddleware.Inject(CallToolResult.Error($"Tool not found: {name}"), middlewareNotifications);
-                usedLegacyAlias = true;
-            }
+                return ToolCallMiddleware.Inject(CallToolResult.Error($"Tool not found: {name}"), middlewareNotifications);
 
             try
             {
                 if (!ToolCallMiddleware.TryGetTaskDescription(arguments, out var taskDescription))
-                {
-                    var missingTaskResult = ToolCallMiddleware.MissingTaskDescription(tool.Name, middlewareNotifications);
-                    return usedLegacyAlias
-                        ? ToolMetadata.AddLegacyAliasDeprecationWarning(missingTaskResult, name, tool.Name)
-                        : missingTaskResult;
-                }
+                    return ToolCallMiddleware.MissingTaskDescription(tool.Name, middlewareNotifications);
 
                 ToolCallMiddleware.PresentTaskDescription(taskDescription);
 
                 if (!allowValidatedCoordinates && !IsCoordinateTool(tool.Name) && ContainsCoordinateArguments(arguments)
                     && !CameraCoordinatePolicy.AllowsArguments(tool.Name, arguments))
                 {
-                    var coordinateResult = ToolCallMiddleware.Inject(CallToolResult.Error("Coordinate arguments require a supported navigation_control camera action or a validated world_editor operation; use semantic query/target/areaId for gameplay tools."), middlewareNotifications);
-                    return usedLegacyAlias
-                        ? ToolMetadata.AddLegacyAliasDeprecationWarning(coordinateResult, name, tool.Name)
-                        : coordinateResult;
+                    return ToolCallMiddleware.Inject(CallToolResult.Error("Coordinate arguments require a supported navigation_control camera action or a validated world_editor operation; use semantic query/target/areaId for gameplay tools."), middlewareNotifications);
                 }
 
-                var result = ToolCallMiddleware.Inject(tool.Handler(arguments ?? new JObject()), middlewareNotifications);
-                return usedLegacyAlias
-                    ? ToolMetadata.AddLegacyAliasDeprecationWarning(result, name, tool.Name)
-                    : result;
+                return ToolCallMiddleware.Inject(tool.Handler(arguments ?? new JObject()), middlewareNotifications);
             }
             catch (Exception ex)
             {
-                var errorResult = ToolCallMiddleware.Inject(CallToolResult.Error($"Tool execution error: {ex.Message}"), middlewareNotifications);
-                return usedLegacyAlias
-                    ? ToolMetadata.AddLegacyAliasDeprecationWarning(errorResult, name, tool.Name)
-                    : errorResult;
+                return ToolCallMiddleware.Inject(CallToolResult.Error($"Tool execution error: {ex.Message}"), middlewareNotifications);
             }
         }
 
@@ -317,7 +286,6 @@ namespace OniMcp.Tools
         public string Mode { get; set; }
         public string Risk { get; set; }
         public bool Hidden { get; set; }
-        public List<string> Aliases { get; set; }
         public List<string> Tags { get; set; }
         public Dictionary<string, McpToolParameter> Parameters { get; set; }
         public Func<JObject, CallToolResult> Handler { get; set; }
@@ -329,7 +297,6 @@ namespace OniMcp.Tools
         public string Description { get; set; }
         public bool Required { get; set; }
         public List<string> EnumValues { get; set; }
-        public string McpHeader { get; set; }
 
         public List<object> SchemaEnumValues
         {
@@ -370,8 +337,6 @@ namespace OniMcp.Tools
 
     internal static class ToolMetadata
     {
-        private const string LegacyAliasRemovalVersion = "0.3.0";
-
         public static void ApplyDefaults(McpTool tool)
         {
             if (string.IsNullOrEmpty(tool.Group))
@@ -382,8 +347,6 @@ namespace OniMcp.Tools
                 tool.Risk = InferRisk(tool.Name);
             if (tool.Parameters == null)
                 tool.Parameters = new Dictionary<string, McpToolParameter>();
-            if (tool.Aliases == null)
-                tool.Aliases = new List<string>();
             if (tool.Tags == null)
                 tool.Tags = new List<string>();
         }
@@ -393,29 +356,6 @@ namespace OniMcp.Tools
             return $"[{tool.Group}/{tool.Mode}/{tool.Risk}] {tool.Description}";
         }
 
-        public static bool HasLegacyAliases(McpTool tool)
-        {
-            return tool?.Aliases != null && tool.Aliases.Count > 0;
-        }
-
-        public static string LegacyAliasesDeprecationWarning(McpTool tool)
-        {
-            return $"DEPRECATED: legacy aliases for '{tool.Name}' will be removed in {LegacyAliasRemovalVersion}; use '{tool.Name}' directly.";
-        }
-
-        public static CallToolResult AddLegacyAliasDeprecationWarning(CallToolResult result, string alias, string canonicalName)
-        {
-            if (result == null)
-                result = CallToolResult.Text(string.Empty);
-            if (result.Content == null)
-                result.Content = new List<ToolContent>();
-
-            result.Content.Insert(0, new ToolContent
-            {
-                Text = $"DEPRECATED: legacy tool name/alias '{alias}' will be removed in {LegacyAliasRemovalVersion}; use '{canonicalName}' instead."
-            });
-            return result;
-        }
         private static string InferGroup(string name)
         {
             name = (name ?? "").ToLowerInvariant();

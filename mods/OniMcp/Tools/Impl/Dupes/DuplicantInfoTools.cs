@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "duplicants_info_control", "dupe_info_control" },
                 Tags = new List<string> { "dupes", "duplicants", "detail", "attributes", "needs", "status", "stuck", "trapped", "navigation", "复制人", "属性", "需求", "被困", "状态" },
                 Description = "复制人基础只读信息聚合工具：action=detail 单个详情；action=attributes 属性/特性；action=needs 原生需求数值及 unknown/notApplicable 状态，仿生人附电量、电池库存和局部浸液风险；action=status_check 状态/被困检查。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -135,7 +134,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "duplicants_status_check", "dupes_stuck_check", "dupe_rescue_check" },
                 Tags = new List<string> { "dupes", "duplicants", "status", "stuck", "trapped", "navigation", "rescue", "复制人", "被困", "状态" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=info action=status_check。【复制人状态/被困检查首选】一次返回复制人位置、当前差事、关键需求、周边可达格和疑似被困风险；只读，不移动复制人。",
                 Parameters = new Dictionary<string, McpToolParameter>

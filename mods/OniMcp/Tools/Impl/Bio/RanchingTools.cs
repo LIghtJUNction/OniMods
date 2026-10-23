@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Group = "ranching",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "critters_control", "creature_ranching_control" },
                 Tags = new List<string> { "ranching", "critters", "dropoff", "incubator", "eggs", "batch" },
                 Description = "畜牧统一入口。kind=critters/dropoff/incubator；action 透传到对应旧 control。",
                 Parameters = RectParams(LookupParams(new Dictionary<string, McpToolParameter>
@@ -73,7 +72,6 @@ namespace OniMcp.Tools
                 Group = "ranching",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "ranching_control", "critters_read_control" },
                 Tags = new List<string> { "ranching", "critters", "creatures", "capture", "wrangle" },
                 Description = "畜牧只读聚合工具：action=critters 列出地图上的小动物/可抓捕对象状态",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -102,7 +100,6 @@ namespace OniMcp.Tools
                 Group = "ranching",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "ranching_critters_list", "creatures_list" },
                 Tags = new List<string> { "ranching", "critters", "creatures", "capture", "wrangle" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=bio bioDomain=ranching action=critters",
@@ -154,7 +151,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "ranching_dropoffs_list", "critter_dropoffs" },
                 Tags = new List<string> { "ranching", "critters", "dropoff", "filters", "capacity" },
                 Description = "兼容入口：列出小动物投放点/鱼类投放点。新调用请使用 colony_control domain=bio bioDomain=ranching kind=dropoff action=list。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -198,7 +194,6 @@ namespace OniMcp.Tools
                 Group = "ranching",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "critter_dropoff_control", "ranching_dropoff_control" },
                 Tags = new List<string> { "ranching", "critters", "dropoff", "filters", "capacity", "batch" },
                 Description = "统一读取/配置小动物投放点或鱼类投放点。action=list/configure/batch；configure 按 id/x/y 单点修改，batch 按 areaId 或矩形批量修改。",
                 Parameters = RectParams(LookupParams(new Dictionary<string, McpToolParameter>
@@ -234,7 +229,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "egg_incubators_list", "ranching_incubators_list" },
                 Tags = new List<string> { "ranching", "eggs", "incubator", "receptacle" },
                 Description = "兼容入口：列出孵化器的蛋请求、占用蛋/幼体、进度和连续孵化设置。新调用请使用 colony_control domain=bio bioDomain=ranching kind=incubator action=list。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -278,7 +272,6 @@ namespace OniMcp.Tools
                 Group = "ranching",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "incubators_control", "egg_incubator_control", "ranching_incubator_control" },
                 Tags = new List<string> { "ranching", "eggs", "incubator", "receptacle", "batch" },
                 Description = "统一读取/配置孵化器。action=list/configure/batch；incubatorAction=set/cancel/remove_occupant 控制蛋请求动作。",
                 Parameters = RectParams(LookupParams(new Dictionary<string, McpToolParameter>

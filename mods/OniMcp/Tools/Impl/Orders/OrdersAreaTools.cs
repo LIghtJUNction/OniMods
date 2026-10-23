@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Risk = "medium",
                 Hidden = true,
                 Description = "兼容入口：请优先使用 orders_control domain=area action=sweep。把矩形区域内固体散落物/碎片标记为清扫到仓库；不处理水、污水或任何液体。",
-                Aliases = new List<string> { "sweep_area", "clear_debris_area", "solid_debris_sweep_area" },
                 Tags = new List<string> { "orders", "sweep", "clear", "debris", "solid", "pickupable", "storage", "not-liquid", "固体", "碎片", "散落物", "清扫到仓库" },
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -183,7 +182,6 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "orders_area", "area_order", "area_designate" },
                 Tags = new List<string> { "orders", "area", "dig", "sweep", "mop", "disinfect", "cancel", "harvest", "挖", "扫", "清扫", "打扫", "拾取", "擦", "毒", "消", "收" },
                 Description = "统一区域命令入口。action=dig/挖/挖掘、sweep/扫/清扫/打扫/拾取/搬运/clean、mop/擦/擦拭/拖地、disinfect/毒/消毒/杀菌、cancel/消/取消、harvest/收/收获/采摘；复用各具体订单参数，危险或大区域仍需 confirm=true。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -214,7 +212,6 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "orders_designation_control", "map_designation_control" },
                 Tags = new List<string> { "orders", "designation", "deconstruct", "attack", "capture", "conduit", "manual-delivery", "拆", "杀", "攻击", "捕", "捕捉", "抓捕", "捕获" },
                 Description = "统一指定/取消类入口：action=deconstruct/拆/拆除/拆毁、attack/杀/攻击/进攻、capture/捕/捕捉/抓捕/捕获/wrangle、empty_conduits/清空管道、cut_conduits/剪断、manual_delivery/手动送货。只做路由聚合，保留各旧工具的 confirm 和安全限制。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>

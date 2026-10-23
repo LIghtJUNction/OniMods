@@ -21,7 +21,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "buildings_control", "building_read_control" },
                 Tags = new List<string> { "buildings", "read", "summary" },
                 Description = "统一读取建筑列表和建筑类型摘要；action=list/summary。兼容 buildings_list 与 buildings_summary。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -72,7 +71,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "get_buildings" },
                 Description = "兼容入口：请优先使用 read_control domain=buildings action=list。获取殖民地建筑列表，可按类型筛选",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -170,7 +168,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "get_building_summary" },
                 Description = "兼容入口：请优先使用 read_control domain=buildings action=summary。按建筑类型聚合统计数量、运行状态和世界分布",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {

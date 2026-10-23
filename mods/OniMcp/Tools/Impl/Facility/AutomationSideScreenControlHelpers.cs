@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "automation_side_screen_control", "side_automation_control" },
                 Tags = new List<string> { "automation", "side-screen", "automatable", "critter-sensor", "batch" },
                 Description = "统一读取、单点设置和批量设置自动化侧屏控件。kind=automatable/critter_sensor；action=list/set/batch；set/batch 需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -17,7 +17,6 @@ namespace OniMcp.Tools
                 Group = "power",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "power_circuits_summary", "power_status" },
                 Tags = new List<string> { "power", "electricity", "circuits", "generators", "batteries", "consumers", "电力", "电路" },
                 Description = "汇总电力系统：发电机额定功率、消费者负载、电池容量/电量，并按 circuitId 聚合，适合快速发现供电缺口",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -197,7 +196,6 @@ namespace OniMcp.Tools
                 Group = "rooms",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "room_list", "rooms_overview" },
                 Tags = new List<string> { "rooms", "morale", "room-type", "base", "房间", "士气" },
                 Description = "列出房间系统状态：房间类型、大小、边界、对象计数和房间效果，适合检查士气房间是否成型",
                 Parameters = new Dictionary<string, McpToolParameter>

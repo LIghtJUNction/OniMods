@@ -36,7 +36,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "build_place_area", "build_blueprints" },
                 Tags = new List<string> { "buildings", "batch", "area", "footprint", "建造", "批量" },
                 Description = "按 anchor 列表或区域批量放置建造蓝图。执行前会预检 footprint、支撑、材料和明显碰撞；遇到可挖自然固体时默认先标记挖掘，dryRun=true 只返回预览。",
                 Parameters = parameters,

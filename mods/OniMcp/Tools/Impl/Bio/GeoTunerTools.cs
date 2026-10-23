@@ -22,7 +22,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "geotuner_control", "geo_tuner_assignment_control" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
                 Description = "GeoTuner 聚合工具：action=list 查询调谐器；action=list_geysers 查询可选喷泉；action=assign 设置或清空目标喷泉",
                 Parameters = GeoTunerControlParams(),
@@ -49,7 +48,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "geotuners_list", "geo_tuner_assignments_list" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=geo_tuner action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -96,7 +94,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "geotuner_geysers_list", "geotuner_targets_list" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=geo_tuner action=list_geysers",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -147,7 +144,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "geotuner_assign", "geo_tuner_set_geyser" },
                 Tags = new List<string> { "buildings", "geotuner", "geyser", "side-screen", "spaced-out" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=geo_tuner action=assign",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

@@ -17,7 +17,6 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "tools_coverage", "player_action_coverage" },
                 Tags = new List<string> { "coverage", "audit", "actions", "tools", "capabilities", "覆盖", "玩家操作" },
                 Description = "审计玩家可执行操作面与 MCP 工具覆盖情况，返回已覆盖、部分覆盖和缺口，供 agent 规划补工具或选择正确接口",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -142,7 +141,6 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "mcp_static_audit", "coverage_static_audit" },
                 Tags = new List<string> { "coverage", "audit", "resources", "tools", "safety", "verification" },
                 Description = "静态审计 MCP 工具、玩家操作覆盖表、资源入口和危险工具确认参数，用于证明当前接口层是否自洽",
                 Parameters = new Dictionary<string, McpToolParameter>

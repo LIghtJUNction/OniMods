@@ -27,7 +27,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "duplicants_control", "dupe_control" },
                 Tags = new List<string> { "dupes", "duplicants", "priority", "skills", "hats", "assignable", "commands", "side-screen" },
                 Description = "Unified duplicant compatibility entrypoint. domain=info/priority/hat/command/side_screen/skill/assignable; use action plus name/dupeName/query/target/search/id to locate and execute targets. Coordinate input is not accepted here; use coordinate_control for exact coordinate operations. action is forwarded to the matching legacy control.",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -13,7 +13,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "high",
-                Aliases = new List<string> { "special_facility_control", "story_space_facility_control" },
                 Tags = new List<string> { "facility", "special", "story", "space", "side-screen", "building" },
                 Description = "特殊/剧情/太空设施聚合入口：domain=space_building/space_story/special/story_facility；保留各子工具 kind/action 与确认规则。",
                 Parameters = new Dictionary<string, McpToolParameter>

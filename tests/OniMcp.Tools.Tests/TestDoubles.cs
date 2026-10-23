@@ -16,7 +16,6 @@ namespace OniMcp.Tools
         public string Risk { get; set; }
         public string Description { get; set; }
         public bool Hidden { get; set; }
-        public List<string> Aliases { get; set; }
         public List<string> Tags { get; set; }
         public Dictionary<string, McpToolParameter> Parameters { get; set; }
         public Func<JObject, CallToolResult> Handler { get; set; }
@@ -36,12 +35,7 @@ namespace OniMcp.Tools
 
         public static bool TryGetTool(string name, out McpTool tool)
         {
-            if (Tools.TryGetValue(name, out tool))
-                return true;
-
-            tool = Tools.Values.FirstOrDefault(candidate => candidate.Aliases != null
-                && candidate.Aliases.Any(alias => string.Equals(alias, name, StringComparison.Ordinal)));
-            return tool != null;
+            return Tools.TryGetValue(name, out tool);
         }
 
         public static CallToolResult CallTool(string name, JObject arguments) => Tools[name].Handler(arguments);

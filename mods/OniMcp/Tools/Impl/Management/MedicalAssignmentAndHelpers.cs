@@ -21,7 +21,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "medical_beds_threshold_batch_set", "clinics_threshold_batch_set" },
                 Tags = new List<string> { "medical", "clinic", "bed", "threshold", "batch" },
                 Description = "兼容入口：按区域批量设置医疗床/诊所的治疗阈值百分比。新调用请使用 colony_control domain=management kind=medical action=batch_set_threshold。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -78,7 +77,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "clinic_assign_patient", "medical_clinic_assign", "patient_bed_assign" },
                 Tags = new List<string> { "medical", "clinic", "bed", "assign", "patient", "care" },
                 Description = "兼容入口：分配或清除医疗床/诊所患者，可同时设置治疗阈值。新调用请使用 colony_control domain=management kind=medical action=assign_bed。",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

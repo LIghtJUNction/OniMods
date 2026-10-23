@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Risk = "none",
                 Hidden = true,
                 Description = "按玩家目标生成低 token 工具使用指南：推荐资源、检索词、工具链和批量策略",
-                Aliases = new List<string> { "tools_intent_guide", "tool_route", "action_guide" },
                 Tags = new List<string> { "catalog", "intent", "routing", "planning", "batch", "low-token", "工具指南" },
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -53,7 +52,7 @@ namespace OniMcp.Tools
                             ["recommendedResponseMode"] = "summary",
                             ["compactShape"] = "items:[{t:'tool_name',a:{...}}]",
                             ["defaults"] = "defaults/defaultArguments merges into each child call; child arguments win",
-                            ["domainDefaults"] = "Selected domain batch tools also accept defaults/defaultArguments, including building_control domain=side_surface surface=user_menu action=batch, building_control domain=side_surface surface=maintenance action=batch, building_control domain=config action=batch_set, building_control domain=config action=batch_set_automation, building_control domain=side_surface surface=automation action=batch, building_control domain=production action=batch, building_control domain=side_surface surface=activation action=batch, building_control domain=receptacle action=batch, and building_control domain=tile_selection action=batch.",
+                            ["domainDefaults"] = "Selected domain batch tools also accept defaults/defaultArguments, including building_control domain=side_surface surface=user_menu action=batch, building_control domain=side_surface surface=maintenance action=batch, building_control domain=side_surface surface=automation action=batch, building_control domain=production action=batch, building_control domain=side_surface surface=activation action=batch, building_control domain=receptacle action=batch, and building_control domain=tile_selection action=batch. Batch individual building_control domain=config calls through server_control domain=batch action=call_many.",
                             ["recommendedPreflight"] = "dryRun=true before execute; keep requireAllValid=true for write/execute batches",
                             ["maxCalls"] = 20,
                             ["note"] = "Batch tool does not bypass child tool confirm/safety parameters. Repeating the same write/execute tool with the same area usually just repeats the mistake; inspect the result and route to a different tool when marked=0 or skipped dominates."

@@ -430,7 +430,6 @@ if (symbol == '←' || symbol == '→' || symbol == '↑' || symbol == '↓') re
             sb.AppendLine("- `map/viewport.md` : current camera viewport map; move the camera to change it");
             sb.AppendLine("- `map/zoom_X1_Y1_X2_Y2.md` : local multi-view map, e.g. `/active/map/zoom_80_140_105_155.md`");
             sb.AppendLine("- `map/cell_X_Y.md` : single-cell cross-view snapshot, for example `/active/map/cell_91_149.md`");
-            sb.AppendLine("- `map/index.md` : legacy alias for `map/viewport.md`");
             sb.AppendLine("- `map/layers/` : full world map layers");
             sb.AppendLine("- `infrastructure/power.md` : power connection map");
             sb.AppendLine("- `infrastructure/liquid_conduits.md` : liquid pipe connection map");

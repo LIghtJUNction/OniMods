@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "world_dupe_reachability", "reachable_area" },
                 Tags = new List<string> { "world", "dupe", "reachability", "navigation", "行动范围", "可达" },
                 Description = "Read a compact duplicant reachability summary around current positions. Use read_control domain=world action=reachable_area.",
                 Parameters = ReachableAreaParams(),

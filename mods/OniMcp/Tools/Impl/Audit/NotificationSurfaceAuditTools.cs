@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "hud_notification_surface_audit", "message_surface_audit" },
                 Tags = new List<string> { "coverage", "audit", "notifications", "messages", "hud", "focus", "tools", "resources" },
                 Description = "审计 ONI NotificationScreen/NotificationManager/消息通知与 MCP 工具/资源覆盖映射",
                 Parameters = new Dictionary<string, McpToolParameter>

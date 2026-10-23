@@ -21,7 +21,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "planters_list", "plants_list" },
                 Tags = new List<string> { "farming", "plants", "planters", "seeds", "harvest" },
                 Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=list。列出种植箱/农砖等 PlantablePlot 的种植请求、当前植物和可接受种子类型",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -65,7 +64,6 @@ namespace OniMcp.Tools
                 Group = "farming",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "planting_control", "planter_seed_control", "farm_plot_control" },
                 Tags = new List<string> { "farming", "plants", "planters", "seeds", "harvest", "uproot", "batch" },
                 Description = "统一读取/设置种植槽、种子目录、收获标记和区域铲除。action=list_planting/seed_catalog/list_harvestables/set_harvestable/set_planting/batch_set_planting/uproot；兼容 list/set/batch。",
                 Parameters = RectParams(LookupParams(new Dictionary<string, McpToolParameter>
@@ -141,7 +139,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "plants_harvestables_list", "harvestables_list" },
                 Tags = new List<string> { "farming", "plants", "harvest", "when-ready" },
                 Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=list_harvestables。列出可收获/可设置自动收获的植物和作物状态",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -190,7 +187,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "plant_harvest_set", "harvestable_set" },
                 Tags = new List<string> { "farming", "plants", "harvest", "when-ready" },
                 Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=set_harvestable。按单个对象设置收获状态：mark、when_ready、cancel",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

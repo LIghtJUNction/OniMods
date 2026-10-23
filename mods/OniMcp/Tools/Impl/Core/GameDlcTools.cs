@@ -22,7 +22,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "game_dlc_control", "dlc_activation_control" },
                 Tags = new List<string> { "game", "dlc", "pause-menu", "save", "reload", "lifecycle" },
                 Description = "DLC 存档激活聚合工具：action=list/activate；activate 必须传 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -57,7 +56,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "dlc_activation_list", "game_dlc_list" },
                 Tags = new List<string> { "game", "dlc", "pause-menu", "save", "lifecycle" },
                 Description = "兼容入口：请优先使用 game_control domain=dlc action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -92,7 +90,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "activate_dlc_for_save", "dlc_activate" },
                 Tags = new List<string> { "game", "dlc", "pause-menu", "save", "reload", "lifecycle" },
                 Description = "兼容入口：请优先使用 game_control domain=dlc action=activate。会先写入备份存档，再修改当前存档并触发重载；必须先用 game_control domain=dlc action=list 确认可激活并传 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

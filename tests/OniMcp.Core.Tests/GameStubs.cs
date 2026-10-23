@@ -24,7 +24,6 @@ namespace OniMcp.Tools
             {
                 Name = name,
                 Mode = "execute",
-                Aliases = new List<string> { "legacy_" + name },
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["query"] = new McpToolParameter { Type = "string" },

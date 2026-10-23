@@ -308,7 +308,10 @@ def verify_virtual_file_symmetry() -> None:
     require(listing, 'add("viewport.md"', "listed viewport")
     require(listing, 'add("dupes.md"', "listed management dupes")
     require(reads, 'relative == "screenshots/index.md"', "listed screenshot reader")
-    require(reads, "This legacy file is read-only", "orders pseudo-entry removal")
+    forbid(listing, 'add("orders/"', "removed orders pseudo directory")
+    forbid(reads, 'relative == "orders/orders.oni"', "removed orders pseudo reader")
+    for obsolete in ('map/index.md', 'map/index.html'):
+        forbid(reads, obsolete, "removed viewport alias")
     forbid(edits, 'relative == "orders/orders.oni"', "orders pseudo editor")
     forbid(edits, 'relative == "map/terrain.oni"', "terrain orphan editor")
     forbid(edits, 'relative == "dupes/index.oni"', "dupe index pseudo editor")

@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "ui_surface_audit", "surface_coverage_audit" },
                 Tags = new List<string> { "coverage", "audit", "surfaces", "ui", "tools", "resources" },
                 Description = "统一审计 ONI 玩家操作 surface 覆盖。action=side_screen/user_menu/management/tool_menu/ui_menu/global_control/notification",
                 Parameters = new Dictionary<string, McpToolParameter>

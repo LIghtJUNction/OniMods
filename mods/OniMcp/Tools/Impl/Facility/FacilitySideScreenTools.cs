@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "facility_control", "story_facility_sidescreen_control" },
                 Tags = new List<string> { "building", "story", "side-screen", "facility" },
                 Description = "设施侧屏组合工具。kind=dispenser/suit_locker/lore_bearer/telepad/artifact；action=list 或对应操作",
                 Parameters = FacilitySideScreenControlParams(),

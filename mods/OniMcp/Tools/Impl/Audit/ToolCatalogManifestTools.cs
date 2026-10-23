@@ -22,7 +22,7 @@ namespace OniMcp.Tools
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["group"] = new McpToolParameter { Type = "string", Description = "工具分组过滤，如 game、dupes、resources、orders", Required = false },
-                    ["query"] = new McpToolParameter { Type = "string", Description = "关键词或目标意图，匹配工具名、描述、标签、别名和参数", Required = false },
+                    ["query"] = new McpToolParameter { Type = "string", Description = "关键词或目标意图，匹配工具名、描述、标签和参数", Required = false },
                     ["mode"] = new McpToolParameter { Type = "string", Description = "read、write、execute 或 any", Required = false },
                     ["risk"] = new McpToolParameter { Type = "string", Description = "none、low、medium、dangerous 或 any", Required = false },
                     ["detail"] = new McpToolParameter { Type = "string", Description = "brief 极简；compact 返回摘要；full 返回完整参数 schema；默认 brief", Required = false, EnumValues = new List<string> { "brief", "compact", "full" } },
@@ -110,7 +110,6 @@ namespace OniMcp.Tools
             if (required.Count > 0)
                 result["req"] = required;
 
-            AddLegacyAliasDeprecation(result, tool);
             return result;
         }
 
@@ -137,10 +136,8 @@ namespace OniMcp.Tools
                     .Where(kv => kv.Value.Required)
                     .Select(kv => kv.Key)
                     .OrderBy(name => name)
-                    .ToList(),
-                ["aliases"] = tool.Aliases != null && tool.Aliases.Count > 0 ? (object)tool.Aliases : null
+                    .ToList()
             };
-            AddLegacyAliasDeprecation(result, tool);
             return result;
         }
 
@@ -153,7 +150,6 @@ namespace OniMcp.Tools
                 ["mode"] = tool.Mode,
                 ["risk"] = tool.Risk,
                 ["description"] = tool.Description,
-                ["aliases"] = tool.Aliases,
                 ["tags"] = tool.Tags,
                 ["parameters"] = tool.Parameters
                     .OrderBy(kv => kv.Key)
@@ -168,17 +164,7 @@ namespace OniMcp.Tools
                         }),
                 ["exampleArguments"] = ExampleArguments(tool)
             };
-            AddLegacyAliasDeprecation(result, tool);
             return result;
-        }
-
-        private static void AddLegacyAliasDeprecation(Dictionary<string, object> result, McpTool tool)
-        {
-            if (!ToolMetadata.HasLegacyAliases(tool))
-                return;
-
-            result["deprecatedAliases"] = tool.Aliases.OrderBy(alias => alias).ToList();
-            result["deprecationWarning"] = ToolMetadata.LegacyAliasesDeprecationWarning(tool);
         }
 
         private static Dictionary<string, object> ExampleArguments(McpTool tool)

@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "get_cell_info" },
                 Tags = new List<string> { "world", "cell", "grid", "terrain", "elements", "temperature", "disease", "map", "格子", "元素" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=cell_info",

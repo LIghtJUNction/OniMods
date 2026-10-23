@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "lure_control", "creature_lure_bait_control" },
                 Tags = new List<string> { "buildings", "ranching", "lure", "bait", "side-screen" },
                 Description = "生物诱饵站聚合工具：action=list 查询可选诱饵；action=set_bait 选择或清空诱饵",
                 Parameters = CreatureLureControlParams(),
@@ -41,7 +40,6 @@ namespace OniMcp.Tools
                 Group = "ranching",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "lures_list", "creature_lure_baits_list" },
                 Tags = new List<string> { "buildings", "ranching", "lure", "bait", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=creature_lure action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -62,7 +60,6 @@ namespace OniMcp.Tools
                 Group = "ranching",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "lure_bait_set" },
                 Tags = new List<string> { "buildings", "ranching", "lure", "bait", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=creature_lure action=set_bait",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -106,7 +103,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "neural_vacillators_list" },
                 Tags = new List<string> { "buildings", "gene-shuffler", "trait", "recharge", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=gene_shuffler action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -150,7 +146,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "neural_vacillator_control" },
                 Tags = new List<string> { "buildings", "gene-shuffler", "trait", "recharge", "side-screen" },
                 Description = "Gene Shuffler 聚合工具：action=list 查询状态；complete/request_recharge/cancel_recharge/toggle_recharge 执行按钮",
                 Parameters = GeneShufflerControlParams(),

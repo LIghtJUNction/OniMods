@@ -13,7 +13,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "rocket_control", "rocket_domain_control" },
                 Tags = new List<string> { "rocket", "space", "modules", "crew", "cargo", "restriction", "side-screen" },
                 Description = "统一火箭系统入口。domain=ops/module/flight_utility/restriction/usage/crew_request/assignment_group/cargo_status/self_destruct；action 透传到对应旧 control。",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "mop_area", "liquids_mop_area", "water_mop_area", "mop_liquid_area", "mop_water_area" },
                 Tags = new List<string> { "orders", "mop", "liquid", "water", "polluted-water", "floor", "spill", "地上的水", "拖地", "液体", "水" },
                 Description = "在矩形区域内对地上的水、污水或其他可拖地液体格子下达拖地命令；不是清扫固体碎片。遵循游戏限制：下方必须有地面且液体质量不能超过可拖地上限",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -109,7 +108,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "disinfect_area", "germs_disinfect_area" },
                 Description = "兼容入口：请优先使用 orders_control domain=area action=disinfect。标记矩形区域内带病菌且支持消毒的对象",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {

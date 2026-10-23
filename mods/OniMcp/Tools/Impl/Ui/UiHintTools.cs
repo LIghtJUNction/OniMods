@@ -21,7 +21,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "ui_signal_control", "player_feedback_control" },
                 Tags = new List<string> { "ui", "feedback", "hint", "marker", "notification" },
                 Description = "UI 反馈组合入口：domain=hint。hint 创建通知、浮字、复制人聊天气泡和地图标记。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -71,7 +70,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "ui_hints_control", "map_hint_control" },
                 Tags = new List<string> { "ui", "hint", "notification", "popup", "marker", "map" },
                 Description = "统一创建 UI 提示和管理地图标记。action=notification/popup/speech_bubble/marker；marker 使用 markerAction=create/list/clear。",
                 Parameters = new Dictionary<string, McpToolParameter>

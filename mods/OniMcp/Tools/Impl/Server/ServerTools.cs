@@ -22,7 +22,6 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read/execute",
                 Risk = "medium",
-                Aliases = new List<string> { "mcp_server_control", "server_diagnostics_control", "mcp_client_request_control", "tools_catalog_control", "tools_call_many", "agent_program_execute" },
                 Description = "服务器/MCP 组合入口：domain=diagnostics action=status/capabilities/logs_tail；domain=client_request action=create_sampling/create_elicitation；domain=catalog action=manifest/search/guide/coverage/static_audit/surface_audit；domain=batch action=call_many 批量调用工具；domain=program action=execute 执行受限流程 DSL",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -153,7 +152,6 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "server_diagnostics", "mcp_server_diagnostics" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 server_control domain=diagnostics action=status/capabilities/logs_tail",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -193,7 +191,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "tail_logs", "player_log" },
                 Description = "兼容旧名；建议使用 server_diagnostics_control action=logs_tail",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -250,7 +247,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "client_capabilities", "server_client_capabilities" },
                 Description = "兼容旧名；建议使用 server_diagnostics_control action=capabilities",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
@@ -276,7 +272,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "sampling_request_create", "client_sampling_request" },
                 Description = "兼容旧名；建议使用 mcp_client_request_control action=create_sampling",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -336,7 +331,6 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "client_request_control", "mcp_client_request" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 server_control domain=client_request action=create_sampling/create_elicitation",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -378,7 +372,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "elicitation_request_create", "client_elicitation_request" },
                 Description = "兼容旧名；建议使用 mcp_client_request_control action=create_elicitation",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {

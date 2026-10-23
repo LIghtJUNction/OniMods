@@ -17,7 +17,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "area_snapshot", "world_snapshot_area" },
                 Tags = new List<string> { "map", "snapshot", "text", "grid", "screenshot", "overlay", "地图", "截图", "快照" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=area_snapshot",

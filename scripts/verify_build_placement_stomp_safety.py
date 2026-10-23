@@ -144,8 +144,7 @@ def main() -> int:
     # drag simulation is forbidden: it takes over shared player input and needs
     # a fully initialized PlanScreen even when called outside the build menu.
     forbid(placement, "TryPlaceUtilityPathNative", "no shared player-tool path", failures)
-    forbid(placement, 'GetBool(args, "nativePathPlacement"', "legacy flag cannot activate mouse tools", failures)
-    require(placement, "Deprecated compatibility input", "legacy flag compatibility", failures)
+    forbid(placement, "nativePathPlacement", "removed native path compatibility flag", failures)
     require(plan_one, "go == null && autoDig != null && !IsLinearUtilityPrefab(prefabId)",
             "utility cannot enter optional native BuildTool fallback", failures)
     for path in BUILD.glob("BuildPlanning*UtilityPath*.cs"):

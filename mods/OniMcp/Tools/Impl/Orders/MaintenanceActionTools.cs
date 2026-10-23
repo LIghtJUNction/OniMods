@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "focused_user_menu_actions_list", "service_actions_list" },
                 Tags = new List<string> { "controls", "maintenance", "user-menu", "toilet", "desalinator", "equipment", "hive", "cargo", "travel-tube" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=maintenance action=list。列出需要状态机/槽位参数的玩家维护类 UserMenu 操作：厕所清洁、淡化器清空、运输管蜡、蜂巢清空、货仓倒空、复制人卸装",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -80,7 +79,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "high",
                 Hidden = true,
-                Aliases = new List<string> { "focused_user_menu_action_execute", "service_action_execute" },
                 Tags = new List<string> { "controls", "maintenance", "user-menu", "state-machine", "equipment" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=maintenance action=execute。执行维护类玩家操作。actionKey 支持 clean_toilet、empty_desalinator、set_transit_tube_wax、set_hive_harvest、empty_cargo_bay、unequip_dupe_equipment，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -124,7 +122,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "high",
                 Hidden = true,
-                Aliases = new List<string> { "focused_user_menu_actions_batch_execute", "service_actions_batch_execute" },
                 Tags = new List<string> { "controls", "maintenance", "user-menu", "batch" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=maintenance action=batch。批量执行维护类玩家操作；items 支持 {actionKey,id/x/y/worldId/...} 或短字段 {a,id/x/y/w/...}，defaults 可共享 actionKey/worldId/enabled/slotId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -182,7 +179,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "high",
-                Aliases = new List<string> { "focused_user_menu_action_control", "service_action_control" },
                 Tags = new List<string> { "controls", "maintenance", "user-menu", "state-machine", "equipment", "batch" },
                 Description = "统一读取、执行和批量执行维护类玩家操作。action=list/execute/batch；execute/batch 需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

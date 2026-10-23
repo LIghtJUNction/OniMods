@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "low",
                 Hidden = true,
-                Aliases = new List<string> { "rename_dupe", "dupe_rename", "duplicant_rename", "rename_duplicant" },
                 Tags = new List<string> { "dupes", "dupe", "duplicants", "duplicant", "rename", "name", "复制人", "改名", "命名", "名字" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=rename。修改指定复制人的名字",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -52,7 +51,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "auto_rename_dupes", "duplicants_auto_rename", "dupes_rename_by_role", "duplicants_rename_by_role" },
                 Tags = new List<string> { "dupes", "duplicants", "rename", "auto-rename", "name", "role", "job", "apply", "复制人", "改名", "重命名", "命名", "职业", "属性" },
                 Description = "按复制人属性/特质智能生成自然名字；apply=false 预览，apply=true 应用；style 支持 suffix（默认，如 Harold (矿工)）、tag（如 [矿] Harold）、title（如 掘地匠 Harold）、keep（保持原名仅诊断）、prefix/cn_job（旧版 矿工-Harold）、short（如 矿工）、template（结合 pattern 模板）",
                 Parameters = new Dictionary<string, McpToolParameter>

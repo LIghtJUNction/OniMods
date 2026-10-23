@@ -89,8 +89,6 @@
     </Reference>
   </ItemGroup>
 
-  <Import Project="OniMcpSkillResources.props" />
-
   <!-- 项目根目录的预览图自动复制到输出 -->
   <ItemGroup>
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.png" Condition="Exists('$(MSBuildProjectDirectory)/preview.png')" />

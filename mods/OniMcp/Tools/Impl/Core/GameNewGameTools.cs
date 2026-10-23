@@ -180,13 +180,15 @@ namespace OniMcp.Tools
                 ["liveDuplicants"] = Game.Instance == null ? 0 : Components.LiveMinionIdentities.Count,
                 ["isPaused"] = SpeedControlScreen.Instance == null ? (JToken)JValue.CreateNull() : new JValue(SpeedControlScreen.Instance.IsPaused),
                 ["pauseAfterStart"] = NewGamePauseWatcher.Status,
+                ["ready"] = stage == "colony" && NewGamePauseWatcher.Status == "ready_paused"
+                    && SpeedControlScreen.Instance != null && SpeedControlScreen.Instance.IsPaused,
                 ["choices"] = new JArray(choices.Select(item => new JObject
                 {
                     ["id"] = item.Id, ["enabled"] = item.Enabled
                 })),
                 ["next"] = stage == "main_menu"
                     ? "launch/new_game dryRun=true, then confirm=true"
-                    : stage == "colony" ? "Verify baseAlreadyCreated, liveDuplicants=3 and isPaused; then read /active/colony/status.oni"
+                    : stage == "colony" ? "Wait for ready=true and pauseAfterStart=ready_paused; native opening confirmations and the welcome screen must close before play. Then read /active/colony/status.oni"
                     : stage == "world_generation" || stage == "starting_colony" || stage == "unavailable"
                     ? "Wait for the native transition, then read launch/new_game_status"
                     : "launch/new_game_select name=<advertised id> dryRun=true, then confirm=true; inspect status after each transition"

@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "building_enable", "building_disable" },
                 Hidden = true,
                 Description = "兼容入口：请使用 building_control domain=config action=set_enabled。启用或禁用指定建筑；直接设置建筑状态，不排队复制人开关差事",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -54,7 +53,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "logic_switch_set", "building_toggle_set" },
                 Hidden = true,
                 Description = "兼容入口：请使用 building_control domain=config action=set_toggle。设置支持玩家手动开关的建筑/自动化开关状态，例如逻辑开关；仅当目标实现 IPlayerControlledToggle 时可用",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -96,7 +94,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "manual_delivery_set", "building_refill_set" },
                 Description = "兼容入口：请优先使用 orders_control domain=designation action=manual_delivery。配置建筑手动补料/搬运：暂停或恢复补料、设置容量/补料阈值、立即请求搬运",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
                 {

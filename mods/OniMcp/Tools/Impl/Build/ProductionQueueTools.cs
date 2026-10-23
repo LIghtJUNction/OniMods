@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "fabricator_queue_batch_set", "crafting_queue_batch_set" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "batch", "craft" },
                 Description = "兼容入口：请优先使用 building_control domain=production action=batch。批量设置同一制作站的多个配方队列。items 支持短字段 r/m/c，defaults 可共享 mode/count，适合一次规划多个制作订单",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -118,7 +117,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "fabricator_queue_control", "crafting_queue_control" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "batch", "craft" },
                 Description = "生产队列聚合工具：action=list_fabricators/list_recipes/set/batch/set_mutant_seeds/mutant_seed_list/mutant_seed_set；读取制作站和配方，设置队列或突变种子策略。",
                 Parameters = ProductionQueueControlParams(),
@@ -153,7 +151,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "fabricator_mutant_seeds_set", "production_seed_mutations_set" },
                 Tags = new List<string> { "production", "fabricator", "seeds", "mutations", "spaced-out" },
                 Description = "兼容入口：请优先使用 building_control domain=production action=set_mutant_seeds。设置制作站是否拒收突变种子，对应 DLC 制作站用户菜单的接受/拒绝突变种子开关",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

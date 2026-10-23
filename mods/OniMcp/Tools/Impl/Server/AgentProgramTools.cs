@@ -25,7 +25,6 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "agent_script_run", "agent_flow_execute", "agent_program_run" },
                 Tags = new List<string> { "agent", "program", "script", "flow", "if", "while", "loop", "control", "脚本", "流程" },
                 Description = "执行受限 agent 流程 DSL：支持变量、if/while/repeat、break/continue/return，并可按条件调用已注册 MCP 工具",
                 Parameters = new Dictionary<string, McpToolParameter>

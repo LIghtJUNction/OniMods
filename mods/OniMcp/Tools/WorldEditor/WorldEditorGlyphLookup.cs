@@ -27,7 +27,7 @@ namespace OniMcp.Tools
 
         internal static CallToolResult SearchGlyphs(JObject args)
         {
-            var queries = ParseGlyphQueries(args, out bool legacySingle, out string queryError);
+            var queries = ParseGlyphQueries(args, out string queryError);
             if (queryError != null)
                 return CallToolResult.Error(queryError);
 
@@ -41,10 +41,8 @@ namespace OniMcp.Tools
             string requestedView = args?["view"]?.ToString();
             if (!TryNormalizeGlyphView(requestedView, out string view))
                 return CallToolResult.Error("unknown glyph view: " + requestedView);
-            int requestedLimit = ToolUtil.GetInt(args, "perQueryLimit")
-                ?? ToolUtil.GetInt(args, "limit")
-                ?? (legacySingle ? 200 : 20);
-            int perQueryLimit = Math.Max(1, Math.Min(requestedLimit, legacySingle ? 1000 : 100));
+            int requestedLimit = ToolUtil.GetInt(args, "perQueryLimit") ?? 20;
+            int perQueryLimit = Math.Max(1, Math.Min(requestedLimit, 100));
             var rows = BuildSymbolRows();
             var results = new JArray();
             foreach (string input in queries)
@@ -72,49 +70,36 @@ namespace OniMcp.Tools
                 })
             };
 
-            if (legacySingle)
-            {
-                JObject first = results.Count > 0 ? (JObject)results[0] : EmptyGlyphQueryResult(string.Empty, direction);
-                result["query"] = queries.Count > 0 ? queries[0] : string.Empty;
-                result["count"] = first["count"] != null ? first["count"].DeepClone() : new JValue(0);
-                result["symbols"] = first["matches"] != null ? first["matches"].DeepClone() : new JArray();
-            }
-
             return JsonResult(result);
         }
 
-        private static List<string> ParseGlyphQueries(JObject args, out bool legacySingle, out string error)
+        private static List<string> ParseGlyphQueries(JObject args, out string error)
         {
             error = null;
             var raw = args?["queries"] as JArray;
-            legacySingle = raw == null;
-            if (raw != null)
+            if (raw == null)
             {
-                if (raw.Count == 0)
-                {
-                    error = "queries must contain at least one non-blank string";
-                    return new List<string>();
-                }
-                if (raw.Count > 100)
-                {
-                    error = "queries supports at most 100 strings";
-                    return new List<string>();
-                }
-                if (raw.Any(token => token == null
-                    || token.Type != JTokenType.String
-                    || string.IsNullOrWhiteSpace(token.ToString())))
-                {
-                    error = "queries must contain only non-blank strings";
-                    return new List<string>();
-                }
-                var queries = raw
-                    .Select(token => token.ToString().Trim())
-                    .ToList();
-                return queries;
+                error = "queries must be an array of non-blank strings";
+                return new List<string>();
             }
-
-            string query = Text(args, "query", "target", "search")?.Trim();
-            return new List<string> { query ?? string.Empty };
+            if (raw.Count == 0)
+            {
+                error = "queries must contain at least one non-blank string";
+                return new List<string>();
+            }
+            if (raw.Count > 100)
+            {
+                error = "queries supports at most 100 strings";
+                return new List<string>();
+            }
+            if (raw.Any(token => token == null
+                || token.Type != JTokenType.String
+                || string.IsNullOrWhiteSpace(token.ToString())))
+            {
+                error = "queries must contain only non-blank strings";
+                return new List<string>();
+            }
+            return raw.Select(token => token.ToString().Trim()).ToList();
         }
 
         private static JObject LookupGlyphQuery(List<JObject> rows, string input, string direction,
@@ -149,18 +134,6 @@ namespace OniMcp.Tools
                 ["exact"] = useExact && exactMatches.Count > 0,
                 ["count"] = matches.Count,
                 ["matches"] = new JArray(matches.Take(limit))
-            };
-        }
-
-        private static JObject EmptyGlyphQueryResult(string input, string direction)
-        {
-            return new JObject
-            {
-                ["input"] = input,
-                ["resolvedDirection"] = direction,
-                ["exact"] = false,
-                ["count"] = 0,
-                ["matches"] = new JArray()
             };
         }
 

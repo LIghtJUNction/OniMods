@@ -5,8 +5,7 @@ using System.Linq;
 namespace OniMcp.Server
 {
     /// <summary>
-    /// Finite retention policy for the intentionally supported pre-2026 stateful
-    /// Streamable HTTP transport. The modern 2026-07-28 path never creates sessions.
+    /// Finite retention policy for the stateful Streamable HTTP transport.
     /// </summary>
     internal sealed class LegacySessionRetentionPolicy
     {

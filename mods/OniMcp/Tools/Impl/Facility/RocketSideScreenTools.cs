@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "self_destruct_modules_list" },
                 Tags = new List<string> { "rocket", "self-destruct", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=self_destruct action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -39,7 +38,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "high",
-                Aliases = new List<string> { "self_destruct_trigger" },
                 Tags = new List<string> { "rocket", "self-destruct", "destructive", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=self_destruct action=trigger",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -75,7 +73,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "high",
-                Aliases = new List<string> { "rocket_self_destruct", "self_destruct_control" },
                 Tags = new List<string> { "rocket", "self-destruct", "destructive", "side-screen" },
                 Description = "火箭自毁聚合工具：action=list 查询可自毁火箭舱体；action=trigger 触发自毁，必须 confirm=true。",
                 Parameters = SelfDestructControlParams(),

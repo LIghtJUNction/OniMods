@@ -79,7 +79,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "pixelpack_control", "pixel_pack_color_control" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
                 Description = "Pixel Pack 颜色聚合工具：action=list 查询；action=set_color 设置单面板颜色；action=copy_colors 执行复制/交换",
                 Parameters = PixelPackControlParams(),
@@ -106,7 +105,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "pixel_pack_colors_list", "pixelpack_list" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=pixel_pack action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -160,7 +158,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "pixelpack_color_set" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=pixel_pack action=set_color",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -221,7 +218,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "pixelpack_colors_copy", "pixel_pack_colors_swap" },
                 Tags = new List<string> { "buildings", "pixel-pack", "colors", "automation", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=pixel_pack action=copy_colors",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

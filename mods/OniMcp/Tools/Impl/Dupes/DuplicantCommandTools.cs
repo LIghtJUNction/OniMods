@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "dupe_command_control", "duplicant_command_control", "dupes_direct_command_control" },
                 Tags = new List<string> { "dupes", "commands", "move", "batch", "force", "direct", "rescue", "rename", "auto-rename" },
                 Description = "复制人直接动作聚合入口：action=move_to 单人移动；action=force_action 取消/强制移动；action=move_batch_to 批量移动；action=rename/auto_rename 命名。force_action 的具体动作使用 commandAction=cancel_all/move_to/cancel_all_and_move",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -78,7 +77,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "dupe_move", "move_dupe", "duplicant_move_to" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=move_to。对复制人下达“移动到这里”命令，使用游戏原生 MoveToLocationMonitor/MoveChore",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -136,7 +134,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "dupe_force_action", "duplicant_force_action", "dupe_cancel_all" },
                 Tags = new List<string> { "dupes", "force", "cancel", "move", "direct", "rescue" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=force_action commandAction=cancel_all/move_to/cancel_all_and_move。对复制人执行强制动作；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -216,7 +213,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "dupes_move_many", "move_dupes_batch", "duplicants_move_batch", "batch_move_dupes" },
                 Tags = new List<string> { "dupes", "commands", "move", "batch", "direct" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 dupes_control domain=command action=move_batch_to。批量下达复制人“移动到这里”命令。items 支持 {id|i,name|n,x,y,worldId|w}，顶层 x/y/worldId 可作为默认目标",
                 Parameters = new Dictionary<string, McpToolParameter>

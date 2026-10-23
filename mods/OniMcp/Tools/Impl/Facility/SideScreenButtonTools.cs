@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "button_menu_controls_list", "sidescreen_buttons_list" },
                 Tags = new List<string> { "controls", "side-screen", "button", "activatable", "studyable", "generic" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface kind=button action=list。列出实现 ISidescreenButtonControl 的通用侧屏按钮控件",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -71,7 +70,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "high",
                 Hidden = true,
-                Aliases = new List<string> { "button_menu_press", "sidescreen_button_press" },
                 Tags = new List<string> { "controls", "side-screen", "button", "activatable", "studyable", "generic" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface kind=button action=press。按下目标对象的 ISidescreenButtonControl 侧屏按钮，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

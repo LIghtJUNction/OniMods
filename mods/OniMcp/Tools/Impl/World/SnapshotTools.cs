@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "state_snapshot", "colony_snapshot" },
                 Tags = new List<string> { "snapshot", "colony", "status", "diagnostics", "dupes", "food", "research", "performance", "快照", "状态" },
                 Description = "兼容入口：请优先使用 colony_control domain=snapshot action=get。一次返回低 token 殖民地状态快照，替代 game_control domain=speed action=time + colony_status + colony_diagnostics + colony_alerts + resources_food + dupes_list + research_status 的常规组合调用。默认不扫描全图大气；需要氧气统计时显式 includeAtmosphere=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

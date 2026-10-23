@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "single_entity_receptacles_list", "receptacle_side_screens_list" },
                 Tags = new List<string> { "buildings", "side-screen", "receptacle", "single-entity", "pedestal", "rocket", "cargo" },
                 Description = "兼容入口：请优先使用 building_control domain=receptacle action=list。列出 ReceptacleSideScreen / SingleEntityReceptacle 通用实体请求控件，包含特殊火箭货舱；不含种植箱和孵化器",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -64,7 +63,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "single_entity_receptacle_control", "receptacle_side_screen_control" },
                 Tags = new List<string> { "buildings", "side-screen", "receptacle", "single-entity", "rocket", "cargo" },
                 Description = "统一读取、单点和批量执行 ReceptacleSideScreen 操作。action=list/request/cancel_request/remove_occupant/cancel_remove/batch；写操作需 confirm=true。",
                 Parameters = ReceptacleControlParams(),
@@ -107,7 +105,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "single_entity_receptacles_batch_control" },
                 Tags = new List<string> { "buildings", "side-screen", "receptacle", "batch" },
                 Description = "兼容入口：请优先使用 building_control domain=receptacle action=batch。批量执行 ReceptacleSideScreen 操作；items 支持短字段 a/tag/w，defaults 可共享 action/entityTag/worldId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

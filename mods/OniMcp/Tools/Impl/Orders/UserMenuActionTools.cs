@@ -52,7 +52,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "context_menu_actions_list", "object_user_buttons_list" },
                 Tags = new List<string> { "controls", "user-menu", "context-menu", "buttons", "actions" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=user_menu action=list。列出已映射的对象 UserMenu 按钮操作，包括清扫/移动/维修/堆肥/倒空/雕刻等非侧屏按钮",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -102,7 +101,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "high",
                 Hidden = true,
-                Aliases = new List<string> { "context_menu_action_press", "object_user_button_press" },
                 Tags = new List<string> { "controls", "user-menu", "context-menu", "buttons", "actions" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=user_menu action=press。执行已映射对象 UserMenu 按钮操作。用于非侧屏按钮；需先用 action=list 查询 actionKey，且 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -149,7 +147,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "high",
                 Hidden = true,
-                Aliases = new List<string> { "context_menu_actions_batch_press" },
                 Tags = new List<string> { "controls", "user-menu", "context-menu", "batch" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=user_menu action=batch。批量执行已映射对象 UserMenu 按钮操作；items 支持 {actionKey|a,id/x/y/worldId|w}，defaults 可共享 actionKey/worldId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -219,7 +216,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "high",
-                Aliases = new List<string> { "context_menu_action_control", "object_user_button_control" },
                 Tags = new List<string> { "controls", "user-menu", "context-menu", "buttons", "actions", "batch" },
                 Description = "统一读取、执行和批量执行对象 UserMenu 按钮操作。action=list/press/batch；press/batch 需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

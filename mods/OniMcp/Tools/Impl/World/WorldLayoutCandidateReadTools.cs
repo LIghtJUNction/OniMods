@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "world_layout_candidates", "base_layout_candidates", "room_candidates" },
                 Tags = new List<string> { "layout", "planning", "room", "base", "map", "平面", "规划", "房间" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=layout_candidates",

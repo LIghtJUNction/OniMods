@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "spice_grinders_list", "consumer_options_list" },
                 Tags = new List<string> { "production", "side-screen", "configurable-consumer", "spice" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=configurable_consumer action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -37,7 +36,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "spice_grinder_option_set", "consumer_option_set" },
                 Tags = new List<string> { "production", "side-screen", "configurable-consumer", "spice" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=configurable_consumer action=set_option",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -78,7 +76,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "spice_grinder_control", "consumer_option_control" },
                 Tags = new List<string> { "production", "side-screen", "configurable-consumer", "spice" },
                 Description = "可配置消费者聚合工具：action=list 查询选项型消费者；action=set_option 设置当前选项",
                 Parameters = ConfigurableConsumerControlParams(),
@@ -103,7 +100,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "misc_side_screen_control", "small_sidescreen_control" },
                 Tags = new List<string> { "controls", "side-screen", "toggle", "logic", "alarm", "turbo", "configurable-consumer" },
                 Description = "小型侧屏控件统一入口。kind=n_toggle/logic_alarm/turbo_heater/configurable_consumer；action 透传到对应旧 control。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -163,7 +159,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "multi_toggle_control", "n_toggle_option_control" },
                 Tags = new List<string> { "controls", "side-screen", "toggle", "multi-option" },
                 Description = "多选侧屏控件聚合工具：action=list 查询 INToggleSideScreenControl；action=set 排队选择选项",
                 Parameters = NToggleControlParams(),
@@ -188,7 +183,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "multi_toggle_controls_list", "n_toggle_controls_list" },
                 Tags = new List<string> { "controls", "side-screen", "toggle", "multi-option" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=n_toggle action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -209,7 +203,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "multi_toggle_set", "n_toggle_option_set" },
                 Tags = new List<string> { "controls", "side-screen", "toggle", "multi-option" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=n_toggle action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

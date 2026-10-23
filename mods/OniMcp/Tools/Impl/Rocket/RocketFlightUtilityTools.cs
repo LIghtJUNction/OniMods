@@ -15,7 +15,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "rocket_emptyable_cargo_list", "module_flight_utility_list" },
                 Tags = new List<string> { "rocket", "module", "cargo", "deploy", "jettison", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=flight_utility action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -60,7 +59,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "high",
-                Aliases = new List<string> { "rocket_emptyable_cargo_control", "module_flight_utility_control" },
                 Tags = new List<string> { "rocket", "module", "cargo", "deploy", "jettison", "side-screen" },
                 Description = "ModuleFlightUtilitySideScreen 聚合工具：action=list 查询；empty、set_auto_deploy、set_target、clear_target、choose_duplicant、clear_duplicant 执行控制。empty 和目标变更需 confirm=true",
                 Parameters = UtilityLookupParams(new Dictionary<string, McpToolParameter>
@@ -164,7 +162,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "rocket_control_station_restrictions_list" },
                 Tags = new List<string> { "rocket", "control-station", "restriction", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=restriction action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -209,7 +206,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "rocket_control_station_restriction_set" },
                 Tags = new List<string> { "rocket", "control-station", "restriction", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=restriction action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -252,7 +248,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "rocket_control_station_restriction_control" },
                 Tags = new List<string> { "rocket", "control-station", "restriction", "side-screen" },
                 Description = "火箭控制台限制聚合工具：action=list 查询地面/太空使用限制；action=set 设置 none/space",
                 Parameters = RocketRestrictionControlParams(),

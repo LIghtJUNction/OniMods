@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "resources_pin_control", "resources_notification_control" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
                 Description = "资源面板固定/通知聚合工具：action=list 查询；action=set 设置 pinned/notify，写入需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -52,7 +51,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "resources_pins", "resources_notifications_list", "resource_pins_list" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=pins",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -100,7 +98,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "set_resource_pin", "resources_notification_set", "resource_pin_set" },
                 Tags = new List<string> { "resources", "inventory", "pin", "notification", "allresources" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=resources action=set_pin；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

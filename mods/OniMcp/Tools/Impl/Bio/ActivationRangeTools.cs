@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "active_range_controls_list", "activation_range_side_screens_list" },
                 Tags = new List<string> { "controls", "side-screen", "activation-range", "smart-battery", "reservoir", "massage" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=activation action=list。列出 ActiveRangeSideScreen / IActivationRangeTarget 双阈值控件，例如智能电池、智能储液库、按摩床",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -66,7 +65,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "active_range_set", "activation_range_side_screen_set" },
                 Tags = new List<string> { "controls", "side-screen", "activation-range", "smart-battery", "reservoir", "massage" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=activation action=set。设置 ActiveRangeSideScreen / IActivationRangeTarget 双阈值。会影响自动启停/使用条件，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -108,7 +106,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "active_ranges_batch_set", "activation_range_batch_set" },
                 Tags = new List<string> { "controls", "side-screen", "activation-range", "batch" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=activation action=batch。批量设置 ActiveRangeSideScreen / IActivationRangeTarget 双阈值，适合多个智能电池/储液库同步配置；items 支持短字段 a/d/w，defaults 可共享阈值/worldId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -178,7 +175,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "active_range_control", "activation_range_side_screen_control" },
                 Tags = new List<string> { "controls", "side-screen", "activation-range", "smart-battery", "reservoir", "batch" },
                 Description = "统一读取、单点设置和批量设置 ActiveRange 双阈值。action=list/set/batch；set/batch 需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "farming_uproot_area", "plants_cancel_uproot" },
                 Tags = new List<string> { "farming", "plants", "uproot", "harvest" },
                 Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=uproot。按区域标记或取消铲除植物",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>

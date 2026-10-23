@@ -34,7 +34,6 @@ internal static class Program
         Invoke(_bridge, "Awake");
         try
         {
-            Check("immutable Skills package matches manifest", ModernSkillCatalogRegression.Run);
             Check("main-thread invocation preserves result and exception", () =>
             {
                 Assert(MainThreadBridge.Invoke(() => 42) == 42, "Inline return value");
@@ -119,6 +118,7 @@ internal static class Program
             });
             Check("tasks are isolated by session and cancellation prevents execution", TestTaskIsolation);
             TestHttpTransport();
+            Check("HTTP token authentication guards initialization", TestHttpAuthentication);
             Check("bridge destruction wakes an infinite pending invocation", () =>
             {
                 bool called = false;
@@ -137,6 +137,17 @@ internal static class Program
             });
         }
         finally { Invoke(_bridge, "OnDestroy"); }
+        HttpAdmissionRegression.Run();
+        RunGroup(typeof(HttpFrontDoorAdmissionRegressionEntry));
+        RunGroup(typeof(LegacyDiagnosticsExpiredSessionRegressionEntry));
+        RunGroup(typeof(LegacyExpiredSessionTaskCleanupRegressionEntry));
+        RunGroup(typeof(LegacyOutboundExpiredSessionRegressionEntry));
+        RunGroup(typeof(LegacyPingRegressionEntry));
+        RunGroup(typeof(LegacyRequestIdRegressionEntry));
+        RunGroup(typeof(LegacySessionCapacityAdmissionRegressionEntry));
+        RunGroup(typeof(LegacySessionLifecycleRegressionEntry));
+        RunGroup(typeof(LegacySseDisconnectActivityRegressionEntry));
+        RunGroup(typeof(LegacyAcceptNegotiationRegressionEntry));
         Console.WriteLine("PASS: " + _passed + " OniMcp Server regressions (production server sources; game boundaries stubbed).");
     }
 
@@ -175,136 +186,56 @@ internal static class Program
         {
             try
             {
-                const string modernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{},\"io.modelcontextprotocol/clientInfo\":{\"name\":\"regression\",\"version\":\"1.0\"}}";
-                string discover = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":100,\"params\":{" + modernMeta + "}}";
-                Check("HTTP modern parse errors use bad-request status without changing legacy", () =>
+                Check("HTTP malformed JSON is rejected without allocating sessions", () =>
                 {
-                    const string malformed = "{\"jsonrpc\":\"2.0\",\"method\":";
-                    using (var response = PostModern(client, malformed, "server/discover"))
+                    using (var response = Post(client, "{\"jsonrpc\":\"2.0\",\"method\":"))
                     {
-                        Assert(response.StatusCode == HttpStatusCode.BadRequest,
-                            "Modern parse error returned HTTP " + (int)response.StatusCode);
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Parse-error JSON-RPC status changed");
                         Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
-                            "Modern parse error used wrong JSON-RPC code");
-                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                            "Modern parse error returned a legacy session id");
+                            "Malformed JSON used the wrong error code");
                     }
-                    using (var response = Post(client, malformed))
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.OK, "Legacy parse-error HTTP status changed");
-                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.ParseError,
-                            "Legacy parse error used wrong JSON-RPC code");
-                    }
-                    Assert(server.GetSessionSummaries().Count == 0, "Rejected parse error allocated legacy session state");
+                    Assert(server.GetSessionSummaries().Count == 0, "Malformed JSON allocated a session");
                 });
-                Check("HTTP modern cancellation notifications are acknowledged without dispatch or session state", () =>
+                Check("HTTP rejects retired protocol versions before allocating sessions", () =>
                 {
-                    const string notification = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":100}}";
-                    int calls = OniToolRegistry.Calls;
-                    using (var response = PostModern(client, notification, null))
+                    foreach (string version in new[] { "2025-06-18", "2026-07-28" })
+                    using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
                     {
-                        Assert(response.StatusCode == HttpStatusCode.Accepted,
-                            "Header-routed modern cancellation was not acknowledged");
-                        Assert(response.Content.ReadAsStringAsync().GetAwaiter().GetResult() == string.Empty,
-                            "Modern cancellation acknowledgement returned a response body");
-                        Assert(!response.Headers.Contains("Mcp-Session-Id"),
-                            "Modern cancellation returned a legacy session id");
-                    }
-                    Invoke(_bridge, "Update");
-                    Assert(OniToolRegistry.Calls == calls, "Modern cancellation was dispatched as a tool call");
-                    Assert(server.GetSessionSummaries().Count == 0, "Modern cancellation allocated legacy session state");
-                });
-                Check("HTTP modern discovery is stateless and advertises only implemented capabilities", () =>
-                {
-                    using (var response = PostModern(client, discover, "server/discover"))
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.OK, "Modern discovery failed");
-                        Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern discovery minted a session id");
-                        Assert(response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28", "Modern response version missing");
-                        var result = (JObject)ReadJson(response)["result"];
-                        Assert((string)result["resultType"] == "complete", "Modern discovery omitted resultType");
-                        Assert((string)result["cacheScope"] == "public" && (int)result["ttlMs"] > 0, "Discovery cache contract missing");
-                        Assert(result["capabilities"]?["resources"] != null, "Modern resources capability missing");
-                        Assert(result["capabilities"]?["tools"] == null, "Unimplemented modern tools capability was advertised");
-                        Assert(result["supportedVersions"].Values<string>().Contains("2026-07-28"), "Modern version not advertised");
-                    }
-                    Assert(server.GetSessionSummaries().Count == 0, "Modern discovery allocated legacy session state");
-                });
-                Check("HTTP modern requests require routing headers", () =>
-                {
-                    using (var response = PostModern(client, discover, null))
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.BadRequest, "Missing Mcp-Method was accepted");
-                        Assert((int)ReadJson(response)["error"]["code"] == -32020, "Missing Mcp-Method used wrong error code");
-                    }
-                });
-                string listResources = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/list\",\"id\":101,\"params\":{" + modernMeta + "}}";
-                Check("HTTP modern resource list is cache-shaped and sessionless", () =>
-                {
-                    using (var response = PostModern(client, listResources, "resources/list"))
-                    {
-                        var result = (JObject)ReadJson(response)["result"];
-                        Assert((string)result["resultType"] == "complete", "Modern resource list omitted resultType");
-                        Assert((string)result["cacheScope"] == "public" && (int)result["ttlMs"] > 0, "Modern resource list cache hints incorrect");
-                        var resources = result["resources"] as JArray;
-                        Assert(resources != null && resources.Count > 0, "Modern resource list lost resources");
-                        foreach (JObject resource in resources)
+                        request.Content = new StringContent("{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":105,\"params\":{\"protocolVersion\":\"" + version + "\"}}", Encoding.UTF8, "application/json");
+                        request.Headers.Add("Mcp-Protocol-Version", version);
+                        using (var response = client.SendAsync(request).GetAwaiter().GetResult())
                         {
-                            Assert(!string.IsNullOrWhiteSpace((string)resource["uri"]), "Modern resource list returned a resource without uri");
-                            Assert(!string.IsNullOrWhiteSpace((string)resource["name"]), "Modern resource list returned a resource without name");
+                            Assert(response.StatusCode == HttpStatusCode.BadRequest, "Retired protocol header was accepted");
+                            var error = ReadJson(response)["error"];
+                            Assert((int)error["code"] == -32022, "Unsupported version used the wrong error code");
+                            Assert(error["data"]["supported"].Values<string>().SequenceEqual(new[] { "2025-11-25" }),
+                                "Unsupported version response advertised an inactive protocol");
                         }
-                        Assert((string)resources[0]["uri"] == "oni://test", "Modern resource list lost resources");
-                        Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern resource list returned a session id");
                     }
-                    Assert(server.GetSessionSummaries().Count == 0, "Modern resource list allocated legacy session state");
+                    foreach (string version in new[] { "2025-06-18", "2026-07-28" })
+                    {
+                        using (var response = Post(client, "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":106,\"params\":{\"protocolVersion\":\"" + version + "\"}}"))
+                            Assert((int)ReadJson(response)["error"]["code"] == -32022, "Retired initialize version was accepted");
+                        using (var response = Post(client, "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":107,\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"" + version + "\"}}}"))
+                        {
+                            Assert(response.StatusCode == HttpStatusCode.BadRequest, "Retired metadata route was accepted");
+                            Assert((int)ReadJson(response)["error"]["code"] == -32022, "Retired metadata version used the wrong error");
+                        }
+                    }
+                    Assert(server.GetSessionSummaries().Count == 0, "Retired protocol allocated a session");
                 });
-                string readResource = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":102,\"params\":{\"uri\":\"oni://test\"," + modernMeta + "}}";
-                string unicodeReadResource = "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":104,\"params\":{\"uri\":\"oni://测试\"," + modernMeta + "}}";
-                Check("HTTP modern resource read decodes Mcp-Name Base64 sentinel values", () =>
+                Check("HTTP settings form saves screenshot retention", () =>
                 {
-                    using (var response = PostModern(client, readResource, "resources/read"))
+                    using (var form = new FormUrlEncodedContent(new Dictionary<string, string>
                     {
-                        Assert(response.StatusCode == HttpStatusCode.BadRequest, "Missing Mcp-Name was accepted");
-                        Assert((int)ReadJson(response)["error"]["code"] == -32020, "Missing Mcp-Name used wrong error code");
-                    }
-                    using (var response = PostModern(client, readResource, "resources/read", "oni://test"))
+                        ["host"] = "127.0.0.1", ["port"] = port.ToString(),
+                        ["screenshotRetentionMinutes"] = "60", ["screenshotMaxFiles"] = "20"
+                    }))
+                    using (var response = client.PostAsync("/settings/", form).GetAwaiter().GetResult())
                     {
-                        Assert(response.StatusCode == HttpStatusCode.OK, "Modern resource read failed");
-                        var result = (JObject)ReadJson(response)["result"];
-                        Assert((string)result["contents"][0]["text"] == "test", "Modern resource body changed");
-                        Assert((string)result["resultType"] == "complete", "Modern resource read omitted resultType");
-                        Assert(!response.Headers.Contains("Mcp-Session-Id"), "Modern resource read returned a session id");
-                    }
-                    string encodedUnicodeName = "=?base64?" + Convert.ToBase64String(Encoding.UTF8.GetBytes("oni://测试")) + "?=";
-                    using (var response = PostModern(client, unicodeReadResource, "resources/read", encodedUnicodeName))
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.OK, "Encoded non-ASCII Mcp-Name was rejected");
-                        Assert((string)ReadJson(response)["result"]["contents"][0]["uri"] == "oni://测试", "Encoded Mcp-Name decoded to the wrong resource");
-                    }
-                    using (var response = PostModern(client, readResource, "resources/read", encodedUnicodeName))
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.BadRequest, "Decoded Mcp-Name mismatch was accepted");
-                        Assert((int)ReadJson(response)["error"]["code"] == -32020, "Decoded Mcp-Name mismatch used wrong error code");
-                    }
-                    using (var response = PostModern(client, readResource, "resources/read", "=?base64?***?="))
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.BadRequest, "Invalid Mcp-Name Base64 was accepted");
-                        Assert((int)ReadJson(response)["error"]["code"] == -32020, "Invalid Mcp-Name Base64 used wrong error code");
-                    }
-                    Assert(server.GetSessionSummaries().Count == 0, "Modern resource read allocated legacy session state");
-                });
-                Check("HTTP Skills extension is opt-in and keeps list/get/read coherent", () =>
-                    ModernSkillHttpRegression.Run(modernMeta, port,
-                        (body, method, name) => PostModern(client, body, method, name)));
-                Check("HTTP settings save preserves the Skills opt-in", () =>
-                    ModernSkillHttpRegression.VerifySettingsPost(client, port));
-                string toolsList = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":103,\"params\":{" + modernMeta + "}}";
-                Check("HTTP modern path maps unsupported methods to HTTP 404", () =>
-                {
-                    using (var response = PostModern(client, toolsList, "tools/list"))
-                    {
-                        Assert(response.StatusCode == HttpStatusCode.NotFound, "Modern unsupported method did not return HTTP 404");
-                        Assert((int)ReadJson(response)["error"]["code"] == McpErrorCode.MethodNotFound, "Modern unsupported tool method was not rejected");
+                        Assert(response.StatusCode == HttpStatusCode.OK, "Settings POST failed");
+                        Assert(OniMcpOptions.Current.ScreenshotRetentionMinutes == 60
+                            && OniMcpOptions.Current.ScreenshotMaxFiles == 20, "Settings POST lost form values");
                     }
                 });
 
@@ -335,6 +266,20 @@ internal static class Program
                     Assert(ReadJson(response)["result"] != null, "Valid initialize failed");
                     sessionId = response.Headers.GetValues("Mcp-Session-Id").Single();
                 }
+                Check("HTTP current protocol exposes and dispatches the full tool surface", () =>
+                {
+                    using (var response = Post(client, "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":108}", sessionId))
+                    {
+                        var names = ((JArray)ReadJson(response)["result"]["tools"]).Select(tool => (string)tool["name"]);
+                        Assert(names.SequenceEqual(new[] { "server_control", "world_editor", "navigation_control", "building_control", "game_control", "orders_control", "benchmark" }),
+                            "The single protocol path lost public tools");
+                    }
+                    int calls = OniToolRegistry.Calls;
+                    using (var response = Post(client, "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"id\":109,\"params\":{\"name\":\"game_control\",\"arguments\":{\"task\":\"Verify current route\"}}}", sessionId))
+                        Assert(ReadJson(response)["result"] != null, "Current tool dispatch failed");
+                    Assert(OniToolRegistry.Calls == calls + 1 && OniToolRegistry.LastName == "game_control",
+                        "Current tool call was not dispatched exactly once");
+                });
                 Check("HTTP explicit null id returns a response", () =>
                 {
                     using (var response = Post(client, "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":null}", sessionId))
@@ -375,6 +320,47 @@ internal static class Program
         }
     }
 
+    private static void TestHttpAuthentication()
+    {
+        var previous = OniMcpOptions.Current;
+        var reservation = new TcpListener(IPAddress.Loopback, 0);
+        reservation.Start();
+        int port = ((IPEndPoint)reservation.LocalEndpoint).Port;
+        reservation.Stop();
+        OniMcpOptions.Save(new OniMcpOptions { Port = port, AuthEnabled = true, AuthToken = "regression-token" });
+        var server = new McpHttpServer();
+        server.StartServer();
+        try
+        {
+            using (var client = new HttpClient { BaseAddress = new Uri(OniMcpOptions.Current.EndpointUrl) })
+            foreach (string token in new[] { null, "wrong", "regression-token" })
+            using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
+            {
+                request.Content = new StringContent("{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":110,\"params\":{\"protocolVersion\":\"2025-11-25\"}}", Encoding.UTF8, "application/json");
+                if (token != null) request.Headers.Add("Authorization", "Bearer " + token);
+                var work = client.SendAsync(request);
+                PumpUntil(work);
+                using (var response = work.GetAwaiter().GetResult())
+                {
+                    bool authorized = token == "regression-token";
+                    Assert(response.StatusCode == (authorized ? HttpStatusCode.OK : HttpStatusCode.Unauthorized),
+                        "Initialization bypassed token authentication");
+                    Assert(authorized ? ReadJson(response)["result"] != null : server.GetSessionSummaries().Count == 0,
+                        "Unauthorized initialization allocated state");
+                }
+            }
+        }
+        finally { server.StopServer(); OniMcpOptions.Save(previous); }
+    }
+
+    private static void RunGroup(Type type)
+    {
+        var entry = type.GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
+        if (entry == null) throw new InvalidOperationException("Regression entrypoint missing: " + type.Name);
+        entry.Invoke(null, null);
+        Console.WriteLine("PASS " + type.Name);
+    }
+
     private static object Process(McpHttpServer server, string method, string sessionId, JObject parameters = null) =>
         Invoke(server, "ProcessMethod", new JsonRpcRequest { Id = 1, Method = method, Params = parameters }, sessionId);
 
@@ -385,23 +371,6 @@ internal static class Program
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             if (sessionId != null)
                 request.Headers.Add("Mcp-Session-Id", sessionId);
-            var work = client.SendAsync(request);
-            PumpUntil(work);
-            return work.GetAwaiter().GetResult();
-        }
-    }
-
-    private static HttpResponseMessage PostModern(HttpClient client, string json, string method, string name = null)
-    {
-        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
-        {
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
-            request.Headers.Add("Mcp-Protocol-Version", "2026-07-28");
-            if (method != null)
-                request.Headers.Add("Mcp-Method", method);
-            if (name != null)
-                request.Headers.Add("Mcp-Name", name);
             var work = client.SendAsync(request);
             PumpUntil(work);
             return work.GetAwaiter().GetResult();

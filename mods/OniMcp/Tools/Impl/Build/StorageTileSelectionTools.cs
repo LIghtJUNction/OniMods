@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "single_item_selection_list", "storage_tiles_target_items_list" },
                 Tags = new List<string> { "resources", "storage", "side-screen", "single-item", "tile" },
                 Description = "兼容入口：请优先使用 building_control domain=tile_selection action=list。列出 SingleItemSelectionSideScreen / StorageTile 的目标物品选择、容量、当前内容和可选物品",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -64,7 +63,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "single_item_selection_set", "storage_tile_target_item_set" },
                 Tags = new List<string> { "resources", "storage", "side-screen", "single-item", "tile" },
                 Description = "兼容入口：请优先使用 building_control domain=tile_selection action=set。设置 SingleItemSelectionSideScreen / StorageTile 的目标物品；clear=true 选择 None，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -106,7 +104,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "single_item_selections_batch_set" },
                 Tags = new List<string> { "resources", "storage", "side-screen", "single-item", "batch" },
                 Description = "兼容入口：请优先使用 building_control domain=tile_selection action=batch。批量设置 StorageTile 目标物品；items 支持短字段 i/c/w，defaults 可共享 itemTag/clear/worldId，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -176,7 +173,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "single_item_selection_control", "storage_tile_target_item_control" },
                 Tags = new List<string> { "resources", "storage", "side-screen", "single-item", "tile", "batch" },
                 Description = "统一读取、单点设置和批量设置 StorageTile 目标物品。action=list/set/batch；set/batch 需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "alarm_side_screens_list" },
                 Tags = new List<string> { "automation", "logic", "alarm", "notification", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=misc kind=logic_alarm action=list。列出 LogicAlarmSideScreen 名称、提示、通知类型、暂停和镜头跳转设置",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -35,7 +34,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "alarm_side_screen_set" },
                 Tags = new List<string> { "automation", "logic", "alarm", "notification", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=misc kind=logic_alarm action=set。设置 LogicAlarmSideScreen 的通知名称、提示、类型、触发暂停和触发镜头跳转",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -89,7 +87,6 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "logic_alarm_side_control", "alarm_side_screen_control" },
                 Tags = new List<string> { "automation", "logic", "alarm", "notification", "side-screen" },
                 Description = "统一读取和设置 LogicAlarmSideScreen 通知配置。action=list/set。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -132,7 +129,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "liquid_tepidizer_turbo_control", "turbo_mode_control" },
                 Tags = new List<string> { "building", "heater", "liquid", "turbo", "side-screen" },
                 Description = "Liquid Tepidizer 涡轮模式聚合工具：action=list 查询状态；action=set 开关涡轮模式",
                 Parameters = TurboHeaterControlParams(),
@@ -157,7 +153,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "liquid_tepidizers_list", "turbo_mode_heaters_list" },
                 Tags = new List<string> { "building", "heater", "liquid", "turbo", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=turbo_heater action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -178,7 +173,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "liquid_tepidizer_turbo_set", "turbo_mode_set" },
                 Tags = new List<string> { "building", "heater", "liquid", "turbo", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=side_surface surface=misc kind=turbo_heater action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

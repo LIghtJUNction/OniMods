@@ -8,47 +8,6 @@ namespace OniMcp.Tools
 {
     public static partial class RocketTools
     {
-        public static McpTool ControlRocketFlight()
-        {
-            return new McpTool
-            {
-                Name = "rocket_flight_control",
-                Group = "rockets",
-                Mode = "write",
-                Risk = "medium",
-                Aliases = new List<string> { "rocket_destination_side_control", "rocket_landing_control" },
-                Tags = new List<string> { "rocket", "destination", "landing", "round-trip", "side-screen" },
-                Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=set_round_trip/set_landing_pad",
-                Hidden = true,
-                Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["operation"] = new McpToolParameter { Type = "string", Description = "set_round_trip 或 set_landing_pad", Required = true, EnumValues = new List<string> { "set_round_trip", "set_landing_pad" } },
-                    ["repeat"] = new McpToolParameter { Type = "boolean", Description = "operation=set_round_trip 时：true=往返，false=单程", Required = false },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "operation=set_landing_pad 时：land 或 cancel", Required = false, EnumValues = new List<string> { "land", "cancel" } },
-                    ["padId"] = new McpToolParameter { Type = "integer", Description = "operation=set_landing_pad action=land 时目标 LaunchPad InstanceID", Required = false },
-                    ["padX"] = new McpToolParameter { Type = "integer", Description = "operation=set_landing_pad action=land 时目标 LaunchPad 格子 X", Required = false },
-                    ["padY"] = new McpToolParameter { Type = "integer", Description = "operation=set_landing_pad action=land 时目标 LaunchPad 格子 Y", Required = false },
-                    ["padWorldId"] = new McpToolParameter { Type = "integer", Description = "operation=set_landing_pad 按坐标查找平台时的世界 ID", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "确认修改，必须为 true", Required = true }
-                }),
-                Handler = args =>
-                {
-                    string operation = (args["operation"]?.ToString() ?? "").Trim().ToLowerInvariant();
-                    switch (operation)
-                    {
-                        case "set_round_trip":
-                        case "round_trip":
-                            return SetRocketRoundTrip().Handler(args);
-                        case "set_landing_pad":
-                        case "landing_pad":
-                            return SetRocketLandingPad().Handler(args);
-                        default:
-                            return CallToolResult.Error("operation must be set_round_trip or set_landing_pad");
-                    }
-                }
-            };
-        }
-
         public static McpTool SetRocketLandingPad()
         {
             return new McpTool
@@ -57,7 +16,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "rocket_land_at_pad", "rocket_landing_cancel" },
                 Tags = new List<string> { "rocket", "launch-pad", "landing", "side-screen" },
                 Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=set_landing_pad landingAction=land/cancel",
                 Hidden = true,
@@ -178,7 +136,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "rocket_control", "rocket_operation_control", "rocket_launch_control" },
                 Tags = new List<string> { "rocket", "destination", "launch", "landing", "round-trip", "side-screen" },
                 Description = "火箭操作组合工具。action=list/status/detail/list_destinations/list_launch_pads/set_destination/request_launch/cancel_launch/set_round_trip/set_landing_pad。",
                 Parameters = RocketLookupParams(new Dictionary<string, McpToolParameter>

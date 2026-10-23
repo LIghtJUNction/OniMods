@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "spatial_control", "view_control" },
                 Tags = new List<string> { "camera", "view", "screenshot", "overlay" },
                 Description = "相机与视图聚合入口：domain=camera；处理相机移动、世界切换、覆盖层和截图。不传 domain 时按已知相机 action 自动判断。",
                 Parameters = Params(),
