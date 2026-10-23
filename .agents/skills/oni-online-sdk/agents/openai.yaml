@@ -1,0 +1,4 @@
+interface:
+  display_name: "OniOnline SDK 玩法开发"
+  short_description: "用公开 SDK 开发第三方联机玩法"
+  default_prompt: "使用 $oni-online-sdk 接入一个新的 OniOnline 联机玩法，并按局部验证顺序检查生命周期、消息和状态同步。"

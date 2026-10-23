@@ -7,6 +7,8 @@ description: "Develop, review, test, and package the OniOnline multiplayer frame
 
 用于维护 `/home/lightjunction/Documents/GITHUB/OniMods` 中的 OniOnline 联机框架。它覆盖独立 SDK、ONI 原生适配、入场模组对齐、运行中注册状态同步、内置“一名玩家控制一颗星球”玩法，以及原生风格的浏览、开局和通讯界面。
 
+如果任务是开发独立的第三方玩法程序集，而不是修改框架核心、原生适配或正式包，改用 [`oni-online-sdk`](../oni-online-sdk/SKILL.md)，以免把玩法业务和宿主实现混在一起。
+
 ## 先确认边界
 
 - 先读仓库根目录的 `AGENTS.md`、`RTK.md`、`UPSTREAM.toml` 和 `docs/autonomous-iteration.md`。所有 shell 命令遵守仓库的 `rtk` 约定。
