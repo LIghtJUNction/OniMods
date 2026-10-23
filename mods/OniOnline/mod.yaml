@@ -1,3 +1,3 @@
 title: "OniOnline"
-description: "An early multiplayer preview for chat and permission-based viewing of explored asteroid regions. Each colony keeps its own authoritative simulation and local pause/speed. Requires CycleTrim and Spaced Out! Full colony transfers, rocket visits and remote work are not available in this public preview."
+description: "OniOnline 0.4.0 development preview: a multiplayer framework with an independent SDK and a built-in one-player-per-planet mode. Includes mod alignment, registered mod-state synchronization and permission-based observation. CycleTrim and Spaced Out! are not fixed prerequisites; native features require an available adapter. Full colony transfers, rocket visits and offline hosting are not implemented."
 staticID: "LIghtJUNction.OniOnline"

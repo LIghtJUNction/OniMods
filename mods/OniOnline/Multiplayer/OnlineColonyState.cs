@@ -1,4 +1,5 @@
 using System;
+using OniOnline.Sdk;
 using System.Collections.Generic;
 using System.Linq;
 using KSerialization;
@@ -34,13 +35,22 @@ namespace OniOnline.Multiplayer
         [Serialize] private int dupeOriginSchema;
         [Serialize] private string dupeOriginPayload;
         private DupeOriginLedger dupeOrigins;
+        [Serialize] private int gameplayStateSchema;
+        [Serialize] private string gameplayStatePayload;
+        private GameplayStateStore gameplayState;
+        internal GameplayStateStore GameplayState
+        { get { return gameplayState ?? (gameplayState = GameplayStateStore.Load(gameplayStateSchema, gameplayStatePayload)); } }
         private NativeDupeOrigins nativeDupeOrigins;
         private Game originGame;
         private bool originFailureReported;
         private string originInitializationError;
         private bool initialized;
-        internal bool OwnershipBlocked { get { EnsureOriginState(); return dupeOrigins.Blocked || originInitializationError != null; } }
-        internal string OwnershipError { get { EnsureOriginState(); return dupeOrigins.Error ?? originInitializationError; } }
+        internal bool OwnershipBlocked
+        { get { if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1)) return true;
+            EnsureOriginState(); return dupeOrigins.Blocked || originInitializationError != null; } }
+        internal string OwnershipError
+        { get { if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1)) return "native_adapter_unavailable";
+            EnsureOriginState(); return dupeOrigins.Error ?? originInitializationError; } }
         internal string PersistentOwnerId { get { Ensure(); return ownerId; } }
         internal string HomeSystemId { get { Ensure(); return homeSystemId; } }
         internal string HomeSystemName
@@ -110,8 +120,11 @@ namespace OniOnline.Multiplayer
         {
             NativeDupeBirthObserver.Invalidate(); // Do not span a native serialization boundary.
             Ensure();
-            if (ClusterManager.Instance != null) CapturePlanet();
-            workJournal = NativeWorkJournal.CaptureSavedState(this, ownerId);
+            if (NativeAdapterAvailability.Supports(SessionCapabilities.NativePlanetV1) && ClusterManager.Instance != null) CapturePlanet();
+            if (NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1))
+                workJournal = NativeWorkJournal.CaptureSavedState(this, ownerId);
+            gameplayStateSchema = GameplayState.Schema;
+            gameplayStatePayload = GameplayState.Capture();
             if (EnsureNativeOrigins()) nativeDupeOrigins.CaptureKnownObjectsForSave();
             if (dupeOrigins != null)
             {
@@ -137,6 +150,8 @@ namespace OniOnline.Multiplayer
         // It does not depend on Current/baseAlreadyCreated or on partial OnSpawn lists.
         internal bool AcceptNormalLoadOrigins(NativeDupeLoadEntry[] entries, out string error)
         {
+            if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1))
+            { error = "native_adapter_unavailable"; return false; }
             EnsureOriginState();
             int priorPlanets = planets.Count;
             bool accepted = false;
@@ -145,6 +160,8 @@ namespace OniOnline.Multiplayer
         }
         internal bool AcceptNewGameOrigins(NativeDupeLoadEntry[] entries, out string error)
         {
+            if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1))
+            { error = "native_adapter_unavailable"; return false; }
             EnsureOriginState();
             int priorPlanets = planets.Count;
             bool accepted = false;
@@ -157,7 +174,8 @@ namespace OniOnline.Multiplayer
         internal bool TryGetBirthContext(int worldId, out NativeDupeOrigins adapter, out string planetId, out string birthOwner)
         {
             adapter = null; planetId = null; birthOwner = null;
-            if (!initialized || !ReferenceEquals(Current, this) || originGame == null || !ReferenceEquals(originGame, Game.Instance) ||
+            if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1) ||
+                !initialized || !ReferenceEquals(Current, this) || originGame == null || !ReferenceEquals(originGame, Game.Instance) ||
                 nativeDupeOrigins == null || !nativeDupeOrigins.BirthWorldReady(worldId) ||
                 dupeOrigins.Blocked || dupeOrigins.LegacyPending || originInitializationError != null ||
                 ownerId != LocalOwnerProfile.PersistentOwnerId) return false;
@@ -169,10 +187,11 @@ namespace OniOnline.Multiplayer
         {
             // Only an already closed exact starter batch is retried here. This is not a
             // timing inference about arbitrary population completeness or native births.
-            NativeDupeNewGameObserver.TryComplete(this);
+            if (NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1)) NativeDupeNewGameObserver.TryComplete(this);
         }
         private bool EnsureNativeOrigins()
         {
+            if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1)) return false;
             NativeDupeNewGameObserver.TryComplete(this);
             EnsureOriginState();
             if (dupeOrigins.Blocked || originInitializationError != null || Game.Instance == null ||
@@ -193,6 +212,7 @@ namespace OniOnline.Multiplayer
         }
         private string PlanetIdentityForNativeWorld(int worldId)
         {
+            if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativePlanetV1)) return null;
             Ensure();
             if (worldId < 0 || worldId >= 255 || ClusterManager.Instance == null) return null;
             try { if (ClusterManager.Instance.GetWorld(worldId) == null) return null; }
@@ -210,7 +230,8 @@ namespace OniOnline.Multiplayer
         internal bool TryReadDuplicantOrigin(int nativeId, int nativeWorldId, out DupeOriginRecord origin)
         {
             origin = null;
-            if (dupeOrigins == null || nativeDupeOrigins == null || dupeOrigins.Blocked || dupeOrigins.LegacyPending || Game.Instance == null || !Game.Instance.baseAlreadyCreated || Game.Instance.IsLoading()) return false;
+            if (!NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1) ||
+                dupeOrigins == null || nativeDupeOrigins == null || dupeOrigins.Blocked || dupeOrigins.LegacyPending || Game.Instance == null || !Game.Instance.baseAlreadyCreated || Game.Instance.IsLoading()) return false;
             var identity = planets.FirstOrDefault(p => p.NativeWorldId == nativeWorldId);
             return identity != null && nativeDupeOrigins.TryReadExisting(nativeId, nativeWorldId, identity.PlanetId, out origin);
         }
@@ -229,6 +250,9 @@ namespace OniOnline.Multiplayer
                 nativeDupeOrigins.TryResolve(planet, nativeId, out origin);
         }
         internal WorldContainer[] AvailablePlanets()
+        { return NativeAdapterAvailability.Read(SessionCapabilities.NativePlanetV1, AvailableNativePlanets); }
+
+        private WorldContainer[] AvailableNativePlanets()
         {
             Ensure();
             if (ClusterManager.Instance == null) return new WorldContainer[0];
@@ -243,6 +267,9 @@ namespace OniOnline.Multiplayer
         }
 
         internal PlanetManifest CapturePlanet()
+        { return NativeAdapterAvailability.Read(SessionCapabilities.NativePlanetV1, CaptureNativePlanet); }
+
+        private PlanetManifest CaptureNativePlanet()
         {
             Ensure();
             var worlds = AvailablePlanets();
@@ -272,6 +299,9 @@ namespace OniOnline.Multiplayer
     internal sealed class NativePlanetSource : IPlanetSource
     {
         public PlanetManifest CapturePlanet()
-        { var colony = OnlineColonyState.Current; return colony == null ? null : colony.CapturePlanet(); }
+        {
+            return NativeAdapterAvailability.Read(SessionCapabilities.NativePlanetV1, () =>
+            { var colony = OnlineColonyState.Current; return colony == null ? null : colony.CapturePlanet(); });
+        }
     }
 }

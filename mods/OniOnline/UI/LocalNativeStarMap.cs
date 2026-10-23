@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using OniOnline.Core;
 using OniOnline.Multiplayer;
+using OniOnline.Network;
+using OniOnline.Runtime;
 using UnityEngine;
 
 namespace OniOnline.UI
@@ -18,6 +20,7 @@ namespace OniOnline.UI
 
         internal static LocalNativeStarMap Capture(StarSystemState system, string localPeerId)
         {
+            NativeAdapterAvailability.Require(SessionCapabilities.NativeStarMapV1);
             var result = new LocalNativeStarMap();
             var colony = OnlineColonyState.Current;
             var manager = ClusterManager.Instance;

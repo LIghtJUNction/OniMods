@@ -22,6 +22,8 @@
   </ItemGroup>
   <ItemGroup Condition="'$(OriginAdapterTests)' != 'true'">
     <PackageReference Include="PLib" Version="4.25.0" />
+    <ProjectReference Include="../../sdk/OniOnline.Framework/OniOnline.Framework.csproj" />
+    <Compile Include="../../mods/OniOnline/Core/NativeSimSaveBlock.cs" Link="Core/NativeSimSaveBlock.cs" />
     <Compile Remove="obj/**/*.cs;bin/**/*.cs" />
     <Compile Remove="RuntimeProbe*.cs" />
     <Compile Remove="NativeLifecycleProbe.cs" />
@@ -34,15 +36,13 @@
     <Compile Include="../../mods/OniOnline/Multiplayer/NativeDuplicantRemapMaterializer.cs" Link="Multiplayer/NativeDuplicantRemapMaterializer.cs" />
     <Compile Include="../../mods/OniOnline/Multiplayer/DuplicantTransferPreflightPolicy.cs" Link="Multiplayer/DuplicantTransferPreflightPolicy.cs" />
     <Compile Include="../../mods/OniOnline/Multiplayer/RemoteWorkPersistence.cs" Link="Multiplayer/RemoteWorkPersistence.cs" />
-    <Compile Include="../../mods/OniOnline/Network/*.cs" Link="Network/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniOnline/OnlineOptions.cs" Link="OnlineOptions.cs" />
-    <Compile Include="../../mods/OniOnline/Core/*.cs" Link="Core/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniOnline/Runtime/SteamRoomDirectory.cs" Link="Runtime/SteamRoomDirectory.cs" />
+    <Compile Include="../../mods/OniOnline/Runtime/SteamModContentSync.cs;../../mods/OniOnline/Runtime/NativeModCatalog.cs;../../mods/OniOnline/Runtime/NativeModContentDigest.cs;../../mods/OniOnline/Runtime/NativeModCatalogDiagnostics.cs" Link="Runtime/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniOnline/Multiplayer/RemoteWorkTypes.cs;../../mods/OniOnline/Multiplayer/RemoteWorkAuthority.cs;../../mods/OniOnline/Multiplayer/RemoteWorkWire.cs;../../mods/OniOnline/Multiplayer/RemoteWorkCoordinator.cs" Link="Multiplayer/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniOnline/Multiplayer/TeamColony*.cs;../../mods/OniOnline/Multiplayer/WorldInterest*.cs" Link="Multiplayer/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniOnline/Multiplayer/WorldCellDetails*.cs;../../mods/OniOnline/Multiplayer/DupeCommand*.cs" Link="Multiplayer/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniOnline/Multiplayer/StarMapDirectorySession.cs" Link="Multiplayer/StarMapDirectorySession.cs" />
-    <Compile Include="../../mods/OniOnline/Multiplayer/PlanetManifest.cs;../../mods/OniOnline/Multiplayer/SystemWire.cs;../../mods/OniOnline/Multiplayer/StarSystemCoordinator.cs" Link="Multiplayer/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniOnline/Multiplayer/WorldSnapshot.cs;../../mods/OniOnline/Multiplayer/WorldWire.cs;../../mods/OniOnline/Multiplayer/SnapshotAssembler.cs;../../mods/OniOnline/Multiplayer/SnapshotTransferSender.cs;../../mods/OniOnline/Multiplayer/IWorldSource.cs;../../mods/OniOnline/Multiplayer/WorldReplication.cs;../../mods/OniOnline/Multiplayer/SharedTimeController.cs;../../mods/OniOnline/Multiplayer/INativeTimeControl.cs" Link="Multiplayer/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

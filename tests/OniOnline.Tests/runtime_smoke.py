@@ -33,7 +33,7 @@ def main():
     parser.add_argument("--native-remote-work-completion", action="store_true",
                         help="After the network scenario, use at most thirty paused one-second steps to verify actual digging cleanup and save a fresh checkpoint")
     parser.add_argument("--native-task-ui", action="store_true", help="Verify actual graphical map input events in the native network-work fixture")
-    parser.add_argument("--native-chat-ui", action="store_true", help="Verify long real chat messages, retained reading anchor and latest-message UI handlers in the paused graphical host")
+    parser.add_argument("--native-chat-ui", action="store_true", help="Observe hidden frontend entry, then verify native toolbar, send/submit handlers, reading anchor and close/reopen in a fresh paused graphical host")
     parser.add_argument("--native-transfer-preflight", action="store_true", help="Save a fresh private active checkpoint, then read-only inspect an original starter and native 256x384 host capacity; eligibility is reported separately")
     parser.add_argument("--native-dupe-archive", action="store_true", help="After native work finishes, export one existing starter and proxy without importing or changing it")
     parser.add_argument("--native-dupe", action="store_true", help="Issue a native MoveTo to a real starter dupe in a safe inspected corridor")
@@ -54,6 +54,12 @@ def main():
         parser.error("--native-task-ui and --native-dupe-archive require --native-remote-work-completion")
     if args.native_chat_ui and not args.generate_colony:
         parser.error("--native-chat-ui requires --generate-colony and an explicitly graphical host")
+    if args.native_chat_ui and (args.resume_from_characters or args.resume_frontend):
+        parser.error("--native-chat-ui requires a fresh main-menu run to observe the hidden frontend and starter-selection entry")
+    if args.native_chat_ui and any((args.steam_lobby, args.world_sync, args.star_map, args.management_ui,
+            args.save_identity, args.native_work, args.native_dupe, args.native_remote_work,
+            args.native_transfer_preflight, args.protocol_client_assembly)):
+        parser.error("--native-chat-ui is a separate one-host UI path; run protocol, world and work fixtures separately")
     if args.native_transfer_preflight and not args.generate_colony:
         parser.error("--native-transfer-preflight requires this run's generated disposable colony; existing private checkpoint inspection uses the standalone probe commands")
     if args.native_transfer_preflight and args.native_remote_work and not args.native_remote_work_completion:
@@ -69,6 +75,7 @@ def main():
     logs = []
     sequence = 0
     remote_work_prepared = False
+    native_chat_entry_observations = []
 
     def status(max_age=10):
         if (output / "failure.json").exists():
@@ -108,6 +115,19 @@ def main():
         return wait(lambda s: s.get("command", 0) >= sequence, "probe command " + action,
                     timeout=120 if transition else 20, max_age=120 if transition else 10)
 
+    def native_chat_entry(stage):
+        command("chat_ui_entry", stage)
+        path = output / "chat-entry-receipt.json"
+        if not path.exists():
+            raise RuntimeError("Native chat entry observation receipt is missing")
+        value = json.loads(path.read_text())
+        observation = value.get("observation", {})
+        if not value.get("passed") or observation.get("stage") != stage:
+            raise RuntimeError("Native chat entry did not match its actual " + stage + " state")
+        native_chat_entry_observations.append(observation)
+        checks.append("actual native chat entry state: " + stage)
+        print("PASS", checks[-1], flush=True)
+
     def screenshot():
         if not args.screenshots:
             return
@@ -125,11 +145,122 @@ def main():
         raise RuntimeError(initial["dependencyError"])
     receipt = {"status": "running", "build": initial.get("gameVersion"),
                "cycleTrimVersion": initial.get("cycleTrimVersion"), "checks": checks,
-               "participants": {"completeGameInstances": 1, "peakProtocolClientProcesses": 4 if args.native_remote_work else 3,
+               "participants": {"completeGameInstances": 1, "peakProtocolClientProcesses": 0 if args.native_chat_ui else 4 if args.native_remote_work else 3,
                                 "completeNativeGuestGames": 0},
-               "scope": "One real Steam-launched ONI host plus " + ("four" if args.native_remote_work else "three") +
+               "scope": "One real Steam-launched graphical ONI host and zero protocol peers; native UI only." if args.native_chat_ui else
+                        "One real Steam-launched ONI host plus " + ("four" if args.native_remote_work else "three") +
                         " same-host TCP protocol client processes at peak. No complete native guest game, two-device or Steam P2P acceptance."}
+    def exercise_native_chat_window():
+        command("chat_ui_open")
+        wait(lambda s: s.get("chatOverlayOpen") and not s.get("popup"),
+             "one native toolbar pointer-click handler opens the native chat window")
+        opened = json.loads((output / "chat-open-receipt.json").read_text())
+        if not opened.get("passed") or opened.get("windowType") != "OniOnline.UI.OnlineChatWindow":
+            raise RuntimeError("The actual native toolbar did not open OnlineChatWindow")
+        receipt["nativeChatOpen"] = opened
+        for index in range(10):
+            paragraph = ("这是一条用于真实界面排版的长消息。阅读旧消息时，新消息不应该把画面拉到底部。" * 5 if index % 2 == 0 else
+                         "A long English message wraps inside the actual chat viewport. Reading older messages should retain the same row when new messages arrive. " * 2)
+            text = f"[chat-layout-{index}] <b>中文 literal text</b> /:*? " + paragraph
+            action = "chat_ui_send" if index % 2 == 0 else "chat_ui_submit"
+            command(action, text)
+            wait(lambda s, text=text: text in s.get("chat", ""), "native composer publishes literal message " + str(index))
+            sent = json.loads((output / "chat-send-receipt.json").read_text())
+            if not sent.get("passed") or sent.get("text") != text or not sent.get("endEditDidNotSend"):
+                raise RuntimeError("Native send/submit receipt does not match the actual message")
+            time.sleep(0.55)  # RoomSession's real five-per-two-second local rate limit still applies.
+
+        chat_ui_path = output / "chat-ui-receipt.json"
+
+        def chat_ui_receipt():
+            if not chat_ui_path.exists():
+                return {}
+            value = json.loads(chat_ui_path.read_text())
+            if value.get("phase") == "failed":
+                raise RuntimeError("Native chat UI failed: " + value.get("failure", "unknown"))
+            return value
+
+        command("chat_ui_anchor")
+        wait(lambda _: chat_ui_receipt().get("phase") == "anchored_waiting_message",
+             "real ScrollRect handler establishes a real-message reading anchor")
+        # A player's own composer intentionally follows latest. Append
+        # through the actual host session to test history refresh alone;
+        # this does not claim a remote-sender or native guest test.
+        command("chat_ui_append", "[chat-layout-appended] 会话追加后保留旧消息的阅读位置。 Host-session append without composer; <i>literal markup</i>.")
+        wait(lambda _: chat_ui_receipt().get("phase") == "anchor_preserved",
+             "host-session append preserves viewport anchor within two logical pixels and shows native latest button")
+        screenshot()
+        command("chat_ui_latest")
+        wait(lambda _: chat_ui_receipt().get("phase") == "latest_verified",
+             "native KButton handler follows bottom, dismisses latest and retains literal text inside the native frame")
+        screenshot()
+        command("chat_ui_close")
+        wait(lambda _: chat_ui_receipt().get("passed") and chat_ui_receipt().get("phase") == "complete",
+             "native toolbar closes and reopens the same-room draft without destroying HUD or leaving an orphan window")
+        receipt["nativeChatUi"] = chat_ui_receipt()
+        wait(lambda s: not s.get("chatOverlayOpen") and not s.get("popup"), "native chat finishes closed without opening the lobby")
+
+
+    def run_native_chat_ui():
+        if initial.get("batchMode") or initial.get("graphicsDevice") == "Null":
+            raise RuntimeError("--native-chat-ui requires an explicitly graphical game; no colony was generated")
+        receipt["participants"] = {"completeGameInstances": 1, "peakProtocolClientProcesses": 0, "completeNativeGuestGames": 0}
+        receipt["scope"] = "One real Steam-launched graphical ONI host and zero protocol peers. Native browser, New Game creation and local-host chat UI only; no remote discovery/join, remote-sender, native guest, two-device or Steam P2P acceptance."
+        receipt["nativeChatEntryObservations"] = native_chat_entry_observations
+        receipt["nativeChatUiEvidence"] = "Programmatic native UI handlers after topmost-raycast checks and actual scene observations. No physical pointer, IME or visual-style acceptance; requested screenshots require separate review."
+        native_chat_entry("main_menu")
+        command("browser_ui_open")
+        wait(lambda s: s.get("nativeBrowserOpen") and not s.get("joined") and not s.get("popup"),
+             "actual main-menu button opens the native browse-only list without hosting a system")
+        screenshot()
+        command("browser_ui_close")
+        browser_path = output / "browser-ui-receipt.json"
+
+        def browser_closed(_):
+            value = json.loads(browser_path.read_text()) if browser_path.exists() else {}
+            if value.get("phase") == "failed":
+                raise RuntimeError(value.get("failure", "Native browser close failed"))
+            return value.get("passed") and value.get("phase") == "complete"
+
+        wait(browser_closed, "native browser close button returns to the main menu without leaving a window or creating a session")
+        receipt["nativeBrowserUi"] = json.loads(browser_path.read_text())
+        command("native_new_game")
+        wait(lambda s: s.get("screen") == "ModeSelectScreen" and not s.get("joined"),
+             "ordinary New Game enters native difficulty selection without a room")
+        command("survival")
+        category = wait(lambda s: s.get("onlineCategory") and s.get("onlineCategoryNative") and
+                        s.get("onlineCategoryAnimationReady") and bool(s.get("onlineCategoryLabel")) and not s.get("joined"),
+                        "Online is an actual native MultiToggle category with a live native animation and localized label")
+        receipt["nativeOnlineCategory"] = {key: category.get(key) for key in
+            ("onlineCategoryNative", "onlineCategoryAnimationReady", "onlineCategoryLabel", "frameCount")}
+        screenshot()
+        command("online")
+        wait(lambda s: s.get("screen") == "ColonyDestinationSelectScreen" and s.get("onlineCreationFlow") and
+             s.get("gameMode") == "Survival" and s.get("sandboxDisabled") and not s.get("joined"),
+             "New Game Online configures a native colony while no system has been hosted")
+        native_chat_entry("destination")
+        command("generate")
+        wait(lambda s: s.get("screen") == "MinionSelectScreen" and not s.get("joined"),
+             "native starter selection precedes hosting", 300, max_age=120)
+        native_chat_entry("characters")
+        command("embark")
+        wait(lambda s: s.get("loaded") and s.get("paused") and s.get("screen") == "Game",
+             "the native test colony finishes creation and starts paused", 120)
+        current = wait(lambda s: s.get("joined") and s.get("players") == 1 and s.get("started") and
+                       s.get("loaded") and s.get("paused"),
+                       "Runtime automatically hosts the newly ready native colony with one local player", 60)
+        receipt["createdHost"] = {key: current.get(key) for key in
+            ("gameVersion", "cycleTrimVersion", "modSha256", "modAssemblyPath", "players", "roomCode", "gameTime")}
+        exercise_native_chat_window()
+
     try:
+        if args.native_chat_ui:
+            run_native_chat_ui()
+            receipt["status"] = "passed"
+            receipt["final"] = status()
+            if not args.keep_running:
+                command("quit", wait_ack=False)
+            return
         if not continuing:
             command("host", "27142")
             command("show")
@@ -156,13 +287,13 @@ def main():
         if not args.resume_from_characters:
             if args.direct_create_system:
                 command("native_new_game")
-                wait(lambda s: s.get("screen") == "ModeSelectScreen" and not s.get("onlineCreationTitle"),
+                wait(lambda s: s.get("screen") == "ModeSelectScreen" and not s.get("onlineCreationFlow"),
                      "ordinary New Game still offers native difficulty selection")
                 command("survival")
                 wait(lambda s: s.get("onlineCategory"), "New Game offers the Online creation category")
                 command("online")
                 wait(lambda s: s.get("screen") == "ColonyDestinationSelectScreen"
-                     and s.get("gameMode") == "Survival" and s.get("sandboxDisabled") and s.get("onlineCreationTitle"),
+                     and s.get("gameMode") == "Survival" and s.get("sandboxDisabled") and s.get("onlineCreationFlow"),
                      "New Game Online selects native Survival destination creation with sandbox disabled")
                 screenshot()
             else:
@@ -177,7 +308,7 @@ def main():
 
                 command("online")
                 wait(lambda s: s.get("screen") == "ColonyDestinationSelectScreen" and not s.get("popup")
-                     and s.get("onlineCreationTitle"), "New Game Online creates a colony without opening the lobby browser")
+                     and s.get("onlineCreationFlow"), "New Game Online creates a colony without opening the lobby browser")
             wait(lambda s: s.get("players") == 4, "room connection survives frontend transitions")
 
         if args.generate_colony:
@@ -190,43 +321,6 @@ def main():
             command("chat", "进入殖民地后仍可聊天")
             wait(lambda s: "进入殖民地后仍可聊天" in s.get("chat", ""), "chat works after colony load")
             screenshot()
-
-            if args.native_chat_ui:
-                if status().get("batchMode") or status().get("graphicsDevice") == "Null":
-                    raise RuntimeError("--native-chat-ui requires an explicitly graphical game; no fallback native guest or screenshots were enabled")
-                command("show")
-                # Use the real UI SendChat path; the probe never constructs ChatLine records.
-                for index in range(10):
-                    paragraph = ("这是一条用于真实界面排版的长消息。阅读旧消息时，新消息不应该把画面拉到底部。" * 5 if index % 2 == 0 else
-                                 "A long English message wraps inside the actual chat viewport. Reading older messages should retain the same row when new messages arrive. " * 2)
-                    text = f"[chat-layout-{index}] <b>literal text</b> " + paragraph
-                    command("chat", text)
-                    wait(lambda s, text=text: text in s.get("chat", ""), "real long chat message " + str(index))
-                    time.sleep(0.55)  # RoomSession's real five-per-two-second local rate limit still applies.
-
-                chat_ui_path = output / "chat-ui-receipt.json"
-
-                def chat_ui_receipt():
-                    if not chat_ui_path.exists():
-                        return {}
-                    value = json.loads(chat_ui_path.read_text())
-                    if value.get("phase") == "failed":
-                        raise RuntimeError("Native chat UI failed: " + value.get("failure", "unknown"))
-                    return value
-
-                command("chat_ui_anchor")
-                wait(lambda _: chat_ui_receipt().get("phase") == "anchored_waiting_message",
-                     "real ScrollRect handler establishes a real-message reading anchor")
-                command("chat", "[chat-layout-appended] 新消息到达，保留旧消息的阅读位置。 Keep the actual row anchored; <i>literal markup</i>.")
-                wait(lambda _: chat_ui_receipt().get("phase") == "anchor_preserved",
-                     "new real chat preserves viewport anchor within two logical pixels and shows latest button")
-                screenshot()
-                command("chat_ui_latest")
-                wait(lambda _: chat_ui_receipt().get("passed") and chat_ui_receipt().get("phase") == "complete",
-                     "actual latest Button handler follows bottom within twelve pixels with visible literal-text controls")
-                receipt["nativeChatUi"] = chat_ui_receipt()
-                screenshot()
-                command("hide")
 
             if args.star_map:
                 command("starmap")

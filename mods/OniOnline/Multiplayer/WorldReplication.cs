@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using OniOnline.Core;
 using OniOnline.Network;
 
 namespace OniOnline.Multiplayer
@@ -12,6 +13,9 @@ namespace OniOnline.Multiplayer
         private readonly RoomSession session;
         private readonly IWorldSource source;
         private readonly bool allowRemoteSnapshots;
+        private readonly Func<string, bool> canUsePeer;
+        private readonly Func<string, long> admissionGeneration;
+        private readonly Dictionary<string, long> admissions = new Dictionary<string, long>(StringComparer.Ordinal);
         private readonly SnapshotAssembler assembler = new SnapshotAssembler();
         private readonly SnapshotTransferSender sender;
         private readonly Dictionary<string, WorldViewEntry> worlds = new Dictionary<string, WorldViewEntry>(StringComparer.Ordinal);
@@ -50,11 +54,14 @@ namespace OniOnline.Multiplayer
             }
         }
 
-        internal WorldReplication(RoomSession session, IWorldSource source, bool allowRemoteSnapshots = false)
+        internal WorldReplication(RoomSession session, IWorldSource source, bool allowRemoteSnapshots = false,
+            Func<string, bool> canUsePeer = null, Func<string, long> admissionGeneration = null)
         {
             this.session = session ?? throw new ArgumentNullException("session");
             this.source = source ?? throw new ArgumentNullException("source");
             this.allowRemoteSnapshots = allowRemoteSnapshots;
+            this.canUsePeer = canUsePeer;
+            this.admissionGeneration = admissionGeneration;
             sender = new SnapshotTransferSender(SendTo);
             session.ApplicationMessageReceived += Handle;
         }
@@ -65,11 +72,11 @@ namespace OniOnline.Multiplayer
             now = seconds;
             UpdateRoster();
             assembler.Prune(now);
-            if (!session.Joined || session.Reconnecting || session.Leaving) return;
+            if (!Ready) return;
             foreach (var expired in interestExpiry.Where(p => p.Value <= now).Select(p => p.Key).ToArray())
             { interestExpiry.Remove(expired); interests.Remove(expired); sender.ClearTarget(expired); }
             bool demand = (observing && selectedOwner == session.LocalPlayerId) ||
-                (session.IsHost ? interests.Values.Any(owner => owner == session.LocalPlayerId) : remoteDemandUntil > now);
+                (session.IsHost ? interests.Any(entry => Connected(entry.Key) && entry.Value == session.LocalPlayerId) : remoteDemandUntil > now);
             if (hadDemand && !demand) sender.ClearOwner(session.LocalPlayerId);
             hadDemand = demand;
             if (source.IsAvailable && now >= nextMetadata)
@@ -100,18 +107,21 @@ namespace OniOnline.Multiplayer
 
         public void SetSharing(bool value)
         {
+            UpdateRoster();
             if (ShareOwnWorld == value) return;
             ShareOwnWorld = value;
             sender.ClearOwner(session.LocalPlayerId ?? "");
             nextMetadata = nextFrame = 0;
-            if (source.IsAvailable && session.Joined)
+            if (Ready && source.IsAvailable)
                 PublishLocal(value && (allowRemoteSnapshots || (observing && selectedOwner == session.LocalPlayerId)));
             Notify();
         }
 
         public void RequestWorld(string ownerId)
         {
-            if (!session.Players.Any(p => p.Id == ownerId)) return;
+            UpdateRoster();
+            if (!session.Players.Any(player => player.Id == ownerId) ||
+                !Admitted(session.LocalPlayerId) || !Admitted(ownerId)) return;
             if (!allowRemoteSnapshots && ownerId != session.LocalPlayerId) return;
             observing = true;
             selectedOwner = ownerId;
@@ -123,7 +133,7 @@ namespace OniOnline.Multiplayer
 
         private void SendRequest(string ownerId)
         {
-            if (!session.Joined) return;
+            if (!Ready || !Connected(ownerId)) return;
             var data = WorldWire.EncodeRequest(ownerId);
             if (session.IsHost) OnRequest(session.LocalPlayerId, ownerId, data);
             else session.SendApplication(data);
@@ -131,6 +141,8 @@ namespace OniOnline.Multiplayer
 
         private void PublishLocal(bool full)
         {
+            UpdateRoster();
+            if (!Ready) return;
             try
             {
                 var snapshot = source.Capture(session.LocalPlayerId, ++snapshotSequence, ShareOwnWorld, full);
@@ -185,23 +197,25 @@ namespace OniOnline.Multiplayer
 
         private void SendWithdraw(WorldDescriptor world)
         {
+            if (!Ready) return;
             var data = WorldWire.EncodeWithdraw(world.Id, world.Epoch, world.ControlRevision);
             if (session.IsHost) Broadcast(world.OwnerId, data);
-            else session.SendApplication(data);
+            else if (Connected(HostId())) session.SendApplication(data);
         }
 
         private bool BroadcastDescriptor(WorldDescriptor world)
         {
+            if (!Ready || !Connected(world.OwnerId)) return false;
             var data = WorldWire.EncodeDescriptor(world);
             if (session.IsHost) return Broadcast(world.OwnerId, data);
-            return world.OwnerId != session.LocalPlayerId || session.SendApplication(data);
+            return world.OwnerId != session.LocalPlayerId || Connected(HostId()) && session.SendApplication(data);
         }
 
         private bool Broadcast(string owner, byte[] data)
         {
             bool sent = true;
             foreach (var player in session.Players)
-                if (player.Connected && player.Id != session.LocalPlayerId && player.Id != owner)
+                if (Connected(player.Id) && player.Id != session.LocalPlayerId && player.Id != owner)
                     sent &= SendTo(player.Id, owner, data);
             return sent;
         }
@@ -215,7 +229,7 @@ namespace OniOnline.Multiplayer
 
         private bool SendTo(string target, string owner, byte[] data)
         {
-            if (!session.Joined || session.Reconnecting) return false;
+            if (!Ready || !Connected(target) || !Connected(owner) || !CurrentAdmission(target) || !CurrentAdmission(owner)) return false;
             if (!session.IsHost) return target == HostId() && owner == session.LocalPlayerId && session.SendApplication(data);
             return owner == session.LocalPlayerId ? session.SendApplicationTo(target, data) : session.ForwardApplication(owner, target, data);
         }
@@ -223,6 +237,8 @@ namespace OniOnline.Multiplayer
         private void Handle(string owner, byte[] data)
         {
             if (disposed) return;
+            UpdateRoster();
+            if (!Ready || !Connected(owner)) return;
             if (SnapshotTransferSender.IsAck(data))
             { sender.AcceptAck(owner, data, now); return; }
             WorldMessage message;
@@ -271,15 +287,15 @@ namespace OniOnline.Multiplayer
 
         private void SendAck(string owner, WorldChunk chunk, bool complete)
         {
+            if (!Ready || !Connected(owner)) return;
             var ack = SnapshotTransferSender.EncodeAck(chunk, complete);
             if (session.IsHost) session.SendApplicationTo(owner, ack);
-            else session.SendApplication(ack);
+            else if (Connected(HostId())) session.SendApplication(ack);
         }
 
         private void OnRequest(string requester, string requestedOwner, byte[] payload)
         {
-            if (!allowRemoteSnapshots) return;
-            if (!session.Players.Any(p => p.Id == requestedOwner && p.Connected)) return;
+            if (!allowRemoteSnapshots || !Ready || !Connected(requester) || !Connected(requestedOwner)) return;
             if (session.IsHost)
             {
                 interests[requester] = requestedOwner;
@@ -306,7 +322,7 @@ namespace OniOnline.Multiplayer
             foreach (var player in session.Players)
             {
                 string owner;
-                if (player.Connected && player.Id != session.LocalPlayerId && player.Id != snapshot.World.OwnerId &&
+                if (Connected(player.Id) && Connected(snapshot.World.OwnerId) && player.Id != session.LocalPlayerId && player.Id != snapshot.World.OwnerId &&
                     interests.TryGetValue(player.Id, out owner) && owner == snapshot.World.OwnerId)
                     busy |= !sender.TryQueue(player.Id, snapshot, now);
             }
@@ -335,7 +351,7 @@ namespace OniOnline.Multiplayer
             { entry.Snapshot = null; sender.ClearOwner(descriptor.OwnerId); }
             entry.Descriptor = WorldWire.CopyDescriptor(descriptor);
             entry.OwnerName = player.Name;
-            entry.Connected = player.Connected && !session.Reconnecting;
+            entry.Connected = Connected(player.Id);
             entry.IsLocal = player.Id == session.LocalPlayerId;
             Notify();
         }
@@ -355,9 +371,24 @@ namespace OniOnline.Multiplayer
         private void UpdateRoster()
         {
             var players = session.Players;
-            string key = string.Join(";", players.Select(p => p.Id + ":" + p.Connected)) + ":" + session.Joined;
+            string key = string.Join(";", players.Select(p => p.Id + ":" + Connected(p.Id) + ":" + Generation(p.Id))) + ":" + Ready;
             if (key == rosterKey) return;
             rosterKey = key;
+            foreach (var player in players)
+            {
+                long value = Admitted(player.Id) ? Generation(player.Id) : 0, previous;
+                if (admissions.TryGetValue(player.Id, out previous) && previous != value)
+                {
+                    sender.ClearTarget(player.Id); sender.ClearOwner(player.Id); assembler.ResetOwner(player.Id);
+                    interests.Remove(player.Id); interestExpiry.Remove(player.Id);
+                    WorldViewEntry entry;
+                    if (worlds.TryGetValue(player.Id, out entry)) entry.Snapshot = null;
+                    if (player.Id == session.LocalPlayerId)
+                    { sourceEpoch = null; lastPublishedDescriptor = null; remoteDemandUntil = 0; nextMetadata = nextFrame = 0; }
+                }
+                admissions[player.Id] = value;
+            }
+            foreach (string id in admissions.Keys.Where(id => !players.Any(player => player.Id == id)).ToArray()) admissions.Remove(id);
             foreach (var id in knownPlayers.Where(id => !players.Any(p => p.Id == id)).ToArray())
             { sender.ClearTarget(id); interests.Remove(id); }
             knownPlayers.Clear();
@@ -365,26 +396,41 @@ namespace OniOnline.Multiplayer
             foreach (var entry in worlds.Values)
             {
                 var player = players.FirstOrDefault(p => p.Id == entry.Descriptor.OwnerId);
-                entry.Connected = player != null && player.Connected && !session.Reconnecting;
+                entry.Connected = player != null && Connected(player.Id);
+                if (!Admitted(entry.Descriptor.OwnerId)) entry.Snapshot = null;
                 if (player != null) entry.OwnerName = player.Name;
             }
             foreach (var owner in worlds.Keys.Where(id => !players.Any(p => p.Id == id)).ToArray())
             { worlds.Remove(owner); sender.ClearOwner(owner); assembler.ResetOwner(owner); }
             foreach (var player in players)
-                if (!player.Connected) { sender.ClearTarget(player.Id); assembler.ResetOwner(player.Id); }
-            if (!session.Joined || !wasJoined)
+                if (!Connected(player.Id))
+                {
+                    sender.ClearTarget(player.Id); sender.ClearOwner(player.Id); assembler.ResetOwner(player.Id);
+                    interests.Remove(player.Id); interestExpiry.Remove(player.Id);
+                }
+            if (!Ready || !wasJoined)
             {
                 sender.Reset();
                 nextMetadata = nextFrame = nextCatalog = nextRequest = 0;
+                remoteDemandUntil = 0;
+                sourceEpoch = null;
                 lastPublishedDescriptor = null;
                 foreach (var player in players) assembler.ResetOwner(player.Id);
             }
-            wasJoined = session.Joined;
+            wasJoined = Ready;
             if (session.IsHost) nextCatalog = 0;
             Notify();
         }
 
         private string HostId() { var players = session.Players; return players.Length == 0 ? null : players[0].Id; }
+        private bool Ready { get { return !disposed && session.Joined && !session.Reconnecting && !session.Leaving && !session.Closed &&
+            Admitted(session.LocalPlayerId) && (session.IsHost || Admitted(HostId())); } }
+        private bool Connected(string peer) { return Ready && peer != null && Admitted(peer) &&
+            session.Players.Any(player => player.Id == peer && player.Connected); }
+        private long Generation(string peer) { return PeerAdmission.Generation(admissionGeneration, peer); }
+        private bool Admitted(string peer) { return PeerAdmission.Allows(canUsePeer, peer) && Generation(peer) > 0; }
+        private bool CurrentAdmission(string peer)
+        { long value; return admissions.TryGetValue(peer, out value) && value > 0 && value == Generation(peer); }
         private void Notify() { Revision++; if (Changed != null) Changed(); }
 
         public void Dispose()

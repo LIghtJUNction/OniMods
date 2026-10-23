@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using OniOnline.Multiplayer;
 using OniOnline.Network;
 using OniOnline.Runtime;
+using OniOnline.Sdk;
 using Steamworks;
 using UnityEngine;
 
@@ -25,6 +26,7 @@ namespace OniOnline
             public string nonce { get; set; }
             public string slot { get; set; }
             public string modSha256 { get; set; }
+            public string frameworkSha256 { get; set; }
             public string gameVersion { get; set; }
             public string gameAssemblySha256 { get; set; }
             public string cycleTrimSha256 { get; set; }
@@ -100,12 +102,13 @@ namespace OniOnline
 
         [Serializable] private sealed class MultiplayerProbeSnapshot
         {
-            public int version = 1;
+            public int version = 2;
             public string publishedUtc, runNonce, processStartedUtc, executable, nonce, deviceHash;
-            public string gameAssemblySha256, cycleTrimSha256, steamAccountHash, roomId, localPlayerId, transport;
+            public string frameworkSha256, gameAssemblySha256, cycleTrimSha256, steamAccountHash, roomId, localPlayerId, transport;
             public string saveRelativePath, saveSha256, failure;
             public long saveBytes, saveWriteUnixMilliseconds;
             public bool steamInitialized, steamLoggedOn, steamSubscribed, armed, finished, saveUnchanged;
+            public bool cycleTrimPresent, spacedOut, nativePlanetAdapter, nativeObservationAdapter;
             public int worldId, worldCells, pendingChats;
             public string[] connectedPlayers;
             public MultiplayerChatProof[] messages;
@@ -119,7 +122,8 @@ namespace OniOnline
         private Game multiplayerGame;
         private WorldContainer multiplayerWorld;
         private string multiplayerSavePath, multiplayerAccountHash, multiplayerDeviceHash, multiplayerFailure;
-        private string multiplayerGameHash, multiplayerCycleTrimHash;
+        private string multiplayerFrameworkHash, multiplayerGameHash, multiplayerCycleTrimHash;
+        private System.Reflection.Assembly multiplayerCycleTrimAssembly;
         private bool multiplayerArmed, multiplayerFinished, multiplayerChatSent;
         private double multiplayerLeaseEnd;
         private WorldCoordinator multiplayerCoordinator;
@@ -281,10 +285,20 @@ namespace OniOnline
 
         private void CaptureMultiplayerBuilds()
         {
-            if (multiplayerGameHash != null) return;
-            multiplayerGameHash = MultiplayerFileHash(typeof(Game).Assembly.Location);
-            var cycleTrim = AppDomain.CurrentDomain.GetAssemblies().SingleOrDefault(a => a.GetName().Name == "CycleTrim");
-            multiplayerCycleTrimHash = cycleTrim == null ? "" : MultiplayerFileHash(cycleTrim.Location);
+            if (multiplayerGameHash == null) multiplayerGameHash = MultiplayerFileHash(typeof(Game).Assembly.Location);
+            var framework = typeof(GameplayFramework).Assembly;
+            var frameworks = AppDomain.CurrentDomain.GetAssemblies().Where(a => a.GetName().Name == "OniOnline.Framework").ToArray();
+            MultiplayerNeed(framework.GetName().Name == "OniOnline.Framework" && framework != typeof(RuntimeProbe).Assembly &&
+                frameworks.Length == 1 && ReferenceEquals(frameworks[0], framework), "separate_framework_required");
+            if (multiplayerFrameworkHash == null) multiplayerFrameworkHash = MultiplayerFileHash(framework.Location);
+            var cycleTrims = AppDomain.CurrentDomain.GetAssemblies().Where(a => a.GetName().Name == "CycleTrim").ToArray();
+            MultiplayerNeed(cycleTrims.Length <= 1, "cycletrim_assembly_ambiguous");
+            var cycleTrim = cycleTrims.SingleOrDefault();
+            if (!ReferenceEquals(cycleTrim, multiplayerCycleTrimAssembly))
+            {
+                multiplayerCycleTrimHash = cycleTrim == null ? null : MultiplayerFileHash(cycleTrim.Location);
+                multiplayerCycleTrimAssembly = cycleTrim;
+            }
         }
 
         private static string MultiplayerTransport(RoomSession session)
@@ -339,6 +353,9 @@ namespace OniOnline
         private void RequireMultiplayerState(OnlineRuntime runtime)
         {
             RequireMultiplayerIsolation();
+            CaptureMultiplayerBuilds();
+            MultiplayerNeed(multiplayerPermit != null && multiplayerPermit.frameworkSha256 == multiplayerFrameworkHash &&
+                multiplayerPermit.cycleTrimSha256 == multiplayerCycleTrimHash, "build_changed");
             MultiplayerNeed(multiplayerArmed && multiplayerFailure == null && runtime.Session == multiplayerSession &&
                 multiplayerSession.Joined && !multiplayerSession.Leaving && !multiplayerSession.Reconnecting &&
                 !multiplayerSession.Closed, "session_changed");
@@ -375,9 +392,14 @@ namespace OniOnline
                 MultiplayerNeed(!multiplayerArmed, "already_armed");
                 RequireMultiplayerIsolation();
                 CaptureMultiplayerBuilds();
-                MultiplayerNeed(request.modSha256 == modHash && request.gameVersion == runtime.GameVersion &&
+                MultiplayerNeed(MultiplayerHex(request.modSha256, 64) && MultiplayerHex(request.frameworkSha256, 64) &&
+                    MultiplayerHex(request.gameAssemblySha256, 64) &&
+                    (request.cycleTrimSha256 == null || MultiplayerHex(request.cycleTrimSha256, 64)), "build_fingerprint_required");
+                MultiplayerNeed(request.modSha256 == modHash && request.frameworkSha256 == multiplayerFrameworkHash && request.gameVersion == runtime.GameVersion &&
                     request.gameAssemblySha256 == multiplayerGameHash && request.cycleTrimSha256 == multiplayerCycleTrimHash,
                     "build_mismatch");
+                MultiplayerNeed(NativeAdapterAvailability.Supports(SessionCapabilities.NativePlanetV1) &&
+                    NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1), "native_adapters_required");
                 MultiplayerNeed(request.slot == "a" || request.slot == "b", "invalid_slot");
                 MultiplayerNeed(MultiplayerHex(request.saveSha256, 64) && request.saveBytes > 0, "save_fingerprint_required");
                 MultiplayerNeed(SteamManager.Initialized && SteamUser.GetSteamID().IsValid() &&
@@ -473,14 +495,19 @@ namespace OniOnline
         {
             CaptureMultiplayerBuilds();
             var session = runtime.Session;
-            var world = ClusterManager.Instance == null ? null : ClusterManager.Instance.GetWorld(ClusterManager.Instance.activeWorldId);
+            bool planetAdapter = NativeAdapterAvailability.Supports(SessionCapabilities.NativePlanetV1);
+            bool observationAdapter = NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1);
+            var world = !planetAdapter || !observationAdapter || ClusterManager.Instance == null ? null :
+                ClusterManager.Instance.GetWorld(ClusterManager.Instance.activeWorldId);
             string prefix = multiplayerPermit == null ? null : "[oni-multiplayer:" + multiplayerPermit.nonce + ":";
             return new MultiplayerProbeSnapshot
             {
                 publishedUtc = System.DateTime.UtcNow.ToString("O"), runNonce = multiplayerRunNonce, processStartedUtc = multiplayerProcessStart,
                 executable = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName),
                 nonce = multiplayerPermit?.nonce, deviceHash = multiplayerDeviceHash,
-                gameAssemblySha256 = multiplayerGameHash, cycleTrimSha256 = multiplayerCycleTrimHash,
+                frameworkSha256 = multiplayerFrameworkHash, gameAssemblySha256 = multiplayerGameHash, cycleTrimSha256 = multiplayerCycleTrimHash,
+                cycleTrimPresent = multiplayerCycleTrimAssembly != null, spacedOut = DlcManager.IsExpansion1Active(),
+                nativePlanetAdapter = planetAdapter, nativeObservationAdapter = observationAdapter,
                 steamInitialized = SteamManager.Initialized,
                 steamLoggedOn = SteamManager.Initialized && SteamUser.BLoggedOn(),
                 steamSubscribed = SteamManager.Initialized && SteamApps.BIsSubscribedApp(new AppId_t(457140)),

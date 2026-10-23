@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using OniOnline.Core;
+using OniOnline.UI;
 using PeterHan.PLib.Actions;
 using TMPro;
 using UnityEngine;
@@ -57,7 +58,7 @@ namespace OniOnline.Runtime
             get
             {
                 if (!Application.isFocused || !KInputManager.isFocused || EditingText ||
-                    Game.Instance == null || !Game.Instance.baseAlreadyCreated || Game.Instance.IsLoading()) return false;
+                    !NativeGameplayUi.Ready) return false;
                 if (KScreenManager.Instance == null || ScreenStack == null) return false;
                 var stack = ScreenStack.GetValue(KScreenManager.Instance) as List<KScreen>;
                 if (stack == null) return false;

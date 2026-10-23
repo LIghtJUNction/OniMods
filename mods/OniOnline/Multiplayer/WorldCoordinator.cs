@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OniOnline.Core;
 using OniOnline.Network;
+using OniOnline.Runtime;
 using OniOnline.UI;
 
 namespace OniOnline.Multiplayer
@@ -18,6 +19,8 @@ namespace OniOnline.Multiplayer
         private readonly RegisteredRoomOwners registeredOwners = new RegisteredRoomOwners();
         private readonly Dictionary<string, string> directGrantIssuers = new Dictionary<string, string>(StringComparer.Ordinal);
         private readonly RoomSession room;
+        private readonly Func<string, bool> canUsePeer;
+        private readonly Func<string, long> admissionGeneration;
         private readonly NativeWorkContext nativeWorkContext;
         private double nextDupeRoster;
         public WorldInterestSession Interest { get; private set; }
@@ -25,6 +28,7 @@ namespace OniOnline.Multiplayer
         private readonly Dictionary<string, NativeWorldInterestSource> interestSources = new Dictionary<string, NativeWorldInterestSource>();
         private readonly Dictionary<string, RemoteWorkPermission> directPermissions = new Dictionary<string, RemoteWorkPermission>();
         private readonly Dictionary<string, RemoteWorkPermission> teamPermissions = new Dictionary<string, RemoteWorkPermission>();
+        private readonly HashSet<string> deferredPermissions = new HashSet<string>(StringComparer.Ordinal);
         private string permissionEpoch;
         private WorldOverviewWindow window;
         public long Revision { get; private set; }
@@ -34,16 +38,22 @@ namespace OniOnline.Multiplayer
         public IReadOnlyList<WorldViewEntry> Worlds { get { return replication.Worlds; } }
         public event System.Action Changed;
 
-        internal WorldCoordinator(RoomSession session)
+        internal WorldCoordinator(RoomSession session, Func<string, bool> canUsePeer = null,
+            Func<string, long> admissionGeneration = null)
         {
-            room = session;
+            NativeAdapterAvailability.Require(SessionCapabilities.NativePlanetV1);
+            NativeAdapterAvailability.Require(SessionCapabilities.NativeObservationV1);
+            room = session ?? throw new ArgumentNullException(nameof(session));
+            this.canUsePeer = canUsePeer;
+            this.admissionGeneration = admissionGeneration;
             var planetSource = new NativePlanetSource();
             var source = new NativeWorldSource(() => OnlineColonyState.Current?.SelectedNativeWorldId ?? -1);
-            replication = new WorldReplication(session, source, allowRemoteSnapshots: false);
+            replication = new WorldReplication(session, source, allowRemoteSnapshots: false,
+                canUsePeer: GameplayPeerReady, admissionGeneration: admissionGeneration);
             replication.Changed += Notify;
-            StarSystem = new StarSystemCoordinator(session, planetSource);
+            StarSystem = new StarSystemCoordinator(session, planetSource, PeerReady, admissionGeneration);
             StarSystem.Changed += Notify;
-            var workContext = new NativeWorkContext(session, StarSystem);
+            var workContext = new NativeWorkContext(session, StarSystem, GameplayPeerReady, admissionGeneration);
             nativeWorkContext = workContext;
 #if ONIONLINE_RUNTIME_PROBE
             var nativeExecutor = new NativeWorkExecutor(true);
@@ -51,7 +61,7 @@ namespace OniOnline.Multiplayer
             var nativeExecutor = new NativeWorkExecutor(false);
 #endif
             Work = new RemoteWorkCoordinator(session, workContext, nativeExecutor,
-                planetId => StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId)?.PeerId);
+                OwnerOfPlanet, GameplayPeerReady, admissionGeneration);
             Work.Changed += Notify;
             Teams = new TeamColonyCoordinator(session, () =>
             {
@@ -67,19 +77,18 @@ namespace OniOnline.Multiplayer
                 if ((flags & TeamPermissionFlags.CommandDuplicants) != 0) permissions |= RemoteWorkPermission.CommandDupes;
                 teamPermissions[actor] = permissions;
                 ApplyPermissions(actor);
-            }, IsRegisteredOwner);
+            }, IsRegisteredOwner, GameplayPeerReady, admissionGeneration);
             Teams.Changed += Notify;
             DupeCommands = new DupeCommandCoordinator(session, workContext, new NativeDupeCommandExecutor(),
-                planetId => StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId)?.PeerId,
-                CanControlNativeDuplicant);
+                OwnerOfPlanet, CanControlNativeDuplicant, GameplayPeerReady, admissionGeneration);
             DupeCommands.SubmissionChanged += receipt => Notify();
             Interest = new WorldInterestSession(session,
-                planetId => StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId)?.PeerId,
+                OwnerOfPlanet,
                 planetId => StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId)?.Planet.Copy(),
                 (observer, planetId, subscription) =>
                 {
                     WorkPlanet planet;
-                    if (!workContext.TryGetLocalPlanet(out planet) || planet.PlanetId != planetId)
+                    if (!GameplayPeerReady(observer) || !workContext.TryGetLocalPlanet(out planet) || planet.PlanetId != planetId)
                         throw new InvalidOperationException("world_not_ready");
                     NativeWorldInterestSource sourceForObserver;
                     if (!interestSources.TryGetValue(observer, out sourceForObserver))
@@ -90,19 +99,20 @@ namespace OniOnline.Multiplayer
                         1, index => true);
                 }, (observer, planetId) =>
                 {
+                    if (!GameplayPeerReady(observer)) return false;
                     WorkPlanet planet;
                     if (!workContext.TryGetLocalPlanet(out planet) || planet.PlanetId != planetId) return false;
                     Work.Authority.Synchronize();
                     return replication.ShareOwnWorld || Work.Authority.HasPermission(observer, RemoteWorkPermission.ViewMap);
-                });
+                }, GameplayPeerReady, admissionGeneration);
             Interest.Changed += Notify;
             Interest.ObserverRemoved += observer => interestSources.Remove(observer);
             CellDetails = new WorldCellDetailsSession(session,
-                planetId => StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId)?.PeerId,
+                OwnerOfPlanet,
                 (observer, planetId, index) =>
                 {
                     WorkPlanet planet;
-                    if (!workContext.TryGetLocalPlanet(out planet) || planet.PlanetId != planetId) return null;
+                    if (!GameplayPeerReady(observer) || !workContext.TryGetLocalPlanet(out planet) || planet.PlanetId != planetId) return null;
                     var manifest = StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId)?.Planet;
                     if (manifest == null || index < 0 || index >= (long)manifest.Width * manifest.Height) return null;
                     string sourceKey = "detail:" + observer;
@@ -120,11 +130,12 @@ namespace OniOnline.Multiplayer
                         Cell = frame.Cells[0] };
                 }, (observer, planetId) =>
                 {
+                    if (!GameplayPeerReady(observer)) return false;
                     WorkPlanet planet;
                     if (!workContext.TryGetLocalPlanet(out planet) || planet.PlanetId != planetId) return false;
                     Work.Authority.Synchronize();
                     return replication.ShareOwnWorld || Work.Authority.HasPermission(observer, RemoteWorkPermission.ViewMap);
-                });
+                }, GameplayPeerReady, admissionGeneration);
             CellDetails.Changed += Notify;
             CellDetails.ObserverRemoved += observer => interestSources.Remove("detail:" + observer);
         }
@@ -132,7 +143,9 @@ namespace OniOnline.Multiplayer
         // Native pause/speed remain local. Room membership never controls simulation time.
         public void Pump(double seconds)
         {
-            StarSystem.Pump(seconds); replication.Pump(seconds); Work.Pump(seconds); Teams.Pump(seconds);
+            StarSystem.Pump(seconds);
+            foreach (string actor in deferredPermissions.Where(GameplayPeerReady).ToArray()) ApplyPermissions(actor);
+            replication.Pump(seconds); Work.Pump(seconds); Teams.Pump(seconds);
             RegisterTeamDuplicants(seconds);
             DupeCommands.Pump(seconds); Interest.Pump(seconds); CellDetails.Pump(seconds);
         }
@@ -161,28 +174,29 @@ namespace OniOnline.Multiplayer
         private void RefreshRegisteredOwners()
         {
             var claims = new List<RegisteredOwnerClaim>();
-            var players = room.Players;
             // Opening somebody else's save never changes this process's own profile identity.
             if (!string.IsNullOrEmpty(room.LocalPlayerId)) claims.Add(new RegisteredOwnerClaim { PeerId = room.LocalPlayerId,
-                OwnerId = LocalOwnerProfile.PersistentOwnerId, Connected = room.Joined && !room.Reconnecting && !room.Leaving && !room.Closed });
+                OwnerId = LocalOwnerProfile.PersistentOwnerId, Connected = StarSystem.IsPeerAdmitted(room.LocalPlayerId) });
             var members = StarSystem.State?.Members ?? Array.Empty<SystemMember>();
             foreach (var member in members)
             {
                 if (member.PeerId == room.LocalPlayerId || member.Planet == null) continue;
                 claims.Add(new RegisteredOwnerClaim { PeerId = member.PeerId, OwnerId = member.Planet.OwnerId,
-                    Connected = member.Connected && players.Any(p => p.Id == member.PeerId && p.Connected) });
+                    Connected = StarSystem.IsPeerAdmitted(member.PeerId) });
             }
             // These are admitted cooperative save claims, not verified Steam account bindings.
             registeredOwners.Update(claims.ToArray());
         }
         private bool IsRegisteredOwner(string peer, string expectedOwner)
         {
+            if (!StarSystem.IsPeerAdmitted(peer)) return false;
             RefreshRegisteredOwners();
             string actual;
             return registeredOwners.TryResolveActor(peer, out actual) && actual == expectedOwner;
         }
         private bool CanControlNativeDuplicant(string actor, int nativeId)
         {
+            if (!StarSystem.IsPeerAdmitted(actor)) return false;
             WorkPlanet planet; DupeOriginRecord origin;
             var colony = OnlineColonyState.Current;
             if (colony == null || !nativeWorkContext.TryGetLocalPlanet(out planet) ||
@@ -199,9 +213,11 @@ namespace OniOnline.Multiplayer
                 currentEntityProjection && Teams.CanControl(actor, nativeId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
         public PlanetManifest PlanetForOwner(string ownerId)
-        { return StarSystem.State?.Members.FirstOrDefault(m => m.PeerId == ownerId)?.Planet.Copy(); }
+        { return StarSystem.IsPeerAdmitted(ownerId) ? StarSystem.State?.Members.FirstOrDefault(m => m.PeerId == ownerId)?.Planet?.Copy() : null; }
         internal void SetWorkPermissions(string actor, RemoteWorkPermission permissions)
         {
+            if (permissions != RemoteWorkPermission.None && !StarSystem.IsPeerAdmitted(actor))
+                throw new InvalidOperationException("mod_sync_not_ready");
             if (!PreparePermissionScope()) throw new InvalidOperationException("work_world_unavailable");
             directPermissions[actor] = permissions;
             directGrantIssuers[actor] = LocalOwnerProfile.PersistentOwnerId;
@@ -217,16 +233,16 @@ namespace OniOnline.Multiplayer
             Work.Changed -= Notify;
             Work.Dispose();
             Work = new RemoteWorkCoordinator(room, nativeWorkContext, executor,
-                planetId => StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId)?.PeerId);
+                OwnerOfPlanet, GameplayPeerReady, admissionGeneration);
             Work.Changed += Notify;
-            permissionEpoch = null; directPermissions.Clear(); directGrantIssuers.Clear(); teamPermissions.Clear();
+            permissionEpoch = null; directPermissions.Clear(); directGrantIssuers.Clear(); teamPermissions.Clear(); deferredPermissions.Clear();
             if (!Work.Authority.Synchronize()) throw new InvalidOperationException("probe_work_world_unavailable");
         }
 #endif
         internal RemoteWorkPermission GetDirectWorkPermissions(string actor)
         {
             RemoteWorkPermission permissions;
-            return actor != null && PreparePermissionScope() && directPermissions.TryGetValue(actor, out permissions)
+            return StarSystem.IsPeerAdmitted(actor) && PreparePermissionScope() && directPermissions.TryGetValue(actor, out permissions)
                 ? permissions : RemoteWorkPermission.None;
         }
         private bool PreparePermissionScope()
@@ -234,7 +250,7 @@ namespace OniOnline.Multiplayer
             if (!Work.Authority.Synchronize()) return false;
             string current = Work.Authority.Planet.AuthorityEpoch;
             if (permissionEpoch != current)
-            { permissionEpoch = current; directPermissions.Clear(); directGrantIssuers.Clear(); teamPermissions.Clear(); }
+            { permissionEpoch = current; directPermissions.Clear(); directGrantIssuers.Clear(); teamPermissions.Clear(); deferredPermissions.Clear(); }
             return true;
         }
         private void ApplyPermissions(string actor)
@@ -242,9 +258,28 @@ namespace OniOnline.Multiplayer
             if (!PreparePermissionScope()) return;
             RemoteWorkPermission direct, team;
             directPermissions.TryGetValue(actor, out direct); teamPermissions.TryGetValue(actor, out team);
-            Work.SetPermissions(actor, direct | team);
+            RemoteWorkPermission desired = direct | team;
+            var existing = Work.Authority.GetGrant(actor);
+            if (!GameplayPeerReady(actor) && desired != RemoteWorkPermission.None &&
+                (existing == null || (desired & ~existing.Permissions) != 0))
+            { deferredPermissions.Add(actor); return; }
+            deferredPermissions.Remove(actor);
+            Work.SetPermissions(actor, desired);
             Interest?.RevalidateObservers();
         }
+        private bool PeerReady(string peer)
+        {
+            if (string.IsNullOrEmpty(peer) || !room.Joined || room.Reconnecting || room.Leaving || room.Closed ||
+                !room.Players.Any(player => player.Id == peer && player.Connected)) return false;
+            return PeerAdmission.Allows(canUsePeer, peer) && PeerAdmission.Generation(admissionGeneration, peer) != 0;
+        }
+        private string OwnerOfPlanet(string planetId)
+        {
+            var member = StarSystem.State?.Members.FirstOrDefault(m => m.Planet?.PlanetId == planetId && m.Connected);
+            return member != null && StarSystem.IsPeerAdmitted(member.PeerId) ? member.PeerId : null;
+        }
+        private bool GameplayPeerReady(string peer)
+        { return PeerReady(peer) && StarSystem != null && StarSystem.IsPeerAdmitted(peer); }
         public void Show(string ownerId = null)
         {
             if (window != null) window.Activate();

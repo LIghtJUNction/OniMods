@@ -68,6 +68,28 @@ internal static class Program
     {
         try
         {
+            if (args.Length == 1 && args[0] == "--sdk")
+            { GameplaySdkTests.Run(Check); Console.WriteLine("PASS " + assertions + " SDK assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--compatibility")
+            { CompatibilityTests.Run(Check); Console.WriteLine("PASS " + assertions + " compatibility assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--mod-sync-contracts")
+            { ModSynchronizationTests.Run(Check); Console.WriteLine("PASS " + assertions + " mod synchronization assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--gameplay-admission")
+            { GameplayAdmissionTests.Run(Check); Console.WriteLine("PASS " + assertions + " gameplay admission assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--mod-content-sync")
+            { SteamModContentSyncTests.Run(Check); Console.WriteLine("PASS " + assertions + " mod content synchronization assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--mod-content-digest")
+            { NativeModContentDigestTests.Run(Check); Console.WriteLine("PASS " + assertions + " controlled mod content assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--mod-sync-declarations")
+            { ModSyncDeclarationTests.Run(Check); Console.WriteLine("PASS " + assertions + " mod policy declaration assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--mod-sync-session")
+            { ModSyncSessionTests.Run(Check); Console.WriteLine("PASS " + assertions + " mod admission transport assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--command-admission")
+            { CommandAdmissionTests.Run(Check); Console.WriteLine("PASS " + assertions + " command admission assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--observation-admission")
+            { ObservationAdmissionTests.Run(Check); Console.WriteLine("PASS " + assertions + " observation admission assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--colony-entry-flow")
+            { ColonyEntryFlowTests.Run(Check); Console.WriteLine("PASS " + assertions + " colony entry flow assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--tcp-worker-budget") return TcpWorkerBudgetTests.Run();
             if (args.Length == 1 && args[0] == "--loaded-colony-start")
             { LoadedColonyRoomStartTests.Run(Check); Console.WriteLine("PASS " + assertions + " loaded-colony start assertions"); return 0; }
@@ -135,6 +157,17 @@ internal static class Program
                 .SelectMany(n => n.GetIPProperties().UnicastAddresses)
                 .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
                 .Select(a => a.Address.ToString()).FirstOrDefault() ?? "127.0.0.1";
+            GameplaySdkTests.Run(Check);
+            CompatibilityTests.Run(Check);
+            ModSynchronizationTests.Run(Check);
+            GameplayAdmissionTests.Run(Check);
+            SteamModContentSyncTests.Run(Check);
+            NativeModContentDigestTests.Run(Check);
+            ModSyncDeclarationTests.Run(Check);
+            ModSyncSessionTests.Run(Check);
+            CommandAdmissionTests.Run(Check);
+            ObservationAdmissionTests.Run(Check);
+            ColonyEntryFlowTests.Run(Check);
             ProtocolTests();
             ChatAndStart();
             LoadedColonyRoomStartTests.Run(Check);
@@ -308,11 +341,12 @@ internal static class Program
         Check(catalog.Get("ui.send", null) == "Send", "missing locale falls back to English");
         Check(catalog.Get("mode.online", "zh_klei") == "联机" && catalog.Get("mode.online", "zh-Hant") == "連線" &&
             catalog.Get("mode.online", "en-US") == "Online", "Online game category is localized in all three languages");
-        Check(catalog.Get("menu.browse_lobbies", "zh_klei") == "浏览游戏大厅" &&
-            catalog.Get("menu.browse_lobbies", "en-US") == "Browse game lobbies", "lobby entry describes browsing games rather than creating a system");
+        Check(catalog.Get("menu.browse_lobbies", "zh_klei") == "浏览星系" &&
+            catalog.Get("menu.browse_lobbies", "en-US") == "Browse star systems", "browser entry names star systems while creation remains separate");
+        Check(catalog.Get("ui.empty_title", "zh_klei") == "暂无星系" &&
+            catalog.Get("ui.direct_join", "zh_klei") == "星系码直连" &&
+            catalog.Get("ui.members", "en-US") == "System members", "network rooms use star-system terminology in the visible UI");
         Check(catalog.Get("room.join_running", "en-US") == "Join game", "late-join lobby action is localized");
-        Check(catalog.Get("engine.preview", "zh_klei").StartsWith("你的星球与本地存档绑定。"), "Chinese engine status describes locally owned planets");
-        Check(catalog.Get("engine.preview", "en-US").Contains("They cannot control your planet."), "English engine status preserves read-only authority");
         var quoted = new TextCatalog(new[] { "quoted,\"中文,状态\",\"繁體,狀態\",\"rooms, comms\"" });
         Check(quoted.Get("quoted", "zh_klei") == "中文,状态" && quoted.Get("quoted", "en-US") == "rooms, comms",
             "quoted CSV commas are retained as one field independently of product copy");
@@ -413,10 +447,10 @@ internal static class Program
         Check(wrong.LastError == "wrong_password", "password failure code");
         Check(host.Players.Length == 1, "unauthenticated player absent");
         var version = Join(port, "Old", "房间密钥", "old");
-        Until(() => version.Closed, "game version mismatch rejected");
-        Check(version.LastError == "version_mismatch", "version failure code");
+        Until(() => version.Joined && host.Players.Length == 2, "compatible contracts join across game build metadata");
+        Check(version.LastError == null, "game version metadata alone does not reject basic networking");
         var valid = Join(port, "Valid");
-        Until(() => valid.Joined && host.Players.Length == 2, "room usable after bad peers");
+        Until(() => valid.Joined && host.Players.Length == 3, "room usable after bad peers");
     }
 
     private static void CapacityAndAuthority()

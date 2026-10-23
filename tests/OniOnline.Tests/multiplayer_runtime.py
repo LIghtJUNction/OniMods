@@ -6,7 +6,8 @@ copy an approved disposable save to PROBE/multiplayer-disposable/test.sav (or us
 an existing Harness-owned PROBE/OniHarness/test.sav copy), and
 load that copy in the already Steam-launched game. Join the same two-player room
 and pause both games. Mount/sync the two directories for this controller. Supply
-the exact built DLL hashes, game version, and each copied save's SHA-256.
+the exact OniOnline and OniOnline.Framework DLL hashes, game version, and each
+copied save's SHA-256. CycleTrim is optional; an explicit expected hash pins it.
 
 The test uses the production viewport, single-cell details and chat paths while
 both games stay paused. It checks permission denial, explored-cell filtering,
@@ -52,7 +53,7 @@ def utc_seconds(value):
 def validate_snapshot(value, now, modified, max_age=10):
     need(isinstance(value, dict) and isinstance(value.get("multiplayer"), dict), "multiplayer_probe_required")
     probe = value["multiplayer"]
-    need(probe.get("version") == 1, "unsupported_multiplayer_probe")
+    need(probe.get("version") == 2, "unsupported_multiplayer_probe")
     need(-2 <= now - modified <= max_age and -2 <= now - utc_seconds(probe.get("publishedUtc")) <= max_age,
          "stale_or_future_probe_status")
     need(hex_value(probe.get("runNonce"), 32), "process_nonce_required")
@@ -71,8 +72,20 @@ def validate_pair(states, expected, nonce=None, run_nonces=None):
     need(probes[0]["runNonce"] != probes[1]["runNonce"], "same_probe_used_twice")
     for index, (state, probe) in enumerate(zip(states, probes)):
         need(state.get("gameVersion") == expected["gameVersion"] and state.get("modSha256") == expected["modSha256"] and
+             probe.get("frameworkSha256") == expected["frameworkSha256"] and
              probe.get("gameAssemblySha256") == expected["gameAssemblySha256"] and
-             probe.get("cycleTrimSha256") == expected["cycleTrimSha256"], "exact_build_mismatch")
+             hex_value(probe.get("frameworkSha256"), 64), "exact_build_mismatch")
+        cycletrim = probe.get("cycleTrimSha256")
+        need("cycleTrimSha256" in probe and type(probe.get("cycleTrimPresent")) is bool and
+             probe["cycleTrimPresent"] == (cycletrim is not None) and
+             (cycletrim is None or hex_value(cycletrim, 64)), "cycletrim_identity_invalid")
+        if expected.get("cycleTrimSha256") is not None:
+            need(cycletrim == expected["cycleTrimSha256"], "expected_cycletrim_mismatch")
+        pinned_cycletrim = expected.get("participantCycleTrimSha256")
+        if pinned_cycletrim is not None:
+            need(len(pinned_cycletrim) == 2 and cycletrim == pinned_cycletrim[index], "cycletrim_identity_changed")
+        need(type(probe.get("spacedOut")) is bool and probe.get("nativePlanetAdapter") is True and
+             probe.get("nativeObservationAdapter") is True, "native_planet_observation_adapters_required")
         need(state.get("loaded") is True and state.get("screen") == "Game" and probe.get("worldCells", 0) > 0,
              "loaded_native_world_required")
         need(state.get("joined") is True and state.get("sharedPause") is False, "joined_independent_room_required")
@@ -407,7 +420,8 @@ class Participant:
 def evidence(state):
     probe = state["multiplayer"]
     names = ("publishedUtc", "runNonce", "processStartedUtc", "deviceHash", "steamAccountHash", "roomId", "localPlayerId", "transport",
-             "gameAssemblySha256", "cycleTrimSha256", "saveSha256", "saveWriteUnixMilliseconds", "saveBytes",
+             "frameworkSha256", "gameAssemblySha256", "cycleTrimSha256", "cycleTrimPresent", "spacedOut",
+             "nativePlanetAdapter", "nativeObservationAdapter", "saveSha256", "saveWriteUnixMilliseconds", "saveBytes",
              "worldId", "worldCells", "messages", "finished", "observation")
     return {"pid": state["pid"], "gameVersion": state["gameVersion"], "modSha256": state["modSha256"],
             "gameTime": state["gameTime"], "paused": state["paused"], "frameCount": state["frameCount"],
@@ -420,6 +434,7 @@ def run(args):
          for p in (args.first, args.second)), "receipt_must_be_json_outside_probe_directories")
     nonce = secrets.token_hex(16)
     expected = {"modSha256": args.mod_sha256, "gameVersion": args.game_version,
+                "frameworkSha256": args.framework_sha256,
                 "gameAssemblySha256": args.game_assembly_sha256, "cycleTrimSha256": args.cycletrim_sha256,
                 "transport": args.transport}
     participants = [Participant(args.first, "a", args.timeout), Participant(args.second, "b", args.timeout)]
@@ -436,6 +451,7 @@ def run(args):
     try:
         states = [p.read() for p in participants]
         validate_pair(states, expected)
+        expected["participantCycleTrimSha256"] = [s["multiplayer"]["cycleTrimSha256"] for s in states]
         run_nonces = [s["multiplayer"]["runNonce"] for s in states]
         for participant, state, path, digest in zip(participants, states,
                 (args.first_save, args.second_save), (args.first_save_sha256, args.second_save_sha256)):
@@ -443,7 +459,8 @@ def run(args):
             participant.nonce = nonce
             permit = disposable_save(participant.directory, path, digest)
             armed.append(participant)
-            participant.command("arm", slot=participant.slot, **expected, **permit)
+            identity = {**expected, "cycleTrimSha256": state["multiplayer"]["cycleTrimSha256"]}
+            participant.command("arm", slot=participant.slot, **identity, **permit)
         states = [p.read() for p in participants]
         validate_pair(states, expected, nonce, run_nonces)
         verified = True
@@ -515,22 +532,30 @@ def run(args):
     return receipt
 
 
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     for name in ("first", "second", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
-    for name in ("mod", "game-assembly", "cycletrim", "first-save", "second-save"):
+    for name in ("mod", "framework", "game-assembly", "first-save", "second-save"):
         parser.add_argument("--" + name + "-sha256", required=True)
+    parser.add_argument("--cycletrim-sha256", help="Optional exact loaded CycleTrim hash; omitted allows absence and records each actual identity")
     parser.add_argument("--game-version", required=True)
     parser.add_argument("--transport", choices=("steam", "tcp"), default="steam")
     parser.add_argument("--first-save", default="multiplayer-disposable/test.sav")
     parser.add_argument("--second-save", default="multiplayer-disposable/test.sav")
     parser.add_argument("--timeout", type=float, default=25)
     parser.add_argument("--settle-seconds", type=float, default=6)
+    return parser
+
+
+def main():
+    parser = build_parser()
     args = parser.parse_args()
-    for name in ("mod_sha256", "game_assembly_sha256", "cycletrim_sha256", "first_save_sha256", "second_save_sha256"):
+    for name in ("mod_sha256", "framework_sha256", "game_assembly_sha256", "first_save_sha256", "second_save_sha256"):
         if not hex_value(getattr(args, name), 64):
             parser.error("SHA-256 values must be 64 lowercase hexadecimal characters")
+    if args.cycletrim_sha256 is not None and not hex_value(args.cycletrim_sha256, 64):
+        parser.error("An expected CycleTrim SHA-256 must be 64 lowercase hexadecimal characters")
     if not math.isfinite(args.timeout) or not 10 <= args.timeout <= 30 or not math.isfinite(args.settle_seconds) or not 3 <= args.settle_seconds <= 10:
         parser.error("Use a 10-30 second timeout and a 3-10 second chat observation window")
     output = args.output.resolve()

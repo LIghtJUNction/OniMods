@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using OniOnline.Network;
+using OniOnline.Runtime;
 
 namespace OniOnline.Multiplayer
 {
@@ -32,6 +34,13 @@ namespace OniOnline.Multiplayer
         // Authorization is expressed in planet-local row-major cell indices, matching the wire model.
         // It is checked before any material or numerical property of that cell is inspected.
         internal WorldInterestFrame Capture(WorkPlanet planet, WorldInterestSubscription subscription,
+            long tick, long authRevision, Func<int, bool> authorized)
+        {
+            return NativeAdapterAvailability.Read(SessionCapabilities.NativeObservationV1,
+                () => CaptureNative(planet, subscription, tick, authRevision, authorized));
+        }
+
+        private WorldInterestFrame CaptureNative(WorkPlanet planet, WorldInterestSubscription subscription,
             long tick, long authRevision, Func<int, bool> authorized)
         {
             if (Thread.CurrentThread.ManagedThreadId != owningThread)

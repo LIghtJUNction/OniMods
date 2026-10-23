@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using OniOnline.Core;
 using OniOnline.Network;
 
 namespace OniOnline.Multiplayer
@@ -10,13 +11,16 @@ namespace OniOnline.Multiplayer
     {
         private readonly RoomSession session;
         private readonly Func<string, string> ownerOfPlanet;
+        private readonly Func<string, bool> canUsePeer;
+        private readonly Func<string, long> admissionGeneration;
+        private readonly Dictionary<string, long> grantAdmissions = new Dictionary<string, long>(StringComparer.Ordinal);
         private readonly Dictionary<string, RemoteWorkGrant> receivedGrants = new Dictionary<string, RemoteWorkGrant>();
         private readonly Dictionary<string, RemoteWorkRequest> drafts = new Dictionary<string, RemoteWorkRequest>();
         private readonly Dictionary<string, WorkTaskIntent[]> receivedPlans = new Dictionary<string, WorkTaskIntent[]>();
         private readonly Dictionary<string, PlanAssembly> assemblies = new Dictionary<string, PlanAssembly>();
         private readonly Dictionary<string, string> authorityErrors = new Dictionary<string, string>();
         private readonly Dictionary<string, System.Tuple<string, long>> authorityStatuses = new Dictionary<string, System.Tuple<string, long>>();
-        private readonly Queue<System.Tuple<string, byte[]>> outgoing = new Queue<System.Tuple<string, byte[]>>();
+        private readonly Queue<Outgoing> outgoing = new Queue<Outgoing>();
         private readonly Dictionary<string, PendingRequest> pending = new Dictionary<string, PendingRequest>();
         private readonly Dictionary<string, System.Tuple<string, RemoteWorkRequest>> autoConfirm = new Dictionary<string, System.Tuple<string, RemoteWorkRequest>>();
         private readonly Dictionary<string, string> requestDrafts = new Dictionary<string, string>();
@@ -36,15 +40,20 @@ namespace OniOnline.Multiplayer
         internal string LastError { get; private set; }
         internal string LastSubmittedRequestId { get; private set; }
         private sealed class PlanAssembly { internal string Epoch; internal long Revision; internal WorkTaskIntent[] Items; internal bool[] Seen; }
-        private sealed class PendingRequest { internal string Owner; internal RemoteWorkRequest Request; internal double RetryAt; internal double Deadline; }
+        private sealed class PendingRequest { internal string Owner; internal RemoteWorkRequest Request; internal double RetryAt; internal double Deadline; internal long LocalAdmission, OwnerAdmission; }
+        private sealed class Outgoing { internal string Target; internal byte[] Bytes; internal long LocalAdmission, TargetAdmission; }
 
         // ownerOfPlanet must resolve authenticated StarSystemCoordinator manifests, not packet claims.
-        internal RemoteWorkCoordinator(RoomSession session, IWorldWorkContext context, IWorkExecutor executor, Func<string, string> ownerOfPlanet)
+        internal RemoteWorkCoordinator(RoomSession session, IWorldWorkContext context, IWorkExecutor executor, Func<string, string> ownerOfPlanet,
+            Func<string, bool> canUsePeer = null, Func<string, long> admissionGeneration = null)
         {
             this.session = session ?? throw new ArgumentNullException("session");
             this.ownerOfPlanet = ownerOfPlanet ?? throw new ArgumentNullException("ownerOfPlanet");
+            this.canUsePeer = canUsePeer;
+            this.admissionGeneration = admissionGeneration;
             Authority = new RemoteWorkAuthority(session.LocalPlayerId, context, executor, session.NextWorkAuthorityGeneration);
             session.ApplicationMessageReceived += Receive;
+            session.Changed += RefreshAdmissions;
         }
 
         internal void Pump(double seconds)
@@ -56,12 +65,19 @@ namespace OniOnline.Multiplayer
                 clockStarted = true;
             }
             now = seconds;
-            if (disposed || !session.Joined || session.Reconnecting || session.Leaving) return;
+            RefreshAdmissions();
+            if (!Ready)
+            {
+                if (canUsePeer != null) { outgoing.Clear(); RetirePending(pending.Values.ToArray()); autoConfirm.Clear(); }
+                return;
+            }
             Authority.BindOwner(session.LocalPlayerId);
             Authority.Synchronize();
             if (advertisedGeneration != Authority.Generation) { advertisedGeneration = Authority.Generation; nextGrants = now; }
             foreach (var entry in pending.Values.ToArray())
             {
+                if (canUsePeer != null && !Connected(entry.Owner))
+                { RetirePending(new[] { entry }); continue; }
                 if (now >= entry.Deadline)
                 {
                     pending.Remove(entry.Request.RequestId); LastError = "work_response_unconfirmed";
@@ -85,17 +101,24 @@ namespace OniOnline.Multiplayer
             while (outgoing.Count > 0 && budget-- > 0)
             {
                 var item = outgoing.Dequeue();
-                if (session.IsHost) session.SendApplicationTo(item.Item1, item.Item2);
-                else session.SendApplication(item.Item2);
+                if (!Connected(item.Target) || item.LocalAdmission != AdmissionStamp(session.LocalPlayerId) || item.TargetAdmission != AdmissionStamp(item.Target)) continue;
+                if (session.IsHost) session.SendApplicationTo(item.Target, item.Bytes);
+                else session.SendApplication(item.Bytes);
             }
         }
 
         internal RemoteWorkGrant SetPermissions(string actorId, RemoteWorkPermission permissions)
         {
+            RefreshAdmissions();
+            var prior = Authority.GetGrant(actorId);
+            if (permissions != RemoteWorkPermission.None && !Connected(actorId) &&
+                (prior == null || (permissions & ~prior.Permissions) != RemoteWorkPermission.None))
+                throw new InvalidOperationException("mod_sync_not_ready");
             Authority.BindOwner(session.LocalPlayerId);
             if (!session.Players.Any(p => p.Id == actorId) && Authority.GetGrant(actorId) == null)
                 throw new InvalidOperationException("work_actor_unknown");
             RemoteWorkGrant grant = Authority.SetPermissions(actorId, permissions);
+            if (canUsePeer != null || admissionGeneration != null) grantAdmissions[actorId] = AdmissionStamp(actorId);
             Send(actorId, new RemoteWorkMessage { Kind = RemoteWorkMessageKind.Grant, Grant = grant });
             Notify(); return grant;
         }
@@ -111,7 +134,7 @@ namespace OniOnline.Multiplayer
         {
             RemoteWorkGrant grant;
             long generation;
-            if (ownerOfPlanet(planetId) != ownerId || !receivedGrants.TryGetValue(ownerId + ":" + planetId, out grant) ||
+            if (!Connected(ownerId) || ownerOfPlanet(planetId) != ownerId || !receivedGrants.TryGetValue(ownerId + ":" + planetId, out grant) ||
                 (ownerGenerations.TryGetValue(ownerId, out generation) && grant.Generation != generation)) return null;
             return RemoteWorkAuthority.CopyGrant(grant);
         }
@@ -182,13 +205,14 @@ namespace OniOnline.Multiplayer
 
         internal bool Submit(string ownerId, RemoteWorkRequest request)
         {
-            if (!session.Joined || session.Reconnecting || !Connected(ownerId) || ownerOfPlanet(request.PlanetId) != ownerId) return false;
+            if (!Ready || !Connected(ownerId) || ownerOfPlanet(request.PlanetId) != ownerId) return false;
             LastSubmittedRequestId = request.RequestId;
             if (ownerId == session.LocalPlayerId)
             { DeliverReceipt(ownerId, Authority.Handle(session.LocalPlayerId, CopyRequest(request), now)); Notify(); return true; }
             if (pending.Count >= 128 && !pending.ContainsKey(request.RequestId)) return false;
             if (!Send(ownerId, new RemoteWorkMessage { Kind = RemoteWorkMessageKind.Request, Request = CopyRequest(request) })) return false;
-            pending[request.RequestId] = new PendingRequest { Owner = ownerId, Request = CopyRequest(request), RetryAt = now + 3, Deadline = now + 90 };
+            pending[request.RequestId] = new PendingRequest { Owner = ownerId, Request = CopyRequest(request), RetryAt = now + 3, Deadline = now + 90,
+                LocalAdmission = AdmissionStamp(session.LocalPlayerId), OwnerAdmission = AdmissionStamp(ownerId) };
             return true;
         }
 
@@ -230,6 +254,7 @@ namespace OniOnline.Multiplayer
 
         private bool BindGrant(string ownerId, RemoteWorkRequest request)
         {
+            if (!Connected(ownerId)) return false;
             Authority.BindOwner(session.LocalPlayerId);
             if (ownerId == session.LocalPlayerId)
             {
@@ -243,7 +268,8 @@ namespace OniOnline.Multiplayer
 
         private void Receive(string sender, byte[] data)
         {
-            if (disposed || !RemoteWorkWire.IsMessage(data) || !Connected(sender)) return;
+            RefreshAdmissions();
+            if (!Ready || !RemoteWorkWire.IsMessage(data) || !Connected(sender)) return;
             Authority.BindOwner(session.LocalPlayerId);
             RemoteWorkMessage message;
             try { message = RemoteWorkWire.Decode(data); }
@@ -405,9 +431,41 @@ namespace OniOnline.Multiplayer
         {
             if (outgoing.Count >= 1024 || !Connected(target)) { LastError = "work_send_queue_full"; return false; }
             message.TargetId = target;
-            outgoing.Enqueue(Tuple.Create(target, RemoteWorkWire.Encode(message))); return true;
+            outgoing.Enqueue(new Outgoing { Target = target, Bytes = RemoteWorkWire.Encode(message),
+                LocalAdmission = AdmissionStamp(session.LocalPlayerId), TargetAdmission = AdmissionStamp(target) }); return true;
         }
-        private bool Connected(string id) { return session.Players.Any(p => p.Id == id && p.Connected); }
+        private bool Ready { get { return !disposed && session.Joined && !session.Closed && !session.Reconnecting && !session.Leaving &&
+            Allowed(session.LocalPlayerId) && (session.IsHost || Allowed(session.Players.FirstOrDefault()?.Id)); } }
+        private bool Connected(string id) { return Ready && Allowed(id) && session.Players.Any(p => p.Id == id && p.Connected); }
+        private bool Allowed(string peer)
+        {
+            if (!PeerAdmission.Allows(canUsePeer, peer)) return false;
+            try { return admissionGeneration == null || admissionGeneration(peer) > 0; }
+            catch (Exception) { return false; }
+        }
+        private long AdmissionStamp(string peer)
+        {
+            if (!Connected(peer)) return 0;
+            try
+            {
+                long value = admissionGeneration == null ? session.ConnectionGenerationFor(peer) : admissionGeneration(peer);
+                return admissionGeneration == null && value == 0 ? 1 : Math.Max(0, value);
+            }
+            catch (Exception) { return 0; }
+        }
+        private void RefreshAdmissions()
+        {
+            if (disposed || canUsePeer == null && admissionGeneration == null) return;
+            foreach (string actor in Authority.GrantActors)
+            {
+                long current = AdmissionStamp(actor), previous;
+                if (grantAdmissions.TryGetValue(actor, out previous) && previous != current)
+                { Authority.RetireGrantToken(actor); nextGrants = 0; }
+                grantAdmissions[actor] = current;
+            }
+            foreach (var entry in pending.Values.Where(p => AdmissionStamp(p.Owner) != p.OwnerAdmission ||
+                AdmissionStamp(session.LocalPlayerId) != p.LocalAdmission).ToArray()) RetirePending(new[] { entry });
+        }
         private static string PlanKey(string owner, string planet, bool merged, string actor)
         { return owner + ":" + planet + ":" + merged + ":" + (merged ? "" : actor); }
         private void DeliverReceipt(string sender, RemoteWorkReceipt receipt)
@@ -433,6 +491,6 @@ namespace OniOnline.Multiplayer
         { return new RemoteWorkRequest { RequestId = r.RequestId, PlanetId = r.PlanetId, AuthorityEpoch = r.AuthorityEpoch, GrantToken = r.GrantToken,
             Kind = r.Kind, Layer = r.Layer, Build = r.Build == null ? null : r.Build.Copy(), DryRun = r.DryRun, PreviewToken = r.PreviewToken, Priority = r.Priority,
             Cells = r.Cells == null ? null : (WorkCell[])r.Cells.Clone(), CancelTargetRequestId = r.CancelTargetRequestId, CancelTargetRevision = r.CancelTargetRevision }; }
-        public void Dispose() { disposed = true; session.ApplicationMessageReceived -= Receive; outgoing.Clear(); pending.Clear(); autoConfirm.Clear(); receivedGrants.Clear(); receivedPlans.Clear(); assemblies.Clear(); authorityErrors.Clear(); authorityStatuses.Clear(); ownerGenerations.Clear(); ownerScopes.Clear(); invalidatedScopes.Clear(); drafts.Clear(); requestDrafts.Clear(); submissions.Clear(); }
+        public void Dispose() { disposed = true; session.ApplicationMessageReceived -= Receive; session.Changed -= RefreshAdmissions; outgoing.Clear(); pending.Clear(); autoConfirm.Clear(); receivedGrants.Clear(); receivedPlans.Clear(); assemblies.Clear(); authorityErrors.Clear(); authorityStatuses.Clear(); ownerGenerations.Clear(); ownerScopes.Clear(); invalidatedScopes.Clear(); grantAdmissions.Clear(); drafts.Clear(); requestDrafts.Clear(); submissions.Clear(); }
     }
 }

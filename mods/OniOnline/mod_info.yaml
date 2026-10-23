@@ -1,6 +1,5 @@
 supportedContent: ALL
-requiredDlcIds:
-  - EXPANSION1_ID
+requiredDlcIds: []
 minimumSupportedBuild: 744825
 APIVersion: 2
-version: "0.3.5"
+version: "0.4.0"

@@ -1,5 +1,6 @@
 // Explicit test-build extensions. These never compile into the ordinary Mod.
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Globalization;
@@ -307,59 +308,309 @@ namespace OniOnline
             if (File.Exists(path)) File.Replace(path + ".tmp", path, null); else File.Move(path + ".tmp", path);
         }
 
+        private sealed class NativeBrowserUiReceipt
+        {
+            public string phase, failure, windowType;
+            public bool passed, actualMainMenuHandler, nativeModal, originalControllerRemoved, nativeList,
+                noSessionCreated, noLegacyWindow, closedByNativeButton;
+            public int openedFrame, settledFrame, remainingWindows;
+            public string scope = "One real graphical main menu; programmatic native KButton handlers after topmost-raycast checks. Browser opening/closing only, no remote discovery/join or visual-style acceptance.";
+        }
+
+        private NativeBrowserUiReceipt nativeBrowserUi;
+        private int nativeBrowserCloseFrame;
+
+        private void OpenNativeBrowserUi(OnlineRuntime runtime)
+        {
+            if (nativeBrowserUi != null || MainMenu.Instance == null || !MainMenu.Instance.IsActive() ||
+                Game.Instance != null || runtime.Session != null || Application.isBatchMode ||
+                SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null || !KInputManager.isFocused)
+                throw new InvalidOperationException("Native browser acceptance requires a fresh focused graphical main menu without a room or colony.");
+            var button = MainMenu.Instance.GetComponentsInChildren<KButton>(true)
+                .Single(candidate => candidate.name == "OniOnlineBrowseLobbies" && candidate.gameObject.activeInHierarchy);
+            ClickNativeChatControl(button);
+            var browser = UnityEngine.Object.FindObjectsByType<NativeSystemBrowser>(FindObjectsSortMode.None)
+                .Single(candidate => candidate.IsOpen && candidate.gameObject.activeInHierarchy);
+            nativeBrowserUi = new NativeBrowserUiReceipt {
+                phase = "opened", windowType = browser.GetType().FullName, openedFrame = Time.frameCount,
+                actualMainMenuHandler = true, nativeModal = browser.GetType().BaseType == typeof(KModalScreen) && browser.IsModal() && browser.ConsumeMouseScroll,
+                originalControllerRemoved = browser.GetComponent<ModsScreen>() == null,
+                nativeList = browser.GetComponentsInChildren<ScrollRect>(true).Any(control => control.verticalScrollbar != null),
+                noSessionCreated = runtime.Session == null, noLegacyWindow = !NativeChatLobbyVisible()
+            };
+            WriteNativePreflightJson("browser-ui-receipt.json", nativeBrowserUi);
+            if (!nativeBrowserUi.nativeModal || !nativeBrowserUi.originalControllerRemoved || !nativeBrowserUi.nativeList ||
+                !nativeBrowserUi.noSessionCreated || !nativeBrowserUi.noLegacyWindow)
+                throw new InvalidOperationException("The actual main-menu entry did not open the native browse-only system list.");
+        }
+
+        private void CloseNativeBrowserUi(OnlineRuntime runtime)
+        {
+            if (nativeBrowserUi == null || nativeBrowserUi.phase != "opened" || runtime.Session != null)
+                throw new InvalidOperationException("Open the native browse-only page first.");
+            var browser = UnityEngine.Object.FindObjectsByType<NativeSystemBrowser>(FindObjectsSortMode.None)
+                .Single(candidate => candidate.IsOpen && candidate.gameObject.activeInHierarchy);
+            var close = browser.transform.Find("Panel/DetailsView/CloseButton").GetComponent<KButton>();
+            ClickNativeChatControl(close);
+            nativeBrowserUi.closedByNativeButton = !browser.IsOpen;
+            nativeBrowserUi.phase = "waiting_close";
+            nativeBrowserCloseFrame = Time.frameCount + 4;
+            WriteNativePreflightJson("browser-ui-receipt.json", nativeBrowserUi);
+        }
+
+        private void AdvanceNativeBrowserUi(OnlineRuntime runtime)
+        {
+            if (nativeBrowserUi == null || nativeBrowserUi.phase != "waiting_close" || Time.frameCount < nativeBrowserCloseFrame) return;
+            nativeBrowserUi.remainingWindows = UnityEngine.Object.FindObjectsByType<NativeSystemBrowser>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
+            nativeBrowserUi.settledFrame = Time.frameCount;
+            nativeBrowserUi.passed = nativeBrowserUi.closedByNativeButton && nativeBrowserUi.remainingWindows == 0 &&
+                runtime.Session == null && MainMenu.Instance != null && MainMenu.Instance.IsActive();
+            nativeBrowserUi.phase = nativeBrowserUi.passed ? "complete" : "failed";
+            if (!nativeBrowserUi.passed) nativeBrowserUi.failure = "Browser close leaked a window, created a session or lost the native main menu.";
+            WriteNativePreflightJson("browser-ui-receipt.json", nativeBrowserUi);
+            if (!nativeBrowserUi.passed) throw new InvalidOperationException(nativeBrowserUi.failure);
+        }
+
+        private sealed class NativeChatEntryObservation
+        {
+            public string stage;
+            public int frame, entries, activeEntries, visibleEntries, chatWindows, visibleChatWindows;
+            public bool gameplayReady, nativeParent, nativeSize, nativeIcon, interactable, passed;
+        }
+
         private sealed class NativeChatUiReceipt
         {
             public string phase, failure;
-            public bool passed, anchorPreserved, latestVisible, notForcedToBottom, controlsInsidePanel, richTextDisabled, paused, gameTimeUnchanged;
-            public int initialMessages, finalMessages, connectedPlayers, anchorInstanceId, framesSettled, renderedBodies;
+            public bool passed, anchorPreserved, latestVisible, latestDismissed, notForcedToBottom,
+                controlsInsidePanel, richTextDisabled, rawTextPreserved, nativeLabelsCorrect, paused, gameTimeUnchanged,
+                entryOpenedChat, entryClosedChat, draftPreserved, hudSurvivedClose, nativeFrameControllerRemoved,
+                attachedToNativeCanvas, nonModal, outsidePanelRaycastClear, noLobbyWindow, endEditDidNotSend,
+                appendThroughHostSession;
+            public int initialMessages, finalMessages, connectedPlayers, anchorInstanceId, framesSettled, renderedBodies,
+                buttonSends, submitSends, nativeFrameSpritesRetained, reopenedFramesSettled, remainingWindowsAfterClose;
             public long anchorSequence, initialLastSequence, appendedSequence;
             public string anchorText;
             public float anchorViewportY, observedViewportY, anchorError, anchorWorldX, anchorWorldY,
                 observedWorldX, observedWorldY, initialBottomDistance, readingBottomDistance, latestBottomDistance;
             public double gameTime;
-            public string scope = "Real Steam host RoomSession messages, Unity ScrollRect scroll handler, retained native layout and Button pointer-click handler. No physical mouse or complete native guest acceptance.";
+            public NativeChatEntryObservation[] entryObservations;
+            public float[] outsideRaycastScreenPosition;
+            public string scope = "One graphical Steam host with actual RoomSession history. Programmatic native KToggle/KButton pointer-click handlers after topmost-raycast checks, plus TMP onSubmit/onEndEdit events. Anchor append uses host RoomSession.SendChat without the composer. No physical pointer, IME, visual-style, remote-sender or native guest acceptance.";
         }
 
+        private readonly List<NativeChatEntryObservation> nativeChatEntryObservations = new List<NativeChatEntryObservation>();
         private NativeChatUiReceipt nativeChatUi;
-        private int chatUiAfterFrame;
+        private int chatUiAfterFrame, nativeChatButtonSends, nativeChatSubmitSends;
         private float chatUiDeadline;
         private RectTransform chatUiAnchor;
+        private Canvas chatUiNativeCanvas;
+        private ManagementMenu chatUiNativeMenu;
+        private double nativeChatOpenGameTime;
+        private bool nativeChatEntryOpened, nativeChatEndEditDidNotSend = true;
+        private const string NativeChatDraft = "[native-chat-draft] <b>中文</b> /:*?";
 
         private static void RequireNativeChatUi(OnlineRuntime runtime)
         {
-            if (Game.Instance == null || !Game.Instance.baseAlreadyCreated || Game.Instance.IsLoading() ||
-                SpeedControlScreen.Instance == null || !SpeedControlScreen.Instance.IsPaused ||
+            if (!NativeGameplayUi.Ready || SpeedControlScreen.Instance == null || !SpeedControlScreen.Instance.IsPaused ||
                 Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null ||
-                runtime.Session == null || !runtime.Session.Joined || runtime.Session.Players.Length != 4 ||
-                runtime.Session.Players.Any(player => !player.Connected))
-                throw new InvalidOperationException("Chat UI acceptance requires a paused graphical test colony and four connected real RoomSession players.");
+                runtime.Session == null || !runtime.Session.Joined || !runtime.Session.IsHost || runtime.Session.Players.Length != 1 ||
+                runtime.Session.Players.Any(player => !player.Connected) || !KInputManager.isFocused ||
+                UnityEngine.EventSystems.EventSystem.current == null || !UnityEngine.EventSystems.EventSystem.current.enabled)
+                throw new InvalidOperationException("Chat UI acceptance requires this paused, focused graphical host and one real local host player, without protocol peers.");
             if (UnityEngine.Object.FindObjectsByType<ConfirmDialogScreen>(FindObjectsSortMode.None)
-                .Any(dialog => dialog != null && dialog.gameObject.activeInHierarchy))
-                throw new InvalidOperationException("A native confirmation dialog blocks chat UI acceptance; no modal was dismissed.");
+                    .Any(dialog => dialog.gameObject.activeInHierarchy) ||
+                UnityEngine.Object.FindObjectsByType<PauseScreen>(FindObjectsSortMode.None)
+                    .Any(screen => screen.gameObject.activeInHierarchy))
+                throw new InvalidOperationException("A native confirmation or pause menu blocks chat UI acceptance; no modal was dismissed.");
+        }
+
+        private static KToggle[] NativeChatEntries()
+        {
+            return UnityEngine.Object.FindObjectsByType<KToggle>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .Where(toggle => toggle.name == "OniOnlineCommunications").ToArray();
+        }
+
+        private static int VisibleNativeChatWindows()
+        {
+            return UnityEngine.Object.FindObjectsByType<OnlineChatWindow>(FindObjectsSortMode.None)
+                .Count(window => window.gameObject.activeInHierarchy && window.IsScreenActive());
+        }
+
+        private static int NativeChatWindowCount()
+        {
+            return UnityEngine.Object.FindObjectsByType<OnlineChatWindow>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
+        }
+
+        private static bool NativeChatLobbyVisible()
+        {
+            return UnityEngine.Object.FindObjectsByType<OnlineWindow>(FindObjectsSortMode.None)
+                .Any(window => window.gameObject.activeInHierarchy && window.IsScreenActive());
+        }
+
+        private void ObserveNativeChatEntry(OnlineRuntime runtime, string expectedStage)
+        {
+            bool characters = UnityEngine.Object.FindObjectsByType<MinionSelectScreen>(FindObjectsSortMode.None)
+                .Any(screen => screen.IsScreenActive());
+            bool destination = UnityEngine.Object.FindObjectsByType<ColonyDestinationSelectScreen>(FindObjectsSortMode.None)
+                .Any(screen => screen.IsScreenActive());
+            bool ready = NativeGameplayUi.Ready;
+            string stage = characters ? "characters" : destination ? "destination" : ready ? "gameplay" :
+                MainMenu.Instance != null && MainMenu.Instance.IsActive() ? "main_menu" : "loading_or_frontend";
+            var entries = NativeChatEntries();
+            var source = ManagementMenu.Instance == null ? null : ManagementMenu.Instance.PauseMenuButton;
+            var entry = entries.Length == 1 ? entries[0] : null;
+            var sourceRect = source == null ? null : source.transform as RectTransform;
+            var entryRect = entry == null ? null : entry.transform as RectTransform;
+            var observation = new NativeChatEntryObservation {
+                stage = stage, frame = Time.frameCount, gameplayReady = ready, entries = entries.Length,
+                activeEntries = entries.Count(toggle => toggle.gameObject.activeSelf),
+                visibleEntries = entries.Count(toggle => toggle.gameObject.activeInHierarchy),
+                chatWindows = NativeChatWindowCount(), visibleChatWindows = VisibleNativeChatWindows(),
+                nativeParent = entry != null && source != null && entry.transform.parent == source.transform.parent,
+                nativeSize = sourceRect != null && entryRect != null && entryRect.rect.width > 0 && entryRect.rect.height > 0 &&
+                    Mathf.Abs(sourceRect.rect.width - entryRect.rect.width) <= 1 && Mathf.Abs(sourceRect.rect.height - entryRect.rect.height) <= 1,
+                nativeIcon = entry != null && entry.fgImage != null && entry.fgImage.sprite == Assets.GetSprite("bubble_conversation"),
+                interactable = entry != null && entry.IsInteractable()
+            };
+            observation.passed = stage == expectedStage && (stage == "gameplay" ? ready && entries.Length == 1 &&
+                observation.activeEntries == 1 && observation.visibleEntries == 1 && observation.nativeParent &&
+                observation.nativeSize && observation.nativeIcon && observation.interactable : !ready &&
+                observation.activeEntries == 0 && observation.visibleEntries == 0 && observation.chatWindows == 0 && !runtime.ChatOpen);
+            nativeChatEntryObservations.Add(observation);
+            WriteNativePreflightJson("chat-entry-receipt.json", new { passed = observation.passed, observation,
+                observations = nativeChatEntryObservations.ToArray(),
+                scope = "Actual scene KToggle and OnlineChatWindow state, including inactive scene objects. No synthetic visibility or frontend chat opening." });
+            if (!observation.passed) throw new InvalidOperationException("Native chat entry observation failed for " + expectedStage + "; actual stage is " + stage + ".");
+        }
+
+        private static KToggle NativeChatEntryToggle()
+        {
+            var entries = NativeChatEntries();
+            if (entries.Length != 1 || !entries[0].gameObject.activeInHierarchy || !entries[0].IsInteractable())
+                throw new InvalidOperationException("Exactly one visible, interactable native management-toolbar chat entry is required.");
+            return entries[0];
+        }
+
+        private void OpenNativeChatUiWindow(OnlineRuntime runtime)
+        {
+            if (!testColony) throw new InvalidOperationException("Chat UI acceptance requires this probe's generated disposable colony.");
+            RequireNativeChatUi(runtime);
+            if (runtime.ChatOpen || NativeChatWindowCount() != 0 || NativeChatLobbyVisible())
+                throw new InvalidOperationException("Close existing chat/lobby windows before testing the one-click native toolbar entry.");
+            ObserveNativeChatEntry(runtime, "gameplay");
+            chatUiNativeMenu = ManagementMenu.Instance;
+            chatUiNativeCanvas = chatUiNativeMenu.GetComponentInParent<Canvas>().rootCanvas;
+            nativeChatOpenGameTime = GameClock.Instance.GetTime();
+            var entry = NativeChatEntryToggle();
+            ClickNativeChatControl(entry);
+            nativeChatEntryOpened = runtime.ChatOpen && VisibleNativeChatWindows() == 1 && !NativeChatLobbyVisible() &&
+                SpeedControlScreen.Instance.IsPaused && Math.Abs(GameClock.Instance.GetTime() - nativeChatOpenGameTime) < .000001;
+            WriteNativePreflightJson("chat-open-receipt.json", new { passed = nativeChatEntryOpened,
+                entry = entry.name, route = "native KToggle pointerClickHandler", windowType = NativeChatWindow().GetType().FullName,
+                oldLobbyVisible = NativeChatLobbyVisible(), frame = Time.frameCount });
+            if (!nativeChatEntryOpened) throw new InvalidOperationException("One native toolbar click did not open exactly the native chat window.");
+        }
+
+        private void SendNativeChatUiMessage(OnlineRuntime runtime, string text, bool submit)
+        {
+            RequireNativeChatUi(runtime);
+            if (!nativeChatEntryOpened || NativeChatLobbyVisible()) throw new InvalidOperationException("Open chat through its native toolbar entry first.");
+            var window = NativeChatWindow();
+            var input = NativeChatInput(window);
+            var send = NativeChatSendButton(window);
+            int before = runtime.Session.Chat.Length;
+            input.text = text;
+            if (input.text != text) throw new InvalidOperationException("Native chat input filtered literal message text.");
+            input.onEndEdit.Invoke(input.text);
+            nativeChatEndEditDidNotSend &= runtime.Session.Chat.Length == before;
+            if (!nativeChatEndEditDidNotSend) throw new InvalidOperationException("Losing input focus unexpectedly sent a chat message.");
+            if (submit) input.onSubmit.Invoke(input.text);
+            else ClickNativeChatControl(send);
+            bool passed = runtime.Session.Chat.Length == before + 1 && runtime.Session.Chat.Last().Text == text && input.text == "";
+            if (passed) { if (submit) nativeChatSubmitSends++; else nativeChatButtonSends++; }
+            WriteNativePreflightJson("chat-send-receipt.json", new { passed, text, before, after = runtime.Session.Chat.Length,
+                route = submit ? "native TMP_InputField.onSubmit" : "native KButton pointerClickHandler",
+                endEditDidNotSend = nativeChatEndEditDidNotSend, inputCleared = input.text == "", frame = Time.frameCount });
+            if (!passed) throw new InvalidOperationException("Native chat send handler did not publish exactly one literal message and clear the input.");
+        }
+
+        private void AppendNativeChatUiMessage(OnlineRuntime runtime, string text)
+        {
+            RequireNativeChatUi(runtime);
+            if (nativeChatUi == null || nativeChatUi.phase != "anchored_waiting_message")
+                throw new InvalidOperationException("Establish the actual reading anchor before appending a non-composer message.");
+            if (!runtime.Session.SendChat(text)) throw new InvalidOperationException("The real host RoomSession rejected the non-composer append.");
+            nativeChatUi.appendThroughHostSession = true;
+            WriteNativeChatUi();
         }
 
         private void OpenNativeChatUi(OnlineRuntime runtime)
         {
-            if (!testColony) throw new InvalidOperationException("Chat UI acceptance requires this probe's generated disposable colony.");
             RequireNativeChatUi(runtime);
+            if (!testColony || !nativeChatEntryOpened || nativeChatButtonSends == 0 || nativeChatSubmitSends == 0)
+                throw new InvalidOperationException("Use this disposable colony's native toolbar, send button and submit event before the reading-anchor fixture.");
+            foreach (string stage in new[] { "main_menu", "destination", "characters", "gameplay" })
+                if (!nativeChatEntryObservations.Any(observation => observation.stage == stage && observation.passed))
+                    throw new InvalidOperationException("Missing native chat entry observation: " + stage);
             if (nativeChatUi != null) throw new InvalidOperationException("Chat UI acceptance already started; a failed run cannot be reused as a pass.");
-            runtime.ShowWindow();
-            nativeChatUi = new NativeChatUiReceipt { phase = "waiting_initial_layout", gameTime = GameClock.Instance.GetTime(),
-                initialMessages = runtime.Session.Chat.Length, initialLastSequence = runtime.Session.Chat.Last().Sequence };
+            NativeChatWindow();
+            nativeChatUi = new NativeChatUiReceipt { phase = "waiting_initial_layout", gameTime = nativeChatOpenGameTime,
+                initialMessages = runtime.Session.Chat.Length, initialLastSequence = runtime.Session.Chat.Last().Sequence,
+                entryOpenedChat = nativeChatEntryOpened, buttonSends = nativeChatButtonSends, submitSends = nativeChatSubmitSends,
+                endEditDidNotSend = nativeChatEndEditDidNotSend, entryObservations = nativeChatEntryObservations.ToArray() };
             chatUiAfterFrame = Time.frameCount + 4;
             chatUiDeadline = Time.realtimeSinceStartup + 40;
             WriteNativeChatUi();
         }
 
-        private static OnlineWindow NativeChatWindow()
+        private static OnlineChatWindow NativeChatWindow()
         {
-            var window = UnityEngine.Object.FindFirstObjectByType<OnlineWindow>();
-            if (window == null || !window.gameObject.activeInHierarchy)
-                throw new InvalidOperationException("The real chat window is not visible.");
-            return window;
+            var windows = UnityEngine.Object.FindObjectsByType<OnlineChatWindow>(FindObjectsSortMode.None)
+                .Where(window => window.gameObject.activeInHierarchy && window.IsScreenActive()).ToArray();
+            if (windows.Length != 1 || NativeChatLobbyVisible())
+                throw new InvalidOperationException("Exactly one native OnlineChatWindow must be visible, with no legacy lobby window overlay.");
+            return windows[0];
         }
 
-        private static ScrollRect NativeChatScroll(OnlineWindow window)
+        private static KInputTextField NativeChatInput(OnlineChatWindow window)
+        {
+            return (KInputTextField)AccessTools.Field(typeof(OnlineChatWindow), "message").GetValue(window);
+        }
+
+        private static KButton NativeChatSendButton(OnlineChatWindow window)
+        {
+            var button = (KButton)AccessTools.Field(typeof(OnlineChatWindow), "send").GetValue(window);
+            if (button == null || !button.gameObject.activeInHierarchy || !button.isInteractable)
+                throw new InvalidOperationException("The actual native chat send button is unavailable.");
+            return button;
+        }
+
+        private static KButton NativeChatLatestButton(OnlineChatWindow window)
+        {
+            return window.GetComponentsInChildren<KButton>(true).Single(button => button.name == "ChatLatestMessages");
+        }
+
+        private static Transform NativeChatClonedElement(OnlineChatWindow window, Transform source)
+        {
+            var path = new List<string>();
+            var prefab = ScreenPrefabs.Instance.MessageDialogFrame.transform;
+            for (var item = source; item != prefab; item = item.parent)
+            {
+                if (item == null) throw new InvalidOperationException("The native frame element is outside its template.");
+                path.Insert(0, item.name);
+            }
+            return path.Count == 0 ? window.transform : window.transform.Find(string.Join("/", path));
+        }
+
+        private static KButton NativeChatCloseButton(OnlineChatWindow window)
+        {
+            var source = (KButton)AccessTools.Field(typeof(MessageDialogFrame), "closeButton")
+                .GetValue(ScreenPrefabs.Instance.MessageDialogFrame);
+            var clone = NativeChatClonedElement(window, source.transform);
+            return clone == null ? null : clone.GetComponent<KButton>();
+        }
+
+        private static ScrollRect NativeChatScroll(OnlineChatWindow window)
         {
             return window.GetComponentsInChildren<ScrollRect>(true).Single(scroll => scroll.name == "ChatTranscript");
         }
@@ -374,11 +625,35 @@ namespace OniOnline
             return scroll.viewport.InverseTransformPoint(row.TransformPoint(new Vector3(0, row.rect.yMax, 0))).y;
         }
 
+        private static Camera NativeChatCamera(RectTransform rect)
+        {
+            var canvas = rect.GetComponentInParent<Canvas>().rootCanvas;
+            return canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+        }
+
         private static PointerEventData NativeChatPointer(RectTransform rect)
         {
             return new PointerEventData(UnityEngine.EventSystems.EventSystem.current) {
-                button = PointerEventData.InputButton.Left,
-                position = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center)) };
+                button = PointerEventData.InputButton.Left, clickCount = 1,
+                position = RectTransformUtility.WorldToScreenPoint(NativeChatCamera(rect), rect.TransformPoint(rect.rect.center)) };
+        }
+
+        private static void RequireNativeChatRaycast<T>(GameObject expected, PointerEventData pointer) where T : IEventSystemHandler
+        {
+            var hits = new List<RaycastResult>();
+            UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointer, hits);
+            var hit = hits.FirstOrDefault();
+            var target = hit.gameObject == null ? null : ExecuteEvents.GetEventHandler<T>(hit.gameObject);
+            if (target != expected)
+                throw new InvalidOperationException("The native chat control is not the top raycast target: " + expected.name);
+            pointer.pointerCurrentRaycast = pointer.pointerPressRaycast = hit;
+        }
+
+        private static void ClickNativeChatControl(Component control)
+        {
+            var pointer = NativeChatPointer((RectTransform)control.transform);
+            RequireNativeChatRaycast<IPointerClickHandler>(control.gameObject, pointer);
+            ExecuteEvents.Execute(control.gameObject, pointer, ExecuteEvents.pointerClickHandler);
         }
 
         private void FollowNativeChatUi(OnlineRuntime runtime)
@@ -386,11 +661,26 @@ namespace OniOnline
             RequireNativeChatUi(runtime);
             if (nativeChatUi == null || nativeChatUi.phase != "anchor_preserved")
                 throw new InvalidOperationException("Verify the retained reading anchor before clicking latest messages.");
-            var latest = NativeChatWindow().GetComponentsInChildren<Button>(true).Single(button => button.name == "ChatLatestMessages");
-            if (!latest.gameObject.activeInHierarchy || !latest.IsInteractable())
+            var latest = NativeChatLatestButton(NativeChatWindow());
+            if (!latest.gameObject.activeInHierarchy || !latest.isInteractable)
                 throw new InvalidOperationException("The real latest-messages button is not visible and interactable.");
-            ExecuteEvents.Execute(latest.gameObject, NativeChatPointer((RectTransform)latest.transform), ExecuteEvents.pointerClickHandler);
+            ClickNativeChatControl(latest);
             nativeChatUi.phase = "waiting_latest_layout";
+            chatUiAfterFrame = Time.frameCount + 4;
+            chatUiDeadline = Time.realtimeSinceStartup + 20;
+            WriteNativeChatUi();
+        }
+
+        private void CloseNativeChatUi(OnlineRuntime runtime)
+        {
+            RequireNativeChatUi(runtime);
+            if (nativeChatUi == null || nativeChatUi.phase != "latest_verified")
+                throw new InvalidOperationException("Verify latest-message layout before the native toolbar close/reopen fixture.");
+            NativeChatInput(NativeChatWindow()).text = NativeChatDraft;
+            var entry = NativeChatEntryToggle();
+            ClickNativeChatControl(entry);
+            nativeChatUi.entryClosedChat = !runtime.ChatOpen && VisibleNativeChatWindows() == 0;
+            nativeChatUi.phase = "waiting_toolbar_close";
             chatUiAfterFrame = Time.frameCount + 4;
             chatUiDeadline = Time.realtimeSinceStartup + 20;
             WriteNativeChatUi();
@@ -398,13 +688,49 @@ namespace OniOnline
 
         private void AdvanceNativeChatUi(OnlineRuntime runtime)
         {
+            AdvanceNativeBrowserUi(runtime);
             if (nativeChatUi == null || nativeChatUi.phase == "complete" || nativeChatUi.phase == "failed" ||
-                nativeChatUi.phase == "anchor_preserved") return;
+                nativeChatUi.phase == "anchor_preserved" || nativeChatUi.phase == "latest_verified") return;
             try
             {
                 RequireNativeChatUi(runtime);
                 if (Time.realtimeSinceStartup > chatUiDeadline) throw new InvalidOperationException("Chat UI layout/message phase timed out: " + nativeChatUi.phase);
                 if (Time.frameCount < chatUiAfterFrame) return;
+                if (nativeChatUi.phase == "waiting_toolbar_close")
+                {
+                    nativeChatUi.hudSurvivedClose = chatUiNativeMenu != null && ManagementMenu.Instance == chatUiNativeMenu &&
+                        chatUiNativeCanvas != null && chatUiNativeCanvas.gameObject.activeInHierarchy;
+                    if (!nativeChatUi.entryClosedChat || runtime.ChatOpen || NativeChatWindowCount() != 0 || !nativeChatUi.hudSurvivedClose)
+                        throw new InvalidOperationException("Native toolbar close left a chat window or destroyed the game HUD.");
+                    var entry = NativeChatEntryToggle();
+                    ClickNativeChatControl(entry);
+                    nativeChatUi.phase = "waiting_reopened_layout"; chatUiAfterFrame = Time.frameCount + 4;
+                    WriteNativeChatUi(); return;
+                }
+                if (nativeChatUi.phase == "waiting_reopened_layout")
+                {
+                    var input = NativeChatInput(NativeChatWindow());
+                    nativeChatUi.draftPreserved = runtime.ChatOpen && NativeChatWindowCount() == 1 && input.text == NativeChatDraft &&
+                        !input.richText && input.textComponent != null && !input.textComponent.richText &&
+                        runtime.Session.Chat.Length == nativeChatUi.finalMessages;
+                    nativeChatUi.reopenedFramesSettled = 4;
+                    if (!nativeChatUi.draftPreserved)
+                        throw new InvalidOperationException("Native chat reopen lost or submitted the literal same-room draft after layout and focus settled.");
+                    ClickNativeChatControl(NativeChatEntryToggle());
+                    if (runtime.ChatOpen) throw new InvalidOperationException("A single native toolbar click did not close the reopened chat.");
+                    nativeChatUi.phase = "waiting_final_close"; chatUiAfterFrame = Time.frameCount + 4;
+                    WriteNativeChatUi(); return;
+                }
+                if (nativeChatUi.phase == "waiting_final_close")
+                {
+                    nativeChatUi.gameTimeUnchanged &= Math.Abs(GameClock.Instance.GetTime() - nativeChatUi.gameTime) < .000001;
+                    nativeChatUi.remainingWindowsAfterClose = NativeChatWindowCount();
+                    nativeChatUi.passed = !runtime.ChatOpen && nativeChatUi.remainingWindowsAfterClose == 0 && !NativeChatLobbyVisible() &&
+                        nativeChatUi.entryOpenedChat && nativeChatUi.entryClosedChat && nativeChatUi.draftPreserved &&
+                        nativeChatUi.hudSurvivedClose && nativeChatUi.gameTimeUnchanged;
+                    if (!nativeChatUi.passed) throw new InvalidOperationException("Final native chat close left an orphan window or changed paused game time.");
+                    nativeChatUi.phase = "complete"; WriteNativeChatUi(); return;
+                }
                 var window = NativeChatWindow();
                 var scroll = NativeChatScroll(window);
                 Canvas.ForceUpdateCanvases();
@@ -414,6 +740,7 @@ namespace OniOnline
                     if (scroll.content.rect.height - scroll.viewport.rect.height < 300 || nativeChatUi.initialBottomDistance > 12)
                         throw new InvalidOperationException("Real long-message log must overflow by at least 300 logical pixels and initially follow latest.");
                     var pointer = NativeChatPointer(scroll.viewport); pointer.scrollDelta = new Vector2(0, 8);
+                    RequireNativeChatRaycast<IScrollHandler>(scroll.gameObject, pointer);
                     ExecuteEvents.Execute(scroll.gameObject, pointer, ExecuteEvents.scrollHandler);
                     scroll.StopMovement();
                     nativeChatUi.phase = "waiting_scroll_layout"; chatUiAfterFrame = Time.frameCount + 4;
@@ -459,37 +786,16 @@ namespace OniOnline
                     nativeChatUi.anchorError = Mathf.Abs(nativeChatUi.anchorViewportY - nativeChatUi.observedViewportY);
                     nativeChatUi.anchorPreserved = nativeChatUi.anchorError <= 2;
                     nativeChatUi.notForcedToBottom = NativeChatBottomDistance(scroll) > 12;
-                    var latest = window.GetComponentsInChildren<Button>(true).Single(button => button.name == "ChatLatestMessages");
-                    nativeChatUi.latestVisible = latest.gameObject.activeInHierarchy && latest.IsInteractable();
-                    if (!nativeChatUi.anchorPreserved || !nativeChatUi.notForcedToBottom || !nativeChatUi.latestVisible)
-                        throw new InvalidOperationException("Actual appended chat layout lost the reading anchor or unread/latest indicator.");
+                    var latest = NativeChatLatestButton(window);
+                    nativeChatUi.latestVisible = latest.gameObject.activeInHierarchy && latest.isInteractable;
+                    if (!nativeChatUi.anchorPreserved || !nativeChatUi.notForcedToBottom || !nativeChatUi.latestVisible || !nativeChatUi.appendThroughHostSession)
+                        throw new InvalidOperationException("Actual non-composer appended chat layout lost the reading anchor or latest indicator.");
                     nativeChatUi.phase = "anchor_preserved";
                 }
                 else if (nativeChatUi.phase == "waiting_latest_layout")
                 {
-                    nativeChatUi.latestBottomDistance = NativeChatBottomDistance(scroll);
-                    var input = window.GetComponentsInChildren<TMP_InputField>(true).Single(field => field.name == "ChatMessageInput");
-                    var send = window.GetComponentsInChildren<Button>(true).Single(button => button.name == "SendChatMessage");
-                    var leave = window.GetComponentsInChildren<Button>(true).Single(button => button.name == "LeaveSystem");
-                    var panel = (RectTransform)window.transform;
-                    nativeChatUi.controlsInsidePanel = NativeChatRectVisible(panel, (RectTransform)input.transform) &&
-                        NativeChatRectVisible(panel, (RectTransform)send.transform) && NativeChatRectVisible(panel, (RectTransform)leave.transform) &&
-                        input.IsInteractable() && send.IsInteractable() && leave.IsInteractable();
-                    var bodies = scroll.content.GetComponentsInChildren<TextMeshProUGUI>(false).Where(text => text.name == "ChatMessageBody").ToArray();
-                    nativeChatUi.renderedBodies = bodies.Length;
-                    nativeChatUi.richTextDisabled = bodies.Length == runtime.Session.Chat.Length && bodies.All(text => !text.richText) &&
-                        scroll.content.GetComponentsInChildren<TextMeshProUGUI>(false).All(text => !text.richText) &&
-                        input.textComponent != null && !input.textComponent.richText;
-                    nativeChatUi.paused = SpeedControlScreen.Instance.IsPaused;
-                    nativeChatUi.gameTimeUnchanged = Math.Abs(GameClock.Instance.GetTime() - nativeChatUi.gameTime) < .000001;
-                    nativeChatUi.finalMessages = runtime.Session.Chat.Length;
-                    nativeChatUi.connectedPlayers = runtime.Session.Players.Count(player => player.Connected);
-                    nativeChatUi.framesSettled = 4;
-                    nativeChatUi.passed = nativeChatUi.latestBottomDistance <= 12 && nativeChatUi.controlsInsidePanel &&
-                        nativeChatUi.richTextDisabled && nativeChatUi.anchorPreserved && nativeChatUi.latestVisible &&
-                        nativeChatUi.notForcedToBottom && nativeChatUi.gameTimeUnchanged && nativeChatUi.paused;
-                    if (!nativeChatUi.passed) throw new InvalidOperationException("Actual latest-chat layout/control containment or literal-text check failed.");
-                    nativeChatUi.phase = "complete";
+                    InspectNativeChatLayout(runtime, window, scroll);
+                    nativeChatUi.phase = "latest_verified";
                 }
                 WriteNativeChatUi();
             }
@@ -500,13 +806,72 @@ namespace OniOnline
             }
         }
 
+        private void InspectNativeChatLayout(OnlineRuntime runtime, OnlineChatWindow window, ScrollRect scroll)
+        {
+            nativeChatUi.latestBottomDistance = NativeChatBottomDistance(scroll);
+            var input = NativeChatInput(window);
+            var send = NativeChatSendButton(window);
+            var latest = NativeChatLatestButton(window);
+            var close = NativeChatCloseButton(window);
+            if (close == null) throw new InvalidOperationException("The native frame close button was not retained.");
+            var panel = (RectTransform)window.transform;
+            nativeChatUi.controlsInsidePanel = NativeChatRectVisible(panel, (RectTransform)input.transform) &&
+                NativeChatRectVisible(panel, (RectTransform)send.transform) && NativeChatRectVisible(panel, (RectTransform)close.transform) &&
+                input.IsInteractable() && send.isInteractable && close.isInteractable;
+            var bodies = scroll.content.GetComponentsInChildren<TextMeshProUGUI>(false).Where(text => text.name == "ChatMessageBody").ToArray();
+            nativeChatUi.renderedBodies = bodies.Length;
+            nativeChatUi.rawTextPreserved = bodies.Select(text => text.text).SequenceEqual(runtime.Session.Chat.Select(line => line.Text));
+            nativeChatUi.richTextDisabled = bodies.Length == runtime.Session.Chat.Length &&
+                scroll.content.GetComponentsInChildren<TextMeshProUGUI>(false).All(text => !text.richText) &&
+                !input.richText && input.textComponent != null && !input.textComponent.richText;
+            var heading = (LocText)AccessTools.Field(typeof(OnlineChatWindow), "heading").GetValue(window);
+            var sendLabel = send.GetComponentInChildren<LocText>(true);
+            var latestLabel = latest.GetComponentInChildren<LocText>(true);
+            foreach (var label in new[] { heading, sendLabel, latestLabel, input.placeholder as LocText })
+                if (label != null) label.ApplySettings();
+            nativeChatUi.nativeLabelsCorrect = heading.text == OnlineText.Get("chat.button") &&
+                sendLabel.text == OnlineText.Get("ui.send") && latestLabel.text == OnlineText.Get("chat.latest") &&
+                input.placeholder is TMP_Text && ((TMP_Text)input.placeholder).text == OnlineText.Get("ui.chat_placeholder");
+            nativeChatUi.latestDismissed = !latest.gameObject.activeSelf;
+            nativeChatUi.nativeFrameControllerRemoved = window.GetComponent<MessageDialogFrame>() == null;
+            nativeChatUi.attachedToNativeCanvas = chatUiNativeCanvas != null && window.transform.parent == chatUiNativeCanvas.transform;
+            nativeChatUi.nonModal = !window.IsModal();
+            nativeChatUi.noLobbyWindow = !NativeChatLobbyVisible();
+            foreach (var image in ScreenPrefabs.Instance.MessageDialogFrame.GetComponentsInChildren<Image>(true).Where(image => image.sprite != null))
+            {
+                var clone = NativeChatClonedElement(window, image.transform);
+                var retained = clone == null ? null : clone.GetComponent<Image>();
+                if (retained != null && retained.sprite == image.sprite) nativeChatUi.nativeFrameSpritesRetained++;
+            }
+            var outside = NativeChatPointer((RectTransform)chatUiNativeCanvas.transform);
+            var canvasRect = (RectTransform)chatUiNativeCanvas.transform;
+            outside.position = RectTransformUtility.WorldToScreenPoint(NativeChatCamera(panel),
+                canvasRect.TransformPoint(new Vector3(canvasRect.rect.xMax - 4, canvasRect.rect.yMax - 4, 0)));
+            if (RectTransformUtility.RectangleContainsScreenPoint(panel, outside.position, NativeChatCamera(panel)))
+                throw new InvalidOperationException("No outside-panel raycast point is available on the native canvas.");
+            nativeChatUi.outsideRaycastScreenPosition = new[] { outside.position.x, outside.position.y };
+            var hits = new List<RaycastResult>();
+            UnityEngine.EventSystems.EventSystem.current.RaycastAll(outside, hits);
+            nativeChatUi.outsidePanelRaycastClear = hits.All(hit => !hit.gameObject.transform.IsChildOf(window.transform));
+            nativeChatUi.paused = SpeedControlScreen.Instance.IsPaused;
+            nativeChatUi.gameTimeUnchanged = Math.Abs(GameClock.Instance.GetTime() - nativeChatUi.gameTime) < .000001;
+            nativeChatUi.finalMessages = runtime.Session.Chat.Length;
+            nativeChatUi.connectedPlayers = runtime.Session.Players.Count(player => player.Connected);
+            nativeChatUi.framesSettled = 4;
+            if (nativeChatUi.latestBottomDistance > 12 || !nativeChatUi.controlsInsidePanel || !nativeChatUi.richTextDisabled ||
+                !nativeChatUi.rawTextPreserved || !nativeChatUi.nativeLabelsCorrect || !nativeChatUi.latestDismissed || !nativeChatUi.gameTimeUnchanged || !nativeChatUi.paused ||
+                !nativeChatUi.nativeFrameControllerRemoved || !nativeChatUi.attachedToNativeCanvas || !nativeChatUi.nonModal ||
+                !nativeChatUi.noLobbyWindow || !nativeChatUi.outsidePanelRaycastClear || nativeChatUi.nativeFrameSpritesRetained == 0)
+                throw new InvalidOperationException("Native chat layout, retained frame art, literal text, latest state or outside-panel raycast check failed.");
+        }
+
         private static bool NativeChatRectVisible(RectTransform panel, RectTransform control)
         {
             if (!control.gameObject.activeInHierarchy || control.rect.width <= 0 || control.rect.height <= 0) return false;
             var corners = new Vector3[4]; control.GetWorldCorners(corners);
             return corners.All(corner => {
                 Vector3 local = panel.InverseTransformPoint(corner);
-                Vector2 screen = RectTransformUtility.WorldToScreenPoint(null, corner);
+                Vector2 screen = RectTransformUtility.WorldToScreenPoint(NativeChatCamera(panel), corner);
                 return local.x >= panel.rect.xMin - 1 && local.x <= panel.rect.xMax + 1 &&
                     local.y >= panel.rect.yMin - 1 && local.y <= panel.rect.yMax + 1 &&
                     screen.x >= 0 && screen.x <= Screen.width && screen.y >= 0 && screen.y <= Screen.height;

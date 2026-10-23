@@ -26,7 +26,7 @@ namespace OniOnline
             public string screen;
             public string gameMode;
             public bool sandboxDisabled;
-            public bool onlineCreationTitle;
+            public bool onlineCreationFlow;
             public string dependencyError;
             public string error;
             public string commandError;
@@ -35,6 +35,10 @@ namespace OniOnline
             public string cycleTrimVersion;
             public bool mainMenuButton;
             public bool onlineCategory;
+            public bool onlineCategoryNative;
+            public bool onlineCategoryAnimationReady;
+            public string onlineCategoryLabel;
+            public bool nativeBrowserOpen;
             public bool popup;
             public bool joined;
             public bool started;
@@ -461,6 +465,14 @@ namespace OniOnline
                 case "team": runtime.ShowTeam(); break;
                 case "task_ui_open": OpenNativeTaskUi(runtime); break;
                 case "task_ui_close": runtime.Multiplayer.CloseWorldView(); break;
+                case "browser_ui_open": OpenNativeBrowserUi(runtime); break;
+                case "browser_ui_close": CloseNativeBrowserUi(runtime); break;
+                case "chat_ui_entry": ObserveNativeChatEntry(runtime, command.value); break;
+                case "chat_ui_open": OpenNativeChatUiWindow(runtime); break;
+                case "chat_ui_send": SendNativeChatUiMessage(runtime, command.value, false); break;
+                case "chat_ui_submit": SendNativeChatUiMessage(runtime, command.value, true); break;
+                case "chat_ui_append": AppendNativeChatUiMessage(runtime, command.value); break;
+                case "chat_ui_close": CloseNativeChatUi(runtime); break;
                 case "chat_ui_anchor": OpenNativeChatUi(runtime); break;
                 case "chat_ui_latest": FollowNativeChatUi(runtime); break;
                 case "native_transfer_preflight": InspectNativeTransferPreflight(runtime, command.value); break;
@@ -596,8 +608,9 @@ namespace OniOnline
                     ((MultiToggle)AccessTools.Field(typeof(ModeSelectScreen), "survivalButton").GetValue(mode)).onClick();
                     break;
                 case "online":
-                    Active<ClusterCategorySelectionScreen>().GetComponentsInChildren<UnityEngine.UI.Button>(true)
-                        .First(t => t.name == "OniOnlineCategory").onClick.Invoke();
+                    var onlineCategory = Active<ClusterCategorySelectionScreen>().GetComponentsInChildren<MultiToggle>(true)
+                        .Single(t => t.name == "OniOnlineCategory" && t.gameObject.activeInHierarchy);
+                    ClickNativeChatControl(onlineCategory);
                     break;
                 case "generate": Click(Active<ColonyDestinationSelectScreen>(), "launchButton"); testColony = true; break;
                 case "embark": Click(Active<MinionSelectScreen>(), "proceedButton"); break;
@@ -1335,6 +1348,8 @@ namespace OniOnline
             var system = runtime.Multiplayer?.StarSystem.State;
             var category = UnityEngine.Object.FindObjectsByType<ClusterCategorySelectionScreen>(FindObjectsSortMode.None)
                 .FirstOrDefault(s => s.gameObject.activeInHierarchy);
+            var onlineCategory = category == null ? null : category.GetComponentsInChildren<MultiToggle>(true)
+                .FirstOrDefault(button => button.name == "OniOnlineCategory" && button.gameObject.activeInHierarchy);
             var flow = UnityEngine.Object.FindFirstObjectByType<NewGameFlow>();
             var current = flow == null ? null : AccessTools.Field(typeof(NewGameFlow), "currentScreen").GetValue(flow) as KScreen;
             var starterSelection = UnityEngine.Object.FindObjectsByType<MinionSelectScreen>(FindObjectsSortMode.None)
@@ -1351,12 +1366,17 @@ namespace OniOnline
                     ? current.GetType().Name : Game.Instance != null ? "Game" : "MainMenu",
                 gameMode = CustomGameSettings.Instance?.customGameMode.ToString(),
                 sandboxDisabled = CustomGameSettings.Instance?.GetCurrentQualitySetting(CustomGameSettingConfigs.SandboxMode)?.id == "Disabled",
-                onlineCreationTitle = current is ColonyDestinationSelectScreen && current.transform.Find("OniOnlineCreationHeader") != null,
+                onlineCreationFlow = current is ColonyDestinationSelectScreen && runtime.CreatingSystem,
                 dependencyError = runtime.DependencyError, error = runtime.Error ?? runtime.Session?.LastError,
                 commandError = commandError, roomCode = runtime.RoomCode,
                 gameVersion = runtime.GameVersion, cycleTrimVersion = runtime.CycleTrimVersion,
                 mainMenuButton = MainMenu.Instance != null && MainMenu.Instance.GetComponentsInChildren<KButton>(true).Any(b => b.name == "OniOnlineBrowseLobbies"),
-                onlineCategory = category != null && category.GetComponentsInChildren<UnityEngine.UI.Button>(true).Any(t => t.name == "OniOnlineCategory"),
+                onlineCategory = onlineCategory != null,
+                onlineCategoryNative = onlineCategory != null && onlineCategory.GetComponent<OniOnline.UI.NativeOnlineCategory>() != null,
+                onlineCategoryAnimationReady = onlineCategory != null && onlineCategory.GetComponentsInChildren<KAnimControllerBase>(true).Any(animation => animation.HasBatchInstanceData),
+                onlineCategoryLabel = onlineCategory == null ? null : onlineCategory.GetComponentsInChildren<LocText>(true)
+                    .FirstOrDefault(label => label.text == OnlineText.Get("mode.online"))?.text,
+                nativeBrowserOpen = UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.NativeSystemBrowser>()?.IsOpen == true,
                 popup = UnityEngine.Object.FindFirstObjectByType<OniOnline.UI.OnlineWindow>() != null,
                 joined = runtime.Session != null && runtime.Session.Joined, started = runtime.Session != null && runtime.Session.Started,
                 players = runtime.Session?.Players.Length ?? 0, chatLines = runtime.Session?.Chat.Length ?? 0,

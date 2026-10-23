@@ -1,10 +1,12 @@
 """Collector regressions only. These fixtures never establish ONI acceptance."""
 import argparse
 import copy
+from contextlib import redirect_stderr
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
+import io
 import os
 from pathlib import Path
 import tempfile
@@ -18,7 +20,7 @@ SPEC.loader.exec_module(runtime)
 
 NONCE = "1" * 32
 EXPECTED = {"modSha256": "2" * 64, "gameVersion": "744825", "gameAssemblySha256": "3" * 64,
-            "cycleTrimSha256": "4" * 64, "transport": "steam"}
+            "frameworkSha256": "e" * 64, "cycleTrimSha256": "4" * 64, "transport": "steam"}
 
 
 def pair():
@@ -26,12 +28,13 @@ def pair():
     values = []
     ids = ["a" * 32, "b" * 32]
     for index in range(2):
-        probe = {"version": 1, "publishedUtc": timestamp, "processStartedUtc": timestamp,
+        probe = {"version": 2, "publishedUtc": timestamp, "processStartedUtc": timestamp,
                  "runNonce": str(index + 5) * 32, "executable": "OxygenNotIncluded", "nonce": NONCE,
                  "steamInitialized": True, "steamLoggedOn": True, "steamSubscribed": True,
                  "steamAccountHash": str(index + 6) * 64, "deviceHash": str(index + 7) * 64,
                  "worldCells": 100, "armed": True, "saveUnchanged": True, "roomId": "room",
                  "localPlayerId": ids[index], "connectedPlayers": ids, "pendingChats": 0,
+                 "cycleTrimPresent": True, "spacedOut": True, "nativePlanetAdapter": True, "nativeObservationAdapter": True,
                  **EXPECTED}
         values.append({"multiplayer": probe, "pid": 100 + index, "command": 0, "frameCount": 100,
                        "gameVersion": EXPECTED["gameVersion"], "modSha256": EXPECTED["modSha256"],
@@ -73,6 +76,79 @@ def received_view(source):
 
 
 class CollectorValidation(unittest.TestCase):
+    def test_cycletrim_can_be_absent_and_base_game_keeps_observation(self):
+        states = pair()
+        for state in states:
+            state["multiplayer"].update(cycleTrimSha256=None, cycleTrimPresent=False, spacedOut=False)
+        expected = {**EXPECTED, "cycleTrimSha256": None}
+        runtime.validate_pair(states, expected, NONCE)
+        evidence = runtime.evidence(states[0])
+        self.assertIsNone(evidence["cycleTrimSha256"])
+        self.assertFalse(evidence["cycleTrimPresent"])
+        self.assertFalse(evidence["spacedOut"])
+        self.assertEqual(evidence["frameworkSha256"], EXPECTED["frameworkSha256"])
+
+    def test_optional_cycletrim_has_explicit_per_participant_identity(self):
+        states = pair()
+        states[0]["multiplayer"].update(cycleTrimSha256=None, cycleTrimPresent=False)
+        expected = {**EXPECTED, "cycleTrimSha256": None, "participantCycleTrimSha256": [None, "4" * 64]}
+        runtime.validate_pair(states, expected, NONCE)
+        states[0]["multiplayer"].update(cycleTrimSha256="4" * 64, cycleTrimPresent=True)
+        with self.assertRaisesRegex(runtime.ValidationError, "cycletrim_identity_changed"):
+            runtime.validate_pair(states, expected, NONCE)
+
+    def test_explicit_expected_cycletrim_requires_an_actual_match(self):
+        for digest, present in ((None, False), ("f" * 64, True)):
+            with self.subTest(digest=digest):
+                states = pair()
+                states[1]["multiplayer"].update(cycleTrimSha256=digest, cycleTrimPresent=present)
+                with self.assertRaisesRegex(runtime.ValidationError, "expected_cycletrim_mismatch"):
+                    runtime.validate_pair(states, EXPECTED, NONCE)
+
+    def test_optional_cycletrim_never_accepts_empty_or_ambiguous_identity(self):
+        for digest, present in (("", False), ("", True), (None, True), ("4" * 64, False), ("invalid", True)):
+            with self.subTest(digest=digest, present=present):
+                states = pair()
+                states[1]["multiplayer"].update(cycleTrimSha256=digest, cycleTrimPresent=present)
+                with self.assertRaisesRegex(runtime.ValidationError, "cycletrim_identity_invalid"):
+                    runtime.validate_pair(states, {**EXPECTED, "cycleTrimSha256": None}, NONCE)
+        states = pair()
+        del states[1]["multiplayer"]["cycleTrimSha256"]
+        with self.assertRaisesRegex(runtime.ValidationError, "cycletrim_identity_invalid"):
+            runtime.validate_pair(states, {**EXPECTED, "cycleTrimSha256": None}, NONCE)
+
+    def test_loaded_framework_must_match_this_candidate(self):
+        for digest in (None, "", "f" * 64):
+            with self.subTest(digest=digest):
+                states = pair()
+                states[1]["multiplayer"]["frameworkSha256"] = digest
+                with self.assertRaisesRegex(runtime.ValidationError, "exact_build_mismatch"):
+                    runtime.validate_pair(states, EXPECTED, NONCE)
+
+    def test_optional_dependencies_do_not_remove_native_adapter_gates(self):
+        for capability in ("nativePlanetAdapter", "nativeObservationAdapter"):
+            with self.subTest(capability=capability):
+                states = pair()
+                states[1]["multiplayer"][capability] = False
+                with self.assertRaisesRegex(runtime.ValidationError, "native_planet_observation_adapters_required"):
+                    runtime.validate_pair(states, EXPECTED, NONCE)
+
+    def test_older_probe_without_framework_identity_cannot_pass(self):
+        state = pair()[0]
+        state["multiplayer"]["version"] = 1
+        with self.assertRaisesRegex(runtime.ValidationError, "unsupported_multiplayer_probe"):
+            runtime.validate_snapshot(state, time.time(), time.time())
+
+    def test_cli_requires_framework_and_cycletrim_is_optional(self):
+        arguments = ["--first", "/tmp/a", "--second", "/tmp/b", "--output", "/tmp/receipt.json", "--game-version", "744825"]
+        for name in ("mod", "game-assembly", "first-save", "second-save"):
+            arguments.extend(["--" + name + "-sha256", "a" * 64])
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            runtime.build_parser().parse_args(arguments)
+        parsed = runtime.build_parser().parse_args(arguments + ["--framework-sha256", "e" * 64])
+        self.assertIsNone(parsed.cycletrim_sha256)
+        self.assertEqual(parsed.framework_sha256, "e" * 64)
+
     def test_valid_collector_fixture(self):
         states = pair()
         for state in states:
@@ -263,7 +339,7 @@ class CollectorValidation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             args = argparse.Namespace(first=root / "first", second=root / "second", output=root / "result.json", timeout=10,
-                mod_sha256=EXPECTED["modSha256"], game_version=EXPECTED["gameVersion"],
+                mod_sha256=EXPECTED["modSha256"], framework_sha256=EXPECTED["frameworkSha256"], game_version=EXPECTED["gameVersion"],
                 game_assembly_sha256=EXPECTED["gameAssemblySha256"], cycletrim_sha256=EXPECTED["cycleTrimSha256"], transport="steam")
             result = runtime.run(args)
             self.assertEqual(result["status"], "blocked")
@@ -271,11 +347,50 @@ class CollectorValidation(unittest.TestCase):
             self.assertEqual(result["protocolClientProcesses"], 0)
             self.assertEqual(json.loads(args.output.read_text())["status"], "blocked")
 
+    def test_arm_permits_pin_each_actual_optional_cycletrim_and_framework(self):
+        states = pair()
+        states[0]["multiplayer"].update(cycleTrimSha256=None, cycleTrimPresent=False)
+        commands = []
+
+        class ProbeFixture:
+            def __init__(self, directory, slot, timeout):
+                self.directory, self.slot = directory, slot
+                self.index = 0 if slot == "a" else 1
+                self.reads = 0
+
+            def read(self):
+                self.reads += 1
+                if self.reads > 1:
+                    raise runtime.ValidationError("fixture_stopped_after_arming")
+                return copy.deepcopy(states[self.index])
+
+            def command(self, action, **fields):
+                if action != "arm":
+                    raise runtime.ValidationError("fixture_cleanup_without_native_process")
+                commands.append((self.slot, fields))
+                return copy.deepcopy(states[self.index])
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args = argparse.Namespace(first=root / "first", second=root / "second", output=root / "result.json", timeout=10,
+                mod_sha256=EXPECTED["modSha256"], framework_sha256=EXPECTED["frameworkSha256"], game_version=EXPECTED["gameVersion"],
+                game_assembly_sha256=EXPECTED["gameAssemblySha256"], cycletrim_sha256=None, transport="steam",
+                first_save="multiplayer-disposable/test.sav", second_save="multiplayer-disposable/test.sav",
+                first_save_sha256="a" * 64, second_save_sha256="b" * 64)
+            with patch.object(runtime, "Participant", ProbeFixture), patch.object(runtime, "disposable_save", return_value={}), \
+                 patch.object(runtime.secrets, "token_hex", return_value=NONCE):
+                receipt = runtime.run(args)
+        self.assertEqual(receipt["expected"]["participantCycleTrimSha256"], [None, "4" * 64])
+        self.assertEqual([fields["cycleTrimSha256"] for _, fields in commands], [None, "4" * 64])
+        self.assertTrue(all(fields["frameworkSha256"] == EXPECTED["frameworkSha256"] for _, fields in commands))
+        self.assertEqual(receipt["status"], "blocked")
+        self.assertEqual(receipt["completeGameInstances"], 0)
+
     def test_interrupt_keeps_a_failure_receipt(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             args = argparse.Namespace(first=root / "first", second=root / "second", output=root / "result.json", timeout=10,
-                mod_sha256=EXPECTED["modSha256"], game_version=EXPECTED["gameVersion"],
+                mod_sha256=EXPECTED["modSha256"], framework_sha256=EXPECTED["frameworkSha256"], game_version=EXPECTED["gameVersion"],
                 game_assembly_sha256=EXPECTED["gameAssemblySha256"], cycletrim_sha256=EXPECTED["cycleTrimSha256"], transport="steam")
             with patch.object(runtime.Participant, "read", side_effect=KeyboardInterrupt):
                 result = runtime.run(args)

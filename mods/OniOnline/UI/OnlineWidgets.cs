@@ -253,34 +253,5 @@ namespace OniOnline.UI
             return root;
         }
 
-        internal static GameObject CreateLauncher(OnlineRuntime runtime)
-        {
-            var root = CanvasRoot("OniOnlineChatLauncher", 29990);
-            var button = Button(root.transform, "", runtime.ShowChat, 220);
-            button.name = "OpenOniOnlineChat";
-            var rect = (RectTransform)button.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(1, 1);
-            rect.pivot = new Vector2(1, 1); rect.anchoredPosition = new Vector2(-18, -62);
-            rect.sizeDelta = new Vector2(220, 34);
-            root.AddComponent<OnlineLauncherVisibility>().Initialize(runtime, button);
-            return root;
-        }
-    }
-
-    internal sealed class OnlineLauncherVisibility : MonoBehaviour
-    {
-        private Button button;
-        private TextMeshProUGUI label;
-        private OnlineRuntime runtime;
-        internal void Initialize(OnlineRuntime owner, Button value)
-        { runtime = owner; button = value; label = value.GetComponentInChildren<TextMeshProUGUI>(); }
-        private void Update()
-        {
-            bool visible = Game.Instance != null && Game.Instance.baseAlreadyCreated && !Game.Instance.IsLoading();
-            if (button == null) return;
-            if (button.gameObject.activeSelf != visible) button.gameObject.SetActive(visible);
-            if (visible) label.text = runtime.Voice?.IsTalking == true ? OnlineText.Get("voice.talking") :
-                OnlineText.Get("chat.button") + " (" + OnlineInputControls.ChatBinding + ")";
-        }
     }
 }

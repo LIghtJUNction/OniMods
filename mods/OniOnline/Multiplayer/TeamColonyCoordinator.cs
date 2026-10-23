@@ -16,7 +16,7 @@ namespace OniOnline.Multiplayer
     internal sealed class TeamColonyCoordinator : IDisposable
     {
         private sealed class Pending
-        { internal TeamColonyMessage Message; internal byte[] Bytes; internal double RetryAt; }
+        { internal TeamColonyMessage Message; internal byte[] Bytes; internal double RetryAt; internal long LocalAdmission, HostAdmission; }
         private sealed class CachedReceipt
         { internal byte[] Hash; internal TeamColonyMessage Receipt; }
         private sealed class Cursor
@@ -27,6 +27,8 @@ namespace OniOnline.Multiplayer
         private readonly System.Func<WorkPlanet> nativeHostPlanet;
         private readonly System.Action<string, TeamPermissionFlags> applyPermissions;
         private readonly System.Func<string, string, bool> verifyRegisteredOwner;
+        private readonly System.Func<string, bool> canUsePeer;
+        private readonly System.Func<string, long> admissionGeneration;
         private readonly Dictionary<string, VerifiedOwnerStamp> verifiedDupeOwners = new Dictionary<string, VerifiedOwnerStamp>(StringComparer.Ordinal);
         private bool projectionChanged;
         private readonly Queue<Pending> pending = new Queue<Pending>();
@@ -62,16 +64,26 @@ namespace OniOnline.Multiplayer
                 return copy;
             }
         }
-        private bool Connected { get { return !disposed && session.Joined && !session.Reconnecting && !session.Closed && !session.Leaving; } }
+        private bool Connected { get { return !disposed && session.Joined && !session.Reconnecting && !session.Closed && !session.Leaving &&
+            Allowed(session.LocalPlayerId) && (session.IsHost || Allowed(session.Players.FirstOrDefault()?.Id)); } }
+        private bool ConnectedPeer(string peer)
+        { return Connected && Allowed(peer) && session.Players.Any(p => p.Id == peer && p.Connected); }
+        private bool Allowed(string peer)
+        { return PeerAdmission.Allows(canUsePeer, peer) && PeerAdmission.Generation(admissionGeneration, peer) > 0; }
+        private long AdmissionStamp(string peer)
+        { return Allowed(peer) ? PeerAdmission.Generation(admissionGeneration, peer) : 0; }
 
         internal TeamColonyCoordinator(RoomSession session, System.Func<WorkPlanet> nativeHostPlanet,
             System.Action<string, TeamPermissionFlags> applyPermissions = null,
-            System.Func<string, string, bool> verifyRegisteredOwner = null)
+            System.Func<string, string, bool> verifyRegisteredOwner = null, System.Func<string, bool> canUsePeer = null,
+            System.Func<string, long> admissionGeneration = null)
         {
             this.session = session ?? throw new ArgumentNullException("session");
             this.nativeHostPlanet = nativeHostPlanet ?? throw new ArgumentNullException("nativeHostPlanet");
             this.applyPermissions = applyPermissions ?? ((actor, flags) => { });
             this.verifyRegisteredOwner = verifyRegisteredOwner;
+            this.canUsePeer = canUsePeer;
+            this.admissionGeneration = admissionGeneration;
             session.ApplicationMessageReceived += Receive;
         }
 
@@ -80,6 +92,7 @@ namespace OniOnline.Multiplayer
             now = time;
             if (disposed) return;
             bool connected = Connected;
+            if (!connected && (canUsePeer != null || admissionGeneration != null)) { pending.Clear(); outbound.Clear(); }
             if (lastConnected != connected) { lastConnected = connected; Notify(); }
             if (session.IsHost)
             {
@@ -95,7 +108,7 @@ namespace OniOnline.Multiplayer
                     sendCursor = (sendCursor + 1) % peers.Length;
                     Cursor cursor;
                     if (!outbound.TryGetValue(peer, out cursor)) continue;
-                    if (!session.Players.Any(p => p.Id == peer && p.Connected)) { outbound.Remove(peer); continue; }
+                    if (!ConnectedPeer(peer)) { outbound.Remove(peer); continue; }
                     var page = cursor.Snapshot.Copy(false);
                     page.Entries = cursor.Snapshot.Entries.Skip(cursor.Offset).Take(TeamColonyWire.PageSize).ToArray();
                     var message = Header(TeamColonyMessageKind.Snapshot, cursor.Snapshot);
@@ -109,6 +122,10 @@ namespace OniOnline.Multiplayer
             }
             else if (connected)
             {
+                if (canUsePeer != null || admissionGeneration != null)
+                    while (pending.Count > 0 && (pending.Peek().LocalAdmission != AdmissionStamp(session.LocalPlayerId) ||
+                        pending.Peek().HostAdmission != AdmissionStamp(session.Players.FirstOrDefault()?.Id)))
+                    { pending.Dequeue(); LastError = "mod_sync_not_ready"; Notify(); }
                 if (now >= nextQuery)
                 {
                     session.SendApplication(TeamColonyWire.Encode(new TeamColonyMessage { Kind = TeamColonyMessageKind.Query, RoomId = session.RoomId }));
@@ -207,15 +224,16 @@ namespace OniOnline.Multiplayer
             return stamp.OwnerPeer == actor && (verifyRegisteredOwner == null || verifyRegisteredOwner(actor, stamp.OriginalOwnerId));
         }
         internal bool CanIssue(string actorId)
-        { RefreshAuthority(); return session.IsHost && authority != null && authority.CanIssue(actorId, Connected); }
+        { RefreshAuthority(); return ConnectedPeer(actorId) && session.IsHost && authority != null && authority.CanIssue(actorId, Connected); }
         internal bool CanControl(string actorId, string dupeId)
-        { RefreshAuthority(); return session.IsHost && authority != null && (verifyRegisteredOwner == null || verifiedDupeOwners.ContainsKey(dupeId ?? "")) &&
+        { RefreshAuthority(); return ConnectedPeer(actorId) && session.IsHost && authority != null && (verifyRegisteredOwner == null || verifiedDupeOwners.ContainsKey(dupeId ?? "")) &&
             authority.CanControl(actorId, CoreDuplicantId(dupeId), Connected); }
 
         private bool Submit(TeamColonyMessageKind kind, string targetId = "", string entityId = "",
             TeamPermissionFlags permissions = TeamPermissionFlags.None, bool enabled = false, decimal amount = 0)
         {
             if (!Connected || snapshot == null || string.IsNullOrEmpty(snapshot.TeamId)) return Reject("team_unavailable");
+            if (RequiresPeerTarget(kind, permissions, enabled) && !ConnectedPeer(targetId)) return Reject("mod_sync_not_ready");
             var message = Header(kind, snapshot);
             message.RequestId = Guid.NewGuid().ToString("N"); message.TargetId = targetId ?? "";
             message.EntityId = entityId ?? ""; message.Permissions = permissions; message.Enabled = enabled; message.Amount = amount;
@@ -228,13 +246,14 @@ namespace OniOnline.Multiplayer
                 LastError = receipt.Accepted ? null : receipt.Reason; Notify(); return receipt.Accepted;
             }
             if (pending.Count >= 64) return Reject("team_pending_budget");
-            pending.Enqueue(new Pending { Message = message, Bytes = bytes });
+            pending.Enqueue(new Pending { Message = message, Bytes = bytes, LocalAdmission = AdmissionStamp(session.LocalPlayerId),
+                HostAdmission = AdmissionStamp(session.Players.FirstOrDefault()?.Id) });
             LastError = null; Notify(); return true;
         }
 
         private void Receive(string sender, byte[] bytes)
         {
-            if (disposed || !TeamColonyWire.IsMessage(bytes)) return;
+            if (!ConnectedPeer(sender) || !TeamColonyWire.IsMessage(bytes)) return;
             TeamColonyMessage message;
             try { message = TeamColonyWire.Decode(bytes); }
             catch (Exception error) when (error is InvalidDataException || error is IOException || error is ArgumentException || error is OverflowException) { return; }
@@ -284,6 +303,8 @@ namespace OniOnline.Multiplayer
         {
             var receipt = new TeamColonyMessage { Kind = TeamColonyMessageKind.Receipt, RoomId = message.RoomId,
                 TeamId = message.TeamId, PlanetId = message.PlanetId, AuthorityEpoch = message.AuthorityEpoch, RequestId = message.RequestId };
+            if (!ConnectedPeer(actorId) || RequiresPeerTarget(message.Kind, message.Permissions, message.Enabled) && !ConnectedPeer(message.TargetId))
+            { receipt.Reason = "mod_sync_not_ready"; return receipt; }
             string key = actorId + ":" + message.RequestId;
             byte[] hash;
             using (var sha = SHA256.Create()) hash = sha.ComputeHash(bytes);
@@ -353,7 +374,7 @@ namespace OniOnline.Multiplayer
             WorkPlanet planet = nativeHostPlanet();
             bool available = Connected && ValidNativePlanet(planet) && planet.PlanetId == authority.PlanetId && planet.AuthorityEpoch == authority.AuthorityEpoch;
             authority.SetHostAvailable(session.LocalPlayerId, authority.AuthorityEpoch, available);
-            var connectedPeers = new HashSet<string>(session.Players.Where(p => p.Connected).Select(p => p.Id), StringComparer.Ordinal);
+            var connectedPeers = new HashSet<string>(session.Players.Where(p => ConnectedPeer(p.Id)).Select(p => p.Id), StringComparer.Ordinal);
             foreach (var member in authority.GetMembers())
                 authority.SetMemberOnline(session.LocalPlayerId, member.ActorId, authority.AuthorityEpoch,
                     Connected && connectedPeers.Contains(member.ActorId));
@@ -390,7 +411,7 @@ namespace OniOnline.Multiplayer
         }
         private void QueueSnapshot(string peer)
         {
-            if (authority == null || peer == session.LocalPlayerId) return;
+            if (authority == null || peer == session.LocalPlayerId || !ConnectedPeer(peer)) return;
             var next = BuildSnapshot(peer);
             Cursor current;
             // Queries/replays must not repeatedly restart a slow peer before its last page.
@@ -428,6 +449,10 @@ namespace OniOnline.Multiplayer
                 a.Invited == b.Invited && a.IsMember == b.IsMember;
         }
         private bool Reject(string reason) { LastError = reason; Notify(); return false; }
+        private static bool RequiresPeerTarget(TeamColonyMessageKind kind, TeamPermissionFlags permissions, bool enabled)
+        { return kind == TeamColonyMessageKind.Invite || kind == TeamColonyMessageKind.TransferAdministration ||
+            kind == TeamColonyMessageKind.Permissions && permissions != TeamPermissionFlags.None ||
+            (kind == TeamColonyMessageKind.Administrator || kind == TeamColonyMessageKind.Delegate) && enabled; }
         private void Notify() { if (Changed != null) Changed(); }
         public void Dispose()
         {

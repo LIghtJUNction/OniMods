@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using OniOnline.Core;
+using OniOnline.Sdk;
 
 namespace OniOnline.Network
 {
@@ -13,6 +14,12 @@ namespace OniOnline.Network
         public string GameVersion;
         public string CycleTrimVersion;
         public bool SpacedOut;
+        public string[] Capabilities = SessionCapabilities.Core;
+        // Contracts that the remote endpoint must implement; asymmetric services
+        // may require a producer capability without providing it locally.
+        public string[] RequiredCapabilities = SessionCapabilities.Core;
+        public string GameplayId = GameplayFramework.BuiltInId;
+        public string GameplayVersion = "1";
     }
 
     public sealed class SessionOptions
@@ -77,6 +84,8 @@ namespace OniOnline.Network
         public string CleanupStatus { get; private set; }
         private long workAuthorityGeneration;
         internal long NextWorkAuthorityGeneration() { return checked(++workAuthorityGeneration); }
+        private long modAdmissionGeneration;
+        internal long NextModAdmissionGeneration() { return checked(++modAdmissionGeneration); }
         private sealed class Seat
         {
             internal string Id;
@@ -84,6 +93,9 @@ namespace OniOnline.Network
             internal string Secret;
             internal string Account;
             internal int Number;
+            internal string[] Capabilities = new string[0];
+            internal string[] NegotiatedCapabilities = new string[0];
+            internal long ConnectionGeneration;
             internal string Connection;
             internal double DisconnectedAt;
             internal long HighestAcceptedMessage;
@@ -121,6 +133,10 @@ namespace OniOnline.Network
         private readonly Func<IRoomTransport> reconnect;
         private readonly SessionOptions options;
         private readonly SessionProfile profile;
+        private string[] hostCapabilities = new string[0];
+        private string[] negotiatedWithHost = new string[0];
+        private long hostConnectionGeneration;
+        public SessionCompatibilityResult LastCompatibilityFailure { get; private set; }
         private readonly string password;
         private readonly Dictionary<string, Peer> peers = new Dictionary<string, Peer>();
         private readonly Dictionary<string, Seat> seats = new Dictionary<string, Seat>();
@@ -155,6 +171,8 @@ namespace OniOnline.Network
         private int localChatCount;
         private double localChatWindow;
 
+        public string GameplayId { get { return profile.GameplayId; } }
+        public string GameplayVersion { get { return profile.GameplayVersion; } }
         public bool IsHost { get { return host; } }
         public bool Joined { get; private set; }
         public bool Started { get; private set; }
@@ -182,7 +200,7 @@ namespace OniOnline.Network
         {
             if (transport == null) throw new ArgumentNullException("transport");
             if (profile == null || !Protocol.ValidText(profile.Name, 32) ||
-                !Protocol.ValidText(profile.GameVersion, 64) || !Protocol.ValidText(profile.CycleTrimVersion, 64) || !profile.SpacedOut)
+                !ValidMetadata(profile.GameVersion) || !ValidMetadata(profile.CycleTrimVersion) || !GameplayFramework.Available(profile.GameplayId, profile.GameplayVersion))
                 throw new ArgumentException("dependencies_required");
             if ((password ?? "").Length > 128) throw new ArgumentException("password_too_long");
             if (transport.IsHost && !Protocol.ValidText(roomName, 64)) throw new ArgumentException("invalid_room_name");
@@ -196,7 +214,7 @@ namespace OniOnline.Network
                 !ValidSeconds(this.options.SeatReservationSeconds) || !ValidSeconds(this.options.ChatRetrySeconds) ||
                 this.options.ChatHistoryLimit < 1 || this.options.ChatHistoryLimit > SessionOptions.MaxChatHistoryLimit)
                 throw new ArgumentException("invalid_session_options");
-            this.profile = profile;
+            this.profile = SessionCompatibility.Freeze(profile);
             this.password = password ?? "";
             if (IsHost)
             {
@@ -206,6 +224,49 @@ namespace OniOnline.Network
                 localId = Guid.NewGuid().ToString("N");
                 RefreshRoster();
             }
+        }
+
+        private static bool ValidMetadata(string value)
+        { return string.IsNullOrEmpty(value) || Protocol.ValidText(value, 64); }
+
+        // Capabilities negotiated with an authenticated endpoint. Other guests'
+        // optional features are deliberately not inferred from the roster.
+        public string[] CapabilitiesFor(string playerId)
+        {
+            if (!Joined || Closed || Reconnecting || Leaving || playerId == null) return new string[0];
+            if (playerId == localId) return (string[])profile.Capabilities.Clone();
+            if (!IsHost) return players.Length > 0 && playerId == players[0].Id ? (string[])negotiatedWithHost.Clone() : new string[0];
+            Seat seat;
+            return seats.TryGetValue(playerId, out seat) && seat.Connection != null
+                ? (string[])seat.NegotiatedCapabilities.Clone() : new string[0];
+        }
+
+        public bool CanUseCapabilityWith(string playerId, string capability)
+        { return CapabilitiesFor(playerId).Contains(capability, StringComparer.Ordinal); }
+
+        // A player ID names a durable seat; this generation names its current
+        // authenticated transport. Admission grants must bind to both values.
+        public long ConnectionGenerationFor(string playerId)
+        {
+            if (!Joined || Closed || Reconnecting || Leaving || playerId == null) return 0;
+            if (playerId == localId) return IsHost ? 1 : hostConnectionGeneration;
+            if (!IsHost) return players.Length > 0 && playerId == players[0].Id ? hostConnectionGeneration : 0;
+            Seat seat; Peer peer;
+            return seats.TryGetValue(playerId, out seat) && seat.Connection != null &&
+                peers.TryGetValue(seat.Connection, out peer) && peer.Authenticated && !peer.Leaving && peer.CloseAt == 0 &&
+                ReferenceEquals(peer.Seat, seat) ? seat.ConnectionGeneration : 0;
+        }
+
+        // Producer/consumer services can inspect the authenticated endpoint's
+        // advertised contracts even when the local endpoint is only a consumer.
+        public string[] PeerCapabilitiesFor(string playerId)
+        {
+            if (!Joined || Closed || Reconnecting || Leaving || playerId == null) return new string[0];
+            if (playerId == localId) return (string[])profile.Capabilities.Clone();
+            if (!IsHost) return players.Length > 0 && playerId == players[0].Id ? (string[])hostCapabilities.Clone() : new string[0];
+            Seat seat;
+            return seats.TryGetValue(playerId, out seat) && seat.Connection != null
+                ? (string[])seat.Capabilities.Clone() : new string[0];
         }
 
         private static bool ValidSeconds(double value) { return value > 0 && !double.IsInfinity(value) && !double.IsNaN(value); }
@@ -387,7 +448,12 @@ namespace OniOnline.Network
         {
             peer.LastSeen = now;
             if (packet.Kind == PacketKind.Reject && !IsHost)
-            { Stop(Protocol.ValidText(packet.Text, 64) ? packet.Text : "connection_rejected"); return; }
+            {
+                if (packet.Text == "capability_mismatch")
+                    LastCompatibilityFailure = SessionCompatibility.Evaluate(packet.Capabilities, packet.RequiredCapabilities,
+                        profile.Capabilities, profile.RequiredCapabilities);
+                Stop(Protocol.ValidText(packet.Text, 64) ? packet.Text : "connection_rejected"); return;
+            }
             if (!peer.Authenticated)
             {
                 if (IsHost && packet.Kind == PacketKind.Hello) AcceptHello(key, peer, packet);
@@ -399,7 +465,9 @@ namespace OniOnline.Network
                     peer.Challenge = packet.Nonce;
                     RoomId = packet.Room;
                     var hello = new Packet { Kind = PacketKind.Hello, Name = profile.Name,
-                        GameVersion = profile.GameVersion, CycleTrimVersion = profile.CycleTrimVersion, SpacedOut = true,
+                        GameVersion = profile.GameVersion, CycleTrimVersion = profile.CycleTrimVersion, SpacedOut = profile.SpacedOut,
+                        Capabilities = profile.Capabilities, RequiredCapabilities = profile.RequiredCapabilities,
+                        GameplayId = profile.GameplayId, GameplayVersion = profile.GameplayVersion,
                         Nonce = Protocol.NewNonce(), PlayerId = localId ?? "", ResumeToken = localId == null ? resumeSecret : "", Sequence = sequence };
                     hello.ResumeProof = Protocol.ResumeProof(resumeSecret, peer.Challenge, hello);
                     hello.Proof = Protocol.PasswordProof(password, peer.Challenge, hello);
@@ -412,6 +480,15 @@ namespace OniOnline.Network
                         !packet.Players.Any(p => p.Id == packet.PlayerId) || packet.Room != RoomId ||
                         packet.Sequence < sequence || packet.HistoryStart < 1 || packet.HistoryStart > packet.Sequence + 1 ||
                         (localId != null && packet.PlayerId != localId)) throw new InvalidDataException();
+                    if (packet.GameplayId != profile.GameplayId || packet.GameplayVersion != profile.GameplayVersion)
+                    { Stop("gameplay_mismatch"); return; }
+                    var compatibility = SessionCompatibility.Evaluate(packet.Capabilities, packet.RequiredCapabilities,
+                        profile.Capabilities, profile.RequiredCapabilities);
+                    if (!compatibility.Compatible)
+                    { LastCompatibilityFailure = compatibility; Stop("capability_mismatch"); return; }
+                    hostCapabilities = (string[])packet.Capabilities.Clone();
+                    negotiatedWithHost = compatibility.Negotiated; LastCompatibilityFailure = null;
+                    hostConnectionGeneration = checked(hostConnectionGeneration + 1);
                     peer.Authenticated = true; Joined = true; Reconnecting = false; RetryAttempt = 0; LastError = null;
                     localId = packet.PlayerId; players = packet.Players; RoomName = packet.Name;
                     advertisedSequence = packet.Sequence;
@@ -550,7 +627,8 @@ namespace OniOnline.Network
             string account = authenticated == null ? null : authenticated.GetAuthenticatedIdentity(key);
             if (!Protocol.ValidText(hello.Name, 32) || hello.Nonce == null || hello.Nonce.Length != 44 || hello.Sequence < 0 || hello.Sequence > sequence)
                 error = "invalid_name";
-            else if (hello.GameVersion != profile.GameVersion || hello.CycleTrimVersion != profile.CycleTrimVersion || !hello.SpacedOut) error = "version_mismatch";
+            else if (!ValidMetadata(hello.GameVersion) || !ValidMetadata(hello.CycleTrimVersion)) error = "invalid_profile";
+            else if (hello.GameplayId != profile.GameplayId || hello.GameplayVersion != profile.GameplayVersion) error = "gameplay_mismatch";
             else if (!Protocol.EqualProof(Protocol.PasswordProof(password, peer.Challenge, hello), hello.Proof)) error = "wrong_password";
             else if (moderation.Rejection(hello.PlayerId, hello.ResumeToken, account) is string rejection) error = rejection;
             else if (!string.IsNullOrEmpty(hello.PlayerId))
@@ -561,6 +639,10 @@ namespace OniOnline.Network
             }
             else if (hello.ResumeToken == null || hello.ResumeToken.Length != 44 ||
                 !Protocol.EqualProof(Protocol.ResumeProof(hello.ResumeToken, peer.Challenge, hello), hello.ResumeProof)) error = "resume_invalid";
+            var compatibility = SessionCompatibility.Evaluate(profile.Capabilities, profile.RequiredCapabilities,
+                hello.Capabilities, hello.RequiredCapabilities);
+            if (error == null && !compatibility.Compatible)
+            { LastCompatibilityFailure = compatibility; error = "capability_mismatch"; }
             if (error == null && string.IsNullOrEmpty(hello.PlayerId))
             {
                 // The first Welcome may have been lost. Reuse the pending identity bound
@@ -580,12 +662,15 @@ namespace OniOnline.Network
                 string old = seat.Connection;
                 peers.Remove(old); transport.Disconnect(old);
             }
-            seat.Connection = key;
+            seat.ConnectionGeneration = checked(seat.ConnectionGeneration + 1);
+            seat.Connection = key; seat.Capabilities = (string[])hello.Capabilities.Clone(); seat.NegotiatedCapabilities = compatibility.Negotiated;
             peer.Seat = seat; peer.Authenticated = true;
             RefreshRoster();
             Send(key, new Packet { Kind = PacketKind.Welcome, Room = RoomId, Name = RoomName, PlayerId = seat.Id,
                 Players = new[] { players[0], players.First(p => p.Id == seat.Id) }, Started = Started, Sequence = sequence,
-                HistoryStart = chat.Count == 0 ? sequence + 1 : chat[0].Sequence });
+                HistoryStart = chat.Count == 0 ? sequence + 1 : chat[0].Sequence,
+                GameplayId = profile.GameplayId, GameplayVersion = profile.GameplayVersion,
+                Capabilities = profile.Capabilities, RequiredCapabilities = profile.RequiredCapabilities });
             QueueHistory(peer, hello.Sequence);
             Notify();
         }
@@ -609,7 +694,12 @@ namespace OniOnline.Network
 
         private void Reject(string key, Peer peer, string reason)
         {
-            if (IsHost) { Send(key, new Packet { Kind = PacketKind.Reject, Text = reason }); peer.CloseAt = now + 1; }
+            if (IsHost)
+            {
+                Send(key, new Packet { Kind = PacketKind.Reject, Text = reason,
+                    Capabilities = profile.Capabilities, RequiredCapabilities = profile.RequiredCapabilities });
+                peer.CloseAt = now + 1;
+            }
             else Stop(reason);
         }
 

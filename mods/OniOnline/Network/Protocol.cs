@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using OniOnline.Sdk;
 
 namespace OniOnline.Network
 {
@@ -28,7 +29,11 @@ namespace OniOnline.Network
         public string ResumeProof;
         public string GameVersion;
         public string CycleTrimVersion;
+        public string GameplayId = GameplayFramework.BuiltInId;
+        public string GameplayVersion = "1";
         public bool SpacedOut;
+        public string[] Capabilities;
+        public string[] RequiredCapabilities;
         public string PlayerId;
         public long Sequence;
         public long MessageId;
@@ -43,7 +48,7 @@ namespace OniOnline.Network
 
     public static class Protocol
     {
-        public const int Version = 9;
+        public const int Version = 10;
         public const int MaxPacketBytes = 8192;
         public const int RosterPageSize = 32;
         public const int MaxChatLength = 512;
@@ -65,15 +70,19 @@ namespace OniOnline.Network
                     case PacketKind.Challenge:
                         WriteText(writer, packet.Room, 32); WriteText(writer, packet.Nonce, 44); break;
                     case PacketKind.Hello:
-                        WriteText(writer, packet.Name, 32); WriteText(writer, packet.GameVersion, 64);
-                        WriteText(writer, packet.CycleTrimVersion, 64); writer.Write(packet.SpacedOut);
+                        WriteText(writer, packet.Name, 32); WriteText(writer, packet.GameVersion ?? "", 64);
+                        WriteText(writer, packet.CycleTrimVersion ?? "", 64); writer.Write(packet.SpacedOut);
+                        WriteText(writer, packet.GameplayId, 64); WriteText(writer, packet.GameplayVersion, 64);
+                        WriteCapabilities(writer, packet.Capabilities); WriteCapabilities(writer, packet.RequiredCapabilities);
                         WriteText(writer, packet.Nonce, 44); WriteText(writer, packet.Proof, 44);
                         WriteText(writer, packet.PlayerId ?? "", 32); WriteText(writer, packet.ResumeToken ?? "", 44);
                         WriteText(writer, packet.ResumeProof ?? "", 44); writer.Write(packet.Sequence); break;
                     case PacketKind.Welcome:
                         WriteText(writer, packet.Room, 32); WriteText(writer, packet.Name, 64);
                         WriteText(writer, packet.PlayerId, 32); writer.Write(packet.Started); writer.Write(packet.Sequence);
-                        writer.Write(packet.HistoryStart); WritePlayers(writer, packet.Players); break;
+                        writer.Write(packet.HistoryStart); WritePlayers(writer, packet.Players);
+                        WriteText(writer, packet.GameplayId, 64); WriteText(writer, packet.GameplayVersion, 64);
+                        WriteCapabilities(writer, packet.Capabilities); WriteCapabilities(writer, packet.RequiredCapabilities); break;
                     case PacketKind.Roster: WritePlayers(writer, packet.Players); break;
                     case PacketKind.RosterPart:
                         writer.Write(packet.RosterRevision); writer.Write(packet.RosterTotal); writer.Write(packet.RosterOffset);
@@ -82,7 +91,9 @@ namespace OniOnline.Network
                     case PacketKind.Chat:
                         writer.Write(packet.Sequence); WriteText(writer, packet.PlayerId, 32);
                         WriteText(writer, packet.Name, 32); WriteText(writer, packet.Text, MaxChatLength); writer.Write(packet.MessageId); break;
-                    case PacketKind.Reject: WriteText(writer, packet.Text, 64); break;
+                    case PacketKind.Reject:
+                        WriteText(writer, packet.Text, 64);
+                        WriteCapabilities(writer, packet.Capabilities); WriteCapabilities(writer, packet.RequiredCapabilities); break;
                     case PacketKind.Removed: WriteText(writer, packet.Name, 64); WriteText(writer, packet.Text, 128); break;
                     case PacketKind.ChatAck: writer.Write(packet.MessageId); break;
                     case PacketKind.HistoryRequest: case PacketKind.HistoryReset: writer.Write(packet.Sequence); break;
@@ -119,13 +130,17 @@ namespace OniOnline.Network
                         case PacketKind.Hello:
                             packet.Name = ReadText(reader, 32); packet.GameVersion = ReadText(reader, 64);
                             packet.CycleTrimVersion = ReadText(reader, 64); packet.SpacedOut = ReadBool(reader);
+                            packet.GameplayId = ReadText(reader, 64); packet.GameplayVersion = ReadText(reader, 64);
+                            packet.Capabilities = ReadCapabilities(reader); packet.RequiredCapabilities = ReadCapabilities(reader);
                             packet.Nonce = ReadText(reader, 44); packet.Proof = ReadText(reader, 44);
                             packet.PlayerId = ReadText(reader, 32); packet.ResumeToken = ReadText(reader, 44);
                             packet.ResumeProof = ReadText(reader, 44); packet.Sequence = reader.ReadInt64(); break;
                         case PacketKind.Welcome:
                             packet.Room = ReadText(reader, 32); packet.Name = ReadText(reader, 64);
                             packet.PlayerId = ReadText(reader, 32); packet.Started = ReadBool(reader);
-                            packet.Sequence = reader.ReadInt64(); packet.HistoryStart = reader.ReadInt64(); packet.Players = ReadPlayers(reader); break;
+                            packet.Sequence = reader.ReadInt64(); packet.HistoryStart = reader.ReadInt64(); packet.Players = ReadPlayers(reader);
+                            packet.GameplayId = ReadText(reader, 64); packet.GameplayVersion = ReadText(reader, 64);
+                            packet.Capabilities = ReadCapabilities(reader); packet.RequiredCapabilities = ReadCapabilities(reader); break;
                         case PacketKind.Roster: packet.Players = ReadPlayers(reader); break;
                         case PacketKind.RosterPart:
                             packet.RosterRevision = reader.ReadInt64(); packet.RosterTotal = reader.ReadInt32();
@@ -134,7 +149,9 @@ namespace OniOnline.Network
                         case PacketKind.Chat:
                             packet.Sequence = reader.ReadInt64(); packet.PlayerId = ReadText(reader, 32);
                             packet.Name = ReadText(reader, 32); packet.Text = ReadText(reader, MaxChatLength); packet.MessageId = reader.ReadInt64(); break;
-                        case PacketKind.Reject: packet.Text = ReadText(reader, 64); break;
+                        case PacketKind.Reject:
+                            packet.Text = ReadText(reader, 64);
+                            packet.Capabilities = ReadCapabilities(reader); packet.RequiredCapabilities = ReadCapabilities(reader); break;
                         case PacketKind.Removed: packet.Name = ReadText(reader, 64); packet.Text = ReadText(reader, 128); break;
                         case PacketKind.ChatAck: packet.MessageId = reader.ReadInt64(); break;
                         case PacketKind.HistoryRequest: case PacketKind.HistoryReset: packet.Sequence = reader.ReadInt64(); break;
@@ -152,6 +169,25 @@ namespace OniOnline.Network
                 }
             }
             catch (EndOfStreamException error) { throw new InvalidDataException("truncated_packet", error); }
+        }
+
+        private static void WriteCapabilities(BinaryWriter writer, string[] capabilities)
+        {
+            string[] values;
+            try { values = SessionCompatibility.Normalize(capabilities ?? SessionCapabilities.Core); }
+            catch (ArgumentException error) { throw new InvalidDataException("invalid_capabilities", error); }
+            writer.Write((byte)values.Length);
+            foreach (string value in values) WriteText(writer, value, SessionCompatibility.MaximumCapabilityLength);
+        }
+
+        private static string[] ReadCapabilities(BinaryReader reader)
+        {
+            int count = reader.ReadByte();
+            if (count > SessionCompatibility.MaximumCapabilities) throw new InvalidDataException("capability_budget");
+            var values = new string[count];
+            for (int i = 0; i < count; i++) values[i] = ReadText(reader, SessionCompatibility.MaximumCapabilityLength);
+            try { return SessionCompatibility.Normalize(values); }
+            catch (ArgumentException error) { throw new InvalidDataException("invalid_capabilities", error); }
         }
 
         private static void WriteText(BinaryWriter writer, string text, int limit)
@@ -216,7 +252,9 @@ namespace OniOnline.Network
         public static string PasswordProof(string password, string challenge, Packet hello)
         {
             var material = challenge + "\n" + hello.Nonce + "\n" + hello.GameVersion + "\n" +
-                hello.CycleTrimVersion + "\n" + hello.Name + "\n" + hello.PlayerId + "\n" +
+                hello.CycleTrimVersion + "\n" + (hello.SpacedOut ? "1" : "0") + "\n" +
+                string.Join(",", SessionCompatibility.Normalize(hello.Capabilities ?? SessionCapabilities.Core)) + "\n" +
+                string.Join(",", SessionCompatibility.Normalize(hello.RequiredCapabilities ?? SessionCapabilities.Core)) + "\n" + hello.GameplayId + "\n" + hello.GameplayVersion + "\n" + hello.Name + "\n" + hello.PlayerId + "\n" +
                 hello.ResumeToken + "\n" + hello.ResumeProof + "\n" + hello.Sequence;
             using (var sha = new SHA256Managed())
             using (var hmac = new HMACSHA256(sha.ComputeHash(Encoding.UTF8.GetBytes(password ?? ""))))

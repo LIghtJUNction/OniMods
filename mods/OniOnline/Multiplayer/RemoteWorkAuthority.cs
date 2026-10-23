@@ -111,6 +111,18 @@ namespace OniOnline.Multiplayer
 
         internal RemoteWorkGrant GetGrant(string actorId)
         { RemoteWorkGrant value; return grants.TryGetValue(actorId, out value) ? CopyGrant(value) : null; }
+        internal string[] GrantActors { get { return grants.Keys.ToArray(); } }
+        // Authentication renewal changes the token, not the accepted task layers.
+        // This path deliberately performs no native reconciliation or save restore.
+        internal RemoteWorkGrant RetireGrantToken(string actorId)
+        {
+            RemoteWorkGrant prior;
+            if (!grants.TryGetValue(actorId, out prior)) return null;
+            var renewed = CopyGrant(prior);
+            renewed.Token = Guid.NewGuid().ToString("N"); renewed.Revision = ++grantRevision;
+            grants[actorId] = renewed; StateRevision++;
+            return CopyGrant(renewed);
+        }
         internal bool HasPermission(string actorId, RemoteWorkPermission value)
         { RemoteWorkGrant g; return actorId == ownerId || (grants.TryGetValue(actorId, out g) && (g.Permissions & value) == value); }
         internal WorkTaskIntent[] GetOwnPlans(string actorId)

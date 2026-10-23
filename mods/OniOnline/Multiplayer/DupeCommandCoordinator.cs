@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using OniOnline.Core;
 using OniOnline.Network;
 
 namespace OniOnline.Multiplayer
@@ -13,6 +14,8 @@ namespace OniOnline.Multiplayer
         private readonly IDupeCommandExecutor executor;
         private readonly Func<string, string> authorityOfPlanet;
         private readonly Func<string, int, bool> canControl;
+        private readonly Func<string, bool> canUsePeer;
+        private readonly Func<string, long> admissionGeneration;
         private readonly Dictionary<string, Pending> pending = new Dictionary<string, Pending>();
         private readonly Dictionary<string, Known> requests = new Dictionary<string, Known>();
         private readonly Dictionary<string, DupeCommandReceipt> submissions = new Dictionary<string, DupeCommandReceipt>();
@@ -30,18 +33,23 @@ namespace OniOnline.Multiplayer
             internal double QueryAt;
             internal string CancellationId;
             internal int Sequence;
+            internal long LocalAdmission, AuthorityAdmission;
         }
         private sealed class Pending { internal Known Known; internal double RetryAt; internal double Deadline; }
-        private bool Ready { get { return !disposed && session.Joined && !session.Leaving && !session.Reconnecting; } }
+        private bool Ready { get { return !disposed && session.Joined && !session.Closed && !session.Leaving && !session.Reconnecting &&
+            Allowed(session.LocalPlayerId) && (session.IsHost || Allowed(session.Players.FirstOrDefault()?.Id)); } }
 
         internal DupeCommandCoordinator(RoomSession session, IWorldWorkContext context, IDupeCommandExecutor executor,
-            Func<string, string> authorityOfPlanet, Func<string, int, bool> canControl)
+            Func<string, string> authorityOfPlanet, Func<string, int, bool> canControl, Func<string, bool> canUsePeer = null,
+            Func<string, long> admissionGeneration = null)
         {
             this.session = session ?? throw new ArgumentNullException("session");
             this.context = context ?? throw new ArgumentNullException("context");
             this.executor = executor ?? throw new ArgumentNullException("executor");
             this.authorityOfPlanet = authorityOfPlanet ?? throw new ArgumentNullException("authorityOfPlanet");
             this.canControl = canControl ?? throw new ArgumentNullException("canControl");
+            this.canUsePeer = canUsePeer;
+            this.admissionGeneration = admissionGeneration;
             session.ApplicationMessageReceived += Receive;
         }
 
@@ -92,9 +100,10 @@ namespace OniOnline.Multiplayer
 
         private string Begin(DupeMoveRequest request, string peer)
         {
-            if (!Ready || string.IsNullOrEmpty(peer) || !DupeCommandAuthority.Valid(request) ||
+            if (!Ready || string.IsNullOrEmpty(peer) || (canUsePeer != null || admissionGeneration != null) && !Connected(peer) || !DupeCommandAuthority.Valid(request) ||
                 requests.Count >= DupeCommandAuthority.MaxLedger || pending.Count >= 128) return null;
-            var known = new Known { Authority = peer, Request = request.Copy(), QueryAt = now + 3, Sequence = requests.Count };
+            var known = new Known { Authority = peer, Request = request.Copy(), QueryAt = now + 3, Sequence = requests.Count,
+                LocalAdmission = AdmissionStamp(session.LocalPlayerId), AuthorityAdmission = AdmissionStamp(peer) };
             requests.Add(request.RequestId, known);
             pending.Add(request.RequestId, new Pending { Known = known, RetryAt = now, Deadline = now + 90 });
             Publish(new DupeCommandReceipt { RequestId = request.RequestId, Pending = true, Revision = 0, Reason = "dupe_pending" });
@@ -124,6 +133,9 @@ namespace OniOnline.Multiplayer
             foreach (var item in pending.Values.ToArray())
             {
                 Known known = item.Known;
+                if ((canUsePeer != null || admissionGeneration != null) && (!Ready || !Connected(known.Authority) ||
+                    known.LocalAdmission != AdmissionStamp(session.LocalPlayerId) || known.AuthorityAdmission != AdmissionStamp(known.Authority)))
+                { pending.Remove(known.Request.RequestId); Publish(Unconfirmed(known.Request.RequestId)); continue; }
                 if (now >= item.Deadline || authorityOfPlanet(known.Request.PlanetId) != known.Authority)
                 {
                     pending.Remove(known.Request.RequestId);
@@ -217,7 +229,11 @@ namespace OniOnline.Multiplayer
             if (requests.TryGetValue(receipt.RequestId, out known)) known.QueryAt = now + 3;
             Publish(receipt);
         }
-        private bool Connected(string peer) { return session.Players.Any(p => p.Id == peer && p.Connected); }
+        private bool Connected(string peer) { return Ready && Allowed(peer) && session.Players.Any(p => p.Id == peer && p.Connected); }
+        private bool Allowed(string peer)
+        { return PeerAdmission.Allows(canUsePeer, peer) && PeerAdmission.Generation(admissionGeneration, peer) > 0; }
+        private long AdmissionStamp(string peer)
+        { return Allowed(peer) ? PeerAdmission.Generation(admissionGeneration, peer) : 0; }
         private void Send(string target, DupeCommandMessage message)
         {
             if (outgoing.Count >= 256 || !Connected(target)) return;

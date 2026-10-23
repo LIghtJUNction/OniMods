@@ -9,10 +9,12 @@
 
 ## 准备两个客户端
 
-1. 两台机器使用不同的 Steam 账号，分别拥有游戏和所需 DLC，并通过 Steam 启动游戏。
+1. 两台机器使用不同的 Steam 账号，分别拥有游戏，并通过 Steam 启动游戏。
    默认 `--transport steam` 要求两个不同的账号和设备。账号 ID、设备 ID 不写入回执；
    探针用本次随机验收 nonce 加盐后计算 SHA-256。每次运行的结果不能作跨次身份标识。
-2. 两端使用同一组明确版本的 OniOnline 探针 DLL、CycleTrim DLL 和游戏程序集。
+2. 两端使用本轮同一组 OniOnline 探针 DLL、**OniOnline.Framework.dll** 和游戏程序集。
+   两个联机 DLL 都必须核对游戏进程实际加载程序集的位置与 SHA-256，旧 SDK 不能混入新候选。
+   CycleTrim 可不安装；缺席时回执明确记录 `cycleTrimPresent: false`、`cycleTrimSha256: null`。
    探针构建必须与普通构建使用不同的输出和中间目录。它不能打成正式 Mod 包。
 3. 在每端创建一个新的绝对探针目录。在该目录下创建 `multiplayer-disposable`，
    将获准使用的一次性测试存档**复制**成 `test.sav`。不要移动私人存档，不要使用硬链接、
@@ -33,15 +35,20 @@
 以下构建命令以已配置好 `OniManagedPath` 和依赖的环境为例：
 
 ```bash
-rtk proxy dotnet build mods/OniOnline/OniOnline.csproj -c Release \
+rtk proxy dotnet build mods/OniOnline/OniOnline.csproj -c OniOnlineProbe \
   -p:OnlineRuntimeProbe=true \
-  -p:OutputPath=/tmp/onionline-probe-build/ \
-  -p:BaseIntermediateOutputPath=/tmp/onionline-probe-obj/
+  -p:Optimize=true \
+  -p:OutputPath=/tmp/onionline-probe-build/
 ```
 
+专用配置名将两个项目的中间产物分别放入各自 `obj/OniOnlineProbe`，
+避免与普通 Release 共用，也避免给两个项目指定同一个全局中间目录。
 使用**最终实际加载的 DLL**计算哈希；不要使用合并 PLib 前的中间 DLL。
 游戏程序集哈希指向 `Assembly-CSharp.dll`。版本是实际运行的游戏 changelist，
 不是程序集镜像的标注。探针还要求 Steam SDK 已初始化、账号拥有游戏，且原生世界已加载。
+当前星球身份与观察适配器只支持构建 744825，本体和 Spaced Out! 均可执行本验收。
+`spacedOut` 仅记录实际 DLC 状态；本验收不读取 DLC 原生星图，也不要求 DLC。
+未知构建的原生适配器仍会拒绝开始，这不影响框架基础会话的版本解耦。
 
 ## 运行
 
@@ -55,13 +62,18 @@ rtk proxy python3 tests/OniOnline.Tests/multiplayer_runtime.py \
   --transport steam \
   --game-version 744825 \
   --mod-sha256 ONIONLINE_PROBE_DLL_SHA256 \
+  --framework-sha256 ONIONLINE_FRAMEWORK_DLL_SHA256 \
   --game-assembly-sha256 ASSEMBLY_CSHARP_DLL_SHA256 \
-  --cycletrim-sha256 CYCLETRIM_DLL_SHA256 \
   --first-save-sha256 FIRST_DISPOSABLE_SAVE_SHA256 \
   --second-save-sha256 SECOND_DISPOSABLE_SAVE_SHA256
 ```
 
 默认存档相对路径为 `multiplayer-disposable/test.sav`。
+`--framework-sha256` 必填，探针协议版本为 2；不提供框架身份的旧探针不能通过。
+`--cycletrim-sha256` 可选：显式提供时，两端实际加载的 CycleTrim 都必须匹配该哈希。
+省略时允许缺席或存在，采集器先记录各端真实哈希或 null，再分别锁定到本轮挑战；
+挑战期间新增或改变这项身份会失败。游戏内的模组清单准入仍正常生效，
+这个可选参数不会把不一致的必需模组判为已对齐。
 回执必须为位于两个探针目录之外的 JSON 文件，避免覆盖游戏状态、命令或存档。
 可以通过 `--first-save`、`--second-save` 指定该子目录下的其他 `.sav` 文件。
 采集器绑定实际副本的哈希、长度和修改时间。探针要求当前活动存档就是该副本，
@@ -70,7 +82,7 @@ rtk proxy python3 tests/OniOnline.Tests/multiplayer_runtime.py \
 
 默认操作全程保持双方暂停：
 
-- 核对两个完整游戏进程、各自的运行 nonce、当前房间和不同的玩家 ID。
+- 核对两个完整游戏进程、主 DLL 与框架 DLL、各自的运行 nonce、当前房间和不同的玩家 ID。
 - 用新随机 nonce 要求双方探针在新的游戏帧中回复，拒绝旧状态和进程重启。
 - 两端各发一条唯一聊天，包含本轮盐化账号哈希。
 - 两端都必须恰好收到这两条聊天；发送者、序号、消息 ID 必须一致，待确认队列必须清空。

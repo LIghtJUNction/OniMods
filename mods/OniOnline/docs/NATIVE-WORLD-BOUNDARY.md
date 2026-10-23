@@ -65,7 +65,7 @@ rtk proxy /home/lightjunction/.dotnet/tools/ilspycmd -t ClusterManager /path/to/
 | WorldContainer | OnPrefabInit 获取 WorldInventory 并向 ClusterManager 注册；SetID 同时设置 ParentWorldId。OnCleanUp 本身不从 ClusterManager 移除，不能只 Destroy 一个组件。 |
 | WorldInventory | OnPrefabInit 订阅全局物品事件；OnSpawn 延后一帧扫描现有 Pickupable。导入对象后还需验证库存刷新和归属。 |
 | AsteroidGridEntity / ClusterGridEntity | Init 设置名称、星图坐标和图标；OnSpawn 注册到 ClusterGrid，清理时解除星图注册。 |
-| 导航 / 房间 | 使用已分配全局网格；原生创建内舱会写 WorldIdx、标记新区域导航脏格并刷新 roomProber。没有独立“新增世界即自动修复所有路径”的保证。 |
+| 导航 / 星系 | 使用已分配全局网格；原生创建内舱会写 WorldIdx、标记新区域导航脏格并刷新 roomProber。没有独立“新增世界即自动修复所有路径”的保证。 |
 
 本地定位：`ClusterManager.decompiled.cs:229,529`；`WorldContainer.cs:451,558,602,799`；`AsteroidConfig.cs:7`；`WorldInventory.cs:69,127`；`ClusterGridEntity.cs:105`。
 
@@ -87,6 +87,6 @@ rtk proxy /home/lightjunction/.dotnet/tools/ilspycmd -t ClusterManager /path/to/
 
 放不下时停止这条原地导入路径。可继续研究在**加载前**为新的测试副本预留额外空间，或完整存档迁移并重新加载；二者都需要专门处理原生 Sim 数据及对象的坐标/引用，不是调整存档宽高或复制 Grid 数组。当前没有经验证的实现。
 
-预留很大的 Grid 还会扩大原生分配、托管数组、导航和房间缓存。远端按视口 lazy 同步能减少网络采样与传输，不会自动免除房主的全局模拟网格内存成本；必须在目标机器实际测量后再决定预留容量。
+预留很大的 Grid 还会扩大原生分配、托管数组、导航和星系缓存。远端按视口 lazy 同步能减少网络采样与传输，不会自动免除星系主人的全局模拟网格内存成本；必须在目标机器实际测量后再决定预留容量。
 
 即使空矩形足够，尚未解除的阻碍仍包括：完整星球的 Sim/疾病/背墙数据恢复、生态区与 WorldDetailSave 重定位、所有对象的世界/格子/实例引用映射、世界季节与空间事件、存档恢复及失败回滚。另行调查的复制人 archive 能导出若干 root，不会自动解决这些世界级问题。

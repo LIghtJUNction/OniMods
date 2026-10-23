@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Text;
 using System.Threading;
 using UnityEngine;
+using OniOnline.Network;
+using OniOnline.Runtime;
 
 namespace OniOnline.Multiplayer
 {
@@ -25,12 +27,15 @@ namespace OniOnline.Multiplayer
 
         internal NativeWorldSource(Func<int> selectedWorld = null) { this.selectedWorld = selectedWorld; }
 
+        internal string UnavailableReason
+        { get { return NativeAdapterAvailability.Supports(SessionCapabilities.NativeObservationV1) ? null : "native_adapter_unavailable"; } }
+
         public bool IsAvailable
         {
             get
             {
                 WorldContainer world;
-                return TryGetWorld(out world);
+                return UnavailableReason == null && TryGetWorld(out world);
             }
         }
 
@@ -156,6 +161,7 @@ namespace OniOnline.Multiplayer
 
         private bool TryGetWorld(out WorldContainer world)
         {
+            NativeAdapterAvailability.Require(SessionCapabilities.NativeObservationV1);
             RequireOwningThread();
             world = null;
             Game game = Game.Instance;

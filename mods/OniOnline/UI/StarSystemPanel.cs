@@ -17,6 +17,8 @@ namespace OniOnline.UI
         private ClusterMapScreen screen;
         private SystemHexMap map;
         private GameObject actions;
+        private KButton menuButton;
+        private bool menuOpen;
         private KButton connection, context, scope, buttonTemplate;
         internal bool Ready { get; private set; }
         internal int ActionCount { get { return labels.Count; } }
@@ -31,7 +33,7 @@ namespace OniOnline.UI
         private GridLayoutGroup toolbarLayout;
         private readonly Vector3[] corners = new Vector3[4];
         internal int ToolbarColumns { get { return toolbarLayout?.constraintCount ?? 0; } }
-        internal float NativePanelLeft { get; private set; }
+        internal float NativePanelLeft { get { return Screen.width; } }
         internal float[] ToolbarBounds
         {
             get
@@ -86,9 +88,9 @@ namespace OniOnline.UI
             actions = new GameObject("OniOnlineNativeMapActions", typeof(RectTransform), typeof(GridLayoutGroup));
             var rect = (RectTransform)actions.transform;
             rect.SetParent(screen.transform, false);
-            rect.anchorMin = rect.anchorMax = Vector2.zero;
-            rect.pivot = Vector2.zero;
-            rect.anchoredPosition = new Vector2(12, 18);
+            rect.anchorMin = rect.anchorMax = new Vector2(0, 1);
+            rect.pivot = new Vector2(0, 1);
+            rect.anchoredPosition = new Vector2(12, -116);
             toolbarLayout = actions.GetComponent<GridLayoutGroup>();
             toolbarLayout.spacing = new Vector2(8, 8);
             toolbarLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -100,6 +102,16 @@ namespace OniOnline.UI
             NativeButton("OniOnlineChat", () => Runtime.ShowChat(), "system.chat");
             context = NativeButton("OniOnlineSelectedPlanet", ApplySelection);
             scope = NativeButton("OniOnlineMapScope", () => SetHomeView(!homeView));
+            menuButton = Util.KInstantiateUI<KButton>(buttonTemplate.gameObject, screen.gameObject, true);
+            menuButton.name = "OniOnlineSystemMenu";
+            menuButton.ClearOnClick(); menuButton.ClearOnPointerEvents();
+            menuButton.GetComponentInChildren<LocText>(true).SetText(OnlineText.Get("native.system_menu"));
+            var menuRect = (RectTransform)menuButton.transform;
+            menuRect.anchorMin = menuRect.anchorMax = menuRect.pivot = new Vector2(0, 1);
+            menuRect.anchoredPosition = new Vector2(12, -74);
+            menuRect.sizeDelta = new Vector2(160, 34);
+            menuButton.onClick += () => { menuOpen = !menuOpen; actions.SetActive(menuOpen); };
+            actions.SetActive(false);
             Refresh();
             LayoutToolbar();
         }
@@ -122,7 +134,7 @@ namespace OniOnline.UI
             label.raycastTarget = false;
             labels.Add(button, label);
             var size = button.GetComponent<LayoutElement>() ?? button.gameObject.AddComponent<LayoutElement>();
-            size.minWidth = 80; size.flexibleWidth = 1; size.preferredHeight = 42;
+            size.minWidth = 80; size.flexibleWidth = 1; size.preferredHeight = 34;
             var tooltip = button.GetComponent<ToolTip>();
             if (tooltip != null) tooltip.SetSimpleTooltip(textKey == null ? "" : OnlineText.Get(textKey));
             return button;
@@ -136,6 +148,8 @@ namespace OniOnline.UI
 
         internal void CloseOnlineView()
         {
+            menuOpen = false;
+            if (actions != null) actions.SetActive(false);
             StopDirectory();
             map?.SetHomeView(true);
             homeView = true;
@@ -211,14 +225,21 @@ namespace OniOnline.UI
 
         private void Update()
         {
-            bool visible = screen.IsScreenActive() && screen.GetMode() == ClusterMapScreen.Mode.Default;
-            if (actions.activeSelf != visible) actions.SetActive(visible);
+            bool visible = NativeGameplayUi.Ready && screen.IsScreenActive() && screen.GetMode() == ClusterMapScreen.Mode.Default;
+            if (menuButton.gameObject.activeSelf != visible) menuButton.gameObject.SetActive(visible);
+            if (!visible) menuOpen = false;
+            if (actions.activeSelf != (visible && menuOpen)) actions.SetActive(visible && menuOpen);
             if (!visible)
             {
                 StopDirectory();
                 map.SuspendRemoteView();
                 return;
             }
+            // The native chart owns the HUD while open, including after other
+            // mods or hotkeys try to reactivate a construction tray.
+            if (PlanScreen.Instance != null && PlanScreen.Instance.gameObject.activeSelf) PlanScreen.Instance.gameObject.SetActive(false);
+            if (ToolMenu.Instance != null && ToolMenu.Instance.gameObject.activeSelf) ToolMenu.Instance.gameObject.SetActive(false);
+            if (OverlayScreen.Instance != null && OverlayScreen.Instance.gameObject.activeSelf) OverlayScreen.Instance.gameObject.SetActive(false);
             if (!homeView) StartDirectory();
             if (revision == Runtime?.Revision && Time.realtimeSinceStartupAsDouble < nextRefresh) return;
             nextRefresh = Time.realtimeSinceStartupAsDouble + 0.5;
@@ -239,41 +260,12 @@ namespace OniOnline.UI
 
         private void LayoutToolbar()
         {
-            var parent = (RectTransform)screen.transform;
-            float right = parent.rect.xMax - 12;
-            var bottomBand = new Rect(parent.rect.xMin, parent.rect.yMin, parent.rect.width, 118);
-            var details = DetailsScreen.Instance;
-            var nativeRoots = new List<Transform>();
-            if (details != null) { nativeRoots.Add(details.transform); if (details.UserMenuPanel != null) nativeRoots.Add(details.UserMenuPanel); }
-            foreach (var nativeRoot in nativeRoots)
-                foreach (var graphic in nativeRoot.GetComponentsInChildren<Graphic>(false))
-                {
-                    if (!graphic.enabled || graphic.color.a <= .001f || graphic.canvasRenderer.cull) continue;
-                    var text = graphic as TMP_Text;
-                    if (text != null && string.IsNullOrEmpty(text.text)) continue;
-                    graphic.rectTransform.GetWorldCorners(corners);
-                    var low = parent.InverseTransformPoint(corners[0]);
-                    var high = parent.InverseTransformPoint(corners[2]);
-                    var bounds = Rect.MinMaxRect(low.x, low.y, high.x, high.y);
-                    // Ignore full-screen backgrounds; reserve the actual right-hand
-                    // native panel graphics that overlap the bottom toolbar band.
-                    if (bounds.center.x <= parent.rect.center.x || !bounds.Overlaps(bottomBand)) continue;
-                    right = Mathf.Min(right, bounds.xMin - 12);
-                }
-            NativePanelLeft = RectTransformUtility.WorldToScreenPoint(null,
-                parent.TransformPoint(new Vector3(right + 12, parent.rect.yMin, 0))).x;
-            float available = Mathf.Max(80, right - parent.rect.xMin - 12);
             int visible = labels.Keys.Count(button => button != null && button.gameObject.activeSelf);
             if (visible == 0) return;
-            int columns = Mathf.Clamp(Mathf.FloorToInt((available + 8) / 188), 1, visible);
-            int rows = Mathf.CeilToInt((float)visible / columns);
             var target = (RectTransform)actions.transform;
-            var size = new Vector2(available, rows * 42 + (rows - 1) * 8);
-            var cells = new Vector2((available - (columns - 1) * 8) / columns, 42);
-            if (toolbarLayout.constraintCount == columns && toolbarLayout.cellSize == cells && target.sizeDelta == size) return;
-            toolbarLayout.constraintCount = columns;
-            toolbarLayout.cellSize = cells;
-            target.sizeDelta = size;
+            toolbarLayout.constraintCount = 1;
+            toolbarLayout.cellSize = new Vector2(220, 34);
+            target.sizeDelta = new Vector2(220, visible * 34 + (visible - 1) * 8);
             LayoutRebuilder.MarkLayoutForRebuild(target);
         }
 
@@ -297,6 +289,7 @@ namespace OniOnline.UI
             labels.Clear();
             connection = context = scope = buttonTemplate = null;
             if (oldMap != null) oldMap.Selected -= Select;
+            if (menuButton != null) { Destroy(menuButton.gameObject); menuButton = null; }
             if (oldActions != null) { oldActions.SetActive(false); Destroy(oldActions); }
             StopDirectory();
             oldMap?.SuspendRemoteView();

@@ -1,13 +1,20 @@
-OniOnline: Read-only Multiplayer Preview
+OniOnline 0.4.0: Multiplayer Framework Development Preview
 
-Join a shared star-system room to chat and view colonies shared by friends. Each player keeps their own save and authoritative local simulation. Pausing or changing speed affects only that player's game.
+Join a star system with friends and manage one planet per player. Each player keeps their own colony, save and authoritative simulation. Pausing and changing speed affect only that player's game. Owners can share explored regions for observation and chat.
 
-This preview includes Steam public lobbies, LAN rooms, room-code joining, chat, host moderation and reconnect support. When an owner enables sharing, members can view explored regions, pan and zoom, and request temperature or individual-cell details. Observation requests follow the viewport and send changes; unexplored cells stay hidden. Observers do not replay the owner's simulation or periodically force whole worlds into agreement.
+OniOnline also provides an independent SDK. The built-in one-player-per-planet mode uses the same extension interfaces as third-party modes. Developers can add rules, authenticated messages and explicitly registered mod-state channels. This does not automatically synchronize arbitrary mod internals or the entire simulation.
 
-Requires Spaced Out! and CycleTrim. Participants should use matching game and mod versions. The host loads a colony and opens its star system from the star map. Guests browse Online or enter a room code, choose a position and confirm. Enable sharing in the planet viewer; its sidebar opens room chat directly.
+Getting started:
+• Browse Star Systems in the main menu is for browsing and joining.
+• New Game → Survival → Online creates a system through the native opening flow.
+• Once the colony is ready, open Communications from the native management-bar bubble, or press Ctrl+T. No settings-menu detour is required.
 
-Source candidate 0.3.5 uses room protocol 9 and remains an early read-only preview. This version label does not mean the candidate has been published to Steam. Remote digging, building and duplicant commands are disabled in the ordinary package. The room view uses the game's native star map and displays player-registered planets alongside a static directory of native asteroids discovered by the host. This directory is subscribed to only while the room chart is open and sends a baseline followed by actual changes; undiscovered bodies are not published. Full colony transfers, rocket visits, resource shipping and offline hosting are not implemented.
+The preview includes Steam public systems, LAN discovery, system codes, chat, reconnects and host moderation. The ordinary package provides permission-based read-only observation; native remote work and duplicant commands are disabled. Full colony transfers, rocket visits, resource shipping and offline hosting are not implemented.
 
-Local network regressions, one real Steam host and the local shared-map viewer have been checked. Viewing and chatting between two actual accounts still need verification; cross-device smoothness is not yet established. Please use a copy of your save for testing and report the version and reproduction steps.
+Before gameplay admission, required mods must match in source, version, controlled content digest and actual loaded state. Public Workshop content can be downloaded after confirmation. A completed Steam download does not establish ONI installation or loading: use the native mod menu, enable the required content, restart and rejoin. Local/Dev packages are not automatically distributed. Runtime state synchronization covers only channels explicitly registered and authorized through the SDK.
 
-Source and feedback: https://github.com/LIghtJUNction/OniMods
+CycleTrim and Spaced Out! are not fixed prerequisites. Basic sessions negotiate protocol, gameplay and feature contracts rather than requiring equal game-build or DLC labels. The current native adapter is registered for build 744825: planet identity and observation sampling cover the base game, while the native star map requires Spaced Out! Unknown builds cannot use unadapted native features; arbitrary game-version compatibility is not promised. Other required mods enabled by the host must still match the manifest.
+
+The current source candidate is 0.4.0, protocol 10, and remains a development preview. This text does not mean it has been published to Steam. Visual interaction, real Workshop download and native restart, and complete testing between two actual game clients still need acceptance. Focused host tests do not replace game evidence. Please use copies of your saves for testing.
+
+Source, SDK and installation: https://github.com/LIghtJUNction/OniMods/tree/main/mods/OniOnline

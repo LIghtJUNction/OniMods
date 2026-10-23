@@ -5,7 +5,7 @@
       <OnlineMergeAssemblies Include="$(OutputPath)PLib.dll" />
     </ItemGroup>
     <ILRepack Parallel="true" DebugInfo="true" AllowDuplicateResources="true"
-      LibraryPath="$(OniManagedPath)" InputAssemblies="@(OnlineMergeAssemblies)"
+      LibraryPath="$(OniManagedPath);$(OutputPath)" InputAssemblies="@(OnlineMergeAssemblies)"
       TargetKind="SameAsPrimaryAssembly" OutputFile="$(OutputPath)$(TargetName)$(TargetExt)" />
     <Delete Files="$(OutputPath)PLib.dll;$(OutputPath)PLib.xml" />
   </Target>

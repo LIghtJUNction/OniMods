@@ -24,7 +24,8 @@ namespace OniOnline.UI
 
         private readonly ScrollRect scroll;
         private readonly Transform content;
-        private readonly Button latest;
+        private readonly GameObject latest;
+        private readonly TMP_Text nativeStyle;
         private readonly int fontSize;
         private readonly List<Entry> entries = new List<Entry>();
         private string roomId;
@@ -33,8 +34,11 @@ namespace OniOnline.UI
         private float readingAnchorY, previousOffset;
 
         internal OnlineChatTranscript(ScrollRect scroll, Transform content, Button latest, int fontSize)
+            : this(scroll, content, latest.gameObject, fontSize, null) { }
+
+        internal OnlineChatTranscript(ScrollRect scroll, Transform content, GameObject latest, int fontSize, TMP_Text nativeStyle)
         {
-            this.scroll = scroll; this.content = content; this.latest = latest;
+            this.scroll = scroll; this.content = content; this.latest = latest; this.nativeStyle = nativeStyle;
             this.fontSize = fontSize;
             scroll.onValueChanged.AddListener(_ => RefreshLatestButton());
         }
@@ -51,7 +55,7 @@ namespace OniOnline.UI
         internal void FollowLatest()
         {
             followPending = true; layoutPending = true; unread = false;
-            latest.gameObject.SetActive(false);
+            latest.SetActive(false);
         }
 
         private float ViewportY(RectTransform rect, float y)
@@ -101,7 +105,7 @@ namespace OniOnline.UI
                     Entry entry = found >= 0 ? retained[found] : Create(line);
                     if (found >= 0) retained.RemoveAt(found);
                     entry.Rect.SetSiblingIndex(i);
-                    entry.Surface.color = (i & 1) == 0 ? OnlineWidgets.InsetColor :
+                    entry.Surface.color = nativeStyle != null ? Color.clear : (i & 1) == 0 ? OnlineWidgets.InsetColor :
                         new Color(0.205f, 0.215f, 0.26f);
                     next.Add(entry);
                 }
@@ -156,20 +160,27 @@ namespace OniOnline.UI
             bodyLayout.minWidth = 0; bodyLayout.minHeight = fontSize + 7; bodyLayout.flexibleHeight = 0;
             // Neither sender names nor message bodies ever enable TMP rich text.
             entry.Body.richText = entry.Sender.richText = false;
+            if (nativeStyle != null)
+            {
+                foreach (var label in new[] { entry.Sender, entry.Body })
+                { label.font = nativeStyle.font; label.fontSharedMaterial = nativeStyle.fontSharedMaterial; label.color = nativeStyle.color; }
+            }
             return entry;
         }
 
-        private static void RefreshSender(Entry entry, PlayerInfo[] players)
+        private void RefreshSender(Entry entry, PlayerInfo[] players)
         {
             bool system = string.IsNullOrEmpty(entry.PlayerId);
             var player = players.FirstOrDefault(value => value.Id == entry.PlayerId);
             Color color = player != null ? OnlineWidgets.PlayerColor(player.Number) : OnlineWidgets.MutedColor;
-            entry.Badge.SetActive(!system);
+            if (nativeStyle != null)
+                color = player == null ? nativeStyle.color : Color.Lerp(nativeStyle.color, color, .35f);
+            entry.Badge.SetActive(nativeStyle == null && !system);
             entry.Number.text = player == null ? "·" : player.Number.ToString();
             entry.Number.color = entry.Sender.color = color;
             entry.Sender.text = system ? OnlineText.Get("chat.system") : entry.Name;
-            entry.Body.color = system ? OnlineWidgets.MutedColor : OnlineWidgets.TextColor;
-            entry.Body.margin = new Vector4(system ? 0 : 36, 0, 0, 2);
+            entry.Body.color = nativeStyle != null ? nativeStyle.color : system ? OnlineWidgets.MutedColor : OnlineWidgets.TextColor;
+            entry.Body.margin = new Vector4(nativeStyle != null || system ? 0 : 36, 0, 0, 2);
         }
 
         internal void CompleteLayout()
@@ -201,7 +212,7 @@ namespace OniOnline.UI
         private void RefreshLatestButton()
         {
             if (!layoutPending && AtLatest) unread = false;
-            latest.gameObject.SetActive(unread && !AtLatest);
+            latest.SetActive(unread && !AtLatest);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using OniOnline.Core;
 using OniOnline.Network;
 
 namespace OniOnline.Multiplayer
@@ -14,6 +15,9 @@ namespace OniOnline.Multiplayer
         private readonly Func<string, PlanetManifest> manifestForPlanet;
         private readonly Func<string, string, WorldInterestSubscription, WorldInterestFrame> capture;
         private readonly Func<string, string, bool> canObserve;
+        private readonly Func<string, bool> canUsePeer;
+        private readonly Func<string, long> admissionGeneration;
+        private readonly Dictionary<string, long> admissions = new Dictionary<string, long>(StringComparer.Ordinal);
         private readonly Dictionary<string, Observer> observers = new Dictionary<string, Observer>();
         private readonly Dictionary<string, RequestStamp> requestHighwater = new Dictionary<string, RequestStamp>();
         private readonly Dictionary<string, Authority> authorities = new Dictionary<string, Authority>();
@@ -38,10 +42,12 @@ namespace OniOnline.Multiplayer
             internal long VisualSentSequence, MotionSentSequence;
             internal bool Bound;
             internal int Memory;
+            internal long PeerAdmission, LocalAdmission;
         }
         private sealed class Authority { internal string Owner, Epoch; internal long SourceGeneration, Generation; }
         private sealed class RequestStamp { internal long Number; internal string Nonce, Planet; internal bool Cancelled; }
-        private sealed class Outgoing { internal string Sender, Target; internal byte[] Data; internal int Priority; internal long Order; internal double QueuedAt; }
+        private sealed class Outgoing { internal string Sender, Target; internal byte[] Data; internal int Priority;
+            internal long Order, SenderAdmission, TargetAdmission; internal double QueuedAt; }
         private long order;
         internal WorldInterestReplica VisualReplica { get; private set; }
         internal WorldInterestReplica MotionReplica { get; private set; }
@@ -60,18 +66,23 @@ namespace OniOnline.Multiplayer
         internal WorldInterestSession(RoomSession session, Func<string, string> authorityForPlanet,
             Func<string, PlanetManifest> manifestForPlanet,
             Func<string, string, WorldInterestSubscription, WorldInterestFrame> capture,
-            Func<string, string, bool> canObserve)
+            Func<string, string, bool> canObserve, Func<string, bool> canUsePeer = null,
+            Func<string, long> admissionGeneration = null)
         {
             this.session = session ?? throw new ArgumentNullException("session");
             this.authorityForPlanet = authorityForPlanet ?? throw new ArgumentNullException("authorityForPlanet");
             this.manifestForPlanet = manifestForPlanet ?? throw new ArgumentNullException("manifestForPlanet");
             this.capture = capture ?? throw new ArgumentNullException("capture");
             this.canObserve = canObserve ?? throw new ArgumentNullException("canObserve");
+            this.canUsePeer = canUsePeer;
+            this.admissionGeneration = admissionGeneration;
             session.ApplicationMessageReceived += Receive;
         }
 
         internal bool Subscribe(string authorityPeer, string planetId, WorldInterestSubscription value)
         {
+            RefreshAdmission();
+            if (!Admitted(session.LocalPlayerId) || !Admitted(authorityPeer)) return false;
             PlanetManifest manifest = manifestForPlanet(planetId);
             if (disposed || manifest == null || authorityForPlanet(planetId) != authorityPeer || authorityPeer == session.LocalPlayerId ||
                 !session.Players.Any(player => player.Id == authorityPeer)) return false;
@@ -91,6 +102,7 @@ namespace OniOnline.Multiplayer
         internal void RevalidateObservers()
         {
             if (disposed) return;
+            RefreshAdmission();
             foreach (var observer in observers.Values.ToArray())
                 if (!canObserve(observer.Peer, observer.Planet))
                 {
@@ -110,7 +122,8 @@ namespace OniOnline.Multiplayer
         {
             now = seconds;
             if (disposed) return;
-            if (!session.Joined || session.Reconnecting || session.Leaving || session.Closed)
+            RefreshAdmission();
+            if (!Ready)
             {
                 if (!disconnected)
                 {
@@ -151,6 +164,9 @@ namespace OniOnline.Multiplayer
                     ? outbox.Where(p => p.Value.Priority == 2).OrderBy(p => p.Value.Order).First()
                     : outbox.OrderBy(p => p.Value.Priority).ThenBy(p => p.Value.Order).First();
                 Outgoing item = pair.Value;
+                if (!Connected(item.Sender) || !Connected(item.Target) || item.SenderAdmission != Generation(item.Sender) ||
+                    item.TargetAdmission != Generation(item.Target))
+                { outbox.Remove(pair.Key); outboxBytes -= item.Data.Length; continue; }
                 bool sent = session.IsHost ? (item.Sender == session.LocalPlayerId ? session.SendApplicationTo(item.Target, item.Data) :
                     session.ForwardApplication(item.Sender, item.Target, item.Data)) : session.SendApplication(item.Data);
                 if (!sent) break;
@@ -160,6 +176,8 @@ namespace OniOnline.Multiplayer
 
         private void Produce(Observer observer)
         {
+            if (!Ready || !Connected(observer.Peer) || observer.PeerAdmission != Generation(observer.Peer) ||
+                observer.LocalAdmission != Generation(session.LocalPlayerId)) { InvalidatePeer(observer.Peer); return; }
             bool motionDue = (observer.Subscription.Channels & WorldInterestChannels.Entities) != 0 && now >= observer.MotionAt;
             bool visualDue = now >= observer.VisualAt;
             if (observer.Bound)
@@ -251,7 +269,9 @@ namespace OniOnline.Multiplayer
 
         private void Receive(string sender, byte[] data)
         {
-            if (disposed || !WorldInterestSessionWire.IsMessage(data) || !Connected(sender)) return;
+            if (disposed) return;
+            RefreshAdmission();
+            if (!Ready || !WorldInterestSessionWire.IsMessage(data) || !Connected(sender)) return;
             WorldInterestSessionMessage message;
             if (!WorldInterestSessionWire.TryDecode(data, out message) || message.RoomId != session.RoomId || !Connected(message.TargetId)) return;
             string authority = authorityForPlanet(message.PlanetId);
@@ -323,7 +343,8 @@ namespace OniOnline.Multiplayer
             { Deny(sender, message.PlanetId, message.Nonce, message.RequestNumber, "world_interest_memory_budget"); return; }
             RemoveObserver(sender); requestHighwater[sender] = new RequestStamp { Number = message.RequestNumber, Nonce = message.Nonce, Planet = message.PlanetId };
             observers[sender] = new Observer { Peer = sender, Planet = message.PlanetId, Nonce = message.Nonce,
-                Request = message.RequestNumber, Binding = ++nextBinding, Subscription = valid, Expires = now + 25, Memory = memory };
+                Request = message.RequestNumber, Binding = ++nextBinding, Subscription = valid, Expires = now + 25, Memory = memory,
+                PeerAdmission = Generation(sender), LocalAdmission = Generation(session.LocalPlayerId) };
         }
 
         private void AcceptCancel(string sender, WorldInterestSessionMessage message)
@@ -420,6 +441,7 @@ namespace OniOnline.Multiplayer
         }
         private void QueueRaw(string sender, string target, WorldInterestSessionMessage message, int priority)
         {
+            if (!Ready || !Connected(sender) || !Connected(target)) return;
             byte[] bytes = WorldInterestSessionWire.Encode(message);
             string key = sender + ":" + target + ":" + message.Nonce + ":" + message.Kind + ":" + message.Motion;
             Outgoing old; outbox.TryGetValue(key, out old);
@@ -427,7 +449,8 @@ namespace OniOnline.Multiplayer
             { LastError = "world_interest_backpressure"; return; }
             outboxBytes += bytes.Length - (old == null ? 0 : old.Data.Length);
             outbox[key] = new Outgoing { Sender = sender, Target = target, Data = bytes, Priority = priority,
-                Order = old == null ? ++order : old.Order, QueuedAt = old == null ? now : old.QueuedAt };
+                Order = old == null ? ++order : old.Order, QueuedAt = old == null ? now : old.QueuedAt,
+                SenderAdmission = Generation(sender), TargetAdmission = Generation(target) };
         }
         private static int Priority(WorldInterestSessionMessage message)
         { return message.Kind != WorldInterestSessionKind.Delta ? 0 : message.Motion ? 1 : 2; }
@@ -443,7 +466,60 @@ namespace OniOnline.Multiplayer
             foreach (var pair in outbox.Where(p => p.Key.Contains(":" + requestNonce + ":") && (peer == null || p.Value.Target == peer)).ToArray())
             { outboxBytes -= pair.Value.Data.Length; outbox.Remove(pair.Key); }
         }
-        private bool Connected(string peer) { return peer != null && session.Players.Any(p => p.Id == peer && p.Connected); }
+        private bool Ready { get { return session.Joined && !session.Reconnecting && !session.Leaving && !session.Closed &&
+            Admitted(session.LocalPlayerId) && (session.IsHost || Admitted(session.Players.FirstOrDefault()?.Id)); } }
+        private bool Connected(string peer) { return Ready && peer != null &&
+            Admitted(peer) && session.Players.Any(p => p.Id == peer && p.Connected); }
+        private long Generation(string peer) { return PeerAdmission.Generation(admissionGeneration, peer); }
+        private bool Admitted(string peer) { return PeerAdmission.Allows(canUsePeer, peer) && Generation(peer) > 0; }
+        private void RefreshAdmission()
+        {
+            bool localChanged = false, ownerChanged = false;
+            foreach (var player in session.Players)
+            {
+                long value = Admitted(player.Id) ? Generation(player.Id) : 0, previous;
+                if (admissions.TryGetValue(player.Id, out previous) && previous != value)
+                {
+                    InvalidatePeer(player.Id);
+                    localChanged |= player.Id == session.LocalPlayerId || !session.IsHost && player.Id == session.Players[0].Id;
+                    ownerChanged |= player.Id == owner;
+                }
+                admissions[player.Id] = value;
+            }
+            foreach (string gone in admissions.Keys.Where(id => !session.Players.Any(player => player.Id == id)).ToArray())
+            { InvalidatePeer(gone); admissions.Remove(gone); }
+            bool localAdmitted = Admitted(session.LocalPlayerId) && (session.IsHost || Admitted(session.Players.FirstOrDefault()?.Id));
+            if (!localAdmitted || localChanged)
+            {
+                foreach (string peer in observers.Keys.ToArray()) InvalidatePeer(peer);
+                outbox.Clear(); outboxBytes = 0;
+                if (nonce != null)
+                {
+                    nonce = boundEpoch = null; boundGeneration = boundBinding = 0;
+                    VisualReplica = MotionReplica = null; Stale = true;
+                    Notify();
+                }
+                return;
+            }
+            foreach (string peer in observers.Keys.Where(peer => !Admitted(peer)).ToArray()) InvalidatePeer(peer);
+            foreach (var pair in outbox.Where(pair => !Admitted(pair.Value.Sender) || !Admitted(pair.Value.Target)).ToArray())
+            { outboxBytes -= pair.Value.Data.Length; outbox.Remove(pair.Key); }
+            if (subscription != null && (ownerChanged || !Admitted(owner)) && nonce != null)
+            {
+                Purge(null, nonce); nonce = null;
+                VisualReplica = MotionReplica = null; boundEpoch = null; boundGeneration = boundBinding = 0;
+                Stale = true; LastError = "world_interest_owner_offline"; Notify();
+            }
+            else if (subscription != null && nonce == null && Ready) NewRequest();
+        }
+        private void InvalidatePeer(string peer)
+        {
+            RequestStamp stamp;
+            if (requestHighwater.TryGetValue(peer, out stamp)) stamp.Cancelled = true;
+            RemoveObserver(peer);
+            foreach (var pair in outbox.Where(pair => pair.Value.Sender == peer || pair.Value.Target == peer).ToArray())
+            { outboxBytes -= pair.Value.Data.Length; outbox.Remove(pair.Key); }
+        }
         private static WorldInterestSubscription VisualSubscription(WorldInterestSubscription source)
         { return new WorldInterestSubscription { Revision = source.Revision, Region = source.Region, Channels = source.Channels & ~WorldInterestChannels.Entities,
             HoverIndex = source.HoverIndex, NumericIntervalTicks = source.NumericIntervalTicks }; }

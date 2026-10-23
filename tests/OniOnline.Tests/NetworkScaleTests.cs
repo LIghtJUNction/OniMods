@@ -262,8 +262,19 @@ internal static class NetworkScaleTests
             peer.InitialTransport.Disconnect("host"); room.Step();
             check(peer.Session.Reconnecting && !peer.System.Admitted, "disconnect during colony creation does not activate an absent planet");
             room.Until(() => peer.Session.Joined && !peer.Session.Reconnecting, "creation reconnect recovers the same communication session");
+            check(!peer.System.TravelConfirmed && !peer.System.LandingRequested,
+                "reconnect invalidates the absent planet's old reservation and travel confirmation");
             peer.Source.Ready = true;
-            room.Until(() => peer.System.Admitted, "colony becoming available after reconnect completes the reservation");
+            room.Advance(5);
+            check(!peer.System.Admitted && !room.Host.System.State.Members.Any(m => m.PeerId == id && m.Planet != null),
+                "native colony becoming ready after reconnect cannot replay the old admission confirmation");
+            check(peer.Session.LocalPlayerId == id && peer.Source.Planet.PlanetId == planet,
+                "reconfirmation waits without replacing the restored player or completed local planet identity");
+            room.Until(() => peer.System.State != null && !peer.System.State.Members.Any(m => m.PeerId == id),
+                "reconnected visitor receives fresh state without its old empty reservation");
+            room.Reserve(peer, 1, 0);
+            check(peer.System.ConfirmTravel(), "owner explicitly confirms a fresh reservation for its completed colony after reconnect");
+            room.Until(() => peer.System.Admitted, "completed local colony joins after a fresh reservation and confirmation");
             check(peer.Session.LocalPlayerId == id && room.Host.System.State.Members.Single(m => m.PeerId == id).Planet.PlanetId == planet,
                 "creation reconnect preserves owner and selected planet identity");
         }

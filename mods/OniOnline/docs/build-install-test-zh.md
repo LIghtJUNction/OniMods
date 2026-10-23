@@ -1,171 +1,119 @@
-# 从源码构建、安装并测试 OniOnline
+# 构建、安装与测试 OniOnline 0.4.0
 
-这份教程会把 OniOnline 装进你自己的《缺氧》，再和另一名玩家测试文字聊天与授权只读观察。当前是开发预览，每个玩家运行自己的殖民地。房主管理自己的星系，客人登记自己存档中的一颗星球，其他人经过授权才能观察。
+这是源码开发预览的安装与测试流程，不是 Steam 发版公告。OniOnline 内置“一名玩家控制一颗星球”：每个人运行自己的原生殖民地，星系负责连接、登记和授权观察。当前不搬迁完整殖民地，不提供火箭互访或离线代算。
 
-完整殖民地迁移、火箭互访和远程施工不属于普通预览包的可用功能。带星球加入房间，目前表示登记身份与观察数据，不会把客人的殖民地复制进房主存档。
+先验证局部模块，再进行安装和游戏内集成测试。新版浏览、开局、通讯和模组对齐界面的图形验收仍待完成，下面的游戏步骤是验收清单，不代表已经通过。
 
-## 1. 准备游戏和工具
+## 准备环境
 
-先在 Steam 安装并启动一次《缺氧》和《眼冒金星 / Spaced Out!》DLC。后面的游戏启动也全部通过 Steam 进行。
+通过 Steam 安装并正常启动一次《缺氧》。后续游戏启动也使用 Steam。CycleTrim、Spaced Out! 和单独的 PLib 模组均不是固定前置；OniOnline 已内置 PLib。普通联机不需要 OniMcp 或 OniHarness。
 
-安装并启用与房主匹配的 CycleTrim。OniOnline 内置 PLib，不用另装 PLib 模组。只参加联机测试不需要 OniMcp 或 OniHarness。
+当前原生适配器登记游戏构建 **744825**：本体提供星球身份和观察采样适配，Spaced Out! 另提供原生星图。未知构建的原生功能关闭，不能把基础协议连接成功理解成任意游戏版本兼容。最低构建要求和细节见 [兼容边界](FRAMEWORK-COMPATIBILITY.md)。
 
-安装以下构建工具，然后重新打开终端：
-
-- [Git](https://git-scm.com/downloads/)。
-- [Rust stable 和 Cargo](https://rustup.rs/)，用于构建 `onim`。
-- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)，用于构建模组和运行测试。选择 SDK，只有 Runtime 不够。
-- Linux 需要 `unzip` 和 `tar`。Windows 使用 PowerShell 解压，并需要 Visual Studio 的 C++ 构建工具来编译 Rust 程序。安装步骤见 [Windows 开发说明](https://github.com/LIghtJUNction/OniMods/blob/main/docs/WINDOWS_DEV.md)。
-
-这些工具不包含游戏程序集。构建使用你本机合法安装的游戏文件，不要向别人索取或分发游戏 DLL。
-
-## 2. 获取双方一致的源码
-
-打开终端，克隆仓库：
+源码构建需要 Git、Rust stable/Cargo 和 .NET 10 SDK。Linux 另需 `unzip`、`tar`；Windows 的构建工具说明见 [WINDOWS_DEV.md](../../../docs/WINDOWS_DEV.md)。所有游戏程序集来自自己的合法安装，不分发游戏 DLL。
 
 ```sh
 git clone https://github.com/LIghtJUNction/OniMods.git
 cd OniMods
-git rev-parse HEAD
-```
-
-把最后输出的提交号发给房主核对。测试双方要使用同一个提交，并使用相同的 ONI、CycleTrim 和 DLC 组合。
-
-直播中的本地修改可能尚未推送。克隆 `main` 不会得到未推送的修改。房主公布测试提交后，再在新克隆的仓库中切换到那个提交：
-
-```sh
-git fetch origin
-git switch --detach 房主公布的提交号
-```
-
-把中文占位符替换为真实提交号后再运行。已有自己的未提交修改时，先保留这些工作，不要用重置命令覆盖。
-
-构建 OniOnline 不需要初始化 `oni-skills` 或 OniHarness 子模块。
-
-## 3. 配置本机游戏路径
-
-在仓库根目录安装 CLI：
-
-```sh
 cargo install --path . --locked
 onim --version
 ```
 
-本文核对的 CLI 为 `onim 0.1.8`。安装后找不到 `onim` 时，重新打开终端，确认 Cargo 的可执行文件目录已加入 `PATH`。
+测试双方先核对源码提交或候选包身份。新版本首次验收建议使用同一候选，减少未验证组合；协议 9 及更早客户端不能加入协议 10。后续是否可连接由协议、玩法合同、功能能力和模组清单决定，不要求游戏构建号或 DLC 标签简单相等。
 
-首次配置时，把 `Directory.Build.props.example` 复制为 `Directory.Build.props`。Linux 使用：
+构建 OniOnline 无需初始化可选的 `oni-skills` 或 OniHarness 子模块。保留已有未提交修改，不通过重置仓库来切换测试版本。
 
-```sh
-cp Directory.Build.props.example Directory.Build.props
-```
+## 配置本机游戏路径
 
-Windows PowerShell 使用：
-
-```powershell
-Copy-Item Directory.Build.props.example Directory.Build.props
-```
-
-已经有 `Directory.Build.props` 时，直接检查已有内容，不要覆盖。编辑其中的 `OniGamePath`，填入 Steam 的游戏安装目录。可在 Steam 的《缺氧》属性中打开 **已安装文件 → 浏览**，找到这一层目录。
-
-Linux 的示例值：
+首次配置将 `Directory.Build.props.example` 复制为 `Directory.Build.props`；已有文件直接检查，不覆盖。在其中填写 Steam 实际安装目录，例如：
 
 ```xml
 <OniGamePath>/home/你的用户名/.local/share/Steam/steamapps/common/OxygenNotIncluded</OniGamePath>
 ```
 
-Windows 的示例值：
+Windows 可使用 `C:/Program Files (x86)/Steam/steamapps/common/OxygenNotIncluded`，自定义 Steam 库填写实际目录。可从 Steam 游戏属性的“已安装文件 → 浏览”定位。
 
-```xml
-<OniGamePath>C:/Program Files (x86)/Steam/steamapps/common/OxygenNotIncluded</OniGamePath>
-```
-
-这两个值都只是示例。自定义 Steam 库要填写实际位置。Windows 和 Linux 的 `OniManagedPath` 保留模板值即可。
-
-仓库已经登记了 OniOnline，本教程不需要运行 `onim setup`。保留原来的 `onim.toml`，不要改成模板模组列表。
-
-检查配置：
+保留仓库已有的 `onim.toml`，不需要重新执行 `onim setup`。检查：
 
 ```sh
 onim list
 onim doctor
 ```
 
-`list` 中要有 `OniOnline`。`doctor` 中的游戏目录、`Assembly-CSharp.dll`、SDK 和 Mod 用户目录都要指向本机有效位置。缺少某项时先修正，再继续构建。
+列表应有 `OniOnline`；诊断中的游戏、Managed 引用、SDK 和用户模组目录应有效。诊断进程退出成功不代表每一项都通过。
 
-## 4. 构建并安装
+## 先运行局部测试
 
-先正常保存并退出《缺氧》。安装不会让已运行的游戏热加载新 DLL。
-
-普通测试者安装 Release 版本：
+以下命令不启动游戏，根据改动选择相关模块，不必每次全部执行：
 
 ```sh
-onim -m OniOnline install
+dotnet run --project tests/OniOnline.Tests -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -- --sdk
+dotnet run --project tests/OniOnline.Tests -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -- --compatibility
+dotnet run --project tests/OniOnline.Tests -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -- --mod-sync-session
+dotnet run --project tests/OniOnline.Tests -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -- --mod-content-sync
 ```
 
-这个命令先构建 Release，再解压到用户 Mod 目录的 `Local/OniOnline`。构建成功时，仓库中也会有本轮的 `dist/OniOnline.zip` 和 `mods/OniOnline/dist/OniOnline.zip`。
+核对退出码和实际选择的用例。编译失败、空选择、超时或断言失败均不算通过。SDK、内容同步和兼容测试只验证各自生产逻辑及协议边界，不证明 Unity、Steam 下载或原生界面已经可用。
 
-想反复修改源码的开发者，可以改用：
+只开发独立框架时，可先构建 `sdk/OniOnline.Framework`，无需游戏引用；玩法示例与调用方式见 [SDK.md](SDK.md)。
 
-```sh
-onim -m OniOnline dev
-```
+## 构建和安装候选
 
-`dev` 会重新构建 Debug，安装到 `Dev/OniOnline`，并在已有 `mods.json` 中启用该 Dev 条目。它没有 `--release` 选项。两条安装命令选一条使用，不要把先构建 Release、再运行 `dev` 的结果当成 Release 测试。
-
-仅检查是否能编译，不安装到游戏时，运行：
+只构建，不安装：
 
 ```sh
 onim -m OniOnline build --release
 ```
 
-当前 CLI 识别的 Mod 用户目录为 Linux 的 `~/.config/unity3d/Klei/Oxygen Not Included/mods`，以及 Windows 实际 **文档**目录中的 `Klei/OxygenNotIncluded/mods`。Windows 文档目录可能被重定向，以安装输出和游戏加载日志为准。
+Release 包位于 `dist/OniOnline.zip`，模组项目内也有 `mods/OniOnline/dist/OniOnline.zip`。包中应同时包含 `OniOnline.dll`、`OniOnline.Framework.dll`、元数据和说明，不含游戏 DLL。
 
-现在从 Steam 启动游戏，在 **模组**列表中启用 OniOnline 和 CycleTrim。若 OniOnline 同时出现 Dev、Local 或 Workshop 副本，只启用本次安装的一份。相同的 `staticID` 为 `LIghtJUNction.OniOnline`，不要靠显示名或版本号猜测加载来源。先在游戏中停用旧副本，再退出游戏处理确定无用的旧安装目录。不要删除存档目录，也不要删除其他模组。
-
-按游戏提示重启，再检查 `Player.log` 中实际加载的 `OniOnline.dll` 路径。只看到 ZIP 构建成功，不能证明游戏加载了这个版本。
-
-## 5. 和另一名玩家测试
-
-双方各自正常创建一个独立殖民地，或使用自己已有殖民地的测试副本。各自选一颗星球参与，不要复制同一个存档来冒充两名玩家的不同星球。
-
-没有测试存档时，打开 **新游戏 → 生存模式 → 联机**，进入原生眼冒金星目的地配置，默认关闭沙盒。继续选择星球并完成原生开局，再开放自己的星系。主菜单的 **浏览游戏大厅** 只列出大厅和加入入口，不提供创建星系按钮。本次入口调整尚待游戏内验收。
-
-1. 房主加载自己的测试殖民地，打开原生星图中的星系入口，设置星系名并开放星系。
-2. 客人加载自己的测试殖民地，打开 **联机**，找到房主的公开星系。使用 LAN 时，双方在连接设置中选择 LAN，也可以输入房主给出的房间码或 IP 与端口。
-3. 客人已有殖民地时，直接在游戏原生星图底部切换“我的星系”和“房间星系”。自己的星图中点选一颗已发现星球，再点“选择此星球”；房间星图中点选空格，等待预留成功后点“确认加入”。房间视图仅展示房主已发现的静态目录和已登记玩家，不展示客人的本地星图冒充房主。无存档先完成原生创建或加载。位置规则仍在开发，不把当前选位方式当成最终玩法。
-4. 双方各发一句不同的中文聊天，确认两边都收到，昵称、文字和消息条数正确。点击编辑框后检查光标、方向键和选中文字的显示。
-5. 星球主人先保持未共享，确认另一端看不到该星球的地块。主人开启共享后，再观察已经探索的区域。
-6. 查看地形、对象和单格详情。未探索的格子不能泄漏数据。观察者不能挖掘、建造或替主人下指令。
-7. 主人关闭共享，确认另一端停止更新并清掉该星球的观察数据。
-8. 用测试房间短暂断开网络，再恢复网络。检查断线提示、重连后的聊天是否重复，以及观察权限是否仍正确。主动离开房间后，不能自动重连回旧房间。
-9. 双方连接麦克风和耳机，默认按住 `Ctrl+V` 轮流说话，确认对方能听到。松开、编辑文字或切出窗口时确认麦克风停止；断网再连接后不能重放旧语音。设置中关闭语音或调节接收音量，检查实际效果。原生控制设置中可以修改说话和聊天快捷键。
-
-LAN 默认使用 TCP `27140` 和 UDP 发现端口 `27141`。发现列表为空时，可以用对方实际可达的 LAN IP 直连。LAN 预览面向可信局域网；跨互联网优先测试 Steam 大厅，不把局域网端口直接开放到公网。
-
-这轮主要测试低频状态同步和聊天，不传直播视频。主人仍在自己的电脑上模拟殖民地。高延迟、断流恢复和换房后的授权清理，都需要记录实际结果，不能只凭“加入成功”判定通过。
-
-## 6. 在本机运行源码测试
-
-下面的测试不启动游戏。它们验证协议、权限、缓存、聊天和模拟弱网，不能代替上一步的两个真实游戏客户端。
-
-运行完整宿主测试：
+安装前正常保存并退出游戏。选择一条安装路线：
 
 ```sh
-dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -p:TreatWarningsAsErrors=true
+# Release 测试：重新构建并安装到 Local/OniOnline
+onim -m OniOnline install
 ```
 
-单独测试真实 TCP 连接上的限速和断流恢复：
+反复修改源码时可改用 `onim -m OniOnline dev`，它重新构建 Debug 并启用 `Dev/OniOnline`，不是 Release。不要连续安装两份并同时启用。
+
+从 Steam 启动游戏，在原生模组列表中启用本轮 OniOnline，按游戏提示重启。同一 `LIghtJUNction.OniOnline` 只启用一份 Local、Dev 或 Workshop 来源，保留其他模组和存档。Linux 用户模组目录通常为 `~/.config/unity3d/Klei/Oxygen Not Included/mods`；Windows 位于实际“文档”目录下的 `Klei/OxygenNotIncluded/mods`，以安装输出为准。
+
+检查 `Player.log` 中实际加载程序集的路径、版本与 SHA256，并与候选比对。构建 ZIP 成功、文件已经复制或游戏已经启动，都不等于候选已经加载。
+
+## 验收入场和模组对齐
+
+使用一次性测试殖民地或自己的存档副本。不要把同一存档复制成两份后当成两个不同玩家的星球；内置规则会拒绝同源分支重复登记。
+
+1. 从 **新游戏 → 生存模式 → 联机** 进入原生配置和开局流程，完成后创建星系。主菜单 **浏览星系** 只负责浏览与加入，不能创建。菜单、加载和初始复制人选择期间不出现联机 HUD。
+2. 另一名玩家通过浏览列表或星系码加入。LAN 可选择发现或 `oni://可达IP:27140`；Steam 使用 `oni://steam/<lobby id>`。
+3. 先用一致的必需模组清单确认正常准入，再分别制造缺失、未启用、版本或内容不同的情况。没有对齐前，不能登记星球、观察或操作其他玩家的内容。
+4. 差异确认窗应先给摘要，完整差异可选查看；不需要翻完所有条目才能下载。确认只作用于当前连接和当前清单，离开或清单改变后旧按钮失效。
+5. 公开工坊内容可经确认下载。下载结束后，进入原生 **管理模组** 启用或停用对应项，并按游戏要求重启，再重新加入。必须核对新进程实际加载的清单，不能把 Steam 下载回调当作安装或加载完成。
+6. Local/Dev 模组需要自行取得对应来源和版本；它们不会自动上传或传给其他玩家。星系主人使用 CycleTrim 或其他默认必需模组时，客人仍需按清单对齐。
+7. 短暂断网、恢复和主动离开各测一次。重连应重新确认当前清单，旧连接的就绪或授权不能复用；主动离开后不能自动连回。
+
+模组对齐的加载证据与下载阶段说明见 [MOD-CONTENT-SYNC.md](MOD-CONTENT-SYNC.md)。基本会话按能力协商，不代表没有模组准入检查。
+
+## 验收聊天、观察和注册状态
+
+进入殖民地后，点击原生管理栏的气泡或按默认 `Ctrl+T` 打开通讯，不进入设置菜单。双方各发不同中文消息，检查昵称、内容、消息顺序、中文输入法、回车发送、焦点与关闭后草稿。窗口和入口应沿用游戏原生控件，不遮挡建造栏；主菜单、世界配置和初始复制人选择期间应隐藏入口。
+
+星球主人保持未共享时，另一端不能看到地块；授权后可观察已探索区域。检查平移、缩放、温度与单格详情，未探索区域不泄漏。关闭共享后，另一端停止更新并清理观察数据。普通预览包不能通过观察页执行原生挖掘、建造或复制人指令。双方本地暂停和倍速互不控制。
+
+注册状态同步需要使用 SDK 的模组参与测试：由其注册状态频道和观察权限，验证快照、增量、断线恢复及不兼容数据版本。没有接入 SDK 的任意第三方模组不会自动获得状态同步。接口和开发示例见 [SDK.md](SDK.md)。
+
+语音可单独验收：默认按住 `Ctrl+V` 轮流说话，松开、编辑文字、切出窗口及离开星系后停止采集；断线后不重放旧音频。实际麦克风、Steam 编码和两个真实游戏之间的听音未被宿主测试覆盖。
+
+新版界面的外观、真实鼠标与输入法仍需图形测试。探针调用事件处理器不能替代这些检查。实际 Steam 下载、ONI 原生安装与重启、两个真实账号的 P2P 和两端游戏观察均需单独留存证据。
+
+## 最后进行完整集成验证
+
+局部模块通过后，才运行完整宿主回归并集中进行 Steam 实机测试：
 
 ```sh
-dotnet run --project tests/OniOnline.Tests/OniOnline.Tests.csproj -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -- --multiplayer-tcp
+dotnet run --project tests/OniOnline.Tests -c Release -p:ImportDirectoryBuildProps=false -p:ImportDirectoryBuildTargets=false -p:TreatWarningsAsErrors=true
 ```
 
-等命令结束并核对退出码。编译失败、超时或断言失败都不算通过。两端 ONI 的自动采集流程见 [两个完整游戏客户端验收](https://github.com/LIghtJUNction/OniMods/blob/main/tests/OniOnline.Tests/MULTIPLAYER-RUNTIME.md)。其中的测试探针只能用于专门的测试构建，不能打进普通发布包。
+[两个完整游戏客户端验收](../../../tests/OniOnline.Tests/MULTIPLAYER-RUNTIME.md)要求两个真实 Steam 游戏进程。单机协议进程、假 SDK 和纯宿主用例不能填作双游戏通过。测试探针只属于专门测试构建，普通包不包含，也不能发布。
 
-## 7. 把可复现的问题发回来
-
-反馈时写明源码提交号、ONI 版本、系统、CycleTrim 版本、使用 Steam 还是 LAN，以及问题发生前的操作。附上预期结果、实际结果和一小段相关日志。
-
-画面问题可以附截图。弱网问题写明延迟、断网时长、恢复时间和是否出现重复聊天。先删去日志中的房间密码、连接密钥、Cookie 和其他私人信息，不上传游戏 DLL 或私人存档。
-
-直播时可以用弹幕描述问题，也可以在 [OniMods 的 GitHub Issues](https://github.com/LIghtJUNction/OniMods/issues) 提交复现步骤。提交前搜索同类问题，在已有讨论中补充本轮证据。
+反馈请附候选提交或哈希、游戏构建、DLC、系统、实际启用模组清单、Steam/LAN、复现步骤和必要的短日志。先删去密码、连接密钥、Cookie、账号隐私及私人路径；不要上传游戏 DLL 或私人存档。

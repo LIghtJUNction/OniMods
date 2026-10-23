@@ -4,13 +4,16 @@
     <AssemblyName>OniOnline</AssemblyName>
     <RootNamespace>OniOnline</RootNamespace>
     <LangVersion>7.3</LangVersion>
-    <Version>0.3.5</Version>
+    <Version>0.4.0</Version>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <NuGetAudit>false</NuGetAudit>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="obj/**/*.cs;bin/**/*.cs;.local-tests/**/*.cs;dist/**/*.cs" />
+    <Compile Remove="Network/**/*.cs;Sdk/**/*.cs;Gameplay/**/*.cs;Core/**/*.cs;Multiplayer/PlanetManifest.cs;Multiplayer/SystemWire.cs;Multiplayer/StarSystemCoordinator.cs" />
+    <Compile Include="Core/NativeSimSaveBlock.cs" />
+    <ProjectReference Include="../../sdk/OniOnline.Framework/OniOnline.Framework.csproj" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
     <PackageReference Include="PLib" Version="4.25.0" />
     <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48" PrivateAssets="all" />
@@ -30,7 +33,7 @@
     <Reference Include="Unity.TextMeshPro"><HintPath>$(OniManagedPath)/Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="docs/build-install-test-zh.md;docs/steam-description-zh.md;docs/steam-description-en.md;localization/menu-draft.csv;assets/online-background-concept.png;assets/online-card-v2.png;assets/online-lobby-v2.png;assets/onionline-logo-v1.png;assets/onionline-icon-v1.png;preview.png;assets/ART.md;README.md;DESIGN.md;STAR-SYSTEMS.md;PERMISSIONS.md;CYCLETRIM-INTEGRATION.md;PHASE1-VALIDATION.md;THIRD_PARTY_NOTICES.txt;mod.yaml;mod_info.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="docs/SDK.md;docs/FRAMEWORK-COMPATIBILITY.md;docs/SDK-MOD-SYNC.md;docs/MOD-CONTENT-SYNC.md;docs/build-install-test-zh.md;docs/steam-description-zh.md;docs/steam-description-en.md;localization/menu-draft.csv;assets/online-background-concept.png;assets/online-card-v2.png;assets/online-lobby-v2.png;assets/onionline-logo-v1.png;assets/onionline-icon-v1.png;preview.png;assets/ART.md;README.md;DESIGN.md;STAR-SYSTEMS.md;PERMISSIONS.md;CYCLETRIM-INTEGRATION.md;PHASE1-VALIDATION.md;THIRD_PARTY_NOTICES.txt;mod.yaml;mod_info.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <PropertyGroup Condition="'$(OnlineRuntimeProbe)' == 'true'">
     <DefineConstants>$(DefineConstants);ONIONLINE_RUNTIME_PROBE</DefineConstants>
@@ -64,7 +67,7 @@
     <MakeDir Directories="$(PackagePath)" />
     <RemoveDir Directories="$(PackageRoot)" />
     <MakeDir Directories="$(PackageRoot)" />
-    <Copy SourceFiles="$(OutputPath)OniOnline.dll" DestinationFolder="$(PackageRoot)" />
+    <Copy SourceFiles="$(OutputPath)OniOnline.dll;$(OutputPath)OniOnline.Framework.dll" DestinationFolder="$(PackageRoot)" />
     <Copy SourceFiles="$(OutputPath)LICENSE;$(OutputPath)LICENSING.md" DestinationFolder="$(PackageRoot)" />
     <Copy SourceFiles="@(Content->'$(OutputPath)%(Identity)')" DestinationFiles="@(Content->'$(PackageRoot)/%(Identity)')" />
     <Delete Files="$(PackagePath)/OniOnline.zip" />
@@ -76,7 +79,7 @@
     </PropertyGroup>
     <RemoveDir Directories="$(PublishRoot)" />
     <MakeDir Directories="$(PublishRoot)" />
-    <Copy SourceFiles="$(PackageRoot)/OniOnline.dll;$(PackageRoot)/LICENSE;$(PackageRoot)/LICENSING.md" DestinationFolder="$(PublishRoot)" />
+    <Copy SourceFiles="$(PackageRoot)/OniOnline.dll;$(PackageRoot)/OniOnline.Framework.dll;$(PackageRoot)/LICENSE;$(PackageRoot)/LICENSING.md" DestinationFolder="$(PublishRoot)" />
     <Copy SourceFiles="@(Content->'$(PackageRoot)/%(Identity)')" DestinationFiles="@(Content->'$(PublishRoot)/%(Identity)')" />
   </Target>
 </Project>
