@@ -91,7 +91,8 @@ def verify_local(manifest: dict, failures: list[str]) -> None:
     )
     require_regex(
         patch,
-        r"return\s+AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null\s*;",
+        r"return\\s+CycleTrimPatchOptions\\.ThrottleStationaryCritters\\s*&&\\s*"
+        r"AccessTools\.TypeByName\(FastTrackPatchType\)\s*==\s*null\s*;",
         "CycleTrim no longer uses the conservative FastTrack type-presence guard",
         failures,
     )
