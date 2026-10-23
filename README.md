@@ -23,6 +23,11 @@
   <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — performance optimization mod for Oxygen Not Included" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
+<p align="center">
+  <a href="mods/OniOnline/README.md"><img alt="OniOnline — multiplayer planets for Oxygen Not Included" src="mods/OniOnline/assets/onionline-logo-v1.png" width="280" /></a><br />
+  <a href="mods/OniOnline/README.md"><strong>OniOnline</strong></a>
+</p>
+
 A large-scale modular repository for Oxygen Not Included mod development:
 
 - `onim`: Rust-based ONI mod development CLI (init/build/install/publish workflow)
@@ -76,6 +81,7 @@ The repository is organized as a **two-part platform**:
 | `onim` | [src/](src/) | Rust CLI for mod lifecycle management |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP server mod and tool surface |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | Lightweight performance mod targeting measured simulation hot paths |
+| `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | Multiplayer planets, chat, and authorized read-only observation |
 | `oni-skills` *(optional)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | High-level ONI gameplay strategies and community engineering modules |
 | Architecture & Principles | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | Technical implementation, world textualization, and optimization principles |
 | `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | Boilerplate template for new mod creation |

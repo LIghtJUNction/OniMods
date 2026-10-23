@@ -7,6 +7,11 @@
   <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 缺氧性能优化 Mod" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
+<p align="center">
+  <a href="mods/OniOnline/README.md"><img alt="OniOnline — 缺氧星球联机 Mod" src="mods/OniOnline/assets/onionline-logo-v1.png" width="280" /></a><br />
+  <a href="mods/OniOnline/README.md"><strong>OniOnline</strong></a>
+</p>
+
 <div align="center">
   <p>
     <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust-2024-f46623?logo=rust&logoColor=white" /></a>
@@ -56,6 +61,7 @@
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP Server Mod |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 针对实测模拟热点的轻量级性能优化 Mod |
+| `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | 自有星球联机、聊天与授权只读观察 |
 | `oni-skills` *(可选)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | 缺氧高阶游戏攻略与工程模块库（社区共建、开放完善） |
 | 架构与核心原理 | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | OniMcp 与 CycleTrim 的底层实现机制、世界文本化与性能优化设计 |
 | `OniMcp` 中文文档 | [mods/OniMcp/README.md](mods/OniMcp/README.md) | 安装、连接和功能说明 |
