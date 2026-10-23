@@ -7,7 +7,7 @@ OniOnline also provides an independent SDK. The built-in one-player-per-planet m
 Getting started:
 • Browse Star Systems in the main menu is for browsing and joining.
 • New Game → Survival → Online creates a system through the native opening flow.
-• Once the colony is ready, open Communications from the native management-bar bubble, or press Ctrl+T. No settings-menu detour is required.
+• Once the colony is ready, open Communications from the native management-bar bubble or the in-game Options menu, or press Ctrl+T.
 
 The preview includes Steam public systems, LAN discovery, system codes, chat, reconnects and host moderation. The ordinary package provides permission-based read-only observation; native remote work and duplicant commands are disabled. Full colony transfers, rocket visits, resource shipping and offline hosting are not implemented.
 
