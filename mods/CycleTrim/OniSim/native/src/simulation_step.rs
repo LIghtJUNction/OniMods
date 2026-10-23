@@ -369,37 +369,36 @@ fn disease_diffusion(
     world: &mut PhysicsWorld,
     elements: &ElementTable,
     diseases: &DiseaseTable,
-    events: &mut EventQueues,
+    _events: &mut EventQueues,
     region: Region,
 ) -> Result<()> {
     for y in region.min_y..region.max_y {
         for x in region.min_x..region.max_x {
             let cell = y as usize * world.stride + x as usize;
-            if world.read.disease_idx[cell] != u8::MAX
-                || world.read.disease_idx[cell + 1] != u8::MAX
-            {
-                crate::disease::update_cells(
+            let first_id = world.read.disease_idx[cell];
+            let right_id = world.read.disease_idx[cell + 1];
+            if first_id != u8::MAX || right_id != u8::MAX {
+                crate::disease::update_cells_known(
                     world,
                     elements,
                     diseases,
-                    events,
-                    FIXED_DT,
                     cell,
                     cell + 1,
-                )?;
+                    first_id,
+                    right_id,
+                );
             }
-            if world.read.disease_idx[cell] != u8::MAX
-                || world.read.disease_idx[cell + world.stride] != u8::MAX
-            {
-                crate::disease::update_cells(
+            let below_id = world.read.disease_idx[cell + world.stride];
+            if first_id != u8::MAX || below_id != u8::MAX {
+                crate::disease::update_cells_known(
                     world,
                     elements,
                     diseases,
-                    events,
-                    FIXED_DT,
                     cell,
                     cell + world.stride,
-                )?;
+                    first_id,
+                    below_id,
+                );
             }
         }
     }
