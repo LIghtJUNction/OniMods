@@ -5,6 +5,8 @@ import copy
 import contextlib
 import io
 import json
+import hashlib
+import mmap
 import os
 from pathlib import Path
 import subprocess
@@ -14,12 +16,21 @@ import time
 import unittest
 from unittest.mock import patch
 
-from profile_cycletrim_process import collect, interval, process_snapshot, stat_fields
+from profile_cycletrim_process import collect, interval, loaded_libraries, process_snapshot, stat_fields
 import profile_cycletrim_native as native_profiler
 
 
 @unittest.skipUnless(Path("/proc/self/stat").exists(), "Linux /proc diagnostics only")
 class ProcessProfileTests(unittest.TestCase):
+    def test_mapped_underscored_onisim_library_is_fingerprinted(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            library = Path(temporary) / "liboni_sim_core.so"
+            payload = b"read-only mapped diagnostic fixture"
+            library.write_bytes(payload)
+            with library.open("rb") as handle, mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ):
+                matches = [row for row in loaded_libraries(os.getpid()) if row["path"] == str(library)]
+                self.assertEqual(matches, [{"path": str(library), "sha256": hashlib.sha256(payload).hexdigest()}])
+
     def test_comm_with_parentheses(self):
         text = Path("/proc/self/stat").read_text()
         fields = text.rsplit(")", 1)[1]

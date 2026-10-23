@@ -53,7 +53,8 @@ namespace CycleTrim.Patches
 
         private static bool IsCompatible()
         {
-            return AccessTools.TypeByName(FastTrackPatchType) == null
+            return CycleTrimPatchOptions.OptimizeAsyncPathProbes
+                && AccessTools.TypeByName(FastTrackPatchType) == null
                 && IsSentinelRecycleSafe();
         }
 

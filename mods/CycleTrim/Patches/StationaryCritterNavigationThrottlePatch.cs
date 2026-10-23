@@ -31,7 +31,8 @@ namespace CycleTrim.Patches
         private static bool Prepare()
         {
             // Keep this patch off when FastTrack already applies equivalent throttling.
-            return AccessTools.TypeByName(FastTrackPatchType) == null;
+            return CycleTrimPatchOptions.ThrottleStationaryCritters
+                && AccessTools.TypeByName(FastTrackPatchType) == null;
         }
 
         private static RefreshStamp CaptureStamp(

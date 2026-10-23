@@ -50,7 +50,8 @@ namespace CycleTrim.Patches
 
         private static bool IsCompatible()
         {
-            return AccessTools.TypeByName(FastTrackPatchType) == null;
+            return CycleTrimPatchOptions.ThrottleBusyDuplicants
+                && AccessTools.TypeByName(FastTrackPatchType) == null;
         }
 
         private static State CreateSensorState(PickupableSensor sensor)

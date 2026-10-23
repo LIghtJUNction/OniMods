@@ -131,6 +131,115 @@ class CaseConcurrencyTests(unittest.TestCase):
             self.assertFalse((root / "out").exists())
 
 
+class SnapshotRetentionTests(unittest.TestCase):
+    def run_fixture(self, root, *, keep=False, failed=False, summary_error=False, child_error=False):
+        (root / "host.py").write_text("Authored driver fixture; no native code is executed.")
+        reference, candidate = root / "reference.so", root / "candidate.so"
+        reference.write_bytes(b"authored reference")
+        candidate.write_bytes(b"authored candidate")
+        output = root / "output"
+        selected = [dict(name="passing"), dict(name="second")]
+
+        def child(command, **kwargs):
+            target = Path(command[command.index("--output") + 1])
+            role = command[command.index("--role") + 1]
+            changed = failed and target.parent.name == "second" and role == "candidate"
+            target.write_text(json.dumps(dict(snapshots=[dict(
+                arrays=dict(element=[2 if changed else 1]), events={})], message_calls={})))
+            if child_error and role == "candidate":
+                raise RuntimeError("Authored child error")
+            return subprocess.CompletedProcess(command, 0)
+
+        write_text = Path.write_text
+
+        def write(path, content, *args, **kwargs):
+            if summary_error and path == output / "summary.json":
+                raise OSError("Authored summary write error")
+            return write_text(path, content, *args, **kwargs)
+
+        args = [str(RUNNER), "--reference", str(reference), "--candidate", str(candidate),
+                "--output", str(output)]
+        if keep:
+            args.append("--keep-success-snapshots")
+        with patch.object(conformance_run, "ROOT", root), \
+             patch.object(conformance_run, "HARNESS_FILES", ("host.py",)), \
+             patch.object(conformance_run, "cases", return_value=selected), \
+             patch.object(sys, "argv", args), \
+             patch.object(conformance_run.subprocess, "run", side_effect=child), \
+             patch.object(Path, "write_text", autospec=True, side_effect=write):
+            return conformance_run.main()
+
+    def test_success_removes_raw_only_after_writing_the_summary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(self.run_fixture(root), 0)
+            output = root / "output"
+            self.assertTrue(json.loads((output / "summary.json").read_text())["passed"])
+            for name in ("passing", "second"):
+                self.assertTrue((output / name / "case.json").exists())
+                for role in ("reference", "candidate"):
+                    self.assertFalse((output / name / f"{role}.json").exists())
+                    self.assertTrue((output / name / f"{role}.log").exists())
+
+    def test_explicit_opt_in_preserves_successful_raw_snapshots(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(self.run_fixture(root, keep=True), 0)
+            for name in ("passing", "second"):
+                for role in ("reference", "candidate"):
+                    self.assertTrue((root / "output" / name / f"{role}.json").exists())
+
+    def test_one_failed_case_preserves_all_raw_snapshots(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(self.run_fixture(root, failed=True), 1)
+            report = json.loads((root / "output/summary.json").read_text())
+            self.assertFalse(report["passed"])
+            self.assertTrue(report["cases"][0]["passed"])
+            self.assertFalse(report["cases"][1]["passed"])
+            for name in ("passing", "second"):
+                for role in ("reference", "candidate"):
+                    self.assertTrue((root / "output" / name / f"{role}.json").exists())
+
+    def test_summary_write_error_preserves_successful_raw_snapshots(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(OSError, "summary write error"):
+                self.run_fixture(root, summary_error=True)
+            for name in ("passing", "second"):
+                for role in ("reference", "candidate"):
+                    self.assertTrue((root / "output" / name / f"{role}.json").exists())
+
+    def test_child_exception_preserves_raw_outputs_without_a_summary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(RuntimeError, "child error"):
+                self.run_fixture(root, child_error=True)
+            self.assertFalse((root / "output/summary.json").exists())
+            for role in ("reference", "candidate"):
+                self.assertTrue((root / "output/passing" / f"{role}.json").exists())
+
+    def test_busy_output_rejects_another_run_without_touching_its_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "output"
+            folder = output / "passing"
+            folder.mkdir(parents=True)
+            summary = output / "summary.json"
+            summary.write_text("Existing receipt belongs to another runner.")
+            raw = folder / "reference.json"
+            raw.write_text("Existing raw belongs to another runner.")
+            with (output / ".run.lock").open("a") as owner:
+                conformance_run.fcntl.flock(owner.fileno(), conformance_run.fcntl.LOCK_EX)
+                with self.assertRaises(SystemExit) as error:
+                    self.run_fixture(root)
+            self.assertEqual(error.exception.code, 2)
+            self.assertEqual(summary.read_text(), "Existing receipt belongs to another runner.")
+            self.assertEqual(raw.read_text(), "Existing raw belongs to another runner.")
+            # Closing the owner releases the lock so the next run can succeed.
+            self.assertEqual(self.run_fixture(root), 0)
+
+
 class LibraryPreflightTests(unittest.TestCase):
     def test_optional_pressure_context_records_missing_and_denied_counters(self):
         def read(path):
@@ -322,6 +431,8 @@ class LibraryPreflightTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, "changed during comparison"):
                         conformance_run.main()
                 self.assertFalse(summary.exists())
+                for role in ("reference", "candidate"):
+                    self.assertTrue((output / "identity" / f"{role}.json").exists())
 
     def test_comparison_rejects_extra_missing_and_null_fields(self):
         reference = [dict(arrays=dict(temperature=[1]), events={})]

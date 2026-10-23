@@ -122,7 +122,7 @@ def loaded_libraries(pid):
         parts = line.split(maxsplit=5)
         if len(parts) == 6 and parts[5].startswith("/"):
             path = Path(parts[5])
-            if any(name in path.name.lower() for name in ("cycletrim", "onisim", "simdll")):
+            if any(name in path.name.lower() for name in ("cycletrim", "onisim", "oni_sim", "simdll")):
                 paths.add(path)
     for path in sorted(paths):
         try:

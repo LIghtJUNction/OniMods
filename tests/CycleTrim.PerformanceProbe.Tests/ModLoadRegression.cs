@@ -35,6 +35,7 @@ namespace HarmonyLib
 {
     public sealed class Harmony
     {
+        internal static Action BeforePatchAll;
         public Harmony(string id) { Id = id; }
         public string Id { get; }
         public int Installations { get; private set; }
@@ -42,6 +43,7 @@ namespace HarmonyLib
 
         public void PatchAll()
         {
+            BeforePatchAll?.Invoke();
             Installations++;
             OwnerReadyAtInstall = CycleTrim.Patches.PerformanceProbePatch.Owner == Id;
         }

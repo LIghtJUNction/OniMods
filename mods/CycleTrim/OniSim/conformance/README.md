@@ -173,6 +173,13 @@ Worker names are recorded from `/proc/self/task` before shutdown.
 `artifacts/` contains generated raw snapshots, logs and debugger traces and is
 ignored by Git and excluded from CycleTrim's source package. Hashes bind a result
 to its tested artifact; rebuilding requires rerunning the comparison.
+Conformance runs remove raw `reference.json` and `candidate.json` only after the
+entire comparison passes and `summary.json` is written. Use
+`--keep-success-snapshots` to retain them. A failed comparison, interrupted run or
+summary-write error preserves all raw outputs; fixtures, logs and summaries are
+always retained.
+An output directory has one non-blocking runner lock; concurrent runs must use
+different `--output` directories so they cannot replace each other's evidence.
 
 ## Recorded run (2026-10-21)
 

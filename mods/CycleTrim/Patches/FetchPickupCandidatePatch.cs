@@ -52,6 +52,8 @@ namespace CycleTrim.Patches
             // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
             private static bool Prepare()
             {
+                if (!CycleTrimPatchOptions.OptimizePickupCandidates)
+                    return false;
                 // Waste Not, Want Not reverses the vanilla freshness comparator. This replacement
                 // cannot preserve that transpiler safely, so leave the original method in control.
                 if (AccessTools.TypeByName(NoWasteWantPatchType) != null)

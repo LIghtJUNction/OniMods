@@ -6,6 +6,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from datetime import datetime, timezone
+import fcntl
 import hashlib
 import json
 import os
@@ -125,27 +126,7 @@ def compare_cases(selected, compare, jobs):
         executor.shutdown(wait=True, cancel_futures=True)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--reference", required=True, type=Path)
-    parser.add_argument("--candidate", required=True, type=Path)
-    parser.add_argument("--workers", type=int, default=1, choices=range(1, 9))
-    parser.add_argument("--jobs", type=int, default=1, choices=range(1, 9),
-                        help="Concurrent isolated native case pairs; default 1 minimizes memory. Not full games.")
-    parser.add_argument("--case", action="append", help="Select exact case names; default is all")
-    parser.add_argument("--output", type=Path, default=ROOT / "artifacts")
-    args = parser.parse_args()
-    if args.jobs > 1 and args.jobs * args.workers > len(os.sched_getaffinity(0)):
-        parser.error("jobs * workers exceeds the current CPU affinity; reduce explicit native concurrency")
-    for role, library in (("reference", args.reference), ("candidate", args.candidate)):
-        if not library.is_file():
-            parser.error(f"{role} library does not exist or is not a file: {library}")
-    selected = [case for case in cases() if not args.case or case["name"] in args.case]
-    if not selected or (args.case and set(args.case) != {case["name"] for case in selected}):
-        parser.error("Unknown or empty case selection")
-    if any(case.get("allocate_only") for case in selected) and os.environ.get("LD_PRELOAD"):
-        parser.error("Allocate fixtures require an isolated LD_PRELOAD environment")
-    args.output.mkdir(parents=True, exist_ok=True)
+def compare_output(args, selected):
     # A failed or interrupted replacement run must not leave an old green summary.
     (args.output / "summary.json").unlink(missing_ok=True)
     harness_paths = {name: ROOT / name for name in HARNESS_FILES}
@@ -172,7 +153,46 @@ def main():
                   message_ids_exercised=sorted({message for item in results for message in item["message_ids_exercised"]}),
                   cases=results, passed=all(item["passed"] for item in results))
     (args.output / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
+    # Retain all evidence on any failed/interrupted comparison or summary-write
+    # error. Passing runs keep their fixtures, logs and compact hashed receipt.
+    if report["passed"] and not args.keep_success_snapshots:
+        for item in results:
+            for role in ("reference", "candidate"):
+                (args.output / item["case"] / f"{role}.json").unlink(missing_ok=True)
     return 0 if report["passed"] else 1
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--reference", required=True, type=Path)
+    parser.add_argument("--candidate", required=True, type=Path)
+    parser.add_argument("--workers", type=int, default=1, choices=range(1, 9))
+    parser.add_argument("--jobs", type=int, default=1, choices=range(1, 9),
+                        help="Concurrent isolated native case pairs; default 1 minimizes memory. Not full games.")
+    parser.add_argument("--case", action="append", help="Select exact case names; default is all")
+    parser.add_argument("--output", type=Path, default=ROOT / "artifacts")
+    parser.add_argument("--keep-success-snapshots", action="store_true",
+                        help="Keep raw reference/candidate snapshots after a passing summary; failures always retain them.")
+    args = parser.parse_args()
+    if args.jobs > 1 and args.jobs * args.workers > len(os.sched_getaffinity(0)):
+        parser.error("jobs * workers exceeds the current CPU affinity; reduce explicit native concurrency")
+    for role, library in (("reference", args.reference), ("candidate", args.candidate)):
+        if not library.is_file():
+            parser.error(f"{role} library does not exist or is not a file: {library}")
+    selected = [case for case in cases() if not args.case or case["name"] in args.case]
+    if not selected or (args.case and set(args.case) != {case["name"] for case in selected}):
+        parser.error("Unknown or empty case selection")
+    if any(case.get("allocate_only") for case in selected) and os.environ.get("LD_PRELOAD"):
+        parser.error("Allocate fixtures require an isolated LD_PRELOAD environment")
+    args.output.mkdir(parents=True, exist_ok=True)
+    # Hold one owner across comparison, receipt writing and raw-file cleanup.
+    # A second runner must not replace evidence while the first removes it.
+    with (args.output / ".run.lock").open("a") as output_lock:
+        try:
+            fcntl.flock(output_lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            parser.error(f"Another comparison is using output directory: {args.output}")
+        return compare_output(args, selected)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 using System;
+using CycleTrim.Core;
 using OniSim.CycleTrim;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
@@ -10,17 +11,22 @@ namespace CycleTrim
         partial void ConfigureOniSim()
         {
             bool enableOniSim = true;
+            OniSimOptions options = null;
             try
             {
                 PUtil.InitLibrary();
-                OniSimOptions options = POptions.ReadSettings<OniSimOptions>();
-                if (options != null)
-                    enableOniSim = options.EnableOniSim;
+                options = POptions.ReadSettings<OniSimOptions>();
             }
             catch (Exception error)
             {
-                Console.WriteLine("[CycleTrim][OniSim] PLib options could not be loaded; using the default enabled setting: " + error.Message);
+                Console.WriteLine("[CycleTrim] Settings could not be loaded; using the defaults: " + error.Message);
             }
+            options = options ?? new OniSimOptions();
+            enableOniSim = options.EnableOniSim;
+            CycleTrimPatchOptions.Configure(options.OptimizePickupCandidates,
+                options.ThrottleBusyDuplicants, options.ThrottleStationaryCritters,
+                options.OptimizeAsyncPathProbes, options.LimitCreatureBrainUpdates,
+                options.EnablePerformanceDiagnostics);
             LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
             Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
         }
