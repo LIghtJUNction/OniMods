@@ -50,8 +50,10 @@ namespace OniOnline.Runtime
             get
             {
                 var session = Session;
-                return Enabled && session != null && session.Joined && !session.Closed &&
-                    !session.Leaving && !session.Reconnecting;
+                // Keep the HUD entry during a short reconnect so the player can
+                // read the retained transcript and see the reconnect status.
+                // The chat composer disables itself until the session is live.
+                return Enabled && session != null && session.Joined && !session.Closed && !session.Leaving;
             }
         }
         internal readonly List<RoomListing> Listings = new List<RoomListing>();
