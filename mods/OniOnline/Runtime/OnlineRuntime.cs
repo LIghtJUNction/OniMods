@@ -83,6 +83,7 @@ namespace OniOnline.Runtime
         private string reviewedModManifest;
         private ModSyncPlan reviewedModSyncPlan;
         private long reviewedConnectionGeneration;
+        private double nextModContentRefresh;
         private bool catalogCaptureStopped;
         private double catalogCaptureStarted = -1;
         private readonly LoadedColonyRoomStart hostStart = new LoadedColonyRoomStart();
@@ -532,17 +533,40 @@ namespace OniOnline.Runtime
                 pending?.RequiredFingerprint != reviewedModSyncPlan.RequiredFingerprint))
             {
                 modSyncDialog?.Dispose(); modSyncDialog = null;
-                modContentSync?.Dispose(); modContentSync = null;
+                ModSyncRuntimePolicy.DisposeContentSync(ref modContentSync);
                 shownModSyncPlan = reviewedModManifest = null; reviewedModSyncPlan = null;
+                nextModContentRefresh = 0;
                 reviewedConnectionGeneration = generation;
             }
             modSyncDialog?.Refresh();
             if (pending == null || pending.CanJoin)
-            { modSyncDialog?.Dispose(); modSyncDialog = null; return; }
+            {
+                modSyncDialog?.Dispose(); modSyncDialog = null;
+                // A controller is bound to one reviewed plan and one native
+                // catalog epoch. Never carry it across a temporarily admitted
+                // state and a later mismatch with the same required fingerprint.
+                ModSyncRuntimePolicy.DisposeContentSync(ref modContentSync);
+                nextModContentRefresh = 0;
+                return;
+            }
             if (modContentSync != null)
             {
                 modContentSync.Tick(now);
-                var lines = modContentSync.Status.Take(8).Select(s => s.Id + ": " + OnlineText.Get("mod_sync.stage_" + s.Stage));
+                var waitingForNative = ModSyncRuntimePolicy.NeedsNativeRefresh(modContentSync.Status);
+                if (waitingForNative && now >= nextModContentRefresh)
+                {
+                    // Steam may finish downloading before the native loader has
+                    // refreshed its loaded evidence. Re-capture at a bounded
+                    // cadence; this does not enable a mod or mutate mods.json.
+                    try { modContentSync.RefreshNativeCatalog(); }
+                    catch (ObjectDisposedException) { modContentSync = null; }
+                    nextModContentRefresh = now + 2;
+                }
+                var lines = modContentSync == null ? new string[0] : modContentSync.Status.Take(8).Select(s => {
+                    string line = s.Id + ": " + OnlineText.Get("mod_sync.stage_" + s.Stage);
+                    if (!string.IsNullOrEmpty(s.Error)) line += " — " + OnlineText.Get(ModSyncRuntimePolicy.ErrorKey(s.Error));
+                    return line;
+                });
                 modSyncDialog?.SetStatus(string.Join("\n", lines) + "\n\n" + OnlineText.Get("mod_sync.restart"));
                 return;
             }
@@ -575,11 +599,12 @@ namespace OniOnline.Runtime
                 try
                 {
                     content = new SteamModContentSync(new SteamWorkshopModContentApi(),
-                        () => modCatalog.CaptureInstalled(barrier.PendingPlan?.RequiredManifest).InstalledManifest,
+                        () => CaptureCurrentInstalledManifest(barrier.PendingPlan?.RequiredManifest),
                         () => barrier.PendingPlan?.RequiredManifest);
                     if (!content.Begin(plan, fingerprint, Time.realtimeSinceStartupAsDouble))
                         throw new InvalidOperationException(content.Error);
                     modContentSync = content;
+                    nextModContentRefresh = Time.realtimeSinceStartupAsDouble;
                     modSyncDialog = NativeModSyncDialog.OpenStatus(fingerprint, OnlineText.Get("mod_sync.downloading"),
                         Leave, current, manage);
                 }
@@ -591,6 +616,12 @@ namespace OniOnline.Runtime
                 }
             } : (System.Action<string>)null;
             modSyncDialog = NativeModSyncDialog.Open(plan, download, manage, Leave, current);
+        }
+
+        private ModManifest CaptureCurrentInstalledManifest(ModManifest desired)
+        {
+            var snapshot = modCatalog?.CaptureInstalled(desired);
+            return snapshot?.IsComplete == true ? snapshot.InstalledManifest : null;
         }
 
         private static void BindModeration(RoomSession session, OnlineColonyState colony, bool reload)
@@ -676,6 +707,7 @@ namespace OniOnline.Runtime
             var oldModSync = ModSynchronization; ModSynchronization = null;
             var oldModDialog = modSyncDialog; modSyncDialog = null;
             var oldModContentSync = modContentSync; modContentSync = null;
+            nextModContentRefresh = 0;
             shownModSyncPlan = null; reviewedModManifest = null; reviewedModSyncPlan = null;
             var oldStarMapDirectory = StarMapDirectory; StarMapDirectory = null;
             moderationColony = null;

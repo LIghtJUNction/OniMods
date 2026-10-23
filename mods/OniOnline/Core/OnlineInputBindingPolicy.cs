@@ -17,4 +17,16 @@ namespace OniOnline.Core
                 (!other.DebugFocus || debugEnabled);
         }
     }
+
+    // A gameplay HUD control must yield to any active native modal or pause-level
+    // screen. Keep the decision pure so the Unity adapter and host tests share the
+    // same fail-closed rule.
+    internal static class OnlineUiPolicy
+    {
+        internal static bool BlocksGameplayCommunication(bool active, bool modal, float sortKey,
+            float pauseMenuSortKey, bool exempt)
+        {
+            return active && !exempt && (modal || sortKey >= pauseMenuSortKey);
+        }
+    }
 }

@@ -447,6 +447,12 @@ mod_sync.stage_AwaitingActivation,等待启用并重启,等待啟用並重新啟
 mod_sync.stage_Verified,已就绪,已就緒,Ready
 mod_sync.stage_ManualActionRequired,请在模组菜单调整,請在模組選單調整,Adjust in the Mods menu
 mod_sync.stage_Failed,下载失败,下載失敗,Download failed
+mod_sync.error_item,创意工坊内容与请求不符，请检查该模组。,創意工坊內容與要求不符，請檢查該模組。,The Workshop item does not match the requested mod.
+mod_sync.error_network,创意工坊暂时无法完成请求，请稍后重试。,創意工坊暫時無法完成要求，請稍後重試。,The Workshop request could not be completed. Try again later.
+mod_sync.error_timeout,创意工坊响应超时，请稍后重试。,創意工坊回應逾時，請稍後重試。,The Workshop request timed out. Try again later.
+mod_sync.error_local,该模组需要手动安装或启用。,該模組需要手動安裝或啟用。,This mod must be installed or enabled manually.
+mod_sync.error_changed,模组内容已变化，请重启游戏后重新加入。,模組內容已變化，請重新啟動遊戲後重新加入。,Mod content changed. Restart the game and join again.
+mod_sync.error_generic,模组同步未完成，请在模组菜单调整后重试。,模組同步未完成，請在模組選單調整後重試。,Mod synchronization did not finish. Adjust the Mods menu and try again.
 mod_sync.summary,{0} 项模组需要调整。,{0} 項模組需要調整。,{0} mods need changes.
 mod_sync.summary_download,下载或更新：{0},下載或更新：{0},Download or update: {0}
 mod_sync.summary_enable,启用：{0},啟用：{0},Enable: {0}

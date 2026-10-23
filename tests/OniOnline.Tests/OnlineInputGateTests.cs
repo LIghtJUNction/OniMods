@@ -6,6 +6,7 @@ internal static class OnlineInputGateTests
     internal static void Run(Action<bool, string> check)
     {
         BindingConflicts(check);
+        ModalGating(check);
         var gate = new OnlineInputGate();
         check(!gate.UpdateVoice(true, true), "a held key without an accepted key-down never opens the microphone");
         gate.PressVoice(false);
@@ -20,6 +21,20 @@ internal static class OnlineInputGateTests
         gate.PressVoice(true);
         gate.ReleaseVoice();
         check(!gate.UpdateVoice(true, true), "cancel and key-up clear recording authorization immediately");
+    }
+
+    private static void ModalGating(Action<bool, string> check)
+    {
+        check(!OnlineUiPolicy.BlocksGameplayCommunication(false, true, 999, 100, false),
+            "an inactive native modal does not block the gameplay communication gate");
+        check(OnlineUiPolicy.BlocksGameplayCommunication(true, true, 0, 100, false),
+            "an active native modal blocks the gameplay communication gate");
+        check(OnlineUiPolicy.BlocksGameplayCommunication(true, false, 100, 100, false),
+            "an active pause-level screen blocks the gameplay communication gate");
+        check(!OnlineUiPolicy.BlocksGameplayCommunication(true, false, 99, 100, false),
+            "an active ordinary low-layer screen does not block the gameplay communication gate");
+        check(!OnlineUiPolicy.BlocksGameplayCommunication(true, true, 999, 100, true),
+            "the input controller itself is exempt from its modal gate");
     }
     private static void BindingConflicts(Action<bool, string> check)
     {

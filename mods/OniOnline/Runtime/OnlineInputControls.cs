@@ -58,15 +58,25 @@ namespace OniOnline.Runtime
             get
             {
                 if (!Application.isFocused || !KInputManager.isFocused || EditingText ||
-                    !NativeGameplayUi.Ready) return false;
-                if (KScreenManager.Instance == null || ScreenStack == null) return false;
-                var stack = ScreenStack.GetValue(KScreenManager.Instance) as List<KScreen>;
-                if (stack == null) return false;
-                foreach (var screen in stack)
-                    if (screen != null && !(screen is OnlineInputControls) && screen.IsScreenActive() &&
-                        (screen.IsModal() || screen.GetSortKey() >= PAUSE_MENU_SORT_KEY)) return false;
+                    !NativeGameplayUi.Ready || !ModalStackAllowsGameplayUi()) return false;
                 return true;
             }
+        }
+
+        // The HUD button and the keyboard shortcut must share the same native
+        // modal/pause gate. NativeGameplayUi calls this directly; keep this
+        // method independent of ContextAllowsShortcuts to avoid a recursion.
+        internal static bool ModalStackAllowsGameplayUi()
+        {
+            if (KScreenManager.Instance == null || ScreenStack == null) return false;
+            List<KScreen> stack;
+            try { stack = ScreenStack.GetValue(KScreenManager.Instance) as List<KScreen>; }
+            catch { return false; }
+            if (stack == null) return false;
+            foreach (var screen in stack)
+                if (screen != null && OnlineUiPolicy.BlocksGameplayCommunication(screen.IsScreenActive(),
+                    screen.IsModal(), screen.GetSortKey(), PAUSE_MENU_SORT_KEY, screen is OnlineInputControls)) return false;
+            return true;
         }
 
         public override void OnKeyDown(KButtonEvent e)

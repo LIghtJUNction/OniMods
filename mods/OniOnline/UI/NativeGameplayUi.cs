@@ -23,7 +23,8 @@ namespace OniOnline.UI
                 var characters = Object.FindFirstObjectByType<MinionSelectScreen>();
                 var destination = Object.FindFirstObjectByType<ColonyDestinationSelectScreen>();
                 ready = (characters == null || !characters.IsScreenActive()) &&
-                    (destination == null || !destination.IsScreenActive());
+                    (destination == null || !destination.IsScreenActive()) &&
+                    global::OniOnline.Runtime.OnlineInputControls.ModalStackAllowsGameplayUi();
                 return ready;
             }
         }

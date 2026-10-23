@@ -84,8 +84,17 @@ SDK rejection, query failure and timeouts are explicit failure states.
 
 `AwaitingNativeInstall` means Steam has the source package. `AwaitingActivation`
 means exact installed content still lacks startup-loaded evidence. Call
-`RefreshNativeCatalog()` after a native refresh; `CanJoin` refers to the latest
-complete comparison and must be refreshed immediately before admission.
+`RefreshNativeCatalog()` after a native refresh; the OniOnline adapter also
+rechecks while a controller is waiting for native evidence, at a bounded cadence.
+`CanJoin` refers to the latest complete comparison and must be refreshed
+immediately before admission. A controller is discarded when the barrier is
+cleared or its connection generation changes, so a later mismatch cannot reuse
+an old download plan.
+
+The status view keeps the native stage and adds a short, localized cause for
+known failures (wrong Workshop item, timeout, unavailable network, local/manual
+action, or changed content). Unknown error details fall back to a generic
+message; paths, account data and raw SDK exceptions are never shown.
 
 `NativeModActivationRequest.TryCreate` prepares exact enable/disable actions
 without applying them. It requires the confirmed plan and unchanged manifests,

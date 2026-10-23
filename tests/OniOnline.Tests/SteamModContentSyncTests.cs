@@ -128,6 +128,7 @@ internal static class SteamModContentSyncTests
         Activation(check);
         Catalog(check);
         Diagnostics(check);
+        RuntimePolicy(check);
     }
 
     private static void Activation(System.Action<bool, string> check)
@@ -209,6 +210,25 @@ internal static class SteamModContentSyncTests
         var copies = new NativeModCatalogSnapshot(Manifest(), new[] { new NativeModCatalogIssue("public-mod-id", "native_mod_identity_ambiguous") });
         check(NativeModCatalogDiagnostics.Summary(copies).Contains("重复启用") && NativeModCatalogDiagnostics.Summary(copies).Contains("public-mod-id"),
             "active-source collision identifies the safe mod identity");
+    }
+
+    private static void RuntimePolicy(System.Action<bool, string> check)
+    {
+        var fake = new FakeSteam();
+        SteamModContentSync sync = new SteamModContentSync(fake, () => Manifest(), () => Manifest());
+        ModSyncRuntimePolicy.DisposeContentSync(ref sync);
+        check(sync == null && fake.Disposed, "runtime cleanup releases an obsolete Steam content controller");
+        check(ModSyncRuntimePolicy.ErrorKey("steam_item_identity_mismatch") == "mod_sync.error_item" &&
+            ModSyncRuntimePolicy.ErrorKey("steam_request_timeout") == "mod_sync.error_timeout" &&
+            ModSyncRuntimePolicy.ErrorKey("unrecognized_private_error") == "mod_sync.error_generic",
+            "mod sync UI maps known failures to safe localized causes and hides unknown details");
+        check(ModSyncRuntimePolicy.NeedsNativeRefresh(new[] {
+                new ModContentSyncStatus("a", 1, ModContentSyncStage.Downloading, "", 0, 1),
+                new ModContentSyncStatus("b", 2, ModContentSyncStage.AwaitingActivation, "", 1, 1) }),
+            "native refresh is requested while downloaded content awaits loaded evidence");
+        check(!ModSyncRuntimePolicy.NeedsNativeRefresh(new[] {
+                new ModContentSyncStatus("a", 1, ModContentSyncStage.Verified, "", 1, 1) }),
+            "native refresh is not repeated after every mod is verified");
     }
 
     private sealed class FakeSteam : ISteamModContentApi
