@@ -346,6 +346,9 @@ internal static class Program
         Check(catalog.Get("ui.empty_title", "zh_klei") == "暂无星系" &&
             catalog.Get("ui.direct_join", "zh_klei") == "星系码直连" &&
             catalog.Get("ui.members", "en-US") == "System members", "network rooms use star-system terminology in the visible UI");
+        Check(catalog.Get("error.room_full", "zh_klei") == "星系已满" &&
+            catalog.Get("error.room_full", "zh-Hant") == "星系已滿" &&
+            catalog.Get("error.room_full", "en-US") == "System is full", "full-system copy does not invent a four-player limit");
         Check(catalog.Get("room.join_running", "en-US") == "Join game", "late-join lobby action is localized");
         var quoted = new TextCatalog(new[] { "quoted,\"中文,状态\",\"繁體,狀態\",\"rooms, comms\"" });
         Check(quoted.Get("quoted", "zh_klei") == "中文,状态" && quoted.Get("quoted", "en-US") == "rooms, comms",

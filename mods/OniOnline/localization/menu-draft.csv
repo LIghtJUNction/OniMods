@@ -130,7 +130,7 @@ error.protocol_mismatch,联机协议版本不兼容，请双方安装相同测�
 error.invalid_packet,收到无效网络消息,收到無效網路訊息,Invalid network message
 error.handshake_required,连接验证未完成,連線驗證未完成,Connection handshake required
 error.connection_rejected,星系拒绝了连接,星系拒絕了連線,Connection rejected
-error.room_full,星系已满（最多 4 人）,星系已滿（最多 4 人）,System is full (4 players maximum)
+error.room_full,星系已满,星系已滿,System is full
 error.host_only,该操作仅允许星系主人执行,此操作僅允許星系主人執行,Only the host can perform this action
 error.chat_rate_limited,消息发送过快,訊息傳送過快,Chat rate limit exceeded
 error.invalid_chat_or_rate,消息为空或过长或发送太快,訊息為空或過長或傳送太快,Message is empty or too long or sent too quickly
