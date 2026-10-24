@@ -265,6 +265,9 @@ namespace OniOnline.UI
                 if (error == "wrong_password") return T("error.wrong_password");
                 if (error == "room_full") return T("room.full");
                 if (error == "invalid_address") return T("browser.invalid_code");
+                if (error == "capability_mismatch") return T("error.capability_mismatch");
+                if (error == "gameplay_mismatch") return T("error.gameplay_mismatch");
+                if (error == "native_adapter_unavailable") return T("error.native_adapter_unavailable");
                 return T("browser.connection_failed");
             }
             if (runtime.DependencyError != null) return T("browser.connection_failed");
