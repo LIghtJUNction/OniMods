@@ -437,6 +437,9 @@ mod_sync.version_mismatch,模组版本不同：{0}（{2} → {1}）,模組版本
 mod_sync.content_mismatch,模组内容不同：{0}（{1}）,模組內容不同：{0}（{1}）,Different mod content: {0} ({1})
 mod_sync.unexpected,需停用模组：{0},需停用模組：{0},Disable mod: {0}
 mod_sync.downloading,正在下载模组…,正在下載模組…,Downloading mods…
+mod_sync.enable_restart,启用并重启,啟用並重新啟動,Enable and restart
+mod_sync.activation_wait,模组仍在安装或核验，请稍后再试。,模組仍在安裝或核驗，請稍後再試。,The mod is still installing or being verified. Try again shortly.
+mod_sync.activation_failed,无法安全启用这些模组，请在模组菜单检查。,無法安全啟用這些模組，請在模組選單檢查。,The mods could not be enabled safely. Check the Mods menu.
 mod_sync.stage_Queued,等待下载,等待下載,Queued
 mod_sync.stage_CheckingWorkshop,检查创意工坊,檢查工作坊,Checking Workshop
 mod_sync.stage_Subscribing,正在订阅,正在訂閱,Subscribing

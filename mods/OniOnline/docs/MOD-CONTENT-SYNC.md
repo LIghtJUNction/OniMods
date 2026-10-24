@@ -108,9 +108,12 @@ message; paths, account data and raw SDK exceptions are never shown.
 `NativeModActivationRequest.TryCreate` prepares exact enable/disable actions
 without applying them. It requires the confirmed plan and unchanged manifests,
 and refuses disabled content with a different source, version or digest. This
-iteration has no automatic native settings writer: there is no reliable atomic
-enable/restart transaction implemented here, and no current `mods.json` changes
-are made. The native settings flow remains required for activation/restart.
+request is applied only after the player chooses **Enable and restart**. The
+native adapter selects the same unambiguous local source, writes the native mod
+manager state, rolls back on a failed write, and then uses the game's normal
+restart path. Loader activity, duplicate sources, missing installs and write
+failures fall back to the Mods menu; a remote manifest never mutates settings
+without that explicit confirmation.
 
 ## Evidence
 
@@ -119,7 +122,7 @@ failures, incomplete downloads, item/app mismatch, stale callbacks, changed
 manifests and hashes, native duplicate-source selection, and activation preparation.
 The native bridge is separately compiled against the installed game's reference
 metadata. These checks do not establish a real Steam subscription/download,
-ONI installation/restart, Windows behavior or a native settings transaction.
+Windows behavior or a successful activation/restart on every native mod source.
 
 Filesystem-only preflight on 2026-10-24 also fingerprinted the configured enabled
 Local OniHarness Runtime, Local CycleTrim, Dev OniMcp and Local OniOnline packages:

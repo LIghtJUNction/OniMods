@@ -230,6 +230,8 @@ internal static class SteamModContentSyncTests
         check(sync == null && fake.Disposed, "runtime cleanup releases an obsolete Steam content controller");
         check(ModSyncRuntimePolicy.ErrorKey("steam_item_identity_mismatch") == "mod_sync.error_item" &&
             ModSyncRuntimePolicy.ErrorKey("steam_request_timeout") == "mod_sync.error_timeout" &&
+            ModSyncRuntimePolicy.ErrorKey("native_mod_settings_write_failed") == "mod_sync.activation_failed" &&
+            ModSyncRuntimePolicy.ErrorKey("native_mod_loader_busy") == "mod_sync.activation_wait" &&
             ModSyncRuntimePolicy.ErrorKey("unrecognized_private_error") == "mod_sync.error_generic",
             "mod sync UI maps known failures to safe localized causes and hides unknown details");
         check(ModSyncRuntimePolicy.NeedsNativeRefresh(new[] {

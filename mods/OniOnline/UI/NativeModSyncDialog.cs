@@ -19,6 +19,8 @@ namespace OniOnline.UI
         private readonly Func<string, bool> isCurrent;
         private readonly System.Action<string> onConfirmDownload;
         private readonly System.Action onOpenMods;
+        private readonly System.Action onPrimary;
+        private readonly string primaryText;
         private readonly System.Action onCancel;
         private readonly List<string> pages;
         private readonly string overview;
@@ -32,14 +34,16 @@ namespace OniOnline.UI
         internal bool IsOpen { get { return !disposed && dialog != null && dialog.IsActive() && dialog.IsScreenActive(); } }
 
         private NativeModSyncDialog(string fingerprint, Func<string, bool> isCurrent,
-            System.Action<string> onConfirmDownload, System.Action onOpenMods, System.Action onCancel,
-            List<string> pages, bool canDownload, string overview = null)
+            System.Action<string> onConfirmDownload, System.Action onOpenMods, System.Action onPrimary,
+            string primaryText, System.Action onCancel, List<string> pages, bool canDownload, string overview = null)
         {
             if (string.IsNullOrEmpty(fingerprint)) throw new ArgumentException("invalid_mod_sync_fingerprint");
             this.fingerprint = fingerprint;
             this.isCurrent = isCurrent ?? throw new ArgumentNullException(nameof(isCurrent));
             this.onConfirmDownload = onConfirmDownload;
             this.onOpenMods = onOpenMods;
+            this.onPrimary = onPrimary;
+            this.primaryText = primaryText;
             this.onCancel = onCancel;
             this.pages = pages;
             this.canDownload = canDownload;
@@ -59,23 +63,27 @@ namespace OniOnline.UI
                 if (change.CanDownload && !SameContent(change.Expected, change.Installed)) { needsDownload = true; break; }
             downloadable &= needsDownload;
             var view = new NativeModSyncDialog(plan.Fingerprint, isCurrent, onConfirmDownload,
-                onOpenMods, onCancel, BuildPages(plan), downloadable, BuildOverview(plan));
+                onOpenMods, null, null, onCancel, BuildPages(plan), downloadable, BuildOverview(plan));
             try { view.ShowOverview(); return view; }
             catch { view.Dispose(); throw; }
         }
 
         internal static NativeModSyncDialog OpenStatus(string planFingerprint, string text,
-            System.Action onCancel, Func<string, bool> isCurrent, System.Action onOpenMods = null)
+            System.Action onCancel, Func<string, bool> isCurrent, System.Action onOpenMods = null,
+            System.Action onPrimary = null, string primaryText = null)
         {
             if (onCancel == null) throw new ArgumentNullException(nameof(onCancel));
             ValidateStatus(text);
-            var view = new NativeModSyncDialog(planFingerprint, isCurrent, null, onOpenMods, onCancel, null, false);
+            var view = new NativeModSyncDialog(planFingerprint, isCurrent, null, onOpenMods, onPrimary,
+                primaryText, onCancel, null, false);
             try
             {
                 if (!view.Refresh()) return view;
                 int generation = ++view.screenGeneration;
-                view.Show(text, () => view.Select(generation, onOpenMods ?? onCancel), null,
-                    T(onOpenMods == null ? "mod_sync.back" : "mod_sync.manage"), null, generation, onOpenMods == null);
+                var action = onPrimary ?? onOpenMods ?? onCancel;
+                string actionText = primaryText ?? T(onOpenMods == null ? "mod_sync.back" : "mod_sync.manage");
+                view.Show(text, () => view.Select(generation, action), null,
+                    actionText, null, generation, action == onCancel && onOpenMods == null && onPrimary == null);
                 return view;
             }
             catch { view.Dispose(); throw; }

@@ -61,7 +61,9 @@ namespace OniOnline.Runtime
         }
     }
 
-    // A controller never edits mods.json, enables a mod, or treats a Workshop download as a loaded mod.
+    // This controller never edits native mod settings or treats a Workshop
+    // download as a loaded mod. Explicit activation belongs to the separate
+    // NativeModActivationAdapter after a reviewed plan.
     // Drive it on the main thread; the native adapter receives Steam callbacks on that same thread.
     internal sealed class SteamModContentSync : IDisposable
     {

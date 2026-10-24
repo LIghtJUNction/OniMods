@@ -605,6 +605,7 @@ namespace OniOnline.Runtime
                 Leave(); HideWindow();
                 Util.KInstantiateUI<ModsScreen>(ScreenPrefabs.Instance.modsMenu.gameObject, Global.Instance.globalCanvas);
             };
+            System.Action activate = () => ActivateReviewedMods(connection, barrier, plan, current, manage);
             System.Action<string> download = SteamManager.Initialized ? fingerprint => {
                 if (!current(fingerprint)) return;
                 SteamModContentSync content = null;
@@ -618,7 +619,7 @@ namespace OniOnline.Runtime
                     modContentSync = content;
                     nextModContentRefresh = Time.realtimeSinceStartupAsDouble;
                     modSyncDialog = NativeModSyncDialog.OpenStatus(fingerprint, OnlineText.Get("mod_sync.downloading"),
-                        Leave, current, manage);
+                        Leave, current, manage, activate, OnlineText.Get("mod_sync.enable_restart"));
                 }
                 catch (Exception)
                 {
@@ -628,6 +629,32 @@ namespace OniOnline.Runtime
                 }
             } : (System.Action<string>)null;
             modSyncDialog = NativeModSyncDialog.Open(plan, download, manage, Leave, current);
+        }
+
+        private void ActivateReviewedMods(RoomSession connection, ModSyncSession barrier, ModSyncPlan plan,
+            Func<string, bool> current, System.Action manage)
+        {
+            string fingerprint = plan?.Fingerprint;
+            if (string.IsNullOrEmpty(fingerprint) || !current(fingerprint)) return;
+            var required = barrier.PendingPlan?.RequiredManifest;
+            var installed = CaptureCurrentInstalledManifest(required);
+            NativeModActivationRequest request; string error;
+            if (!NativeModActivationRequest.TryCreate(plan, fingerprint, required, installed, out request, out error))
+            {
+                modSyncDialog = NativeModSyncDialog.OpenStatus(fingerprint, OnlineText.Get("mod_sync.activation_wait"),
+                    Leave, current, manage,
+                    () => ActivateReviewedMods(connection, barrier, plan, current, manage),
+                    OnlineText.Get("mod_sync.enable_restart"));
+                return;
+            }
+            if (!NativeModActivationAdapter.TryApply(Global.Instance?.modManager, request, out error))
+            {
+                modSyncDialog = NativeModSyncDialog.OpenStatus(fingerprint, OnlineText.Get("mod_sync.activation_failed"),
+                    Leave, current, manage);
+                return;
+            }
+            Leave();
+            App.instance.Restart();
         }
 
         private ModManifest CaptureCurrentInstalledManifest(ModManifest desired)
