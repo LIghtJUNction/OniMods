@@ -125,7 +125,6 @@ error.invalid_room_name,星系名称不能为空且最多 64 个字符,星系名
 error.invalid_address,星系码或 IP 与端口格式错误,星系代碼或 IP 與連接埠格式錯誤,Invalid system code or IP and port
 error.password_too_long,密码最多 128 个字符,密碼最多 128 個字元,Password is limited to 128 characters
 error.wrong_password,星系密码错误,星系密碼錯誤,Incorrect system password
-error.version_mismatch,双方的游戏或 CycleTrim 版本不一致,雙方的遊戲或 CycleTrim 版本不一致,Game or CycleTrim versions do not match
 error.protocol_mismatch,联机协议版本不兼容，请双方安装相同测试版本,連線協定版本不相容，請雙方安裝相同測試版本,Incompatible network protocol. Both players must install the same test version.
 error.invalid_packet,收到无效网络消息,收到無效網路訊息,Invalid network message
 error.handshake_required,连接验证未完成,連線驗證未完成,Connection handshake required
