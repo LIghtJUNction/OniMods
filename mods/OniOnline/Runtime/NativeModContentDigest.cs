@@ -8,10 +8,12 @@ using System.Text;
 namespace OniOnline.Runtime
 {
     // Hash only a mod's declared package root, never an ONI user-data root.
-    // JSON/YAML outside the known package-data directories is ambiguous: fail
-    // closed instead of omitting gameplay data or fingerprinting private settings.
-    // Excluded: hidden files/directories, private settings, source, logs and saves.
-    // Assets without code/data extensions are outside this network-state digest.
+    // JSON/YAML/localization data outside the known package-data directories is
+    // ambiguous: fail closed instead of omitting gameplay data or fingerprinting
+    // private settings. Excluded: hidden files/directories, private settings,
+    // source, logs and saves. Common Unity/package resources are included even
+    // when they are not text data; otherwise a changed texture, prefab or audio
+    // file could pass the content gate with the same assembly and version.
     // Two hash passes and metadata scans reject ordinary concurrent updates; a
     // caller must also hold its catalog epoch stable. This is not a filesystem lock.
     internal static class NativeModContentDigest
@@ -23,10 +25,22 @@ namespace OniOnline.Runtime
         internal const long MaxTotalBytes = 256L * 1024 * 1024;
         private static readonly HashSet<string> CodeExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { ".dll", ".so", ".dylib", ".bytes", ".bin" };
+        private static readonly HashSet<string> ResourceExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Images and UI resources
+            ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tga", ".tif", ".tiff", ".webp", ".svg", ".ico",
+            // Unity-authored assets and runtime bundles
+            ".asset", ".prefab", ".mat", ".shader", ".anim", ".controller", ".overridecontroller",
+            ".spriteatlas", ".fontsettings", ".guiskin", ".physicmaterial", ".physicmaterial2d",
+            ".terrainlayer", ".mask", ".flare", ".cubemap", ".rendertexture", ".bundle", ".manifest",
+            ".resource", ".ress", ".resss",
+            // Fonts and audio
+            ".ttf", ".otf", ".wav", ".ogg", ".mp3", ".aif", ".aiff", ".flac"
+        };
         private static readonly HashSet<string> DataExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        { ".json", ".yaml", ".yml" };
+        { ".json", ".yaml", ".yml", ".csv", ".po", ".xml", ".loc", ".properties" };
         private static readonly HashSet<string> DataRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        { "data", "worldgen", "elements", "buildings", "templates", "content", "assets" };
+        { "data", "worldgen", "elements", "buildings", "templates", "content", "assets", "localization", "strings", "translations", "lang" };
         private static readonly HashSet<string> PrivateDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "config", "configs", "configuration", "settings", "options", "cache", "caches", "logs", "log",
@@ -167,6 +181,18 @@ namespace OniOnline.Runtime
             {
                 if (name.IndexOf('/') >= 0) throw new ContentFailure("content_data_unclassified");
                 return false;
+            }
+            if (ResourceExtensions.Contains(extension))
+            {
+                // A private-looking resource at package root is ignored; the
+                // same name inside a public package directory is ambiguous and
+                // must be declared rather than silently fingerprinted.
+                if (PrivateDataNames.Any(fragment => stem.Contains(fragment)))
+                {
+                    if (name.IndexOf('/') >= 0) throw new ContentFailure("content_data_unclassified");
+                    return false;
+                }
+                return true;
             }
             if (CodeExtensions.Contains(extension)) return true;
             if (!DataExtensions.Contains(extension)) return false;

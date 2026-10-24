@@ -46,11 +46,14 @@ otherwise that identity remains missing and an audit issue explains the ambiguit
 Disabling a loaded DLL in native configuration does not unload it: the catalog
 preserves the loaded evidence and requires a restart.
 
-Only bounded packaged code and known packaged-data roots contribute to the
-controlled digest. Private configuration, saves, credentials, logs and source are
-excluded; unclassified JSON/YAML refuses fingerprinting. A mod that reads gameplay
-data outside those packaged roots needs a reviewed content declaration adapter.
-No Local/Dev source or archive is uploaded or transmitted.
+Only bounded packaged code, common Unity resources, and known packaged-data or
+localization roots contribute to the controlled digest. Text data outside those
+roots is ambiguous; unclassified JSON/YAML refuses fingerprinting. Private
+configuration, saves, credentials, logs and source are excluded. A mod that
+ships a gameplay resource with an extension outside the built-in resource list,
+or reads data outside those packaged roots, needs a reviewed content declaration
+adapter before it can claim complete synchronization. No Local/Dev source or
+archive is uploaded or transmitted.
 
 ## Steam controller
 
