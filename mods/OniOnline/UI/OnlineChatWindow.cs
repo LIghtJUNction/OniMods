@@ -1,5 +1,6 @@
 using System;
 using HarmonyLib;
+using OniOnline.Core;
 using OniOnline.Network;
 using OniOnline.Runtime;
 using TMPro;
@@ -266,7 +267,8 @@ namespace OniOnline.UI
                 if (session?.RoomId != draftRoomId) draftRoomId = draftText = null;
             }
             revision = runtime.Revision;
-            bool connected = session?.Joined == true && !session.Closed && !session.Reconnecting && !session.Leaving;
+            bool connected = session != null && OnlineChatAvailability.CanSend(runtime.Enabled, session.Joined,
+                session.Reconnecting, session.Closed, session.Leaving);
             heading.SetText(OnlineText.Get("chat.button"));
             heading.richText = false;
             status.text = session?.Reconnecting == true ? OnlineText.Get("ui.reconnecting") :

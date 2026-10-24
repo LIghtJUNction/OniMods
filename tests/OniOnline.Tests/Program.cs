@@ -97,6 +97,8 @@ internal static class Program
             { LocalStarMapCatalogTests.Run(Check); Console.WriteLine("PASS " + assertions + " local star-map assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--online-options")
             { OnlineOptionsTests.Run(Check); Console.WriteLine("PASS " + assertions + " online options assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--chat-availability")
+            { OnlineChatAvailabilityTests.Run(Check); Console.WriteLine("PASS " + assertions + " chat availability assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--star-map-directory")
             { StarMapDirectoryTests.Run(Check); Console.WriteLine("PASS " + assertions + " star-map directory assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--voice")
@@ -174,6 +176,7 @@ internal static class Program
             LocalStarMapCatalogTests.Run(Check);
             StarMapDirectoryTests.Run(Check);
             OnlineOptionsTests.Run(Check);
+            OnlineChatAvailabilityTests.Run(Check);
             RoomVoiceTests.Run(Check);
             ViewportOnlyWorldReplicationTests.Run(Check);
             SteamRoomDirectoryTests.Run(Check);
