@@ -10,6 +10,11 @@
 
 功能合同使用独立、带版本的能力 ID。`Capabilities` 表示本端提供的合同，`RequiredCapabilities` 表示要求对端提供的合同。双方要求都满足后才能认证入席，缺项返回 `capability_mismatch`；诊断见 `LastCompatibilityFailure.MissingAtHost / MissingAtPeer`。
 
+已选玩法可以通过 SDK 的 `IGameplayCapabilityContract` 增加自己的能力和要求。
+适配器会把它们与原生能力、`ModSynchronizationV1` 合并后再创建会话资料；玩法
+能力仍然只描述协议合同，不替代模组清单、准入规则或权限校验。这样玩法可以在
+不绑定具体游戏构建号或 DLC 标签的情况下声明自己的网络依赖。
+
 | 公开入口 | 含义 |
 | --- | --- |
 | `SessionCompatibility.Evaluate(...)` | 双向检查必需合同，并计算双方能力交集 |

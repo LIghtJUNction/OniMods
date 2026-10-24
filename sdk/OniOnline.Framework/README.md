@@ -11,6 +11,11 @@ with `ModSyncDeclarations.RegisterContentExtensions` before the first manifest
 snapshot. The declaration is local, immutable after startup, and does not grant
 access to user configuration or save directories.
 
+Gameplay rules may optionally implement `IGameplayCapabilityContract` to add
+directional, versioned capability IDs to the session handshake. The adapter
+merges those IDs with its native and mod-sync capabilities; a gameplay package
+must still perform its own admission and permission checks.
+
 Subscribe to `GameplayFramework.SessionChanged` and reacquire `GameplayFramework.Current` on every callback. The adapter disposes the previous session before publishing a replacement, so a plugin must release its old channel subscriptions instead of keeping a stale `GameplaySession` reference.
 
 `GameplaySession.LocalEnvironment` and `HostEnvironment` expose immutable

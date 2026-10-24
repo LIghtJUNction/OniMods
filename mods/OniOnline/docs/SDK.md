@@ -16,6 +16,24 @@ GameplayFramework.SessionChanged += OnSessionChanged;
 
 实现 `IGameplayRules.ValidatePlanetAdmission`。返回 null 接受；返回简短错误键拒绝。候选玩家身份由传输层提供，星球清单是防御性副本。回调只校验，不创建原生对象。框架始终保留稳定星球身份的唯一性约束，玩法不能通过放行回调制造重复的星球身份。内置规则见 `Gameplay/OnePlanetPerPlayer.cs`：限制一名玩家在当前星系绑定一颗原生星球，允许重连及信息更新，拒绝重复星球和同源分支。
 
+玩法如果需要额外的联机能力，可以同时实现 `IGameplayCapabilityContract`：
+
+```csharp
+public sealed class MyGameplay : IGameplayRules, IGameplayCapabilityContract
+{
+    public string Id => "example.my-gameplay";
+    public string Version => "1";
+    public IEnumerable<string> Capabilities => new[] { "example.rules.v1" };
+    public IEnumerable<string> RequiredCapabilities => new[] { "example.rules.v1" };
+    public string ValidatePlanetAdmission(PlanetClaim candidate, IReadOnlyList<PlanetClaim> current) => null;
+}
+```
+
+这些能力会和适配器的原生能力、模组同步能力合并后参与双向协商。`Capabilities`
+表示本端提供的合同，`RequiredCapabilities`表示要求对端提供的合同；后者可以是
+只由远端提供的能力。能力 ID 必须符合框架规则，重复值会被规范化。玩法不能用
+能力合同绕过模组对齐、准入权限或业务参数校验。
+
 ```csharp
 static IDisposable commands;
 static void OnSessionChanged()

@@ -348,11 +348,15 @@ namespace OniOnline.Runtime
             if (!Enabled) throw new InvalidOperationException("online_disabled");
             if (DependencyError != null) throw new InvalidOperationException(DependencyError);
             if (!Protocol.ValidText(Nickname, 32)) throw new ArgumentException("invalid_name");
+            var gameplayCapabilities = GameplayFramework.SelectedCapabilities;
+            var gameplayRequirements = GameplayFramework.SelectedRequiredCapabilities;
             return new SessionProfile { Name = Nickname, GameVersion = GameVersion,
                 CycleTrimVersion = CycleTrimVersion, SpacedOut = DlcManager.IsExpansion1Active(),
                 Capabilities = SessionCapabilities.ForNativeAdapter(GameVersion, DlcManager.IsExpansion1Active())
-                    .Concat(new[] { SessionCapabilities.ModSynchronizationV1 }).ToArray(),
-                RequiredCapabilities = SessionCapabilities.Core.Concat(new[] { SessionCapabilities.ModSynchronizationV1 }).ToArray(),
+                    .Concat(new[] { SessionCapabilities.ModSynchronizationV1 })
+                    .Concat(gameplayCapabilities).Distinct(StringComparer.Ordinal).ToArray(),
+                RequiredCapabilities = SessionCapabilities.Core.Concat(new[] { SessionCapabilities.ModSynchronizationV1 })
+                    .Concat(gameplayRequirements).Distinct(StringComparer.Ordinal).ToArray(),
                 GameplayId = GameplayFramework.SelectedId, GameplayVersion = GameplayFramework.SelectedVersion };
         }
 

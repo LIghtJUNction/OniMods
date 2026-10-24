@@ -31,11 +31,13 @@ namespace PlanetSignals
             if (session == null || session.GameplayId != "example.planet-signals") return;
             State = new StateExample(session);
         }
-        private sealed class SignalRules : IGameplayRules
+        private sealed class SignalRules : IGameplayRules, IGameplayCapabilityContract
         {
             private readonly OnePlanetPerPlayer defaults = new OnePlanetPerPlayer();
             public string Id { get { return "example.planet-signals"; } }
             public string Version { get { return "1"; } }
+            public IEnumerable<string> Capabilities { get { return new[] { "example.planet-signals.state.v1" }; } }
+            public IEnumerable<string> RequiredCapabilities { get { return new[] { "example.planet-signals.state.v1" }; } }
             public string ValidatePlanetAdmission(PlanetClaim candidate, IReadOnlyList<PlanetClaim> current)
             { return defaults.ValidatePlanetAdmission(candidate, current); }
         }

@@ -15,6 +15,15 @@ internal static class GameplaySdkTests
         internal Mode(string id) { Id = id; }
         public string ValidatePlanetAdmission(PlanetClaim candidate, IReadOnlyList<PlanetClaim> current) { return null; }
     }
+    private sealed class ContractMode : IGameplayRules, IGameplayCapabilityContract
+    {
+        public string Id { get; }
+        public string Version { get { return "1"; } }
+        public IEnumerable<string> Capabilities { get { return new[] { "test.custom-producer", "test.custom-producer" }; } }
+        public IEnumerable<string> RequiredCapabilities { get { return new[] { "test.custom-consumer" }; } }
+        internal ContractMode(string id) { Id = id; }
+        public string ValidatePlanetAdmission(PlanetClaim candidate, IReadOnlyList<PlanetClaim> current) { return null; }
+    }
     private sealed class Fixture : IDisposable
     {
         internal readonly DeterministicRoomNetwork Network = new DeterministicRoomNetwork(19357);
@@ -49,9 +58,15 @@ internal static class GameplaySdkTests
     internal static void Run(Action<bool, string> check)
     {
         GameplayFramework.Register(new Mode("test.other-mode"));
+        GameplayFramework.Register(new ContractMode("test.contract-mode"));
         check(GameplayFramework.RegisteredIds.Contains(GameplayFramework.BuiltInId), "bundled gameplay is registered through the public SDK");
         bool duplicate = false; try { GameplayFramework.Register(new Mode("test.other-mode")); } catch (InvalidOperationException) { duplicate = true; }
         check(duplicate, "duplicate gameplay IDs cannot replace a registered rules implementation");
+        GameplayFramework.Select("test.contract-mode");
+        check(GameplayFramework.SelectedCapabilities.SequenceEqual(new[] { "test.custom-producer" }) &&
+            GameplayFramework.SelectedRequiredCapabilities.SequenceEqual(new[] { "test.custom-consumer" }),
+            "selected gameplay contributes a normalized directional capability contract");
+        GameplayFramework.Select(GameplayFramework.BuiltInId);
         Lifecycle(check);
         using (var fixture = new Fixture(2, true))
             check(fixture.Rooms[1].LastError == "gameplay_mismatch" && fixture.Rooms[0].Players.Length == 1,

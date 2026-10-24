@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using OniOnline.Network;
 using OniOnline.Multiplayer;
 using OniOnline.Gameplay;
 
@@ -12,6 +13,16 @@ namespace OniOnline.Sdk
         string Version { get; }
         // Null accepts. A short localization error key rejects. No native writes belong here.
         string ValidatePlanetAdmission(PlanetClaim candidate, IReadOnlyList<PlanetClaim> current);
+    }
+
+    // Optional contract for a gameplay package. These IDs are merged into the
+    // adapter's native and mod-sync capabilities when the gameplay is selected.
+    // RequiredCapabilities are directional: a consumer may require a capability
+    // from the remote endpoint without providing it locally.
+    public interface IGameplayCapabilityContract
+    {
+        IEnumerable<string> Capabilities { get; }
+        IEnumerable<string> RequiredCapabilities { get; }
     }
 
     public sealed class PlanetClaim
@@ -31,7 +42,14 @@ namespace OniOnline.Sdk
         public const int ApiVersion = 1;
         public const string BuiltInId = "onionline.one-planet-per-player";
         private static readonly Dictionary<string, IGameplayRules> rules = new Dictionary<string, IGameplayRules>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, GameplayCapabilityContract> contracts = new Dictionary<string, GameplayCapabilityContract>(StringComparer.Ordinal);
         private static string selected = BuiltInId;
+        private sealed class GameplayCapabilityContract
+        {
+            internal readonly string[] Capabilities, RequiredCapabilities;
+            internal GameplayCapabilityContract(string[] capabilities, string[] requiredCapabilities)
+            { Capabilities = capabilities; RequiredCapabilities = requiredCapabilities; }
+        }
         static GameplayFramework() { Register(new OnePlanetPerPlayer()); }
         public static GameplaySession Current { get; private set; }
         public static event System.Action SessionChanged;
@@ -44,7 +62,11 @@ namespace OniOnline.Sdk
             if (gameplay == null || !ValidName(gameplay.Id) || !ValidName(gameplay.Version))
                 throw new ArgumentException("invalid_gameplay_registration");
             if (rules.ContainsKey(gameplay.Id)) throw new InvalidOperationException("duplicate_gameplay_registration");
+            var contract = gameplay as IGameplayCapabilityContract;
+            string[] capabilities = NormalizeContract(contract?.Capabilities);
+            string[] required = NormalizeContract(contract?.RequiredCapabilities);
             rules.Add(gameplay.Id, gameplay);
+            contracts.Add(gameplay.Id, new GameplayCapabilityContract(capabilities, required));
         }
 
         // Select before opening/joining a system. Every participant must install the same rules/version.
@@ -57,6 +79,24 @@ namespace OniOnline.Sdk
 
         internal static bool Available(string id, string version)
         { return id != null && rules.TryGetValue(id, out var value) && value.Version == version; }
+
+        // The adapter merges these with its own native and mod-sync contracts.
+        // Copies prevent a gameplay package from changing the selected profile
+        // after a connection has captured it.
+        internal static string[] SelectedCapabilities
+        { get { return Contract(selected).Capabilities.ToArray(); } }
+
+        internal static string[] SelectedRequiredCapabilities
+        { get { return Contract(selected).RequiredCapabilities.ToArray(); } }
+
+        private static GameplayCapabilityContract Contract(string id)
+        { return contracts.TryGetValue(id, out var value) ? value : new GameplayCapabilityContract(new string[0], new string[0]); }
+
+        private static string[] NormalizeContract(IEnumerable<string> values)
+        {
+            if (values == null) return new string[0];
+            return SessionCompatibility.Normalize(values.Where(value => value != null).Distinct(StringComparer.Ordinal));
+        }
 
         internal static string Validate(string id, string version, PlanetClaim candidate, PlanetClaim[] current)
         {
