@@ -270,8 +270,10 @@ namespace OniOnline.Network
             if (playerId == localId) return localEnvironment;
             if (!IsHost)
                 return players.Length > 0 && playerId == players[0].Id ? hostEnvironment : null;
-            Seat seat;
-            if (!seats.TryGetValue(playerId, out seat) || seat.Connection == null) return null;
+            Seat seat; Peer peer;
+            if (!seats.TryGetValue(playerId, out seat) || seat.Connection == null ||
+                !peers.TryGetValue(seat.Connection, out peer) || !peer.Authenticated ||
+                peer.Leaving || peer.CloseAt > 0) return null;
             return new SessionEnvironment(seat.GameVersion, seat.CycleTrimVersion, seat.SpacedOut,
                 seat.Capabilities, seat.RequiredCapabilities);
         }
