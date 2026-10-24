@@ -5,7 +5,7 @@
 | 改动 | 优先命令 | 能证明 | 不能证明 |
 | --- | --- | --- | --- |
 | SDK/玩法/生命周期 | `--sdk` | 认证消息、玩法规则、存档槽、旧会话释放 | Unity 生命周期、原生 UI |
-| DLC/游戏版本 | `--compatibility` | 能力合同、未知构建 fail-closed、codec 边界 | 任意版本真实游戏加载 |
+| DLC/游戏版本 | `--compatibility` | 能力合同、环境快照、未知构建 fail-closed、codec 边界 | 任意版本真实游戏加载 |
 | 入场模组同步 | 依次运行 `--mod-sync-declarations`、`--mod-sync-contracts`、`--mod-content-sync`、`--mod-content-digest`、`--mod-sync-session` | 清单、策略声明、内容摘要/传输、分页、恢复、准入 generation | Steam Workshop 下载/重启后加载 |
 | 星球准入 | `--gameplay-admission` | 身份、权限、撤权、授权观察边界 | 原生星球迁移 |
 | 网络恢复 | `--resilience`、`--network-matrix` | TCP、弱网、重连、重复/乱序、预算 | 两台真实 ONI |

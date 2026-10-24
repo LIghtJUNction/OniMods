@@ -16,6 +16,7 @@
 
 - `GameplayFramework.Bind` 是适配器所有权边界。替换或解绑时旧 `GameplaySession` 必须失效，插件在 `SessionChanged` 中重新读取 `Current` 并释放旧订阅。
 - `GameplaySession.Ready`、`ModStateSession.Ready` 和 `ModSyncSession.IsReady` 是不同层级的准入条件；不能用“房间已连接”绕过模组对齐或星球授权。
+- `GameplaySession.LocalEnvironment`、`HostEnvironment` 和 `EnvironmentFor(playerId)` 只描述已认证端的游戏构建、DLC、CycleTrim 和能力合同。它们不授予权限；断线、重连等待、离开、撤销席位或关闭后不得继续使用旧快照。
 - `AdmissionGenerationFor(playerId)` 是本端准入代次，不是玩家跨存档身份。代次变化要撤销旧发布者、订阅、relay 和待处理请求。
 - 未知状态 schema 要保留最后正确状态并隔离新数据；不能把未知数据当成空状态写回存档。
 - `NativeAdapterGuard` 只允许已登记游戏构建和能力进入原生调用。未知构建返回 `native_adapter_unavailable`，不读取、不写入、不破坏现有存档。
