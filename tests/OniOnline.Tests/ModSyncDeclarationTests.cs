@@ -27,6 +27,10 @@ internal static class ModSyncDeclarationTests
         check(Throws(() => ModSyncDeclarations.Register("", ModSyncPolicy.Required)), "invalid declaration identity is rejected");
         check(Throws(() => ModSyncDeclarations.RegisterContentExtensions("bad-extension", new[] { "png" })),
             "content declarations require extension identities");
+        check(Throws(() => ModSyncDeclarations.RegisterContentExtensions("bad-extension-dot", new[] { ".foo.bar" })),
+            "content declarations reject multi-suffix identities");
+        check(Throws(() => ModSyncDeclarations.RegisterContentExtensions("bad-extension-path", new[] { ".foo/bar" })),
+            "content declarations reject path separators");
     }
     private static bool Throws(System.Action action)
     { try { action(); return false; } catch (ArgumentException) { return true; } catch (InvalidOperationException) { return true; } catch (NotSupportedException) { return true; } }

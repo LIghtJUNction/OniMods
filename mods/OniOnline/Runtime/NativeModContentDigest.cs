@@ -132,6 +132,12 @@ namespace OniOnline.Runtime
             {
                 if (string.IsNullOrEmpty(extension) || extension.Length > 32 || extension[0] != '.')
                     throw new ContentFailure("content_extension_invalid");
+                for (int i = 1; i < extension.Length; i++)
+                {
+                    char c = extension[i];
+                    if (!(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_'))
+                        throw new ContentFailure("content_extension_invalid");
+                }
                 normalized.Add(extension.ToLowerInvariant());
             }
             return normalized;

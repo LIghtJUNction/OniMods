@@ -87,7 +87,7 @@ namespace OniOnline.Sdk
             for (int i = 1; i < extension.Length; i++)
             {
                 char c = extension[i];
-                if (!(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '-' || c == '_'))
+                if (!(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_'))
                     return false;
             }
             return true;

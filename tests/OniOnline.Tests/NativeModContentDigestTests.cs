@@ -59,6 +59,8 @@ internal static class NativeModContentDigestTests
             check(baseline == Digest(left, check), "undeclared custom resources stay outside the default digest");
             string declared = DigestWithExtensions(left, new[] { ".custom" }, check);
             check(declared != baseline, "a trusted content extension declaration includes custom resources");
+            FailureWithExtensions(left, new[] { ".custom.extra" }, "content_extension_invalid", check);
+            FailureWithExtensions(left, new[] { ".custom/extra" }, "content_extension_invalid", check);
             Write(left, "assets/settings.png", "private-resource");
             Failure(left, "content_data_unclassified", check);
             File.Delete(Path.Combine(left, "assets/settings.png"));
@@ -173,6 +175,14 @@ internal static class NativeModContentDigestTests
         bool success = NativeModContentDigest.TryCompute(root, out digest, out error);
         check(!success && digest == null && error == expected, "content boundary returns " + expected + ", observed " + error);
         check(error != null && !error.Contains(root.Length == 0 ? "private-secret" : root), "failure does not expose source paths");
+    }
+
+    private static void FailureWithExtensions(string root, IReadOnlyCollection<string> extensions, string expected, System.Action<bool, string> check)
+    {
+        string digest, error;
+        bool success = NativeModContentDigest.TryCompute(root, extensions, null, out digest, out error);
+        check(!success && digest == null && error == expected, "content extension boundary returns " + expected + ", observed " + error);
+        check(error != null && !error.Contains(root), "extension failure does not expose source paths");
     }
 
     private static void Write(string root, string relative, string content)
