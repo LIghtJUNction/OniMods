@@ -6,6 +6,8 @@
 
 `SessionProfile.GameVersion`、`SpacedOut`、`CycleTrimVersion` 是描述信息。基础会话不会因游戏构建号、DLC 状态或 CycleTrim 版本不同而直接拒绝连接，CycleTrim 可以缺席。双方仍须使用相同的 `Protocol.Version` 和玩法 `GameplayId / GameplayVersion`；本地玩法必须已经注册。
 
+认证完成后，`RoomSession.LocalEnvironment`、`HostEnvironment` 和 `EnvironmentFor(playerId)` 提供不可变的环境快照。快照包含游戏构建、CycleTrim 版本、DLC 状态、对端声明的能力和对端要求的能力；访客只能读取主机，主机只能读取当前已认证的席位。环境描述用于选择降级路径和记录诊断，功能权限仍必须通过能力协商和模组准入检查。断线、重连等待、离开或关闭后不再返回旧快照。
+
 功能合同使用独立、带版本的能力 ID。`Capabilities` 表示本端提供的合同，`RequiredCapabilities` 表示要求对端提供的合同。双方要求都满足后才能认证入席，缺项返回 `capability_mismatch`；诊断见 `LastCompatibilityFailure.MissingAtHost / MissingAtPeer`。
 
 | 公开入口 | 含义 |
@@ -14,6 +16,7 @@
 | `RoomSession.CapabilitiesFor(playerId)` | 已认证对端与本端的能力交集；查询自身时返回本端能力 |
 | `RoomSession.CanUseCapabilityWith(...)` | 检查上述交集，适用于双方都实现同一合同的服务 |
 | `RoomSession.PeerCapabilitiesFor(playerId)` | 已认证对端实际提供的能力，适用于读取端与提供端不对称的服务 |
+| `RoomSession.EnvironmentFor(playerId)` | 已认证端的游戏、DLC、CycleTrim 和能力描述；不授予任何功能权限 |
 
 能力查询返回副本。访客只能查询自己和主机的能力，不能从成员名单推断其他访客的可用功能。未连接、重连、离开或关闭时，不提供可用能力绑定。
 
@@ -55,7 +58,7 @@
 
 ## 已有验证
 
-[CompatibilityTests.cs](../../../tests/OniOnline.Tests/CompatibilityTests.cs) 已通过 **53 项局部宿主检查**，调用生产框架和真实 `RoomSession` 协议边界，覆盖能力协商、描述信息差异、非法能力编码、错误 Welcome、原生读取守卫、同席位在线替换和重连代次。未知构建用例确认 DLC 与原生读取委托均未执行，模拟元数据保持原值。
+[CompatibilityTests.cs](../../../tests/OniOnline.Tests/CompatibilityTests.cs) 已通过 **57 项局部宿主检查**，调用生产框架和真实 `RoomSession` 协议边界，覆盖能力协商、描述信息差异、环境快照、非法能力编码、错误 Welcome、原生读取守卫、同席位在线替换和重连代次。未知构建用例确认 DLC 与原生读取委托均未执行，模拟元数据保持原值。
 
 可单独运行此模块：
 
@@ -63,4 +66,4 @@
 rtk proxy dotnet run --project tests/OniOnline.Tests -c Release -- --compatibility
 ```
 
-上述 53 项记录来自独立局部宿主；该仓库入口调用同一组用例。它们不启动游戏，不证明 Unity 生命周期、原生存读档、本体实机、跨版本原生交互或界面视觉已经验收。
+上述 57 项记录来自独立局部宿主；该仓库入口调用同一组用例。它们不启动游戏，不证明 Unity 生命周期、原生存读档、本体实机、跨版本原生交互或界面视觉已经验收。

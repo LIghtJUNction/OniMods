@@ -40,6 +40,8 @@ namespace OniOnline.Sdk
         public string GameplayVersion { get { return room.GameplayVersion; } }
         public string SessionId { get { return room.RoomId; } }
         public string LocalPlayerId { get { return room.LocalPlayerId; } }
+        public SessionEnvironment LocalEnvironment { get { return room.LocalEnvironment; } }
+        public SessionEnvironment HostEnvironment { get { return room.HostEnvironment; } }
         public bool IsHost { get { return room.IsHost; } }
         public long AdmissionGeneration
         {
@@ -57,6 +59,9 @@ namespace OniOnline.Sdk
         public PlayerInfo[] Players { get { return room.Players.Select(p => new PlayerInfo { Id = p.Id, Name = p.Name, Number = p.Number, Connected = p.Connected }).ToArray(); } }
         public event System.Action Changed;
         public event System.Action<string> HandlerFailed;
+
+        public SessionEnvironment EnvironmentFor(string playerId)
+        { return room.EnvironmentFor(playerId); }
 
         internal GameplaySession(RoomSession room, Func<StarSystemState> capture, Func<GameplayStateStore> storage,
             Func<string, bool> canUsePeer = null, Func<string, long> admissionGeneration = null)

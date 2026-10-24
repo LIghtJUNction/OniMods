@@ -13,6 +13,11 @@ access to user configuration or save directories.
 
 Subscribe to `GameplayFramework.SessionChanged` and reacquire `GameplayFramework.Current` on every callback. The adapter disposes the previous session before publishing a replacement, so a plugin must release its old channel subscriptions instead of keeping a stale `GameplaySession` reference.
 
+`GameplaySession.LocalEnvironment` and `HostEnvironment` expose immutable
+game-build, DLC, CycleTrim and capability descriptions for choosing a
+graceful fallback. They describe an endpoint; they do not grant native access
+or replace capability and mod-synchronization checks.
+
 Build without installed game files: `dotnet build sdk/OniOnline.Framework -c Release`. Package locally with `dotnet pack sdk/OniOnline.Framework -c Release -o dist/sdk`.
 
 Use the framework supplied by OniOnline at runtime; other mods must not bundle their own competing copy.

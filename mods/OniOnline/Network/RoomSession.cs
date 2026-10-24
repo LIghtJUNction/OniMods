@@ -92,8 +92,12 @@ namespace OniOnline.Network
             internal string Name;
             internal string Secret;
             internal string Account;
+            internal string GameVersion;
+            internal string CycleTrimVersion;
+            internal bool SpacedOut;
             internal int Number;
             internal string[] Capabilities = new string[0];
+            internal string[] RequiredCapabilities = new string[0];
             internal string[] NegotiatedCapabilities = new string[0];
             internal long ConnectionGeneration;
             internal string Connection;
@@ -140,6 +144,8 @@ namespace OniOnline.Network
         private readonly string password;
         private readonly Dictionary<string, Peer> peers = new Dictionary<string, Peer>();
         private readonly Dictionary<string, Seat> seats = new Dictionary<string, Seat>();
+        private readonly SessionEnvironment localEnvironment;
+        private SessionEnvironment hostEnvironment;
         private readonly List<ChatLine> chat = new List<ChatLine>();
         private readonly SortedDictionary<long, Packet> receivedChat = new SortedDictionary<long, Packet>();
         private readonly Dictionary<long, PendingChat> pendingChat = new Dictionary<long, PendingChat>();
@@ -173,6 +179,15 @@ namespace OniOnline.Network
 
         public string GameplayId { get { return profile.GameplayId; } }
         public string GameplayVersion { get { return profile.GameplayVersion; } }
+        public SessionEnvironment LocalEnvironment { get { return localEnvironment; } }
+        public SessionEnvironment HostEnvironment
+        {
+            get
+            {
+                if (!Joined || Closed || Reconnecting || Leaving) return null;
+                return IsHost ? localEnvironment : hostEnvironment;
+            }
+        }
         public bool IsHost { get { return host; } }
         public bool Joined { get; private set; }
         public bool Started { get; private set; }
@@ -215,6 +230,8 @@ namespace OniOnline.Network
                 this.options.ChatHistoryLimit < 1 || this.options.ChatHistoryLimit > SessionOptions.MaxChatHistoryLimit)
                 throw new ArgumentException("invalid_session_options");
             this.profile = SessionCompatibility.Freeze(profile);
+            localEnvironment = new SessionEnvironment(this.profile.GameVersion, this.profile.CycleTrimVersion,
+                this.profile.SpacedOut, this.profile.Capabilities, this.profile.RequiredCapabilities);
             this.password = password ?? "";
             if (IsHost)
             {
@@ -243,6 +260,21 @@ namespace OniOnline.Network
 
         public bool CanUseCapabilityWith(string playerId, string capability)
         { return CapabilitiesFor(playerId).Contains(capability, StringComparer.Ordinal); }
+
+        // Returns a defensive description only for this endpoint or an
+        // authenticated peer. Guests cannot infer another guest's environment
+        // from the roster, just as they cannot infer its capabilities.
+        public SessionEnvironment EnvironmentFor(string playerId)
+        {
+            if (!Joined || Closed || Reconnecting || Leaving || playerId == null) return null;
+            if (playerId == localId) return localEnvironment;
+            if (!IsHost)
+                return players.Length > 0 && playerId == players[0].Id ? hostEnvironment : null;
+            Seat seat;
+            if (!seats.TryGetValue(playerId, out seat) || seat.Connection == null) return null;
+            return new SessionEnvironment(seat.GameVersion, seat.CycleTrimVersion, seat.SpacedOut,
+                seat.Capabilities, seat.RequiredCapabilities);
+        }
 
         // A player ID names a durable seat; this generation names its current
         // authenticated transport. Admission grants must bind to both values.
@@ -404,6 +436,7 @@ namespace OniOnline.Network
         {
             if (Closed || disposed) return;
             Joined = false;
+            hostEnvironment = null;
             peers.Clear();
             rosterAssembly.Reset();
             var old = transport; transport = null;
@@ -424,7 +457,8 @@ namespace OniOnline.Network
 
         private void Stop(string reason, string detail = null)
         {
-            LastError = reason; LastErrorDetail = detail; Joined = false; Closed = true; Reconnecting = false; Leaving = false;
+            LastError = reason; LastErrorDetail = detail; Joined = false; hostEnvironment = null;
+            Closed = true; Reconnecting = false; Leaving = false;
             var old = transport; transport = null;
             peers.Clear();
             if (old != null) old.Dispose();
@@ -488,6 +522,8 @@ namespace OniOnline.Network
                     { LastCompatibilityFailure = compatibility; Stop("capability_mismatch"); return; }
                     hostCapabilities = (string[])packet.Capabilities.Clone();
                     negotiatedWithHost = compatibility.Negotiated; LastCompatibilityFailure = null;
+                    hostEnvironment = new SessionEnvironment(packet.GameVersion, packet.CycleTrimVersion, packet.SpacedOut,
+                        packet.Capabilities, packet.RequiredCapabilities);
                     hostConnectionGeneration = checked(hostConnectionGeneration + 1);
                     peer.Authenticated = true; Joined = true; Reconnecting = false; RetryAttempt = 0; LastError = null;
                     localId = packet.PlayerId; players = packet.Players; RoomName = packet.Name;
@@ -663,12 +699,15 @@ namespace OniOnline.Network
                 peers.Remove(old); transport.Disconnect(old);
             }
             seat.ConnectionGeneration = checked(seat.ConnectionGeneration + 1);
-            seat.Connection = key; seat.Capabilities = (string[])hello.Capabilities.Clone(); seat.NegotiatedCapabilities = compatibility.Negotiated;
+            seat.Connection = key; seat.GameVersion = hello.GameVersion; seat.CycleTrimVersion = hello.CycleTrimVersion;
+            seat.SpacedOut = hello.SpacedOut; seat.Capabilities = (string[])hello.Capabilities.Clone();
+            seat.RequiredCapabilities = (string[])hello.RequiredCapabilities.Clone(); seat.NegotiatedCapabilities = compatibility.Negotiated;
             peer.Seat = seat; peer.Authenticated = true;
             RefreshRoster();
             Send(key, new Packet { Kind = PacketKind.Welcome, Room = RoomId, Name = RoomName, PlayerId = seat.Id,
                 Players = new[] { players[0], players.First(p => p.Id == seat.Id) }, Started = Started, Sequence = sequence,
                 HistoryStart = chat.Count == 0 ? sequence + 1 : chat[0].Sequence,
+                GameVersion = profile.GameVersion, CycleTrimVersion = profile.CycleTrimVersion, SpacedOut = profile.SpacedOut,
                 GameplayId = profile.GameplayId, GameplayVersion = profile.GameplayVersion,
                 Capabilities = profile.Capabilities, RequiredCapabilities = profile.RequiredCapabilities });
             QueueHistory(peer, hello.Sequence);

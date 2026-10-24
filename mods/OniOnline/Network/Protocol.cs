@@ -48,7 +48,7 @@ namespace OniOnline.Network
 
     public static class Protocol
     {
-        public const int Version = 10;
+        public const int Version = 11;
         public const int MaxPacketBytes = 8192;
         public const int RosterPageSize = 32;
         public const int MaxChatLength = 512;
@@ -81,6 +81,8 @@ namespace OniOnline.Network
                         WriteText(writer, packet.Room, 32); WriteText(writer, packet.Name, 64);
                         WriteText(writer, packet.PlayerId, 32); writer.Write(packet.Started); writer.Write(packet.Sequence);
                         writer.Write(packet.HistoryStart); WritePlayers(writer, packet.Players);
+                        WriteText(writer, packet.GameVersion ?? "", 64);
+                        WriteText(writer, packet.CycleTrimVersion ?? "", 64); writer.Write(packet.SpacedOut);
                         WriteText(writer, packet.GameplayId, 64); WriteText(writer, packet.GameplayVersion, 64);
                         WriteCapabilities(writer, packet.Capabilities); WriteCapabilities(writer, packet.RequiredCapabilities); break;
                     case PacketKind.Roster: WritePlayers(writer, packet.Players); break;
@@ -139,6 +141,8 @@ namespace OniOnline.Network
                             packet.Room = ReadText(reader, 32); packet.Name = ReadText(reader, 64);
                             packet.PlayerId = ReadText(reader, 32); packet.Started = ReadBool(reader);
                             packet.Sequence = reader.ReadInt64(); packet.HistoryStart = reader.ReadInt64(); packet.Players = ReadPlayers(reader);
+                            packet.GameVersion = ReadText(reader, 64);
+                            packet.CycleTrimVersion = ReadText(reader, 64); packet.SpacedOut = ReadBool(reader);
                             packet.GameplayId = ReadText(reader, 64); packet.GameplayVersion = ReadText(reader, 64);
                             packet.Capabilities = ReadCapabilities(reader); packet.RequiredCapabilities = ReadCapabilities(reader); break;
                         case PacketKind.Roster: packet.Players = ReadPlayers(reader); break;

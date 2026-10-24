@@ -51,6 +51,8 @@ ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planet
 
 `session.AdmissionGeneration` 是本端当前准入代次，未就绪时为零。`Changed` 也会通知代次变化。即使两次检查都得到 `Ready == true`，代次变化仍要求释放旧的发布和订阅，重新取得描述信息；示例包含这条处理。这个数字只用于本端失效检查，不能用作跨玩家身份。
 
+`session.LocalEnvironment` 和 `session.HostEnvironment` 是当前会话的只读环境快照；`session.EnvironmentFor(playerId)` 只返回本端、主机或主机可见的已认证成员。快照中的游戏构建、DLC 和 CycleTrim 版本是适配线索，不是准入条件；具体功能仍要检查 `Capabilities`、`RequiredCapabilities`、`Ready` 和模组同步状态。断线或准入代次变化后，重新读取快照，不要缓存旧对象。
+
 适配器离开或切换玩法时先解除当前绑定；框架会释放旧的 `GameplaySession`，再通知 `SessionChanged`。插件应在回调中丢弃旧订阅，并从 `Current` 取得新会话，不要缓存旧对象继续发送。
 
 完整合同见[模组状态同步](SDK-MOD-SYNC.md)、[原生模组对齐](MOD-CONTENT-SYNC.md)和[版本与能力协商](FRAMEWORK-COMPATIBILITY.md)。

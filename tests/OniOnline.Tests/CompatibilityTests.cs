@@ -36,6 +36,29 @@ internal static class CompatibilityTests
                 "game build, absent CycleTrim and base-game metadata do not block a compatible protocol");
 
         host = Profile("Host"); peer = Profile("Peer");
+        host.GameVersion = "host-build"; host.CycleTrimVersion = "host-cycletrim"; host.SpacedOut = true;
+        peer.GameVersion = "peer-build"; peer.CycleTrimVersion = ""; peer.SpacedOut = false;
+        using (var fixture = new Fixture(host, peer))
+        {
+            string hostId = fixture.Host.LocalPlayerId, peerId = fixture.Peer.LocalPlayerId;
+            var hostView = fixture.Peer.HostEnvironment;
+            var peerView = fixture.Host.EnvironmentFor(peerId);
+            bool immutable = false;
+            try { ((System.Collections.Generic.IList<string>)hostView.Capabilities)[0] = "mutated"; }
+            catch (NotSupportedException) { immutable = true; }
+            check(hostView != null && hostView.GameVersion == "host-build" && hostView.CycleTrimVersion == "host-cycletrim" && hostView.SpacedOut,
+                "Welcome returns the host game and DLC description without making it an admission gate");
+            check(peerView != null && peerView.GameVersion == "peer-build" && peerView.CycleTrimVersion == "" && !peerView.SpacedOut,
+                "the host can inspect an authenticated peer environment separately from negotiated capabilities");
+            check(immutable && fixture.Peer.HostEnvironment.Capabilities[0] != "mutated" &&
+                fixture.Peer.EnvironmentFor("other-peer") == null && fixture.Peer.LocalEnvironment.GameVersion == "peer-build",
+                "environment snapshots are immutable and guests cannot infer another guest's environment");
+            fixture.Peer.Dispose();
+            check(fixture.Peer.HostEnvironment == null && fixture.Peer.EnvironmentFor(hostId) == null,
+                "closing a session withdraws environment observations");
+        }
+
+        host = Profile("Host"); peer = Profile("Peer");
         host.GameVersion = null; host.CycleTrimVersion = ""; host.SpacedOut = false;
         host.Capabilities = host.Capabilities.Concat(new[] { Producer }).ToArray();
         peer.RequiredCapabilities = peer.RequiredCapabilities.Concat(new[] { Producer }).ToArray();
@@ -144,8 +167,10 @@ internal static class CompatibilityTests
             check(decoded.Capabilities.SequenceEqual(SessionCompatibility.Normalize(packet.Capabilities)) &&
                 decoded.RequiredCapabilities.SequenceEqual(packet.RequiredCapabilities), "capability contracts survive " + kind + " serialization");
             if (kind == PacketKind.Welcome)
-                check(decoded.GameplayId == packet.GameplayId && decoded.GameplayVersion == packet.GameplayVersion,
-                    "Welcome identifies the host gameplay contract for the joining client");
+                check(decoded.GameplayId == packet.GameplayId && decoded.GameplayVersion == packet.GameplayVersion &&
+                    decoded.GameVersion == packet.GameVersion && decoded.CycleTrimVersion == packet.CycleTrimVersion &&
+                    decoded.SpacedOut == packet.SpacedOut,
+                    "Welcome identifies the host gameplay and environment contracts for the joining client");
         }
 
         foreach (var invalid in new[] { new[] { "UPPER" }, new[] { "test.invalid/id" }, new[] { "test.duplicate", "test.duplicate" },
