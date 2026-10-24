@@ -515,7 +515,8 @@ namespace OniOnline.Network
                     if (!Protocol.ValidText(packet.Name, 64) || packet.PlayerId == null || packet.PlayerId.Length != 32 ||
                         !packet.Players.Any(p => p.Id == packet.PlayerId) || packet.Room != RoomId ||
                         packet.Sequence < sequence || packet.HistoryStart < 1 || packet.HistoryStart > packet.Sequence + 1 ||
-                        (localId != null && packet.PlayerId != localId)) throw new InvalidDataException();
+                        (localId != null && packet.PlayerId != localId) ||
+                        !ValidMetadata(packet.GameVersion) || !ValidMetadata(packet.CycleTrimVersion)) throw new InvalidDataException();
                     if (packet.GameplayId != profile.GameplayId || packet.GameplayVersion != profile.GameplayVersion)
                     { Stop("gameplay_mismatch"); return; }
                     var compatibility = SessionCompatibility.Evaluate(packet.Capabilities, packet.RequiredCapabilities,
