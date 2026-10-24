@@ -35,7 +35,9 @@ For an in-game development install, run `onim dev`. It builds the configured mod
 - `onim setup` detects the game and required tools for an existing OniMods workspace.
 - `onim doctor` checks configured paths, tools and mod sources.
 - `onim build` and `onim dev` build and install a development copy.
-- `onim install` installs a Release build to the game's Local mods directory.
+- `onim install` installs a Release build to the game's Local mods directory. It
+  refuses to proceed while the same mod still exists in `Dev` so ONI cannot load
+  two copies with the same static ID; remove or move the Dev copy first.
 - `onim info`, `onim list` and `onim uninstall` inspect and manage configured mods.
 - `onim publish` prepares the VDF for OniUploader; it does not use SteamCMD directory uploads.
 

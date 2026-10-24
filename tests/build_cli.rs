@@ -70,6 +70,7 @@ exit "${ONIM_DOTNET_EXIT-0}"
             .env("PATH", self.0.join("bin"))
             .env("ONIM_BUILD_CAPTURE", self.0.join("calls.txt"))
             .env("ONIM_DOTNET_EXIT", exit_code)
+            .env("HOME", self.0.join("home"))
             .env("MSBUILDUSESERVER", "1")
             .env("DOTNET_CLI_USE_MSBUILD_SERVER", "true")
             .env("XDG_CONFIG_HOME", self.0.join("user-config"))
@@ -128,4 +129,30 @@ fn dev_all_stops_on_a_real_build_failure_without_installing() {
     assert!(!stderr.contains("stale MSBuild server"), "{stderr}");
     assert_eq!(project.calls().len(), 1);
     assert!(!project.0.join("user-config").exists());
+}
+
+#[test]
+fn install_refuses_a_dev_shadow_before_building_or_overwriting_local() {
+    let project = Project::new();
+    let shadow = project
+        .0
+        .join("home/.config/unity3d/Klei/Oxygen Not Included/mods/Dev/Alpha");
+    fs::create_dir_all(&shadow).unwrap();
+    fs::write(shadow.join("OniOnline.dll"), "old-dev-copy").unwrap();
+
+    let output = project.run(&["install"], "0");
+    assert!(!output.status.success(), "{output:?}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("同名 Dev 模组"), "{stderr}");
+    assert!(!project.0.join("calls.txt").exists());
+    assert!(
+        !project
+            .0
+            .join("home/.config/unity3d/Klei/Oxygen Not Included/mods/Local/Alpha")
+            .exists()
+    );
+    assert_eq!(
+        fs::read_to_string(shadow.join("OniOnline.dll")).unwrap(),
+        "old-dev-copy"
+    );
 }
