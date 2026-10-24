@@ -165,6 +165,60 @@ namespace OniOnline.Runtime
         internal NativeModActivationChange(string id, bool enable) { Id = id; Enable = enable; }
     }
 
+    internal sealed class NativeModActivationTarget
+    {
+        internal string Id { get; }
+        internal bool Installed, Enabled, Loaded;
+        internal Action<bool> SetEnabled { get; }
+        internal NativeModActivationTarget(string id, bool installed, bool enabled, bool loaded, Action<bool> setEnabled)
+        { Id = id; Installed = installed; Enabled = enabled; Loaded = loaded; SetEnabled = setEnabled; }
+    }
+
+    internal static class NativeModActivationOperations
+    {
+        internal static bool TryApply(IReadOnlyList<NativeModActivationTarget> targets,
+            IReadOnlyList<NativeModActivationChange> changes, Func<bool> save, out string error)
+        {
+            error = "";
+            if (targets == null || changes == null || changes.Count == 0 || save == null)
+            { error = "native_mod_activation_invalid"; return false; }
+            var groups = targets.Where(target => target != null && target.Id != null)
+                .GroupBy(target => target.Id, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+            var assignments = new List<System.Tuple<NativeModActivationTarget, bool>>();
+            foreach (var change in changes)
+            {
+                if (change == null || !groups.TryGetValue(change.Id, out var group))
+                { error = "native_mod_not_found"; return false; }
+                var active = group.Where(candidate => candidate.Enabled || candidate.Loaded).ToList();
+                NativeModActivationTarget selected;
+                if (active.Count == 1) selected = active[0];
+                else if (active.Count == 0 && group.Count == 1) selected = group[0];
+                else { error = "native_mod_identity_ambiguous"; return false; }
+                if (!selected.Installed || selected.SetEnabled == null)
+                { error = "native_mod_not_installed"; return false; }
+                if (selected.Enabled != change.Enable) assignments.Add(System.Tuple.Create(selected, selected.Enabled));
+            }
+            if (assignments.Count == 0) { error = "native_mod_activation_noop"; return false; }
+            try
+            {
+                foreach (var assignment in assignments)
+                {
+                    var requested = changes.First(change => change.Id == assignment.Item1.Id).Enable;
+                    assignment.Item1.SetEnabled(requested);
+                    assignment.Item1.Enabled = requested;
+                }
+                if (save()) return true;
+                error = "native_mod_settings_write_failed";
+            }
+            catch (Exception) { error = "native_mod_settings_write_failed"; }
+            foreach (var assignment in assignments)
+                try { assignment.Item1.SetEnabled(assignment.Item2); assignment.Item1.Enabled = assignment.Item2; } catch (Exception) { }
+            try { save(); } catch (Exception) { }
+            return false;
+        }
+    }
+
     // Preparation is reversible and side-effect free. Actual changes belong to an idle native-menu adapter.
     internal sealed class NativeModActivationRequest
     {

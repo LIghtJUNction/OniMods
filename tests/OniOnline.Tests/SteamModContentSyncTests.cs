@@ -146,6 +146,28 @@ internal static class SteamModContentSyncTests
         installed = Manifest(Entry("extra", "1", 'b', true)); plan = ModSyncPlanner.Compare(Manifest(), installed);
         check(NativeModActivationRequest.TryCreate(plan, plan.Fingerprint, Manifest(), installed, out request, out error) &&
             !request.Changes.Single().Enable, "extra required mod produces explicit disable request without performing it");
+        ActivationOperations(check);
+    }
+
+    private static void ActivationOperations(System.Action<bool, string> check)
+    {
+        bool enabled = false;
+        var target = new NativeModActivationTarget("test", true, false, false, value => enabled = value);
+        var change = new[] { new NativeModActivationChange("test", true) };
+        check(NativeModActivationOperations.TryApply(new[] { target }, change, () => true, out var error) &&
+            enabled && target.Enabled && error == "", "activation operations apply one reviewed native setting");
+
+        enabled = false; target.Enabled = false;
+        check(!NativeModActivationOperations.TryApply(new[] { target }, change, () => false, out error) &&
+            !enabled && !target.Enabled && error == "native_mod_settings_write_failed",
+            "activation operations roll back when the native settings write fails");
+
+        var duplicate = new[] {
+            new NativeModActivationTarget("duplicate", true, false, false, _ => { }),
+            new NativeModActivationTarget("duplicate", true, false, false, _ => { }) };
+        check(!NativeModActivationOperations.TryApply(duplicate,
+            new[] { new NativeModActivationChange("duplicate", true) }, () => true, out error) &&
+            error == "native_mod_identity_ambiguous", "activation operations refuse ambiguous disabled sources");
     }
 
     private static void Catalog(System.Action<bool, string> check)
