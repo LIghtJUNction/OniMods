@@ -51,6 +51,19 @@ ModInfo.State.Changed += () => {
 状态。界面销毁时应移除自己注册的 `Changed` 处理器。需要主动重新请求描述
 信息时调用 `State.RequestState()`；它不会重发信号操作。
 
+如果玩法需要根据宿主环境选择降级路径，可以读取只读快照：
+
+```csharp
+var host = GameplayFramework.Current?.HostEnvironment;
+bool hostUsesSpacedOut = host?.SpacedOut == true;
+string hostBuild = host?.GameVersion ?? "";
+// 具体功能仍检查 host.Provides(capability) 和当前会话 Ready。
+// GameVersion、CycleTrimVersion 和 DLC 状态本身不构成准入条件。
+```
+
+快照只在当前认证端仍有效时返回；断线、重连或准入代次变化后，应重新从
+`GameplayFramework.Current` 读取会话和环境，不要缓存旧快照。
+
 ## 数据如何同步
 
 1. 框架提供 `GameplaySession` 后，`StateExample` 注册三个认证消息频道。
