@@ -32,15 +32,8 @@ EXPECTED_INTERNAL = {
     "search_control",
 }
 
-EXPECTED_ALIASES = {
-    "benchmark": (),
-    "building_control": ("buildings_control", "building_system_control"),
-    "game_control": ("game_system_control",),
-    "navigation_control": ("spatial_control", "view_control"),
-    "orders_control": ("orders", "orders_unified_control", "orders_action_control", "map_orders_control"),
-    "server_control": ("mcp_server_control", "server_diagnostics_control", "mcp_client_request_control", "tools_catalog_control", "tools_call_many", "agent_program_execute"),
-    "world_editor": ("oni_editor", "map_editor", "save_editor"),
-}
+# Retired aliases must not silently reappear in the single supported protocol.
+EXPECTED_ALIASES = {name: () for name in EXPECTED_REGISTERED}
 
 EXPECTED_OPERATION_FILES = {
     "ops/any.md": "",
@@ -232,17 +225,15 @@ def resolve_factory(
 
 def assert_dispatch_path(registry: str, method_marker: str) -> None:
     block = extract_block(registry, method_marker)
+    # Only registered canonical names are dispatched on the supported wire.
+    # Do not restore alias fallback just to satisfy an obsolete contract.
     canonical = re.search(
         r"_tools\.TryGetValue\(name,\s*out(?:\s+var)?\s+tool\)", block
     )
-    alias = re.search(
-        r"_aliases\.TryGetValue\(name,\s*out(?:\s+var)?\s+canonicalName\)", block
-    )
-    alias_target = re.search(
-        r"_tools\.TryGetValue\(canonicalName,\s*out\s+tool\)", block
-    )
-    if canonical is None or alias is None or alias_target is None:
-        fail(f"{method_marker} must preserve canonical and alias dispatch")
+    if canonical is None:
+        fail(f"{method_marker} must dispatch registered canonical tools")
+    if re.search(r"\b_aliases\b|\bcanonicalName\b", block):
+        fail(f"{method_marker} must not revive retired alias dispatch")
 
 
 def assert_no_removed_pointer_contracts(root: Path, navigation: str) -> None:
@@ -389,6 +380,8 @@ def main() -> None:
                 )
             alias_owner[alias] = canonical
 
+    if "_aliases" in registry:
+        fail("removed alias registry must not return")
     assert_dispatch_path(registry, "public static bool TryGetTool")
     call_tool = extract_block(registry, "public static CallToolResult CallTool")
     if "CallToolCore" in call_tool:
