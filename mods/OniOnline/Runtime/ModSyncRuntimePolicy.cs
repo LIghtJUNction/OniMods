@@ -43,6 +43,7 @@ namespace OniOnline.Runtime
                 case "native_mod_settings_write_failed":
                 case "native_mod_activation_invalid":
                 case "native_mod_activation_noop":
+                case "native_mod_activation_conflict":
                 case "native_mod_not_found":
                 case "native_mod_identity_ambiguous":
                 case "native_mod_not_installed": return "mod_sync.activation_failed";

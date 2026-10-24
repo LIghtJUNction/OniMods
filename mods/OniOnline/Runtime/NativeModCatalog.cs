@@ -185,10 +185,19 @@ namespace OniOnline.Runtime
             var groups = targets.Where(target => target != null && target.Id != null)
                 .GroupBy(target => target.Id, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
-            var assignments = new List<System.Tuple<NativeModActivationTarget, bool>>();
+            var requested = new Dictionary<string, bool>(StringComparer.Ordinal);
             foreach (var change in changes)
             {
-                if (change == null || !groups.TryGetValue(change.Id, out var group))
+                if (change == null || string.IsNullOrEmpty(change.Id))
+                { error = "native_mod_activation_invalid"; return false; }
+                if (requested.TryGetValue(change.Id, out var previous) && previous != change.Enable)
+                { error = "native_mod_activation_conflict"; return false; }
+                requested[change.Id] = change.Enable;
+            }
+            var assignments = new List<System.Tuple<NativeModActivationTarget, bool>>();
+            foreach (var change in requested)
+            {
+                if (!groups.TryGetValue(change.Key, out var group))
                 { error = "native_mod_not_found"; return false; }
                 var active = group.Where(candidate => candidate.Enabled || candidate.Loaded).ToList();
                 NativeModActivationTarget selected;
@@ -197,16 +206,16 @@ namespace OniOnline.Runtime
                 else { error = "native_mod_identity_ambiguous"; return false; }
                 if (!selected.Installed || selected.SetEnabled == null)
                 { error = "native_mod_not_installed"; return false; }
-                if (selected.Enabled != change.Enable) assignments.Add(System.Tuple.Create(selected, selected.Enabled));
+                if (selected.Enabled != change.Value) assignments.Add(System.Tuple.Create(selected, selected.Enabled));
             }
             if (assignments.Count == 0) { error = "native_mod_activation_noop"; return false; }
             try
             {
                 foreach (var assignment in assignments)
                 {
-                    var requested = changes.First(change => change.Id == assignment.Item1.Id).Enable;
-                    assignment.Item1.SetEnabled(requested);
-                    assignment.Item1.Enabled = requested;
+                    var desired = requested[assignment.Item1.Id];
+                    assignment.Item1.SetEnabled(desired);
+                    assignment.Item1.Enabled = desired;
                 }
                 if (save()) return true;
                 error = "native_mod_settings_write_failed";

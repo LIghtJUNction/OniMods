@@ -168,6 +168,17 @@ internal static class SteamModContentSyncTests
         check(!NativeModActivationOperations.TryApply(duplicate,
             new[] { new NativeModActivationChange("duplicate", true) }, () => true, out error) &&
             error == "native_mod_identity_ambiguous", "activation operations refuse ambiguous disabled sources");
+
+        enabled = false; target.Enabled = false;
+        check(!NativeModActivationOperations.TryApply(new[] { target }, new[] {
+                new NativeModActivationChange("test", true), new NativeModActivationChange("test", false) },
+                () => true, out error) && error == "native_mod_activation_conflict" && !enabled && !target.Enabled,
+            "activation operations reject conflicting duplicate requests before mutating native settings");
+
+        check(NativeModActivationOperations.TryApply(new[] { target }, new[] {
+                new NativeModActivationChange("test", true), new NativeModActivationChange("test", true) },
+                () => true, out error) && enabled && target.Enabled,
+            "activation operations coalesce identical duplicate requests");
     }
 
     private static void Catalog(System.Action<bool, string> check)
