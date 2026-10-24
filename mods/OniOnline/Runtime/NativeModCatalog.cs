@@ -10,6 +10,7 @@ namespace OniOnline.Runtime
     internal sealed class NativeModRecord
     {
         internal string Id, Version, ContentRoot;
+        internal IReadOnlyCollection<string> ContentExtensions = null;
         internal ModDistributionSource Source;
         internal ulong WorkshopId;
         internal ModSyncPolicy Policy;
@@ -97,7 +98,7 @@ namespace OniOnline.Runtime
                     if (record.ConfiguredEnabled) issues.Add(new NativeModCatalogIssue(record.Id, "native_mod_not_installed"));
                     continue;
                 }
-                if (!NativeModContentDigest.TryCompute(record.ContentRoot,
+                if (!NativeModContentDigest.TryCompute(record.ContentRoot, record.ContentExtensions,
                     () => loaderIdle() && loaderEpoch() == epoch, out var digest, out var error))
                 { issues.Add(new NativeModCatalogIssue(record.Id, error)); continue; }
                 try

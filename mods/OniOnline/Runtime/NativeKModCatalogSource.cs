@@ -11,7 +11,8 @@ namespace OniOnline.Runtime
 {
     internal static class NativeKModCatalogSource
     {
-        internal static NativeModCatalog Create(KMod.Manager manager, IReadOnlyDictionary<string, ModSyncPolicy> localPolicies = null)
+        internal static NativeModCatalog Create(KMod.Manager manager, IReadOnlyDictionary<string, ModSyncPolicy> localPolicies = null,
+            IReadOnlyDictionary<string, IReadOnlyList<string>> contentExtensions = null)
         {
             if (manager == null) throw new ArgumentNullException(nameof(manager));
             var policies = new Dictionary<string, ModSyncPolicy>(StringComparer.Ordinal);
@@ -24,12 +25,14 @@ namespace OniOnline.Runtime
                         throw new ArgumentException("framework_mod_must_be_required");
                     policies.Add(pair.Key, pair.Value);
                 }
-            return new NativeModCatalog(() => Read(manager, id => policies.TryGetValue(id, out var policy) ? policy : ModSyncPolicy.Required),
+            return new NativeModCatalog(() => Read(manager, id => policies.TryGetValue(id, out var policy) ? policy : ModSyncPolicy.Required,
+                    id => contentExtensions != null && contentExtensions.TryGetValue(id, out var extensions) ? extensions : null),
                 () => NativeModCatalogLifecycle.Epoch(manager), () => NativeModCatalogLifecycle.Idle(manager));
         }
 
         // Policy is local trusted configuration. An unrecognized mod is network-required by default.
-        internal static IEnumerable<NativeModRecord> Read(KMod.Manager manager, Func<string, ModSyncPolicy> policy = null)
+        internal static IEnumerable<NativeModRecord> Read(KMod.Manager manager, Func<string, ModSyncPolicy> policy = null,
+            Func<string, IReadOnlyCollection<string>> contentExtensions = null)
         {
             if (manager == null) throw new ArgumentNullException(nameof(manager));
             foreach (var mod in manager.mods.ToArray())
@@ -46,6 +49,7 @@ namespace OniOnline.Runtime
                     Version = string.IsNullOrEmpty(mod.packagedModInfo?.version)
                         ? mod.label.version.ToString(CultureInfo.InvariantCulture) : mod.packagedModInfo.version,
                     ContentRoot = mod.ContentPath,
+                    ContentExtensions = contentExtensions?.Invoke(id),
                     Source = workshop ? ModDistributionSource.SteamWorkshop : ModDistributionSource.Local,
                     WorkshopId = workshopId,
                     Policy = policy == null ? ModSyncPolicy.Required : policy(id),

@@ -508,7 +508,8 @@ namespace OniOnline.Runtime
             // This runs after all OnAllModsLoaded callbacks, so plugins can declare
             // their local synchronization policy before the catalog freezes it.
             if (modCatalog == null)
-                modCatalog = NativeKModCatalogSource.Create(Global.Instance.modManager, ModSyncDeclarations.Snapshot());
+                modCatalog = NativeKModCatalogSource.Create(Global.Instance.modManager,
+                    ModSyncDeclarations.Snapshot(), ModSyncDeclarations.ContentSnapshot());
             if (loadedModSnapshot?.IsComplete == true) return;
             double now = Time.realtimeSinceStartupAsDouble;
             if (explicitRetry && catalogCaptureStopped)

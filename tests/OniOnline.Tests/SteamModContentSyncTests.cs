@@ -155,16 +155,26 @@ internal static class SteamModContentSyncTests
         try
         {
             File.WriteAllText(Path.Combine(root, "code.dll"), "first");
+            File.WriteAllText(Path.Combine(root, "mesh.custom"), "declared-resource");
             var record = new NativeModRecord
             {
                 Id = "测试 模组", Version = "1", ContentRoot = root, Source = ModDistributionSource.Local,
-                WorkshopId = 0, Policy = ModSyncPolicy.Required, ConfiguredEnabled = true, Loaded = true, Installed = true
+                WorkshopId = 0, Policy = ModSyncPolicy.Required, ConfiguredEnabled = true, Loaded = true, Installed = true,
+                ContentExtensions = new[] { ".custom" }
             };
             long epoch = 1; bool idle = true;
             var catalog = new NativeModCatalog(() => new[] { record }, () => epoch, () => idle);
             check(!catalog.CaptureInstalled().IsComplete, "catalog cannot invent an initial loaded snapshot");
             var initial = catalog.CaptureLoadedSnapshot();
             check(initial.IsComplete && initial.ActiveManifest.Entries.Single().Id == record.Id, "native Unicode stable identity is preserved");
+            var withoutDeclaration = new NativeModRecord
+            {
+                Id = record.Id, Version = record.Version, ContentRoot = root, Source = record.Source,
+                WorkshopId = record.WorkshopId, Policy = record.Policy, ConfiguredEnabled = true, Loaded = true, Installed = true
+            };
+            var defaultCatalog = new NativeModCatalog(() => new[] { withoutDeclaration }, () => epoch, () => idle);
+            check(defaultCatalog.CaptureLoadedSnapshot().InstalledManifest.Fingerprint != initial.InstalledManifest.Fingerprint,
+                "native catalog passes trusted custom content extensions into the digest");
             check(catalog.CaptureInstalled().InstalledManifest.Fingerprint == initial.InstalledManifest.Fingerprint, "unchanged package retains loaded evidence");
             File.WriteAllText(Path.Combine(root, "code.dll"), "other");
             var changed = catalog.CaptureInstalled();

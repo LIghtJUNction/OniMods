@@ -12,6 +12,10 @@ before the first `Snapshot()`. Unregistered identities default to `Required`.
 The framework identity `LIghtJUNction.OniOnline` always remains `Required`.
 Conflicting declarations fail. `Snapshot()` freezes declarations for the process
 and returns an immutable copy; remote manifests cannot register local policy.
+The same boundary exposes `RegisterContentExtensions(modId, extensions)` for
+package resources outside the built-in Unity/data extension list. Extensions
+are normalized and frozen with the policy snapshot; they do not authorize
+private directories or transmit user data.
 
 Create the native catalog after plugin registration:
 

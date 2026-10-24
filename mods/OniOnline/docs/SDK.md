@@ -39,6 +39,14 @@ static void OnSessionChanged()
 
 未知模组默认需要双方一致。仅影响本机显示的模组可以在加载时调用 `ModSyncDeclarations.Register(modId, ModSyncPolicy.ClientOnly)`；可选内容使用 `Optional`。这是本机模组代码的声明，远端不能替本机登记政策。启动模组全部加载完后，适配器固定本次进程的声明和受控内容清单。未完成双向清单校验时，`Ready` 为 false，玩法消息、星球登记和原生观察都不放行。
 
+如果模组把联机相关资源放在内置摘要扩展名之外，可以在第一次清单快照前声明扩展名：
+
+```csharp
+ModSyncDeclarations.RegisterContentExtensions("example.my-mod", new[] { ".planetdata", ".atlasx" });
+```
+
+扩展名声明只影响受控模组包的内容摘要，不会上传或读取用户配置、存档、凭据和日志；私有目录仍会被排除。声明和模组政策在快照后一起冻结，远端清单不能修改本机声明。没有声明的自定义文件不会被摘要纳入，发布前应为会影响玩法的资源补上声明。
+
 `session.ModStates` 是框架管理的状态传输服务，不需要插件自行 Pump 或 Dispose。用 `session.SessionId` 创建绑定，并实现纯字节的 `IModStateReducer`。发布者必须明确观察权限；接收方先通过已认证消息获得权威身份、epoch 和 schema，再创建订阅。快照最多 64 KiB，支持增量和缺口恢复；未知 schema 保留最后正确检查点并隔离新数据。传输不会自动执行原生方法，也不会重放业务操作。
 
 `session.AdmissionGeneration` 是本端当前准入代次，未就绪时为零。`Changed` 也会通知代次变化。即使两次检查都得到 `Ready == true`，代次变化仍要求释放旧的发布和订阅，重新取得描述信息；示例包含这条处理。这个数字只用于本端失效检查，不能用作跨玩家身份。

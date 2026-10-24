@@ -62,11 +62,18 @@ namespace OniOnline.Runtime
         }
 
         internal static bool TryCompute(string contentRoot, out string sha256, out string error)
-        { return TryCompute(contentRoot, null, out sha256, out error); }
+        { return TryCompute(contentRoot, null, null, out sha256, out error); }
 
         // The caller may invalidate a scan when its native loader/catalog epoch
         // changes. No filenames or contents are given to this callback.
         internal static bool TryCompute(string contentRoot, Func<bool> sourceStillCurrent, out string sha256, out string error)
+        { return TryCompute(contentRoot, null, sourceStillCurrent, out sha256, out error); }
+
+        // A trusted local mod may add a package extension that is meaningful to
+        // its gameplay. The extension list is metadata only; private directories
+        // and private-looking names remain outside the digest boundary.
+        internal static bool TryCompute(string contentRoot, IReadOnlyCollection<string> additionalExtensions,
+            Func<bool> sourceStillCurrent, out string sha256, out string error)
         {
             sha256 = null; error = null;
             try
@@ -78,13 +85,14 @@ namespace OniOnline.Runtime
                 if (!Directory.Exists(root)) throw new ContentFailure("content_unavailable");
                 RejectLinkedAncestors(root);
                 RequireCurrent(sourceStillCurrent);
-                var first = Scan(root);
+                var extensions = NormalizeAdditionalExtensions(additionalExtensions);
+                var first = Scan(root, extensions);
                 byte[] digest = Hash(first, sourceStillCurrent);
                 RequireCurrent(sourceStillCurrent);
-                var second = Scan(root);
+                var second = Scan(root, extensions);
                 RequireSame(first, second);
                 byte[] repeated = Hash(second, sourceStillCurrent);
-                var final = Scan(root);
+                var final = Scan(root, extensions);
                 RequireSame(second, final);
                 RequireCurrent(sourceStillCurrent);
                 if (!digest.SequenceEqual(repeated)) throw new ContentFailure("content_changed");
@@ -116,7 +124,20 @@ namespace OniOnline.Runtime
                     throw new ContentFailure("content_link_not_allowed");
         }
 
-        private static List<ContentFile> Scan(string root)
+        private static HashSet<string> NormalizeAdditionalExtensions(IReadOnlyCollection<string> extensions)
+        {
+            if (extensions == null || extensions.Count == 0) return null;
+            var normalized = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string extension in extensions)
+            {
+                if (string.IsNullOrEmpty(extension) || extension.Length > 32 || extension[0] != '.')
+                    throw new ContentFailure("content_extension_invalid");
+                normalized.Add(extension.ToLowerInvariant());
+            }
+            return normalized;
+        }
+
+        private static List<ContentFile> Scan(string root, HashSet<string> additionalExtensions)
         {
             var files = new List<ContentFile>();
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -144,7 +165,7 @@ namespace OniOnline.Runtime
                         pending.Push(new KeyValuePair<string, int>(path, directory.Value + 1));
                         continue;
                     }
-                    if (!Include(name, leaf)) continue;
+                    if (!Include(name, leaf, additionalExtensions)) continue;
                     var info = new FileInfo(path);
                     if (info.Length > MaxFileBytes) throw new ContentFailure("content_file_budget");
                     if (files.Count >= MaxContentFiles) throw new ContentFailure("content_file_count_budget");
@@ -171,7 +192,7 @@ namespace OniOnline.Runtime
             return name;
         }
 
-        private static bool Include(string name, string leaf)
+        private static bool Include(string name, string leaf, HashSet<string> additionalExtensions)
         {
             if (leaf.StartsWith(".", StringComparison.Ordinal)) return false;
             string extension = Path.GetExtension(leaf);
@@ -182,7 +203,7 @@ namespace OniOnline.Runtime
                 if (name.IndexOf('/') >= 0) throw new ContentFailure("content_data_unclassified");
                 return false;
             }
-            if (ResourceExtensions.Contains(extension))
+            if (ResourceExtensions.Contains(extension) || additionalExtensions?.Contains(extension) == true)
             {
                 // A private-looking resource at package root is ignored; the
                 // same name inside a public package directory is ambiguous and

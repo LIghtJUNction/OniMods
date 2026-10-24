@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using OniOnline.Runtime;
@@ -54,6 +55,10 @@ internal static class NativeModContentDigestTests
             Write(left, "README.md", "documentation");
             Write(left, "Engine.pdb", "private-paths");
             check(baseline == Digest(left, check), "private settings, credentials, saves, logs, source and documentation are excluded");
+            Write(left, "assets/mesh.custom", "custom-resource");
+            check(baseline == Digest(left, check), "undeclared custom resources stay outside the default digest");
+            string declared = DigestWithExtensions(left, new[] { ".custom" }, check);
+            check(declared != baseline, "a trusted content extension declaration includes custom resources");
             Write(left, "assets/settings.png", "private-resource");
             Failure(left, "content_data_unclassified", check);
             File.Delete(Path.Combine(left, "assets/settings.png"));
@@ -151,6 +156,14 @@ internal static class NativeModContentDigestTests
         string digest, error;
         bool success = NativeModContentDigest.TryCompute(root, out digest, out error);
         check(success && error == null, "controlled package content can be fingerprinted: " + error);
+        return digest;
+    }
+
+    private static string DigestWithExtensions(string root, IReadOnlyCollection<string> extensions, System.Action<bool, string> check)
+    {
+        string digest, error;
+        bool success = NativeModContentDigest.TryCompute(root, extensions, null, out digest, out error);
+        check(success && error == null, "declared package content can be fingerprinted: " + error);
         return digest;
     }
 
