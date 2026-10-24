@@ -22,6 +22,9 @@ fn resolve_ore(table: &ElementTable, hash: i32) -> u16 {
     if hash as u32 == VACUUM_HASH {
         return u16::MAX;
     }
+    if hash == 0 && !table.has_zero_id {
+        return u16::MAX;
+    }
     table
         .elements
         .iter()
