@@ -78,6 +78,8 @@ internal static class Program
             { GameplayAdmissionTests.Run(Check); Console.WriteLine("PASS " + assertions + " gameplay admission assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--mod-content-sync")
             { SteamModContentSyncTests.Run(Check); Console.WriteLine("PASS " + assertions + " mod content synchronization assertions"); return 0; }
+            if (args.Length == 1 && args[0] == "--mod-sync-ui")
+            { NativeModSyncDialogTests.Run(Check); Console.WriteLine("PASS " + assertions + " mod sync dialog host assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--mod-content-digest")
             { NativeModContentDigestTests.Run(Check); Console.WriteLine("PASS " + assertions + " controlled mod content assertions"); return 0; }
             if (args.Length == 1 && args[0] == "--mod-sync-declarations")
@@ -164,6 +166,7 @@ internal static class Program
             ModSynchronizationTests.Run(Check);
             GameplayAdmissionTests.Run(Check);
             SteamModContentSyncTests.Run(Check);
+            NativeModSyncDialogTests.Run(Check);
             NativeModContentDigestTests.Run(Check);
             ModSyncDeclarationTests.Run(Check);
             ModSyncSessionTests.Run(Check);
@@ -353,6 +356,10 @@ internal static class Program
             catalog.Get("error.room_full", "zh-Hant") == "星系已滿" &&
             catalog.Get("error.room_full", "en-US") == "System is full", "full-system copy does not invent a four-player limit");
         Check(catalog.Get("room.join_running", "en-US") == "Join game", "late-join lobby action is localized");
+        Check(catalog.Get("mod_sync.apply_restart", "zh_klei") == "应用并重启" &&
+            catalog.Get("mod_sync.apply_restart", "zh-Hant") == "套用並重新啟動" &&
+            catalog.Get("mod_sync.apply_restart", "en-US") == "Apply and restart",
+            "mod synchronization uses apply-and-restart copy for both enabling and disabling reviewed packages");
         var quoted = new TextCatalog(new[] { "quoted,\"中文,状态\",\"繁體,狀態\",\"rooms, comms\"" });
         Check(quoted.Get("quoted", "zh_klei") == "中文,状态" && quoted.Get("quoted", "en-US") == "rooms, comms",
             "quoted CSV commas are retained as one field independently of product copy");

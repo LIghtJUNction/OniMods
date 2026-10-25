@@ -1,12 +1,28 @@
 using System;
 using System.Collections.Generic;
+using OniOnline.Sdk;
 
 namespace OniOnline.Runtime
 {
+    internal enum ModSyncReviewAction { Manage, Download, ApplyAndRestart }
+
     // Pure lifecycle and presentation decisions shared by the Unity adapter and
     // host tests. It never mutates native mod settings or exposes raw errors.
     internal static class ModSyncRuntimePolicy
     {
+        internal static ModSyncReviewAction PrimaryAction(ModSyncPlan plan, bool canDownload, bool canApply)
+        {
+            if (plan == null || plan.CanJoin) return ModSyncReviewAction.Manage;
+            if (canDownload)
+                foreach (var change in plan.Changes)
+                    if (change.CanDownload && !SteamModContentSync.ContentsMatch(change.Expected, change.Installed))
+                        return ModSyncReviewAction.Download;
+            if (canApply && NativeModActivationRequest.TryCreate(plan, plan.Fingerprint,
+                plan.RequiredManifest, plan.InstalledManifest, out _, out _))
+                return ModSyncReviewAction.ApplyAndRestart;
+            return ModSyncReviewAction.Manage;
+        }
+
         internal static void DisposeContentSync(ref SteamModContentSync sync)
         {
             var old = sync;
@@ -19,7 +35,8 @@ namespace OniOnline.Runtime
             if (statuses == null) return false;
             for (int i = 0; i < statuses.Count; i++)
                 if (statuses[i] != null && (statuses[i].Stage == ModContentSyncStage.AwaitingNativeInstall ||
-                    statuses[i].Stage == ModContentSyncStage.AwaitingActivation)) return true;
+                    statuses[i].Stage == ModContentSyncStage.AwaitingActivation ||
+                    statuses[i].Error == "mod_sync_plan_changed" || statuses[i].Error == "native_mod_content_changed")) return true;
             return false;
         }
 

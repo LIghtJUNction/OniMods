@@ -30,9 +30,16 @@ var catalog = NativeKModCatalogSource.Create(
 `CaptureLoadedSnapshot()` on a later frame while its blocking issue is
 `native_mod_loader_busy`. Keep that successful startup snapshot for the process
 lifetime. Later use `CaptureInstalled(requiredManifest)`. Require `IsComplete`
-before publishing or passing a manifest to the synchronization controller.
+before publishing a connection manifest or permitting admission.
 `ActiveManifest` describes loaded identities; `InstalledManifest` also includes
 unambiguous disabled packages for comparison. Issue codes contain no paths.
+
+For a local review only, `CanReviewInstalled` also accepts verified packages
+waiting for native activation/restart. Busy loaders, failed digests and ambiguous
+active identities still block review. `ActivationManifest` keeps required packages
+unready until their code is verified loaded, and retains unwanted configured or
+loaded packages as explicit disable actions, including packages updated on disk.
+It must never replace loaded-code evidence in a connection manifest.
 
 The native factory checks the manager's actual `mod_load_in_progress` field,
 tracks load/unload calls, and observes native catalog metadata for its epoch.
@@ -66,7 +73,7 @@ archive is uploaded or transmitted.
 ```csharp
 var controller = new SteamModContentSync(
     new SteamWorkshopModContentApi(),
-    captureCompleteInstalledManifest,
+    captureVerifiedActivationManifest,
     captureCurrentAuthorityManifest);
 controller.Begin(plan, explicitlyConfirmedPlanFingerprint, monotonicSeconds);
 controller.Tick(monotonicSeconds);
@@ -95,8 +102,15 @@ SDK rejection, query failure and timeouts are explicit failure states.
 means exact installed content still lacks startup-loaded evidence. Call
 `RefreshNativeCatalog()` after a native refresh; the OniOnline adapter also
 rechecks while a controller is waiting for native evidence, at a bounded cadence.
-`CanJoin` refers to the latest complete comparison and must be refreshed
-immediately before admission. A controller is discarded when the barrier is
+`LatestNativePlan` provides the newly captured comparison. When its fingerprint
+changes, the adapter closes the old status/review, discards its controller and
+requires a new confirmation. Download consent never authorizes applying a new
+installed-content plan. Native plan drift is recaptured even if it invalidated
+an outstanding download job. `Cancel()`, authority changes and failed native
+reads invalidate the captured review as well.
+
+`CanJoin` refers to the latest comparison; actual admission separately requires
+the connection's complete loaded manifest. A controller is discarded when the barrier is
 cleared or its connection generation changes, so a later mismatch cannot reuse
 an old download plan.
 
@@ -108,10 +122,16 @@ message; paths, account data and raw SDK exceptions are never shown.
 `NativeModActivationRequest.TryCreate` prepares exact enable/disable actions
 without applying them. It requires the confirmed plan and unchanged manifests,
 and refuses disabled content with a different source, version or digest. This
-request is applied only after the player chooses **Enable and restart**. The
+request is applied only after the player chooses **Apply and restart**. Already
+installed matching packages expose that action directly, including without a
+Steam download connection. Missing or mismatched content cannot expose it. The
 native adapter selects the same unambiguous local source, writes the native mod
 manager state, rolls back on a failed write, and then uses the game's normal
-restart path. Loader activity, duplicate sources, missing installs and write
+restart path. A verified request may require only a restart when settings already
+match but old code remains loaded; this does not rewrite or save native settings.
+An aligned plan cannot request a needless restart. If content changes while the
+review is open, confirmation returns to a fresh review before any settings write.
+Loader activity, duplicate sources, missing installs and write
 failures fall back to the Mods menu; a remote manifest never mutates settings
 without that explicit confirmation.
 
@@ -120,6 +140,9 @@ without that explicit confirmation.
 Focused host tests exercise the production controller/catalog with fake SDK
 failures, incomplete downloads, item/app mismatch, stale callbacks, changed
 manifests and hashes, native duplicate-source selection, and activation preparation.
+`--mod-sync-ui` executes the actual dialog review, paging, cancellation and stale
+callback paths against explicit host control/reflection doubles. This verifies
+callback wiring and labels, not Unity rendering, native pause/focus or real input.
 The native bridge is separately compiled against the installed game's reference
 metadata. These checks do not establish a real Steam subscription/download,
 Windows behavior or a successful activation/restart on every native mod source.

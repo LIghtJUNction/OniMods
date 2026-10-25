@@ -573,6 +573,15 @@ namespace OniOnline.Runtime
                         shownModSyncPlan = null;
                     }
                     nextModContentRefresh = now + 2;
+                    var latest = modContentSync?.LatestNativePlan;
+                    if (latest != null && latest.Fingerprint != reviewedModSyncPlan?.Fingerprint)
+                    {
+                        // Downloaded content changes the reviewed installed
+                        // fingerprint. Close the old confirmation before showing
+                        // the new plan; never activate using download consent.
+                        ReplaceModSyncReview(latest, pending.Fingerprint);
+                        return;
+                    }
                 }
                 var lines = modContentSync == null ? new string[0] : modContentSync.Status.Take(8).Select(s => {
                     string line = s.Id + ": " + OnlineText.Get("mod_sync.stage_" + s.Stage);
@@ -585,8 +594,8 @@ namespace OniOnline.Runtime
             if (reviewedModManifest != pending.Fingerprint)
             {
                 var installed = modCatalog.CaptureInstalled(pending.RequiredManifest);
-                if (!installed.IsComplete) { Error = "mod_sync_restart_required"; return; }
-                reviewedModSyncPlan = ModSyncPlanner.Compare(pending.RequiredManifest, installed.InstalledManifest);
+                if (!installed.CanReviewInstalled) { Error = "mod_sync_restart_required"; return; }
+                reviewedModSyncPlan = ModSyncPlanner.Compare(pending.RequiredManifest, installed.ActivationManifest);
                 reviewedModManifest = pending.Fingerprint;
             }
             var plan = reviewedModSyncPlan;
@@ -612,14 +621,14 @@ namespace OniOnline.Runtime
                 try
                 {
                     content = new SteamModContentSync(new SteamWorkshopModContentApi(),
-                        () => CaptureCurrentInstalledManifest(barrier.PendingPlan?.RequiredManifest),
+                        () => CaptureActivationManifest(barrier.PendingPlan?.RequiredManifest),
                         () => barrier.PendingPlan?.RequiredManifest);
                     if (!content.Begin(plan, fingerprint, Time.realtimeSinceStartupAsDouble))
                         throw new InvalidOperationException(content.Error);
                     modContentSync = content;
                     nextModContentRefresh = Time.realtimeSinceStartupAsDouble;
                     modSyncDialog = NativeModSyncDialog.OpenStatus(fingerprint, OnlineText.Get("mod_sync.downloading"),
-                        Leave, current, manage, activate, OnlineText.Get("mod_sync.enable_restart"));
+                        Leave, current, manage);
                 }
                 catch (Exception)
                 {
@@ -628,7 +637,7 @@ namespace OniOnline.Runtime
                         Leave, current, manage);
                 }
             } : (System.Action<string>)null;
-            modSyncDialog = NativeModSyncDialog.Open(plan, download, manage, Leave, current);
+            modSyncDialog = NativeModSyncDialog.Open(plan, download, manage, activate, Leave, current);
         }
 
         private void ActivateReviewedMods(RoomSession connection, ModSyncSession barrier, ModSyncPlan plan,
@@ -637,14 +646,19 @@ namespace OniOnline.Runtime
             string fingerprint = plan?.Fingerprint;
             if (string.IsNullOrEmpty(fingerprint) || !current(fingerprint)) return;
             var required = barrier.PendingPlan?.RequiredManifest;
-            var installed = CaptureCurrentInstalledManifest(required);
+            var installed = CaptureActivationManifest(required);
+            if (required != null && installed != null && !plan.IsCurrent(required, installed))
+            {
+                ReplaceModSyncReview(ModSyncPlanner.Compare(required, installed, plan.ComparisonMode), barrier.PendingPlan.Fingerprint);
+                return;
+            }
             NativeModActivationRequest request; string error;
             if (!NativeModActivationRequest.TryCreate(plan, fingerprint, required, installed, out request, out error))
             {
                 modSyncDialog = NativeModSyncDialog.OpenStatus(fingerprint, OnlineText.Get("mod_sync.activation_wait"),
                     Leave, current, manage,
                     () => ActivateReviewedMods(connection, barrier, plan, current, manage),
-                    OnlineText.Get("mod_sync.enable_restart"));
+                    OnlineText.Get("mod_sync.apply_restart"));
                 return;
             }
             if (!NativeModActivationAdapter.TryApply(Global.Instance?.modManager, request, out error))
@@ -657,10 +671,20 @@ namespace OniOnline.Runtime
             App.instance.Restart();
         }
 
-        private ModManifest CaptureCurrentInstalledManifest(ModManifest desired)
+        private void ReplaceModSyncReview(ModSyncPlan plan, string loadedFingerprint)
+        {
+            reviewedModSyncPlan = plan;
+            reviewedModManifest = loadedFingerprint;
+            shownModSyncPlan = null;
+            nextModContentRefresh = 0;
+            ModSyncRuntimePolicy.DisposeContentSync(ref modContentSync);
+            modSyncDialog?.Dispose(); modSyncDialog = null;
+        }
+
+        private ModManifest CaptureActivationManifest(ModManifest desired)
         {
             var snapshot = modCatalog?.CaptureInstalled(desired);
-            return snapshot?.IsComplete == true ? snapshot.InstalledManifest : null;
+            return snapshot?.CanReviewInstalled == true ? snapshot.ActivationManifest : null;
         }
 
         private static void BindModeration(RoomSession session, OnlineColonyState colony, bool reload)

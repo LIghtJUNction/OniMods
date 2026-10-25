@@ -38,6 +38,13 @@ internal static class SteamModContentSyncTests
             check(sync.Status.Single().Stage == ModContentSyncStage.AwaitingNativeInstall && !sync.CanJoin, "Steam installation waits for native installed and loaded evidence");
             installed = Manifest(Entry("test", "1", 'a', false));
             check(!sync.RefreshNativeCatalog() && sync.Status.Single().Stage == ModContentSyncStage.AwaitingActivation, "matching downloaded but disabled mod cannot join");
+            var afterDownload = sync.LatestNativePlan;
+            check(afterDownload != null && afterDownload.Fingerprint != plan.Fingerprint &&
+                afterDownload.RequiredFingerprint == plan.RequiredFingerprint && !afterDownload.CanJoin,
+                "downloaded native content yields a new review fingerprint while admission remains closed");
+            check(!NativeModActivationRequest.TryCreate(plan, plan.Fingerprint, required, installed, out _, out _) &&
+                NativeModActivationRequest.TryCreate(afterDownload, afterDownload.Fingerprint, required, installed, out _, out _),
+                "activation requires confirmation of the refreshed plan rather than the old download consent");
             installed = required;
             check(sync.RefreshNativeCatalog() && sync.Status.Single().Stage == ModContentSyncStage.Verified, "exact enabled native manifest allows joining");
             installed = Manifest(Entry("test", "1", 'b', true));
@@ -63,7 +70,7 @@ internal static class SteamModContentSyncTests
             sync.Begin(plan, plan.Fingerprint, 0);
             var cancelled = fake.PendingInspection;
             sync.Cancel(); cancelled(new SteamModDetails { ItemId = 7, ConsumerAppId = SteamModContentSync.OniAppId, Success = true });
-            check(fake.Subscriptions == 0 && fake.Downloads == 0, "late cancelled query callback has no side effects");
+            check(fake.Subscriptions == 0 && fake.Downloads == 0 && sync.LatestNativePlan == null, "late cancelled query callback has no side effects or retained native plan");
             sync.Begin(plan, plan.Fingerprint, 1);
             installed = Manifest(Entry("extra", "1", 'b', true));
             fake.PendingInspection(new SteamModDetails { ItemId = 7, ConsumerAppId = SteamModContentSync.OniAppId, Success = true });
@@ -95,9 +102,10 @@ internal static class SteamModContentSyncTests
         {
             sync.Begin(plan, plan.Fingerprint, 0);
             var callback = fake.PendingInspection;
+            sync.RefreshNativeCatalog();
             required = Manifest(Entry("test", "2", 'b', true)); sync.Tick(1);
             callback(new SteamModDetails { ItemId = 7, ConsumerAppId = SteamModContentSync.OniAppId, Success = true });
-            check(!sync.CanJoin && fake.Subscriptions == 0 && sync.Error == "mod_sync_plan_changed", "authority requirement change invalidates outstanding requests");
+            check(!sync.CanJoin && sync.LatestNativePlan == null && fake.Subscriptions == 0 && sync.Error == "mod_sync_plan_changed", "authority requirement change invalidates outstanding requests and native review");
             required = plan.RequiredManifest;
         }
         var many = Manifest(Enumerable.Range(1, 9).Select(i => Entry("mod" + i, "1", 'a', true, (ulong)i)).ToArray());
@@ -129,6 +137,7 @@ internal static class SteamModContentSyncTests
         Catalog(check);
         Diagnostics(check);
         RuntimePolicy(check);
+        NativeReviewFailure(check);
     }
 
     private static void Activation(System.Action<bool, string> check)
@@ -148,6 +157,39 @@ internal static class SteamModContentSyncTests
             !request.Changes.Single().Enable, "extra required mod produces explicit disable request without performing it");
         ActivationOperations(check);
         DisabledCopyActivation(check);
+        RestartOnlyActivation(check);
+    }
+
+    private static void RestartOnlyActivation(System.Action<bool, string> check)
+    {
+        var required = Manifest(Entry("test", "1", 'a', true));
+        var installed = Manifest(Entry("test", "1", 'a', false));
+        var plan = ModSyncPlanner.Compare(required, installed);
+        check(NativeModActivationRequest.TryCreate(plan, plan.Fingerprint, required, installed,
+            out var request, out var error), "verified disk content can prepare a restart while old code remains loaded");
+        int writes = 0, saves = 0;
+        var target = Target(Entry("test", "1", 'a', true), _ => writes++, loaded: true);
+        check(!NativeModActivationOperations.TryApply(new[] { target }, request.Changes,
+                () => { saves++; return true; }, out error) && error == "native_mod_activation_noop" && writes == 0 && saves == 0,
+            "raw setting application still distinguishes a no-op from a settings change");
+        check(NativeModActivationOperations.TryApplyReviewed(new[] { target }, request,
+                () => { saves++; return true; }, out error) && writes == 0 && saves == 0 && error == "",
+            "reviewed restart-only activation succeeds without rewriting an already enabled setting");
+        var drifted = Target(Entry("test", "2", 'b', true), _ => writes++, loaded: true);
+        check(!NativeModActivationOperations.TryApplyReviewed(new[] { drifted }, request,
+                () => { saves++; return true; }, out error) && error == "native_mod_content_not_ready" && writes == 0 && saves == 0,
+            "restart-only handling cannot suppress a package identity failure");
+        var aligned = ModSyncPlanner.Compare(required, required);
+        NativeModActivationRequest.TryCreate(aligned, aligned.Fingerprint, required, required, out var noChanges, out error);
+        check(!NativeModActivationOperations.TryApplyReviewed(new[] { target }, noChanges, () => true, out error),
+            "an already aligned plan cannot request a needless restart");
+        var extra = Manifest(Entry("extra", "1", 'b', true));
+        var disable = ModSyncPlanner.Compare(Manifest(), extra);
+        NativeModActivationRequest.TryCreate(disable, disable.Fingerprint, Manifest(), extra, out request, out error);
+        var unloading = Target(Entry("extra", "1", 'b', false), _ => writes++, loaded: true);
+        check(NativeModActivationOperations.TryApplyReviewed(new[] { unloading }, request,
+                () => { saves++; return true; }, out error) && writes == 0 && saves == 0,
+            "a configured-disabled but still loaded extra mod can request its reviewed restart");
     }
 
     private static void DisabledCopyActivation(System.Action<bool, string> check)
@@ -285,9 +327,33 @@ internal static class SteamModContentSyncTests
             var changed = catalog.CaptureInstalled();
             check(!changed.IsComplete && !changed.InstalledManifest.Entries.Single().Enabled && changed.ActiveManifest.Entries.Count == 0,
                 "disk update cannot claim an assembly was hot loaded");
+            check(changed.CanReviewInstalled, "verified updated disk content can be reviewed without satisfying loaded admission");
+            record.ConfiguredEnabled = false;
+            var disabledAfterUpdate = catalog.CaptureInstalled(Manifest());
+            check(!disabledAfterUpdate.IsComplete && disabledAfterUpdate.CanReviewInstalled &&
+                disabledAfterUpdate.ActiveManifest.Entries.Count == 0 && disabledAfterUpdate.ActivationManifest.Entries.Single().Enabled,
+                "disabling an updated package cannot hide its old loaded code or satisfy connection admission");
+            record.ConfiguredEnabled = true;
+            var updatedRequired = Manifest(new ModManifestEntry(record.Id, record.Version, record.Policy, record.Source,
+                record.WorkshopId, changed.InstalledManifest.Entries.Single().ContentSha256));
+            var waitingForReload = catalog.CaptureInstalled(updatedRequired);
+            var reloadPlan = ModSyncPlanner.Compare(updatedRequired, waitingForReload.ActivationManifest);
+            check(waitingForReload.CanReviewInstalled && !waitingForReload.IsComplete && !reloadPlan.CanJoin &&
+                NativeModActivationRequest.TryCreate(reloadPlan, reloadPlan.Fingerprint, updatedRequired,
+                    waitingForReload.ActivationManifest, out var reloadRequest, out _) &&
+                NativeModActivationOperations.TryApplyReviewed(new[] { new NativeModActivationTarget(record,
+                    _ => throw new Exception("restart-only review must not rewrite settings")) }, reloadRequest,
+                    () => throw new Exception("restart-only review must not save settings"), out _),
+                "a real disk update can request restart without falsely claiming its assembly is loaded");
+            var updatedExtra = catalog.CaptureInstalled(Manifest());
+            var extraPlan = ModSyncPlanner.Compare(Manifest(), updatedExtra.ActivationManifest);
+            check(!updatedExtra.IsComplete && updatedExtra.ActiveManifest.Entries.Count == 0 &&
+                !extraPlan.CanJoin && extraPlan.Changes.Single().Kind == ModSyncChangeKind.Unexpected,
+                "an updated loaded extra still requires reviewed disabling rather than disappearing from the plan");
             check(changed.Issues.All(i => !i.Code.Contains(root)), "catalog error codes contain no private path");
             idle = false;
-            check(catalog.CaptureInstalled().Issues.Single().Code == "native_mod_loader_busy", "catalog refuses to inspect a busy loader");
+            var busy = catalog.CaptureInstalled();
+            check(busy.Issues.Single().Code == "native_mod_loader_busy" && !busy.CanReviewInstalled, "catalog refuses to review a busy loader");
             idle = true;
             var ambiguous = new NativeModCatalog(() => new[] { record, record }, () => epoch, () => idle).CaptureLoadedSnapshot();
             check(!ambiguous.IsComplete && ambiguous.InstalledManifest.Entries.Count == 0, "duplicate stable IDs fail closed");
@@ -346,6 +412,44 @@ internal static class SteamModContentSyncTests
         check(!ModSyncRuntimePolicy.NeedsNativeRefresh(new[] {
                 new ModContentSyncStatus("a", 1, ModContentSyncStage.Verified, "", 1, 1) }),
             "native refresh is not repeated after every mod is verified");
+        check(ModSyncRuntimePolicy.NeedsNativeRefresh(new[] {
+                new ModContentSyncStatus("a", 1, ModContentSyncStage.Failed, "mod_sync_plan_changed", 0, 1) }) &&
+            !ModSyncRuntimePolicy.NeedsNativeRefresh(new[] {
+                new ModContentSyncStatus("a", 1, ModContentSyncStage.Failed, "steam_state_failed", 0, 1) }),
+            "native plan drift is recaptured while a Steam failure stays an explicit failure");
+
+        var required = Manifest(Entry("test", "1", 'a', true));
+        var missing = ModSyncPlanner.Compare(required, Manifest());
+        var disabled = ModSyncPlanner.Compare(required, Manifest(Entry("test", "1", 'a', false)));
+        check(ModSyncRuntimePolicy.PrimaryAction(missing, true, true) == ModSyncReviewAction.Download &&
+            ModSyncRuntimePolicy.PrimaryAction(missing, false, true) == ModSyncReviewAction.Manage,
+            "missing Workshop content downloads only when the native Steam callback is available");
+        check(ModSyncRuntimePolicy.PrimaryAction(disabled, false, true) == ModSyncReviewAction.ApplyAndRestart &&
+            ModSyncRuntimePolicy.PrimaryAction(disabled, true, false) == ModSyncReviewAction.Manage,
+            "installed matching content exposes apply-and-restart without requiring a download or Steam connection");
+        var wrong = ModSyncPlanner.Compare(required, Manifest(Entry("test", "1", 'b', false)));
+        check(ModSyncRuntimePolicy.PrimaryAction(wrong, true, true) == ModSyncReviewAction.Download &&
+            ModSyncRuntimePolicy.PrimaryAction(wrong, false, true) == ModSyncReviewAction.Manage,
+            "a disabled package with the wrong hash cannot expose activation");
+        var local = new ModManifestEntry("local", "1", ModSyncPolicy.Required, ModDistributionSource.Local, 0, new string('a', 64));
+        check(ModSyncRuntimePolicy.PrimaryAction(ModSyncPlanner.Compare(Manifest(local), Manifest()), true, true) == ModSyncReviewAction.Manage &&
+            ModSyncRuntimePolicy.PrimaryAction(ModSyncPlanner.Compare(Manifest(), required), false, true) == ModSyncReviewAction.ApplyAndRestart &&
+            ModSyncRuntimePolicy.PrimaryAction(ModSyncPlanner.Compare(required, required), true, true) == ModSyncReviewAction.Manage,
+            "manual local content, reviewed removal and aligned manifests choose distinct safe actions");
+    }
+
+    private static void NativeReviewFailure(System.Action<bool, string> check)
+    {
+        bool readable = true;
+        using (var sync = new SteamModContentSync(new FakeSteam(), () => readable ? Manifest() : null, () => Manifest()))
+        {
+            var plan = ModSyncPlanner.Compare(Manifest(), Manifest());
+            sync.Begin(plan, plan.Fingerprint, 0);
+            check(sync.RefreshNativeCatalog() && sync.LatestNativePlan != null, "a successful native read publishes its reviewed plan");
+            readable = false;
+            check(!sync.RefreshNativeCatalog() && !sync.CanJoin && sync.LatestNativePlan == null,
+                "a failed native catalog read revokes both admission and the last review plan");
+        }
     }
 
     private sealed class FakeSteam : ISteamModContentApi

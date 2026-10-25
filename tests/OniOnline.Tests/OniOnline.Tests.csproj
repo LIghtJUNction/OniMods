@@ -21,6 +21,8 @@
     <Compile Include="../../mods/OniOnline/Multiplayer/NativeDupeBirthObserver.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(OriginAdapterTests)' != 'true'">
+    <!-- PLib's compile-only Harmony reference must not shadow the host control doubles. -->
+    <PackageReference Include="Lib.Harmony.Ref" Version="2.4.2" Aliases="HarmonyReference" />
     <PackageReference Include="PLib" Version="4.25.0" />
     <ProjectReference Include="../../sdk/OniOnline.Framework/OniOnline.Framework.csproj" />
     <Compile Include="../../mods/OniOnline/Core/NativeSimSaveBlock.cs" Link="Core/NativeSimSaveBlock.cs" />
@@ -37,6 +39,7 @@
     <Compile Include="../../mods/OniOnline/Multiplayer/DuplicantTransferPreflightPolicy.cs" Link="Multiplayer/DuplicantTransferPreflightPolicy.cs" />
     <Compile Include="../../mods/OniOnline/Multiplayer/RemoteWorkPersistence.cs" Link="Multiplayer/RemoteWorkPersistence.cs" />
     <Compile Include="../../mods/OniOnline/OnlineOptions.cs" Link="OnlineOptions.cs" />
+    <Compile Include="../../mods/OniOnline/UI/NativeModSyncDialog.cs" Link="UI/NativeModSyncDialog.cs" />
     <Compile Include="../../mods/OniOnline/Runtime/SteamRoomDirectory.cs" Link="Runtime/SteamRoomDirectory.cs" />
     <Compile Include="../../mods/OniOnline/Runtime/SteamModContentSync.cs;../../mods/OniOnline/Runtime/ModSyncRuntimePolicy.cs;../../mods/OniOnline/Runtime/NativeModCatalog.cs;../../mods/OniOnline/Runtime/NativeModContentDigest.cs;../../mods/OniOnline/Runtime/NativeModCatalogDiagnostics.cs" Link="Runtime/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniOnline/Multiplayer/RemoteWorkTypes.cs;../../mods/OniOnline/Multiplayer/RemoteWorkAuthority.cs;../../mods/OniOnline/Multiplayer/RemoteWorkWire.cs;../../mods/OniOnline/Multiplayer/RemoteWorkCoordinator.cs" Link="Multiplayer/%(Filename)%(Extension)" />

@@ -24,7 +24,7 @@ namespace OniOnline.UI
         private readonly System.Action onCancel;
         private readonly List<string> pages;
         private readonly string overview;
-        private readonly bool canDownload;
+        private readonly ModSyncReviewAction reviewAction;
         private ConfirmDialogScreen dialog;
         private int page;
         private int screenGeneration;
@@ -35,7 +35,7 @@ namespace OniOnline.UI
 
         private NativeModSyncDialog(string fingerprint, Func<string, bool> isCurrent,
             System.Action<string> onConfirmDownload, System.Action onOpenMods, System.Action onPrimary,
-            string primaryText, System.Action onCancel, List<string> pages, bool canDownload, string overview = null)
+            string primaryText, System.Action onCancel, List<string> pages, ModSyncReviewAction reviewAction, string overview = null)
         {
             if (string.IsNullOrEmpty(fingerprint)) throw new ArgumentException("invalid_mod_sync_fingerprint");
             this.fingerprint = fingerprint;
@@ -46,24 +46,20 @@ namespace OniOnline.UI
             this.primaryText = primaryText;
             this.onCancel = onCancel;
             this.pages = pages;
-            this.canDownload = canDownload;
+            this.reviewAction = reviewAction;
             this.overview = overview;
         }
 
         internal static NativeModSyncDialog Open(ModSyncPlan plan, System.Action<string> onConfirmDownload,
-            System.Action onOpenMods, System.Action onCancel, Func<string, bool> isCurrent)
+            System.Action onOpenMods, System.Action onApply, System.Action onCancel, Func<string, bool> isCurrent)
         {
             if (plan == null) throw new ArgumentNullException(nameof(plan));
             if (plan.CanJoin) throw new ArgumentException("mod_sync_plan_has_no_changes");
             if (onOpenMods == null) throw new ArgumentNullException(nameof(onOpenMods));
             if (onCancel == null) throw new ArgumentNullException(nameof(onCancel));
-            bool downloadable = onConfirmDownload != null;
-            bool needsDownload = false;
-            foreach (var change in plan.Changes)
-                if (change.CanDownload && !SameContent(change.Expected, change.Installed)) { needsDownload = true; break; }
-            downloadable &= needsDownload;
+            var action = ModSyncRuntimePolicy.PrimaryAction(plan, onConfirmDownload != null, onApply != null);
             var view = new NativeModSyncDialog(plan.Fingerprint, isCurrent, onConfirmDownload,
-                onOpenMods, null, null, onCancel, BuildPages(plan), downloadable, BuildOverview(plan));
+                onOpenMods, onApply, T("mod_sync.apply_restart"), onCancel, BuildPages(plan), action, BuildOverview(plan));
             try { view.ShowOverview(); return view; }
             catch { view.Dispose(); throw; }
         }
@@ -75,7 +71,7 @@ namespace OniOnline.UI
             if (onCancel == null) throw new ArgumentNullException(nameof(onCancel));
             ValidateStatus(text);
             var view = new NativeModSyncDialog(planFingerprint, isCurrent, null, onOpenMods, onPrimary,
-                primaryText, onCancel, null, false);
+                primaryText, onCancel, null, ModSyncReviewAction.Manage);
             try
             {
                 if (!view.Refresh()) return view;
@@ -120,11 +116,13 @@ namespace OniOnline.UI
         {
             if (!Refresh()) return;
             int generation = ++screenGeneration;
-            System.Action primary = canDownload
-                ? (System.Action)(() => Select(generation, () => onConfirmDownload(fingerprint)))
-                : () => Select(generation, onOpenMods);
-            Show(overview, primary, () => ShowDetails(generation),
-                T(canDownload ? "mod_sync.download" : "mod_sync.manage"), T("mod_sync.details"), generation);
+            System.Action primary = reviewAction == ModSyncReviewAction.Download
+                ? (System.Action)(() => onConfirmDownload(fingerprint))
+                : reviewAction == ModSyncReviewAction.ApplyAndRestart ? onPrimary : onOpenMods;
+            string label = reviewAction == ModSyncReviewAction.ApplyAndRestart ? primaryText
+                : T(reviewAction == ModSyncReviewAction.Download ? "mod_sync.download" : "mod_sync.manage");
+            Show(overview, () => Select(generation, primary), () => ShowDetails(generation),
+                label, T("mod_sync.details"), generation);
         }
 
         private void ShowDetails(int generation)
@@ -239,7 +237,7 @@ namespace OniOnline.UI
             foreach (var change in plan.Changes)
             {
                 if (change.Kind == ModSyncChangeKind.Unexpected) disable++;
-                else if (SameContent(change.Expected, change.Installed)) enable++;
+                else if (SteamModContentSync.ContentsMatch(change.Expected, change.Installed)) enable++;
                 else if (change.CanDownload) download++;
                 else manual++;
             }
@@ -285,13 +283,6 @@ namespace OniOnline.UI
         private static string T(string key) { return OnlineText.Get(key); }
         private static string Format(string key, params object[] arguments)
         { return string.Format(CultureInfo.CurrentCulture, T(key), arguments); }
-
-        private static bool SameContent(ModManifestEntry expected, ModManifestEntry installed)
-        {
-            return expected != null && installed != null && expected.Id == installed.Id &&
-                expected.Source == installed.Source && expected.WorkshopId == installed.WorkshopId &&
-                expected.Version == installed.Version && expected.ContentSha256 == installed.ContentSha256;
-        }
 
         private void CloseScreen()
         {

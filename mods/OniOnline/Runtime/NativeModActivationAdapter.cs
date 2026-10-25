@@ -26,7 +26,7 @@ namespace OniOnline.Runtime
             }
             if (!NativeModCatalogLifecycle.Idle(manager) || NativeModCatalogLifecycle.Epoch(manager) != epoch)
             { error = "native_mod_catalog_changed"; return false; }
-            return NativeModActivationOperations.TryApply(targets, request.Changes, manager.Save, out error);
+            return NativeModActivationOperations.TryApplyReviewed(targets, request, manager.Save, out error);
         }
     }
 }

@@ -29,12 +29,18 @@ namespace OniOnline.Runtime
     internal sealed class NativeModCatalogSnapshot
     {
         internal ModManifest InstalledManifest { get; }
+        internal ModManifest ActivationManifest { get; }
         internal ModManifest ActiveManifest { get; }
         internal IReadOnlyList<NativeModCatalogIssue> Issues { get; }
         internal bool IsComplete { get { return Issues.All(issue => !issue.Blocking); } }
-        internal NativeModCatalogSnapshot(ModManifest installed, IList<NativeModCatalogIssue> issues)
+        // Disk identity can be reviewed before a restart supplies loaded-code
+        // evidence. Room admission must continue to require IsComplete.
+        internal bool CanReviewInstalled { get { return Issues.All(issue => !issue.Blocking ||
+            issue.Code == "native_mod_restart_required" || issue.Code == "native_mod_not_loaded"); } }
+        internal NativeModCatalogSnapshot(ModManifest installed, IList<NativeModCatalogIssue> issues, ModManifest activation = null)
         {
             InstalledManifest = installed;
+            ActivationManifest = activation ?? installed;
             ActiveManifest = new ModManifest(installed.Entries.Where(e => e.Enabled));
             Issues = new ReadOnlyCollection<NativeModCatalogIssue>(new List<NativeModCatalogIssue>(issues));
         }
@@ -80,6 +86,9 @@ namespace OniOnline.Runtime
         {
             var issues = new List<NativeModCatalogIssue>();
             var entries = new List<ModManifestEntry>();
+            var activationEntries = desired == null ? null : new List<ModManifestEntry>();
+            var requiredIds = desired == null ? null : new HashSet<string>(desired.Entries
+                .Where(entry => entry.Enabled && entry.Policy == ModSyncPolicy.Required).Select(entry => entry.Id), StringComparer.Ordinal);
             long epoch;
             List<NativeModRecord> records;
             try
@@ -108,10 +117,18 @@ namespace OniOnline.Runtime
                     bool enabled = record.Loaded;
                     if (!initial)
                         enabled = enabled && loaded.TryGetValue(record.Id, out var original) && SteamModContentSync.ContentsMatch(original, content);
-                    if (record.ConfiguredEnabled != enabled)
+                    if (record.Loaded && !enabled || record.ConfiguredEnabled != enabled)
                         issues.Add(new NativeModCatalogIssue(record.Id, record.Loaded ? "native_mod_restart_required" : "native_mod_not_loaded"));
-                    entries.Add(new ModManifestEntry(content.Id, content.Version, content.Policy, content.Source,
-                        content.WorkshopId, content.ContentSha256, enabled));
+                    var entry = new ModManifestEntry(content.Id, content.Version, content.Policy, content.Source,
+                        content.WorkshopId, content.ContentSha256, enabled);
+                    entries.Add(entry);
+                    // Required packages still need verified loaded code. Extra
+                    // packages must be disabled even when a disk update has
+                    // invalidated their old loaded-content identity.
+                    bool activationEnabled = enabled || requiredIds != null && !requiredIds.Contains(content.Id) &&
+                        (record.ConfiguredEnabled || record.Loaded);
+                    activationEntries?.Add(activationEnabled == enabled ? entry : new ModManifestEntry(content.Id,
+                        content.Version, content.Policy, content.Source, content.WorkshopId, content.ContentSha256, activationEnabled));
                 }
                 catch (ArgumentException) { issues.Add(new NativeModCatalogIssue(record.Id, "invalid_native_mod_metadata")); }
             }
@@ -120,7 +137,8 @@ namespace OniOnline.Runtime
                 if (!loaderIdle() || loaderEpoch() != epoch) return Failure("native_mod_catalog_changed");
             }
             catch { return Failure("native_mod_catalog_failed"); }
-            return new NativeModCatalogSnapshot(new ModManifest(entries), issues);
+            return new NativeModCatalogSnapshot(new ModManifest(entries), issues,
+                activationEntries == null ? null : new ModManifest(activationEntries));
         }
 
         private static NativeModCatalogSnapshot Failure(string code)
@@ -188,6 +206,17 @@ namespace OniOnline.Runtime
 
     internal static class NativeModActivationOperations
     {
+        internal static bool TryApplyReviewed(IReadOnlyList<NativeModActivationTarget> targets,
+            NativeModActivationRequest request, Func<bool> save, out string error)
+        {
+            if (TryApply(targets, request?.Changes, save, out error)) return true;
+            // Every target was checked before TryApply reports a no-op. A
+            // reviewed loaded-state mismatch can need only a native restart.
+            if (error != "native_mod_activation_noop") return false;
+            error = "";
+            return true;
+        }
+
         internal static bool TryApply(IReadOnlyList<NativeModActivationTarget> targets,
             IReadOnlyList<NativeModActivationChange> changes, Func<bool> save, out string error)
         {

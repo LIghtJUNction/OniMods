@@ -101,6 +101,7 @@ namespace OniOnline.Runtime
         }
 
         internal bool CanJoin { get; private set; }
+        internal ModSyncPlan LatestNativePlan { get; private set; }
         internal string Error { get; private set; } = "";
         internal IReadOnlyList<ModContentSyncStatus> Status
         {
@@ -154,6 +155,7 @@ namespace OniOnline.Runtime
             {
                 generation++;
                 CanJoin = false;
+                LatestNativePlan = null;
                 foreach (var job in jobs) Fail(job, "mod_sync_plan_changed");
                 try { api.CancelPendingRequests(); } catch { }
                 return;
@@ -181,8 +183,10 @@ namespace OniOnline.Runtime
         internal bool RefreshNativeCatalog()
         {
             ThrowIfDisposed();
+            LatestNativePlan = null;
             if (plan == null || !RequiredStillCurrent(plan) || !TryCapture(out var installed)) { CanJoin = false; return false; }
             var comparison = ModSyncPlanner.Compare(plan.RequiredManifest, installed, plan.ComparisonMode);
+            LatestNativePlan = comparison;
             CanJoin = comparison.CanJoin;
             var actual = installed.Entries.ToDictionary(e => e.Id, StringComparer.Ordinal);
             foreach (var job in jobs)
@@ -209,7 +213,7 @@ namespace OniOnline.Runtime
         internal void Cancel()
         {
             generation++;
-            jobs.Clear(); plan = null; CanJoin = false; Error = "";
+            jobs.Clear(); plan = null; LatestNativePlan = null; CanJoin = false; Error = "";
             try { api.CancelPendingRequests(); } catch { }
         }
 
