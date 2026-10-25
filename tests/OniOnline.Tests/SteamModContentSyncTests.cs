@@ -138,6 +138,57 @@ internal static class SteamModContentSyncTests
         Diagnostics(check);
         RuntimePolicy(check);
         NativeReviewFailure(check);
+        NativeInstallDeadline(check);
+    }
+
+    private static void NativeInstallDeadline(System.Action<bool, string> check)
+    {
+        var required = Manifest(Entry("test", "1", 'a', true));
+        foreach (bool wrongDigest in new[] { false, true })
+        {
+            var installed = wrongDigest ? Manifest(Entry("test", "1", 'b', false)) : Manifest();
+            var plan = ModSyncPlanner.Compare(required, installed);
+            var fake = new FakeSteam();
+            using (var sync = new SteamModContentSync(fake, () => installed, () => required))
+            {
+                sync.Begin(plan, plan.Fingerprint, 0);
+                sync.Tick(5);
+                fake.State.Installed = true; fake.State.HasInstallInfo = true;
+                fake.Emit(7, SteamModContentSync.OniAppId, true);
+                foreach (double now in new[] { 30d, 60d, 120d, 304d })
+                {
+                    sync.Tick(now); sync.RefreshNativeCatalog();
+                }
+                check(sync.Status.Single().Stage == ModContentSyncStage.AwaitingNativeInstall && !sync.CanJoin,
+                    "native install wait starts after Steam completion and tolerates bounded loader delay");
+                sync.Tick(305);
+                check(sync.Status.Single().Stage == ModContentSyncStage.ManualActionRequired &&
+                    sync.Status.Single().Error == "native_mod_install_timeout" && !sync.CanJoin,
+                    "completed Steam package cannot leave missing or mismatched native content waiting forever");
+                check(ModSyncRuntimePolicy.NeedsNativeRefresh(sync.Status) &&
+                    ModSyncRuntimePolicy.ErrorKey(sync.Status.Single().Error) == "mod_sync.error_install",
+                    "native install timeout exposes a localized manual remedy and permits later catalog recovery");
+                fake.Emit(7, SteamModContentSync.OniAppId, true);
+                sync.Tick(306); sync.RefreshNativeCatalog();
+                check(sync.Status.Single().Stage == ModContentSyncStage.ManualActionRequired &&
+                    sync.Status.Single().Error == "native_mod_install_timeout" && !sync.CanJoin,
+                    "repeated callbacks and unsuccessful catalog reads do not reset the native install deadline");
+                installed = Manifest(Entry("test", "1", 'a', false));
+                check(!sync.RefreshNativeCatalog() && sync.Status.Single().Stage == ModContentSyncStage.AwaitingActivation &&
+                    sync.Status.Single().Error == "" && sync.LatestNativePlan.Fingerprint != plan.Fingerprint,
+                    "late matching installed content recovers into a fresh activation review without admission");
+            }
+        }
+
+        var disabled = Manifest(Entry("test", "1", 'a', false));
+        var activationPlan = ModSyncPlanner.Compare(required, disabled);
+        using (var sync = new SteamModContentSync(new FakeSteam(), () => disabled, () => required))
+        {
+            sync.Begin(activationPlan, activationPlan.Fingerprint, 0);
+            sync.Tick(3600);
+            check(sync.Status.Single().Stage == ModContentSyncStage.AwaitingActivation && !sync.CanJoin,
+                "waiting for player activation has no installation timeout or automatic enablement");
+        }
     }
 
     private static void Activation(System.Action<bool, string> check)

@@ -109,6 +109,14 @@ installed-content plan. Native plan drift is recaptured even if it invalidated
 an outstanding download job. `Cancel()`, authority changes and failed native
 reads invalidate the captured review as well.
 
+The native-install wait is limited to five minutes after Steam reports completion.
+If content is still missing or mismatched, the status becomes a localized manual
+action instead of waiting forever. Repeated callbacks and unsuccessful native
+reads do not reset this deadline. Bounded native refreshes continue, so late
+matching content can produce a new activation review; it never grants admission
+or enables a mod automatically. Waiting for the player's activation decision has
+no installation deadline.
+
 `CanJoin` refers to the latest comparison; actual admission separately requires
 the connection's complete loaded manifest. A controller is discarded when the barrier is
 cleared or its connection generation changes, so a later mismatch cannot reuse

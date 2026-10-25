@@ -36,7 +36,8 @@ namespace OniOnline.Runtime
             for (int i = 0; i < statuses.Count; i++)
                 if (statuses[i] != null && (statuses[i].Stage == ModContentSyncStage.AwaitingNativeInstall ||
                     statuses[i].Stage == ModContentSyncStage.AwaitingActivation ||
-                    statuses[i].Error == "mod_sync_plan_changed" || statuses[i].Error == "native_mod_content_changed")) return true;
+                    statuses[i].Error == "mod_sync_plan_changed" || statuses[i].Error == "native_mod_content_changed" ||
+                    statuses[i].Error == "native_mod_install_timeout")) return true;
             return false;
         }
 
@@ -52,6 +53,7 @@ namespace OniOnline.Runtime
                 case "steam_sdk_failed":
                 case "steam_download_callback_failed": return "mod_sync.error_network";
                 case "steam_request_timeout": return "mod_sync.error_timeout";
+                case "native_mod_install_timeout": return "mod_sync.error_install";
                 case "local_mod_not_distributable":
                 case "extra_required_mod": return "mod_sync.error_local";
                 case "mod_sync_plan_changed":

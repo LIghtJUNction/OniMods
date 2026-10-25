@@ -72,6 +72,7 @@ namespace OniOnline.Runtime
         private const double PollSeconds = 1;
         private const double RequestTimeoutSeconds = 60;
         private const double DownloadTimeoutSeconds = 1800;
+        private const double NativeInstallTimeoutSeconds = 300;
 
         private sealed class Job
         {
@@ -162,6 +163,17 @@ namespace OniOnline.Runtime
             }
             foreach (var job in jobs)
             {
+                if (job.Stage == ModContentSyncStage.AwaitingNativeInstall &&
+                    now - job.Started >= NativeInstallTimeoutSeconds)
+                {
+                    // Steam can be up to date while its package cannot satisfy
+                    // this room's exact version/content. Stop showing an endless
+                    // install wait; later native evidence can still recover it.
+                    job.Stage = ModContentSyncStage.ManualActionRequired;
+                    job.Error = "native_mod_install_timeout";
+                    CanJoin = false;
+                    continue;
+                }
                 if (!Active(job.Stage)) continue;
                 double timeout = job.Stage == ModContentSyncStage.Downloading ? DownloadTimeoutSeconds : RequestTimeoutSeconds;
                 if (now - job.Started >= timeout) { Fail(job, "steam_request_timeout"); continue; }

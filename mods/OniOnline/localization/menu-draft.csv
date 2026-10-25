@@ -452,6 +452,7 @@ mod_sync.stage_Failed,下载失败,下載失敗,Download failed
 mod_sync.error_item,创意工坊内容与请求不符，请检查该模组。,創意工坊內容與要求不符，請檢查該模組。,The Workshop item does not match the requested mod.
 mod_sync.error_network,创意工坊暂时无法完成请求，请稍后重试。,創意工坊暫時無法完成要求，請稍後重試。,The Workshop request could not be completed. Try again later.
 mod_sync.error_timeout,创意工坊响应超时，请稍后重试。,創意工坊回應逾時，請稍後重試。,The Workshop request timed out. Try again later.
+mod_sync.error_install,下载已完成，但游戏未确认到匹配的模组。请在模组菜单检查后重试。,下載已完成，但遊戲未確認到相符的模組。請在模組選單檢查後重試。,Download finished but the game has not confirmed a matching mod. Check the Mods menu and try again.
 mod_sync.error_local,该模组需要手动安装或启用。,該模組需要手動安裝或啟用。,This mod must be installed or enabled manually.
 mod_sync.error_changed,模组内容已变化，请重启游戏后重新加入。,模組內容已變化，請重新啟動遊戲後重新加入。,Mod content changed. Restart the game and join again.
 mod_sync.error_generic,模组同步未完成，请在模组菜单调整后重试。,模組同步未完成，請在模組選單調整後重試。,Mod synchronization did not finish. Adjust the Mods menu and try again.
