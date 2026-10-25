@@ -36,28 +36,32 @@ namespace OniOnline.Runtime
         {
             if (manager == null) throw new ArgumentNullException(nameof(manager));
             foreach (var mod in manager.mods.ToArray())
+                yield return ReadMod(mod, policy, contentExtensions);
+        }
+
+        internal static NativeModRecord ReadMod(KMod.Mod mod, Func<string, ModSyncPolicy> policy = null,
+            Func<string, IReadOnlyCollection<string>> contentExtensions = null)
+        {
+            if (mod == null) throw new InvalidOperationException("invalid_native_mod_record");
+            string id = string.IsNullOrEmpty(mod.staticID) ? mod.label.defaultStaticID : mod.staticID;
+            bool workshop = mod.label.distribution_platform == KMod.Label.DistributionPlatform.Steam;
+            ulong workshopId = 0;
+            if (workshop && (!ulong.TryParse(mod.label.id, NumberStyles.None, CultureInfo.InvariantCulture, out workshopId) || workshopId == 0))
+                throw new InvalidOperationException("invalid_native_workshop_id");
+            return new NativeModRecord
             {
-                if (mod == null) throw new InvalidOperationException("invalid_native_mod_record");
-                string id = string.IsNullOrEmpty(mod.staticID) ? mod.label.defaultStaticID : mod.staticID;
-                bool workshop = mod.label.distribution_platform == KMod.Label.DistributionPlatform.Steam;
-                ulong workshopId = 0;
-                if (workshop && (!ulong.TryParse(mod.label.id, NumberStyles.None, CultureInfo.InvariantCulture, out workshopId) || workshopId == 0))
-                    throw new InvalidOperationException("invalid_native_workshop_id");
-                yield return new NativeModRecord
-                {
-                    Id = id,
-                    Version = string.IsNullOrEmpty(mod.packagedModInfo?.version)
-                        ? mod.label.version.ToString(CultureInfo.InvariantCulture) : mod.packagedModInfo.version,
-                    ContentRoot = mod.ContentPath,
-                    ContentExtensions = contentExtensions?.Invoke(id),
-                    Source = workshop ? ModDistributionSource.SteamWorkshop : ModDistributionSource.Local,
-                    WorkshopId = workshopId,
-                    Policy = policy == null ? ModSyncPolicy.Required : policy(id),
-                    ConfiguredEnabled = mod.IsEnabledForActiveDlc(),
-                    Loaded = mod.loaded_content != (KMod.Content)0,
-                    Installed = mod.status == KMod.Mod.Status.Installed
-                };
-            }
+                Id = id,
+                Version = string.IsNullOrEmpty(mod.packagedModInfo?.version)
+                    ? mod.label.version.ToString(CultureInfo.InvariantCulture) : mod.packagedModInfo.version,
+                ContentRoot = mod.ContentPath,
+                ContentExtensions = contentExtensions?.Invoke(id),
+                Source = workshop ? ModDistributionSource.SteamWorkshop : ModDistributionSource.Local,
+                WorkshopId = workshopId,
+                Policy = policy == null ? ModSyncPolicy.Required : policy(id),
+                ConfiguredEnabled = mod.IsEnabledForActiveDlc(),
+                Loaded = mod.loaded_content != (KMod.Content)0,
+                Installed = mod.status == KMod.Mod.Status.Installed
+            };
         }
     }
 

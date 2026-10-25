@@ -171,13 +171,13 @@ internal static class ReadOnlyLatencyTests
                 room.MaxInterestMemory <= WorldInterestSession.ObserverMemoryBudget && room.MaxDetailMemory <= WorldCellDetailsSession.ObserverByteBudget,
                 "all sampled viewport and hover queues and observer state stay inside production byte budgets");
             double maxPump = room.PumpMilliseconds.Max();
-            check(maxPump < 250, "session, viewport, hover and replica sampling return before the proxy's minimum 250ms network delay");
             var sorted = room.PumpMilliseconds.OrderBy(v => v).ToArray();
             Console.WriteLine("Read-only TCP: 500ms +/-250ms/chunk; 2048B/s/direction; 192-cell viewport; 2.5s blackhole; " +
                 "first-view=" + firstView.ToString("F2") + "s chat=" + chat.ToString("F2") + "s recovery=" + recovery.ToString("F2") +
                 "s pump-p95/max=" + sorted[(int)((sorted.Length - 1) * .95)].ToString("F3") + "/" + maxPump.ToString("F3") +
                 "ms queue-max(view/hover)=" + room.MaxInterestQueue + "/" + room.MaxDetailQueue + "B forwarded=" + room.Proxy.ForwardedBytes + "B. " +
                 "Host fixture only: no Unity rendering or game-FPS claim.");
+            check(maxPump < 250, "session, viewport, hover and replica sampling return before the proxy's minimum 250ms network delay");
         }
     }
 }

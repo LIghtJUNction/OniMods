@@ -160,18 +160,30 @@ namespace OniOnline.Runtime
 
     internal sealed class NativeModActivationChange
     {
-        internal string Id { get; }
+        internal string Id { get { return Content?.Id; } }
+        internal ModManifestEntry Content { get; }
         internal bool Enable { get; }
-        internal NativeModActivationChange(string id, bool enable) { Id = id; Enable = enable; }
+        internal NativeModActivationChange(ModManifestEntry content, bool enable) { Content = content; Enable = enable; }
     }
 
     internal sealed class NativeModActivationTarget
     {
         internal string Id { get; }
         internal bool Installed, Enabled, Loaded;
+        private readonly string version;
+        private readonly ModDistributionSource source;
+        private readonly ulong workshopId;
         internal Action<bool> SetEnabled { get; }
-        internal NativeModActivationTarget(string id, bool installed, bool enabled, bool loaded, Action<bool> setEnabled)
-        { Id = id; Installed = installed; Enabled = enabled; Loaded = loaded; SetEnabled = setEnabled; }
+        internal NativeModActivationTarget(NativeModRecord record, Action<bool> setEnabled)
+        {
+            Id = record.Id; version = record.Version; source = record.Source; workshopId = record.WorkshopId;
+            Installed = record.Installed; Enabled = record.ConfiguredEnabled; Loaded = record.Loaded; SetEnabled = setEnabled;
+        }
+
+        // Content digests are checked by TryCreate immediately before this
+        // adapter. Match the same native package that the catalog selected.
+        internal bool Matches(ModManifestEntry content)
+        { return content != null && Id == content.Id && version == content.Version && source == content.Source && workshopId == content.WorkshopId; }
     }
 
     internal static class NativeModActivationOperations
@@ -185,14 +197,15 @@ namespace OniOnline.Runtime
             var groups = targets.Where(target => target != null && target.Id != null)
                 .GroupBy(target => target.Id, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
-            var requested = new Dictionary<string, bool>(StringComparer.Ordinal);
+            var requested = new Dictionary<string, NativeModActivationChange>(StringComparer.Ordinal);
             foreach (var change in changes)
             {
                 if (change == null || string.IsNullOrEmpty(change.Id))
                 { error = "native_mod_activation_invalid"; return false; }
-                if (requested.TryGetValue(change.Id, out var previous) && previous != change.Enable)
+                if (requested.TryGetValue(change.Id, out var previous) && (previous.Enable != change.Enable ||
+                    !SteamModContentSync.ContentsMatch(previous.Content, change.Content) || previous.Content.Policy != change.Content.Policy))
                 { error = "native_mod_activation_conflict"; return false; }
-                requested[change.Id] = change.Enable;
+                requested[change.Id] = change;
             }
             var assignments = new List<System.Tuple<NativeModActivationTarget, bool>>();
             foreach (var change in requested)
@@ -202,18 +215,26 @@ namespace OniOnline.Runtime
                 var active = group.Where(candidate => candidate.Enabled || candidate.Loaded).ToList();
                 NativeModActivationTarget selected;
                 if (active.Count == 1) selected = active[0];
-                else if (active.Count == 0 && group.Count == 1) selected = group[0];
+                else if (active.Count == 0)
+                {
+                    var matching = group.Where(candidate => candidate.Matches(change.Value.Content)).ToList();
+                    if (matching.Count == 0) { error = "native_mod_content_not_ready"; return false; }
+                    if (matching.Count != 1) { error = "native_mod_identity_ambiguous"; return false; }
+                    selected = matching[0];
+                }
                 else { error = "native_mod_identity_ambiguous"; return false; }
+                if (!selected.Matches(change.Value.Content))
+                { error = "native_mod_content_not_ready"; return false; }
                 if (!selected.Installed || selected.SetEnabled == null)
                 { error = "native_mod_not_installed"; return false; }
-                if (selected.Enabled != change.Value) assignments.Add(System.Tuple.Create(selected, selected.Enabled));
+                if (selected.Enabled != change.Value.Enable) assignments.Add(System.Tuple.Create(selected, selected.Enabled));
             }
             if (assignments.Count == 0) { error = "native_mod_activation_noop"; return false; }
             try
             {
                 foreach (var assignment in assignments)
                 {
-                    var desired = requested[assignment.Item1.Id];
+                    var desired = requested[assignment.Item1.Id].Enable;
                     assignment.Item1.SetEnabled(desired);
                     assignment.Item1.Enabled = desired;
                 }
@@ -246,9 +267,9 @@ namespace OniOnline.Runtime
             foreach (var change in plan.Changes)
             {
                 if (change.Kind == ModSyncChangeKind.Unexpected)
-                    changes.Add(new NativeModActivationChange(change.Installed.Id, false));
+                    changes.Add(new NativeModActivationChange(change.Installed, false));
                 else if (change.Installed != null && !change.Installed.Enabled && SteamModContentSync.ContentsMatch(change.Expected, change.Installed))
-                    changes.Add(new NativeModActivationChange(change.Expected.Id, true));
+                    changes.Add(new NativeModActivationChange(change.Installed, true));
                 else { error = "native_mod_content_not_ready"; return false; }
             }
             request = new NativeModActivationRequest(plan, changes);

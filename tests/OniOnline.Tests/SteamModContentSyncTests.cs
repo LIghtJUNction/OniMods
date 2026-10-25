@@ -147,13 +147,49 @@ internal static class SteamModContentSyncTests
         check(NativeModActivationRequest.TryCreate(plan, plan.Fingerprint, Manifest(), installed, out request, out error) &&
             !request.Changes.Single().Enable, "extra required mod produces explicit disable request without performing it");
         ActivationOperations(check);
+        DisabledCopyActivation(check);
+    }
+
+    private static void DisabledCopyActivation(System.Action<bool, string> check)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "oni-activation-copies-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "code.dll"), "reviewed-package");
+            check(NativeModContentDigest.TryCompute(root, () => true, out var digest, out var digestError),
+                "disabled copy fixture has a controlled content digest");
+            var workshop = new NativeModRecord { Id = "test", Version = "1", ContentRoot = root,
+                Source = ModDistributionSource.SteamWorkshop, WorkshopId = 7, Policy = ModSyncPolicy.Required, Installed = true };
+            var dev = new NativeModRecord { Id = "test", Version = "dev", ContentRoot = root,
+                Source = ModDistributionSource.Local, Policy = ModSyncPolicy.Required, Installed = true };
+            var required = Manifest(new ModManifestEntry("test", "1", ModSyncPolicy.Required,
+                ModDistributionSource.SteamWorkshop, 7, digest));
+            var catalog = new NativeModCatalog(() => new[] { dev, workshop }, () => 1, () => true);
+            catalog.CaptureLoadedSnapshot();
+            var installed = catalog.CaptureInstalled(required);
+            check(installed.IsComplete && installed.InstalledManifest.Entries.Single().Source == ModDistributionSource.SteamWorkshop,
+                "native catalog selects the required disabled Workshop copy beside a Dev copy");
+            var plan = ModSyncPlanner.Compare(required, installed.InstalledManifest);
+            check(NativeModActivationRequest.TryCreate(plan, plan.Fingerprint, required, installed.InstalledManifest,
+                out var request, out var error), "disabled Workshop copy prepares an exact reviewed activation");
+            int saves = 0;
+            var targets = new[] {
+                new NativeModActivationTarget(dev, value => dev.ConfiguredEnabled = value),
+                new NativeModActivationTarget(workshop, value => workshop.ConfiguredEnabled = value) };
+            check(NativeModActivationOperations.TryApply(targets, request.Changes, () => { saves++; return true; }, out error) &&
+                workshop.ConfiguredEnabled && !dev.ConfiguredEnabled && saves == 1,
+                "activation enables only the reviewed disabled Workshop copy and saves once");
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     private static void ActivationOperations(System.Action<bool, string> check)
     {
         bool enabled = false;
-        var target = new NativeModActivationTarget("test", true, false, false, value => enabled = value);
-        var change = new[] { new NativeModActivationChange("test", true) };
+        var content = Entry("test", "1", 'a', false);
+        var target = Target(content, value => enabled = value);
+        var change = new[] { new NativeModActivationChange(content, true) };
         check(NativeModActivationOperations.TryApply(new[] { target }, change, () => true, out var error) &&
             enabled && target.Enabled && error == "", "activation operations apply one reviewed native setting");
 
@@ -162,23 +198,59 @@ internal static class SteamModContentSyncTests
             !enabled && !target.Enabled && error == "native_mod_settings_write_failed",
             "activation operations roll back when the native settings write fails");
 
-        var duplicate = new[] {
-            new NativeModActivationTarget("duplicate", true, false, false, _ => { }),
-            new NativeModActivationTarget("duplicate", true, false, false, _ => { }) };
+        var duplicateContent = Entry("duplicate", "1", 'a', false);
+        var duplicate = new[] { Target(duplicateContent, _ => { }), Target(duplicateContent, _ => { }) };
         check(!NativeModActivationOperations.TryApply(duplicate,
-            new[] { new NativeModActivationChange("duplicate", true) }, () => true, out error) &&
+            new[] { new NativeModActivationChange(duplicateContent, true) }, () => true, out error) &&
             error == "native_mod_identity_ambiguous", "activation operations refuse ambiguous disabled sources");
 
         enabled = false; target.Enabled = false;
         check(!NativeModActivationOperations.TryApply(new[] { target }, new[] {
-                new NativeModActivationChange("test", true), new NativeModActivationChange("test", false) },
+                new NativeModActivationChange(content, true), new NativeModActivationChange(content, false) },
                 () => true, out error) && error == "native_mod_activation_conflict" && !enabled && !target.Enabled,
             "activation operations reject conflicting duplicate requests before mutating native settings");
 
         check(NativeModActivationOperations.TryApply(new[] { target }, new[] {
-                new NativeModActivationChange("test", true), new NativeModActivationChange("test", true) },
+                new NativeModActivationChange(content, true), new NativeModActivationChange(content, true) },
                 () => true, out error) && enabled && target.Enabled,
             "activation operations coalesce identical duplicate requests");
+
+        enabled = false; target.Enabled = false;
+        check(!NativeModActivationOperations.TryApply(new[] { target }, new[] {
+                new NativeModActivationChange(content, true),
+                new NativeModActivationChange(Entry("test", "1", 'b', false), true) },
+                () => true, out error) && error == "native_mod_activation_conflict" && !enabled,
+            "activation refuses duplicate requests for different reviewed content before any write");
+
+        foreach (var different in new[] {
+            Entry("test", "2", 'a', false), Entry("test", "1", 'a', false, 99),
+            new ModManifestEntry("test", "1", ModSyncPolicy.Required, ModDistributionSource.Local, 0, new string('a', 64)) })
+        {
+            int writes = 0, saves = 0;
+            var earlier = Target(Entry("earlier", "1", 'a', false), _ => writes++);
+            var drifted = Target(different, _ => writes++);
+            check(!NativeModActivationOperations.TryApply(new[] { earlier, drifted }, new[] {
+                    new NativeModActivationChange(Entry("earlier", "1", 'a', false), true), change[0] },
+                    () => { saves++; return true; }, out error) && error == "native_mod_content_not_ready" && writes == 0 && saves == 0,
+                "native package source, Workshop item and version stay bound to the reviewed batch");
+        }
+
+        var otherContent = Entry("test", "2", 'b', true);
+        var loadedOther = Target(otherContent, _ => { }, loaded: true);
+        check(!NativeModActivationOperations.TryApply(new[] { loadedOther, target }, change,
+                () => true, out error) && error == "native_mod_content_not_ready" && !enabled,
+            "a different active package cannot be replaced by silently enabling an inactive copy");
+        var loadedExpected = Target(Entry("test", "1", 'a', true), _ => { }, loaded: true);
+        check(!NativeModActivationOperations.TryApply(new[] { loadedOther, loadedExpected }, change,
+                () => true, out error) && error == "native_mod_identity_ambiguous",
+            "multiple active packages stay ambiguous even when only one matches the review");
+    }
+
+    private static NativeModActivationTarget Target(ModManifestEntry content, System.Action<bool> setEnabled, bool loaded = false)
+    {
+        return new NativeModActivationTarget(new NativeModRecord { Id = content.Id, Version = content.Version,
+            Source = content.Source, WorkshopId = content.WorkshopId, Policy = content.Policy,
+            Installed = true, ConfiguredEnabled = content.Enabled, Loaded = loaded }, setEnabled);
     }
 
     private static void Catalog(System.Action<bool, string> check)

@@ -16,15 +16,16 @@ namespace OniOnline.Runtime
             if (!NativeModCatalogLifecycle.Idle(manager))
             { error = "native_mod_loader_busy"; return false; }
 
+            long epoch = NativeModCatalogLifecycle.Epoch(manager);
             var targets = new List<NativeModActivationTarget>();
             foreach (var mod in manager.mods.ToArray())
             {
                 if (mod == null) { error = "invalid_native_mod_record"; return false; }
-                string id = string.IsNullOrEmpty(mod.staticID) ? mod.label.defaultStaticID : mod.staticID;
-                targets.Add(new NativeModActivationTarget(id, mod.status == KMod.Mod.Status.Installed,
-                    mod.IsEnabledForActiveDlc(), mod.loaded_content != (KMod.Content)0,
+                targets.Add(new NativeModActivationTarget(NativeKModCatalogSource.ReadMod(mod),
                     enabled => mod.SetEnabledForActiveDlc(enabled)));
             }
+            if (!NativeModCatalogLifecycle.Idle(manager) || NativeModCatalogLifecycle.Epoch(manager) != epoch)
+            { error = "native_mod_catalog_changed"; return false; }
             return NativeModActivationOperations.TryApply(targets, request.Changes, manager.Save, out error);
         }
     }

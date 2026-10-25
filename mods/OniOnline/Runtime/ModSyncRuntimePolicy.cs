@@ -38,6 +38,8 @@ namespace OniOnline.Runtime
                 case "local_mod_not_distributable":
                 case "extra_required_mod": return "mod_sync.error_local";
                 case "mod_sync_plan_changed":
+                case "native_mod_catalog_changed":
+                case "native_mod_content_not_ready":
                 case "native_mod_content_changed": return "mod_sync.error_changed";
                 case "native_mod_loader_busy": return "mod_sync.activation_wait";
                 case "native_mod_settings_write_failed":
