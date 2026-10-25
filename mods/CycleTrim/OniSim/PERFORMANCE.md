@@ -18,6 +18,19 @@ release profile remains unchanged. No 192x192, four-worker, actual-game or FPS
 acceptance is claimed for either experiment. See the
 [rejection receipt](conformance/results/linux-744825-thermal-guard-lto.json).
 
+A same-gas SSE2 pressure-triplet experiment remains unadopted. Its release build
+passes 57 Rust tests (two existing microbenchmarks ignored), 1,849,056 edge
+comparisons across 32 MXCSR environments and all 287 official cases at one
+worker. Eight alternating pairs in six 96x96 scenes produce 96 exact final
+states and zero timed major faults. The median-based gates nominally pass, but
+all paired uncertainty intervals cross zero while CPU frequency and host load
+vary widely. The planned 192x192 run stops at the unchanged 60-second timeout
+in its first baseline vacuum sample; only ten earlier timed rows are accepted.
+There is no reliable speed claim or complete large-grid acceptance. Source and
+the normal native build are restored to `e8bfcb47`; a base-bound patch and the
+[inconclusive receipt](conformance/results/linux-744825-pressure-triplet.json)
+retain the experiment without enabling it.
+
 ## Earlier 2772e526 measurements
 
 The earlier source-built native candidate is
