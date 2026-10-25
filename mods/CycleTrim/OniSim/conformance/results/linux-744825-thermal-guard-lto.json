@@ -1,0 +1,475 @@
+{
+  "schema": 1,
+  "scope": "Authored 96x96 native complete-frame fixtures, not game FPS or Unity/Mono memory. Both experiments rejected; source and release flags remain unchanged.",
+  "baseline_revision": "35f9785f1a57b99eb0c654fe584726837fe3c76f",
+  "reference_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "method": {
+    "samples_per_role_per_scene": 8,
+    "warmup_batches": 2,
+    "timed_batches": 6,
+    "requested_native_seconds_per_batch": 10,
+    "workers": 1,
+    "cpu": 0,
+    "order": "baseline/candidate alternates by sample",
+    "comparison": "Every final array word and ordered event compared against installed official library"
+  },
+  "gates": {
+    "max_cpu_regression_percent": 3,
+    "max_wall_regression_percent": 3,
+    "max_peak_rss_increase_percent": 3,
+    "min_one_scene_cpu_reduction_percent": 10,
+    "major_faults": 0,
+    "min_interleaved_samples_per_side": 5
+  },
+  "limitation": "Large within-run CPU-frequency and host-load variation. Gate failures justify rejection but do not establish stable regression magnitudes. No accepted optimization or whole-game speedup.",
+  "experiments": [
+    {
+      "experiment": "temperature-pair early return",
+      "adopted": false,
+      "decision": "Fails fixed performance gates; thermal improvement is below 10 percent, mixed-germ and vacuum CPU regressions exceed 3 percent. Observed dispersion also precludes a reliable benefit claim. Source restored.",
+      "baseline_sha256": "e8bfcb479c1a093cebfb9239c881c6051ef36a116dd15cccad1d17c9f66e8056",
+      "candidate_sha256": "af4565b5cdc5132f29a6909d431679503e817f96de0d30298830c61b2acab01a",
+      "official_exact_frame_samples": 96,
+      "timed_major_faults": 0,
+      "complete_corpus": {
+        "complete_corpus_run": false,
+        "passed": null,
+        "workers": null
+      },
+      "host_load_1m_range": [
+        5.091796875,
+        6.74072265625
+      ],
+      "cpu_frequency_khz_range": [
+        1787907,
+        3900047
+      ],
+      "scenes": {
+        "fluid": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.22833102700000002,
+              "min": 0.20602767300000002,
+              "max": 0.325163226
+            },
+            "wall_seconds": {
+              "median": 0.2500351685011992,
+              "min": 0.22018236899748445,
+              "max": 0.3527537750196643
+            },
+            "maximum_peak_rss_kib": 33424
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.22015921450000003,
+              "min": 0.203879411,
+              "max": 0.317695175
+            },
+            "wall_seconds": {
+              "median": 0.2374470509821549,
+              "min": 0.22223067699815147,
+              "max": 0.3560320450051222
+            },
+            "maximum_peak_rss_kib": 33448
+          },
+          "cpu_change_percent": -3.5789321352283743,
+          "wall_change_percent": -5.0345387788854
+        },
+        "thermal": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.078636398,
+              "min": 0.060505162,
+              "max": 0.15355389000000003
+            },
+            "wall_seconds": {
+              "median": 0.09091009901021607,
+              "min": 0.06932938299723901,
+              "max": 0.17567740799859166
+            },
+            "maximum_peak_rss_kib": 33436
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.07745563,
+              "min": 0.05882414200000001,
+              "max": 0.110574973
+            },
+            "wall_seconds": {
+              "median": 0.0907343394937925,
+              "min": 0.06934599598753266,
+              "max": 0.12659569599782117
+            },
+            "maximum_peak_rss_kib": 33476
+          },
+          "cpu_change_percent": -1.5015540259104898,
+          "wall_change_percent": -0.19333332417096338
+        },
+        "sealed": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.19890333500000001,
+              "min": 0.17339466,
+              "max": 0.22887819699999998
+            },
+            "wall_seconds": {
+              "median": 0.20924792147707194,
+              "min": 0.18347279200679623,
+              "max": 0.2480453540047165
+            },
+            "maximum_peak_rss_kib": 33364
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.1840246735,
+              "min": 0.174750403,
+              "max": 0.214830297
+            },
+            "wall_seconds": {
+              "median": 0.20375592399796005,
+              "min": 0.1852755250001792,
+              "max": 0.23012047397787683
+            },
+            "maximum_peak_rss_kib": 33356
+          },
+          "cpu_change_percent": -7.480347928806719,
+          "wall_change_percent": -2.6246365748075817
+        },
+        "germ_flow": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.283827877,
+              "min": 0.25519592599999996,
+              "max": 0.375418692
+            },
+            "wall_seconds": {
+              "median": 0.30586435250006616,
+              "min": 0.27541413699509576,
+              "max": 0.4159052520117257
+            },
+            "maximum_peak_rss_kib": 33460
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.2759429715,
+              "min": 0.25575853800000004,
+              "max": 0.301086671
+            },
+            "wall_seconds": {
+              "median": 0.30385074199875817,
+              "min": 0.26829342398559675,
+              "max": 0.31731195200700313
+            },
+            "maximum_peak_rss_kib": 33436
+          },
+          "cpu_change_percent": -2.7780588655849314,
+          "wall_change_percent": -0.6583344822138293
+        },
+        "mixed_germs": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.27682332249999997,
+              "min": 0.270118376,
+              "max": 0.360996268
+            },
+            "wall_seconds": {
+              "median": 0.3019630494818557,
+              "min": 0.2822339170088526,
+              "max": 0.3947411499975715
+            },
+            "maximum_peak_rss_kib": 33372
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.316188366,
+              "min": 0.275994207,
+              "max": 0.353558162
+            },
+            "wall_seconds": {
+              "median": 0.3323968254990177,
+              "min": 0.2869819529878441,
+              "max": 0.3846616939990781
+            },
+            "maximum_peak_rss_kib": 33372
+          },
+          "cpu_change_percent": 14.220277086660582,
+          "wall_change_percent": 10.078642426410767
+        },
+        "vacuum": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.150792971,
+              "min": 0.14513319300000002,
+              "max": 0.194160151
+            },
+            "wall_seconds": {
+              "median": 0.16745645549963228,
+              "min": 0.15384858098695986,
+              "max": 0.21802052698330954
+            },
+            "maximum_peak_rss_kib": 33360
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.164857736,
+              "min": 0.140282669,
+              "max": 0.181910996
+            },
+            "wall_seconds": {
+              "median": 0.1768795320094796,
+              "min": 0.15213979899999686,
+              "max": 0.19997732702177018
+            },
+            "maximum_peak_rss_kib": 33364
+          },
+          "cpu_change_percent": 9.327201995376821,
+          "wall_change_percent": 5.62718020140347
+        }
+      },
+      "source_change": "temperature_pair returns on !(difference >= 1.0) before loading either element record; original arithmetic retained.",
+      "harness_sha256": {
+        "host.py": "b0cc570ed1f5575ef4b9c87d8c81ef28f4b46b909e632e46276aca27cf4f6ebb",
+        "run.py": "528ed75d19c6ec86595246e049bd06995779387c4d2526c1e5df114e281c4ee3",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "ed45032133423b7bce6030cff79aacf4b98ceb82508d94151a5d9934a28f17c0",
+        "pressure_cases.py": "9b2a1527e2e138d020816dbe75deda3e45174977a515de3af1f63c3bb73cfb86",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "thermal_boundary_cases.py": "c72b3a3d20babb7b3467bf15978fd2f9a7f0340b1dc4dc8a9fada1f6e4be8ca0",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b",
+        "benchmark_frames.py": "52f861ccf9d03a2623ca0762555674318dc88a60c074e69f654492e28cdbe9a8"
+      }
+    },
+    {
+      "experiment": "Thin LTO with one codegen unit",
+      "adopted": false,
+      "decision": "Fails the unchanged whole-frame CPU gates. Host load and frequency dispersion preclude a reliable speedup claim. Build flags remain unchanged.",
+      "baseline_sha256": "e8bfcb479c1a093cebfb9239c881c6051ef36a116dd15cccad1d17c9f66e8056",
+      "candidate_sha256": "00e14d9654deb25b9e830697244aeb3306bf5b337aef3c74bf702a9d25122e5a",
+      "official_exact_frame_samples": 96,
+      "timed_major_faults": 0,
+      "complete_corpus": {
+        "complete_corpus_run": true,
+        "passed": true,
+        "workers": 1,
+        "case_count": 287
+      },
+      "host_load_1m_range": [
+        28.19140625,
+        35.068359375
+      ],
+      "cpu_frequency_khz_range": [
+        2100000,
+        3277176
+      ],
+      "scenes": {
+        "fluid": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.33019704699999997,
+              "min": 0.222036461,
+              "max": 0.449089245
+            },
+            "wall_seconds": {
+              "median": 0.36556355851644184,
+              "min": 0.24741326298681088,
+              "max": 0.48926759100868367
+            },
+            "maximum_peak_rss_kib": 33428
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.36943136849999997,
+              "min": 0.278723459,
+              "max": 0.518756844
+            },
+            "wall_seconds": {
+              "median": 0.4120081429864513,
+              "min": 0.3152487379848026,
+              "max": 0.5757151270227041
+            },
+            "maximum_peak_rss_kib": 33336
+          },
+          "cpu_change_percent": 11.882093391343984,
+          "wall_change_percent": 12.704927334249195
+        },
+        "thermal": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.10868129950000001,
+              "min": 0.07139890099999999,
+              "max": 0.285089328
+            },
+            "wall_seconds": {
+              "median": 0.12471601851575542,
+              "min": 0.08392124698730186,
+              "max": 0.3301110560132656
+            },
+            "maximum_peak_rss_kib": 33476
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.1476867755,
+              "min": 0.082702522,
+              "max": 0.170188024
+            },
+            "wall_seconds": {
+              "median": 0.16773714699957054,
+              "min": 0.09892059900448658,
+              "max": 0.18382587502128445
+            },
+            "maximum_peak_rss_kib": 33400
+          },
+          "cpu_change_percent": 35.889776971244245,
+          "wall_change_percent": 34.495270932963784
+        },
+        "sealed": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.271545445,
+              "min": 0.20677148899999998,
+              "max": 0.41560002800000007
+            },
+            "wall_seconds": {
+              "median": 0.3005766670103185,
+              "min": 0.23062274002586491,
+              "max": 0.44006582599831745
+            },
+            "maximum_peak_rss_kib": 33376
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.278115557,
+              "min": 0.22492751,
+              "max": 0.46296089300000004
+            },
+            "wall_seconds": {
+              "median": 0.30412221350707114,
+              "min": 0.2364855530031491,
+              "max": 0.48177212598966435
+            },
+            "maximum_peak_rss_kib": 33228
+          },
+          "cpu_change_percent": 2.419525762989694,
+          "wall_change_percent": 1.1795814132941063
+        },
+        "germ_flow": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.420840128,
+              "min": 0.33926002200000005,
+              "max": 0.6046350380000001
+            },
+            "wall_seconds": {
+              "median": 0.4504166164988419,
+              "min": 0.36319148499751464,
+              "max": 0.6523429400112946
+            },
+            "maximum_peak_rss_kib": 33400
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.44687864499999996,
+              "min": 0.37883987900000005,
+              "max": 0.5607091420000001
+            },
+            "wall_seconds": {
+              "median": 0.4848500480147777,
+              "min": 0.415832897007931,
+              "max": 0.6059638590086251
+            },
+            "maximum_peak_rss_kib": 33396
+          },
+          "cpu_change_percent": 6.187270478161233,
+          "wall_change_percent": 7.644796007658905
+        },
+        "mixed_germs": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.40471076399999995,
+              "min": 0.33380540400000003,
+              "max": 0.690912377
+            },
+            "wall_seconds": {
+              "median": 0.42911835649283603,
+              "min": 0.36733487399760634,
+              "max": 0.762259440991329
+            },
+            "maximum_peak_rss_kib": 33484
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.426450274,
+              "min": 0.3262095930000001,
+              "max": 0.6851549270000001
+            },
+            "wall_seconds": {
+              "median": 0.45922833451186307,
+              "min": 0.34122609699261375,
+              "max": 0.7419865670090076
+            },
+            "maximum_peak_rss_kib": 33332
+          },
+          "cpu_change_percent": 5.371616456438022,
+          "wall_change_percent": 7.0167070607546345
+        },
+        "vacuum": {
+          "baseline": {
+            "cpu_seconds": {
+              "median": 0.24264908350000003,
+              "min": 0.17206458600000002,
+              "max": 0.390842447
+            },
+            "wall_seconds": {
+              "median": 0.26111226799548604,
+              "min": 0.1843675239942968,
+              "max": 0.4247797740099486
+            },
+            "maximum_peak_rss_kib": 33376
+          },
+          "candidate": {
+            "cpu_seconds": {
+              "median": 0.259711578,
+              "min": 0.17075158199999999,
+              "max": 0.357887652
+            },
+            "wall_seconds": {
+              "median": 0.2912533100170549,
+              "min": 0.1794329019903671,
+              "max": 0.3809825859789271
+            },
+            "maximum_peak_rss_kib": 33256
+          },
+          "cpu_change_percent": 7.0317572413167495,
+          "wall_change_percent": 11.543326651388863
+        }
+      },
+      "build_environment": {
+        "CARGO_PROFILE_RELEASE_LTO": "thin",
+        "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": "1",
+        "target_cpu": "unchanged default"
+      },
+      "harness_sha256": {
+        "host.py": "b0cc570ed1f5575ef4b9c87d8c81ef28f4b46b909e632e46276aca27cf4f6ebb",
+        "run.py": "528ed75d19c6ec86595246e049bd06995779387c4d2526c1e5df114e281c4ee3",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "ed45032133423b7bce6030cff79aacf4b98ceb82508d94151a5d9934a28f17c0",
+        "pressure_cases.py": "9b2a1527e2e138d020816dbe75deda3e45174977a515de3af1f63c3bb73cfb86",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "thermal_boundary_cases.py": "c72b3a3d20babb7b3467bf15978fd2f9a7f0340b1dc4dc8a9fada1f6e4be8ca0",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b",
+        "benchmark_frames.py": "52f861ccf9d03a2623ca0762555674318dc88a60c074e69f654492e28cdbe9a8"
+      }
+    }
+  ],
+  "environment": {
+    "rust_toolchain": "1.99.1",
+    "python": "3.14.8",
+    "architecture": "x86_64",
+    "kernel": "7.2.11-arch1-1",
+    "cpu_model": "12th Gen Intel(R) Core(TM) i9-12900HX"
+  }
+}

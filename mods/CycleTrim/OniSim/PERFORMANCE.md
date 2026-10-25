@@ -1,6 +1,26 @@
 # Native frame performance work
 
-The canonical source-built native candidate is
+## Current source baseline, 2026-10-26
+
+Source `35f9785` rebuilds to Linux native
+`e8bfcb479c1a093cebfb9239c881c6051ef36a116dd15cccad1d17c9f66e8056`.
+Two follow-up experiments are rejected: moving the temperature threshold guard
+before element lookups, and enabling Thin LTO with one codegen unit. Each has
+eight alternating pairs in all six 96x96 scenes, two warmup batches and six timed
+batches per sample, on CPU0 with one worker. All 192 timed final states match
+the installed official library exactly, with zero timed major faults. The LTO
+file separately passes all 287 conformance cases at one worker.
+
+Neither experiment meets the unchanged CPU performance gates. CPU frequencies
+vary substantially within each run, so these measurements do not establish
+stable regression magnitudes or a speedup. The source edit is reverted and the
+release profile remains unchanged. No 192x192, four-worker, actual-game or FPS
+acceptance is claimed for either experiment. See the
+[rejection receipt](conformance/results/linux-744825-thermal-guard-lto.json).
+
+## Earlier 2772e526 measurements
+
+The earlier source-built native candidate is
 `2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f`.
 The numeric helper is adopted in source and retained in the current candidate.
 The earlier C301/EA8 native/managed pair passed targeted Steam headless and graphical
