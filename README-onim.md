@@ -29,6 +29,13 @@ onim build
 
 For an in-game development install, run `onim dev`. It builds the configured mod and enables its Dev copy in ONI. You can also create additional mods in this project with `onim init AnotherMod`.
 
+Each build must produce a new `dist/<AssemblyName>.zip`. A successful compiler
+exit without a new ZIP fails the command and restores the previous package.
+Installation extracts and checks the DLL and `mod_info.yaml` before replacing
+the installed copy. Extraction or Dev enablement failures preserve the previous
+installation; an interrupted transaction is retained at the reported recovery
+path. Legacy lowercase `dev` copies are removed after a successful Dev install.
+
 ## Commands
 
 - `onim init [NAME]` creates a project in an empty directory or adds a mod to an existing `onim` project.

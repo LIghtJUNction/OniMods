@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use std::env;
-use std::fs;
 use std::path::PathBuf;
 
 use crate::archive;
@@ -42,14 +41,7 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     let local_dir = cfg.local_mod_dir(&selected.name)?;
     println!("\n📥 安装到 Local 目录：{}", local_dir.display());
 
-    if local_dir.exists() {
-        fs::remove_dir_all(&local_dir)
-            .with_context(|| format!("清理旧 Local 目录失败：{}", local_dir.display()))?;
-    }
-    fs::create_dir_all(&local_dir)
-        .with_context(|| format!("创建 Local 目录失败：{}", local_dir.display()))?;
-
-    archive::unzip(&zip, &local_dir)?;
+    archive::install(&zip, &local_dir, &assembly_name, || Ok(()))?;
 
     println!("✅ 已正式安装到游戏 Local 目录");
     println!("   启动游戏 → Mod 列表 → 启用 '{}'", selected.name);

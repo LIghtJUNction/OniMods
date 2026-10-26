@@ -32,19 +32,19 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     let legacy_dev_dir = cfg.legacy_dev_mod_dir(&selected.name)?;
     println!("\n🔧 安装到 Dev 目录：{}", dev_dir.display());
 
-    if dev_dir.exists() {
-        fs::remove_dir_all(&dev_dir)
-            .with_context(|| format!("清理旧 Dev 目录失败：{}", dev_dir.display()))?;
+    archive::install(&zip, &dev_dir, &assembly_name, || {
+        enable_dev_mod(cfg, selected, &dev_dir)
+    })?;
+    if distinct_legacy_directory(&legacy_dev_dir, &dev_dir).unwrap_or_else(|error| {
+        eprintln!("⚠️ 新 Dev 模组已安装，但无法确认旧目录身份，已保留：{error:#}");
+        false
+    }) && let Err(error) = fs::remove_dir_all(&legacy_dev_dir)
+    {
+        eprintln!(
+            "⚠️ 新 Dev 模组已安装，但旧版小写 dev 目录清理失败：{}：{error}",
+            legacy_dev_dir.display()
+        );
     }
-    if legacy_dev_dir != dev_dir && legacy_dev_dir.exists() {
-        fs::remove_dir_all(&legacy_dev_dir)
-            .with_context(|| format!("清理旧版小写 dev 目录失败：{}", legacy_dev_dir.display()))?;
-    }
-    fs::create_dir_all(&dev_dir)
-        .with_context(|| format!("创建 Dev 目录失败：{}", dev_dir.display()))?;
-
-    archive::unzip(&zip, &dev_dir)?;
-    enable_dev_mod(cfg, selected, &dev_dir)?;
 
     println!("✅ 已安装到游戏 Dev 目录");
 
@@ -55,6 +55,29 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn distinct_legacy_directory(legacy: &Path, current: &Path) -> Result<bool> {
+    if !legacy.try_exists()? {
+        return Ok(false);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        let old = fs::metadata(legacy)?;
+        let new = fs::metadata(current)?;
+        Ok(old.dev() != new.dev() || old.ino() != new.ino())
+    }
+    #[cfg(not(unix))]
+    {
+        let old = fs::canonicalize(legacy)?;
+        let new = fs::canonicalize(current)?;
+        // Dev/dev can be the same directory on a case-insensitive filesystem.
+        // Retain an ambiguous alias rather than deleting the new installation.
+        Ok(!old
+            .to_string_lossy()
+            .eq_ignore_ascii_case(&new.to_string_lossy()))
+    }
 }
 
 fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Result<()> {
