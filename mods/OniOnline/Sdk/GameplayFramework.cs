@@ -28,13 +28,24 @@ namespace OniOnline.Sdk
     public sealed class PlanetClaim
     {
         private readonly PlanetManifest planet;
+        private readonly string authenticatedAccount;
         public string PlayerId { get; }
         // Admission rules receive a snapshot, not a mutable reference into the
         // coordinator's roster. Returning a copy also prevents one rule from
         // mutating the input observed by its own later checks.
         public PlanetManifest Planet { get { return planet.Copy(); } }
         public PlanetClaim(string playerId, PlanetManifest planet)
-        { PlayerId = playerId; this.planet = planet?.Copy() ?? throw new ArgumentNullException(nameof(planet)); }
+            : this(playerId, planet, null) { }
+
+        // Only the host coordinator supplies transport-authenticated context.
+        // It is neither part of a client manifest nor a public account identifier.
+        internal PlanetClaim(string playerId, PlanetManifest planet, string authenticatedAccount)
+        {
+            PlayerId = playerId; this.planet = planet?.Copy() ?? throw new ArgumentNullException(nameof(planet));
+            this.authenticatedAccount = string.IsNullOrWhiteSpace(authenticatedAccount) ? null : authenticatedAccount;
+        }
+        internal bool SharesAuthenticatedAccount(PlanetClaim other)
+        { return other != null && authenticatedAccount != null && authenticatedAccount == other.authenticatedAccount; }
     }
 
     public static class GameplayFramework

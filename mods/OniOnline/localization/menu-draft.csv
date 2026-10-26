@@ -218,6 +218,7 @@ error.planet_identity_version,存档中的联机身份版本不受支持,存檔�
 error.planet_not_ready,请先载入自己的殖民地并选择一个星球,請先載入自己的殖民地並選擇一個星球,Load your colony and select an asteroid first.
 error.planet_duplicate_branch,这颗星球或同一联机分支已在星系中,這顆星球或同一連線分支已在星系中,This asteroid or its online branch is already in the system.
 error.planet_selection_locked,先返回自己的星系，再更换携带的星球,先返回自己的星系，再更換攜帶的星球,Return home before selecting another asteroid.
+error.planet_owner_already_admitted,你已在此星系登记了一颗星球，请先离开原连接。,你已在此星系登記了一顆星球，請先離開原連線。,You already have a planet in this system. Leave the original connection first.
 error.planet_colony_changed,已载入另一个殖民地；原星系连接已关闭,已載入另一個殖民地；原星系連線已關閉,A different colony was loaded; the previous system connection was closed.
 map.players,玩家与星球,玩家與星球,Players and asteroids
 map.choose_position,点击星图空位置选择裂隙出口,點擊星圖空位置選擇裂隙出口,Select an empty hex for the rift exit

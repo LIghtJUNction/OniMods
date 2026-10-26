@@ -246,6 +246,21 @@ namespace OniOnline.Network
         private static bool ValidMetadata(string value)
         { return string.IsNullOrEmpty(value) || Protocol.ValidText(value, 64); }
 
+        // Host-only evidence for gameplay admission, never received from a manifest.
+        // Disconnected seats retain their verified identity until the seat is released.
+        internal string AuthenticatedAccountFor(string playerId)
+        {
+            if (!IsHost || !Joined || Closed || disposed || playerId == null) return null;
+            if (playerId != localId)
+                return seats.TryGetValue(playerId, out var seat) ? seat.Account : null;
+            try
+            {
+                var authenticated = transport as IAuthenticatedRoomTransport;
+                return authenticated?.GetAuthenticatedIdentity(transport.HostPeer);
+            }
+            catch (Exception) { return null; } // Unknown local evidence is not a global identity.
+        }
+
         // Capabilities negotiated with an authenticated endpoint. Other guests'
         // optional features are deliberately not inferred from the roster.
         public string[] CapabilitiesFor(string playerId)

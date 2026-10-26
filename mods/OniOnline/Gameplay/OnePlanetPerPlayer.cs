@@ -19,6 +19,9 @@ namespace OniOnline.Gameplay
                     (claim.Planet.PlanetId != candidate.Planet.PlanetId || claim.Planet.LineageId != candidate.Planet.LineageId ||
                     claim.Planet.OwnerId != candidate.Planet.OwnerId || claim.Planet.HomeSystemId != candidate.Planet.HomeSystemId ||
                     claim.Planet.NativeWorldId != candidate.Planet.NativeWorldId)) return "planet_selection_locked";
+                if (claim.PlayerId != candidate.PlayerId &&
+                    (claim.Planet.OwnerId == candidate.Planet.OwnerId || claim.SharesAuthenticatedAccount(candidate)))
+                    return "planet_owner_already_admitted";
             }
             return null;
         }

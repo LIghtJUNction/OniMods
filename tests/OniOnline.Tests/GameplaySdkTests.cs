@@ -190,5 +190,8 @@ internal static class GameplaySdkTests
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-b", a), current) == "planet_duplicate_branch", "another player cannot claim an existing planet");
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-a", b), current) == "planet_selection_locked", "one player cannot attach a second planet while admitted");
         check(mode.ValidatePlanetAdmission(new PlanetClaim("player-a", a), current) == null, "reconnect/metadata refresh retains the original planet binding");
+        var sameOwner = b.Copy(); sameOwner.OwnerId = a.OwnerId;
+        check(mode.ValidatePlanetAdmission(new PlanetClaim("another-connection", sameOwner), current) == "planet_owner_already_admitted",
+            "public admission rules reject another planet from the same persistent owner");
     }
 }

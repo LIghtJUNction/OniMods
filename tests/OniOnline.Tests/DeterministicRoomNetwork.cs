@@ -41,11 +41,17 @@ internal sealed class DeterministicRoomNetwork : IDisposable
         internal bool Disposed;
         internal int PeakInbox;
         internal string AccountIdentity;
+        internal bool FailLocalIdentityRead;
         public bool IsHost { get; private set; }
         public string HostPeer { get { return "host"; } }
 
         public string GetAuthenticatedIdentity(string peer)
         {
+            if (IsHost && peer == HostPeer)
+            {
+                if (FailLocalIdentityRead) throw new InvalidOperationException("local account fixture unavailable");
+                return AccountIdentity;
+            }
             Endpoint remote;
             return Peers.TryGetValue(peer, out remote) ? remote.AccountIdentity : null;
         }

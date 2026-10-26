@@ -239,8 +239,8 @@ namespace OniOnline.Multiplayer
                 : members.Values.Any(m => m.PeerId != sender && m.Planet != null &&
                     (m.Planet.PlanetId == planet.PlanetId || m.Planet.LineageId == planet.LineageId)) ? "planet_duplicate_branch"
                 : GameplayFramework.Validate(session.GameplayId, session.GameplayVersion,
-                    new PlanetClaim(sender, planet), members.Values.Where(m => m.Planet != null)
-                        .Select(m => new PlanetClaim(m.PeerId, m.Planet)).ToArray());
+                    Claim(sender, planet), members.Values.Where(m => m.Planet != null)
+                        .Select(m => Claim(m.PeerId, m.Planet)).ToArray());
             if (rejection != null)
             {
                 if (sender == session.LocalPlayerId) { LastError = rejection; Notify(); }
@@ -271,6 +271,9 @@ namespace OniOnline.Multiplayer
             reservationDeadlines.Remove(sender);
             LastError = null; state.Revision++; Publish(); Notify();
         }
+
+        private PlanetClaim Claim(string playerId, PlanetManifest planet)
+        { return new PlanetClaim(playerId, planet, session.AuthenticatedAccountFor(playerId)); }
 
         private void UpdateRoster()
         {
