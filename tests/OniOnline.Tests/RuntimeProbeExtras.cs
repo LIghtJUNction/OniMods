@@ -350,7 +350,7 @@ namespace OniOnline
                 throw new InvalidOperationException("Open the native browse-only page first.");
             var browser = UnityEngine.Object.FindObjectsByType<NativeSystemBrowser>(FindObjectsSortMode.None)
                 .Single(candidate => candidate.IsOpen && candidate.gameObject.activeInHierarchy);
-            var close = browser.transform.Find("Panel/DetailsView/CloseButton").GetComponent<KButton>();
+            var close = browser.transform.Find("Panel/BrowserActions/CloseButton").GetComponent<KButton>();
             ClickNativeChatControl(close);
             nativeBrowserUi.closedByNativeButton = !browser.IsOpen;
             nativeBrowserUi.phase = "waiting_close";

@@ -49,7 +49,8 @@ namespace OniOnline.UI
             var source = Field<GameObject>(ScreenPrefabs.Instance.ConfirmDialogScreen, "confirmButton");
             var button = Util.KInstantiateUI<KButton>(source, parent.gameObject, true);
             Bind(button, text, click);
-            Size(button.gameObject, width, 36);
+            Style(button.GetComponentInChildren<LocText>(true), 20, TextAlignmentOptions.Center);
+            Size(button.gameObject, width, 44);
             return button;
         }
 
@@ -64,6 +65,7 @@ namespace OniOnline.UI
             input.characterLimit = limit;
             input.richText = false;
             input.textComponent.richText = false;
+            Style(input.textComponent, 20, TextAlignmentOptions.MidlineLeft);
             input.readOnly = false;
             input.OnValueChangesPaused = null;
             input.onValueChanged = new TMP_InputField.OnChangeEvent();
@@ -78,9 +80,10 @@ namespace OniOnline.UI
                 if (localizedHint != null) localizedHint.key = "";
                 hint.richText = false;
                 hint.text = placeholder;
+                Style(hint, 20, TextAlignmentOptions.MidlineLeft);
             }
             input.text = value ?? "";
-            Size(input.gameObject, -1, 36, 1);
+            Size(input.gameObject, -1, 44, 1);
             return input;
         }
 
@@ -90,11 +93,32 @@ namespace OniOnline.UI
             var label = Util.KInstantiateUI<LocText>(source.gameObject, parent.gameObject, true);
             Text(label, text);
             label.raycastTarget = false;
-            label.alignment = TextAlignmentOptions.MidlineLeft;
-            label.textWrappingMode = TextWrappingModes.NoWrap;
-            label.overflowMode = TextOverflowModes.Ellipsis;
+            Style(label, 20, TextAlignmentOptions.MidlineLeft);
             Size(label.gameObject, width, 36, width < 0 ? 1 : 0);
             return label;
+        }
+
+        // Native prefabs carry typography for their original use. In particular,
+        // a mod version label must not determine a browser heading's font size.
+        internal static void Style(TMP_Text label, float size, TextAlignmentOptions alignment,
+            bool wrap = false)
+        {
+            var native = label as LocText;
+            if (native != null)
+            {
+                // Resolve the native font/palette once, then detach its shared
+                // size preset. LocText.Awake would otherwise restore that size
+                // when the inactive browser is finally activated.
+                if (native.textStyleSetting != null)
+                    SetTextStyleSetting.ApplyStyle(native, native.textStyleSetting);
+                native.allowOverride = true;
+                native.textStyleSetting = null;
+            }
+            label.enableAutoSizing = false;
+            label.fontSize = size;
+            label.alignment = alignment;
+            label.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+            label.overflowMode = wrap ? TextOverflowModes.Truncate : TextOverflowModes.Ellipsis;
         }
 
         internal static RectTransform Rect(string name, Transform parent)
