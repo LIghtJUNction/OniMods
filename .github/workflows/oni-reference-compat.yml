@@ -19,6 +19,7 @@ on:
       - 'global.json'
       - 'NuGet.Config'
       - 'nuget.config'
+      - '.github/workflows/mod-quality.yml'
       - '.github/workflows/oni-reference-compat.yml'
   push:
     branches: [main]
@@ -39,6 +40,7 @@ on:
       - 'global.json'
       - 'NuGet.Config'
       - 'nuget.config'
+      - '.github/workflows/mod-quality.yml'
       - '.github/workflows/oni-reference-compat.yml'
   workflow_dispatch:
 
