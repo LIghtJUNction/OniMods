@@ -6,6 +6,9 @@
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <NuGetAudit>false</NuGetAudit>
+    <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)../../libs/Jlib/artifacts/nuget;$(RestoreAdditionalProjectSources)</RestoreAdditionalProjectSources>
+    <!-- Only this game-free test host loads the development reference locally. -->
+    <JlibCopyLocalForHost>true</JlibCopyLocalForHost>
     <!-- Concrete crypto providers are required by Unity Mono's net48 environment. -->
     <NoWarn>$(NoWarn);SYSLIB0021;SYSLIB0023</NoWarn>
   </PropertyGroup>
@@ -21,9 +24,9 @@
     <Compile Include="../../mods/OniOnline/Multiplayer/NativeDupeBirthObserver.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(OriginAdapterTests)' != 'true'">
-    <!-- PLib's compile-only Harmony reference must not shadow the host control doubles. -->
+    <!-- Jlib's compile-only Harmony reference must not shadow the host control doubles. -->
     <PackageReference Include="Lib.Harmony.Ref" Version="2.4.2" Aliases="HarmonyReference" />
-    <PackageReference Include="PLib" Version="4.25.0" />
+    <PackageReference Include="LIghtJUNction.Jlib" Version="0.1.0" />
     <ProjectReference Include="../../sdk/OniOnline.Framework/OniOnline.Framework.csproj" />
     <Compile Include="../../mods/OniOnline/Core/NativeSimSaveBlock.cs" Link="Core/NativeSimSaveBlock.cs" />
     <Compile Remove="obj/**/*.cs;bin/**/*.cs" />

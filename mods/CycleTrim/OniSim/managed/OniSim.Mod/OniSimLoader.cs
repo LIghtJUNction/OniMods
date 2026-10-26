@@ -56,6 +56,8 @@ namespace OniSim.CycleTrim
                     if (string.IsNullOrWhiteSpace(path))
                     {
                         string modDirectory = Path.GetDirectoryName(typeof(OniSimLoader).Assembly.Location);
+                        if (string.Equals(Path.GetFileName(modDirectory), "implementation", StringComparison.OrdinalIgnoreCase))
+                            modDirectory = Path.GetDirectoryName(modDirectory);
                         path = NativePlatform.BundledLibrary(modDirectory);
                     }
                     if (!Path.IsPathRooted(path))

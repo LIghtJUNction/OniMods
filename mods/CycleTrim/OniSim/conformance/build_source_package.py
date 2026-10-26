@@ -59,7 +59,8 @@ def main():
         rebuilt_package = checkout / "dist/CycleTrim.zip"
         with zipfile.ZipFile(rebuilt_package) as package:
             native = hashlib.sha256(package.read("OniSim/linux-x64/liboni_sim_core.so")).hexdigest()
-            wrapper = hashlib.sha256(package.read("CycleTrim.dll")).hexdigest()
+            wrapper = hashlib.sha256(package.read("implementation/CycleTrim.dll")).hexdigest()
+            bootstrap = hashlib.sha256(package.read("CycleTrim.dll")).hexdigest()
         if hashlib.sha256(archive_path.read_bytes()).hexdigest() != digest:
             raise RuntimeError("Source archive changed during its isolated build")
         package_hash = hashlib.sha256(rebuilt_package.read_bytes()).hexdigest()
@@ -74,6 +75,7 @@ def main():
                   canonical_layout=True, license_resolved=True, isolated_build=True,
                   native_compiled=True, managed_compiled=True, exit_code=0,
                   rebuilt_native_sha256=native, rebuilt_managed_sha256=wrapper,
+                  rebuilt_bootstrap_sha256=bootstrap,
                   rebuilt_package_sha256=package_hash,
                   retained_package=str(package_output) if package_output else None,
                   compiler_wrappers_disabled=True, cargo_build_jobs=1,

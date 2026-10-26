@@ -1,3 +1,5 @@
+[b]必需前置：Jlib[/b]。请订阅并在游戏模组菜单启用 Jlib，然后重启游戏。多个 Mod 共用一份 Jlib，不再分别内嵌。
+
 [h1]CycleTrim[/h1]
 
 [b]轻量级性能优化 Mod（缺氧 / Oxygen Not Included）[/b]

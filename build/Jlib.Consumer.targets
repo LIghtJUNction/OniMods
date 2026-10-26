@@ -1,0 +1,16 @@
+<Project>
+  <!-- Compile against the submodule, but install Jlib once as a separate Mod. -->
+  <PropertyGroup>
+    <JlibRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</JlibRepositoryRoot>
+    <JlibBootstrapAssembly>$(JlibRepositoryRoot)/sdk/Jlib.Bootstrap/bin/$(AssemblyName)/$(Configuration)/net48/$(AssemblyName).Bootstrap.dll</JlibBootstrapAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(JlibRepositoryRoot)/libs/Jlib/Jlib/Jlib.csproj" AdditionalProperties="OniManagedPath=$(OniManagedPath)" Private="false" />
+  </ItemGroup>
+  <Target Name="BuildJlibBootstrap" BeforeTargets="GenerateModFiles;PackageOniOnlineArtifacts">
+    <!-- Restore needs the consumer property too; NuGet's ProjectReference restore
+         graph omits AdditionalProperties, so build this isolated project directly. -->
+    <Exec Command="dotnet build &quot;$(JlibRepositoryRoot)/sdk/Jlib.Bootstrap/Jlib.Bootstrap.csproj&quot; --configuration &quot;$(Configuration)&quot; --verbosity quiet -p:ConsumerAssemblyName=$(AssemblyName) -p:OniManagedPath=&quot;$(OniManagedPath)&quot;" />
+    <Error Condition="!Exists('$(JlibBootstrapAssembly)')" Text="Jlib dependency bootstrap was not built: $(JlibBootstrapAssembly)" />
+  </Target>
+</Project>

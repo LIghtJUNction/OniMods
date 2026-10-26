@@ -88,7 +88,13 @@ def main() -> int:
     assert "Application.OpenURL(ProjectSupportUrl)" in create_options
     assert 'ProjectSupportUrl = "https://donate.lmm.best/?project=onimcp"' in options
 
-    assert '<PackageReference Include="PLib" Version="4.25.0"' in project
+    assert '<Import Project="../../build/Jlib.Consumer.targets" />' in project
+    dependencies = (ROOT / "build/Jlib.Consumer.targets").read_text(encoding="utf-8")
+    assert re.search(
+        r'<ProjectReference\b[^>]*Include="[^"]*/libs/Jlib/Jlib/Jlib.csproj"[^>]*Private="false"',
+        dependencies,
+    ), "Jlib must be supplied by the standalone Mod"
+    assert not re.search(r'<PackageReference\b[^>]*Include="(?:PLib|Jlib|LIghtJUNction.Jlib)"', project)
     assert "Disabled by default" in settings
     dispatch = method_body(server, "private void ProcessRequest")
     assert dispatch.find("TryHandleSettingsRequest") < dispatch.find("ValidateAuth")

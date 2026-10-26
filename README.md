@@ -267,6 +267,13 @@ additional checks that require an installed game.
 
 ## Dependencies
 
+All shipped Mods require the standalone [Jlib](https://github.com/LIghtJUNction/Jlib)
+Mod. Install and enable it once, then restart ONI. Consumer ZIPs keep their entry
+DLL at the root and their implementation under `implementation/`; do not move or
+flatten those files. Jlib is tracked as the `libs/Jlib` Git submodule, so source
+checkouts need `git submodule update --init libs/Jlib` before building.
+
+
 - [Rust](https://rustup.rs/) to compile `onim`
 - [.NET SDK](https://dotnet.microsoft.com/download) to build ONI mods
 - `unzip` and `tar` for packaging/install helpers

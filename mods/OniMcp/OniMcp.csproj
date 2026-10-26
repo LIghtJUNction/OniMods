@@ -21,7 +21,7 @@
     <ModTitle>ONI MCP Server</ModTitle>
     <ModDescription>ONI MCP Server - /mcp/ exposes the Model Context Protocol endpoint. The root path shows a virtual save and world file browser for feedback.</ModDescription>
     <ModStaticID>LIghtJUNction.OniMcp</ModStaticID>
-    <ModVersion>0.2.6</ModVersion>
+    <ModVersion>0.2.7</ModVersion>
     <Version>$(ModVersion)</Version>
 
     <!-- mod_info.yaml 元数据 -->
@@ -119,7 +119,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="PLib" Version="4.25.0" GeneratePathProperty="true" />
     <PackageReference Include="Toon.Format" Version="1.0.0" />
     <PackageReference Include="Markdig" Version="1.4.2" />
     <!-- Unity Mono does not provide the ValueTuple facade assumed by net48 NuGet resolution. -->
@@ -171,7 +170,6 @@
 
     <!-- 复制 mod 文件到 dist/ModName/ -->
     <ItemGroup>
-      <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
       <ModOutputFiles Include="$(OutputPath)THIRD_PARTY_NOTICES.txt" />
       <ModOutputFiles Include="$(OutputPath)mod.yaml" />
       <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
@@ -183,6 +181,8 @@
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+    <Copy SourceFiles="$(JlibBootstrapAssembly)" DestinationFiles="$(DistModPath)$(AssemblyName).dll" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DistModPath)implementation" />
     <MakeDir Directories="$(DistModPath)assets" />
     <Copy SourceFiles="$(OutputPath)assets/edit_mark_tool.png" DestinationFolder="$(DistModPath)assets" Condition="Exists('$(OutputPath)assets/edit_mark_tool.png')" />
     <Copy SourceFiles="$(OutputPath)assets/restart_oni_steam_relay.sh" DestinationFolder="$(DistModPath)assets" Condition="Exists('$(OutputPath)assets/restart_oni_steam_relay.sh')" />
@@ -191,10 +191,11 @@
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
 
     <!-- 打包源码成 tar.gz。Windows tar 不能用单引号包路径；源码包失败会使构建失败。 -->
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/OniMcp build/Jlib.Consumer.targets sdk/Jlib.Bootstrap libs/Jlib/Jlib libs/Jlib/PLibCore libs/Jlib/PLibActions libs/Jlib/PLibAVC libs/Jlib/PLibBuildings libs/Jlib/PLibDatabase libs/Jlib/PLibLighting libs/Jlib/PLibOptions libs/Jlib/PLibUI libs/Jlib/LICENSE libs/Jlib/UPSTREAM.toml Directory.Build.props.example LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml" />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
   </Target>
 
+  <Import Project="../../build/Jlib.Consumer.targets" />
 </Project>

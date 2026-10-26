@@ -44,7 +44,7 @@ internal static class FirstPublicationRunner
         if (!args.Contains(confirmation, StringComparer.Ordinal))
             throw new ArgumentException($"First-publication write requires {confirmation}");
         if (create && File.Exists(FirstPublicationJournal.DefaultPath))
-            throw new InvalidOperationException("OniOnline first creation was already attempted; inspect its journal and owned items, never automatically retry create");
+            throw new InvalidOperationException($"{FirstPublicationPlan.Name} first creation was already attempted; inspect its journal and owned items, never automatically retry create");
         // DownloadItem belongs to a short-lived child. Steam shutdown can hang
         // after downloads; the process that performs writes must not download.
         if (!create) RunConsumerVerifier(planPath, reviewed.PlanSha256, publicItem: false);

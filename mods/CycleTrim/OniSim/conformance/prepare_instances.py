@@ -16,13 +16,14 @@ from texture_probe.build import verify_receipt as verify_texture_probe
 from memory_probe.build import verify_receipt as verify_memory_probe
 
 NATIVE_PATHS = ("OniSim/linux-x64/liboni_sim_core.so", "OniSim/liboni_sim_core.so")
-PAYLOAD = ("CycleTrim.dll", "mod_info.yaml", "mod.yaml", *NATIVE_PATHS,
+PAYLOAD = ("CycleTrim.dll", "implementation/CycleTrim.dll", "mod_info.yaml", "mod.yaml", *NATIVE_PATHS,
            "LICENSE", "LICENSE.MIT", "LICENSING.md", "THIRD_PARTY_NOTICES.txt")
-REQUIRED = set(PAYLOAD[:3])
+REQUIRED = set(PAYLOAD[:4])
 COMPANION_FILES = ("OniHarness.Runtime.dll", "mod.yaml", "mod_info.yaml")
-MCP_PAYLOAD = ("OniMcp.dll", "mod_info.yaml", "mod.yaml", "LICENSE", "LICENSE.MIT",
+MCP_PAYLOAD = ("OniMcp.dll", "implementation/OniMcp.dll", "mod_info.yaml", "mod.yaml", "LICENSE", "LICENSE.MIT",
                "LICENSING.md", "THIRD_PARTY_NOTICES.txt", "assets/edit_mark_tool.png",
                "assets/restart_oni_steam_relay.sh")
+JLIB_PAYLOAD = ("Jlib.dll", "mod.yaml", "mod_info.yaml", "LICENSE", "THIRD_PARTY_NOTICES.txt")
 
 
 def check_native(path):
@@ -64,7 +65,8 @@ def stage_package(package, destination, native=None):
         shutil.copyfile(native, target)
         require(digest(target) == expected_native == digest(native), "Native override changed while copying")
     check_native(target)
-    return dict(managed_sha256=digest(destination / "CycleTrim.dll"), native_sha256=digest(target))
+    return dict(managed_sha256=digest(destination / "implementation/CycleTrim.dll"),
+                bootstrap_sha256=digest(destination / "CycleTrim.dll"), native_sha256=digest(target))
 
 
 def stage_simulation_options(destination, core):
@@ -84,6 +86,8 @@ def main():
     parser.add_argument("--group-root", required=True, type=Path)
     parser.add_argument("--stage", required=True, type=Path)
     parser.add_argument("--package", required=True, type=Path)
+    parser.add_argument("--jlib-package", required=True, type=Path,
+                        help="Standalone Jlib ZIP required by CycleTrim and OniMcp; copied into each isolated profile")
     parser.add_argument("--native", type=Path, help="Explicit experimental native override; never implies acceptance")
     parser.add_argument("--mcp-package", type=Path,
                         help="Optional existing OniMcp ZIP for save/step acceptance; isolated ports/configs, not a release dependency")
@@ -109,6 +113,7 @@ def main():
     require(1024 <= args.base_port and args.base_port + args.count - 1 <= 65535, "Invalid instance port range")
     require(args.expected_instance_gib > 0, "Capacity forecast must be positive")
     package_hash, source_save_hash = digest(args.package), digest(args.save)
+    jlib_package_hash = digest(args.jlib_package)
     mcp_package_hash = digest(args.mcp_package) if args.mcp_package else None
     texture = verify_texture_probe(args.texture_probe_receipt) if args.texture_probe_receipt else None
     memory = verify_memory_probe(args.memory_probe_receipt) if args.memory_probe_receipt else None
@@ -119,6 +124,9 @@ def main():
         check_native(args.native)
     stage.mkdir(parents=True, mode=0o700)
     payload = stage_package(args.package, stage / "mod", args.native)
+    stage_files(args.jlib_package, stage / "jlib", JLIB_PAYLOAD, set(JLIB_PAYLOAD[:3]), "the standalone Jlib runtime payload")
+    jlib_hashes = {str(p.relative_to(stage / "jlib")): digest(p)
+                   for p in (stage / "jlib").rglob("*") if p.is_file()}
     options_hash = stage_simulation_options(stage / "mod", args.simulation_core) if args.simulation_core else None
     texture_hashes = {}
     if texture:
@@ -152,7 +160,7 @@ def main():
         verify_memory_probe(args.memory_probe_receipt)
     mcp_hashes = {}
     if args.mcp_package:
-        stage_files(args.mcp_package, stage / "mcp", MCP_PAYLOAD, set(MCP_PAYLOAD[:3]), "the OniMcp runtime payload")
+        stage_files(args.mcp_package, stage / "mcp", MCP_PAYLOAD, set(MCP_PAYLOAD[:4]), "the OniMcp runtime payload")
         mcp_hashes = {str(p.relative_to(stage / "mcp")): digest(p)
                       for p in (stage / "mcp").rglob("*") if p.is_file()}
     companion = stage / "companion"
@@ -172,6 +180,7 @@ def main():
     command = ["rtk", "proxy", sys.executable, str(controller), "--root", str(root), "init",
                "--game-path", str(args.game_path.resolve()), "--companion", str(companion),
                "--save", str(copied_save), "--count", str(args.count), "--base-port", str(args.base_port),
+               "--mod", json.dumps(dict(id="Jlib", staticID="LIghtJUNction.Jlib", source=str(stage / "jlib"))),
                "--mod", json.dumps(dict(id="CycleTrim", staticID="LIghtJUNction.CycleTrim", source=str(stage / "mod")))]
     if args.mcp_package:
         command.extend(["--mod", json.dumps(dict(id="OniMcp", staticID="LIghtJUNction.OniMcp",
@@ -185,8 +194,9 @@ def main():
     result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=30)
     (stage / "initialize.log").write_text(result.stdout + result.stderr)
     require(result.returncode == 0, "Group initialization failed; inspect the staged initialize.log")
-    require(digest(controller) == controller_hash and digest(args.package) == package_hash,
-            "Controller or package changed during preparation")
+    require(digest(controller) == controller_hash and digest(args.package) == package_hash
+            and digest(args.jlib_package) == jlib_package_hash,
+            "Controller or dependency package changed during preparation")
     config_path = root / "group.json"
     config = json.loads(config_path.read_text())
     config["expectedInstanceBytes"] = args.expected_instance_gib * 1024 ** 3
@@ -222,6 +232,7 @@ def main():
                   source_save_sha256=source_save_hash, controller_sha256=controller_hash,
                   staged_save_mode="0600", source_save_modified=False,
                   companion_sha256=companion_hashes,
+                  jlib_package_sha256=jlib_package_hash, jlib_payload_sha256=jlib_hashes,
                   mcp_package_sha256=mcp_package_hash, mcp_payload_sha256=mcp_hashes,
                   mcp_profile_configs=mcp_configs,
                   texture_probe_payload_sha256=texture_hashes,

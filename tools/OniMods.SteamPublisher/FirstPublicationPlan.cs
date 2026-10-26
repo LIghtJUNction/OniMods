@@ -8,35 +8,42 @@ internal sealed record FirstPublicationPlan(
     string Title, string EnglishDescription, string ChineseDescription,
     string[] Tags, string PlanSha256)
 {
-    internal const string Name = "OniOnline";
-    internal const string StaticId = "LIghtJUNction.OniOnline";
+    internal static string Name => WorkshopTarget.DisplayName switch
+    {
+        "OniOnline" => "OniOnline",
+        "Jlib" => "Jlib",
+        _ => throw new InvalidOperationException("First publication supports only the fixed OniOnline and Jlib targets"),
+    };
+    internal static string StaticId => "LIghtJUNction." + Name;
 
     internal static void RequireTarget()
     {
         if (WorkshopTarget.DisplayName != Name || WorkshopTarget.WorkshopId != 0
             || WorkshopTarget.CreatorAppId != 636750 || WorkshopTarget.ConsumerAppId != 457140
             || WorkshopTarget.ExpectedOwner != 76561199137573787)
-            throw new InvalidOperationException("First publication requires the fixed OniOnline target, ID 0, owner and App IDs");
+            throw new InvalidOperationException("First publication requires a fixed target, ID 0, owner and App IDs");
     }
 
     internal static FirstPublicationPlan Create(WorkshopMetadata metadata)
     {
         RequireTarget();
-        if (!metadata.Title.StartsWith("OniOnline", StringComparison.Ordinal)
+        if (!metadata.Title.StartsWith(Name, StringComparison.Ordinal)
             || metadata.Title.Length > 128 || metadata.EnglishDescription.Length is 0 or > 8000
             || metadata.ChineseDescription.Length is 0 or > 8000)
-            throw new InvalidOperationException("First publication requires reviewed OniOnline metadata within Steam limits");
+            throw new InvalidOperationException($"First publication requires reviewed {Name} metadata within Steam limits");
         var extension = Path.GetExtension(metadata.PreviewFile).ToLowerInvariant();
         var preview = File.ReadAllBytes(metadata.PreviewFile);
         if (extension is not (".png" or ".jpg" or ".jpeg") || preview.Length is 0 or > 10 * 1024 * 1024)
             throw new InvalidOperationException("First publication preview must be PNG/JPEG, 1 byte to 10 MiB");
         var modYaml = File.ReadAllText(Path.Combine(metadata.ContentFolder, "mod.yaml"));
-        if (!modYaml.Split('\n').Any(line => line.Trim() is "staticID: LIghtJUNction.OniOnline" or "staticID: \"LIghtJUNction.OniOnline\""))
-            throw new InvalidOperationException("First publication content has the wrong OniOnline staticID");
+        if (!modYaml.Split('\n').Any(line => line.Trim() == $"staticID: {StaticId}"
+            || line.Trim() == $"staticID: \"{StaticId}\""))
+            throw new InvalidOperationException($"First publication content has the wrong {Name} staticID");
         var package = LegacyPackage.Create(metadata);
         var plan = new FirstPublicationPlan(package.Path, Hash(package.Bytes), package.Bytes.Length,
             Path.GetFullPath(metadata.PreviewFile), Hash(preview), metadata.Title,
-            metadata.EnglishDescription, metadata.ChineseDescription, ["tweaks", "Spaced Out!"], "");
+            metadata.EnglishDescription, metadata.ChineseDescription,
+            Name == "Jlib" ? ["tweaks"] : ["tweaks", "Spaced Out!"], "");
         return plan with { PlanSha256 = plan.ComputeHash() };
     }
 

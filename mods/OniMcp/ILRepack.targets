@@ -1,8 +1,7 @@
 <Project>
-  <Target Name="MergePLibIntoOniMcp" AfterTargets="Build" BeforeTargets="GenerateModFiles" Condition="Exists('$(OutputPath)PLib.dll')">
+  <Target Name="MergeRuntimeDependenciesIntoOniMcp" AfterTargets="Build" BeforeTargets="GenerateModFiles" Condition="Exists('$(OutputPath)ToonFormat.dll')">
     <ItemGroup>
       <InputAssemblies Include="$(OutputPath)$(TargetName)$(TargetExt)" />
-      <InputAssemblies Include="$(OutputPath)PLib.dll" />
       <InputAssemblies Include="$(OutputPath)ToonFormat.dll" />
       <InputAssemblies Include="$(OutputPath)Markdig.dll" />
       <InputAssemblies Include="$(OutputPath)System.Text.Json.dll" />
@@ -18,16 +17,16 @@
       <InputAssemblies Include="@(ToonDependency)" />
     </ItemGroup>
 
-    <Message Text="Merging PLib.dll into $(OutputPath)$(TargetName)$(TargetExt)" Importance="high" />
+    <Message Text="Merging private runtime dependencies into $(OutputPath)$(TargetName)$(TargetExt)" Importance="high" />
     <ILRepack
       Parallel="true"
       DebugInfo="true"
       AllowDuplicateResources="true"
-      LibraryPath="$(OniManagedPath)"
+      LibraryPath="$(OniManagedPath);$(JlibRepositoryRoot)/libs/Jlib/Jlib/bin/$(Configuration)/net48"
       InputAssemblies="@(InputAssemblies)"
       TargetKind="SameAsPrimaryAssembly"
       OutputFile="$(OutputPath)$(TargetName)$(TargetExt)" />
 
-    <Delete Files="$(OutputPath)PLib.dll;$(OutputPath)PLib.xml;$(OutputPath)ToonFormat.dll;$(OutputPath)ToonFormat.xml;$(OutputPath)Markdig.dll;$(OutputPath)Markdig.xml;$(OutputPath)System.Text.Json.dll;$(OutputPath)System.Text.Encodings.Web.dll;@(ToonDependency)" />
+    <Delete Files="$(OutputPath)ToonFormat.dll;$(OutputPath)ToonFormat.xml;$(OutputPath)Markdig.dll;$(OutputPath)Markdig.xml;$(OutputPath)System.Text.Json.dll;$(OutputPath)System.Text.Encodings.Web.dll;@(ToonDependency)" />
   </Target>
 </Project>

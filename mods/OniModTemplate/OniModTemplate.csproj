@@ -10,7 +10,7 @@
     <ModTitle>OniModTemplate</ModTitle>
     <ModDescription>这是一个示例 Mod</ModDescription>
     <ModStaticID>YourName.OniModTemplate</ModStaticID>
-    <ModVersion>0.1.7</ModVersion>
+    <ModVersion>0.1.8</ModVersion>
     <ModApiVersion>2</ModApiVersion>
   </PropertyGroup>
 
@@ -63,7 +63,6 @@
     <Delete Files="$(DistPath)$(AssemblyName)-src.tar.gz" />
 
     <ItemGroup>
-      <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
       <ModOutputFiles Include="$(OutputPath)mod.yaml" />
       <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
       <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />
@@ -73,11 +72,14 @@
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+    <Copy SourceFiles="$(JlibBootstrapAssembly)" DestinationFiles="$(DistModPath)$(AssemblyName).dll" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DistModPath)implementation" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)&quot; --exclude=bin --exclude=obj --exclude=dist ." />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/OniModTemplate build/Jlib.Consumer.targets sdk/Jlib.Bootstrap libs/Jlib/Jlib libs/Jlib/PLibCore libs/Jlib/PLibActions libs/Jlib/PLibAVC libs/Jlib/PLibBuildings libs/Jlib/PLibDatabase libs/Jlib/PLibLighting libs/Jlib/PLibOptions libs/Jlib/PLibUI libs/Jlib/LICENSE libs/Jlib/UPSTREAM.toml Directory.Build.props.example LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml" />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
   </Target>
 
+  <Import Project="../../build/Jlib.Consumer.targets" />
 </Project>

@@ -11,7 +11,7 @@
     <ModTitle>CycleTrim</ModTitle>
     <ModDescription>Streamlines fetch pickup candidates, limits expensive pickup/chore refreshes for active duplicants only, and throttles stationary-critter navigation probing; IdleChore, idle duplicants, and explicit priority updates retain the vanilla immediate path. / 优化拾取候选选择，仅限制真正忙碌复制人的高开销拾取与差事刷新，并对静止小动物的导航探针调用进行节流；IdleChore、空闲复制人与显式优先更新均保留原版即时路径。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
-    <ModVersion>0.4.0</ModVersion>
+    <ModVersion>0.4.1</ModVersion>
     <Version>$(ModVersion)</Version>
     <ModApiVersion>2</ModApiVersion>
     <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">true</IncludeOniSim>
@@ -19,12 +19,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="PLib" Version="4.25.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -97,7 +92,6 @@
     <Delete Files="$(DistPath)source-build-validation.json" />
 
     <ItemGroup>
-      <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
       <ModOutputFiles Include="$(OutputPath)mod.yaml" />
       <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
       <ModOutputFiles Include="$(OutputPath)THIRD_PARTY_NOTICES.txt" Condition="Exists('$(OutputPath)THIRD_PARTY_NOTICES.txt')" />
@@ -109,6 +103,8 @@
       <ModOutputFiles Include="$(OutputPath)docs/steam-description-en.md" Condition="Exists('$(OutputPath)docs/steam-description-en.md')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DistModPath)" />
+    <Copy SourceFiles="$(JlibBootstrapAssembly)" DestinationFiles="$(DistModPath)$(AssemblyName).dll" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DistModPath)implementation" />
     <ItemGroup Condition="'$(IncludeOniSim)' == 'true'">
       <OniSimNativeFiles Include="$(OutputPath)OniSim/**/*" />
     </ItemGroup>
@@ -124,7 +120,7 @@
     </ItemGroup>
     <Copy SourceFiles="@(OniSimConformanceReceipts)" DestinationFolder="$(DistModPath)OniSim/conformance/results" Condition="'$(IncludeOniSim)' == 'true'" />
     <ZipDirectory SourceDirectory="$(DistModPath)" DestinationFile="$(ZipFile)" Overwrite="true" />
-    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/CycleTrim scripts/build_onisim_native.py LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml" />
+    <Exec Command="tar -czf &quot;$(DistPath)$(AssemblyName)-src.tar.gz&quot; -C &quot;$(MSBuildProjectDirectory)/../..&quot; --exclude=bin --exclude=obj --exclude=target --exclude=dist --exclude=history --exclude=artifacts --exclude=__pycache__ mods/CycleTrim build/Jlib.Consumer.targets sdk/Jlib.Bootstrap libs/Jlib/Jlib libs/Jlib/PLibCore libs/Jlib/PLibActions libs/Jlib/PLibAVC libs/Jlib/PLibBuildings libs/Jlib/PLibDatabase libs/Jlib/PLibLighting libs/Jlib/PLibOptions libs/Jlib/PLibUI libs/Jlib/LICENSE libs/Jlib/UPSTREAM.toml Directory.Build.props.example LICENSE LICENSE.MIT LICENSING.md UPSTREAM.toml scripts/build_onisim_native.py" />
 
     <Message Text="Packaged mod -&gt; $(ZipFile)" Importance="high" />
     <Message Text="Packaged source -&gt; $(DistPath)$(AssemblyName)-src.tar.gz" Importance="high" />
@@ -144,4 +140,5 @@
     <Copy SourceFiles="@(OniSimBundleFiles)" DestinationFiles="@(OniSimBundleFiles->'$(OutputPath)OniSim/%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 
+  <Import Project="../../build/Jlib.Consumer.targets" />
 </Project>

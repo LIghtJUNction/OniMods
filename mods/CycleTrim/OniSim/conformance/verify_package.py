@@ -52,11 +52,16 @@ def verify(dist):
     expected_messages = {int(value) for value in re.findall(r"\| `(-?\d+)` \|",
         (MOD / "OniSim/OFFICIAL-MESSAGES.md").read_text())}
     require(len(expected_messages) == 62, "Re-audit the pinned official message catalogue")
+    with zipfile.ZipFile(dist / "Jlib.zip") as dependency:
+        jlib = sha(dependency.read("Jlib.dll"))
     with zipfile.ZipFile(dist / "CycleTrim.zip") as package:
+        require(not any(Path(name).name in ("PLib.dll", "Jlib.dll") for name in package.namelist()),
+                "CycleTrim must use the standalone Jlib package without embedding a library copy")
         require(not any(Path(name).name == "CycleTrim.TextureProbe.dll" for name in package.namelist()),
                 "The opt-in texture probe must not be included in the production mod")
         native = sha(package.read("OniSim/linux-x64/liboni_sim_core.so"))
-        managed = sha(package.read("CycleTrim.dll"))
+        managed = sha(package.read("implementation/CycleTrim.dll"))
+        bootstrap = sha(package.read("CycleTrim.dll"))
         for workers in (1, 4):
             name = f"results/linux-744825-workers{workers}.json"
             data = package.read("OniSim/conformance/" + name)
@@ -86,6 +91,8 @@ def verify(dist):
         require(runtime["native_sha256"] == native, "Runtime used a different native library")
         require(runtime["cycletrim_dll_sha256"] == managed,
                 "Runtime used a different managed DLL; re-test or repackage the tested outputs without rebuilding")
+        require(runtime.get("cycletrim_bootstrap_sha256") == bootstrap and runtime.get("jlib_dll_sha256") == jlib,
+                "Runtime has not verified this CycleTrim bootstrap and standalone Jlib pair")
         require(runtime["steam_launched"] and runtime["headless"] and runtime["batch_mode"]
                 and runtime["graphics_device"] == "Null" and runtime["camera_render_callbacks"] == 0
                 and runtime["game_crash"] is False, "Headless runtime acceptance failed")
@@ -105,6 +112,8 @@ def verify(dist):
         require(graphics["native_sha256"] == native
                 and graphics["cycletrim_dll_sha256"] == managed,
                 "Graphical runtime used a different native/managed pair")
+        require(graphics.get("cycletrim_bootstrap_sha256") == bootstrap and graphics.get("jlib_dll_sha256") == jlib,
+                "Graphical runtime has not verified this CycleTrim bootstrap and standalone Jlib pair")
         validate_observation(graphics["observation"], 1)
         validate_observation(graphics["observation_after_reload"], 2)
         require(graphics["steam_launched"] and graphics["reload_clock_equal"],
@@ -159,7 +168,8 @@ def verify(dist):
             and source_build["native_compiled"] and source_build["managed_compiled"]
             and source_build["rebuilt_native_sha256"] == native,
             "The exact source archive has not passed a clean extracted build")
-    return dict(native_sha256=native, managed_sha256=managed, conformance=conformance,
+    return dict(native_sha256=native, managed_sha256=managed, bootstrap_sha256=bootstrap, jlib_sha256=jlib,
+                conformance=conformance,
                 runtime_smoke_covers_this_native_and_managed_pair=True,
                 runtime_scope=runtime["acceptance_scope"],
                 graphical_full_buffer_comparison_verified=True,

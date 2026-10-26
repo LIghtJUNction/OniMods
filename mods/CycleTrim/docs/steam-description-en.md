@@ -1,3 +1,5 @@
+[b]Required mod: Jlib.[/b] Subscribe to and enable Jlib in the game mod menu, then restart ONI. This mod uses the shared prerequisite instead of embedding its own copy.
+
 [h1]CycleTrim[/h1]
 
 [b]Lightweight performance optimization mod for Oxygen Not Included[/b]

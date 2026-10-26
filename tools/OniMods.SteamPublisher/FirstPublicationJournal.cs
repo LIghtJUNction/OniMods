@@ -5,7 +5,8 @@ internal sealed class FirstPublicationJournal
 {
     private FirstPublicationJournal(string path) { Path = path; }
     internal string Path { get; }
-    internal static string JournalPath(string directory) => System.IO.Path.Combine(directory, "onionline-first-publication.jsonl");
+    internal static string JournalPath(string directory) => System.IO.Path.Combine(directory,
+        FirstPublicationPlan.Name.ToLowerInvariant() + "-first-publication.jsonl");
     internal static string DefaultPath => JournalPath(CandidateCreationJournal.DefaultDirectory());
 
     internal static FirstPublicationJournal Begin(string directory, string planSha256)
@@ -27,6 +28,15 @@ internal sealed class FirstPublicationJournal
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return Read(stream, planSha256).Id;
+    }
+
+    internal static ulong ReadPublicVerifiedId(string path, string planSha256)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var state = Read(stream, planSha256);
+        if (!state.PublicVerified)
+            throw new InvalidOperationException("Workshop dependencies require a publicly verified first-publication item");
+        return state.Id;
     }
 
     internal static void RecordPrivateVerified(string path, string planSha256)
@@ -51,7 +61,7 @@ internal sealed class FirstPublicationJournal
     internal void RecordPublicVerified()
         => Append(new { @event = "first-public-verified", utc = DateTimeOffset.UtcNow });
 
-    private static (ulong Id, bool PrivateVerified, bool PublicStarted) Read(FileStream stream, string planSha256)
+    private static (ulong Id, bool PrivateVerified, bool PublicStarted, bool PublicVerified) Read(FileStream stream, string planSha256)
     {
         RequireHash(planSha256);
         using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
@@ -92,7 +102,7 @@ internal sealed class FirstPublicationJournal
             }
         }
         if (id == 0) throw new InvalidOperationException("First publication lacks a usable item ID");
-        return (id, verified, publicStarted);
+        return (id, verified, publicStarted, publicVerified);
     }
 
     private void Append<T>(T entry)

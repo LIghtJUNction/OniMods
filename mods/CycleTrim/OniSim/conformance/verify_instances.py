@@ -27,6 +27,37 @@ def require(condition, message):
         raise RuntimeError(message)
 
 
+def loaded_consumer(assemblies, profile, name):
+    """Select the implementation by assembly identity and its canonical package path."""
+    loaded = [item for item in assemblies if item.get("name") == name]
+    require(len(loaded) == 1 and not loaded[0].get("error"), "Require one successfully loaded " + name + " implementation")
+    assembly = loaded[0]
+    location = Path(assembly.get("location", ""))
+    require(location.name == name + ".dll" and location.parent.name == "implementation"
+            and location.resolve().is_relative_to(profile.resolve()),
+            "Loaded " + name + " implementation is outside its canonical instance package path")
+    bootstrap = [item for item in assemblies if item.get("name") == name + ".Bootstrap"]
+    expected = location.parent.parent / (name + ".dll")
+    require(len(bootstrap) == 1 and not bootstrap[0].get("error")
+            and expected.resolve().is_relative_to(profile.resolve())
+            and Path(bootstrap[0].get("location", "")).resolve() == expected.resolve()
+            and bootstrap[0].get("sha256") == digest(expected),
+            "Require the matching loaded " + name + " bootstrap")
+    return assembly
+
+
+def loaded_jlib(assemblies, profile):
+    loaded = [item for item in assemblies if item.get("name") == "Jlib"]
+    require(len(loaded) == 1 and not loaded[0].get("error"), "Require one successfully loaded standalone Jlib assembly")
+    assembly = loaded[0]
+    location = Path(assembly.get("location", ""))
+    require(location.name == "Jlib.dll" and location.parent.name != "implementation"
+            and location.resolve().is_relative_to(profile.resolve())
+            and assembly.get("sha256") == digest(location),
+            "Loaded standalone Jlib differs from its instance package")
+    return assembly
+
+
 def mapped_native(pid, profile, expected, proc=Path("/proc")):
     """Bind the mapped inode/device to current bytes, including paths with spaces."""
     mapped = {}
@@ -92,10 +123,8 @@ def inspect_instance(controller, backend, name, managed, native):
     receipt = json.loads((paths["control"] / "instance-assemblies.json").read_text())
     require(all(receipt.get(k) == status.get(k) for k in ("pid", "identity", "runNonce")),
             "Assembly receipt crosses process or run identity")
-    loaded = [item for item in receipt.get("assemblies", [])
-              if Path(item.get("location", "")).name == "CycleTrim.dll"]
-    require(len(loaded) == 1 and not loaded[0].get("error"), "Require one successfully loaded CycleTrim assembly")
-    assembly = loaded[0]
+    assembly = loaded_consumer(receipt.get("assemblies", []), paths["user"], "CycleTrim")
+    jlib = loaded_jlib(receipt.get("assemblies", []), paths["user"])
     location = Path(assembly["location"])
     require(location.resolve().is_relative_to(paths["user"].resolve()), "Loaded CycleTrim is outside its instance profile")
     require(assembly.get("sha256") == managed and digest(location) == managed,
@@ -107,7 +136,8 @@ def inspect_instance(controller, backend, name, managed, native):
     require(backend.ProcessIdentity.capture(pid) == identity, "PID was reused during the library audit")
     require(mapped_native(pid, paths["user"], native) == native_hash, "OniSim changed during the audit")
     return dict(pid=pid, identity=status["identity"], runNonce=status["runNonce"],
-                managed_sha256=managed, mapped_native_sha256=native_hash,
+                managed_sha256=managed, bootstrap_sha256=digest(location.parent.parent / "CycleTrim.dll"),
+                jlib_sha256=jlib["sha256"], mapped_native_sha256=native_hash,
                 mode=controller.instances[name]["graphics"], status=final, native_threads=threads)
 
 

@@ -17,3 +17,7 @@ workshop_title = "CycleTrim"
 [mods.OniOnline]
 path = "mods/OniOnline"
 workshop_title = "OniOnline"
+
+[mods.Jlib]
+path = "libs/Jlib/Jlib"
+workshop_title = "Jlib"

@@ -9,3 +9,5 @@ The root [LICENSE](LICENSE) sets out the **Agent Upstream License (AUL) 1.0-draf
 - **Future contributions:** A pull request does not automatically convey rights the contributor does not possess. Confirm the licensing basis before describing contributed material as AUL-covered.
 
 AUL is a custom MIT-inspired license with upstream issue and PR duties; it is not the standard MIT License and has not been approved by OSI. See the [AUL project](https://github.com/LIghtJUNction/AUL) for the reference text. Licensing questions involving third-party files should be resolved before publication.
+
+- **Jlib (`libs/Jlib`):** separate MIT-licensed fork of Peter Han’s PLib; its inherited terms, notices and upstream relationship are maintained in that submodule. Consumer Mods reference the shared library and do not embed it.

@@ -417,7 +417,7 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
 
     let publishedfileid = if let Some(ref id) = selected.config.publishedfileid {
         id.clone()
-    } else if dry_run && selected.name == "OniOnline" {
+    } else if dry_run && matches!(selected.name.as_str(), "OniOnline" | "Jlib") {
         // First creation is handled by the reviewed, one-shot Legacy publisher.
         // ID 0 here only prepares metadata and never reaches a Steam upload.
         "0".to_string()

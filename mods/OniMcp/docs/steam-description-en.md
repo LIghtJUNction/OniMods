@@ -1,3 +1,5 @@
+[b]Required mod: Jlib.[/b] Subscribe to and enable Jlib in the game mod menu, then restart ONI. This mod uses the shared prerequisite instead of embedding its own copy.
+
 [h1]ONI MCP Server[/h1]
 
 [b]A local MCP bridge mod for Oxygen Not Included[/b]

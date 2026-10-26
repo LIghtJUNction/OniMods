@@ -17,9 +17,9 @@ OniMcp)
   EXPECTED_ID="3807166922"
   TITLE_CONTAINS="OniMcp"
   ;;
-OniOnline)
+OniOnline | Jlib)
   EXPECTED_ID="0"
-  TITLE_CONTAINS="OniOnline"
+  TITLE_CONTAINS="$MOD_KEY"
   ;;
 *)
   echo "Unsupported publish target: $MOD_KEY" >&2
@@ -44,9 +44,9 @@ Usage: scripts/publish_cycletrim_steam.sh [options]
   --preflight-only  Query both Steam App contexts without uploading
   --skip-tests   Skip contract, binary, benchmark, and Rust tests
   --allow-dirty  Permit publishing an uncommitted worktree
-  --prepare-first-item  OniOnline only: prepare an offline, immutable first-item plan
-  --create-first-item   OniOnline only: create the reviewed Private Legacy item once
-  --publish-first-item  OniOnline only: publish the verified Private Legacy item
+  --prepare-first-item  OniOnline/Jlib: prepare an offline, immutable first-item plan
+  --create-first-item   OniOnline/Jlib: create the reviewed Private Legacy item once
+  --publish-first-item  OniOnline/Jlib: publish the verified Private Legacy item
   --plan <path>         First-item plan path (required for all first-item stages)
   --expected-plan-sha256 <hash>  Reviewed plan SHA (required for create/publish)
   -h, --help     Show this help
@@ -93,8 +93,9 @@ if [[ "$DRY_RUN" == true && "$PREFLIGHT_ONLY" == true ]]; then
   echo "--dry-run and --preflight-only cannot be combined" >&2
   exit 2
 fi
-if [[ "$MOD_KEY" == "OniOnline" && -z "$FIRST_MODE" ]] || [[ "$MOD_KEY" != "OniOnline" && -n "$FIRST_MODE" ]]; then
-  echo "OniOnline requires an explicit first-item stage; existing-item targets cannot use it" >&2
+if [[ ( "$MOD_KEY" == "OniOnline" || "$MOD_KEY" == "Jlib" ) && -z "$FIRST_MODE" ]] \
+  || [[ "$MOD_KEY" != "OniOnline" && "$MOD_KEY" != "Jlib" && -n "$FIRST_MODE" ]]; then
+  echo "OniOnline/Jlib require an explicit first-item stage; existing-item targets cannot use it" >&2
   exit 2
 fi
 if [[ -n "$FIRST_MODE" && ( "$DRY_RUN" == true || "$PREFLIGHT_ONLY" == true || -z "$FIRST_PLAN" ) ]]; then
@@ -121,7 +122,7 @@ with open(sys.argv[1], "rb") as handle:
 print(config.get("mods", {}).get(sys.argv[2], {}).get("publishedfileid", ""))
 PY
   )"
-  if [[ "$MOD_KEY" == "OniOnline" && -z "$configured_id" ]]; then configured_id="0"; fi
+  if [[ ( "$MOD_KEY" == "OniOnline" || "$MOD_KEY" == "Jlib" ) && -z "$configured_id" ]]; then configured_id="0"; fi
   if [[ "$configured_id" != "$EXPECTED_ID" ]]; then
     echo "Refusing upload: $MOD_KEY publishedfileid is '$configured_id', expected '$EXPECTED_ID'" >&2
     exit 1
@@ -260,10 +261,12 @@ if [[ -n "$FIRST_MODE" ]]; then
   require_clean_worktree
   if [[ "$FIRST_MODE" == "--prepare-first-item" ]]; then
     if [[ "$SKIP_TESTS" != true ]]; then
-      (cd "$ROOT" && dotnet run --project tests/OniOnline.Tests -c Release)
+      if [[ "$MOD_KEY" == "OniOnline" ]]; then
+        (cd "$ROOT" && dotnet run --project tests/OniOnline.Tests -c Release)
+      fi
       (cd "$ROOT" && dotnet run --project tests/OniMods.SteamPublisher.Tests -c Release)
     fi
-    (cd "$ROOT" && cargo run --quiet --release -- --config "$ROOT/onim.toml" --mod OniOnline publish --non-interactive --auto-note --dry-run)
+    (cd "$ROOT" && cargo run --quiet --release -- --config "$ROOT/onim.toml" --mod "$MOD_KEY" publish --non-interactive --auto-note --dry-run)
     dotnet build "$PUBLISHER_PROJECT" -c Release >/dev/null
     run_publisher --prepare-first-item --vdf "$VDF_PATH" --output "$FIRST_PLAN"
   else

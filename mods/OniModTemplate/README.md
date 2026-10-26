@@ -1,5 +1,7 @@
 # OniModTemplate
 
+**前置 Mod：** 先安装并启用 [Jlib](https://github.com/LIghtJUNction/Jlib)，再重启游戏。所有本项目 Mod 共用一份 Jlib，消费者包不再内嵌 PLib/Jlib。
+
 ## 索引
 
 - [项目用途](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniModTemplate/README.md#项目用途)

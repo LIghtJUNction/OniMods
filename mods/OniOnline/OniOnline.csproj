@@ -4,7 +4,7 @@
     <AssemblyName>OniOnline</AssemblyName>
     <RootNamespace>OniOnline</RootNamespace>
     <LangVersion>7.3</LangVersion>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <NuGetAudit>false</NuGetAudit>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -15,8 +15,6 @@
     <Compile Include="Core/NativeSimSaveBlock.cs" />
     <ProjectReference Include="../../sdk/OniOnline.Framework/OniOnline.Framework.csproj" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="PLib" Version="4.25.0" />
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48" PrivateAssets="all" />
     <Reference Include="Newtonsoft.Json"><HintPath>$(OniManagedPath)/Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(OniManagedPath)/0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Assembly-CSharp"><HintPath>$(OniManagedPath)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
@@ -59,7 +57,7 @@
     <Error Condition="'$(OnlineRuntimeProbe)' == 'true'" Text="Runtime probe builds must never be packaged." />
   </Target>
   <Target Name="PackageOniOnlineArtifacts" AfterTargets="Build"
-    DependsOnTargets="MergePLibIntoOniOnline;CopyLicenseFiles" Condition="'$(OnlineRuntimeProbe)' != 'true'">
+    DependsOnTargets="CopyLicenseFiles" Condition="'$(OnlineRuntimeProbe)' != 'true'">
     <PropertyGroup>
       <PackagePath>$(MSBuildProjectDirectory)/dist</PackagePath>
       <PackageRoot>$(PackagePath)/OniOnline</PackageRoot>
@@ -67,7 +65,9 @@
     <MakeDir Directories="$(PackagePath)" />
     <RemoveDir Directories="$(PackageRoot)" />
     <MakeDir Directories="$(PackageRoot)" />
-    <Copy SourceFiles="$(OutputPath)OniOnline.dll;$(OutputPath)OniOnline.Framework.dll" DestinationFolder="$(PackageRoot)" />
+    <Copy SourceFiles="$(JlibBootstrapAssembly)" DestinationFiles="$(PackageRoot)/OniOnline.dll" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageRoot)/implementation" />
+    <Copy SourceFiles="$(OutputPath)OniOnline.Framework.dll" DestinationFolder="$(PackageRoot)" />
     <Copy SourceFiles="$(OutputPath)LICENSE;$(OutputPath)LICENSING.md" DestinationFolder="$(PackageRoot)" />
     <Copy SourceFiles="@(Content->'$(OutputPath)%(Identity)')" DestinationFiles="@(Content->'$(PackageRoot)/%(Identity)')" />
     <Delete Files="$(PackagePath)/OniOnline.zip" />
@@ -79,7 +79,9 @@
     </PropertyGroup>
     <RemoveDir Directories="$(PublishRoot)" />
     <MakeDir Directories="$(PublishRoot)" />
-    <Copy SourceFiles="$(PackageRoot)/OniOnline.dll;$(PackageRoot)/OniOnline.Framework.dll;$(PackageRoot)/LICENSE;$(PackageRoot)/LICENSING.md" DestinationFolder="$(PublishRoot)" />
+    <ItemGroup><PublishedFiles Include="$(PackageRoot)/**/*" /></ItemGroup>
+    <Copy SourceFiles="@(PublishedFiles)" DestinationFiles="@(PublishedFiles->'$(PublishRoot)/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(Content->'$(PackageRoot)/%(Identity)')" DestinationFiles="@(Content->'$(PublishRoot)/%(Identity)')" />
   </Target>
+  <Import Project="../../build/Jlib.Consumer.targets" />
 </Project>
