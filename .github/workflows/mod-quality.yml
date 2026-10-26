@@ -5,6 +5,9 @@ on:
     paths:
       - 'mods/**'
       - 'tests/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - 'scripts/**'
       - 'tools/OniMods.SteamPublisher/**'
       - 'ci/**'
@@ -23,6 +26,9 @@ on:
     paths:
       - 'mods/**'
       - 'tests/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - 'scripts/**'
       - 'tools/OniMods.SteamPublisher/**'
       - 'ci/**'
@@ -59,6 +65,10 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.401'
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.99.1 --profile minimal
+      - name: Test onim CLI regressions
+        run: cargo +1.99.1 test --locked
       - name: Check Mod source contracts and host behavior
         run: python3 scripts/check_mods.py --skip-synthetic-performance
       - name: Report CycleTrim synthetic performance evidence
