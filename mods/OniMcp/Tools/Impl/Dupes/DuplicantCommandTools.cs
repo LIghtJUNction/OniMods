@@ -348,65 +348,16 @@ namespace OniMcp.Tools
                 ["cancelledMoveCommand"] = false
             };
 
-            var consumer = dupe.GetComponent<ChoreConsumer>();
+            // Stop this duplicant's work, not the colony-owned chore/designation.
+            // ONI's driver handles the chore's subclass-specific release semantics.
             var driver = dupe.GetComponent<ChoreDriver>();
-            var currentChore = driver?.GetCurrentChore();
-            if (TryCancelChore(currentChore, reason))
-                result["cancelledCurrentChore"] = true;
-
-            if (consumer != null && ConsumerStopChoreMethod != null)
-            {
-                ConsumerStopChoreMethod.Invoke(consumer, null);
-                result["stoppedConsumer"] = true;
-            }
-
             if (driver != null)
             {
                 driver.StopChore();
                 result["stoppedDriver"] = true;
             }
 
-            var brain = dupe.GetComponent<MinionBrain>();
-            if (brain != null && BrainCancelFetchesMethod != null)
-            {
-                BrainCancelFetchesMethod.Invoke(brain, new object[] { reason });
-                result["cancelledBrainFetches"] = true;
-            }
-            if (brain != null && BrainCancelChoreMethod != null)
-            {
-                BrainCancelChoreMethod.Invoke(brain, new object[] { reason });
-                result["cancelledBrainChore"] = true;
-            }
-
-            var navigator = dupe.GetComponent<Navigator>();
-            var moveMonitor = navigator?.GetSMI<MoveToLocationMonitor.Instance>();
-            if (moveMonitor != null && MoveMonitorCancelMethod != null)
-            {
-                MoveMonitorCancelMethod.Invoke(moveMonitor, null);
-                result["cancelledMoveCommand"] = true;
-            }
-
             return result;
-        }
-
-        private static bool TryCancelChore(Chore chore, string reason)
-        {
-            if (chore == null)
-                return false;
-
-            if (ChoreCancelWithStringMethod != null)
-            {
-                ChoreCancelWithStringMethod.Invoke(chore, new object[] { reason });
-                return true;
-            }
-
-            if (ChoreCancelNoArgsMethod != null)
-            {
-                ChoreCancelNoArgsMethod.Invoke(chore, null);
-                return true;
-            }
-
-            return false;
         }
 
         private static int? GetIntValue(JObject obj, string name, string shortName)

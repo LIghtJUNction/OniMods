@@ -1,24 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using OniMcp.Core;
 
 namespace OniMcp.Tools
 {
     public static partial class DuplicantTools
 {
-        private static readonly MethodInfo ConsumerStopChoreMethod = typeof(ChoreConsumer).GetMethod("StopChore", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-        private static readonly MethodInfo ChoreCancelWithStringMethod = typeof(Chore).GetMethod("Cancel", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(string) }, null);
-
-        private static readonly MethodInfo ChoreCancelNoArgsMethod = typeof(Chore).GetMethod("Cancel", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
-
-        private static readonly MethodInfo BrainCancelChoreMethod = typeof(MinionBrain).GetMethod("CancelChore", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(string) }, null);
-
-        private static readonly MethodInfo BrainCancelFetchesMethod = typeof(MinionBrain).GetMethod("CancelFetches", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(string) }, null);
-
-        private static readonly MethodInfo MoveMonitorCancelMethod = typeof(MoveToLocationMonitor.Instance).GetMethod("CancelChore", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
-
         public static McpTool ControlDupes()
         {
             return new McpTool
