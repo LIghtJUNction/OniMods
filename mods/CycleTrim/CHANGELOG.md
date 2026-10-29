@@ -2,6 +2,19 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
+## Unreleased — 2026-10-29
+
+- Independently implement save type metadata reuse inspired by oni-moono: cache
+  only immutable CLR type metadata, preserve other reflection queries, and use
+  weak keys so collectible types are not retained.
+- Reuse circuit demand only inside each power overlay update, with manager
+  identity, thread-local scopes, nested-update invalidation, exception cleanup
+  and bounded storage. Unknown electricity interface implementations and
+  conflicting Harmony callbacks retain original queries.
+- Add separate restart-required settings (metadata on, power reuse opt-in), real Harmony host regressions, exact
+  synthetic output checks and paired performance measurements. These do not
+  establish Unity/Mono save/load, DLC compatibility or game FPS improvements.
+
 ## 2026-10-22 — 0.4.0
 
 - Bundle the OniSim Rust core for Windows x64, macOS x64 and Linux x64 in one

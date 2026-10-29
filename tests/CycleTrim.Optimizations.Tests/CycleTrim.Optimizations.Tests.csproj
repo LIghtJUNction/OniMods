@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>7.3</LangVersion>
+    <NuGetAudit>false</NuGetAudit>
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../../mods/CycleTrim/Core/CycleTrimPatchOptions.cs" Link="CycleTrimPatchOptions.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/SaveTypeMetadataCache.cs" Link="SaveTypeMetadataCache.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/SaveTypeMetadataPatch.cs" Link="SaveTypeMetadataPatch.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/PowerOverlay*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../mods/CycleTrim/Patches/PowerOverlay*.cs" Link="%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>
