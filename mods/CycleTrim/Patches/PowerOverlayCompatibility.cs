@@ -124,20 +124,34 @@ namespace CycleTrim.Patches
                         if (type.IsAbstract || type.IsInterface)
                             continue;
                         if (!InspectInterface(type, typeof(IEnergyConsumer), guarded)
-                            || !InspectInterface(type, typeof(IBridgedNetworkItem), guarded))
+                            || !InspectInterface(type, typeof(IBridgedNetworkItem), guarded)
+                            || !InspectInterface(type, typeof(ICircuitConnected), guarded))
                             return false;
                     }
                 }
 
-                // Transformer ratings also read these non-interface getters.
-                if (!AddGetter(guarded, typeof(Generator), "WattageRating")
-                    || !AddGetter(guarded, typeof(Generator), "Efficiency"))
+                // A transformer resolves its circuit through these methods as
+                // well as reading its rating. A patch anywhere along that path
+                // can make two otherwise identical demand queries differ.
+                var networks = typeof(UtilityNetworkManager<ElectricalUtilityNetwork, Wire>);
+                if (!AddGetter(guarded, typeof(Generator), "WattageRating", typeof(float))
+                    || !AddGetter(guarded, typeof(Generator), "Efficiency", typeof(float))
+                    || !AddGetter(guarded, typeof(Generator), "CircuitID", typeof(ushort))
+                    || !AddGetter(guarded, typeof(Game), "Instance", typeof(Game), true)
+                    || !AddMethod(guarded, typeof(CircuitManager), "GetCircuitID", typeof(ushort),
+                        false, typeof(ICircuitConnected))
+                    || !AddMethod(guarded, typeof(CircuitManager), "GetCircuitID", typeof(ushort),
+                        false, typeof(int))
+                    || !AddMethod(guarded, typeof(CircuitManager), "GetVirtualCircuitID", typeof(ushort),
+                        false, typeof(object))
+                    || !AddMethod(guarded, networks, "GetNetworkForCell", typeof(UtilityNetwork),
+                        false, typeof(int))
+                    || !AddMethod(guarded, networks, "GetNetworkForVirtualKey", typeof(UtilityNetwork),
+                        false, typeof(object))
+                    || !AddMethod(guarded, typeof(Grid), "IsValidCell", typeof(bool), true, typeof(int))
+                    || !AddMethod(guarded, typeof(Klei.AI.AttributeInstance), "GetTotalValue", typeof(float),
+                        false))
                     return false;
-                var totalValue = AccessTools.DeclaredMethod(typeof(Klei.AI.AttributeInstance),
-                    "GetTotalValue", Type.EmptyTypes);
-                if (totalValue == null)
-                    return false;
-                guarded.Add(totalValue);
                 methods = new MethodBase[guarded.Count];
                 guarded.CopyTo(methods);
                 return true;
@@ -163,18 +177,32 @@ namespace CycleTrim.Patches
             {
                 var name = map.InterfaceMethods[index].Name;
                 if (name == "get_WattsNeededWhenActive" || name == "GetNetworkCell"
-                    || name == "IsConnectedToNetworks")
+                    || name == "IsConnectedToNetworks" || name == "get_IsVirtual"
+                    || name == "get_PowerCell" || name == "get_VirtualCircuitKey")
                     guarded.Add(map.TargetMethods[index]);
             }
             return true;
         }
 
-        private static bool AddGetter(HashSet<MethodBase> guarded, Type type, string name)
+        private static bool AddGetter(HashSet<MethodBase> guarded, Type type, string name,
+            Type result, bool isStatic = false)
         {
             var getter = AccessTools.PropertyGetter(type, name);
-            if (getter == null)
+            if (getter == null || getter.ReturnType != result || getter.IsStatic != isStatic
+                || getter.GetParameters().Length != 0)
                 return false;
             guarded.Add(getter);
+            return true;
+        }
+
+        private static bool AddMethod(HashSet<MethodBase> guarded, Type type, string name,
+            Type result, bool isStatic, params Type[] parameters)
+        {
+            var method = AccessTools.DeclaredMethod(type, name, parameters);
+            if (method == null || method.ReturnType != result || method.IsStatic != isStatic
+                || method.ContainsGenericParameters)
+                return false;
+            guarded.Add(method);
             return true;
         }
     }

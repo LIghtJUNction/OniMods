@@ -1,0 +1,2405 @@
+{
+  "interpretation": "Synthetic batch timings. Within each round, baseline means the original fixture and candidate means that round's production helper. Ratios are original/candidate, with seven alternating pairs; below one is a regression. Paired ratio medians need not equal ratios of timing medians. Separate rounds are not interleaved comparisons of old and new helpers: do not divide their ratios or timings to claim an improvement. The conveyor and power emitters compare both outputs before printing one shared checksum; this parser checks its consistency across all pairs and matching rounds. These fixtures do not measure Unity/Mono, GPU upload, workload frequency or game FPS.",
+  "conveyor": {
+    "long-misses": {
+      "baseline_ms": {
+        "median": 121.5145,
+        "min": 110.285428,
+        "max": 230.896807
+      },
+      "candidate_ms": {
+        "median": 103.716752,
+        "min": 75.742325,
+        "max": 109.654761
+      },
+      "baseline_allocated_bytes": {
+        "median": 36061600,
+        "min": 36061600,
+        "max": 36061600
+      },
+      "candidate_allocated_bytes": {
+        "median": 37356040,
+        "min": 37356000,
+        "max": 37360000
+      },
+      "baseline_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 1.424363284779164,
+        "min": 1.0057513873018245,
+        "max": 3.0484515361787485
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-conveyor.log"
+    },
+    "shared-rails": {
+      "baseline_ms": {
+        "median": 113.80812,
+        "min": 93.022272,
+        "max": 151.403755
+      },
+      "candidate_ms": {
+        "median": 107.077463,
+        "min": 100.690246,
+        "max": 113.415269
+      },
+      "baseline_allocated_bytes": {
+        "median": 36061600,
+        "min": 36061600,
+        "max": 36061600
+      },
+      "candidate_allocated_bytes": {
+        "median": 37356000,
+        "min": 37356000,
+        "max": 37356040
+      },
+      "baseline_direction_reads": {
+        "median": 12600,
+        "min": 12600,
+        "max": 12600
+      },
+      "candidate_direction_reads": {
+        "median": 12600,
+        "min": 12600,
+        "max": 12600
+      },
+      "paired_speedup": {
+        "median": 1.1289915087246167,
+        "min": 0.8201917856404326,
+        "max": 1.5036586066141897
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-conveyor.log"
+    },
+    "early-hits": {
+      "baseline_ms": {
+        "median": 12.660396,
+        "min": 10.866313,
+        "max": 16.59451
+      },
+      "candidate_ms": {
+        "median": 22.828231,
+        "min": 18.539675,
+        "max": 24.707108
+      },
+      "baseline_allocated_bytes": {
+        "median": 11432000,
+        "min": 11432000,
+        "max": 11432000
+      },
+      "candidate_allocated_bytes": {
+        "median": 11432000,
+        "min": 11432000,
+        "max": 11432000
+      },
+      "baseline_direction_reads": {
+        "median": 126000,
+        "min": 126000,
+        "max": 126000
+      },
+      "candidate_direction_reads": {
+        "median": 126000,
+        "min": 126000,
+        "max": 126000
+      },
+      "paired_speedup": {
+        "median": 0.605796835016297,
+        "min": 0.47600328733312713,
+        "max": 0.8857444912060217
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-conveyor.log"
+    },
+    "single-query": {
+      "baseline_ms": {
+        "median": 10.936287,
+        "min": 10.42861,
+        "max": 19.634397
+      },
+      "candidate_ms": {
+        "median": 11.032428,
+        "min": 10.274652,
+        "max": 25.47577
+      },
+      "baseline_allocated_bytes": {
+        "median": 256000,
+        "min": 256000,
+        "max": 256000
+      },
+      "candidate_allocated_bytes": {
+        "median": 256000,
+        "min": 256000,
+        "max": 256000
+      },
+      "baseline_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.9912855991446308,
+        "min": 0.4263964936094179,
+        "max": 1.8124777068088116
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-conveyor.log"
+    },
+    "short-paths": {
+      "baseline_ms": {
+        "median": 9.826843,
+        "min": 6.463048,
+        "max": 10.559161
+      },
+      "candidate_ms": {
+        "median": 13.958808,
+        "min": 9.232287,
+        "max": 14.644418
+      },
+      "baseline_allocated_bytes": {
+        "median": 11432000,
+        "min": 11432000,
+        "max": 11432000
+      },
+      "candidate_allocated_bytes": {
+        "median": 11432000,
+        "min": 11432000,
+        "max": 11432000
+      },
+      "baseline_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.7262154223937506,
+        "min": 0.6562099612602427,
+        "max": 0.8412964101025997
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-conveyor.log"
+    },
+    "contained-path": {
+      "baseline_ms": {
+        "median": 34.527699,
+        "min": 29.606504,
+        "max": 40.651951
+      },
+      "candidate_ms": {
+        "median": 43.755412,
+        "min": 30.344881,
+        "max": 79.83391
+      },
+      "baseline_allocated_bytes": {
+        "median": 16800000,
+        "min": 16800000,
+        "max": 16800000
+      },
+      "candidate_allocated_bytes": {
+        "median": 16800000,
+        "min": 16800000,
+        "max": 16800000
+      },
+      "baseline_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.7535884668519129,
+        "min": 0.43700554062803637,
+        "max": 1.3396642089319775
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-conveyor.log"
+    }
+  },
+  "animation": {
+    "repeat-single/setter": {
+      "baseline_ms": {
+        "median": 0.244261,
+        "min": 0.235978,
+        "max": 0.673745
+      },
+      "candidate_ms": {
+        "median": 0.464977,
+        "min": 0.429284,
+        "max": 0.488241
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.5389909289516732,
+        "min": 0.4872204505561803,
+        "max": 1.448985648752519
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "repeat-single/consumer": {
+      "baseline_ms": {
+        "median": 4.728352,
+        "min": 4.29317,
+        "max": 9.482865
+      },
+      "candidate_ms": {
+        "median": 0.639805,
+        "min": 0.540488,
+        "max": 2.946021
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 6.734724647309349,
+        "min": 3.218872166899014,
+        "max": 8.76081982568158
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "change-single/setter": {
+      "baseline_ms": {
+        "median": 0.431166,
+        "min": 0.384527,
+        "max": 0.675637
+      },
+      "candidate_ms": {
+        "median": 0.698331,
+        "min": 0.679794,
+        "max": 0.823396
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.5920801880955328,
+        "min": 0.5288400443396771,
+        "max": 0.967502516714853
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "change-single/consumer": {
+      "baseline_ms": {
+        "median": 7.184189,
+        "min": 4.664909,
+        "max": 7.671768
+      },
+      "candidate_ms": {
+        "median": 8.002348,
+        "min": 6.610172,
+        "max": 9.249588
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.9122327910109848,
+        "min": 0.5043369499268509,
+        "max": 1.0351462866624348
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "repeat-range4/setter": {
+      "baseline_ms": {
+        "median": 1.394439,
+        "min": 1.355061,
+        "max": 1.625911
+      },
+      "candidate_ms": {
+        "median": 3.33838,
+        "min": 3.189069,
+        "max": 3.396846
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.41956126359570023,
+        "min": 0.405903761704779,
+        "max": 0.4814593933694142
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "repeat-range4/consumer": {
+      "baseline_ms": {
+        "median": 8.887954,
+        "min": 5.222152,
+        "max": 9.762036
+      },
+      "candidate_ms": {
+        "median": 3.286664,
+        "min": 2.448745,
+        "max": 4.277822
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 2.6662929210071176,
+        "min": 1.2207501854915892,
+        "max": 3.9316539696865127
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "repeat-range256/setter": {
+      "baseline_ms": {
+        "median": 62.581387,
+        "min": 60.049327,
+        "max": 83.214276
+      },
+      "candidate_ms": {
+        "median": 159.184044,
+        "min": 135.163473,
+        "max": 202.43808
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.405009181367653,
+        "min": 0.3525262980313377,
+        "max": 0.5776349477938482
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "repeat-range256/consumer": {
+      "baseline_ms": {
+        "median": 79.337702,
+        "min": 56.931543,
+        "max": 89.515662
+      },
+      "candidate_ms": {
+        "median": 217.47799,
+        "min": 161.401409,
+        "max": 253.033481
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.37976069294432413,
+        "min": 0.26942079440190847,
+        "max": 0.43335905763331767
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "change-range4/setter": {
+      "baseline_ms": {
+        "median": 1.331056,
+        "min": 1.261773,
+        "max": 1.519534
+      },
+      "candidate_ms": {
+        "median": 1.822372,
+        "min": 1.735422,
+        "max": 4.233752
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.7270698423783956,
+        "min": 0.3322790281528063,
+        "max": 0.8149676085110856
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "change-range4/consumer": {
+      "baseline_ms": {
+        "median": 7.99129,
+        "min": 7.534767,
+        "max": 9.208187
+      },
+      "candidate_ms": {
+        "median": 9.101031,
+        "min": 8.09204,
+        "max": 10.410153
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.9451846655260231,
+        "min": 0.7237902267142472,
+        "max": 0.9694382977049524
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "change-range256/setter": {
+      "baseline_ms": {
+        "median": 66.791965,
+        "min": 58.968902,
+        "max": 95.647688
+      },
+      "candidate_ms": {
+        "median": 83.292131,
+        "min": 70.142529,
+        "max": 108.041701
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.7337273451609886,
+        "min": 0.6182054186651504,
+        "max": 1.2686041684924652
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "change-range256/consumer": {
+      "baseline_ms": {
+        "median": 65.590216,
+        "min": 62.600641,
+        "max": 68.608577
+      },
+      "candidate_ms": {
+        "median": 89.20739,
+        "min": 63.440666,
+        "max": 119.3916
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 96
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.7655363324804831,
+        "min": 0.5309565664586118,
+        "max": 0.9867588874303432
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "change-last-range256/setter": {
+      "baseline_ms": {
+        "median": 59.543839,
+        "min": 58.142564,
+        "max": 84.710062
+      },
+      "candidate_ms": {
+        "median": 211.350494,
+        "min": 180.021636,
+        "max": 225.869718
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.32495182412407364,
+        "min": 0.2600159973635775,
+        "max": 0.40791299786007384
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    },
+    "change-last-range256/consumer": {
+      "baseline_ms": {
+        "median": 68.579599,
+        "min": 65.032721,
+        "max": 74.530783
+      },
+      "candidate_ms": {
+        "median": 211.453827,
+        "min": 151.168618,
+        "max": 225.451836
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.32431569628335133,
+        "min": 0.2978402846096139,
+        "max": 0.4825637884709642
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-animation.log"
+    }
+  },
+  "power": {
+    "repeated-circuits": {
+      "baseline_ms": {
+        "median": 24.646374,
+        "min": 23.683945,
+        "max": 35.677644
+      },
+      "candidate_ms": {
+        "median": 16.002262,
+        "min": 11.749575,
+        "max": 18.317452
+      },
+      "baseline_allocated_bytes": {
+        "median": 7782400,
+        "min": 7782400,
+        "max": 7782400
+      },
+      "candidate_allocated_bytes": {
+        "median": 1778400,
+        "min": 1778400,
+        "max": 1778400
+      },
+      "baseline_query_calls": {
+        "median": 51200,
+        "min": 51200,
+        "max": 51200
+      },
+      "candidate_query_calls": {
+        "median": 3200,
+        "min": 3200,
+        "max": 3200
+      },
+      "paired_speedup": {
+        "median": 1.578850706220849,
+        "min": 1.2929715879697679,
+        "max": 2.254644189257909
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-power.log"
+    },
+    "all-distinct-circuits": {
+      "baseline_ms": {
+        "median": 23.511067,
+        "min": 22.866933,
+        "max": 26.629348
+      },
+      "candidate_ms": {
+        "median": 32.696678,
+        "min": 28.713323,
+        "max": 82.34747
+      },
+      "baseline_allocated_bytes": {
+        "median": 7782400,
+        "min": 7782400,
+        "max": 7782400
+      },
+      "candidate_allocated_bytes": {
+        "median": 7782400,
+        "min": 7782400,
+        "max": 7782400
+      },
+      "baseline_query_calls": {
+        "median": 51200,
+        "min": 51200,
+        "max": 51200
+      },
+      "candidate_query_calls": {
+        "median": 51200,
+        "min": 51200,
+        "max": 51200
+      },
+      "paired_speedup": {
+        "median": 0.7190659246789537,
+        "min": 0.29387746824522964,
+        "max": 0.8787348646480242
+      },
+      "pairs_count": 7,
+      "source_log": "candidate-power.log"
+    }
+  },
+  "baseline_conveyor": {
+    "long-misses": {
+      "baseline_ms": {
+        "median": 105.320836,
+        "min": 78.375464,
+        "max": 516.799572
+      },
+      "candidate_ms": {
+        "median": 94.755632,
+        "min": 68.547074,
+        "max": 98.654615
+      },
+      "baseline_allocated_bytes": {
+        "median": 36061600,
+        "min": 36061600,
+        "max": 36061600
+      },
+      "candidate_allocated_bytes": {
+        "median": 37359880,
+        "min": 37356000,
+        "max": 37360000
+      },
+      "baseline_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 1.0720847164146197,
+        "min": 0.8272974997502288,
+        "max": 5.638805716981233
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-conveyor.log"
+    },
+    "shared-rails": {
+      "baseline_ms": {
+        "median": 117.912391,
+        "min": 95.235095,
+        "max": 173.845192
+      },
+      "candidate_ms": {
+        "median": 94.999846,
+        "min": 74.424459,
+        "max": 97.091747
+      },
+      "baseline_allocated_bytes": {
+        "median": 36061600,
+        "min": 36061600,
+        "max": 36061600
+      },
+      "candidate_allocated_bytes": {
+        "median": 37356840,
+        "min": 37356000,
+        "max": 37359960
+      },
+      "baseline_direction_reads": {
+        "median": 12600,
+        "min": 12600,
+        "max": 12600
+      },
+      "candidate_direction_reads": {
+        "median": 12600,
+        "min": 12600,
+        "max": 12600
+      },
+      "paired_speedup": {
+        "median": 1.2224590820419394,
+        "min": 0.9953322116909753,
+        "max": 2.0670785234874827
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-conveyor.log"
+    },
+    "early-hits": {
+      "baseline_ms": {
+        "median": 12.84796,
+        "min": 10.662952,
+        "max": 16.933564
+      },
+      "candidate_ms": {
+        "median": 20.022714,
+        "min": 15.160778,
+        "max": 24.834093
+      },
+      "baseline_allocated_bytes": {
+        "median": 11432000,
+        "min": 11432000,
+        "max": 11432000
+      },
+      "candidate_allocated_bytes": {
+        "median": 11432000,
+        "min": 11432000,
+        "max": 11432000
+      },
+      "baseline_direction_reads": {
+        "median": 126000,
+        "min": 126000,
+        "max": 126000
+      },
+      "candidate_direction_reads": {
+        "median": 126000,
+        "min": 126000,
+        "max": 126000
+      },
+      "paired_speedup": {
+        "median": 0.6416692562257045,
+        "min": 0.47063926897912267,
+        "max": 1.0764459687954855
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-conveyor.log"
+    },
+    "single-query": {
+      "baseline_ms": {
+        "median": 9.837917,
+        "min": 7.161102,
+        "max": 10.180717
+      },
+      "candidate_ms": {
+        "median": 10.271101,
+        "min": 8.093006,
+        "max": 11.601476
+      },
+      "baseline_allocated_bytes": {
+        "median": 256000,
+        "min": 256000,
+        "max": 256000
+      },
+      "candidate_allocated_bytes": {
+        "median": 256000,
+        "min": 256000,
+        "max": 256000
+      },
+      "baseline_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.9477968330756361,
+        "min": 0.8775363583047536,
+        "max": 1.1817240856578457
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-conveyor.log"
+    },
+    "short-paths": {
+      "baseline_ms": {
+        "median": 7.855133,
+        "min": 5.772241,
+        "max": 8.947304
+      },
+      "candidate_ms": {
+        "median": 12.925831,
+        "min": 9.730729,
+        "max": 14.598376
+      },
+      "baseline_allocated_bytes": {
+        "median": 11432000,
+        "min": 11432000,
+        "max": 11432000
+      },
+      "candidate_allocated_bytes": {
+        "median": 11432000,
+        "min": 11432000,
+        "max": 11432000
+      },
+      "baseline_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.5931971797796445,
+        "min": 0.4371953425710853,
+        "max": 0.649135459591374
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-conveyor.log"
+    },
+    "contained-path": {
+      "baseline_ms": {
+        "median": 29.933926,
+        "min": 29.331882,
+        "max": 30.497613
+      },
+      "candidate_ms": {
+        "median": 40.437132,
+        "min": 39.651094,
+        "max": 68.105673
+      },
+      "baseline_allocated_bytes": {
+        "median": 16800000,
+        "min": 16800000,
+        "max": 16800000
+      },
+      "candidate_allocated_bytes": {
+        "median": 16800000,
+        "min": 16800000,
+        "max": 16800000
+      },
+      "baseline_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_direction_reads": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.7253699891475983,
+        "min": 0.44479995080586016,
+        "max": 0.7671601435300436
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-conveyor.log"
+    }
+  },
+  "baseline_animation": {
+    "repeat-single/setter": {
+      "baseline_ms": {
+        "median": 0.315789,
+        "min": 0.247497,
+        "max": 0.430879
+      },
+      "candidate_ms": {
+        "median": 0.637045,
+        "min": 0.502786,
+        "max": 0.655943
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.5819834342783011,
+        "min": 0.4788324472407308,
+        "max": 0.6572866421983642
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-animation.log"
+    },
+    "repeat-single/consumer": {
+      "baseline_ms": {
+        "median": 6.001909,
+        "min": 4.509056,
+        "max": 6.416324
+      },
+      "candidate_ms": {
+        "median": 0.91019,
+        "min": 0.541082,
+        "max": 0.937359
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 7.034193487560324,
+        "min": 6.594127599731924,
+        "max": 8.800247714731569
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-animation.log"
+    },
+    "change-single/setter": {
+      "baseline_ms": {
+        "median": 0.300916,
+        "min": 0.25652,
+        "max": 0.665326
+      },
+      "candidate_ms": {
+        "median": 0.53966,
+        "min": 0.445971,
+        "max": 0.771835
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.656851167491416,
+        "min": 0.3520069993830497,
+        "max": 0.8656063288943345
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-animation.log"
+    },
+    "change-single/consumer": {
+      "baseline_ms": {
+        "median": 6.470474,
+        "min": 5.739921,
+        "max": 6.621277
+      },
+      "candidate_ms": {
+        "median": 6.785442,
+        "min": 6.330331,
+        "max": 6.945098
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.9480843892681124,
+        "min": 0.826470843176007,
+        "max": 0.9899454693088628
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-animation.log"
+    },
+    "repeat-range4/setter": {
+      "baseline_ms": {
+        "median": 1.103707,
+        "min": 0.96431,
+        "max": 1.374038
+      },
+      "candidate_ms": {
+        "median": 2.729588,
+        "min": 2.19173,
+        "max": 2.932869
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.4351859257012062,
+        "min": 0.33010669904597656,
+        "max": 0.4684962062744705
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-animation.log"
+    },
+    "repeat-range4/consumer": {
+      "baseline_ms": {
+        "median": 7.395215,
+        "min": 6.695627,
+        "max": 8.133339
+      },
+      "candidate_ms": {
+        "median": 3.278261,
+        "min": 2.894643,
+        "max": 3.37898
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 2.230393733642531,
+        "min": 2.0424325579933993,
+        "max": 2.8097900155563225
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-animation.log"
+    },
+    "repeat-range256/setter": {
+      "baseline_ms": {
+        "median": 62.953723,
+        "min": 55.949357,
+        "max": 64.784452
+      },
+      "candidate_ms": {
+        "median": 168.929309,
+        "min": 142.154508,
+        "max": 176.754477
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.3748268781137514,
+        "min": 0.3273934774605228,
+        "max": 0.4402797423094007
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-animation.log"
+    },
+    "repeat-range256/consumer": {
+      "baseline_ms": {
+        "median": 64.166841,
+        "min": 59.702705,
+        "max": 75.142304
+      },
+      "candidate_ms": {
+        "median": 151.93948,
+        "min": 126.364563,
+        "max": 163.267568
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.4443704336920116,
+        "min": 0.3920937477449064,
+        "max": 0.5946469660168887
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-animation.log"
+    }
+  },
+  "baseline_power": {
+    "repeated-circuits": {
+      "baseline_ms": {
+        "median": 31.403804,
+        "min": 26.678287,
+        "max": 35.784714
+      },
+      "candidate_ms": {
+        "median": 16.811758,
+        "min": 11.040738,
+        "max": 20.75319
+      },
+      "baseline_allocated_bytes": {
+        "median": 7782400,
+        "min": 7782400,
+        "max": 7782400
+      },
+      "candidate_allocated_bytes": {
+        "median": 1778400,
+        "min": 1778400,
+        "max": 1778440
+      },
+      "baseline_query_calls": {
+        "median": 51200,
+        "min": 51200,
+        "max": 51200
+      },
+      "candidate_query_calls": {
+        "median": 3200,
+        "min": 3200,
+        "max": 3200
+      },
+      "paired_speedup": {
+        "median": 1.7266488816023662,
+        "min": 1.3939539897239894,
+        "max": 2.913238094837663
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-power.log"
+    },
+    "all-distinct-circuits": {
+      "baseline_ms": {
+        "median": 26.478202,
+        "min": 26.093221,
+        "max": 26.828249
+      },
+      "candidate_ms": {
+        "median": 37.063185,
+        "min": 35.767518,
+        "max": 39.094291
+      },
+      "baseline_allocated_bytes": {
+        "median": 7782400,
+        "min": 7782400,
+        "max": 7782400
+      },
+      "candidate_allocated_bytes": {
+        "median": 7782400,
+        "min": 7782400,
+        "max": 7782400
+      },
+      "baseline_query_calls": {
+        "median": 51200,
+        "min": 51200,
+        "max": 51200
+      },
+      "candidate_query_calls": {
+        "median": 51200,
+        "min": 51200,
+        "max": 51200
+      },
+      "paired_speedup": {
+        "median": 0.7115693281399578,
+        "min": 0.6674432591705014,
+        "max": 0.7434267314830176
+      },
+      "pairs_count": 7,
+      "source_log": "baseline-power.log"
+    }
+  },
+  "previous_helper_animation": {
+    "repeat-single/setter": {
+      "baseline_ms": {
+        "median": 0.400522,
+        "min": 0.360614,
+        "max": 0.668639
+      },
+      "candidate_ms": {
+        "median": 0.762638,
+        "min": 0.64164,
+        "max": 0.868025
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.5251797051812261,
+        "min": 0.4154419515566948,
+        "max": 1.042078112337136
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "repeat-single/consumer": {
+      "baseline_ms": {
+        "median": 5.833653,
+        "min": 4.829847,
+        "max": 7.310227
+      },
+      "candidate_ms": {
+        "median": 0.757521,
+        "min": 0.514892,
+        "max": 1.038177
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 7.7965498588599695,
+        "min": 6.8530416535110925,
+        "max": 9.82297081507152
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "change-single/setter": {
+      "baseline_ms": {
+        "median": 0.481973,
+        "min": 0.428904,
+        "max": 0.647237
+      },
+      "candidate_ms": {
+        "median": 0.841275,
+        "min": 0.805552,
+        "max": 0.860083
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.5858379714770873,
+        "min": 0.5098261567263974,
+        "max": 0.7525285350367348
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "change-single/consumer": {
+      "baseline_ms": {
+        "median": 6.931788,
+        "min": 5.580728,
+        "max": 9.081364
+      },
+      "candidate_ms": {
+        "median": 7.419689,
+        "min": 5.614488,
+        "max": 8.211627
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.9388389991430508,
+        "min": 0.869770265989919,
+        "max": 1.4132795330279573
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "repeat-range4/setter": {
+      "baseline_ms": {
+        "median": 1.124975,
+        "min": 0.979931,
+        "max": 1.842997
+      },
+      "candidate_ms": {
+        "median": 3.080529,
+        "min": 2.298381,
+        "max": 3.485578
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.42411341071784087,
+        "min": 0.284796094076793,
+        "max": 0.5863868931657339
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "repeat-range4/consumer": {
+      "baseline_ms": {
+        "median": 8.314825,
+        "min": 7.764249,
+        "max": 8.823075
+      },
+      "candidate_ms": {
+        "median": 3.566948,
+        "min": 3.112276,
+        "max": 3.753014
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 2.355010782327076,
+        "min": 2.1606502112994708,
+        "max": 2.8349269152221717
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "repeat-range256/setter": {
+      "baseline_ms": {
+        "median": 67.640273,
+        "min": 63.970051,
+        "max": 75.820752
+      },
+      "candidate_ms": {
+        "median": 174.290681,
+        "min": 148.852329,
+        "max": 201.787871
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.4007197608000625,
+        "min": 0.3170163334544523,
+        "max": 0.4451810290452358
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "repeat-range256/consumer": {
+      "baseline_ms": {
+        "median": 67.757716,
+        "min": 63.130832,
+        "max": 80.889827
+      },
+      "candidate_ms": {
+        "median": 197.802307,
+        "min": 136.912841,
+        "max": 228.94791
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.37703979863086223,
+        "min": 0.2959525422180093,
+        "max": 0.4611023446661223
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "change-range4/setter": {
+      "baseline_ms": {
+        "median": 1.322569,
+        "min": 1.137063,
+        "max": 1.497229
+      },
+      "candidate_ms": {
+        "median": 3.153014,
+        "min": 2.432522,
+        "max": 3.436606
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.414770451820614,
+        "min": 0.354003630325967,
+        "max": 0.5439590976548293
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "change-range4/consumer": {
+      "baseline_ms": {
+        "median": 8.796556,
+        "min": 5.788487,
+        "max": 11.04316
+      },
+      "candidate_ms": {
+        "median": 9.939162,
+        "min": 7.891068,
+        "max": 11.408534
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.7822281109912983,
+        "min": 0.7335492483400219,
+        "max": 1.0739971840684357
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "change-range256/setter": {
+      "baseline_ms": {
+        "median": 65.38998,
+        "min": 57.964015,
+        "max": 68.449946
+      },
+      "candidate_ms": {
+        "median": 177.707396,
+        "min": 158.957682,
+        "max": 259.311044
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 96
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.36669311773179986,
+        "min": 0.2525371923611553,
+        "max": 0.4126295758862678
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "change-range256/consumer": {
+      "baseline_ms": {
+        "median": 66.932678,
+        "min": 63.499276,
+        "max": 86.326491
+      },
+      "candidate_ms": {
+        "median": 175.980865,
+        "min": 131.691773,
+        "max": 253.572821
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.4277311247470973,
+        "min": 0.2766968310061905,
+        "max": 0.49054475894296806
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "change-last-range256/setter": {
+      "baseline_ms": {
+        "median": 61.844032,
+        "min": 54.261562,
+        "max": 246.050272
+      },
+      "candidate_ms": {
+        "median": 145.174512,
+        "min": 124.25047,
+        "max": 193.421813
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copies": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_copied_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "paired_speedup": {
+        "median": 0.4201749894049414,
+        "min": 0.32539691373898977,
+        "max": 1.9802763884917296
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    },
+    "change-last-range256/consumer": {
+      "baseline_ms": {
+        "median": 67.995543,
+        "min": 67.157954,
+        "max": 74.088132
+      },
+      "candidate_ms": {
+        "median": 186.440018,
+        "min": 149.904486,
+        "max": 203.397867
+      },
+      "baseline_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "candidate_allocated_bytes": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "baseline_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "candidate_copies": {
+        "median": 30000,
+        "min": 30000,
+        "max": 30000
+      },
+      "baseline_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "candidate_copied_bytes": {
+        "median": 368640000,
+        "min": 368640000,
+        "max": 368640000
+      },
+      "paired_speedup": {
+        "median": 0.3602121192672273,
+        "min": 0.33154304415591535,
+        "max": 0.49423558945394075
+      },
+      "pairs_count": 7,
+      "source_log": "previous-helper-animation.log"
+    }
+  }
+}

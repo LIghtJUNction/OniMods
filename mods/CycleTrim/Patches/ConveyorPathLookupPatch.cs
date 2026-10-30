@@ -50,7 +50,13 @@ namespace CycleTrim.Patches
         private static void Prefix(List<SolidConduitFlow.Conduit> new_path,
             bool __runOriginal, out ConveyorPathLookup __state)
         {
-            __state = __runOriginal ? ConveyorPathLookup.Enter(new_path, callSiteMatched) : null;
+            var canUseIndex = callSiteMatched && new_path != null
+                && new_path.Count >= ConveyorPathLookup.MinimumCandidateLength;
+            // A top-level short candidate can never reach the existing build
+            // rule. Nested calls still need a barrier: their searches must not
+            // reuse the parent's index, and their mutations invalidate it.
+            __state = __runOriginal && (canUseIndex || ConveyorPathLookup.Current != null)
+                ? ConveyorPathLookup.Enter(new_path, canUseIndex) : null;
         }
 
         private static Exception Finalizer(Exception __exception, ConveyorPathLookup __state)

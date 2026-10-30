@@ -11,6 +11,13 @@ public interface IBridgedNetworkItem
     bool IsConnectedToNetworks(HashSet<int> networks);
 }
 
+public interface ICircuitConnected
+{
+    bool IsVirtual { get; }
+    int PowerCell { get; }
+    object VirtualCircuitKey { get; }
+}
+
 public class EnergyConsumer : IEnergyConsumer
 {
     public float Watts;
@@ -27,10 +34,75 @@ public sealed class SyntheticWire : IBridgedNetworkItem
     public bool IsConnectedToNetworks(HashSet<int> networks) { return false; }
 }
 
-public sealed class Generator
+public sealed class Generator : ICircuitConnected
 {
     public float WattageRating { get { return 1f * Efficiency; } }
     private float Efficiency { get { return 1f; } }
+    public bool Virtual;
+    public int Cell;
+    public object VirtualKey;
+    public bool IsVirtual
+    {
+        [MethodImpl(MethodImplOptions.NoInlining)] get { return Virtual; }
+    }
+    public int PowerCell
+    {
+        [MethodImpl(MethodImplOptions.NoInlining)] get { return Cell; }
+    }
+    public object VirtualCircuitKey
+    {
+        [MethodImpl(MethodImplOptions.NoInlining)] get { return VirtualKey; }
+    }
+    public ushort CircuitID
+    {
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        get { return Game.Instance.circuitManager.GetCircuitID(this); }
+    }
+}
+
+// Original, deliberately small routing fixtures expose the actual dependency
+// signatures. They do not model the game's electrical simulation or its graph.
+public sealed class Game
+{
+    [ThreadStatic] private static Game current;
+    public static Game Instance
+    {
+        [MethodImpl(MethodImplOptions.NoInlining)] get { return current; }
+    }
+    internal static void SetInstanceForTest(Game instance) { current = instance; }
+    public CircuitManager circuitManager;
+    public UtilityNetworkManager<ElectricalUtilityNetwork, Wire> electricalConduitSystem;
+}
+
+public class UtilityNetwork { public int id; }
+public sealed class ElectricalUtilityNetwork : UtilityNetwork { }
+public sealed class Wire { }
+
+public sealed class UtilityNetworkManager<NetworkType, ItemType>
+    where NetworkType : UtilityNetwork, new()
+{
+    public readonly Dictionary<int, UtilityNetwork> Cells = new Dictionary<int, UtilityNetwork>();
+    public readonly Dictionary<object, UtilityNetwork> VirtualKeys = new Dictionary<object, UtilityNetwork>();
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public UtilityNetwork GetNetworkForCell(int cell)
+    {
+        UtilityNetwork network;
+        return Grid.IsValidCell(cell) && Cells.TryGetValue(cell, out network) ? network : null;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public UtilityNetwork GetNetworkForVirtualKey(object key)
+    {
+        UtilityNetwork network;
+        return VirtualKeys.TryGetValue(key, out network) ? network : null;
+    }
+}
+
+public static class Grid
+{
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static bool IsValidCell(int cell) { return cell >= 0; }
 }
 
 namespace Klei.AI
@@ -49,6 +121,26 @@ public sealed class CircuitManager
     public int SyntheticWork;
     public int SyntheticAllocation;
     public long WorkChecksum;
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public ushort GetCircuitID(int cell)
+    {
+        var network = Game.Instance.electricalConduitSystem.GetNetworkForCell(cell);
+        return network == null ? ushort.MaxValue : (ushort)network.id;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public ushort GetVirtualCircuitID(object key)
+    {
+        var network = Game.Instance.electricalConduitSystem.GetNetworkForVirtualKey(key);
+        return network == null ? ushort.MaxValue : (ushort)network.id;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public ushort GetCircuitID(ICircuitConnected item)
+    {
+        return item.IsVirtual ? GetVirtualCircuitID(item.VirtualCircuitKey) : GetCircuitID(item.PowerCell);
+    }
 
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
     public float GetWattsNeededWhenActive(ushort originCircuitId)

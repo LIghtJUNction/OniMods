@@ -33,26 +33,34 @@ namespace CycleTrim.Core
 
         // Each setter invocation owns this state: 0 = no fields visited,
         // 1 = only identical fields, 3 = at least one changed field.
+        // Once a change requires MarkDirty, later comparisons cannot affect the
+        // decision. Continue the original writes without reading their old values.
         // The transpiler invokes these small helpers once per field. Request
         // inlining so those calls need not dominate a large unchanged range.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void WriteFloat(ref float destination, float value, ref int state)
         {
-            state |= 1;
-            if (SameBits(destination, value))
-                return;
+            if (state != 3)
+            {
+                state = 1;
+                if (SameBits(destination, value))
+                    return;
+                state = 3;
+            }
             destination = value;
-            state = 3;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void WriteVector(ref Vector2 destination, Vector2 value, ref int state)
         {
-            state |= 1;
-            if (SameBits(destination.x, value.x) && SameBits(destination.y, value.y))
-                return;
+            if (state != 3)
+            {
+                state = 1;
+                if (SameBits(destination.x, value.x) && SameBits(destination.y, value.y))
+                    return;
+                state = 3;
+            }
             destination = value;
-            state = 3;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

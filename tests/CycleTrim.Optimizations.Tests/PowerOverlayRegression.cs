@@ -18,6 +18,8 @@ namespace CycleTrim.Optimizations.Tests
         private static readonly MethodInfo Update = AccessTools.Method(typeof(OverlayModes.Power), "Update");
         private static readonly MethodInfo Query = AccessTools.Method(typeof(CircuitManager), "GetWattsNeededWhenActive");
         private static int assertions;
+        private static UtilityNetwork patchedRoutingNetwork;
+        private static int routingPatchCalls;
 
         internal static void Benchmark() { PowerOverlayBenchmark.Run(); }
 
@@ -38,6 +40,7 @@ namespace CycleTrim.Optimizations.Tests
                 TestsExceptionalExitAndNullReceiver();
                 TestsConcurrentUpdates();
                 TestsForeignPatches(harmony);
+                TestsCircuitRoutingDependencies();
                 // This deliberately loads an unsupported external type. Keep it
                 // last; a dynamic assembly can grow for the rest of the process.
                 TestsMidUpdateAssemblyLoad();
@@ -367,6 +370,125 @@ namespace CycleTrim.Optimizations.Tests
             harmony.Patch(Query, prefix: new HarmonyMethod(neutral));
             try { CheckCalls(3, "foreign method sharing the owner string still disables reuse"); }
             finally { harmony.Unpatch(Query, neutral); }
+        }
+
+        private static void TestsCircuitRoutingDependencies()
+        {
+            var networks = typeof(UtilityNetworkManager<ElectricalUtilityNetwork, Wire>);
+            var dependencies = new (MethodInfo Method, bool Virtual)[]
+            {
+                (AccessTools.PropertyGetter(typeof(Generator), "CircuitID"), false),
+                (AccessTools.PropertyGetter(typeof(Generator), "IsVirtual"), false),
+                (AccessTools.PropertyGetter(typeof(Generator), "PowerCell"), false),
+                (AccessTools.PropertyGetter(typeof(Generator), "VirtualCircuitKey"), true),
+                (AccessTools.PropertyGetter(typeof(Game), "Instance"), false),
+                (AccessTools.DeclaredMethod(typeof(CircuitManager), "GetCircuitID",
+                    new[] { typeof(ICircuitConnected) }), false),
+                (AccessTools.DeclaredMethod(typeof(CircuitManager), "GetCircuitID",
+                    new[] { typeof(int) }), false),
+                (AccessTools.DeclaredMethod(typeof(CircuitManager), "GetVirtualCircuitID",
+                    new[] { typeof(object) }), true),
+                (AccessTools.DeclaredMethod(networks, "GetNetworkForCell", new[] { typeof(int) }), false),
+                (AccessTools.DeclaredMethod(networks, "GetNetworkForVirtualKey", new[] { typeof(object) }), true),
+                (AccessTools.DeclaredMethod(typeof(Grid), "IsValidCell", new[] { typeof(int) }), false)
+            };
+            var foreign = new Harmony(Owner + ".routing");
+            try
+            {
+                foreach (var virtualRoute in new[] { false, true })
+                {
+                    var manager = RoutingManager(virtualRoute);
+                    WarmCompatibility();
+                    var overlay = Overlay(manager, 77, 77, 77);
+                    overlay.Update();
+                    Check(manager.Calls == 1 && overlay.Results.All(value => value == 100f),
+                        "unpatched " + (virtualRoute ? "virtual" : "physical")
+                        + " routing still permits actual demand reuse");
+                }
+
+                foreach (var dependency in dependencies)
+                {
+                    Check(dependency.Method != null, "routing fixture exposes the exact dependency signature");
+                    foreach (var postfix in new[] { false, true })
+                    {
+                        var manager = RoutingManager(dependency.Virtual);
+                        var patch = new HarmonyMethod(typeof(PowerOverlayRegression), nameof(AdvanceRouting));
+                        if (postfix)
+                            foreign.Patch(dependency.Method, postfix: patch);
+                        else
+                            foreign.Patch(dependency.Method, prefix: patch);
+                        try
+                        {
+                            var overlay = Overlay(manager, 77, 77, 77);
+                            // Warm the actual patched route before comparison;
+                            // an incidental assembly load must not mask a missing
+                            // guard by independently disabling the first lease.
+                            for (var warmup = 0; warmup < 3; warmup++)
+                            {
+                                ResetRoutingReads(manager);
+                                overlay.Update();
+                            }
+                            var environmentVersion = PowerOverlayCompatibility.CurrentVersion;
+                            ResetRoutingReads(manager);
+                            var expected = new float[3];
+                            for (var index = 0; index < expected.Length; index++)
+                                expected[index] = manager.GetWattsNeededWhenActive(77);
+                            var expectedPatchCalls = routingPatchCalls;
+                            Check(expectedPatchCalls > 0 && expected[0] != expected[1],
+                                "routing patch changes the executed dependency's result");
+
+                            ResetRoutingReads(manager);
+                            overlay.Update();
+                            var label = dependency.Method.DeclaringType.Name + "." + dependency.Method.Name
+                                + (postfix ? " postfix" : " prefix");
+                            Check(overlay.Results.SequenceEqual(expected), label + " preserves every changed answer");
+                            Check(manager.Calls == expected.Length && routingPatchCalls == expectedPatchCalls,
+                                label + " preserves original query and callback counts");
+                            Check(PowerOverlayCompatibility.IsCurrent(environmentVersion),
+                                label + " is rejected without an assembly-load fallback");
+                            Check(PowerOverlayCache.Current == null, label + " releases its lease");
+                        }
+                        finally { foreign.Unpatch(dependency.Method, HarmonyPatchType.All, foreign.Id); }
+                    }
+                }
+                CheckCalls(1, "removing routing patches restores reuse");
+            }
+            finally
+            {
+                foreign.UnpatchAll(foreign.Id);
+                Game.SetInstanceForTest(null);
+                patchedRoutingNetwork = null;
+            }
+        }
+
+        private static CircuitManager RoutingManager(bool virtualRoute)
+        {
+            var manager = Manager(77, 0f);
+            for (ushort circuit = 1; circuit <= 32; circuit++)
+                manager.Values[circuit] = circuit * 100f;
+            var transformer = new Generator { Virtual = virtualRoute, Cell = 5, VirtualKey = new object() };
+            var networks = new UtilityNetworkManager<ElectricalUtilityNetwork, Wire>();
+            patchedRoutingNetwork = new ElectricalUtilityNetwork { id = 1 };
+            networks.Cells[transformer.Cell] = patchedRoutingNetwork;
+            networks.VirtualKeys[transformer.VirtualKey] = patchedRoutingNetwork;
+            Game.SetInstanceForTest(new Game { circuitManager = manager, electricalConduitSystem = networks });
+            // Use the fixture's existing callback so benchmark query bodies and
+            // the unrelated ordinary-query tests acquire no extra work.
+            manager.BeforeRead = () => manager.Values[77] = manager.Values[transformer.CircuitID];
+            return manager;
+        }
+
+        private static void ResetRoutingReads(CircuitManager manager)
+        {
+            manager.Calls = 0;
+            routingPatchCalls = 0;
+            patchedRoutingNetwork.id = 1;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void AdvanceRouting()
+        {
+            patchedRoutingNetwork.id = 1 + ++routingPatchCalls;
         }
 
         private static void TestsMidUpdateAssemblyLoad()

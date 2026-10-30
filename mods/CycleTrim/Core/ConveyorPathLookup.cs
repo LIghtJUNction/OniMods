@@ -10,6 +10,9 @@ namespace CycleTrim.Core
         internal const int MinimumPathLength = 32;
         internal const int MaximumPathLength = 4096;
         private const int MinimumQueriesRemaining = 4;
+        // Even two full-length scans are needed before the existing admission
+        // rule can build a table. Fewer queries cannot amortize that table.
+        internal const int MinimumCandidateLength = 2 + MinimumQueriesRemaining;
 
         [ThreadStatic] private static ConveyorPathLookup current;
         [ThreadStatic] private static ConveyorPathLookup pooled;

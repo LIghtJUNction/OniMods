@@ -27,6 +27,7 @@ namespace CycleTrim.Optimizations.Tests
             {
                 BitComparisonsAreExact();
                 EveryPayloadFieldMatches();
+                FirstChangeKeepsLaterWritesAndFailures();
                 RangeOutputsAndUploadsMatch();
                 InvalidInputsAndPartialWritesMatch();
                 FailedRangesKeepLaterDirtying();
@@ -160,6 +161,59 @@ namespace CycleTrim.Optimizations.Tests
                 case 5: frame.uvMin.y = value; break;
                 case 6: frame.uvMax.x = value; break;
                 case 7: frame.uvMax.y = value; break;
+            }
+        }
+
+        private static void FirstChangeKeepsLaterWritesAndFailures()
+        {
+            foreach (int bits in FloatPatterns)
+            {
+                var frames = new KAnim.Build.SymbolFrameInstance[3];
+                for (int index = 0; index < frames.Length; index++)
+                {
+                    frames[index] = AnimationSymbolFixture.Frame(index + 1);
+                    for (int component = 0; component < 8; component++)
+                        SetComponent(ref frames[index], component, BitConverter.Int32BitsToSingle(
+                            (component & 1) == 0 ? bits : bits ^ int.MinValue));
+                }
+                var source = new KBatchGroupData(frames);
+                foreach (bool failAfterWrites in new[] { false, true })
+                {
+                    var baseline = new SymbolOverrideInfoGpuData(3);
+                    var candidate = new SymbolOverrideInfoGpuData(3);
+                    var originalTexture = new AnimationSymbolFixture.TextureConsumer(3);
+                    var candidateTexture = new AnimationSymbolFixture.TextureConsumer(3);
+                    originalTexture.Update(baseline);
+                    candidateTexture.Update(candidate);
+                    int count = failAfterWrites ? 4 : 3;
+                    // The first atlas changes from zero. Every later scalar and
+                    // vector must still be written, including exact NaN/zero bits.
+                    var originalError = Error(() => AnimationSymbolFixture.OriginalRange(
+                        baseline, 0, count, 7, source, 0, frames.Length));
+                    var candidateError = Error(() => candidate.SetSymbolOverrideInfo(
+                        0, count, 7, source, 0, frames.Length));
+                    Equal(failAfterWrites ? typeof(IndexOutOfRangeException) : null,
+                        originalError, "late destination failure reaches the intended path");
+                    Equal(originalError, candidateError, "first change preserves late exception type");
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(),
+                        "first change preserves all later scalar/vector writes");
+                    Equal(baseline.version, candidate.version,
+                        "first change preserves completion or failure dirtying");
+
+                    originalTexture.Update(baseline);
+                    candidateTexture.Update(candidate);
+                    EqualBytes(originalTexture.Bytes, candidateTexture.Bytes,
+                        "first change preserves the consumer before retry");
+                    int version = candidate.version;
+                    AnimationSymbolFixture.OriginalRange(baseline, 0, 3, 7, source, 0, frames.Length);
+                    candidate.SetSymbolOverrideInfo(0, 3, 7, source, 0, frames.Length);
+                    Equal(failAfterWrites ? unchecked(version + 1) : version, candidate.version,
+                        "only a failed range keeps dirtying an identical retry");
+                    originalTexture.Update(baseline);
+                    candidateTexture.Update(candidate);
+                    EqualBytes(originalTexture.Bytes, candidateTexture.Bytes,
+                        "first change retry uploads all pending bytes");
+                }
             }
         }
 

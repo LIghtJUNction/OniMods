@@ -32,6 +32,7 @@ namespace CycleTrim.Optimizations.Tests
                 for (var index = 0; index < cases.Count; index++)
                     Check(Evaluate(cases[index]) == expected[index], "differential path result " + index);
                 TestActualPatch();
+                TestShortCandidateScopes();
                 TestForeignPatches();
             }
             finally
@@ -269,6 +270,54 @@ namespace CycleTrim.Optimizations.Tests
             second[second.Count - 1] = new SolidConduitFlow.Conduit(65001);
             sameLength.AddPath(second);
             Check(second.Count == 2, "same-length mutation between calls is observed without a persistent cache");
+        }
+
+        private static void TestShortCandidateScopes()
+        {
+            for (var length = 2; length < ConveyorPathLookup.MinimumCandidateLength; length++)
+            {
+                var flow = RepeatedFixture(64, 1);
+                var candidate = Rails(Enumerable.Range(0, length));
+                candidate[0] = new SolidConduitFlow.Conduit(65000);
+                var observed = false;
+                flow.GetSOAInfo().ObserveRead = () =>
+                {
+                    observed = true;
+                    Check(ConveyorPathLookup.Current == null,
+                        "short top-level query preserves original reads without a lookup scope");
+                };
+                flow.AddPath(candidate);
+                Check(observed && candidate.Count == length,
+                    "short candidate still visits shared rails and preserves multi-direction paths");
+            }
+
+            var retained = Rails(Enumerable.Range(0, 64));
+            var parent = ConveyorPathLookup.Enter(Rails(Enumerable.Range(500, 64)), true);
+            try
+            {
+                FillIndex(parent, retained);
+                Check(parent.IndexEntryCount == retained.Count, "parent has a live index before nesting");
+                var nested = RepeatedFixture(64, 1);
+                nested.Paths[0] = retained;
+                var observed = false;
+                nested.GetSOAInfo().ObserveRead = () =>
+                {
+                    observed = true;
+                    Check(ConveyorPathLookup.Current != null
+                        && !ReferenceEquals(ConveyorPathLookup.Current, parent),
+                        "short nested query cannot borrow the parent's index");
+                    retained[7] = new SolidConduitFlow.Conduit(999);
+                    throw new InvalidOperationException("nested short-path mutation");
+                };
+                Expect<InvalidOperationException>(() => nested.AddPath(Rails(new[] { 65000, 1 })));
+                Check(observed && ReferenceEquals(ConveyorPathLookup.Current, parent)
+                    && parent.IndexEntryCount == 0,
+                    "short nested exception restores and invalidates the parent");
+                Check(Lookup(parent, retained, rail => rail.idx == 999, 999, () => true) == 7,
+                    "parent observes same-length mutation after a short nested failure");
+            }
+            finally { ConveyorPathLookup.Exit(parent); }
+            Check(ConveyorPathLookup.Current == null, "short nested test leaves no scope");
         }
 
         private static void TestForeignPatches()

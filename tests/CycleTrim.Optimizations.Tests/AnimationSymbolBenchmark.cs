@@ -10,8 +10,9 @@ namespace CycleTrim.Optimizations.Tests
             internal readonly string Name;
             internal readonly int Range;
             internal readonly bool Change;
-            internal Scenario(string name, int range, bool change)
-            { Name = name; Range = range; Change = change; }
+            internal readonly bool ChangeAtEnd;
+            internal Scenario(string name, int range, bool change, bool changeAtEnd = false)
+            { Name = name; Range = range; Change = change; ChangeAtEnd = changeAtEnd; }
         }
 
         private struct Sample
@@ -28,7 +29,10 @@ namespace CycleTrim.Optimizations.Tests
                 new Scenario("repeat-single", 1, false),
                 new Scenario("change-single", 1, true),
                 new Scenario("repeat-range4", 4, false),
-                new Scenario("repeat-range256", 256, false)
+                new Scenario("repeat-range256", 256, false),
+                new Scenario("change-range4", 4, true),
+                new Scenario("change-range256", 256, true),
+                new Scenario("change-last-range256", 256, true, changeAtEnd: true)
             };
             Console.WriteLine("BENCH animation-config warmups=3 pairs=7 symbols=256"
                 + " updates=30000 settersPerUpdate=1 consumer=managed-byte-copy"
@@ -71,8 +75,9 @@ namespace CycleTrim.Optimizations.Tests
             for (int index = 0; index < frames.Length; index++)
                 frames[index] = AnimationSymbolFixture.Frame(index + 1);
             var source = new KBatchGroupData(frames);
-            var frame = frames[0];
-            if (scenario.Change) frame.uvMin.x = 0;
+            var frame = frames[scenario.ChangeAtEnd ? frames.Length - 1 : 0];
+            if (scenario.Change && scenario.Range == 1) frame.uvMin.x = 0;
+            int atlas = 3;
             if (scenario.Range == 1)
                 AnimationSymbolFixture.OriginalOne(data, 0, ref frame);
             else
@@ -85,7 +90,18 @@ namespace CycleTrim.Optimizations.Tests
             long start = Stopwatch.GetTimestamp();
             for (int update = 0; update < updates; update++)
             {
-                if (scenario.Change) frame.uvMin.x = (update & 1) + 1;
+                if (scenario.Change)
+                {
+                    if (scenario.Range == 1)
+                        frame.uvMin.x = (update & 1) + 1;
+                    else if (scenario.ChangeAtEnd)
+                    {
+                        frame.uvMax.y = (update & 1) + 1;
+                        source.symbolFrameInstances[frames.Length - 1] = frame;
+                    }
+                    else
+                        atlas = (update & 1) + 1;
+                }
                 if (scenario.Range == 1)
                 {
                     if (candidate) data.SetSymbolOverrideInfo(0, ref frame);
@@ -93,8 +109,8 @@ namespace CycleTrim.Optimizations.Tests
                 }
                 else
                 {
-                    if (candidate) data.SetSymbolOverrideInfo(0, scenario.Range, 3, source, 0, frames.Length);
-                    else AnimationSymbolFixture.OriginalRange(data, 0, scenario.Range, 3, source, 0, frames.Length);
+                    if (candidate) data.SetSymbolOverrideInfo(0, scenario.Range, atlas, source, 0, frames.Length);
+                    else AnimationSymbolFixture.OriginalRange(data, 0, scenario.Range, atlas, source, 0, frames.Length);
                 }
                 if (consume) texture.Update(data);
             }

@@ -4,6 +4,14 @@ Generated from `git log -- mods/CycleTrim`.
 
 ## Unreleased — 2026-10-30
 
+- Guard transformer circuit-resolution callbacks before reusing power-overlay
+  answers. Real Harmony dependency patches now retain original per-query
+  results and callback counts, including physical and virtual circuits.
+- Stop comparing animation fields after a setter has already found a change;
+  preserve subsequent writes, exact payload bits and partial-failure behavior.
+- Skip top-level conveyor lookup scopes for candidates too short to meet the
+  existing index rule, retaining nested-call isolation and invalidation.
+
 - Add opt-in conveyor membership indexing scoped to one path-construction call.
   Build only after repeated scans, retain first positions, and discard the index
   on list edits, nested calls and exceptional exits.
