@@ -1,0 +1,34 @@
+{
+  "selected_round": "inplace",
+  "variants": {
+    "initial": {
+      "mods/CycleTrim/Core/ConduitVisualRefreshGate.cs": "64ec9f559deeca6ec8e0cddacec085b1f5d3107ad1fd1d22952466170559d1af",
+      "mods/CycleTrim/Patches/ConduitVisualSnapshot.cs": "995e482646621a3161da33431c10eda59ac408990cd21bd2a95f8788954e35f2",
+      "tests/CycleTrim.Optimizations.Tests/ConduitVisualBenchmark.cs": "3db24537f27dd3e49ae6f3bb66e4fda38ace142cc569ece585a183b63bf829b6",
+      "mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs": "3515e412b76ac3f9137d83c38c299bb05325662db8c0032df20df0f2e8c42b23",
+      "host_dll_sha256": "e16706c3c0229b7df753df5bf7a3dcf778783a2903a3cf436eb7f7d927a1ca82"
+    },
+    "dispatch": {
+      "mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs": "55c9cee796475dca5541a5eb182f8e3c149f8d75fc34154c9c2c7135014c02e1",
+      "mods/CycleTrim/Patches/ConduitVisualSnapshot.cs": "995e482646621a3161da33431c10eda59ac408990cd21bd2a95f8788954e35f2",
+      "mods/CycleTrim/Core/ConduitVisualRefreshGate.cs": "64ec9f559deeca6ec8e0cddacec085b1f5d3107ad1fd1d22952466170559d1af",
+      "tests/CycleTrim.Optimizations.Tests/ConduitVisualBenchmark.cs": "3db24537f27dd3e49ae6f3bb66e4fda38ace142cc569ece585a183b63bf829b6",
+      "host_dll_sha256": "1655e0c68942b6e49efa8d8a92c25dc3cb3b15a0e98deb352e69dd56c6a1d01a"
+    },
+    "inplace": {
+      "mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs": "f4474202f3efbd0cf84d97f75b91bbb958222599ed135deae5bcdb4690d65822",
+      "mods/CycleTrim/Patches/ConduitVisualSnapshot.cs": "1a1a77d075e27e6c26cbbfaed17a8a1b3f89d45259e5a65e82556f608450b647",
+      "mods/CycleTrim/Core/ConduitVisualRefreshGate.cs": "64ec9f559deeca6ec8e0cddacec085b1f5d3107ad1fd1d22952466170559d1af",
+      "tests/CycleTrim.Optimizations.Tests/ConduitVisualBenchmark.cs": "3db24537f27dd3e49ae6f3bb66e4fda38ace142cc569ece585a183b63bf829b6",
+      "host_dll_sha256": "a83e1e6fde68eb353e17425e2da3fabfbdc7140ea7d686bd372bed7beab46160"
+    },
+    "aggregate": {
+      "mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs": "f4474202f3efbd0cf84d97f75b91bbb958222599ed135deae5bcdb4690d65822",
+      "mods/CycleTrim/Patches/ConduitVisualSnapshot.cs": "53fa5a021e835e91e56bec3bd4fa0b4ee32d7574240ae01abb16815ad04f8299",
+      "mods/CycleTrim/Core/ConduitVisualRefreshGate.cs": "64ec9f559deeca6ec8e0cddacec085b1f5d3107ad1fd1d22952466170559d1af",
+      "tests/CycleTrim.Optimizations.Tests/ConduitVisualBenchmark.cs": "3db24537f27dd3e49ae6f3bb66e4fda38ace142cc569ece585a183b63bf829b6",
+      "host_dll_sha256": "baf10cf49eebfcf361e4a070ac31d8baa2f65debf99b5dcc7c7593b540041ef5"
+    }
+  },
+  "aggregate_qualified_source_sha256": "3341831f3d7646f8235f711c68528741b75245cb837608a6eec1a8c4e2b5290c"
+}

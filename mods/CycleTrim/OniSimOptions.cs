@@ -1,3 +1,4 @@
+using CycleTrim.Core;
 using PeterHan.PLib.Options;
 
 namespace CycleTrim
@@ -65,6 +66,12 @@ namespace CycleTrim
             "优化 / Optimizations")]
         [RestartRequired]
         public bool OptimizeAnimationSymbols { get; set; }
+
+        [Option("管道动画刷新 / Conduit animation refresh",
+            "Full 保持每帧；Half 每2帧、Quarter 每4帧重建普通管道动画，最长100毫秒后下次绘制刷新。查看内容、音效、模拟或视野变化时立即刷新；物质传输按原时序运行。默认Full，修改后需要重启。",
+            "显示 / Visuals")]
+        [RestartRequired]
+        public ConduitAnimationQuality ConduitAnimation { get; set; } = ConduitAnimationQuality.Full;
 
         [Option("性能诊断日志 / Performance diagnostics",
             "向 Player.log 输出耗时和内存统计，用于反馈问题。统计本身有额外开销，平时保持关闭。需要重启游戏。",

@@ -4,6 +4,16 @@ Generated from `git log -- mods/CycleTrim`.
 
 ## Unreleased — 2026-10-30
 
+- Add restart-required Full / Half / Quarter conduit display refresh. Full remains
+  the default; reduced modes sample geometry and sprite phase while preserving
+  simulation calls, the outer animation clock, audio and every-frame drawing.
+- Invalidate display reuse on simulation/topology changes, visible bounds, world,
+  style and resource changes. Empty returns, partial failures, reentry and cleanup
+  cannot publish old or incomplete meshes; incompatible rendering patches fall back.
+- Validate real Harmony dispatch, late patches and failure paths. Retain complete
+  paired synthetic measurements, including slower controls and failed iterations;
+  game performance and Unity/Mono acceptance still require Steam-launched testing.
+
 - Guard transformer circuit-resolution callbacks before reusing power-overlay
   answers. Real Harmony dependency patches now retain original per-query
   results and callback counts, including physical and virtual circuits.

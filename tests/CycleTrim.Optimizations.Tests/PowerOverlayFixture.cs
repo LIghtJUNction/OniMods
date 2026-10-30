@@ -62,7 +62,7 @@ public sealed class Generator : ICircuitConnected
 
 // Original, deliberately small routing fixtures expose the actual dependency
 // signatures. They do not model the game's electrical simulation or its graph.
-public sealed class Game
+public sealed partial class Game
 {
     [ThreadStatic] private static Game current;
     public static Game Instance
@@ -99,7 +99,7 @@ public sealed class UtilityNetworkManager<NetworkType, ItemType>
     }
 }
 
-public static class Grid
+public static partial class Grid
 {
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static bool IsValidCell(int cell) { return cell >= 0; }

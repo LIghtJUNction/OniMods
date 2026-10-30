@@ -13,6 +13,7 @@
     <Compile Include="../../mods/CycleTrim/ModInfo.OniSim.cs" Link="ModInfo.OniSim.cs" />
     <Compile Include="../../mods/CycleTrim/OniSimOptions.cs" Link="OniSimOptions.cs" />
     <Compile Include="../../mods/CycleTrim/Core/CycleTrimPatchOptions.cs" Link="CycleTrimPatchOptions.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/ConduitVisualRefreshGate.cs" Link="ConduitVisualRefreshGate.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeCounter.cs" Link="PerformanceProbeCounter.cs" />
     <Compile Include="../../mods/CycleTrim/Core/RefreshStamp.cs" Link="RefreshStamp.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs" Link="PerformanceProbeGenerationCounter.cs" />

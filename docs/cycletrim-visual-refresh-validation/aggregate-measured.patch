@@ -1,0 +1,124 @@
+--- a/mods/CycleTrim/Patches/ConduitVisualSnapshot.cs
++++ b/mods/CycleTrim/Patches/ConduitVisualSnapshot.cs
+@@ -1,0 +2 @@
++using System.Linq.Expressions;
+@@ -29,4 +30,2 @@
+-            var tuning = Access.Tuning(instance);
+-            var style = Access.Style(instance);
+-            var moving = Access.Moving(instance);
+-            var stationary = Access.Stationary(instance);
++            Access.ReadOwners(instance, out var tuning, out var style,
++                out var moving, out var stationary);
+@@ -37,4 +36,2 @@
+-            var movingMesh = Access.Mesh(moving);
+-            var staticMesh = Access.Mesh(stationary);
+-            var movingMaterial = Access.Material(moving);
+-            var staticMaterial = Access.Material(stationary);
++            Access.ReadResources(moving, stationary, out var movingMesh, out var staticMesh,
++                out var movingMaterial, out var staticMaterial);
+@@ -57,4 +54,2 @@
+-            snapshot.layer = Access.Layer(instance);
+-            snapshot.highlightedCell = Access.HighlightedCell(instance);
+-            snapshot.highlightColour = Access.HighlightColour(instance);
+-            snapshot.flow = Access.Flow(instance);
++            Access.ReadControls(instance, out snapshot.layer, out snapshot.highlightedCell,
++                out snapshot.highlightColour, out snapshot.flow);
+@@ -128,0 +124,14 @@
++            internal delegate void OwnersReader(ConduitFlowVisualizer instance,
++                out ConduitFlowVisualizer.Tuning tuning, out Game.ConduitVisInfo style,
++                out object moving, out object stationary);
++            internal delegate void ResourcesReader(object moving, object stationary,
++                out Mesh movingMesh, out Mesh staticMesh,
++                out Material movingMaterial, out Material staticMaterial);
++            internal delegate void ControlsReader(ConduitFlowVisualizer instance,
++                out int layer, out int highlightedCell, out Color32 highlightColour,
++                out ConduitFlow flow);
++
++            internal static OwnersReader ReadOwners;
++            internal static ResourcesReader ReadResources;
++            internal static ControlsReader ReadControls;
++
+@@ -131 +139,0 @@
+-            internal static AccessTools.FieldRef<ConduitFlowVisualizer, Color32> HighlightColour;
+@@ -133,5 +140,0 @@
+-            internal static AccessTools.FieldRef<ConduitFlowVisualizer, ConduitFlowVisualizer.Tuning> Tuning;
+-            internal static AccessTools.FieldRef<ConduitFlowVisualizer, Game.ConduitVisInfo> Style;
+-            internal static AccessTools.FieldRef<ConduitFlowVisualizer, object> Moving, Stationary;
+-            internal static AccessTools.FieldRef<object, Mesh> Mesh;
+-            internal static AccessTools.FieldRef<object, Material> Material;
+@@ -145 +147,0 @@
+-                HighlightColour = AccessTools.FieldRefAccess<ConduitFlowVisualizer, Color32>("highlightColour");
+@@ -147,6 +148,0 @@
+-                Tuning = AccessTools.FieldRefAccess<ConduitFlowVisualizer, ConduitFlowVisualizer.Tuning>("tuning");
+-                Style = AccessTools.FieldRefAccess<ConduitFlowVisualizer, Game.ConduitVisInfo>("visInfo");
+-                Moving = AccessTools.FieldRefAccess<ConduitFlowVisualizer, object>("movingBallMesh");
+-                Stationary = AccessTools.FieldRefAccess<ConduitFlowVisualizer, object>("staticBallMesh");
+-                Mesh = AccessTools.FieldRefAccess<object, Mesh>(AccessTools.Field(meshType, "mesh"));
+-                Material = AccessTools.FieldRefAccess<object, Material>(AccessTools.Field(meshType, "material"));
+@@ -154,0 +151,66 @@
++
++                ReadOwners = CreateOwnersReader();
++                ReadResources = CreateResourcesReader(meshType);
++                ReadControls = CreateControlsReader();
++            }
++
++            // Each reader contains only the original field loads, in order.
++            // Keep the groups separate so no load crosses a null check or the
++            // live camera/world queries, which can invoke another mod's code.
++            private static OwnersReader CreateOwnersReader()
++            {
++                var instance = Expression.Parameter(typeof(ConduitFlowVisualizer), "instance");
++                var tuning = Output<ConduitFlowVisualizer.Tuning>("tuning");
++                var style = Output<Game.ConduitVisInfo>("style");
++                var moving = Output<object>("moving");
++                var stationary = Output<object>("stationary");
++                return Expression.Lambda<OwnersReader>(Expression.Block(
++                    Expression.Assign(tuning, Field(instance, "tuning")),
++                    Expression.Assign(style, Field(instance, "visInfo")),
++                    Expression.Assign(moving, Field(instance, "movingBallMesh")),
++                    Expression.Assign(stationary, Field(instance, "staticBallMesh")),
++                    Expression.Empty()), instance, tuning, style, moving, stationary).Compile();
++            }
++
++            private static ResourcesReader CreateResourcesReader(Type meshType)
++            {
++                var moving = Expression.Parameter(typeof(object), "moving");
++                var stationary = Expression.Parameter(typeof(object), "stationary");
++                var movingMesh = Output<Mesh>("movingMesh");
++                var staticMesh = Output<Mesh>("staticMesh");
++                var movingMaterial = Output<Material>("movingMaterial");
++                var staticMaterial = Output<Material>("staticMaterial");
++                var movingValue = Expression.Convert(moving, meshType);
++                var staticValue = Expression.Convert(stationary, meshType);
++                return Expression.Lambda<ResourcesReader>(Expression.Block(
++                    Expression.Assign(movingMesh, Field(movingValue, "mesh")),
++                    Expression.Assign(staticMesh, Field(staticValue, "mesh")),
++                    Expression.Assign(movingMaterial, Field(movingValue, "material")),
++                    Expression.Assign(staticMaterial, Field(staticValue, "material")),
++                    Expression.Empty()), moving, stationary, movingMesh, staticMesh,
++                    movingMaterial, staticMaterial).Compile();
++            }
++
++            private static ControlsReader CreateControlsReader()
++            {
++                var instance = Expression.Parameter(typeof(ConduitFlowVisualizer), "instance");
++                var layer = Output<int>("layer");
++                var highlightedCell = Output<int>("highlightedCell");
++                var highlightColour = Output<Color32>("highlightColour");
++                var flow = Output<ConduitFlow>("flow");
++                return Expression.Lambda<ControlsReader>(Expression.Block(
++                    Expression.Assign(layer, Field(instance, "layer")),
++                    Expression.Assign(highlightedCell, Field(instance, "highlightedCell")),
++                    Expression.Assign(highlightColour, Field(instance, "highlightColour")),
++                    Expression.Assign(flow, Field(instance, "flowManager")),
++                    Expression.Empty()), instance, layer, highlightedCell, highlightColour, flow).Compile();
++            }
++
++            private static ParameterExpression Output<T>(string name)
++            {
++                return Expression.Parameter(typeof(T).MakeByRefType(), name);
++            }
++
++            private static MemberExpression Field(Expression instance, string name)
++            {
++                return Expression.Field(instance, AccessTools.Field(instance.Type, name));

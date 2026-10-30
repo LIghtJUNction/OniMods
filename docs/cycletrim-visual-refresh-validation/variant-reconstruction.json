@@ -1,0 +1,38 @@
+{
+  "all_checks_passed": true,
+  "checks": [
+    {
+      "variant": "initial",
+      "patch": "initial-to-selected.patch",
+      "reverse": true,
+      "source_hash_checks": {
+        "mods/CycleTrim/Core/ConduitVisualRefreshGate.cs": true,
+        "mods/CycleTrim/Patches/ConduitVisualSnapshot.cs": true,
+        "tests/CycleTrim.Optimizations.Tests/ConduitVisualBenchmark.cs": true,
+        "mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs": true
+      }
+    },
+    {
+      "variant": "dispatch",
+      "patch": "dispatch-to-selected.patch",
+      "reverse": true,
+      "source_hash_checks": {
+        "mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs": true,
+        "mods/CycleTrim/Patches/ConduitVisualSnapshot.cs": true,
+        "mods/CycleTrim/Core/ConduitVisualRefreshGate.cs": true,
+        "tests/CycleTrim.Optimizations.Tests/ConduitVisualBenchmark.cs": true
+      }
+    },
+    {
+      "variant": "aggregate",
+      "patch": "aggregate-measured.patch",
+      "reverse": false,
+      "source_hash_checks": {
+        "mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs": true,
+        "mods/CycleTrim/Patches/ConduitVisualSnapshot.cs": true,
+        "mods/CycleTrim/Core/ConduitVisualRefreshGate.cs": true,
+        "tests/CycleTrim.Optimizations.Tests/ConduitVisualBenchmark.cs": true
+      }
+    }
+  ]
+}
