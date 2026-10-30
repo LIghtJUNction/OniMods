@@ -15,5 +15,9 @@
     <Compile Include="../../mods/CycleTrim/Patches/SaveTypeMetadataPatch.cs" Link="SaveTypeMetadataPatch.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PowerOverlay*.cs" Link="%(Filename)%(Extension)" />
     <Compile Include="../../mods/CycleTrim/Patches/PowerOverlay*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../mods/CycleTrim/Core/Conveyor*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../mods/CycleTrim/Patches/Conveyor*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../mods/CycleTrim/Core/Animation*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../mods/CycleTrim/Patches/Animation*.cs" Link="%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

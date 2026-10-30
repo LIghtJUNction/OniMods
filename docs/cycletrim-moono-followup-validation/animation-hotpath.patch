@@ -1,0 +1,12 @@
+--- a/mods/CycleTrim/Core/AnimationSymbolValueComparer.cs
++++ b/mods/CycleTrim/Core/AnimationSymbolValueComparer.cs
+@@ -19,0 +20 @@
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+@@ -34,0 +36,3 @@
++        // The transpiler invokes these small helpers once per field. Request
++        // inlining so those calls need not dominate a large unchanged range.
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+@@ -43,0 +48 @@
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+@@ -52,0 +58 @@
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]

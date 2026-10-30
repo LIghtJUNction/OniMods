@@ -9,6 +9,8 @@ namespace CycleTrim.Core
         internal static bool LimitCreatureBrainUpdates { get; private set; } = true;
         internal static bool OptimizeSaveMetadata { get; private set; } = true;
         internal static bool OptimizePowerOverlay { get; private set; }
+        internal static bool OptimizeConveyorPathLookup { get; private set; }
+        internal static bool OptimizeAnimationSymbols { get; private set; }
         internal static bool EnablePerformanceDiagnostics { get; private set; }
 
         // Capture settings before Harmony installs patches. Runtime edits take
@@ -21,7 +23,9 @@ namespace CycleTrim.Core
             bool creatureBrainUpdates,
             bool performanceDiagnostics,
             bool saveMetadata = true,
-            bool powerOverlay = false)
+            bool powerOverlay = false,
+            bool conveyorPathLookup = false,
+            bool animationSymbols = false)
         {
             OptimizePickupCandidates = pickupCandidates;
             ThrottleBusyDuplicants = busyDuplicants;
@@ -31,6 +35,8 @@ namespace CycleTrim.Core
             EnablePerformanceDiagnostics = performanceDiagnostics;
             OptimizeSaveMetadata = saveMetadata;
             OptimizePowerOverlay = powerOverlay;
+            OptimizeConveyorPathLookup = conveyorPathLookup;
+            OptimizeAnimationSymbols = animationSymbols;
         }
     }
 }

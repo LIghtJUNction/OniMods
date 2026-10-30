@@ -2,7 +2,17 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
-## Unreleased — 2026-10-29
+## Unreleased — 2026-10-30
+
+- Add opt-in conveyor membership indexing scoped to one path-construction call.
+  Build only after repeated scans, retain first positions, and discard the index
+  on list edits, nested calls and exceptional exits.
+- Add opt-in animation override field comparison using exact float bits. Keep
+  original writes and errors in order, coalesce redundant version increments,
+  and preserve original dirty behavior after a partial-write failure.
+- Extend the real-Harmony host suite and paired benchmarks with short/early-hit
+  conveyor controls and changing/unchanged animation workloads. The new options
+  require a restart; runtime acceptance remains separate from host evidence.
 
 - Independently implement save type metadata reuse inspired by oni-moono: cache
   only immutable CLR type metadata, preserve other reflection queries, and use

@@ -1,0 +1,50 @@
+{
+  "ilspy_version": "11.0.0.9375",
+  "reference_build": 737790,
+  "game_assembly_executed": false,
+  "method_bodies": "stripped in compile-only reference DLLs; all queried methods have 0 IL instructions",
+  "targets": [
+    {
+      "assembly": "Assembly-CSharp",
+      "type": "SolidConduitFlow",
+      "method": "private instance void TryAdd(List<SolidConduitFlow.Conduit> new_path)",
+      "fields": {
+        "pathList": "private List<List<Conduit>>",
+        "path": "private List<Conduit>",
+        "Conduit.idx": "public int"
+      }
+    },
+    {
+      "assembly": "Assembly-CSharp-firstpass",
+      "type": "SymbolOverrideInfoGpuData",
+      "methods": [
+        "public instance void SetSymbolOverrideInfo(int symbol_start_idx, int symbol_num_frames, int atlas_idx, KBatchGroupData source_data, int source_start_idx, int source_num_frames)",
+        "public instance void SetSymbolOverrideInfo(int symbol_idx, ref KAnim.Build.SymbolFrameInstance symbol_frame_instance)"
+      ],
+      "fields": {
+        "symbolOverrideInfoConverter": "private SymbolOverrideInfoToByteConverter",
+        "symbolCount": "private int",
+        "symbolOverrideInfos": "private array property",
+        "version": "public getter / private setter",
+        "MarkDirty": "private method",
+        "SymbolOverrideInfo": "public explicit-layout struct; public atlas/isoverriden/unused1/unused2 floats and bboxMin/bboxMax/uvMin/uvMax Vector2 fields"
+      }
+    },
+    {
+      "assembly": "Assembly-CSharp-firstpass",
+      "type": "SymbolInstanceGpuData",
+      "methods": [
+        "public instance void SetVisible(int symbol_idx,bool is_visible)",
+        "public instance void SetSymbolScale(int symbol_index,float scale)",
+        "public instance void SetSymbolTint(int symbol_index,Color color)"
+      ],
+      "fields": {
+        "symbolInstancesConverter": "private SymbolInstanceToByteConverter",
+        "symbolInstances": "private array property",
+        "version": "public getter / private setter",
+        "MarkDirty": "private method",
+        "SymbolInstance": "public explicit-layout struct; public isVisible/scale/unused/unused2 floats and color Color field"
+      }
+    }
+  ]
+}
