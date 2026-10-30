@@ -40,6 +40,8 @@ ONI 性能优化 Mod。该 Mod 针对缺氧的几个高频模拟路径做降频�
 
 这些优化来自对 oni-moono 机制的研究，使用独立实现。存档与电力视图的验证见[首轮说明](../../docs/cycletrim-moono-optimizations.md)，轨道查找与动画更新的设计、测试及收益范围见[后续优化报告](../../docs/cycletrim-moono-followup.md)。各项合成基准分别度量具体工作量；实机性能需用同一存档和设置交替测量。
 
+短轨道、提前返回和动画比较等退化路径的后续改进，见[开销回收与复测报告](../../docs/cycletrim-regression-recovery.md)。其中保留了旧版与新版的交错样本，以及未采纳方案的记录。
+
 如果列表里只有旧的 `CycleTrimHarness` 测试副本，需退出游戏后更新到包含 PLib 的 CycleTrim 包，并确认只启用一份相同 `staticID` 的安装。源码中存在设置页，不代表当前游戏加载的旧 DLL 也有这个入口。
 
 ## 兼容与说明

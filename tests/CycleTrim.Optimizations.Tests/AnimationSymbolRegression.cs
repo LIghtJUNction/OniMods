@@ -26,10 +26,12 @@ namespace CycleTrim.Optimizations.Tests
             try
             {
                 BitComparisonsAreExact();
+                ArbitraryBitPatternsMatchHostReference();
                 EveryPayloadFieldMatches();
                 FirstChangeKeepsLaterWritesAndFailures();
                 RangeOutputsAndUploadsMatch();
                 InvalidInputsAndPartialWritesMatch();
+                RepeatedArrayAddressesPreserveFailures();
                 FailedRangesKeepLaterDirtying();
                 EmptyRangesAndVersionWrap();
                 ThreadsAndNestedCallsAreIndependent();
@@ -80,24 +82,29 @@ namespace CycleTrim.Optimizations.Tests
             foreach (int bits in FloatPatterns)
             {
                 float value = BitConverter.Int32BitsToSingle(bits);
-                float target = value;
-                int state = 0;
-                AnimationSymbolValueComparer.WriteFloat(ref target, value, ref state);
-                Equal(1, state, "identical scalar touched without change");
-                Equal(bits, BitConverter.SingleToInt32Bits(target), "identical scalar bits");
                 float changed = BitConverter.Int32BitsToSingle(bits ^ int.MinValue);
-                AnimationSymbolValueComparer.WriteFloat(ref target, changed, ref state);
-                Equal(3, state, "sign change is a real write, including zero and NaN");
-                Equal(bits ^ int.MinValue, BitConverter.SingleToInt32Bits(target), "changed scalar bits");
+                Check(AnimationSymbolValueComparer.SameBits(value, value), "identical scalar bits");
+                Check(!AnimationSymbolValueComparer.SameBits(value, changed),
+                    "sign change differs, including zero and NaN");
+                Check(!AnimationSymbolValueComparer.SameBits(changed, value), "scalar comparison is symmetric");
                 var vector = new UnityEngine.Vector2(value, changed);
-                state = 0;
-                AnimationSymbolValueComparer.WriteVector(ref vector,
-                    new UnityEngine.Vector2(value, changed), ref state);
-                Equal(1, state, "identical vector bits");
-                AnimationSymbolValueComparer.WriteVector(ref vector,
-                    new UnityEngine.Vector2(value, value), ref state);
-                Equal(3, state, "second vector component changes");
-                Equal(bits, BitConverter.SingleToInt32Bits(vector.y), "vector stores exact payload");
+                Check(AnimationSymbolValueComparer.SameVectorBits(vector, vector), "identical vector bits");
+                Check(!AnimationSymbolValueComparer.SameVectorBits(vector,
+                    new UnityEngine.Vector2(changed, changed)), "first vector component differs");
+                Check(!AnimationSymbolValueComparer.SameVectorBits(vector,
+                    new UnityEngine.Vector2(value, value)), "second vector component differs");
+                Check(!AnimationSymbolValueComparer.SameVectorBits(vector,
+                    new UnityEngine.Vector2(changed, value)), "both vector components differ");
+            }
+            foreach (int left in FloatPatterns)
+            {
+                foreach (int right in FloatPatterns)
+                {
+                    var vector = new UnityEngine.Vector2(BitConverter.Int32BitsToSingle(left),
+                        BitConverter.Int32BitsToSingle(right));
+                    Check(AnimationSymbolValueComparer.SameVectorBits(vector, vector),
+                        "mixed NaN/zero/infinity payloads retain both words");
+                }
             }
         }
 
@@ -147,6 +154,32 @@ namespace CycleTrim.Optimizations.Tests
                         "unused field is untouched");
                 }
             }
+        }
+
+        private static void ArbitraryBitPatternsMatchHostReference()
+        {
+            uint random = 0xA315769Bu;
+            for (int sample = 0; sample < 1024; sample++)
+            {
+                int leftBits = unchecked((int)NextBits(ref random));
+                int rightBits = unchecked((int)NextBits(ref random));
+                float left = BitConverter.Int32BitsToSingle(leftBits);
+                float right = BitConverter.Int32BitsToSingle(rightBits);
+                Equal(BitConverter.SingleToInt32Bits(left) == BitConverter.SingleToInt32Bits(right),
+                    AnimationSymbolValueComparer.SameBits(left, right), "arbitrary bit comparison");
+                Check(AnimationSymbolValueComparer.SameBits(left, left), "arbitrary identical payload");
+                float changed = BitConverter.Int32BitsToSingle(leftBits ^ (1 << (sample & 31)));
+                Check(!AnimationSymbolValueComparer.SameBits(left, changed),
+                    "every individual bit can distinguish a payload");
+            }
+        }
+
+        private static uint NextBits(ref uint value)
+        {
+            value ^= value << 13;
+            value ^= value >> 17;
+            value ^= value << 5;
+            return value;
         }
 
         private static void SetComponent(ref KAnim.Build.SymbolFrameInstance frame, int field, float value)
@@ -313,6 +346,59 @@ namespace CycleTrim.Optimizations.Tests
             Equal(version, independent.version, "a failure does not disable other instances");
         }
 
+        private static void RepeatedArrayAddressesPreserveFailures()
+        {
+            const string owner = "cycletrim.tests.animation.array-addresses";
+            var harmony = new Harmony(owner);
+            harmony.Patch(AnimationSymbolFixture.ArrayAddresses,
+                transpiler: new HarmonyMethod(typeof(AnimationSymbolOptimizationPatch), "Transpiler"),
+                finalizer: new HarmonyMethod(typeof(AnimationSymbolOptimizationPatch), "Finalizer"));
+            try
+            {
+                var frames = Enumerable.Range(0, 4).Select(index => AnimationSymbolFixture.Frame(index + 9)).ToArray();
+                var complete = new KBatchGroupData(frames);
+                foreach (bool initialized in new[] { false, true })
+                {
+                    // Fail after zero, one, two or three vector stores. Each
+                    // destination array address and source item is evaluated
+                    // separately, including on the unchanged comparison path.
+                    for (int count = 0; count <= 4; count++)
+                    {
+                        var baseline = new SymbolOverrideInfoGpuData(1);
+                        var candidate = new SymbolOverrideInfoGpuData(1);
+                        if (initialized)
+                        {
+                            AnimationSymbolFixture.OriginalArrayAddresses(baseline, 0, complete);
+                            candidate.ArrayAddressesForTest(0, complete);
+                        }
+                        int version = candidate.version;
+                        var source = new KBatchGroupData(frames.Take(count).ToArray());
+                        Equal(Error(() => AnimationSymbolFixture.OriginalArrayAddresses(baseline, 0, source)),
+                            Error(() => candidate.ArrayAddressesForTest(0, source)), "array-address exception");
+                        EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "array-address partial writes");
+                        Equal(count < 4 || initialized ? version : version + 1, candidate.version,
+                            "array-address version follows completed changes");
+                        if (count < 4)
+                        {
+                            AnimationSymbolFixture.OriginalArrayAddresses(baseline, 0, complete);
+                            candidate.ArrayAddressesForTest(0, complete);
+                            Equal(baseline.version, candidate.version, "failed array-address instance keeps dirtying");
+                            EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "array-address retry bytes");
+                        }
+                    }
+                }
+                foreach (int index in new[] { -1, 0, 1 })
+                {
+                    var baseline = new SymbolOverrideInfoGpuData(1);
+                    var candidate = new SymbolOverrideInfoGpuData(1);
+                    Equal(Error(() => AnimationSymbolFixture.OriginalArrayAddresses(baseline, index, null)),
+                        Error(() => candidate.ArrayAddressesForTest(index, null)), "address/value exception order");
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "stores before null source survive");
+                }
+            }
+            finally { harmony.UnpatchAll(owner); }
+        }
+
         private static void EmptyRangesAndVersionWrap()
         {
             foreach (int count in new[] { 0, -1, int.MinValue })
@@ -395,6 +481,18 @@ namespace CycleTrim.Optimizations.Tests
                 Check(result.Zip(code, (a, b) => ReferenceEquals(a, b)).All(same => same),
                     "unsupported IL instruction metadata remains untouched");
             }
+            var branched = AccessTools.DeclaredMethod(typeof(SymbolOverrideInfoGpuData), "BranchedStoresForTest");
+            var branchedCode = PatchProcessor.GetOriginalInstructions(branched, out var branchGenerator);
+            int first = branchedCode.FindIndex(instruction => instruction.opcode == OpCodes.Stfld);
+            int last = branchedCode.FindLastIndex(instruction => instruction.opcode == OpCodes.Stfld);
+            Check(branchedCode.Skip(first).Take(last - first + 1)
+                .Any(instruction => instruction.opcode.FlowControl == FlowControl.Cond_Branch),
+                "negative fixture has original control flow between stores");
+            var unchanged = AnimationSymbolOptimizationPatch.Transpiler(branchedCode,
+                branched, branchGenerator).ToList();
+            Equal(branchedCode.Count, unchanged.Count, "original branched stores remain whole");
+            Check(unchanged.Zip(branchedCode, (a, b) => ReferenceEquals(a, b)).All(same => same),
+                "straight-line guard preserves every original instruction and label");
             Enable();
         }
 

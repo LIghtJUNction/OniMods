@@ -104,6 +104,39 @@ public sealed class SymbolOverrideInfoGpuData
         MarkDirty();
     }
 
+    // Separate negative contract fixture: its original body has control flow
+    // between stores, so the comparison/direct-tail rewrite must decline it.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal void BranchedStoresForTest(int index, ref KAnim.Build.SymbolFrameInstance frame)
+    {
+        ref var entry = ref symbolOverrideInfos[index];
+        entry.atlas = frame.buildImageIdx;
+        float flag;
+        if (frame.buildImageIdx < 0) flag = -1f;
+        else flag = 1f;
+        entry.isoverriden = flag;
+        entry.bboxMin = frame.bboxMin;
+        entry.bboxMax = frame.bboxMax;
+        entry.uvMin = frame.uvMin;
+        entry.uvMax = frame.uvMax;
+        MarkDirty();
+    }
+
+    // Separate from the timed setters: exercise repeated array-address loads
+    // and a value load that can fail after earlier fields have been written.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal void ArrayAddressesForTest(int index, KBatchGroupData source)
+    {
+        var values = symbolOverrideInfos;
+        values[index].atlas = 23f;
+        values[index].isoverriden = 1f;
+        values[index].bboxMin = source.symbolFrameInstances[0].bboxMin;
+        values[index].bboxMax = source.symbolFrameInstances[1].bboxMax;
+        values[index].uvMin = source.symbolFrameInstances[2].uvMin;
+        values[index].uvMax = source.symbolFrameInstances[3].uvMax;
+        MarkDirty();
+    }
+
     internal SymbolOverrideInfo[] Entries { get { return entries; } }
     internal void SetVersionForTest(int value) { version = value; }
     internal int ByteCount { get { return entries.Length * 48; } }
@@ -128,6 +161,8 @@ namespace CycleTrim.Optimizations.Tests
         internal static readonly MethodInfo Range = AccessTools.DeclaredMethod(typeof(SymbolOverrideInfoGpuData),
             "SetSymbolOverrideInfo", new[] { typeof(int), typeof(int), typeof(int), typeof(KBatchGroupData),
                 typeof(int), typeof(int) });
+        internal static readonly MethodInfo ArrayAddresses = AccessTools.DeclaredMethod(
+            typeof(SymbolOverrideInfoGpuData), "ArrayAddressesForTest");
         private static bool originalsInstalled;
 
         internal static void InstallOriginalCopies()
@@ -138,6 +173,8 @@ namespace CycleTrim.Optimizations.Tests
                 "OriginalOne")).Patch(HarmonyReversePatchType.Original);
             harmony.CreateReversePatcher(Range, new HarmonyMethod(typeof(AnimationSymbolFixture),
                 "OriginalRange")).Patch(HarmonyReversePatchType.Original);
+            harmony.CreateReversePatcher(ArrayAddresses, new HarmonyMethod(typeof(AnimationSymbolFixture),
+                "OriginalArrayAddresses")).Patch(HarmonyReversePatchType.Original);
             originalsInstalled = true;
         }
 
@@ -153,6 +190,13 @@ namespace CycleTrim.Optimizations.Tests
             int atlas, KBatchGroupData source, int sourceStart, int sourceCount)
         {
             throw new InvalidOperationException("Original animation stand-in not installed");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static void OriginalArrayAddresses(SymbolOverrideInfoGpuData instance, int index,
+            KBatchGroupData source)
+        {
+            throw new InvalidOperationException("Original array-address stand-in not installed");
         }
 
         internal static KAnim.Build.SymbolFrameInstance Frame(int seed)

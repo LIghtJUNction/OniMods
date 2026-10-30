@@ -1,0 +1,118 @@
+diff --git a/mods/CycleTrim/Core/PowerOverlayCache.cs b/mods/CycleTrim/Core/PowerOverlayCache.cs
+index 0285395..7ad7d9f 100644
+--- a/mods/CycleTrim/Core/PowerOverlayCache.cs
++++ b/mods/CycleTrim/Core/PowerOverlayCache.cs
+@@ -18 +18,6 @@ namespace CycleTrim.Core
+-        private readonly Dictionary<CircuitKey, float> values =
++        // Most updates use one manager. Check its identity once, then hash only
++        // the small circuit ID; interleaved managers retain the full key.
++        private object primaryManager;
++        private readonly Dictionary<ushort, float> primaryValues =
++            new Dictionary<ushort, float>();
++        private readonly Dictionary<CircuitKey, float> otherValues =
+@@ -26 +31 @@ namespace CycleTrim.Core
+-        internal int Count { get { return values.Count; } }
++        internal int Count { get { return primaryValues.Count + otherValues.Count; } }
+@@ -67,2 +72,5 @@ namespace CycleTrim.Core
+-            return enabled && manager != null
+-                && values.TryGetValue(new CircuitKey(manager, circuit), out watts);
++            if (!enabled || manager == null)
++                return false;
++            return ReferenceEquals(manager, primaryManager)
++                ? primaryValues.TryGetValue(circuit, out watts)
++                : otherValues.TryGetValue(new CircuitKey(manager, circuit), out watts);
+@@ -74,2 +82,9 @@ namespace CycleTrim.Core
+-                && manager != null && values.Count < MaximumEntries)
+-                values[new CircuitKey(manager, circuit)] = watts;
++                && manager != null && Count < MaximumEntries)
++            {
++                if (primaryManager == null)
++                    primaryManager = manager;
++                if (ReferenceEquals(manager, primaryManager))
++                    primaryValues[circuit] = watts;
++                else
++                    otherValues[new CircuitKey(manager, circuit)] = watts;
++            }
+@@ -91 +106,3 @@ namespace CycleTrim.Core
+-            values.Clear();
++            primaryValues.Clear();
++            otherValues.Clear();
++            primaryManager = null;
+diff --git a/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs b/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs
+index ec5bf01..7a4c788 100644
+--- a/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs
++++ b/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs
+@@ -28,0 +29 @@ namespace CycleTrim.Optimizations.Tests
++            TestsInterleavedManagerStorage();
+@@ -134,0 +136,71 @@ namespace CycleTrim.Optimizations.Tests
++        private static void TestsInterleavedManagerStorage()
++        {
++            var first = new IdentityOnlyManager();
++            var second = new IdentityOnlyManager();
++            var lease = PowerOverlayCache.Enter(true);
++            float watts;
++            try
++            {
++                for (var index = 0; index < PowerOverlayCache.MaximumEntries / 2; index++)
++                {
++                    lease.Remember(first, (ushort)index, index, lease.Version);
++                    lease.Remember(second, (ushort)index, -index - 1f, lease.Version);
++                }
++                Check(lease.Count == PowerOverlayCache.MaximumEntries,
++                    "all managers share one retention bound");
++                Check(lease.TryGet(first, 0, out watts) && watts == 0f,
++                    "primary manager retains its own value without user hashing");
++                Check(lease.TryGet(second, 0, out watts) && watts == -1f,
++                    "interleaved manager retains a separate value without user equality");
++                lease.Remember(first, ushort.MaxValue, 1f, lease.Version);
++                lease.Remember(second, ushort.MaxValue, 2f, lease.Version);
++                Check(!lease.TryGet(first, ushort.MaxValue, out watts)
++                    && !lease.TryGet(second, ushort.MaxValue, out watts),
++                    "both stores reject new entries at the shared bound");
++                var nested = PowerOverlayCache.Enter(false);
++                PowerOverlayCache.Exit(nested);
++                Check(lease.Count == 0 && !lease.TryGet(first, 0, out watts)
++                    && !lease.TryGet(second, 0, out watts),
++                    "nesting invalidates both manager stores");
++                lease.Remember(second, ushort.MaxValue, 3f, lease.Version);
++                lease.Remember(first, ushort.MaxValue, 4f, lease.Version);
++                Check(lease.TryGet(second, ushort.MaxValue, out watts) && watts == 3f,
++                    "new primary after invalidation cannot see old values");
++                Check(lease.TryGet(first, ushort.MaxValue, out watts) && watts == 4f,
++                    "former primary can become an interleaved manager");
++            }
++            finally { PowerOverlayCache.Exit(lease); }
++
++            var weak = CacheAndReleaseInterleavedOwner();
++            for (var attempt = 0; attempt < 3 && weak.IsAlive; attempt++)
++            {
++                GC.Collect();
++                GC.WaitForPendingFinalizers();
++            }
++            Check(!weak.IsAlive, "empty alternate store releases its manager");
++        }
++
++        [MethodImpl(MethodImplOptions.NoInlining)]
++        private static WeakReference CacheAndReleaseInterleavedOwner()
++        {
++            var manager = new IdentityOnlyManager();
++            var lease = PowerOverlayCache.Enter(true);
++            lease.Remember(new IdentityOnlyManager(), 0, 1f, lease.Version);
++            lease.Remember(manager, 0, 2f, lease.Version);
++            PowerOverlayCache.Exit(lease);
++            return new WeakReference(manager);
++        }
++
++        private sealed class IdentityOnlyManager
++        {
++            public override bool Equals(object other)
++            {
++                throw new InvalidOperationException("Manager equality must use identity");
++            }
++
++            public override int GetHashCode()
++            {
++                throw new InvalidOperationException("Manager hashing must use identity");
++            }
++        }
++

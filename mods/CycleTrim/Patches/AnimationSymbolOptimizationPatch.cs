@@ -70,7 +70,8 @@ namespace CycleTrim.Patches
             var installed = Harmony.GetPatchInfo(__originalMethod);
             if ((installed != null && installed.Owners.Count != 0)
                 || !DependenciesUnpatched() || !IsSupportedBody(source)
-                || !SameInstructions(source, PatchProcessor.GetOriginalInstructions(__originalMethod)))
+                || !SameInstructions(source, PatchProcessor.GetOriginalInstructions(__originalMethod))
+                || !TryGetStoreBlock(source, out var firstStore, out var lastStore))
             {
                 AnimationSymbolValueComparer.DisableSuppression();
                 Console.WriteLine("[CycleTrim] Animation symbol optimization skipped: "
@@ -79,10 +80,6 @@ namespace CycleTrim.Patches
             }
 
             var state = generator.DeclareLocal(typeof(int));
-            var scalar = generator.DeclareLocal(typeof(float));
-            var vector = generator.DeclareLocal(typeof(Vector2));
-            var writeScalar = AccessTools.Method(typeof(AnimationSymbolValueComparer), "WriteFloat");
-            var writeVector = AccessTools.Method(typeof(AnimationSymbolValueComparer), "WriteVector");
             var needsDirty = AccessTools.Method(typeof(AnimationSymbolValueComparer), "NeedsDirty");
             var dirty = AccessTools.DeclaredMethod(typeof(SymbolOverrideInfoGpuData), "MarkDirty");
             var result = new List<CodeInstruction>(source.Count + 40)
@@ -91,21 +88,13 @@ namespace CycleTrim.Patches
                 new CodeInstruction(OpCodes.Stloc, state)
             };
 
-            foreach (var instruction in source)
+            for (int index = 0; index < source.Count; index++)
             {
-                var field = instruction.operand as FieldInfo;
-                if (instruction.opcode == OpCodes.Stfld && field != null)
+                var instruction = source[index];
+                if (index == firstStore)
                 {
-                    var temporary = field.FieldType == typeof(float) ? scalar : vector;
-                    // Preserve the original address/value evaluation, including
-                    // invalid indices and writes completed before a later error.
-                    result.Add(new CodeInstruction(instruction)
-                        { opcode = OpCodes.Stloc, operand = temporary });
-                    result.Add(new CodeInstruction(OpCodes.Ldflda, field));
-                    result.Add(new CodeInstruction(OpCodes.Ldloc, temporary));
-                    result.Add(new CodeInstruction(OpCodes.Ldloca, state));
-                    result.Add(new CodeInstruction(OpCodes.Call,
-                        field.FieldType == typeof(float) ? writeScalar : writeVector));
+                    AppendStoreBlock(result, source, firstStore, lastStore, generator, state);
+                    index = lastStore;
                 }
                 else if (instruction.Calls(dirty))
                 {
@@ -131,6 +120,92 @@ namespace CycleTrim.Patches
                     result.Add(new CodeInstruction(instruction));
             }
             return result;
+        }
+
+        private static bool TryGetStoreBlock(List<CodeInstruction> source, out int first, out int last)
+        {
+            first = source.FindIndex(instruction => instruction.opcode == OpCodes.Stfld);
+            last = source.FindLastIndex(instruction => instruction.opcode == OpCodes.Stfld);
+            if (first < 0) return false;
+            for (int index = first; index <= last; index++)
+            {
+                var instruction = source[index];
+                // The direct-write tail must have exactly the same stack and
+                // evaluation order as the comparison path at every store.
+                if ((index > first && instruction.labels.Count != 0)
+                    || instruction.opcode.FlowControl == FlowControl.Branch
+                    || instruction.opcode.FlowControl == FlowControl.Cond_Branch
+                    || instruction.opcode.FlowControl == FlowControl.Return
+                    || instruction.opcode.FlowControl == FlowControl.Throw)
+                    return false;
+            }
+            return true;
+        }
+
+        private static void AppendStoreBlock(List<CodeInstruction> result, List<CodeInstruction> source,
+            int first, int last, ILGenerator generator, LocalBuilder state)
+        {
+            var scalar = generator.DeclareLocal(typeof(float));
+            var vector = generator.DeclareLocal(typeof(Vector2));
+            var sameScalar = AccessTools.Method(typeof(AnimationSymbolValueComparer), "SameBits");
+            var sameVector = AccessTools.Method(typeof(AnimationSymbolValueComparer), "SameVectorBits");
+            var directStores = new Dictionary<int, Label>();
+            for (int index = first; index <= last; index++)
+                if (source[index].opcode == OpCodes.Stfld)
+                    directStores.Add(index, generator.DefineLabel());
+            var finished = generator.DefineLabel();
+
+            // State is local to this invocation: 0 = no stores visited,
+            // 1 = all visited fields equal, 3 = changed. Once changed, subsequent
+            // symbols execute the original stores without further comparisons.
+            // The first receiver and value have already been evaluated.
+            result.Add(new CodeInstruction(source[first]) { opcode = OpCodes.Ldloc, operand = state });
+            result.Add(new CodeInstruction(OpCodes.Ldc_I4_3));
+            result.Add(new CodeInstruction(OpCodes.Beq, directStores[first]));
+            result.Add(new CodeInstruction(OpCodes.Ldc_I4_1));
+            result.Add(new CodeInstruction(OpCodes.Stloc, state));
+
+            for (int index = first; index <= last; index++)
+            {
+                var instruction = source[index];
+                if (instruction.opcode != OpCodes.Stfld)
+                {
+                    result.Add(new CodeInstruction(instruction));
+                    continue;
+                }
+                var field = (FieldInfo)instruction.operand;
+                var temporary = field.FieldType == typeof(float) ? scalar : vector;
+                var identical = generator.DefineLabel();
+                result.Add(new CodeInstruction(OpCodes.Stloc, temporary));
+                result.Add(new CodeInstruction(OpCodes.Dup));
+                result.Add(new CodeInstruction(OpCodes.Ldfld, field));
+                result.Add(new CodeInstruction(OpCodes.Ldloc, temporary));
+                result.Add(new CodeInstruction(OpCodes.Call,
+                    field.FieldType == typeof(float) ? sameScalar : sameVector));
+                result.Add(new CodeInstruction(OpCodes.Brtrue, identical));
+                result.Add(new CodeInstruction(OpCodes.Ldc_I4_3));
+                result.Add(new CodeInstruction(OpCodes.Stloc, state));
+                result.Add(new CodeInstruction(OpCodes.Ldloc, temporary));
+                result.Add(new CodeInstruction(OpCodes.Br, directStores[index]));
+                var pop = new CodeInstruction(OpCodes.Pop);
+                pop.labels.Add(identical);
+                result.Add(pop);
+            }
+            result.Add(new CodeInstruction(OpCodes.Br, finished));
+
+            // Branch to the first differing field with its original receiver
+            // and value still on the stack. Do not reevaluate either operand,
+            // skip intervening loads, or prevalidate indices/range lengths.
+            for (int index = first; index <= last; index++)
+            {
+                var instruction = new CodeInstruction(source[index]);
+                instruction.labels.Clear();
+                if (directStores.TryGetValue(index, out var label)) instruction.labels.Add(label);
+                result.Add(instruction);
+            }
+            var end = new CodeInstruction(OpCodes.Nop);
+            end.labels.Add(finished);
+            result.Add(end);
         }
 
         private static bool DependenciesUnpatched()

@@ -25,7 +25,6 @@ namespace CycleTrim.Patches
         private static readonly Func<Predicate<SolidConduitFlow.Conduit>, int?> ReadRail = TryReadRail;
         private static MethodInfo membershipPredicate;
         private static AccessTools.FieldRef<object, SolidConduitFlow.Conduit> capturedRail;
-        private static bool callSiteMatched;
         private static bool reportedMismatch;
 
         private static bool Prepare()
@@ -47,34 +46,19 @@ namespace CycleTrim.Patches
         private static MethodBase TargetMethod() { return Target; }
 
         [HarmonyPriority(Priority.Last)]
-        private static void Prefix(List<SolidConduitFlow.Conduit> new_path,
-            bool __runOriginal, out ConveyorPathLookup __state)
-        {
-            var canUseIndex = callSiteMatched && new_path != null
-                && new_path.Count >= ConveyorPathLookup.MinimumCandidateLength;
-            // A top-level short candidate can never reach the existing build
-            // rule. Nested calls still need a barrier: their searches must not
-            // reuse the parent's index, and their mutations invalidate it.
-            __state = __runOriginal && (canUseIndex || ConveyorPathLookup.Current != null)
-                ? ConveyorPathLookup.Enter(new_path, canUseIndex) : null;
-        }
-
-        private static Exception Finalizer(Exception __exception, ConveyorPathLookup __state)
-        {
-            ConveyorPathLookup.Exit(__state);
-            return __exception;
-        }
-
-        [HarmonyPriority(Priority.Last)]
-        internal static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        internal static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions,
+            ILGenerator generator)
         {
             var original = new List<CodeInstruction>(instructions);
-            callSiteMatched = false;
             var calls = new List<int>();
             for (var index = 0; index < original.Count; index++)
+            {
+                if (original[index].opcode == OpCodes.Jmp || original[index].opcode == OpCodes.Tailcall)
+                    return Unchanged(original);
                 if (Equals(original[index].operand, Search))
                     calls.Add(index);
-            if (calls.Count != 3)
+            }
+            if (calls.Count != 3 || original.Count == 0 || original[original.Count - 1].opcode != OpCodes.Ret)
                 return Unchanged(original);
             var at = calls[2];
             if (at < 3 || original[at].opcode != OpCodes.Callvirt
@@ -90,13 +74,80 @@ namespace CycleTrim.Patches
 
             membershipPredicate = predicate;
             capturedRail = AccessTools.FieldRefAccess<object, SolidConduitFlow.Conduit>(capture);
-            var replacement = new CodeInstruction(original[at]);
-            replacement.opcode = OpCodes.Call;
-            replacement.operand = AccessTools.DeclaredMethod(typeof(ConveyorPathLookupPatch),
-                nameof(FindIndex));
-            original[at] = replacement;
-            callSiteMatched = true;
-            return original;
+            return AddInvocationScope(original, at, generator);
+        }
+
+        private static IEnumerable<CodeInstruction> AddInvocationScope(List<CodeInstruction> original,
+            int searchAt, ILGenerator generator)
+        {
+            var lease = generator.DeclareLocal(typeof(ConveyorPathLookup));
+            var barrier = generator.DeclareLocal(typeof(ConveyorPathLookup));
+            var finished = generator.DefineLabel();
+            var cleanup = generator.DefineLabel();
+            var noCleanup = generator.DefineLabel();
+            var result = new List<CodeInstruction>
+            {
+                new CodeInstruction(OpCodes.Call, AccessTools.DeclaredMethod(typeof(ConveyorPathLookup),
+                    nameof(ConveyorPathLookup.BeginInvocation))),
+                new CodeInstruction(OpCodes.Stloc, barrier),
+                new CodeInstruction(OpCodes.Ldnull),
+                new CodeInstruction(OpCodes.Stloc, lease)
+            };
+            for (var index = 0; index < original.Count; index++)
+            {
+                var instruction = original[index];
+                if (index == 0)
+                {
+                    instruction = new CodeInstruction(instruction);
+                    instruction.blocks.Insert(0, new ExceptionBlock(ExceptionBlockType.BeginExceptionBlock));
+                }
+                if (index == searchAt)
+                {
+                    // Branches to the old call must also load the new arguments.
+                    // Keep begin/end exception markers on the same respective
+                    // sides of the entire replacement sequence.
+                    var candidate = new CodeInstruction(OpCodes.Ldarg_1);
+                    candidate.labels.AddRange(instruction.labels);
+                    var replacement = new CodeInstruction(OpCodes.Call,
+                        AccessTools.DeclaredMethod(typeof(ConveyorPathLookupPatch), nameof(FindIndexScoped)));
+                    foreach (var block in instruction.blocks)
+                        (block.blockType == ExceptionBlockType.EndExceptionBlock
+                            ? replacement.blocks : candidate.blocks).Add(block);
+                    result.Add(candidate);
+                    result.Add(new CodeInstruction(OpCodes.Ldloca, lease));
+                    result.Add(replacement);
+                }
+                else if (instruction.opcode == OpCodes.Ret)
+                {
+                    var leave = new CodeInstruction(instruction);
+                    leave.opcode = OpCodes.Leave;
+                    leave.operand = finished;
+                    result.Add(leave);
+                }
+                else
+                    result.Add(instruction);
+            }
+
+            var finallyStart = new CodeInstruction(OpCodes.Ldloc, lease);
+            finallyStart.blocks.Add(new ExceptionBlock(ExceptionBlockType.BeginFinallyBlock));
+            result.Add(finallyStart);
+            result.Add(new CodeInstruction(OpCodes.Brtrue, cleanup));
+            result.Add(new CodeInstruction(OpCodes.Ldloc, barrier));
+            result.Add(new CodeInstruction(OpCodes.Brfalse, noCleanup));
+            var loadLease = new CodeInstruction(OpCodes.Ldloc, lease);
+            loadLease.labels.Add(cleanup);
+            result.Add(loadLease);
+            result.Add(new CodeInstruction(OpCodes.Ldloc, barrier));
+            result.Add(new CodeInstruction(OpCodes.Call, AccessTools.DeclaredMethod(typeof(ConveyorPathLookup),
+                nameof(ConveyorPathLookup.EndInvocation))));
+            var finallyEnd = new CodeInstruction(OpCodes.Nop);
+            finallyEnd.labels.Add(noCleanup);
+            finallyEnd.blocks.Add(new ExceptionBlock(ExceptionBlockType.EndExceptionBlock));
+            result.Add(finallyEnd);
+            var ret = new CodeInstruction(OpCodes.Ret);
+            ret.labels.Add(finished);
+            result.Add(ret);
+            return result;
         }
 
         // The only accepted predicate reads two integer fields and compares them.
@@ -145,6 +196,24 @@ namespace CycleTrim.Patches
             if (scope == null)
                 return path.FindIndex(predicate);
             return scope.FindIndex(path, predicate, ReadRail, CheckCompatibility);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int FindIndexScoped(List<SolidConduitFlow.Conduit> path,
+            Predicate<SolidConduitFlow.Conduit> predicate, List<SolidConduitFlow.Conduit> candidate,
+            ref ConveyorPathLookup lease)
+        {
+            if (path == null || path.Count < ConveyorPathLookup.MinimumPathLength
+                || path.Count > ConveyorPathLookup.MaximumPathLength)
+                return path.FindIndex(predicate);
+            if (lease == null)
+            {
+                if (candidate == null || candidate.Count < ConveyorPathLookup.MinimumCandidateLength
+                    || ReferenceEquals(path, candidate))
+                    return path.FindIndex(predicate);
+                lease = ConveyorPathLookup.Enter(candidate, true);
+            }
+            return lease.FindEligibleIndex(path, predicate, ReadRail, CheckCompatibility);
         }
 
         private static int? TryReadRail(Predicate<SolidConduitFlow.Conduit> predicate)
