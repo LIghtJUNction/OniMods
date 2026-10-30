@@ -1,0 +1,9 @@
+[CycleTrim] Conveyor search call shape changed; retaining original searches.
+System.NotSupportedException: Could not get entrypoint for System.Collections.Generic.List`1[[SolidConduitFlow+Conduit, CycleTrim.Optimizations.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]] System.Collections.Generic.List`1+Enumerator[[System.Collections.Generic.List`1[[SolidConduitFlow+Conduit, CycleTrim.Optimizations.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]:get_Current() (stuck in a loop)
+   at HarmonyLib.PatchFunctions.UpdateWrapper(MethodBase original, PatchInfo patchInfo)
+   at HarmonyLib.PatchProcessor.Patch()
+   at HarmonyLib.Harmony.Patch(MethodBase original, HarmonyMethod prefix, HarmonyMethod postfix, HarmonyMethod transpiler, HarmonyMethod finalizer)
+   at CycleTrim.Optimizations.Tests.ConveyorPathRegression.TestForeignPatches() in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs:line 572
+   at CycleTrim.Optimizations.Tests.ConveyorPathRegression.Run() in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs:line 41
+   at CycleTrim.Optimizations.Tests.Program.RunFamily(String family) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 62
+   at CycleTrim.Optimizations.Tests.Program.Main(String[] args) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 36

@@ -1,0 +1,8 @@
+[CycleTrim] Power overlay call shape changed; retaining the original calls.
+PASS Power overlay: 109 assertions; real Harmony over original synthetic fixtures
+[CycleTrim] Save metadata optimization skipped: expected 2 attribute queries and 1 type name, found 1 and 1.
+[CycleTrim] Save metadata optimization skipped: expected 2 attribute queries and 1 type name, found 3 and 1.
+[CycleTrim] Save metadata optimization skipped: expected 2 attribute queries and 1 type name, found 2 and 0.
+[CycleTrim] Save metadata optimization skipped: expected 2 attribute queries and 1 type name, found 2 and 1 with an unsupported IL prefix.
+PASS save metadata: 375 assertions; real Harmony, byte comparison, weak lifetime and concurrency
+PASS CycleTrim optimization host regressions (synthetic game fixtures)

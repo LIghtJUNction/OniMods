@@ -1,0 +1,14 @@
+{
+  "mods/CycleTrim/Core/AnimationSymbolValueComparer.cs": "c4c804ccb39560969d4b1a7a459179057c21aaa94818d61db0507d94e6ab16a3",
+  "mods/CycleTrim/Core/ConveyorPathLookup.cs": "aa96bffbdac9c5643750afccdbe93d475644b76debda21d9cd974b1e6a4fd5e3",
+  "mods/CycleTrim/Core/PowerOverlayCache.cs": "cd756aa9d3bc9ac876bcb35d3b4a4f0277a4c452b648f0c996eb801894b88099",
+  "mods/CycleTrim/Patches/AnimationSymbolOptimizationPatch.cs": "a955f2c825896e58048b7f9ad20e701a6eb4092816bcc20484b96cd8bbd078de",
+  "mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs": "5d9e2e33a488954818c3202d0a6a05e1aa1b6f84c9663964c8094755a9869b7f",
+  "mods/CycleTrim/Patches/PowerOverlayCompatibility.cs": "0f81e2678eaf5ea12e575807240ed704df5d6e32a5ba023ea60a240775d33e7a",
+  "mods/CycleTrim/Patches/PowerOverlayOptimizationPatch.cs": "0574bdfcb472c97f47a3d0ff533ea0382f580ad3bd06d0f0e667432d09674c35",
+  "tests/CycleTrim.Optimizations.Tests/AnimationSymbolFixture.cs": "8287684e45468c3f814641413a314e14d0f014674ff70f5b7d58f3bbf6275278",
+  "tests/CycleTrim.Optimizations.Tests/AnimationSymbolRegression.cs": "a6bf171432ae46dea58926e387aa7faff4223b5cee7075c7deccbef54dbe3441",
+  "tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs": "c149733cfab84ad9c3d900a71f6ebdefaec3a1e32011013db81ad26f4ae4059f",
+  "tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs": "78cb7a576b6a4691570c0141b37e2f0f5e80761e8159d570a6f6ba363b356614",
+  "tests/CycleTrim.Optimizations.Tests/Program.cs": "5ddce9c6029116f240eb867a9b51554e8cf561170a15f072c910642ccd6fea95"
+}

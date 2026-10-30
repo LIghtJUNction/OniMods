@@ -2,6 +2,42 @@
 
 Generated from `git log -- mods/CycleTrim`.
 
+## Unreleased — 2026-10-30
+
+- Guard transformer circuit-resolution callbacks before reusing power-overlay
+  answers. Real Harmony dependency patches now retain original per-query
+  results and callback counts, including physical and virtual circuits.
+- Create conveyor index scopes lazily, pass the lease through the rewritten
+  call site, and preserve nested cleanup with an injected finally. Short and
+  early-return paths avoid the former unconditional Harmony wrappers; nested
+  calls retain an isolated barrier and invalidate their parent's index.
+- Stop animation comparisons after the first changed field and retain the
+  original remaining stores. Use an exact stack-local float bitcast to avoid
+  explicit-layout union temporaries; pointer access is limited to value parameters.
+- Add paired prior/current regression-recovery measurements, exact-bit property
+  checks, and exception/control-flow regressions. Preserve unsuccessful trials
+  and distinguish controlled JIT measurements from default-runtime checks.
+- Add opt-in conveyor membership indexing scoped to one path-construction call.
+  Build only after repeated scans, retain first positions, and discard the index
+  on list edits, nested calls and exceptional exits.
+- Add opt-in animation override field comparison using exact float bits. Keep
+  original writes and errors in order, coalesce redundant version increments,
+  and preserve original dirty behavior after a partial-write failure.
+- Extend the real-Harmony host suite and paired benchmarks with short/early-hit
+  conveyor controls and changing/unchanged animation workloads. The new options
+  require a restart; runtime acceptance remains separate from host evidence.
+
+- Independently implement save type metadata reuse inspired by oni-moono: cache
+  only immutable CLR type metadata, preserve other reflection queries, and use
+  weak keys so collectible types are not retained.
+- Reuse circuit demand only inside each power overlay update, with manager
+  identity, thread-local scopes, nested-update invalidation, exception cleanup
+  and bounded storage. Unknown electricity interface implementations and
+  conflicting Harmony callbacks retain original queries.
+- Add separate restart-required settings (metadata on, power reuse opt-in), real Harmony host regressions, exact
+  synthetic output checks and paired performance measurements. These do not
+  establish Unity/Mono save/load, DLC compatibility or game FPS improvements.
+
 ## 2026-10-22 — 0.4.0
 
 - Bundle the OniSim Rust core for Windows x64, macOS x64 and Linux x64 in one

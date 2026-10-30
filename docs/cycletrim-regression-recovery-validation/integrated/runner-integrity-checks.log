@@ -1,0 +1,5 @@
+PASS exact summary reproduction: 22 cases, seven outer pairs, 308 process rows; all semantic checks retained.
+PASS rejected missing revision: incomplete outer pair
+PASS rejected missing workload: missing or unexpected scenario/mode
+PASS rejected duplicate revision/pair: duplicate revision/pair
+PASS rejected cross-revision checksum mismatch: prior/candidate semantic mismatch: original

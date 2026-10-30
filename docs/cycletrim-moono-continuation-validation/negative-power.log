@@ -1,0 +1,6 @@
+[CycleTrim] Power overlay call shape changed; retaining the original calls.
+System.InvalidOperationException: Generator.get_CircuitID prefix preserves every changed answer
+   at CycleTrim.Optimizations.Tests.PowerOverlayRegression.Check(Boolean condition, String message) in /tmp/onimods-pr558-ablation/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs:line 555
+   at CycleTrim.Optimizations.Tests.PowerOverlayRegression.TestsCircuitRoutingDependencies() in /tmp/onimods-pr558-ablation/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs:line 444
+   at CycleTrim.Optimizations.Tests.PowerOverlayRegression.Run() in /tmp/onimods-pr558-ablation/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs:line 43
+   at CycleTrim.Optimizations.Tests.Program.Main(String[] args) in /tmp/onimods-pr558-ablation/tests/CycleTrim.Optimizations.Tests/Program.cs:line 36

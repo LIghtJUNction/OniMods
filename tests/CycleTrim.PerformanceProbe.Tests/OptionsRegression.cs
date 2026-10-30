@@ -12,6 +12,12 @@ namespace CycleTrim.PerformanceProbe.Tests
         {
             Check(!new OniSimOptions().EnablePerformanceDiagnostics,
                 "diagnostics must remain off by default");
+            Check(!new OniSimOptions().OptimizePowerOverlay,
+                "workload-dependent power reuse must remain opt-in");
+            Check(!new OniSimOptions().OptimizeConveyorPathLookup,
+                "conveyor lookup candidate must remain opt-in");
+            Check(!new OniSimOptions().OptimizeAnimationSymbols,
+                "animation version coalescing must remain opt-in");
             Load(null, expectedEnabled: true);
 
             var disabled = new OniSimOptions
@@ -22,6 +28,10 @@ namespace CycleTrim.PerformanceProbe.Tests
                 ThrottleStationaryCritters = false,
                 OptimizeAsyncPathProbes = false,
                 LimitCreatureBrainUpdates = false,
+                OptimizeSaveMetadata = false,
+                OptimizePowerOverlay = false,
+                OptimizeConveyorPathLookup = false,
+                OptimizeAnimationSymbols = false,
                 EnablePerformanceDiagnostics = true
             };
             Load(disabled, expectedEnabled: false);
@@ -32,7 +42,10 @@ namespace CycleTrim.PerformanceProbe.Tests
             var mixed = new OniSimOptions
             {
                 ThrottleBusyDuplicants = false,
-                OptimizeAsyncPathProbes = false
+                OptimizeAsyncPathProbes = false,
+                OptimizePowerOverlay = true,
+                OptimizeConveyorPathLookup = true,
+                OptimizeAnimationSymbols = true
             };
             Load(mixed, expectedEnabled: true);
 
@@ -66,6 +79,14 @@ namespace CycleTrim.PerformanceProbe.Tests
                     "creature brain setting before patch install");
                 Check(CycleTrimPatchOptions.EnablePerformanceDiagnostics == expected.EnablePerformanceDiagnostics,
                     "diagnostic setting before patch install");
+                Check(CycleTrimPatchOptions.OptimizeSaveMetadata == expected.OptimizeSaveMetadata,
+                    "save metadata setting before patch install");
+                Check(CycleTrimPatchOptions.OptimizePowerOverlay == expected.OptimizePowerOverlay,
+                    "power overlay setting before patch install");
+                Check(CycleTrimPatchOptions.OptimizeConveyorPathLookup == expected.OptimizeConveyorPathLookup,
+                    "conveyor lookup setting before patch install");
+                Check(CycleTrimPatchOptions.OptimizeAnimationSymbols == expected.OptimizeAnimationSymbols,
+                    "animation symbol setting before patch install");
                 Check(OniSim.CycleTrim.OniSimLoader.LastEnabled == expectedEnabled,
                     "native core setting passed to loader before patch install");
             };

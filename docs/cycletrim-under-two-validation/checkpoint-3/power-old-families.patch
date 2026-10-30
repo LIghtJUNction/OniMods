@@ -1,0 +1,9 @@
+--- a/mods/CycleTrim/Patches/PowerOverlayCompatibility.cs
++++ b/mods/CycleTrim/Patches/PowerOverlayCompatibility.cs
+@@ -72,2 +71,0 @@
+-            if (ExtraPatchReaders == null)
+-                return true;
+@@ -79,3 +76,0 @@
+-            foreach (var read in ExtraPatchReaders)
+-                if (HasPatches(read(patches), allowedPatchType))
+-                    return true;

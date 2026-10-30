@@ -1,0 +1,74 @@
+{
+  "label": "power-two-method-snapshot-diagnostic",
+  "started_utc": "2026-10-30T17:49:52.560141+00:00",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "cpu": 0,
+  "allowed_cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "sets": 2,
+  "families": [
+    "power"
+  ],
+  "assembly_sha256": {
+    "anchor": "93ac44988f9f6200b6dbe22c5a2ad4c255a95897467f67ff12cf78e23da38b33",
+    "prior": "aa25c886154e1b3cdf3063d5b85f7c601293518ed1d9181362ebc4a27e1b58a7",
+    "candidate": "813f3fb6ed2f64048b8eb0a34679994597cf66b4a6e79afaca1e8e7ad8c81865"
+  },
+  "orders": [
+    [
+      "anchor",
+      "prior",
+      "candidate"
+    ],
+    [
+      "anchor",
+      "candidate",
+      "prior"
+    ],
+    [
+      "prior",
+      "anchor",
+      "candidate"
+    ],
+    [
+      "prior",
+      "candidate",
+      "anchor"
+    ],
+    [
+      "candidate",
+      "anchor",
+      "prior"
+    ],
+    [
+      "candidate",
+      "prior",
+      "anchor"
+    ]
+  ],
+  "revision_commits": {
+    "anchor": "62067913a5aea4daa4a8991689c86aad261b1269",
+    "prior": "09c496c46b4879cbdce4a8a9056b3f85f9c5c0d3"
+  },
+  "driver_sha256": "f1904601bf65262439a05b52add81e73c86204f62ee411d72cf3a84e6dd5aff1",
+  "driver_source_sha256": "0c38839ae016a4a2a0d4dcb205f52d5d2561a3f8b9134c83e7088df9d144ddad",
+  "runner_source_sha256": "76a3847ac4f4a116f051b6eacc78a32b246a05acbc72e71879cf5d5c1b7acd39",
+  "retained_parser_sha256": "0a875a8a386d51ae6e001a8b49a86109fd47e637a09e99af7d49a1d1856312b2",
+  "runtime_environment": {
+    "DOTNET_TieredCompilation": "0",
+    "COMPlus_TieredCompilation": "runtime-default",
+    "DOTNET_TieredPGO": "runtime-default",
+    "COMPlus_TieredPGO": "runtime-default"
+  },
+  "protocol": "one original/patched pair per process; three adjacent revisions with all six order permutations",
+  "completed_utc": "2026-10-30T17:50:02.742300+00:00"
+}

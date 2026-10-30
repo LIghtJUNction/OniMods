@@ -1,0 +1,29 @@
+--- a/mods/CycleTrim/Core/ConveyorPathLookup.cs
++++ b/mods/CycleTrim/Core/ConveyorPathLookup.cs
+@@ -107,4 +107,14 @@
+-            // A retained path may alias the path which the game is trimming.
+-            if (!enabled || path == null || predicate == null || candidate == null
+-                || ReferenceEquals(path, candidate) || path.Count < MinimumPathLength
+-                || path.Count > MaximumPathLength)
++            if (path == null || path.Count < MinimumPathLength || path.Count > MaximumPathLength)
++                return path.FindIndex(predicate);
++            return FindEligibleIndex(path, predicate, readRail, canIndex);
++        }
++
++        // The production call site has already checked this path's non-null
++        // receiver and length. Keep per-query state and alias checks here:
++        // later paths in the same invocation need not share the first's identity.
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
++        internal int FindEligibleIndex(List<SolidConduitFlow.Conduit> path,
++            Predicate<SolidConduitFlow.Conduit> predicate,
++            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
++        {
++            if (!enabled || predicate == null || candidate == null || ReferenceEquals(path, candidate))
+--- a/mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs
++++ b/mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs
+@@ -202 +202 @@
+-        private static int FindIndexScoped(List<SolidConduitFlow.Conduit> path,
++        internal static int FindIndexScoped(List<SolidConduitFlow.Conduit> path,
+@@ -216 +216 @@
+-            return lease.FindIndex(path, predicate, ReadRail, CheckCompatibility);
++            return lease.FindEligibleIndex(path, predicate, ReadRail, CheckCompatibility);
