@@ -1,0 +1,9 @@
+[CycleTrim] Conveyor search call shape changed; retaining original searches.
+COVERAGE Conveyor outer get_Current: serialized Harmony metadata only; prior native detour attempt failed on this host
+COVERAGE Conveyor outer MoveNext: serialized Harmony metadata only; prior native detour attempt failed on this host
+System.InvalidOperationException: Conveyor regression: late endpoint observer receives every original comparison; method=<TryAdd>b__1; expected=8; actual=0; direct=False
+   at CycleTrim.Optimizations.Tests.ConveyorPathRegression.Check(Boolean condition, String message) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs:line 1040
+   at CycleTrim.Optimizations.Tests.ConveyorPathRegression.TestDirectSearchCompatibility() in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs:line 819
+   at CycleTrim.Optimizations.Tests.ConveyorPathRegression.Run() in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs:line 48
+   at CycleTrim.Optimizations.Tests.Program.RunFamily(String family) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 62
+   at CycleTrim.Optimizations.Tests.Program.Main(String[] args) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 36

@@ -1,0 +1,3 @@
+/workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs(599,22): error CS1061: 'PatchInfo' does not contain a definition for 'AddPrefixes' and no accessible extension method 'AddPrefixes' accepting a first argument of type 'PatchInfo' could be found (are you missing a using directive or an assembly reference?) [/workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj]
+
+The build failed. Fix the build errors and run again.

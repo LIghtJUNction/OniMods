@@ -77,14 +77,29 @@ def summarize(directory):
             path = directory / f"{family}-{revision}.log"
             if family == "conveyor":
                 groups = parser.conveyor(path)
-                expected = {"long-misses", "shared-rails", "early-hits", "single-query",
-                            "short-paths", "contained-path"}
-                if set(groups) != expected:
+                # These are the retained whole-CLI inputs, not tunable filters.
+                contracts = {
+                    "long-misses": (100, 32, 256, 128),
+                    "shared-rails": (100, 32, 256, 128),
+                    "early-hits": (1000, 1, 1024, 128),
+                    "single-query": (1000, 1, 1024, 1),
+                    "short-paths": (1000, 8, 16, 16),
+                    "contained-path": (100000, 8, 256, 32),
+                }
+                fields = ("iterations_per_sample", "retained_paths", "rails_per_path", "new_path_rails")
+                if set(groups) != set(contracts):
                     raise ValueError("missing or unexpected conveyor workload")
-                for group in groups.values():
-                    if any(pair["baseline_direction_reads"] != pair["candidate_direction_reads"]
-                           for pair in group["pairs"]):
-                        raise ValueError("conveyor direction-read mismatch")
+                for name, group in groups.items():
+                    for pair in group["pairs"]:
+                        if any(type(pair.get(field)) is not int or pair[field] != expected
+                               for field, expected in zip(fields, contracts[name])):
+                            raise ValueError("conveyor workload contract changed")
+                        number = pair["pair"]
+                        expected_order = "baseline,candidate" if number % 2 == 1 else "candidate,baseline"
+                        if type(number) is not int or pair.get("order") != expected_order:
+                            raise ValueError("conveyor variant order changed")
+                        if pair["baseline_direction_reads"] != pair["candidate_direction_reads"]:
+                            raise ValueError("conveyor direction-read mismatch")
             elif family == "animation":
                 groups = animation(path, parser)
             else:

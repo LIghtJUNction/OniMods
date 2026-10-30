@@ -21,12 +21,11 @@ namespace CycleTrim.Optimizations.Tests
         {
             TestDisabledOption();
             TestInstructionShape();
+            TestRegistryIdentitySnapshot();
             TestScopedLookup();
             TestLifetimeAndThreads();
             var cases = BuildCases();
             var expected = cases.Select(Evaluate).ToArray();
-            var latePatchExpected = EvaluateCallbackChange(true);
-            var mutationExpected = EvaluateCallbackChange(false);
             var harmony = new Harmony(Owner);
             try
             {
@@ -37,6 +36,33 @@ namespace CycleTrim.Optimizations.Tests
                 TestShortCandidateScopes();
                 TestLazyScopesAndNestedReturns();
                 TestForeignPatches();
+                TestWarmPatchInvalidation();
+            }
+            finally
+            {
+                harmony.UnpatchAll(Owner);
+                CycleTrimPatchOptions.Configure(true, true, true, true, true, false);
+            }
+            Console.WriteLine("PASS Conveyor path lookup: " + assertions + " assertions; "
+                + cases.Count + " original/patched path-order, identity, mutation and callback comparisons");
+        }
+
+        internal static void RunCompatibility()
+        {
+            // Run in a fresh child process, separate from the thousands of
+            // differential cases above. Harmony cannot retroactively replace
+            // predicate bodies already inlined into warmed generic callers.
+            // These hard callback counts prove fresh-process detour behavior;
+            // TestWarmPatchInvalidation separately proves warmed guard/lease
+            // invalidation without claiming that native inlining is undone.
+            CycleTrimPatchOptions.Configure(true, true, true, true, true, false, conveyorPathLookup: true);
+            PrepareCallbackOracle();
+            var latePatchExpected = EvaluateCallbackChange(true, originalOracle: true);
+            var mutationExpected = EvaluateCallbackChange(false, originalOracle: true);
+            var harmony = new Harmony(Owner);
+            try
+            {
+                harmony.CreateClassProcessor(typeof(ConveyorPathLookupPatch)).Patch();
                 var latePatchActual = EvaluateCallbackChange(true);
                 Check(latePatchActual == latePatchExpected,
                     "a predicate installed inside a direction callback is visible to the next query; expected="
@@ -50,8 +76,8 @@ namespace CycleTrim.Optimizations.Tests
                 harmony.UnpatchAll(Owner);
                 CycleTrimPatchOptions.Configure(true, true, true, true, true, false);
             }
-            Console.WriteLine("PASS Conveyor path lookup: " + assertions + " assertions; "
-                + cases.Count + " original/patched path-order, identity, mutation and callback comparisons");
+            Console.WriteLine("PASS Conveyor fresh-process compatibility: " + assertions
+                + " assertions; actual late-predicate/endpoint callbacks, mutation and provider rejection");
         }
 
         private static void TestDisabledOption()
@@ -128,6 +154,43 @@ namespace CycleTrim.Optimizations.Tests
             var badCache = new List<CodeInstruction>(original);
             badCache[calls[0] - 2] = new CodeInstruction(OpCodes.Stfld, original[calls[1] - 2].operand);
             Check(Transpile(badCache).SequenceEqual(badCache), "endpoint cache initialization must match its cache read");
+            var escapedClosure = new List<CodeInstruction>(original);
+            escapedClosure.InsertRange(5, new[]
+            {
+                new CodeInstruction(original[calls[0] - 13].opcode, original[calls[0] - 13].operand),
+                new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ConveyorPathRegression), nameof(ObserveClosure)))
+            });
+            Check(Transpile(escapedClosure).SequenceEqual(escapedClosure),
+                "an externally visible endpoint closure keeps its original delegate-cache writes");
+            var escapedTemporary = new List<CodeInstruction>(original);
+            escapedTemporary.InsertRange(calls[0] + 2, new[]
+            {
+                new CodeInstruction(original[calls[0] - 1].opcode, original[calls[0] - 1].operand),
+                new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ConveyorPathRegression), nameof(ObserveClosure)))
+            });
+            Check(Transpile(escapedTemporary).SequenceEqual(escapedTemporary),
+                "an endpoint delegate temporary observed outside its cache window retains all original writes");
+            var wrongConstructor = new List<CodeInstruction>(original);
+            wrongConstructor[calls[0] - 5] = new CodeInstruction(OpCodes.Newobj,
+                AccessTools.Constructor(typeof(Action<SolidConduitFlow.Conduit>), new[] { typeof(object), typeof(IntPtr) }));
+            Check(Transpile(wrongConstructor).SequenceEqual(wrongConstructor),
+                "endpoint delegate construction must match the original Predicate type");
+            var immediate = new List<CodeInstruction>(original);
+            var immediateEndpoint = new[]
+            {
+                new CodeInstruction(original[calls[0] - 13].opcode, original[calls[0] - 13].operand),
+                new CodeInstruction(OpCodes.Ldftn, endpointMethods[0].item.operand),
+                new CodeInstruction(original[calls[0] - 5].opcode, original[calls[0] - 5].operand),
+                new CodeInstruction(OpCodes.Callvirt, search)
+            };
+            immediate.RemoveRange(calls[0] - 13, 14);
+            immediate.InsertRange(calls[0] - 13, immediateEndpoint);
+            Check(Transpile(immediate).Any(item => item.operand is MethodInfo method && method.Name == "FindEndpoint"),
+                "an immediate endpoint delegate retains a proven non-null local target");
+            var nullTarget = new List<CodeInstruction>(immediate);
+            nullTarget[calls[0] - 13] = new CodeInstruction(OpCodes.Ldnull);
+            Check(Transpile(nullTarget).SequenceEqual(nullTarget),
+                "an unproven endpoint target cannot introduce an earlier null dereference on an empty searched list");
             var prefixed = new List<CodeInstruction>(original);
             prefixed.Insert(last, new CodeInstruction(OpCodes.Constrained, typeof(List<SolidConduitFlow.Conduit>)));
             Check(Transpile(prefixed).SequenceEqual(prefixed), "prefixed call is not rewritten");
@@ -151,6 +214,30 @@ namespace CycleTrim.Optimizations.Tests
         }
 
         private static bool HasSideEffect(SolidConduitFlow.Conduit value) { return value.idx == Environment.TickCount; }
+
+        private static void ObserveClosure(object closure) { GC.KeepAlive(closure); }
+
+        private static void TestRegistryIdentitySnapshot()
+        {
+            var snapshotType = typeof(ConveyorPathLookupPatch).GetNestedType("PatchSnapshot", BindingFlags.NonPublic);
+            var matches = AccessTools.Method(snapshotType, "MatchesRegistry");
+            var first = AccessTools.Method(typeof(ConveyorPathRegression), nameof(Noop));
+            var second = AccessTools.Method(typeof(ConveyorPathRegression), nameof(ObserveEndpoint));
+            var bytes = new byte[] { 1, 2, 3 };
+            var registry = new Dictionary<MethodBase, byte[]> { { first, bytes } };
+            var snapshot = registry.ToArray();
+            Func<bool> check = () => (bool)matches.Invoke(null, new object[] { registry, snapshot });
+            Check(check(), "the complete stable registry identity snapshot matches");
+            registry[first] = new byte[] { 1, 2, 3 };
+            Check(registry.Count == 1 && !check(), "same-count equal-content byte replacement invalidates the snapshot");
+            registry[first] = bytes;
+            Check(check(), "restoring the exact key and byte identities restores the snapshot");
+            registry.Remove(first);
+            registry.Add(second, bytes);
+            Check(registry.Count == 1 && !check(), "same-count removal and different-key insertion invalidates the snapshot");
+            registry.Add(first, bytes);
+            Check(!check(), "registry growth cannot be accepted from a partial entry snapshot");
+        }
 
         private static void TestScopedLookup()
         {
@@ -477,6 +564,48 @@ namespace CycleTrim.Optimizations.Tests
             finally { ConveyorPathLookup.Exit(parent); }
         }
 
+        private static void TestWarmPatchInvalidation()
+        {
+            // The already-warmed predicate may remain inlined in a native
+            // List.FindIndex caller. A no-op patch leaves its answer unchanged,
+            // allowing the actual call-site invalidation to be tested without
+            // requiring that callback's native detour to run retroactively.
+            var predicate = (MethodInfo)PatchProcessor.GetOriginalInstructions(Target)
+                .Last(item => item.opcode == OpCodes.Ldftn).operand;
+            var foreign = new Harmony(Owner + ".warm-invalidation");
+            var flow = RepeatedFixture(64, 1);
+            var candidate = Rails(new[] { 65000, 2, 1, 60000, 60001, 60002, 60003, 65001 });
+            var reads = 0;
+            ConveyorPathLookup observedLease = null;
+            flow.GetSOAInfo().ObserveRead = () =>
+            {
+                reads++;
+                if (reads == 1)
+                {
+                    observedLease = ConveyorPathLookup.Current;
+                    Check(observedLease != null && observedLease.IndexEntryCount == 64,
+                        "a warmed invocation has an active index before the late no-op patch");
+                    foreign.Patch(predicate, prefix: new HarmonyMethod(typeof(ConveyorPathRegression), nameof(Noop)));
+                }
+                else
+                    Check(ReferenceEquals(ConveyorPathLookup.Current, observedLease)
+                        && observedLease.IndexEntryCount == 0,
+                        "the next warmed callback observes the same lease with its stale index cleared");
+            };
+            try
+            {
+                flow.AddPath(candidate);
+                Check(reads == 2, "the warmed guard fixture observes both original shared-rail reads");
+                Check(!(bool)AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScan")
+                    .Invoke(null, new object[] { 0, null }),
+                    "a warmed metadata snapshot rejects the currently installed predicate observer");
+                Check(ConveyorPathLookup.Current == null,
+                    "the warmed invalidation fixture releases its invocation scope");
+            }
+            finally { foreign.UnpatchAll(foreign.Id); }
+            Console.WriteLine("COVERAGE Conveyor warmed callbacks: metadata rejection and active index invalidation; no retroactive native-detour claim");
+        }
+
         private static void TestForeignPatches()
         {
             var instructions = PatchProcessor.GetOriginalInstructions(Target);
@@ -485,9 +614,19 @@ namespace CycleTrim.Optimizations.Tests
                 AccessTools.Method(typeof(UnityEngine.Mathf), "IsPowerOfTwo"), predicate,
                 AccessTools.Method(typeof(List<SolidConduitFlow.Conduit>), "GetEnumerator"),
                 AccessTools.Method(typeof(List<SolidConduitFlow.Conduit>.Enumerator), "MoveNext"),
-                AccessTools.Method(typeof(List<SolidConduitFlow.Conduit>.Enumerator), "MoveNextRare") };
+                AccessTools.Method(typeof(List<SolidConduitFlow.Conduit>.Enumerator), "MoveNextRare"),
+                AccessTools.Method(typeof(List<List<SolidConduitFlow.Conduit>>), "GetEnumerator"),
+                AccessTools.PropertyGetter(typeof(List<List<SolidConduitFlow.Conduit>>.Enumerator), "Current"),
+                AccessTools.Method(typeof(List<List<SolidConduitFlow.Conduit>>.Enumerator), "MoveNext"),
+                AccessTools.Method(typeof(List<List<SolidConduitFlow.Conduit>>.Enumerator), "MoveNextRare") };
             foreach (var method in methods.Where(item => item != null))
             {
+                if (method.DeclaringType == typeof(List<List<SolidConduitFlow.Conduit>>.Enumerator)
+                    && (method.Name == "get_Current" || method.Name == "MoveNext" || method.Name == "MoveNextRare"))
+                {
+                    TestOuterEnumeratorMetadata(method);
+                    continue;
+                }
                 // Reuse our owner text to establish that patch method identity,
                 // rather than a trusted-looking string, controls compatibility.
                 var foreign = new Harmony(Owner + ".spoof");
@@ -504,6 +643,93 @@ namespace CycleTrim.Optimizations.Tests
             }
         }
 
+        private static void TestOuterEnumeratorMetadata(MethodBase method)
+        {
+            // Pinned Harmony 2.4.2 failed to resolve the shared generic
+            // get_Current and MoveNext entrypoints on this .NET 10 host
+            // ("stuck in a loop"); preparing the getter did not fix it.
+            // All three outer enumerator dependencies receive serialized
+            // metadata/guard coverage. MoveNextRare has no native-detour claim.
+            var path = Rails(new[] { 1 });
+            var iterator = new List<List<SolidConduitFlow.Conduit>> { path }.GetEnumerator();
+            Check(iterator.MoveNext() && ReferenceEquals(InvokeOuterCurrent(ref iterator), path),
+                "the outer getter executes through an ordinary nonoptimizing caller");
+            var canScan = AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScan");
+            Check((bool)canScan.Invoke(null, new object[] { 0, null }),
+                "the outer " + method.Name + " metadata fixture begins with compatible dependencies");
+            var dependencies = (MethodBase[])AccessTools.Field(typeof(ConveyorPathLookupPatch), "scanDependencies")
+                .GetValue(null);
+            Check(dependencies.Contains(method), "the exact outer " + method.Name + " remains a production scan dependency");
+
+            var metadata = new PatchInfo();
+            var observer = AccessTools.Method(typeof(ConveyorPathRegression), nameof(Noop));
+            var addPrefixes = AccessTools.Method(typeof(PatchInfo), "AddPrefixes",
+                new[] { typeof(string), typeof(HarmonyMethod[]) });
+            Check(addPrefixes != null, "the pinned Harmony metadata mutation signature is available");
+            addPrefixes.Invoke(metadata, new object[] { Owner, new[] { new HarmonyMethod(observer) } });
+            var serializer = AccessTools.Method(typeof(Harmony).Assembly.GetType("HarmonyLib.PatchInfoSerialization", true),
+                "Serialize", new[] { typeof(PatchInfo) });
+            Check(serializer != null, "the pinned Harmony metadata serialization signature is available");
+            var bytes = (byte[])serializer.Invoke(null, new object[] { metadata });
+            var publication = AccessTools.Field(typeof(PatchProcessor), "locker").GetValue(null);
+            var shared = typeof(Harmony).Assembly.GetType("HarmonyLib.HarmonySharedState", true);
+            var registry = (Dictionary<MethodBase, byte[]>)AccessTools.Field(shared, "state").GetValue(null);
+            bool hadOriginal;
+            byte[] original;
+            lock (publication)
+            lock (registry)
+            {
+                hadOriginal = registry.TryGetValue(method, out original);
+                registry[method] = bytes;
+            }
+            try
+            {
+                var published = Harmony.GetPatchInfo(method);
+                Check(published != null && published.Prefixes.Any(patch => Equals(patch.PatchMethod, observer)),
+                    "public GetPatchInfo decodes the serialized outer " + method.Name + " observer metadata");
+                Check(!(bool)canScan.Invoke(null, new object[] { 0, null }),
+                    "outer " + method.Name + " observer metadata invalidates an already compatible scan snapshot");
+                var flow = RepeatedFixture(128, 64);
+                var indexed = false;
+                flow.GetSOAInfo().ObserveRead = () => indexed |= ConveyorPathLookup.Current?.IndexEntryCount > 0;
+                flow.AddPath(Rails(Enumerable.Range(0, 63).Concat(new[] { 500 })));
+                Check(!indexed, "serialized outer " + method.Name + " metadata disables the index without a native detour");
+            }
+            finally
+            {
+                lock (publication)
+                lock (registry)
+                {
+                    if (hadOriginal)
+                        registry[method] = original;
+                    else
+                        registry.Remove(method);
+                }
+            }
+            bool restoredExactly;
+            lock (publication)
+            lock (registry)
+            {
+                byte[] restored;
+                var exists = registry.TryGetValue(method, out restored);
+                restoredExactly = exists == hadOriginal && ReferenceEquals(restored, original);
+            }
+            Check(restoredExactly,
+                "the metadata fixture restores the exact original registry presence and byte identity");
+            Check((bool)canScan.Invoke(null, new object[] { 0, null }),
+                "restoring outer " + method.Name + " metadata restores scan compatibility");
+            Console.WriteLine("COVERAGE Conveyor outer " + method.Name + ": serialized Harmony metadata only; "
+                + (method.Name == "MoveNextRare" ? "native detour not attempted"
+                    : "prior native detour attempt failed on this host"));
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        private static List<SolidConduitFlow.Conduit> InvokeOuterCurrent(
+            ref List<List<SolidConduitFlow.Conduit>>.Enumerator iterator)
+        {
+            return iterator.Current;
+        }
+
         private static int rejectedPredicates;
 
         private static bool RejectPredicate(ref bool __result)
@@ -513,7 +739,59 @@ namespace CycleTrim.Optimizations.Tests
             return false;
         }
 
-        private static string EvaluateCallbackChange(bool patchPredicate)
+        private static void PrepareCallbackOracle()
+        {
+            Harmony.ReversePatch(Target,
+                new HarmonyMethod(typeof(ConveyorPathRegression), nameof(OriginalCallbackTryAdd)),
+                AccessTools.Method(typeof(ConveyorPathRegression), nameof(CallbackOracleTranspiler)));
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void OriginalCallbackTryAdd(SolidConduitFlow flow, List<SolidConduitFlow.Conduit> candidate)
+        {
+            throw new InvalidOperationException("Original callback oracle was not installed");
+        }
+
+        private static IEnumerable<CodeInstruction> CallbackOracleTranspiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var search = AccessTools.Method(typeof(List<SolidConduitFlow.Conduit>), "FindIndex",
+                new[] { typeof(Predicate<SolidConduitFlow.Conduit>) });
+            var replacement = AccessTools.Method(typeof(ConveyorPathRegression), nameof(OracleSearch));
+            var count = 0;
+            foreach (var instruction in instructions)
+            {
+                if (instruction.opcode == OpCodes.Callvirt && Equals(instruction.operand, search))
+                {
+                    count++;
+                    yield return new CodeInstruction(instruction) { opcode = OpCodes.Call, operand = replacement };
+                }
+                else
+                    yield return instruction;
+            }
+            if (count != 3)
+                throw new InvalidOperationException("The callback oracle requires all three original FindIndex calls");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static int OracleSearch(List<SolidConduitFlow.Conduit> path, Predicate<SolidConduitFlow.Conduit> predicate)
+        {
+            // Keep List.FindIndex itself, including its traversal and argument
+            // failures. Only the original delegate invocation crosses a test
+            // boundary that cannot inline a predicate before its late patch.
+            // A reverse-patch stand-in's MethodImpl flags are not copied into
+            // Harmony's generated replacement, so those flags belong below.
+            return path.FindIndex(predicate == null ? null
+                : new Predicate<SolidConduitFlow.Conduit>(rail => InvokeOraclePredicate(predicate, rail)));
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        private static bool InvokeOraclePredicate(Predicate<SolidConduitFlow.Conduit> predicate,
+            SolidConduitFlow.Conduit rail)
+        {
+            return predicate(rail);
+        }
+
+        private static string EvaluateCallbackChange(bool patchPredicate, bool originalOracle = false)
         {
             var foreign = new Harmony(Owner + ".late");
             var predicate = (MethodInfo)PatchProcessor.GetOriginalInstructions(Target)
@@ -535,10 +813,18 @@ namespace CycleTrim.Optimizations.Tests
             };
             try
             {
-                flow.AddPath(candidate);
+                if (originalOracle)
+                    OriginalCallbackTryAdd(flow, candidate);
+                else
+                    flow.AddPath(candidate);
                 Check(observed, "callback-change fixture reaches a late shared rail");
-                return string.Join(",", candidate.Select(item => item.idx)) + "|reads:"
+                var trace = string.Join(",", candidate.Select(item => item.idx)) + "|reads:"
                     + string.Join(",", flow.GetSOAInfo().Reads) + "|predicates:" + rejectedPredicates;
+                if (patchPredicate)
+                    Check(trace == "65000,2,1,60000,60001,60002,60003,65001|reads:1|predicates:128",
+                        (originalOracle ? "original semantic oracle" : "optimized invocation")
+                        + " observes the late prefix on both remaining full searches; actual=" + trace);
+                return trace;
             }
             finally { foreign.UnpatchAll(foreign.Id); }
         }
@@ -556,6 +842,31 @@ namespace CycleTrim.Optimizations.Tests
                 && ConveyorPathLookup.Scan(Rails(new[] { 9, 1, 9 }), 8) == -1,
                 "integer scans retain first-match and missing-key results");
             Expect<NullReferenceException>(() => ConveyorPathLookup.Scan(null, 9));
+            var endpointSearch = (Func<List<SolidConduitFlow.Conduit>, List<SolidConduitFlow.Conduit>, int, int>)
+                Delegate.CreateDelegate(typeof(Func<List<SolidConduitFlow.Conduit>, List<SolidConduitFlow.Conduit>, int, int>),
+                    AccessTools.Method(typeof(ConveyorPathLookupPatch), "FindEndpoint"));
+            var empty = Rails(new int[0]);
+            var aliased = Rails(new[] { 9, 1, 9 });
+            Check(endpointSearch(empty, null, 0) == -1 && endpointSearch(empty, empty, 1) == -1,
+                "empty searched lists never evaluate either candidate endpoint");
+            Check(endpointSearch(aliased, aliased, 0) == 0 && endpointSearch(aliased, aliased, 1) == 0,
+                "aliased endpoint searches keep original first-position behavior");
+            Expect<NullReferenceException>(() => endpointSearch(null, aliased, 0));
+            Expect<NullReferenceException>(() => endpointSearch(aliased, null, 1));
+            Expect<ArgumentOutOfRangeException>(() => endpointSearch(aliased, empty, 0));
+            var membership = (MethodInfo)PatchProcessor.GetOriginalInstructions(Target)
+                .Last(item => item.opcode == OpCodes.Ldftn).operand;
+            var membershipOnly = new Harmony(Owner + ".membership-only");
+            try
+            {
+                membershipOnly.Patch(membership, prefix: new HarmonyMethod(typeof(ConveyorPathRegression), nameof(Noop)));
+                Check((bool)AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScanEndpoint")
+                    .Invoke(null, new object[] { 0 })
+                    && !(bool)AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScan")
+                        .Invoke(null, new object[] { 0, null }),
+                    "endpoint and membership evidence each guard only their own bypassed dependencies");
+            }
+            finally { membershipOnly.UnpatchAll(membershipOnly.Id); }
             var endpointNumber = 0;
             foreach (var predicate in PatchProcessor.GetOriginalInstructions(Target)
                 .Where(item => item.opcode == OpCodes.Ldftn).Take(2).Select(item => (MethodInfo)item.operand))
@@ -603,7 +914,67 @@ namespace CycleTrim.Optimizations.Tests
             };
             threaded.AddPath(Rails(new[] { 65000, 2, 1, 65001 }));
             Check(ran && ConveyorPathLookup.Current == null, "threaded callback finishes with no retained scope");
+            TestConstructorHistory();
             TestLateProviderLoad();
+        }
+
+        private static Harmony leakingConstructorOwner;
+        private static object leakedEndpointClosure;
+        private static int leakingConstructorCalls;
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void LeakClosureAndUnpatch(object __instance)
+        {
+            leakingConstructorCalls++;
+            leakedEndpointClosure = __instance;
+            leakingConstructorOwner.UnpatchAll(leakingConstructorOwner.Id);
+        }
+
+        private static void TestConstructorHistory()
+        {
+            var predicate = (MethodInfo)PatchProcessor.GetOriginalInstructions(Target)
+                .First(item => item.opcode == OpCodes.Ldftn).operand;
+            var constructor = AccessTools.Constructor(predicate.DeclaringType);
+            var caches = predicate.DeclaringType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(field => field.FieldType == typeof(Predicate<SolidConduitFlow.Conduit>)).ToArray();
+            Check(caches.Length == 2, "the constructor-history fixture has both observable endpoint caches");
+            var own = new Harmony(Owner);
+            var foreign = new Harmony(Owner + ".constructor-history");
+            leakingConstructorOwner = foreign;
+            leakedEndpointClosure = null;
+            leakingConstructorCalls = 0;
+            // Compile the tested body only after installing the constructor
+            // patch. An earlier JIT-inlined empty constructor is not an oracle
+            // for whether the actual leak and self-unpatch callback executed.
+            own.Unpatch(Target, HarmonyPatchType.Transpiler, Owner);
+            try
+            {
+                foreign.Patch(constructor, postfix: new HarmonyMethod(typeof(ConveyorPathRegression), nameof(LeakClosureAndUnpatch)));
+                own.CreateClassProcessor(typeof(ConveyorPathLookupPatch)).Patch();
+                var flow = RepeatedFixture(64, 1);
+                flow.AddPath(Rails(Enumerable.Range(0, 8)));
+                Check(leakingConstructorCalls == 1 && leakedEndpointClosure != null,
+                    "the real constructor postfix leaks this invocation's closure before removing itself");
+                var patches = Harmony.GetPatchInfo(constructor);
+                Check(patches != null && !patches.Owners.Contains(foreign.Id),
+                    "the leaking constructor has no current observer patch by the first endpoint search");
+                Check(caches.All(field => field.GetValue(leakedEndpointClosure) is Predicate<SolidConduitFlow.Conduit>),
+                    "a historically leaked closure retains both original endpoint delegate-cache writes");
+                Check(!(bool)AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScanEndpoint")
+                    .Invoke(null, new object[] { 0 })
+                    && (bool)AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScan")
+                        .Invoke(null, new object[] { 0, null }),
+                    "constructor publication history rejects cache-write omission while keeping independent membership eligible");
+            }
+            finally
+            {
+                foreign.UnpatchAll(foreign.Id);
+                leakingConstructorOwner = null;
+                leakedEndpointClosure = null;
+                leakingConstructorCalls = 0;
+                own.Unpatch(Target, HarmonyPatchType.Transpiler, Owner);
+                own.CreateClassProcessor(typeof(ConveyorPathLookupPatch)).Patch();
+            }
         }
 
         private static void TestLateProviderLoad()

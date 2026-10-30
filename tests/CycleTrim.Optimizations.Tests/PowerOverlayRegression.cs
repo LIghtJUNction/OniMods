@@ -20,6 +20,7 @@ namespace CycleTrim.Optimizations.Tests
         private static int assertions;
         private static UtilityNetwork patchedRoutingNetwork;
         private static int routingPatchCalls;
+        private static int foreignPatchCalls;
 
         internal static void Benchmark() { PowerOverlayBenchmark.Run(); }
 
@@ -44,6 +45,8 @@ namespace CycleTrim.Optimizations.Tests
                 TestsConcurrentUpdates();
                 TestsForeignPatches(harmony);
                 TestsPatchFamilyMetadata();
+                TestsMetadataSnapshots();
+                TestsPatchesBeforeFirstReuse();
                 TestsCircuitRoutingDependencies();
                 // This deliberately loads an unsupported external type. Keep it
                 // last; a dynamic assembly can grow for the rest of the process.
@@ -59,6 +62,45 @@ namespace CycleTrim.Optimizations.Tests
                 .GetFields(BindingFlags.Instance | BindingFlags.Public)
                 .Where(field => typeof(IEnumerable<Patch>).IsAssignableFrom(field.FieldType))
                 .Select(field => field.Name).OrderBy(name => name)));
+        }
+
+        internal static void RunProviderRegression()
+        {
+            // A second provider cannot be unloaded. The harness runs this
+            // entry in its own process, separate from the dynamic-type case.
+            CycleTrimPatchOptions.Configure(true, true, true, true, true, false, powerOverlay: true);
+            var harmony = new Harmony(Owner + ".provider");
+            try
+            {
+                harmony.CreateClassProcessor(typeof(PowerOverlayOptimizationPatch)).Patch();
+                WarmCompatibility();
+                var snapshot = PowerSnapshot();
+                Check(snapshot.Check() == HarmonyPatchSnapshotResult.Compatible,
+                    "the unique pinned provider permits an initially compatible snapshot");
+                var manager = Manager(8, 3f);
+                var overlay = Overlay(manager, 8, 8, 8);
+                overlay.AfterRead = index =>
+                {
+                    if (index != 0) return;
+                    Check(PowerOverlayCache.Current.Enabled && PowerOverlayCache.Current.Count == 1,
+                        "provider-load fixture begins with a stored candidate answer");
+                    var other = Assembly.Load(System.IO.File.ReadAllBytes(typeof(Harmony).Assembly.Location));
+                    Check(other != typeof(Harmony).Assembly
+                        && other.GetType("HarmonyLib.PatchProcessor") != typeof(PatchProcessor),
+                        "a second real provider is loaded without executing its code");
+                    Check(snapshot.Check() == HarmonyPatchSnapshotResult.Reject,
+                        "a second publication provider rejects the previously compatible snapshot");
+                    manager.Values[8] = 4f;
+                };
+                overlay.Update();
+                Check(manager.Calls == 3 && overlay.Results.SequenceEqual(new[] { 3f, 4f, 4f }),
+                    "mid-update provider loading preserves every subsequent original query");
+                Check(PowerOverlayCache.Current == null, "provider invalidation still releases the lease");
+                CheckCalls(3, "provider ambiguity also rejects reuse in later updates");
+            }
+            finally { harmony.UnpatchAll(harmony.Id); }
+            Console.WriteLine("PASS Power overlay provider: " + assertions
+                + " assertions; isolated real assembly-load invalidation");
         }
 
         private static void TestsDisabledOption()
@@ -161,9 +203,9 @@ namespace CycleTrim.Optimizations.Tests
                 foreach (var circuit in new ushort[] { 0, PowerOverlayCache.MaximumEntries / 2 - 1 })
                 {
                     Check(lease.TryGet(first, circuit, out watts) && watts == circuit,
-                        "switching managers preserves the first manager's stored hash and value");
+                        "switching managers preserves the first manager's key and value");
                     Check(lease.TryGet(second, circuit, out watts) && watts == -circuit - 1,
-                        "switching managers preserves the second manager's stored hash and value");
+                        "switching managers preserves the second manager's key and value");
                 }
                 var overflow = new IdentityOnlyOwner();
                 lease.Remember(overflow, 0, 50f, lease.Version);
@@ -175,10 +217,10 @@ namespace CycleTrim.Optimizations.Tests
                 var nested = PowerOverlayCache.Enter(false);
                 PowerOverlayCache.Exit(nested);
                 lease.Remember(first, 7, 12f, version);
-                Check(lease.Count == 0, "invalidated hash seed cannot admit a stale query result");
+                Check(lease.Count == 0, "an invalidated lease cannot admit a stale query result");
                 lease.Remember(first, 7, 13f, lease.Version);
                 Check(lease.TryGet(first, 7, out watts) && watts == 13f,
-                    "the same owner acquires a fresh hash seed after invalidation");
+                    "the same owner acquires a fresh entry after invalidation");
             }
             finally { PowerOverlayCache.Exit(lease); }
         }
@@ -582,6 +624,149 @@ namespace CycleTrim.Optimizations.Tests
                 family == 4 ? one : empty, family == 5 ? one : empty);
         }
 
+        private static void TestsMetadataSnapshots()
+        {
+            var publication = AccessTools.Field(typeof(PatchProcessor), "locker").GetValue(null);
+            var shared = typeof(Harmony).Assembly.GetType("HarmonyLib.HarmonySharedState", true);
+            var registry = AccessTools.Field(shared, "state").GetValue(null);
+            var methods = new MethodBase[] { Update, Query };
+            var validations = 0;
+            var snapshot = new HarmonyPatchSnapshot(methods, method =>
+            {
+                validations++;
+                Check(!Monitor.IsEntered(publication) && !Monitor.IsEntered(registry),
+                    "public patch validation executes outside publication and registry locks");
+                return !PowerOverlayCompatibility.HasPatches(Harmony.GetPatchInfo(method),
+                    typeof(PowerOverlayOptimizationPatch));
+            });
+            // Mutating a caller-owned list must not change what a published
+            // snapshot proves. A subsequent Query patch tests the copied set.
+            methods[1] = Update;
+            Check(snapshot.Check() == HarmonyPatchSnapshotResult.Compatible && validations == 2,
+                "a fresh snapshot validates both immutable method dependencies");
+            Check(snapshot.Check() == HarmonyPatchSnapshotResult.Compatible && validations == 2,
+                "unchanged byte identities reuse validation without decoding metadata");
+
+            var foreign = new Harmony(Owner + ".snapshot");
+            try
+            {
+                foreign.Patch(Query, prefix: new HarmonyMethod(typeof(PowerOverlayRegression), nameof(NeutralPrefix)));
+                Check(snapshot.Check() == HarmonyPatchSnapshotResult.Reject && validations == 4,
+                    "late Query metadata revalidates the original immutable method set");
+                Check(snapshot.Check() == HarmonyPatchSnapshotResult.Reject && validations == 4,
+                    "a stable rejected snapshot never becomes compatible without a change");
+                foreign.UnpatchAll(foreign.Id);
+                Check(snapshot.Check() == HarmonyPatchSnapshotResult.Compatible && validations == 6,
+                    "removing a late patch changes byte identity and restores valid reuse");
+
+                var changed = false;
+                var racing = new HarmonyPatchSnapshot(new MethodBase[] { Query }, method =>
+                {
+                    Check(!Monitor.IsEntered(publication) && !Monitor.IsEntered(registry),
+                        "a validator may publish a real patch without holding snapshot locks");
+                    var clean = !PowerOverlayCompatibility.HasPatches(Harmony.GetPatchInfo(method), null);
+                    if (!changed)
+                    {
+                        changed = true;
+                        foreign.Patch(Query, prefix: new HarmonyMethod(typeof(PowerOverlayRegression), nameof(NeutralPrefix)));
+                    }
+                    return clean;
+                });
+                Check(racing.Check() == HarmonyPatchSnapshotResult.Reject,
+                    "a metadata change after public validation cannot publish a stale compatible result");
+                foreign.UnpatchAll(foreign.Id);
+                Check(racing.Check() == HarmonyPatchSnapshotResult.Compatible,
+                    "a rejected publication race can be revalidated in a later scope");
+                lock (publication)
+                    Check(racing.Check() == HarmonyPatchSnapshotResult.Reject,
+                        "reentrant publication never consumes a previously compatible snapshot");
+            }
+            finally { foreign.UnpatchAll(foreign.Id); }
+        }
+
+        private static void TestsPatchesBeforeFirstReuse()
+        {
+            var foreign = new Harmony(Owner + ".before-hit");
+            try
+            {
+                foreach (var target in new[] { Query, Update })
+                {
+                    var patch = new HarmonyMethod(typeof(PowerOverlayRegression), nameof(CountForeignCall));
+                    // Settle Harmony/JIT support loads before checking that a
+                    // metadata change, rather than an assembly epoch, rejects it.
+                    foreign.Patch(target, prefix: patch);
+                    foreign.UnpatchAll(foreign.Id);
+                    WarmCompatibility();
+                    var environment = PowerOverlayCompatibility.CurrentVersion;
+                    var manager = Manager(5, 6f);
+                    var overlay = Overlay(manager, 5, 5, 5);
+                    foreignPatchCalls = 0;
+                    overlay.AfterRead = index =>
+                    {
+                        if (index != 0) return;
+                        Check(PowerOverlayCache.Current.Enabled
+                            && !PowerOverlayCache.Current.CompatibilityChecked,
+                            "late-patch fixture installs after the first miss and before the first hit");
+                        foreign.Patch(target, prefix: patch);
+                        manager.Values[5] = 7f;
+                    };
+                    overlay.Update();
+                    var query = target == Query;
+                    Check(manager.Calls == 3 && overlay.Results.SequenceEqual(new[] { 6f, 7f, 7f }),
+                        "a " + target.Name + " patch before first reuse preserves all changed answers");
+                    Check(foreignPatchCalls == (query ? 2 : 0),
+                        "the newly installed real patch executes exactly at original entry points");
+                    Check(PowerOverlayCompatibility.IsCurrent(environment),
+                        "first-hit rejection follows changed patch bytes without assembly invalidation");
+                    manager.Calls = 0;
+                    foreignPatchCalls = 0;
+                    overlay.AfterRead = null;
+                    overlay.Update();
+                    Check(manager.Calls == 3 && foreignPatchCalls == (query ? 3 : 1),
+                        "the same foreign metadata is checked and rejected in the next update");
+                    foreign.UnpatchAll(foreign.Id);
+                    CheckCalls(1, "removing a before-hit patch restores reuse in the next update");
+                }
+
+                var dependency = AccessTools.PropertyGetter(typeof(Generator), "CircuitID");
+                var route = new HarmonyMethod(typeof(PowerOverlayRegression), nameof(AdvanceRouting));
+                foreign.Patch(dependency, prefix: route);
+                foreign.UnpatchAll(foreign.Id);
+                var routed = RoutingManager(false);
+                WarmCompatibility();
+                ResetRoutingReads(routed);
+                var version = PowerOverlayCompatibility.CurrentVersion;
+                var routedOverlay = Overlay(routed, 77, 77, 77);
+                routedOverlay.AfterRead = index =>
+                {
+                    if (index == 0)
+                        foreign.Patch(dependency, prefix: route);
+                };
+                routedOverlay.Update();
+                Check(routedOverlay.Results.SequenceEqual(new[] { 100f, 200f, 300f }),
+                    "a routing callback patched before first reuse preserves each changing circuit answer");
+                Check(routed.Calls == 3 && routingPatchCalls == 2,
+                    "routing callback installation retains all original queries and real callback calls");
+                Check(PowerOverlayCompatibility.IsCurrent(version),
+                    "routing callback rejection still performs public checks each update");
+            }
+            finally
+            {
+                foreign.UnpatchAll(foreign.Id);
+                Game.SetInstanceForTest(null);
+                patchedRoutingNetwork = null;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void CountForeignCall() { foreignPatchCalls++; }
+
+        private static HarmonyPatchSnapshot PowerSnapshot()
+        {
+            return (HarmonyPatchSnapshot)AccessTools.Field(
+                typeof(PowerOverlayOptimizationPatch), "ReuseSnapshot").GetValue(null);
+        }
+
         private static void TestsCircuitRoutingDependencies()
         {
             var networks = typeof(UtilityNetworkManager<ElectricalUtilityNetwork, Wire>);
@@ -703,6 +888,9 @@ namespace CycleTrim.Optimizations.Tests
 
         private static void TestsMidUpdateAssemblyLoad()
         {
+            var snapshot = PowerSnapshot();
+            Check(snapshot.Check() == HarmonyPatchSnapshotResult.Compatible,
+                "dynamic provider fixture first observes a compatible metadata snapshot");
             var manager = Manager(8, 3f);
             var overlay = Overlay(manager, 8, 8, 8);
             overlay.AfterRead = index =>
@@ -710,6 +898,8 @@ namespace CycleTrim.Optimizations.Tests
                 if (index != 0) return;
                 var assembly = AssemblyBuilder.DefineDynamicAssembly(
                     new AssemblyName("CycleTrim.SyntheticExternalConsumer"), AssemblyBuilderAccess.Run);
+                Check(snapshot.Check() == HarmonyPatchSnapshotResult.Reject,
+                    "a growable assembly rejects the snapshot before it defines any provider or consumer type");
                 assembly.DefineDynamicModule("consumer").DefineType("CustomConsumer", TypeAttributes.Public,
                     typeof(EnergyConsumer)).CreateType();
                 manager.Values[8] = 4f;

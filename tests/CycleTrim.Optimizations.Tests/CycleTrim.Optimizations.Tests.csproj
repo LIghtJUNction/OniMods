@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../../mods/CycleTrim/Core/CycleTrimPatchOptions.cs" Link="CycleTrimPatchOptions.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/HarmonyPatchSnapshot.cs" Link="HarmonyPatchSnapshot.cs" />
     <Compile Include="../../mods/CycleTrim/Core/SaveTypeMetadataCache.cs" Link="SaveTypeMetadataCache.cs" />
     <Compile Include="../../mods/CycleTrim/Patches/SaveTypeMetadataPatch.cs" Link="SaveTypeMetadataPatch.cs" />
     <Compile Include="../../mods/CycleTrim/Core/PowerOverlay*.cs" Link="%(Filename)%(Extension)" />

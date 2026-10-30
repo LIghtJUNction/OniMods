@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/tmp/cycletrim-dotnet/dotnet",
+    "run",
+    "--project",
+    "tests/CycleTrim.Optimizations.Tests",
+    "-c",
+    "Release",
+    "--no-restore",
+    "-p:ImportDirectoryBuildProps=false",
+    "-p:TreatWarningsAsErrors=true"
+  ],
+  "exit_code": 0,
+  "started_utc": "2026-10-30T18:27:20.776038+00:00",
+  "finished_utc": "2026-10-30T18:27:28.395303+00:00"
+}

@@ -14,6 +14,9 @@ namespace CycleTrim.Patches
             typeof(OverlayModes.Power), "Update", Type.EmptyTypes);
         private static readonly MethodInfo WattsMethod = AccessTools.DeclaredMethod(
             typeof(CircuitManager), "GetWattsNeededWhenActive", new[] { typeof(ushort) });
+        private static readonly HarmonyPatchSnapshot ReuseSnapshot =
+            UpdateMethod == null || WattsMethod == null ? null : new HarmonyPatchSnapshot(
+                new MethodBase[] { UpdateMethod, WattsMethod }, CheckOwnMethod);
         private static bool callSiteMatched;
         private static bool reportedMismatch;
 
@@ -126,7 +129,7 @@ namespace CycleTrim.Patches
             int environmentVersion;
             var compatible = PowerOverlayCompatibility.CanReuse(out environmentVersion)
                 && environmentVersion == lease.EnvironmentVersion
-                && !HasForeignPatch(UpdateMethod) && !HasForeignPatch(WattsMethod)
+                && CheckCurrentOwnMethods()
                 && PowerOverlayCompatibility.IsCurrent(environmentVersion)
                 && ReferenceEquals(PowerOverlayCache.Current, lease) && lease.Version == version;
             if (compatible)
@@ -134,6 +137,25 @@ namespace CycleTrim.Patches
             else
                 lease.DisableReuse();
             return compatible;
+        }
+
+        private static bool CheckCurrentOwnMethods()
+        {
+            if (ReuseSnapshot == null)
+                return false;
+            var result = ReuseSnapshot.Check();
+            return result == HarmonyPatchSnapshotResult.Compatible
+                || result == HarmonyPatchSnapshotResult.UnsupportedLayout && CheckOwnMethods();
+        }
+
+        private static bool CheckOwnMethods()
+        {
+            return CheckOwnMethod(UpdateMethod) && CheckOwnMethod(WattsMethod);
+        }
+
+        private static bool CheckOwnMethod(MethodBase method)
+        {
+            return !HasForeignPatch(method);
         }
 
         private static bool HasForeignPatch(MethodBase method)

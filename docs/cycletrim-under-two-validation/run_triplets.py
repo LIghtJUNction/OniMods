@@ -39,9 +39,26 @@ def ratio_distribution(values):
             "at_least_two": sum(x >= 2 for x in values)}
 
 
-def validate_triplet(values):
+def validate_triplet(values, family, scenario, mode):
     if set(values) != set(REVISIONS):
         raise ValueError("missing or unexpected revision in triplet")
+    for revision in REVISIONS:
+        original, patched = (values[revision][variant] for variant in ("original", "patched"))
+        if original["checksum"] != patched["checksum"]:
+            raise ValueError("original/patched output mismatch")
+        if family == "conveyor" and original["counter"] != patched["counter"]:
+            raise ValueError("direction-read mismatch")
+        if family == "power":
+            expected = 3200 if scenario == "repeated-circuits" else 51200
+            if original["counter"] != 51200 or patched["counter"] != expected:
+                raise ValueError("power query-count mismatch")
+        if family == "animation":
+            before = 30000 if mode == "consumer" else 0
+            after = before if scenario.startswith("change-") else 0
+            if (original["copies"] != before or patched["copies"] != after
+                    or original["copied_bytes"] != before * 256 * 48
+                    or patched["copied_bytes"] != after * 256 * 48):
+                raise ValueError("animation copy contract mismatch")
     for variant in ("original", "patched"):
         for revision in REVISIONS:
             duration = values[revision][variant]["milliseconds"]
@@ -94,7 +111,7 @@ def summarize(directory):
             raise ValueError("missing or unexpected triplet indices")
         ordered = [sets[index] for index in range(metadata["sets"])]
         for values in ordered:
-            validate_triplet(values)
+            validate_triplet(values, family, scenario, mode)
         row = {"family": family, "scenario": scenario, "mode": mode, "sets": len(ordered)}
         for revision in REVISIONS:
             for variant in ("original", "patched"):
@@ -162,7 +179,7 @@ def run(args):
                         samples.write(json.dumps({"revision": revision, "family": family,
                             "scenario": scenario, "mode": mode, "set": sample,
                             "process_position": position, **measured}, separators=(",", ":")) + "\n")
-                    validate_triplet(values)
+                    validate_triplet(values, family, scenario, mode)
                 print(f"completed {family}/{scenario}/{mode}", flush=True)
     summarize(directory)
     metadata["completed_utc"] = datetime.now(timezone.utc).isoformat()
