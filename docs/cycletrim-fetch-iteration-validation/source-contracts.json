@@ -1,0 +1,22 @@
+[
+  {
+    "script": "verify_cycletrim_fetch_pool_source.py",
+    "exit_code": 0,
+    "output": "PASS CycleTrim fetch candidate pool source contract\n"
+  },
+  {
+    "script": "verify_cycletrim_perf_probe_analyzer.py",
+    "exit_code": 0,
+    "output": "PASS CycleTrim performance probe analyzer regressions\n"
+  },
+  {
+    "script": "verify_cycletrim_perf_probe_source.py",
+    "exit_code": 0,
+    "output": "PASS CycleTrim opt-in performance probe source contract\n"
+  },
+  {
+    "script": "verify_cycletrim_perf_probe_external_ownership.py",
+    "exit_code": 0,
+    "output": "PASS CycleTrim perf probe reports generic Harmony ownership\n"
+  }
+]

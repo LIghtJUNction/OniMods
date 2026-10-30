@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep FetchPickupCandidatePatch's temporary dictionary reuse allocation-free and bounded."""
+"""Keep both FetchPickupCandidatePatch layouts pooled and cleared on every exit."""
 
 from pathlib import Path
 import re
@@ -9,28 +9,40 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / "mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs"
 POOL = ROOT / "mods/CycleTrim/Core/ThreadLocalObjectPool.cs"
+BUFFER = ROOT / "mods/CycleTrim/Core/FetchCandidateBuffer.cs"
 
 
 def main() -> int:
     patch = PATCH.read_text(encoding="utf-8")
     pool = POOL.read_text(encoding="utf-8")
+    buffer = BUFFER.read_text(encoding="utf-8")
     failures = []
 
     if "ConcurrentStack" in patch:
         failures.append("FetchPickupCandidatePatch must not use ConcurrentStack for per-call reuse")
     if "ThreadLocalObjectPool<" not in patch:
         failures.append("FetchPickupCandidatePatch must use the thread-local reuse pool")
-    if patch.count(".Rent();") != 1:
-        failures.append("FetchPickupCandidatePatch must rent exactly one candidate dictionary")
-    if patch.count(".Return(candidates);") != 1:
-        failures.append("FetchPickupCandidatePatch must return exactly one candidate dictionary")
-    if not re.search(
+    if patch.count(".Rent();") != 2:
+        failures.append("each mutually exclusive candidate layout must have one rental")
+    if patch.count(".Return(candidates);") != 2:
+        failures.append("each candidate layout must return its rental")
+    if len(re.findall(
         r"finally\s*\{\s*candidates\.Clear\(\);\s*"
         r"ThreadLocalObjectPool<[^;]+>\.Return\(candidates\);\s*\}",
         patch,
         re.DOTALL,
-    ):
-        failures.append("candidate dictionary must be cleared before it is returned in finally")
+    )) != 2:
+        failures.append("both layouts must clear their buffer before returning it in finally")
+    if patch.count("FetchLayoutExperiment.Compact") != 1:
+        failures.append("layout selection must be captured once per invocation")
+    if not re.search(r"if\s*\(compact\)\s*return\s+UpdateCompact\(", patch):
+        failures.append("layout dispatch must occur before the established dictionary loop")
+    if "Func<" in buffer or "Func<" in patch:
+        failures.append("candidate comparison must not add a per-item delegate")
+    if not re.search(r"private readonly List<TValue> values", buffer):
+        failures.append("compact candidates must stay private until gathering finishes")
+    if "indices.Clear();" not in buffer or "values.Clear();" not in buffer:
+        failures.append("compact cleanup must release both keys and candidate references")
 
     if "[ThreadStatic]" not in pool:
         failures.append("ThreadLocalObjectPool storage must remain thread-local")

@@ -80,6 +80,13 @@ namespace CycleTrim.Patches
                 int worker,
                 Dictionary<int, int> ___cellCosts)
             {
+                // Capture once, including across callbacks and nested updates.
+                // The ordinary path keeps the established dictionary loop.
+                var compact = FetchLayoutExperiment.Compact;
+                FetchLayoutExperiment.RecordUpdate(compact);
+                if (compact)
+                    return UpdateCompact(__instance, worker_navigator, worker, ___cellCosts);
+
                 var candidates = ThreadLocalObjectPool<
                     Dictionary<PickupKey, FetchManager.Pickup>>.Rent();
 
@@ -137,6 +144,61 @@ namespace CycleTrim.Patches
                     candidates.Clear();
                     ThreadLocalObjectPool<
                         Dictionary<PickupKey, FetchManager.Pickup>>.Return(candidates);
+                }
+            }
+
+            private static bool UpdateCompact(
+                FetchManager.FetchablesByPrefabId instance,
+                Navigator navigator,
+                int worker,
+                Dictionary<int, int> cellCosts)
+            {
+                var candidates = ThreadLocalObjectPool<
+                    FetchCandidateBuffer<PickupKey, FetchManager.Pickup>>.Rent();
+                try
+                {
+                    cellCosts.Clear();
+                    instance.finalPickups.Clear();
+                    foreach (var fetchable in instance.fetchables.GetDataList())
+                    {
+                        var pickupable = fetchable.pickupable;
+                        if (!pickupable.CouldBePickedUpByMinion(worker))
+                            continue;
+
+                        var cell = pickupable.cachedCell;
+                        if (!cellCosts.TryGetValue(cell, out var pathCost))
+                        {
+                            pathCost = pickupable.GetNavigationCost(navigator, cell);
+                            cellCosts[cell] = pathCost;
+                        }
+                        if (pathCost == -1)
+                            continue;
+
+                        var pickup = new FetchManager.Pickup
+                        {
+                            pickupable = pickupable,
+                            tagBitsHash = fetchable.tagBitsHash,
+                            PathCost = (ushort)pathCost,
+                            masterPriority = fetchable.masterPriority,
+                            freshness = fetchable.freshness,
+                            foodQuality = fetchable.foodQuality
+                        };
+                        var key = new PickupKey(pickup.tagBitsHash, pickup.masterPriority);
+                        if (!candidates.TryGetIndex(key, out var index))
+                            candidates.Add(key, pickup);
+                        else if (IsBetter(pickup, candidates[index]))
+                            candidates[index] = pickup;
+                    }
+
+                    candidates.AppendTo(instance.finalPickups);
+                    instance.finalPickups.Sort(FinalPickupOrder);
+                    return false;
+                }
+                finally
+                {
+                    candidates.Clear();
+                    ThreadLocalObjectPool<
+                        FetchCandidateBuffer<PickupKey, FetchManager.Pickup>>.Return(candidates);
                 }
             }
 

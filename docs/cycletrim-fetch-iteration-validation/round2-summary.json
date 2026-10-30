@@ -1,0 +1,127 @@
+{
+  "retained_candidate": "v1-private-dense",
+  "rejected_candidate": "v2-lazy-materialization",
+  "source": "round2.log",
+  "scenarios": {
+    "all-distinct": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 1.1296808444101465,
+        "min": 0.912828699995258,
+        "max": 1.5305171994239861
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 1.0328586564173412
+      },
+      "all_warm_allocations_zero": true
+    },
+    "eligibility-filtered": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 1.0207506969611415,
+        "min": 0.6815571933556401,
+        "max": 1.1064355312059468
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 0.900196272261003
+      },
+      "all_warm_allocations_zero": true
+    },
+    "empty": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 0.960089910460999,
+        "min": 0.8973072524192186,
+        "max": 1.0705361272257468
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 0.9550605982623522
+      },
+      "all_warm_allocations_zero": true
+    },
+    "every-duplicate-replaces": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 1.3492067481214616,
+        "min": 1.0946926707160762,
+        "max": 1.9688150036097647
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 0.8897868294226964
+      },
+      "all_warm_allocations_zero": true
+    },
+    "hash-collisions": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 1.2502748998875148,
+        "min": 1.0736833739457288,
+        "max": 1.4668132710409774
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 1.003558165039243
+      },
+      "all_warm_allocations_zero": true
+    },
+    "many-duplicates": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 0.9198926722753867,
+        "min": 0.6929716655420832,
+        "max": 1.5642626710979997
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 0.9413656305057722
+      },
+      "all_warm_allocations_zero": true
+    },
+    "shared-cells": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 0.9308721872948139,
+        "min": 0.8103190550167949,
+        "max": 1.1620379212607905
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 1.0243229803273586
+      },
+      "all_warm_allocations_zero": true
+    },
+    "short-distinct": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 1.0479205629099606,
+        "min": 1.0182371593509414,
+        "max": 1.2059526749742508
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 0.9853341186842668
+      },
+      "all_warm_allocations_zero": true
+    },
+    "unreachable": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 1.0109613928282,
+        "min": 0.8654958717922572,
+        "max": 1.2233526653473936
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 0.9904555425530531
+      },
+      "all_warm_allocations_zero": true
+    },
+    "unsorted-distinct": {
+      "pairs": 7,
+      "baseline_over_retained_candidate": {
+        "median": 1.1325110763802853,
+        "min": 1.0481912012904355,
+        "max": 1.2455605673861583
+      },
+      "candidate_v1_over_rejected_v2": {
+        "median": 0.9633963056242911
+      },
+      "all_warm_allocations_zero": true
+    }
+  }
+}

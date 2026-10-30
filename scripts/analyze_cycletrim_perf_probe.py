@@ -19,6 +19,20 @@ DEFAULT_REQUIRED = (
 )
 
 
+def _is_integer(value) -> bool:
+    # JSON booleans are distinct from counts, even though bool subclasses int.
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_finite_nonnegative(value) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value) and value >= 0
+    except OverflowError:
+        return False
+
+
 def reports(text: str) -> list[dict]:
     parsed = []
     for line in text.splitlines():
@@ -104,21 +118,21 @@ def validate(
     reject_external: bool = False,
 ) -> list[str]:
     failures = []
-    if not isinstance(report.get("stopwatchFrequency"), int) or report["stopwatchFrequency"] <= 0:
+    if not _is_integer(report.get("stopwatchFrequency")) or report["stopwatchFrequency"] <= 0:
         failures.append("stopwatchFrequency must be a positive integer")
 
     if "captureGeneration" in report:
         generation = report.get("captureGeneration")
-        if not isinstance(generation, int) or generation <= 0:
+        if not _is_integer(generation) or generation <= 0:
             failures.append("captureGeneration must be a positive integer")
 
     interval_schema = _has_interval_schema(report)
     if require_intervals or interval_schema:
         sequence = report.get("reportSequence")
-        if not isinstance(sequence, int) or sequence <= 0:
+        if not _is_integer(sequence) or sequence <= 0:
             failures.append("reportSequence must be a positive integer")
         duration = report.get("intervalDurationTicks")
-        if not isinstance(duration, int) or duration < 0:
+        if not _is_integer(duration) or duration < 0:
             failures.append("intervalDurationTicks must be a non-negative integer")
 
     gc = report.get("gc")
@@ -126,7 +140,7 @@ def validate(
         failures.append("gc object is missing")
     else:
         for name in ("gen0Delta", "gen1Delta", "gen2Delta", "heapBytes", "heapDeltaBytes"):
-            if not isinstance(gc.get(name), int):
+            if not _is_integer(gc.get(name)):
                 failures.append(f"gc.{name} must be an integer")
 
     by_name, target_failures = _targets_by_name(report)
@@ -148,32 +162,32 @@ def validate(
             failures.append(f"{name} is patched by FastTrack")
         failures.extend(_validate_ownership(name, target, reject_external))
         calls = target.get("calls")
-        if not isinstance(calls, int) or calls < 0:
+        if not _is_integer(calls) or calls < 0:
             failures.append(f"required target has invalid calls: {name}")
         elif require_calls and calls <= 0:
             failures.append(f"required target has no calls: {name}")
         for metric in ("totalTicks", "maxTicks"):
-            if not isinstance(target.get(metric), int) or target[metric] < 0:
+            if not _is_integer(target.get(metric)) or target[metric] < 0:
                 failures.append(f"{name} {metric} must be a non-negative integer")
         mean_ticks = target.get("meanTicks")
-        if not isinstance(mean_ticks, (int, float)) or mean_ticks < 0:
-            failures.append(f"{name} meanTicks must be non-negative")
+        if not _is_finite_nonnegative(mean_ticks):
+            failures.append(f"{name} meanTicks must be finite and non-negative")
 
         if require_intervals or interval_schema:
             interval_calls = target.get("intervalCalls")
             interval_total = target.get("intervalTotalTicks")
             interval_mean = target.get("intervalMeanTicks")
-            if not isinstance(interval_calls, int) or interval_calls < 0:
+            if not _is_integer(interval_calls) or interval_calls < 0:
                 failures.append(f"{name} intervalCalls must be a non-negative integer")
-            elif isinstance(calls, int) and interval_calls > calls:
+            elif _is_integer(calls) and interval_calls > calls:
                 failures.append(f"{name} intervalCalls exceeds cumulative calls")
-            if not isinstance(interval_total, int) or interval_total < 0:
+            if not _is_integer(interval_total) or interval_total < 0:
                 failures.append(f"{name} intervalTotalTicks must be a non-negative integer")
-            elif isinstance(target.get("totalTicks"), int) and interval_total > target["totalTicks"]:
+            elif _is_integer(target.get("totalTicks")) and interval_total > target["totalTicks"]:
                 failures.append(f"{name} intervalTotalTicks exceeds cumulative totalTicks")
-            if not isinstance(interval_mean, (int, float)) or interval_mean < 0:
-                failures.append(f"{name} intervalMeanTicks must be non-negative")
-            elif isinstance(interval_calls, int) and isinstance(interval_total, int):
+            if not _is_finite_nonnegative(interval_mean):
+                failures.append(f"{name} intervalMeanTicks must be finite and non-negative")
+            elif _is_integer(interval_calls) and _is_integer(interval_total):
                 expected_mean = 0.0 if interval_calls == 0 else interval_total / interval_calls
                 if not math.isclose(float(interval_mean), expected_mean, abs_tol=0.001):
                     failures.append(f"{name} intervalMeanTicks does not match interval totals")
@@ -214,8 +228,8 @@ def validate_series(
                 f"report[{index}]: captureGeneration schema changed within one capture"
             )
         elif (
-            isinstance(previous_generation, int)
-            and isinstance(current_generation, int)
+            _is_integer(previous_generation)
+            and _is_integer(current_generation)
             and current_generation != previous_generation
         ):
             failures.append(
@@ -225,7 +239,7 @@ def validate_series(
 
         previous_sequence = previous.get("reportSequence")
         current_sequence = current.get("reportSequence")
-        if isinstance(previous_sequence, int) and isinstance(current_sequence, int):
+        if _is_integer(previous_sequence) and _is_integer(current_sequence):
             if current_sequence != previous_sequence + 1:
                 failures.append(
                     f"report[{index}]: reportSequence must follow {previous_sequence}, got {current_sequence}"
@@ -265,9 +279,9 @@ def validate_series(
                     f"report[{index}]: {name} Harmony ownership changed within one capture"
                 )
 
-            if not isinstance(before.get("calls"), int) or not isinstance(after.get("calls"), int):
+            if not _is_integer(before.get("calls")) or not _is_integer(after.get("calls")):
                 continue
-            if not isinstance(before.get("totalTicks"), int) or not isinstance(after.get("totalTicks"), int):
+            if not _is_integer(before.get("totalTicks")) or not _is_integer(after.get("totalTicks")):
                 continue
 
             calls_delta = after["calls"] - before["calls"]
@@ -311,7 +325,7 @@ def validate_series(
                 continue
             before_calls = before.get("calls")
             after_calls = after.get("calls")
-            if not isinstance(before_calls, int) or not isinstance(after_calls, int):
+            if not _is_integer(before_calls) or not _is_integer(after_calls):
                 continue
             if after_calls >= before_calls and after_calls - before_calls == 0:
                 failures.append(f"{name} has no fresh calls after the selected baseline")
@@ -321,7 +335,7 @@ def validate_series(
 
 def select_series_after_sequence(report_items: list[dict], after_sequence: int) -> list[dict]:
     """Select a capture anchored at a known report sequence and require a fresh report."""
-    if after_sequence <= 0:
+    if not _is_integer(after_sequence) or after_sequence <= 0:
         raise ValueError("after_sequence must be a positive reportSequence")
 
     baseline_index = None
