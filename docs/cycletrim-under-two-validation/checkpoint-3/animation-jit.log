@@ -1,0 +1,3 @@
+R3_CONFIG {"family":"animation","scenario":"repeat-range256","mode":"setter","pair":0,"assembly_sha256":"1d38ae591ec0f0d86d23f94dc8afd497eecd7cce88114ff9a7558db1d0573692","order":"original,patched"}
+BENCH animation-symbols scenario=repeat-range256 mode=setter sample=0 variant=baseline symbols=256 range=256 settersPerUpdate=1 updates=30000 ticks=57224776 frequency=1000000000 allocated=0 copies=0 copiedBytes=0 checksum=-7601060831707724240
+BENCH animation-symbols scenario=repeat-range256 mode=setter sample=0 variant=candidate symbols=256 range=256 settersPerUpdate=1 updates=30000 ticks=59850881 frequency=1000000000 allocated=0 copies=0 copiedBytes=0 checksum=-7601060831707724240

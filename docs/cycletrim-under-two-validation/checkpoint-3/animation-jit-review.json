@@ -1,0 +1,65 @@
+{
+  "assembly_path": "/workspace/scratch/2706e06c4375/cycletrim-r4-validation/checkpoint-3/animation-jit.asm",
+  "assembly_sha256": "294e75f621149f4e8917a07d574324d59d22ac00395f0595b1e181a223ab222a",
+  "host_sha256": "1d38ae591ec0f0d86d23f94dc8afd497eecd7cce88114ff9a7558db1d0573692",
+  "helper_source_sha256": "c4c804ccb39560969d4b1a7a459179057c21aaa94818d61db0507d94e6ab16a3",
+  "runtime_conditions": {
+    "DOTNET_TieredCompilation": "0",
+    "COMPlus_JitDisasm": "*SetSymbolOverrideInfo*"
+  },
+  "timing_claim": false,
+  "previous_diagnostic": "/tmp/cycletrim-r4-animation-jit-checkpoint2-review.json",
+  "success_path_failure_calls_removed": true,
+  "observations": [
+    {
+      "method": "single patched setter",
+      "assembly_lines": [
+        92,
+        108
+      ],
+      "observation": "Two scalar header comparisons precede four direct qword load/XOR pairs and three ORs. One JE tests their combined vector difference. No reconstructed Vector2 union store/reload appears in this comparison."
+    },
+    {
+      "method": "range patched setter",
+      "assembly_lines": [
+        380,
+        427
+      ],
+      "observation": "Direct qword source/destination comparisons still use four XORs and three ORs, followed by one JNE for the aggregate vector result. Frame values are spilled across the original destination getter and additional stack writebacks remain around lines421-426."
+    },
+    {
+      "method": "range patched setter",
+      "assembly_lines": [
+        467,
+        529
+      ],
+      "observation": "A first difference enters IG10/IG12. Later iterations stay in IG11/IG12/IG13, with original getters, bounds/loop checks and writes. They do not re-enter payload comparison or check changed state per symbol; completion reaches MarkDirty at IG08."
+    },
+    {
+      "method": "both patched setters",
+      "assembly_lines": [
+        126,
+        128,
+        463,
+        465
+      ],
+      "observation": "Success paths now set the wrapper completion flag and branch to the epilogue without calling RememberFailure or RecordFailure. Calls to Finalizer remain in the exception handlers, preserving failure registration."
+    },
+    {
+      "method": "both patched setters",
+      "observation": "Reported machine-code sizes are 367 bytes (single) and 791 bytes (range), 12 bytes fewer each than checkpoint2. This is a code-generation observation, not a speedup measurement."
+    }
+  ],
+  "limits": [
+    "Host .NET x64 machine code only; no Unity/Mono claim.",
+    "Code generation observations are not measured performance results.",
+    "The aggregate vector comparison has one conditional branch; scalar header, bounds, loop and dirty/failure guards still branch.",
+    "Do not claim zero stack spills."
+  ],
+  "published_disassembly": {
+    "file": "animation-jit.normalized.asm",
+    "normalization": "trailing line whitespace and trailing blank lines removed only; raw file retained in experimental artifacts",
+    "raw_sha256": "294e75f621149f4e8917a07d574324d59d22ac00395f0595b1e181a223ab222a",
+    "normalized_sha256": "dcaf8004b5019d08e1e6ca22264d1e14ed4b57b5e88e03046a198add1816f75f"
+  }
+}

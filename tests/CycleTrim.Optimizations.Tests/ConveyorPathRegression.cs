@@ -25,6 +25,8 @@ namespace CycleTrim.Optimizations.Tests
             TestLifetimeAndThreads();
             var cases = BuildCases();
             var expected = cases.Select(Evaluate).ToArray();
+            var latePatchExpected = EvaluateCallbackChange(true);
+            var mutationExpected = EvaluateCallbackChange(false);
             var harmony = new Harmony(Owner);
             try
             {
@@ -35,6 +37,13 @@ namespace CycleTrim.Optimizations.Tests
                 TestShortCandidateScopes();
                 TestLazyScopesAndNestedReturns();
                 TestForeignPatches();
+                var latePatchActual = EvaluateCallbackChange(true);
+                Check(latePatchActual == latePatchExpected,
+                    "a predicate installed inside a direction callback is visible to the next query; expected="
+                    + latePatchExpected + "; actual=" + latePatchActual);
+                Check(EvaluateCallbackChange(false) == mutationExpected,
+                    "same-length mutation inside a direction callback invalidates direct/indexed answers");
+                TestDirectSearchCompatibility();
             }
             finally
             {
@@ -75,8 +84,14 @@ namespace CycleTrim.Optimizations.Tests
             Check(modified.Count(item => item.opcode == OpCodes.Call
                 && item.operand is MethodInfo method && method.Name == "FindIndexScoped") == 1,
                 "exactly one helper call replaces the membership search");
-            Check(modified.Any(item => ReferenceEquals(item, original[calls[0]]))
-                && modified.Any(item => ReferenceEquals(item, original[calls[1]])), "endpoint searches are untouched");
+            Check(modified.Count(item => item.opcode == OpCodes.Call
+                && item.operand is MethodInfo method && method.Name == "FindEndpoint") == 2,
+                "both original endpoint searches retain independent guarded call sites");
+            Check(modified.Count(item => item.opcode == OpCodes.Call
+                && item.operand is MethodInfo method && method.Name == "FindRailScoped") == 1,
+                "the pure membership route omits the per-query predicate delegate");
+            Check(original[calls[0]].opcode == OpCodes.Callvirt && original[calls[1]].opcode == OpCodes.Callvirt,
+                "endpoint source instructions remain unmodified for unsupported/foreign fallback");
             Check(original[last].opcode == OpCodes.Callvirt, "input instructions are not mutated");
             var replacement = Array.FindIndex(modified, item => item.operand is MethodInfo method
                 && method.Name == "FindIndexScoped");
@@ -105,6 +120,14 @@ namespace CycleTrim.Optimizations.Tests
             badLambda[last - 2] = new CodeInstruction(OpCodes.Ldftn,
                 AccessTools.Method(typeof(ConveyorPathRegression), nameof(HasSideEffect)));
             Check(Transpile(badLambda).SequenceEqual(badLambda), "unknown predicate is not bypassed");
+            var wrongEndpoint = new List<CodeInstruction>(original);
+            var endpointMethods = original.Select((item, index) => new { item, index })
+                .Where(value => value.item.opcode == OpCodes.Ldftn).ToArray();
+            wrongEndpoint[endpointMethods[0].index] = new CodeInstruction(OpCodes.Ldftn, endpointMethods[1].item.operand);
+            Check(Transpile(wrongEndpoint).SequenceEqual(wrongEndpoint), "first/last endpoint predicates cannot be interchanged");
+            var badCache = new List<CodeInstruction>(original);
+            badCache[calls[0] - 2] = new CodeInstruction(OpCodes.Stfld, original[calls[1] - 2].operand);
+            Check(Transpile(badCache).SequenceEqual(badCache), "endpoint cache initialization must match its cache read");
             var prefixed = new List<CodeInstruction>(original);
             prefixed.Insert(last, new CodeInstruction(OpCodes.Constrained, typeof(List<SolidConduitFlow.Conduit>)));
             Check(Transpile(prefixed).SequenceEqual(prefixed), "prefixed call is not rewritten");
@@ -459,8 +482,11 @@ namespace CycleTrim.Optimizations.Tests
             var instructions = PatchProcessor.GetOriginalInstructions(Target);
             var predicate = (MethodInfo)instructions.Last(item => item.opcode == OpCodes.Ldftn).operand;
             var methods = new[] { Target, AccessTools.Method(typeof(SolidConduitFlow.SOAInfo), "GetPermittedFlowDirections"),
-                AccessTools.Method(typeof(UnityEngine.Mathf), "IsPowerOfTwo"), predicate };
-            foreach (var method in methods)
+                AccessTools.Method(typeof(UnityEngine.Mathf), "IsPowerOfTwo"), predicate,
+                AccessTools.Method(typeof(List<SolidConduitFlow.Conduit>), "GetEnumerator"),
+                AccessTools.Method(typeof(List<SolidConduitFlow.Conduit>.Enumerator), "MoveNext"),
+                AccessTools.Method(typeof(List<SolidConduitFlow.Conduit>.Enumerator), "MoveNextRare") };
+            foreach (var method in methods.Where(item => item != null))
             {
                 // Reuse our owner text to establish that patch method identity,
                 // rather than a trusted-looking string, controls compatibility.
@@ -476,6 +502,139 @@ namespace CycleTrim.Optimizations.Tests
                 }
                 finally { foreign.UnpatchAll(foreign.Id); }
             }
+        }
+
+        private static int rejectedPredicates;
+
+        private static bool RejectPredicate(ref bool __result)
+        {
+            rejectedPredicates++;
+            __result = false;
+            return false;
+        }
+
+        private static string EvaluateCallbackChange(bool patchPredicate)
+        {
+            var foreign = new Harmony(Owner + ".late");
+            var predicate = (MethodInfo)PatchProcessor.GetOriginalInstructions(Target)
+                .Last(item => item.opcode == OpCodes.Ldftn).operand;
+            var flow = RepeatedFixture(64, 1);
+            var candidate = Rails(new[] { 65000, 2, 1, 60000, 60001, 60002, 60003, 65001 });
+            var observed = false;
+            rejectedPredicates = 0;
+            flow.GetSOAInfo().Reads = new List<int>();
+            flow.GetSOAInfo().ObserveRead = () =>
+            {
+                if (observed)
+                    return;
+                observed = true;
+                if (patchPredicate)
+                    foreign.Patch(predicate, prefix: new HarmonyMethod(typeof(ConveyorPathRegression), nameof(RejectPredicate)));
+                else
+                    flow.Paths[0][2] = new SolidConduitFlow.Conduit(999);
+            };
+            try
+            {
+                flow.AddPath(candidate);
+                Check(observed, "callback-change fixture reaches a late shared rail");
+                return string.Join(",", candidate.Select(item => item.idx)) + "|reads:"
+                    + string.Join(",", flow.GetSOAInfo().Reads) + "|predicates:" + rejectedPredicates;
+            }
+            finally { foreign.UnpatchAll(foreign.Id); }
+        }
+
+        private static int endpointCalls;
+
+        private static void ObserveEndpoint() { endpointCalls++; }
+
+        private static void TestDirectSearchCompatibility()
+        {
+            var arguments = new object[] { 0, null };
+            Check((bool)AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScan").Invoke(null, arguments),
+                "host Harmony publication layout admits the direct-scan route");
+            Check(ConveyorPathLookup.Scan(Rails(new[] { 9, 1, 9 }), 9) == 0
+                && ConveyorPathLookup.Scan(Rails(new[] { 9, 1, 9 }), 8) == -1,
+                "integer scans retain first-match and missing-key results");
+            Expect<NullReferenceException>(() => ConveyorPathLookup.Scan(null, 9));
+            var endpointNumber = 0;
+            foreach (var predicate in PatchProcessor.GetOriginalInstructions(Target)
+                .Where(item => item.opcode == OpCodes.Ldftn).Take(2).Select(item => (MethodInfo)item.operand))
+            {
+                var foreign = new Harmony(Owner + ".endpoint");
+                try
+                {
+                    foreign.Patch(predicate, prefix: new HarmonyMethod(typeof(ConveyorPathRegression), nameof(ObserveEndpoint)));
+                    endpointCalls = 0;
+                    var flow = RepeatedFixture(64, 1);
+                    flow.AddPath(Rails(Enumerable.Range(0, 8)));
+                    var gateArguments = new object[] { 0, null };
+                    var directAllowed = (bool)AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScan")
+                        .Invoke(null, gateArguments);
+                    var expectedCalls = endpointNumber++ == 0 ? 1 : 8;
+                    Check(endpointCalls == expectedCalls && !directAllowed,
+                        "late endpoint observer receives every original comparison; method=" + predicate.Name
+                        + "; expected=" + expectedCalls + "; actual=" + endpointCalls + "; direct=" + directAllowed);
+                }
+                finally { foreign.UnpatchAll(foreign.Id); }
+            }
+            // A callback can synchronously wait for a different thread to
+            // patch a dependency. No publication lock may span that callback.
+            var threaded = RepeatedFixture(64, 1);
+            var ran = false;
+            threaded.GetSOAInfo().ObserveRead = () =>
+            {
+                if (ran) return;
+                ran = true;
+                Exception failure = null;
+                var worker = new Thread(() =>
+                {
+                    var foreign = new Harmony(Owner + ".worker");
+                    try
+                    {
+                        foreign.Patch(AccessTools.Method(typeof(UnityEngine.Mathf), "IsPowerOfTwo"),
+                            prefix: new HarmonyMethod(typeof(ConveyorPathRegression), nameof(Noop)));
+                    }
+                    catch (Exception error) { failure = error; }
+                    finally { foreign.UnpatchAll(foreign.Id); }
+                });
+                worker.Start();
+                Check(worker.Join(TimeSpan.FromSeconds(10)) && failure == null,
+                    "a direction callback can wait for a patching thread without a publication-lock deadlock");
+            };
+            threaded.AddPath(Rails(new[] { 65000, 2, 1, 65001 }));
+            Check(ran && ConveyorPathLookup.Current == null, "threaded callback finishes with no retained scope");
+            TestLateProviderLoad();
+        }
+
+        private static void TestLateProviderLoad()
+        {
+            var flow = RepeatedFixture(64, 1);
+            var loaded = false;
+            var checkedFallback = false;
+            flow.GetSOAInfo().ObserveRead = () =>
+            {
+                var scope = ConveyorPathLookup.Current;
+                if (!loaded)
+                {
+                    Check(scope != null && scope.IndexEntryCount > 0,
+                        "provider-load fixture first establishes an active optimized scope");
+                    var other = Assembly.Load(System.IO.File.ReadAllBytes(typeof(Harmony).Assembly.Location));
+                    Check(other != typeof(Harmony).Assembly && other.GetType("HarmonyLib.PatchProcessor") != null,
+                        "a second real Harmony provider was loaded without executing it");
+                    loaded = true;
+                }
+                else
+                {
+                    checkedFallback = true;
+                    Check(scope != null && scope.IndexEntryCount == 0,
+                        "late provider load clears an active index before the next callback");
+                }
+            };
+            flow.AddPath(Rails(new[] { 65000, 2, 1, 60000, 60001, 60002, 60003, 65001 }));
+            var arguments = new object[] { 0, null };
+            Check(loaded && checkedFallback
+                && !(bool)AccessTools.Method(typeof(ConveyorPathLookupPatch), "CanScan").Invoke(null, arguments),
+                "provider ambiguity permanently disables direct scans, including subsequent invocations");
         }
 
         private static void Noop() { }

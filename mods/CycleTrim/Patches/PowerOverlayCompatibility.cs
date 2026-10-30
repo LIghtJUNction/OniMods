@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 using HarmonyLib;
+using LinqExpression = System.Linq.Expressions.Expression;
 
 namespace CycleTrim.Patches
 {
@@ -17,6 +18,8 @@ namespace CycleTrim.Patches
         // Other dynamic assemblies can grow after AssemblyLoad and are unsupported.
         private static readonly Assembly DynamicMethodHost = new DynamicMethod(
             "CycleTrimPowerOverlayHost", typeof(void), Type.EmptyTypes).Module.Assembly;
+        private static readonly Func<HarmonyLib.Patches, IList<Patch>>[] ExtraPatchReaders =
+            CreateExtraPatchReaders();
         private static int assemblyVersion;
         private static int scannedVersion = -1;
         private static bool supported;
@@ -56,12 +59,79 @@ namespace CycleTrim.Patches
             foreach (var method in callbacks)
             {
                 var patches = Harmony.GetPatchInfo(method);
-                if (patches != null && (patches.Prefixes.Count != 0
-                    || patches.Postfixes.Count != 0 || patches.Transpilers.Count != 0
-                    || patches.Finalizers.Count != 0))
+                if (HasPatches(patches, null))
                     return false;
             }
             return IsCurrent(version);
+        }
+
+        internal static bool HasPatches(HarmonyLib.Patches patches, Type allowedPatchType)
+        {
+            if (patches == null)
+                return false;
+            if (ExtraPatchReaders == null)
+                return true;
+            if (HasPatches(patches.Prefixes, allowedPatchType)
+                || HasPatches(patches.Postfixes, allowedPatchType)
+                || HasPatches(patches.Transpilers, allowedPatchType)
+                || HasPatches(patches.Finalizers, allowedPatchType))
+                return true;
+            foreach (var read in ExtraPatchReaders)
+                if (HasPatches(read(patches), allowedPatchType))
+                    return true;
+            return false;
+        }
+
+        private static bool HasPatches(IList<Patch> patches, Type allowedPatchType)
+        {
+            if (patches == null)
+                return true;
+            if (allowedPatchType == null)
+                return patches.Count != 0;
+            for (var index = 0; index < patches.Count; index++)
+                if (patches[index].PatchMethod.DeclaringType != allowedPatchType)
+                    return true;
+            return false;
+        }
+
+        private static Func<HarmonyLib.Patches, IList<Patch>>[] CreateExtraPatchReaders()
+        {
+            // Harmony 2.4.2 adds InnerPrefixes/InnerPostfixes to the four
+            // original families. Read all extra public patch lists without
+            // binding the mod to fields absent from older Harmony assemblies.
+            // Field discovery and delegate compilation happen once. Each hot
+            // check reads the current lists without reflection or enumerators.
+            try
+            {
+                var readers = new List<Func<HarmonyLib.Patches, IList<Patch>>>();
+                var instance = LinqExpression.Parameter(typeof(HarmonyLib.Patches), "patches");
+                foreach (var field in typeof(HarmonyLib.Patches).GetFields(
+                    BindingFlags.Instance | BindingFlags.Public))
+                {
+                    if (!typeof(IEnumerable<Patch>).IsAssignableFrom(field.FieldType)
+                        || field.Name == nameof(HarmonyLib.Patches.Prefixes)
+                        || field.Name == nameof(HarmonyLib.Patches.Postfixes)
+                        || field.Name == nameof(HarmonyLib.Patches.Transpilers)
+                        || field.Name == nameof(HarmonyLib.Patches.Finalizers))
+                        continue;
+                    if (!typeof(IList<Patch>).IsAssignableFrom(field.FieldType))
+                        return null;
+                    readers.Add(LinqExpression.Lambda<Func<HarmonyLib.Patches, IList<Patch>>>(
+                        LinqExpression.Convert(LinqExpression.Field(instance, field), typeof(IList<Patch>)),
+                        instance).Compile());
+                }
+                return readers.ToArray();
+            }
+            catch (Exception error) when (error is MemberAccessException
+                || error is NotSupportedException || error is TypeInitializationException
+                || error is ArgumentException || error is System.Security.SecurityException
+                || error is ReflectionTypeLoadException || error is TypeLoadException
+                || error is System.IO.FileNotFoundException || error is System.IO.FileLoadException
+                || error is BadImageFormatException)
+            {
+                // Unknown patch metadata cannot establish that callbacks are pure.
+                return null;
+            }
         }
 
         private static void OnAssemblyLoad(object sender, AssemblyLoadEventArgs args)

@@ -137,6 +137,46 @@ public sealed class SymbolOverrideInfoGpuData
         MarkDirty();
     }
 
+    // The game-shaped stable array receiver is separate from timed fixtures.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal void StableArrayAddressesForTest(int index, ref KAnim.Build.SymbolFrameInstance frame)
+    {
+        var values = symbolOverrideInfos;
+        values[index].atlas = frame.buildImageIdx;
+        values[index].isoverriden = 1f;
+        values[index].bboxMin = frame.bboxMin;
+        values[index].bboxMax = frame.bboxMax;
+        values[index].uvMin = frame.uvMin;
+        values[index].uvMax = frame.uvMax;
+        MarkDirty();
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal void DifferentArrayAddressesForTest(int index, ref KAnim.Build.SymbolFrameInstance frame)
+    {
+        var values = symbolOverrideInfos;
+        values[index].atlas = frame.buildImageIdx;
+        values[index + 1].isoverriden = 1f;
+        values[index + 1].bboxMin = frame.bboxMin;
+        values[index + 1].bboxMax = frame.bboxMax;
+        values[index + 1].uvMin = frame.uvMin;
+        values[index + 1].uvMax = frame.uvMax;
+        MarkDirty();
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal void LateFrameReadForTest(int index, ref KAnim.Build.SymbolFrameInstance frame)
+    {
+        var values = symbolOverrideInfos;
+        values[index].atlas = 17f;
+        values[index].isoverriden = 1f;
+        values[index].bboxMin = frame.bboxMin;
+        values[index].bboxMax = frame.bboxMax;
+        values[index].uvMin = frame.uvMin;
+        values[index].uvMax = frame.uvMax;
+        MarkDirty();
+    }
+
     internal SymbolOverrideInfo[] Entries { get { return entries; } }
     internal void SetVersionForTest(int value) { version = value; }
     internal int ByteCount { get { return entries.Length * 48; } }
@@ -163,6 +203,12 @@ namespace CycleTrim.Optimizations.Tests
                 typeof(int), typeof(int) });
         internal static readonly MethodInfo ArrayAddresses = AccessTools.DeclaredMethod(
             typeof(SymbolOverrideInfoGpuData), "ArrayAddressesForTest");
+        internal static readonly MethodInfo StableArrayAddresses = AccessTools.DeclaredMethod(
+            typeof(SymbolOverrideInfoGpuData), "StableArrayAddressesForTest");
+        internal static readonly MethodInfo DifferentArrayAddresses = AccessTools.DeclaredMethod(
+            typeof(SymbolOverrideInfoGpuData), "DifferentArrayAddressesForTest");
+        internal static readonly MethodInfo LateFrameRead = AccessTools.DeclaredMethod(
+            typeof(SymbolOverrideInfoGpuData), "LateFrameReadForTest");
         private static bool originalsInstalled;
 
         internal static void InstallOriginalCopies()
@@ -175,6 +221,12 @@ namespace CycleTrim.Optimizations.Tests
                 "OriginalRange")).Patch(HarmonyReversePatchType.Original);
             harmony.CreateReversePatcher(ArrayAddresses, new HarmonyMethod(typeof(AnimationSymbolFixture),
                 "OriginalArrayAddresses")).Patch(HarmonyReversePatchType.Original);
+            harmony.CreateReversePatcher(StableArrayAddresses, new HarmonyMethod(typeof(AnimationSymbolFixture),
+                "OriginalStableArrayAddresses")).Patch(HarmonyReversePatchType.Original);
+            harmony.CreateReversePatcher(DifferentArrayAddresses, new HarmonyMethod(typeof(AnimationSymbolFixture),
+                "OriginalDifferentArrayAddresses")).Patch(HarmonyReversePatchType.Original);
+            harmony.CreateReversePatcher(LateFrameRead, new HarmonyMethod(typeof(AnimationSymbolFixture),
+                "OriginalLateFrameRead")).Patch(HarmonyReversePatchType.Original);
             originalsInstalled = true;
         }
 
@@ -197,6 +249,27 @@ namespace CycleTrim.Optimizations.Tests
             KBatchGroupData source)
         {
             throw new InvalidOperationException("Original array-address stand-in not installed");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static void OriginalStableArrayAddresses(SymbolOverrideInfoGpuData instance, int index,
+            ref KAnim.Build.SymbolFrameInstance frame)
+        {
+            throw new InvalidOperationException("Original stable-array stand-in not installed");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static void OriginalDifferentArrayAddresses(SymbolOverrideInfoGpuData instance, int index,
+            ref KAnim.Build.SymbolFrameInstance frame)
+        {
+            throw new InvalidOperationException("Original mixed-array stand-in not installed");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static void OriginalLateFrameRead(SymbolOverrideInfoGpuData instance, int index,
+            ref KAnim.Build.SymbolFrameInstance frame)
+        {
+            throw new InvalidOperationException("Original late-frame stand-in not installed");
         }
 
         internal static KAnim.Build.SymbolFrameInstance Frame(int seed)

@@ -18,6 +18,8 @@ namespace CycleTrim.Core
         private readonly Dictionary<CircuitKey, float> values =
             new Dictionary<CircuitKey, float>();
         private PowerOverlayCache previous;
+        private object lastManager;
+        private int lastManagerHash;
         private bool enabled;
 
         internal static PowerOverlayCache Current { get { return current; } }
@@ -65,14 +67,14 @@ namespace CycleTrim.Core
         {
             watts = 0f;
             return enabled && manager != null
-                && values.TryGetValue(new CircuitKey(manager, circuit), out watts);
+                && values.TryGetValue(new CircuitKey(manager, circuit, ManagerHash(manager)), out watts);
         }
 
         internal void Remember(object manager, ushort circuit, float watts, int version)
         {
             if (enabled && ReferenceEquals(current, this) && Version == version
                 && manager != null && values.Count < MaximumEntries)
-                values[new CircuitKey(manager, circuit)] = watts;
+                values[new CircuitKey(manager, circuit, ManagerHash(manager))] = watts;
         }
 
         internal void ConfirmCompatibility()
@@ -89,19 +91,37 @@ namespace CycleTrim.Core
         private void Invalidate()
         {
             values.Clear();
+            lastManager = null;
+            lastManagerHash = 0;
             CompatibilityChecked = false;
             unchecked { Version++; }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int ManagerHash(object manager)
+        {
+            // The usual update queries one manager repeatedly. Cache only its
+            // identity hash, leaving all circuit entries in the same bounded
+            // dictionary. Manager switches still use reference-based keys.
+            if (!ReferenceEquals(manager, lastManager))
+            {
+                unchecked { lastManagerHash = RuntimeHelpers.GetHashCode(manager) * 397; }
+                lastManager = manager;
+            }
+            return lastManagerHash;
         }
 
         private readonly struct CircuitKey : IEquatable<CircuitKey>
         {
             private readonly object manager;
+            private readonly int hashCode;
             private readonly ushort circuit;
 
-            internal CircuitKey(object manager, ushort circuit)
+            internal CircuitKey(object manager, ushort circuit, int managerHash)
             {
                 this.manager = manager;
                 this.circuit = circuit;
+                hashCode = managerHash ^ circuit;
             }
 
             public bool Equals(CircuitKey other)
@@ -116,7 +136,7 @@ namespace CycleTrim.Core
 
             public override int GetHashCode()
             {
-                unchecked { return RuntimeHelpers.GetHashCode(manager) * 397 ^ circuit; }
+                return hashCode;
             }
         }
     }

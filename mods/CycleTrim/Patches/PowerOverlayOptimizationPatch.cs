@@ -138,20 +138,8 @@ namespace CycleTrim.Patches
 
         private static bool HasForeignPatch(MethodBase method)
         {
-            var patches = Harmony.GetPatchInfo(method);
-            return patches != null && (HasForeignPatch(patches.Prefixes)
-                || HasForeignPatch(patches.Postfixes) || HasForeignPatch(patches.Transpilers)
-                || HasForeignPatch(patches.Finalizers));
-        }
-
-        private static bool HasForeignPatch(IEnumerable<Patch> patches)
-        {
-            foreach (var patch in patches)
-            {
-                if (patch.PatchMethod.DeclaringType != typeof(PowerOverlayOptimizationPatch))
-                    return true;
-            }
-            return false;
+            return PowerOverlayCompatibility.HasPatches(Harmony.GetPatchInfo(method),
+                typeof(PowerOverlayOptimizationPatch));
         }
 
         private static void ReportMismatch()

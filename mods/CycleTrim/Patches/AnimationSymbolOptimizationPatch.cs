@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using CycleTrim.Core;
 using HarmonyLib;
 using UnityEngine;
@@ -12,6 +13,7 @@ namespace CycleTrim.Patches
     internal static class AnimationSymbolOptimizationPatch
     {
         private static readonly Type InfoType = typeof(SymbolOverrideInfoGpuData.SymbolOverrideInfo);
+        private static readonly Type FrameType = typeof(KAnim.Build.SymbolFrameInstance);
         private static readonly string[] WrittenFields =
             { "atlas", "isoverriden", "bboxMin", "bboxMax", "uvMin", "uvMax" };
 
@@ -82,7 +84,13 @@ namespace CycleTrim.Patches
             var state = generator.DeclareLocal(typeof(int));
             var needsDirty = AccessTools.Method(typeof(AnimationSymbolValueComparer), "NeedsDirty");
             var dirty = AccessTools.DeclaredMethod(typeof(SymbolOverrideInfoGpuData), "MarkDirty");
-            var result = new List<CodeInstruction>(source.Count + 40)
+            var directStores = new Dictionary<int, Label>();
+            for (int index = firstStore; index <= lastStore; index++)
+                if (source[index].opcode == OpCodes.Stfld)
+                    directStores.Add(index, generator.DefineLabel());
+            var wholePayload = TryGetPayloadFrame(source, __originalMethod, firstStore, lastStore,
+                out var frameAddress, out var consumesStackReceiver);
+            var result = new List<CodeInstruction>(source.Count * 2 + 80)
             {
                 new CodeInstruction(OpCodes.Ldc_I4_0),
                 new CodeInstruction(OpCodes.Stloc, state)
@@ -93,7 +101,12 @@ namespace CycleTrim.Patches
                 var instruction = source[index];
                 if (index == firstStore)
                 {
-                    AppendStoreBlock(result, source, firstStore, lastStore, generator, state);
+                    if (wholePayload)
+                        AppendPayloadComparison(result, source[firstStore], frameAddress,
+                            generator, state, directStores[firstStore], consumesStackReceiver);
+                    else
+                        AppendFieldComparisons(result, source, firstStore, lastStore,
+                            generator, state, directStores);
                     index = lastStore;
                 }
                 else if (instruction.Calls(dirty))
@@ -119,6 +132,14 @@ namespace CycleTrim.Patches
                 else
                     result.Add(new CodeInstruction(instruction));
             }
+
+            // A first difference enters the original method at the same store,
+            // with its already evaluated receiver/value and all locals intact.
+            // Its loop backedges stay in this copy: later symbols do no more
+            // comparisons, state checks or helper calls, and MarkDirty remains
+            // the original call. Unsupported operand shapes use this same
+            // continuation after their field-by-field comparisons.
+            AppendOriginalContinuation(result, source, generator, directStores);
             return result;
         }
 
@@ -142,27 +163,17 @@ namespace CycleTrim.Patches
             return true;
         }
 
-        private static void AppendStoreBlock(List<CodeInstruction> result, List<CodeInstruction> source,
-            int first, int last, ILGenerator generator, LocalBuilder state)
+        private static void AppendFieldComparisons(List<CodeInstruction> result, List<CodeInstruction> source,
+            int first, int last, ILGenerator generator, LocalBuilder state, Dictionary<int, Label> directStores)
         {
             var scalar = generator.DeclareLocal(typeof(float));
             var vector = generator.DeclareLocal(typeof(Vector2));
             var sameScalar = AccessTools.Method(typeof(AnimationSymbolValueComparer), "SameBits");
             var sameVector = AccessTools.Method(typeof(AnimationSymbolValueComparer), "SameVectorBits");
-            var directStores = new Dictionary<int, Label>();
-            for (int index = first; index <= last; index++)
-                if (source[index].opcode == OpCodes.Stfld)
-                    directStores.Add(index, generator.DefineLabel());
-            var finished = generator.DefineLabel();
 
-            // State is local to this invocation: 0 = no stores visited,
-            // 1 = all visited fields equal, 3 = changed. Once changed, subsequent
-            // symbols execute the original stores without further comparisons.
-            // The first receiver and value have already been evaluated.
-            result.Add(new CodeInstruction(source[first]) { opcode = OpCodes.Ldloc, operand = state });
-            result.Add(new CodeInstruction(OpCodes.Ldc_I4_3));
-            result.Add(new CodeInstruction(OpCodes.Beq, directStores[first]));
-            result.Add(new CodeInstruction(OpCodes.Ldc_I4_1));
+            // This path can only have seen identical fields. A changed field
+            // leaves it permanently for the original method continuation.
+            result.Add(new CodeInstruction(source[first]) { opcode = OpCodes.Ldc_I4_1, operand = null });
             result.Add(new CodeInstruction(OpCodes.Stloc, state));
 
             for (int index = first; index <= last; index++)
@@ -183,26 +194,262 @@ namespace CycleTrim.Patches
                 result.Add(new CodeInstruction(OpCodes.Call,
                     field.FieldType == typeof(float) ? sameScalar : sameVector));
                 result.Add(new CodeInstruction(OpCodes.Brtrue, identical));
-                result.Add(new CodeInstruction(OpCodes.Ldc_I4_3));
-                result.Add(new CodeInstruction(OpCodes.Stloc, state));
                 result.Add(new CodeInstruction(OpCodes.Ldloc, temporary));
                 result.Add(new CodeInstruction(OpCodes.Br, directStores[index]));
                 var pop = new CodeInstruction(OpCodes.Pop);
                 pop.labels.Add(identical);
                 result.Add(pop);
             }
-            result.Add(new CodeInstruction(OpCodes.Br, finished));
+        }
 
-            // Branch to the first differing field with its original receiver
-            // and value still on the stack. Do not reevaluate either operand,
-            // skip intervening loads, or prevalidate indices/range lengths.
-            for (int index = first; index <= last; index++)
+        private static void AppendOriginalContinuation(List<CodeInstruction> result,
+            List<CodeInstruction> source, ILGenerator generator, Dictionary<int, Label> directStores)
+        {
+            var labels = new Dictionary<Label, Label>();
+            foreach (var instruction in source)
+                foreach (var label in instruction.labels)
+                    labels.Add(label, generator.DefineLabel());
+            for (int index = 0; index < source.Count; index++)
             {
                 var instruction = new CodeInstruction(source[index]);
                 instruction.labels.Clear();
-                if (directStores.TryGetValue(index, out var label)) instruction.labels.Add(label);
+                foreach (var originalLabel in source[index].labels)
+                    instruction.labels.Add(labels[originalLabel]);
+                if (instruction.operand is Label target)
+                    instruction.operand = labels[target];
+                else if (instruction.operand is Label[] targets)
+                {
+                    var mapped = new Label[targets.Length];
+                    for (int item = 0; item < targets.Length; item++) mapped[item] = labels[targets[item]];
+                    instruction.operand = mapped;
+                }
+                if (directStores.TryGetValue(index, out var storeLabel)) instruction.labels.Add(storeLabel);
                 result.Add(instruction);
             }
+        }
+
+        private static bool TryGetPayloadFrame(List<CodeInstruction> source, MethodBase method,
+            int first, int last, out CodeInstruction frameAddress, out bool consumesStackReceiver)
+        {
+            frameAddress = null;
+            consumesStackReceiver = false;
+            if (!HasPackedVectorLayout()) return false;
+            var stores = new List<int>();
+            for (int index = first; index <= last; index++)
+                if (source[index].opcode == OpCodes.Stfld) stores.Add(index);
+            if (stores.Count != WrittenFields.Length) return false;
+            for (int index = 0; index < stores.Count; index++)
+            {
+                var field = (FieldInfo)source[stores[index]].operand;
+                if (field.Name != WrittenFields[index] || field.IsStatic
+                    || field.FieldType != (index < 2 ? typeof(float) : typeof(Vector2))) return false;
+            }
+
+            // Only these straight-line operand forms can be read together.
+            // A stable local or stack-retained receiver, or the same array and
+            // integer index, remains valid after the first receiver evaluation.
+            // No getters, index expressions or source item reads move across
+            // any original store.
+            int receiverLength = stores[1] - first - 2;
+            if (receiverLength <= 0 || source[stores[1] - 1].opcode != OpCodes.Ldc_R4
+                || !Equals(source[stores[1] - 1].operand, 1f)) return false;
+            var receiver = source.GetRange(first + 1, receiverLength);
+            if (!IsStableReceiver(receiver, method)) return false;
+            consumesStackReceiver = receiver[0].opcode == OpCodes.Dup;
+            int atlasStart = AtlasValueStart(source, first, method);
+            if (atlasStart < receiverLength
+                || !SameSequence(source, atlasStart - receiverLength, receiver)) return false;
+            for (int index = atlasStart - receiverLength + 1; index <= first; index++)
+                if (source[index].labels.Count != 0) return false;
+
+            for (int index = 2; index < stores.Count; index++)
+            {
+                int start = stores[index - 1] + 1;
+                // Roslyn can keep a receiver/array on the stack: intermediate
+                // stores duplicate it, and the last store consumes the retained
+                // value. Accept that exact stack shape, not arbitrary dup/pop.
+                bool lastConsumes = consumesStackReceiver && index == stores.Count - 1;
+                var expectedReceiver = lastConsumes ? receiver.GetRange(1, receiverLength - 1) : receiver;
+                if (stores[index] - start != expectedReceiver.Count + 2
+                    || !SameSequence(source, start, expectedReceiver)) return false;
+                var load = source[start + expectedReceiver.Count];
+                var field = source[start + expectedReceiver.Count + 1];
+                var sourceField = AccessTools.Field(FrameType, WrittenFields[index]);
+                if (sourceField == null || sourceField.IsStatic || sourceField.FieldType != typeof(Vector2)
+                    || field.opcode != OpCodes.Ldfld || !Equals(field.operand, sourceField)) return false;
+                if (frameAddress == null) frameAddress = load;
+                else if (!SameInstruction(frameAddress, load)) return false;
+            }
+
+            // A struct local/value argument has valid storage already. Loading
+            // a value local and then a field can use that same local's address.
+            // A byref argument/local can be null, so require the atlas operand to have
+            // dereferenced this exact frame before the first original store.
+            if (LoadsFrameValueAddress(frameAddress, method)) return true;
+            if (LoadType(frameAddress, method) == FrameType
+                && TryLocalIndex(frameAddress, false, out var frameLocal))
+            {
+                frameAddress = new CodeInstruction(OpCodes.Ldloca,
+                    frameAddress.operand is LocalBuilder ? frameAddress.operand : (object)(short)frameLocal);
+                return true;
+            }
+            return LoadType(frameAddress, method) == FrameType.MakeByRefType()
+                && first - atlasStart == 3 && SameInstruction(source[atlasStart], frameAddress)
+                && source[atlasStart + 1].opcode == OpCodes.Ldfld
+                && Equals(source[atlasStart + 1].operand, AccessTools.Field(FrameType, "buildImageIdx"))
+                && source[atlasStart + 2].opcode == OpCodes.Conv_R4;
+        }
+
+        private static unsafe bool HasPackedVectorLayout()
+        {
+            var type = typeof(Vector2);
+            var x = AccessTools.Field(type, "x");
+            var y = AccessTools.Field(type, "y");
+            return (type.IsExplicitLayout || type.IsLayoutSequential) && sizeof(Vector2) == 8
+                && x != null && y != null && !x.IsStatic && !y.IsStatic
+                && x.FieldType == typeof(float) && y.FieldType == typeof(float)
+                && Marshal.SizeOf(type) == 8 && Marshal.OffsetOf(type, "x").ToInt64() == 0
+                && Marshal.OffsetOf(type, "y").ToInt64() == 4;
+        }
+
+        private static bool IsStableReceiver(List<CodeInstruction> code, MethodBase method)
+        {
+            if (code.Count == 1) return code[0].opcode == OpCodes.Dup
+                || LoadType(code[0], method) == InfoType.MakeByRefType();
+            return code.Count == 3 && (code[0].opcode == OpCodes.Dup
+                || LoadType(code[0], method) == InfoType.MakeArrayType())
+                && IsIntegerLoad(code[1], method) && code[2].opcode == OpCodes.Ldelema
+                && Equals(code[2].operand, InfoType);
+        }
+
+        private static int AtlasValueStart(List<CodeInstruction> source, int first, MethodBase method)
+        {
+            if (first > 0 && source[first - 1].opcode == OpCodes.Ldc_R4) return first - 1;
+            if (first < 2 || source[first - 1].opcode != OpCodes.Conv_R4) return -1;
+            if (IsIntegerLoad(source[first - 2], method)) return first - 2;
+            if (first >= 3 && source[first - 2].opcode == OpCodes.Ldfld
+                && Equals(source[first - 2].operand, AccessTools.Field(FrameType, "buildImageIdx")))
+                return first - 3;
+            return -1;
+        }
+
+        private static bool IsIntegerLoad(CodeInstruction instruction, MethodBase method)
+        {
+            return instruction.opcode == OpCodes.Ldc_I4 || instruction.opcode == OpCodes.Ldc_I4_S
+                || instruction.opcode.Name.StartsWith("ldc.i4.", StringComparison.Ordinal)
+                || LoadType(instruction, method) == typeof(int);
+        }
+
+        private static bool LoadsFrameValueAddress(CodeInstruction instruction, MethodBase method)
+        {
+            if (instruction.opcode == OpCodes.Ldloca || instruction.opcode == OpCodes.Ldloca_S)
+                return LocalType(instruction, method) == FrameType;
+            return (instruction.opcode == OpCodes.Ldarga || instruction.opcode == OpCodes.Ldarga_S)
+                && ArgumentType(instruction, method) == FrameType;
+        }
+
+        private static Type LoadType(CodeInstruction instruction, MethodBase method)
+        {
+            if (TryLocalIndex(instruction, false, out _)) return LocalType(instruction, method);
+            if (instruction.opcode == OpCodes.Ldarg || instruction.opcode == OpCodes.Ldarg_S
+                || instruction.opcode.Name.StartsWith("ldarg.", StringComparison.Ordinal))
+                return ArgumentType(instruction, method);
+            return null;
+        }
+
+        private static Type LocalType(CodeInstruction instruction, MethodBase method)
+        {
+            if (instruction.operand is LocalBuilder local) return local.LocalType;
+            if (instruction.operand is LocalVariableInfo variable) return variable.LocalType;
+            int index;
+            if (instruction.opcode == OpCodes.Ldloca || instruction.opcode == OpCodes.Ldloca_S)
+                index = Convert.ToInt32(instruction.operand);
+            else if (!TryLocalIndex(instruction, false, out index)) return null;
+            var locals = method.GetMethodBody()?.LocalVariables;
+            return locals != null && index >= 0 && index < locals.Count ? locals[index].LocalType : null;
+        }
+
+        private static Type ArgumentType(CodeInstruction instruction, MethodBase method)
+        {
+            int index;
+            if (instruction.operand is ParameterInfo parameter) return parameter.ParameterType;
+            if (instruction.opcode == OpCodes.Ldarg || instruction.opcode == OpCodes.Ldarg_S
+                || instruction.opcode == OpCodes.Ldarga || instruction.opcode == OpCodes.Ldarga_S)
+                index = Convert.ToInt32(instruction.operand);
+            else if (!int.TryParse(instruction.opcode.Name.Substring("ldarg.".Length), out index)) return null;
+            if (!method.IsStatic && index-- == 0) return method.DeclaringType;
+            var parameters = method.GetParameters();
+            return index >= 0 && index < parameters.Length ? parameters[index].ParameterType : null;
+        }
+
+        private static bool SameSequence(List<CodeInstruction> source, int start, List<CodeInstruction> expected)
+        {
+            if (start < 0 || start + expected.Count > source.Count) return false;
+            for (int index = 0; index < expected.Count; index++)
+                if (!SameInstruction(source[start + index], expected[index])) return false;
+            return true;
+        }
+
+        private static bool SameInstruction(CodeInstruction left, CodeInstruction right)
+        {
+            return left.opcode == right.opcode && Equals(left.operand, right.operand);
+        }
+
+        private static void AppendPayloadComparison(List<CodeInstruction> result, CodeInstruction firstStore,
+            CodeInstruction frameAddress, ILGenerator generator, LocalBuilder state, Label originalStore,
+            bool consumesStackReceiver)
+        {
+            var atlas = generator.DeclareLocal(typeof(float));
+            var destination = generator.DeclareLocal(InfoType.MakeByRefType());
+            var changed = generator.DefineLabel();
+            var finished = generator.DefineLabel();
+            result.Add(new CodeInstruction(firstStore) { opcode = OpCodes.Stloc, operand = atlas });
+            result.Add(new CodeInstruction(OpCodes.Stloc, destination));
+
+            // Keep the cheap header check first for changing atlases. Read the
+            // existing float storage as integer bits, including signed zeros.
+            result.Add(new CodeInstruction(OpCodes.Ldloc, destination));
+            result.Add(new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(InfoType, "atlas")));
+            result.Add(new CodeInstruction(OpCodes.Unaligned, (byte)1));
+            result.Add(new CodeInstruction(OpCodes.Ldind_I4));
+            result.Add(new CodeInstruction(OpCodes.Ldloca, atlas));
+            result.Add(new CodeInstruction(OpCodes.Unaligned, (byte)1));
+            result.Add(new CodeInstruction(OpCodes.Ldind_I4));
+            result.Add(new CodeInstruction(OpCodes.Bne_Un, changed));
+            result.Add(new CodeInstruction(OpCodes.Ldloc, destination));
+            result.Add(new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(InfoType, "isoverriden")));
+            result.Add(new CodeInstruction(OpCodes.Unaligned, (byte)1));
+            result.Add(new CodeInstruction(OpCodes.Ldind_I4));
+            result.Add(new CodeInstruction(OpCodes.Ldc_I4, 0x3f800000));
+            result.Add(new CodeInstruction(OpCodes.Bne_Un, changed));
+
+            // These are unaligned reads of four separately validated 8-byte
+            // Vector2 fields. No array traversal, struct-wide padding read or
+            // reconstructed union is used. XOR/OR combines all exact-bit
+            // differences into one branch without touching unused payloads.
+            for (int index = 2; index < WrittenFields.Length; index++)
+            {
+                result.Add(new CodeInstruction(OpCodes.Ldloc, destination));
+                result.Add(new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(InfoType, WrittenFields[index])));
+                result.Add(new CodeInstruction(OpCodes.Unaligned, (byte)1));
+                result.Add(new CodeInstruction(OpCodes.Ldind_I8));
+                result.Add(new CodeInstruction(frameAddress));
+                result.Add(new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(FrameType, WrittenFields[index])));
+                result.Add(new CodeInstruction(OpCodes.Unaligned, (byte)1));
+                result.Add(new CodeInstruction(OpCodes.Ldind_I8));
+                result.Add(new CodeInstruction(OpCodes.Xor));
+                if (index > 2) result.Add(new CodeInstruction(OpCodes.Or));
+            }
+            result.Add(new CodeInstruction(OpCodes.Brtrue, changed));
+            if (consumesStackReceiver) result.Add(new CodeInstruction(OpCodes.Pop));
+            result.Add(new CodeInstruction(OpCodes.Ldc_I4_1));
+            result.Add(new CodeInstruction(OpCodes.Stloc, state));
+            result.Add(new CodeInstruction(OpCodes.Br, finished));
+            var loadDestination = new CodeInstruction(OpCodes.Ldloc, destination);
+            loadDestination.labels.Add(changed);
+            result.Add(loadDestination);
+            result.Add(new CodeInstruction(OpCodes.Ldloc, atlas));
+            result.Add(new CodeInstruction(OpCodes.Br, originalStore));
             var end = new CodeInstruction(OpCodes.Nop);
             end.labels.Add(finished);
             result.Add(end);
@@ -314,7 +561,7 @@ namespace CycleTrim.Patches
             index = -1;
             if (name == prefix || name == prefix + ".s")
             {
-                index = instruction.operand is LocalBuilder local ? local.LocalIndex
+                index = instruction.operand is LocalVariableInfo local ? local.LocalIndex
                     : Convert.ToInt32(instruction.operand);
                 return true;
             }

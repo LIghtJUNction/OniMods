@@ -28,6 +28,9 @@ namespace CycleTrim.Optimizations.Tests
             TestsDisabledOption();
             TestsInstructionRewrite();
             TestsCacheBoundAndObjectLifetime();
+            TestsInterleavedManagerKeys();
+            TestsCollidingManagerKeys();
+            TestsCachedManagerReferenceRelease();
             var harmony = new Harmony(Owner);
             try
             {
@@ -40,6 +43,7 @@ namespace CycleTrim.Optimizations.Tests
                 TestsExceptionalExitAndNullReceiver();
                 TestsConcurrentUpdates();
                 TestsForeignPatches(harmony);
+                TestsPatchFamilyMetadata();
                 TestsCircuitRoutingDependencies();
                 // This deliberately loads an unsupported external type. Keep it
                 // last; a dynamic assembly can grow for the rest of the process.
@@ -51,6 +55,10 @@ namespace CycleTrim.Optimizations.Tests
             }
             Console.WriteLine("PASS Power overlay: " + assertions
                 + " assertions; real Harmony over original synthetic fixtures");
+            Console.WriteLine("POWER_GUARD_FAMILIES " + string.Join(",", typeof(HarmonyLib.Patches)
+                .GetFields(BindingFlags.Instance | BindingFlags.Public)
+                .Where(field => typeof(IEnumerable<Patch>).IsAssignableFrom(field.FieldType))
+                .Select(field => field.Name).OrderBy(name => name)));
         }
 
         private static void TestsDisabledOption()
@@ -133,6 +141,157 @@ namespace CycleTrim.Optimizations.Tests
             lease.Remember(manager, 1, 2f, lease.Version);
             PowerOverlayCache.Exit(lease);
             return new WeakReference(manager);
+        }
+
+        private static void TestsInterleavedManagerKeys()
+        {
+            var first = new IdentityOnlyOwner();
+            var second = new IdentityOnlyOwner();
+            var lease = PowerOverlayCache.Enter(true);
+            try
+            {
+                for (var index = 0; index < PowerOverlayCache.MaximumEntries / 2; index++)
+                {
+                    lease.Remember(first, (ushort)index, index, lease.Version);
+                    lease.Remember(second, (ushort)index, -index - 1, lease.Version);
+                }
+                Check(lease.Count == PowerOverlayCache.MaximumEntries,
+                    "interleaved manager keys share the existing total entry bound");
+                float watts;
+                foreach (var circuit in new ushort[] { 0, PowerOverlayCache.MaximumEntries / 2 - 1 })
+                {
+                    Check(lease.TryGet(first, circuit, out watts) && watts == circuit,
+                        "switching managers preserves the first manager's stored hash and value");
+                    Check(lease.TryGet(second, circuit, out watts) && watts == -circuit - 1,
+                        "switching managers preserves the second manager's stored hash and value");
+                }
+                var overflow = new IdentityOnlyOwner();
+                lease.Remember(overflow, 0, 50f, lease.Version);
+                Check(!lease.TryGet(overflow, 0, out watts)
+                    && lease.Count == PowerOverlayCache.MaximumEntries,
+                    "another manager cannot bypass the total cache bound");
+
+                var version = lease.Version;
+                var nested = PowerOverlayCache.Enter(false);
+                PowerOverlayCache.Exit(nested);
+                lease.Remember(first, 7, 12f, version);
+                Check(lease.Count == 0, "invalidated hash seed cannot admit a stale query result");
+                lease.Remember(first, 7, 13f, lease.Version);
+                Check(lease.TryGet(first, 7, out watts) && watts == 13f,
+                    "the same owner acquires a fresh hash seed after invalidation");
+            }
+            finally { PowerOverlayCache.Exit(lease); }
+        }
+
+        private static void TestsCollidingManagerKeys()
+        {
+            // Equal upper hash bits let ushort circuits produce an exact key
+            // hash collision. The finite upper-half domain guarantees a pair
+            // within 65,537 owners; no probabilistic test failure is allowed.
+            var owners = new Dictionary<uint, object>();
+            object first = null;
+            object second = null;
+            ushort secondCircuit = 0;
+            for (var index = 0; index <= ushort.MaxValue + 1; index++)
+            {
+                var owner = new IdentityOnlyOwner();
+                var hash = unchecked(RuntimeHelpers.GetHashCode(owner) * 397);
+                object other;
+                if (owners.TryGetValue((uint)hash >> 16, out other))
+                {
+                    first = other;
+                    second = owner;
+                    secondCircuit = (ushort)(hash ^ unchecked(RuntimeHelpers.GetHashCode(other) * 397));
+                    break;
+                }
+                owners.Add((uint)hash >> 16, owner);
+            }
+            Check(first != null && second != null && !ReferenceEquals(first, second),
+                "collision fixture finds two distinct reference owners");
+            Check(unchecked(RuntimeHelpers.GetHashCode(first) * 397)
+                == (unchecked(RuntimeHelpers.GetHashCode(second) * 397) ^ secondCircuit),
+                "collision fixture has equal composite hash codes");
+            var lease = PowerOverlayCache.Enter(true);
+            try
+            {
+                lease.Remember(first, 0, 11f, lease.Version);
+                lease.Remember(second, secondCircuit, 22f, lease.Version);
+                lease.Remember(first, 0, 17f, lease.Version);
+                float watts;
+                Check(lease.Count == 2, "hash collisions retain both reference-distinct keys");
+                Check(lease.TryGet(first, 0, out watts) && watts == 17f,
+                    "updating the first collision key does not merge manager identities");
+                Check(lease.TryGet(second, secondCircuit, out watts) && watts == 22f,
+                    "alternating to the other collision key preserves its result");
+            }
+            finally { PowerOverlayCache.Exit(lease); }
+        }
+
+        private enum CacheRelease { Exit, NestedUpdate, Disable }
+
+        private sealed class IdentityOnlyOwner
+        {
+            public override bool Equals(object other)
+            {
+                throw new InvalidOperationException("cache owners require reference equality");
+            }
+
+            public override int GetHashCode()
+            {
+                throw new InvalidOperationException("cache owners require identity hashes");
+            }
+        }
+
+        private static void TestsCachedManagerReferenceRelease()
+        {
+            foreach (var remember in new[] { false, true })
+            foreach (var release in new[] { CacheRelease.Exit, CacheRelease.NestedUpdate, CacheRelease.Disable })
+            {
+                PowerOverlayCache lease;
+                var weak = TouchAndReleaseOwner(remember, release, out lease);
+                try
+                {
+                    CheckCollected(weak, release + " releases "
+                        + (remember ? "stored" : "miss-only") + " manager references");
+                }
+                finally
+                {
+                    if (ReferenceEquals(PowerOverlayCache.Current, lease))
+                        PowerOverlayCache.Exit(lease);
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static WeakReference TouchAndReleaseOwner(bool remember, CacheRelease release,
+            out PowerOverlayCache lease)
+        {
+            var manager = new IdentityOnlyOwner();
+            lease = PowerOverlayCache.Enter(true);
+            float watts;
+            lease.TryGet(manager, 1, out watts);
+            if (remember)
+                lease.Remember(manager, 1, 2f, lease.Version);
+            if (release == CacheRelease.Exit)
+                PowerOverlayCache.Exit(lease);
+            else if (release == CacheRelease.NestedUpdate)
+            {
+                var nested = PowerOverlayCache.Enter(false);
+                PowerOverlayCache.Exit(nested);
+            }
+            else
+                lease.DisableReuse();
+            return new WeakReference(manager);
+        }
+
+        private static void CheckCollected(WeakReference weak, string message)
+        {
+            for (var attempt = 0; attempt < 3 && weak.IsAlive; attempt++)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+            Check(!weak.IsAlive, message);
         }
 
         internal static void WarmCompatibility()
@@ -306,6 +465,17 @@ namespace CycleTrim.Optimizations.Tests
             var missingReceiver = Overlay(null, 1);
             Expect<NullReferenceException>(() => missingReceiver.Update(), "null receiver keeps callvirt exception");
             Check(PowerOverlayCache.Current == null, "null receiver failure releases cache");
+            CheckCollected(ThrowAndReleaseManager(),
+                "actual Harmony exceptional exit releases the cached manager reference");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static WeakReference ThrowAndReleaseManager()
+        {
+            var manager = Manager(1, 1f);
+            var overlay = Overlay(manager, 1, 2);
+            Expect<KeyNotFoundException>(() => overlay.Update(), "reference-release fixture reaches an exceptional exit");
+            return new WeakReference(manager);
         }
 
         private static void TestsConcurrentUpdates()
@@ -370,6 +540,46 @@ namespace CycleTrim.Optimizations.Tests
             harmony.Patch(Query, prefix: new HarmonyMethod(neutral));
             try { CheckCalls(3, "foreign method sharing the owner string still disables reuse"); }
             finally { harmony.Unpatch(Query, neutral); }
+        }
+
+        private static void TestsPatchFamilyMetadata()
+        {
+            // In the pinned 2.4.2 implementation AddInnerPrefix/Postfix cannot
+            // configure Patch.innerMethod, and Infix.Apply only emits a nop.
+            // These public metadata objects exercise our guard for all exposed
+            // families; they do not claim that inner callbacks execute.
+            var foreign = new Patch(new HarmonyMethod(typeof(PowerOverlayRegression), nameof(NeutralPrefix)),
+                0, Owner);
+            var own = new Patch(new HarmonyMethod(AccessTools.Method(
+                typeof(PowerOverlayOptimizationPatch), "Prefix")), 0, Owner + ".foreign-name");
+            var families = new[] { "Prefixes", "Postfixes", "Transpilers", "Finalizers",
+                "InnerPrefixes", "InnerPostfixes" };
+            for (var family = 0; family < families.Length; family++)
+            {
+                var metadata = PatchFamily(family, foreign);
+                Check(PowerOverlayCompatibility.HasPatches(metadata, null),
+                    families[family] + " metadata blocks reuse for dependencies");
+                Check(PowerOverlayCompatibility.HasPatches(metadata, typeof(PowerOverlayOptimizationPatch)),
+                    families[family] + " metadata rejects a foreign method even with a familiar owner");
+                metadata = PatchFamily(family, own);
+                Check(!PowerOverlayCompatibility.HasPatches(metadata, typeof(PowerOverlayOptimizationPatch)),
+                    families[family] + " metadata recognizes our declaring type independently of owner text");
+                Check(PowerOverlayCompatibility.HasPatches(metadata, null),
+                    families[family] + " metadata rejects even our type on a callback dependency");
+            }
+            var empty = PatchFamily(-1, foreign);
+            Check(!PowerOverlayCompatibility.HasPatches(empty, null), "empty family metadata has no callbacks");
+            Check(!PowerOverlayCompatibility.HasPatches(empty, typeof(PowerOverlayOptimizationPatch)),
+                "empty family metadata has no foreign methods");
+        }
+
+        private static HarmonyLib.Patches PatchFamily(int family, Patch patch)
+        {
+            var empty = new Patch[0];
+            var one = new[] { patch };
+            return new HarmonyLib.Patches(family == 0 ? one : empty, family == 1 ? one : empty,
+                family == 2 ? one : empty, family == 3 ? one : empty,
+                family == 4 ? one : empty, family == 5 ? one : empty);
         }
 
         private static void TestsCircuitRoutingDependencies()

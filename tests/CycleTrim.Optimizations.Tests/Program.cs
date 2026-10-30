@@ -31,11 +31,13 @@ namespace CycleTrim.Optimizations.Tests
                 if (args.Length != 0)
                     throw new ArgumentException("expected no arguments or --benchmark-"
                         + "save, power, conveyor or animation");
-                // The compatibility test deliberately loads an unknown dynamic
-                // assembly. Benchmarks therefore run in separate clean processes.
+                // Conveyor's direct-scan guard first needs a clean provider set.
+                // Power/save tests deliberately load growable dynamic assemblies;
+                // their presence must disable later direct scans. Benchmarks run
+                // in separate clean processes, independent of this suite order.
+                ConveyorPathRegression.Run();
                 PowerOverlayRegression.Run();
                 SaveMetadataRegression.Run();
-                ConveyorPathRegression.Run();
                 AnimationSymbolRegression.Run();
                 Console.WriteLine("PASS CycleTrim optimization host regressions (synthetic game fixtures)");
                 return 0;
