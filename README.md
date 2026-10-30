@@ -1,283 +1,136 @@
-# OniMods
+<div align="center">
+  <h1>OniMods</h1>
+  <p><strong>Build, ship, optimize, and automate Oxygen Not Included mods from one workspace.</strong></p>
+  <p>Rust developer tooling · .NET mods · MCP colony operations · performance and multiplayer experiments</p>
 
-[简体中文](README_ZH.md)
+  [![License](https://img.shields.io/badge/license-AUL%201.0--draft.1-5663a8?style=flat-square)](LICENSE)
+  [![Stars](https://img.shields.io/github/stars/LIghtJUNction/OniMods?style=flat-square)](https://github.com/LIghtJUNction/OniMods/stargazers)
+  [![Issues](https://img.shields.io/github/issues/LIghtJUNction/OniMods?style=flat-square)](https://github.com/LIghtJUNction/OniMods/issues)
+  [![Last commit](https://img.shields.io/github/last-commit/LIghtJUNction/OniMods?style=flat-square)](https://github.com/LIghtJUNction/OniMods/commits/main)
 
-<p align="center">
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AUL%201.0--draft.1-5663a8?style=for-the-badge" /></a>
-  <a href="https://github.com/LIghtJUNction/OniMods/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/LIghtJUNction/OniMods?style=for-the-badge&logo=github" /></a>
-  <a href="https://github.com/LIghtJUNction/OniMods/forks"><img alt="Forks" src="https://img.shields.io/github/forks/LIghtJUNction/OniMods?style=for-the-badge" /></a>
-  <a href="https://github.com/LIghtJUNction/OniMods/issues"><img alt="Issues" src="https://img.shields.io/github/issues/LIghtJUNction/OniMods?style=for-the-badge&logo=github" /></a>
-  <a href="https://github.com/LIghtJUNction/OniMods/commits/main"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/LIghtJUNction/OniMods?style=for-the-badge" /></a>
-  <a href="https://github.com/LIghtJUNction/OniMods/blob/main/LICENSE"><img alt="AUL License" src="https://img.shields.io/badge/license-AUL-blue?style=for-the-badge" /></a>
-  <a href="mods/OniMcp/README_EN.md"><img alt="ONI MCP docs" src="https://img.shields.io/badge/ONI%20MCP-Server%20Docs-4f46e5?style=for-the-badge" /></a>
-</p>
-
-<p align="center">
-  <a href="mods/OniModTemplate/README.md"><img alt="Template" src="https://img.shields.io/badge/OniModTemplate-Template-0ea5e9?style=for-the-badge" /></a>
-  <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust%20CLI-onim-f46623?style=for-the-badge&logo=rust&logoColor=white" /></a>
-  <a href="https://github.com/dotnet/sdk"><img alt=".NET SDK" src="https://img.shields.io/badge/.NET-8.0-5c2d91?style=for-the-badge&logo=dotnet&logoColor=white" /></a>
-</p>
+  [简体中文](README_ZH.md) · [onim CLI](README-onim.md) · [OniMcp docs](mods/OniMcp/README_EN.md) · [Architecture](docs/architecture-and-principles.md)
+</div>
 
 <p align="center">
-  <a href="mods/OniMcp/README_EN.md"><img alt="ONI MCP Server — AI colony control for Oxygen Not Included" src="mods/OniMcp/preview.png" width="47%" /></a>
-  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — performance optimization mod for Oxygen Not Included" src="mods/CycleTrim/preview.png" width="47%" /></a>
+  <a href="mods/OniMcp/README_EN.md"><img alt="OniMcp — MCP-native colony operations" src="mods/OniMcp/preview.png" width="47%"></a>
+  <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — measured ONI performance optimization" src="mods/CycleTrim/preview.png" width="47%"></a>
 </p>
 
-<p align="center">
-  <a href="mods/OniOnline/README.md"><img alt="OniOnline — multiplayer planets for Oxygen Not Included" src="mods/OniOnline/assets/onionline-logo-v1.png" width="280" /></a><br />
-  <a href="mods/OniOnline/README.md"><strong>OniOnline</strong></a>
-</p>
+## See it working
 
-A large-scale modular repository for Oxygen Not Included mod development:
+[![GPT operating an Oxygen Not Included colony through OniMcp](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
 
-- `onim`: Rust-based ONI mod development CLI (init/build/install/publish workflow)
-- `OniMcp`: MCP server mod exposing colony state and safe operations to MCP-compatible clients
+The linked gameplay demo shows an MCP client reading colony state and issuing bounded operations for construction and farming. It is a real integration run, including the failures encountered along the way—not a scripted product animation.
 
-> **Compatibility warning**: before `1.0.0`, the `OniMcp` API can still introduce breaking changes. If you build derivatives, plugins, scripts, or third-party clients, pin exact versions and use runtime manifests (e.g. `oni://tools/manifest`) as the compatibility source of truth.
-
-> **AI infrastructure & open-source support:** OniMcp development and agent testing consume model API credits. If you need an OpenAI-compatible endpoint for your MCP client, [LMM API Gateway](https://api.lmm.best) is one available option. Its [source code](https://github.com/TokenNotIncluded/api.lmm.best) is hosted by [TokenNotIncluded](https://github.com/TokenNotIncluded). Purchases help fund this work, while substantive issues, pull requests, and testing may receive API credits. OniMods remains open source and does not require this provider.
-
-## Table of Contents
-
-- [Gameplay Demo](#gameplay-demo)
-- [Project Overview](#project-overview)
-- [Supported Modules](#supported-modules)
-- [Quick Start](#quick-start)
-- [Quick Links](#quick-links)
-- [Getting Started with onim](#getting-started-with-onim)
-- [Repository Layout](#repository-layout)
-- [Command Reference](#command-reference)
-- [Development & Runtime Notes](#development--runtime-notes)
-- [Compatibility](#compatibility)
-- [Contributing](#contributing)
-- [Release Notes](#release-notes)
-
-## Gameplay Demo
-
-[我把《缺氧》交给 GPT，这三个小人能活下来吗？-哔哩哔哩](https://b23.tv/isOd72t)
-
-Watch GPT operate an Oxygen Not Included colony through OniMcp, including construction, farming, and the problems encountered along the way. The screenshots below are taken directly from the video.
-
-[![Colony overview from the GPT gameplay video at 03:05](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
-
-| Reading state and issuing operations · 00:18 | Construction in progress · 02:10 |
+| Read state and plan · 00:18 | Construction in progress · 02:10 |
 | --- | --- |
-| ![OniMcp workflow illustrated in the video](docs/images/gpt-oni-demo/mcp-workflow.jpg) | ![Colony construction and dig orders in the video](docs/images/gpt-oni-demo/colony-building.jpg) |
+| ![OniMcp state and operation workflow](docs/images/gpt-oni-demo/mcp-workflow.jpg) | ![Colony construction and dig orders](docs/images/gpt-oni-demo/colony-building.jpg) |
 
-## Project Overview
+## What ships here
 
-The repository is organized as a **two-part platform**:
-
-1. **Dev Tooling Layer (`onim`)**  
-   A developer experience layer for creating and shipping ONI mods.
-
-2. **Mod Layer (`mods/`)**  
-   Concrete mod implementations and templates with explicit boundaries.
-
-## Supported Modules
-
-| Module | Path | Scope |
+| Component | What it does | Start here |
 | --- | --- | --- |
-| `onim` | [src/](src/) | Rust CLI for mod lifecycle management |
-| `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP server mod and tool surface |
-| `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | Lightweight performance mod targeting measured simulation hot paths |
-| `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | Multiplayer planets, chat, and authorized read-only observation |
-| `oni-skills` *(optional)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | High-level ONI gameplay strategies and community engineering modules |
-| Architecture & Principles | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | Technical implementation, world textualization, and optimization principles |
-| `OniModTemplate` | [mods/OniModTemplate/](mods/OniModTemplate/) | Boilerplate template for new mod creation |
-| Chinese Project Docs | [README_ZH.md](README_ZH.md) | Chinese overview and usage docs |
-| MCP Runtime Docs | [docs/mcp-tools-reference.md](docs/mcp-tools-reference.md) | Current tool/resource reference |
+| **onim** | Creates, builds, installs, inspects and publishes ONI mods | [CLI guide](README-onim.md) |
+| **OniMcp** | Exposes colony state and bounded game operations to MCP clients | [English](mods/OniMcp/README_EN.md) · [中文](mods/OniMcp/README.md) |
+| **CycleTrim** | Targets measured simulation hot paths with focused performance patches | [Module docs](mods/CycleTrim/README.md) |
+| **OniOnline** | Experiments with multiplayer planets, chat and authorized observation | [Module docs](mods/OniOnline/README.md) |
+| **OniModTemplate** | A reusable starting point for a new ONI mod | [Template](mods/OniModTemplate/README.md) |
 
-## Quick Start
+The repository is intentionally split into two layers: `onim` provides the repeatable development workflow; `mods/` contains independently scoped game modules.
+
+## Quick start
+
+Requirements: Rust, a .NET SDK, a local Oxygen Not Included installation, and the normal packaging tools (`unzip` and `tar`).
 
 ```bash
 cargo install --path .
 onim setup
 onim doctor
-onim init MyMod
+onim init MyMod --author YourName --desc "Your mod description"
 onim dev -m MyMod
 ```
 
-`onim dev` backs up `mods.json` only when its configuration changes and keeps the
-latest five valid configuration backups. It enables the selected Dev entry
-without enabling other copies of the same mod. Backup cleanup failures are
-reported separately from a successfully applied configuration.
-
-Builds require a newly generated `dist/<AssemblyName>.zip`. Installation checks
-the extracted DLL and metadata before replacing the mod; extraction or Dev
-enablement failures preserve the previous installation.
-
-## Quick Links
-
-- English ONI MCP docs: [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md)
-- Chinese ONI MCP docs: [mods/OniMcp/README.md](mods/OniMcp/README.md)
-- ONI MCP server changelog: [mods/OniMcp/CHANGELOG.md](mods/OniMcp/CHANGELOG.md)
-- Template changelog: [mods/OniModTemplate/CHANGELOG.md](mods/OniModTemplate/CHANGELOG.md)
-- CycleTrim changelog: [mods/CycleTrim/CHANGELOG.md](mods/CycleTrim/CHANGELOG.md)
-- Read the full story: [A Letter to Everyone](docs/open-source-letter-en.md)
-
-## Open Source References
-
-- Community reference project: [zhuiyun.skill](https://github.com/LIghtJUNction/zhuiyun.skill)
-- ONI mod ecosystem references: [PLib](https://github.com/peterhaneve/PLib)
-- ONI ecosystem patching: [Harmony](https://github.com/pardeike/Harmony), [FastTrack](https://github.com/peterhaneve/FastTrack)
-
-## ONI MCP Server
-
-Support OniMcp development and testing: [Donate](https://donate.lmm.best/?project=onimcp).
-
-[![OniMcp donation progress](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=en&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
-
-Donations speed everything up.
-
-`OniMcp` is designed as a **safe, MCP-native operations layer** for Oxygen Not Included:
-
-- **`world_editor`**: world-like text file editing workflow; apply SEARCH/REPLACE style edits to virtual save artifacts
-- **`game_control`**: play speed, pause/resume, save/load orchestration
-- **`navigation_control`**: camera, overlays, screenshot workflow
-- **`building_control`**: building operations and utility routing
-- **`orders_control`**: dig/sweep/clean/deconstruct flow control
-- **`server_control`**: manifest, screenshot lifecycle, diagnostics, and session status
-
-### ONI MCP Server Design
-
-- Publicly visible surface is intentionally compact and stable for MCP clients.
-- Former aggregate entrypoints are internal operations used only by the virtual-file workflow; they are not registered as MCP tools.
-- Operations are designed with explicit task framing and player confirmation in the operational flow.
-
-See the full runtime docs in [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md).
-
-## onim
-
-`onim` is the Rust CLI used by this repository to initialize, build, install, uninstall, inspect, and publish ONI mods.
-
-### Typical Development Flow
-
-1. Install dependencies and initialize local config with `onim setup`
-2. Scaffold mod with `onim init`
-3. Iterate quickly via `onim dev -m <mod>`
-4. Build/publish through `onim build` and `onim publish`
-
-CycleTrim and OniMcp use the locked, headless workflow in [docs/steam-publishing.md](docs/steam-publishing.md).
-
-## Repository Layout
-
-```text
-.
-├── onim.toml                     # onim config (default mod + aliases)
-├── Directory.Build.props.example  # .NET config template
-├── Directory.Build.props          # generated local config (not committed)
-├── Cargo.toml                    # onim CLI project
-├── src/                          # onim source
-├── mods/                         # mod workspace
-│   ├── OniModTemplate/           # reusable mod template (ModInfo + Patches/)
-│   ├── OniMcp/                  # ONI MCP server
-│   │   ├── ModInfo.cs            # entry only
-│   │   ├── Patches/ UI/ Config/ Core/ Server/ Support/
-│   │   └── Tools/{Core,Entry,WorldEditor,Shared,Impl}/
-│   └── CycleTrim/                # performance mod
-│       ├── ModInfo.cs            # entry only
-│       ├── Core/                 # shared non-patch logic
-│       └── Patches/              # Harmony patches
-├── docs/                         # reference docs
-└── scripts/                      # helper scripts and verification tools
-```
-
-## Getting Started with onim
-
-```bash
-# 1) Install CLI from source
-cargo install --path .
-
-# 2) Discover game path and dependencies
-onim setup
-
-# 3) Verify the local development environment
-onim doctor
-
-# 4) Create a mod
-onim init MyMod --author YourName --desc "Your mod description"
-
-# 5) Development cycle
-onim dev -m MyMod         # build + install to Dev
-onim info                 # inspect installed mods
-
-# 6) Release cycle
-onim install -m MyMod     # Release install to Local
-onim publish -m MyMod     # publish to Steam Workshop
-
-# 7) Cleanup
-onim uninstall -m MyMod   # supports scope flags
-```
-
-If this is your first run, create your local build config before the first build:
+`onim setup` discovers the game path and can generate local build configuration. If you configure it manually:
 
 ```bash
 cp Directory.Build.props.example Directory.Build.props
-# edit OniGamePath in Directory.Build.props to your local ONI installation
+# Set OniGamePath in Directory.Build.props
 ```
 
-`onim setup` can also generate this config automatically.
+The normal lifecycle is deliberately small:
 
-## Command Reference
+```text
+init → dev → inspect → install → publish
+```
 
-| Command | Purpose |
+| Command | Result |
 | --- | --- |
-| `onim setup` | initialize config and discover dependencies |
-| `onim doctor` | read-only health check for paths, tools, and configured mod sources |
-| `onim init <name>` | scaffold from template |
-| `onim build` | build a mod (`--release` for release build) |
-| `onim build --all` | build all configured mods |
-| `onim dev` | build + install a mod to `mods/Dev` |
-| `onim dev --all` | build + install all configured mods to `mods/Dev` |
-| `onim install` | release build + install to `mods/Local` |
-| `onim uninstall` | uninstall `dev/local/all` scoped mods |
-| `onim info` | show installed Dev/Local/Steam modules |
-| `onim publish` | publish to Steam Workshop; supports `--non-interactive` and `--dry-run` |
-| `onim list` | list known mods in config |
+| `onim init <name>` | Scaffold a mod from the maintained template |
+| `onim dev -m <name>` | Build and install into the game's `mods/Dev` directory |
+| `onim info` | Inspect installed Dev, Local and Steam modules |
+| `onim install -m <name>` | Produce and install a release build |
+| `onim publish -m <name>` | Publish through the Steam Workshop workflow |
+| `onim uninstall -m <name>` | Remove a selected Dev/Local installation |
 
-## Development & Runtime Notes
+`onim dev` only rewrites `mods.json` when configuration actually changes, retains the latest five valid backups, and reports cleanup failures separately. Installation validates the new archive, DLL and metadata before replacing the previous copy.
 
-- Use semantic tasks and explicit short descriptions for all MCP calls.
-- Prefer read-only verification for first-pass planning (status, safety checks, manifests).
-- This project intentionally avoids pretending full autonomous gameplay can replace human oversight.
+## OniMcp: the operational boundary
 
-### Current direction
+OniMcp is an MCP-native operations layer, not an unrestricted automation backdoor. Its public surface is grouped by intent:
 
-- Move game operation toward **virtual-file driven workflows**
-- Keep explicit confirmation and bounded operations in critical actions
-- Maintain strict safety checks and compatibility surfaces between tool versions
+- `world_editor` — virtual-file SEARCH/REPLACE workflows for save-like artifacts;
+- `game_control` — pause, speed, save and load orchestration;
+- `navigation_control` — camera, overlays and screenshots;
+- `building_control` — building and utility operations;
+- `orders_control` — dig, sweep, clean and deconstruct orders;
+- `server_control` — manifests, diagnostics, sessions and screenshot lifecycle.
 
-## Compatibility
+Critical operations remain bounded and should be preceded by read-only inspection and explicit task framing. The project does not claim that autonomous play replaces human oversight.
 
-- `OniMcp` is pre-1.0, so API surface can be unstable.
-- For derivatives and integrations, pin exact versions and use runtime manifests as compatibility source.
-- Use `oni://tools/manifest` for runtime verification.
+> **Pre-1.0 compatibility:** OniMcp may still introduce breaking API changes. Pin exact versions for clients and plugins, then verify the live surface through `oni://tools/manifest` rather than assuming a README is the runtime contract.
 
-## Contributing
+## Repository map
 
-1. Open issue for scope and design first
-2. Keep PRs focused to one coherent change
-3. Add/update docs/changelog links when behavior changes
-4. Confirm local workflow (`onim setup`, relevant verify scripts) before merging
+```text
+.
+├── src/                         onim Rust CLI
+├── mods/
+│   ├── OniMcp/                  MCP server mod
+│   ├── CycleTrim/               measured performance patches
+│   ├── OniOnline/               multiplayer experiments
+│   └── OniModTemplate/          reusable mod scaffold
+├── docs/                        architecture, testing and publishing notes
+├── scripts/                     verification helpers
+├── Cargo.toml                   onim package definition
+└── onim.toml                    workspace aliases and defaults
+```
 
-Run `python3 scripts/check_mods.py` with Python 3 and .NET SDK 10 for the Mod
-regression suite. See [Mod testing](docs/mod-testing.md) for coverage and the
-additional checks that require an installed game.
+## Verification and contribution
 
-## Dependencies
+Before opening a pull request:
 
-- [Rust](https://rustup.rs/) to compile `onim`
-- [.NET SDK](https://dotnet.microsoft.com/download) to build ONI mods
-- `unzip` and `tar` for packaging/install helpers
-- Steam Workshop + ONI local environment for integration checks
+```bash
+onim doctor
+python3 scripts/check_mods.py
+```
 
-## Release Notes
+The regression suite requires Python 3 and .NET SDK 10. Checks that need a locally installed game are documented separately in [Mod testing](docs/mod-testing.md).
 
-- `OniMcp` releases are tracked in [mods/OniMcp/CHANGELOG.md](mods/OniMcp/CHANGELOG.md).
-- `CycleTrim` history is tracked in [mods/CycleTrim/CHANGELOG.md](mods/CycleTrim/CHANGELOG.md).
-- Template changelog is tracked in [mods/OniModTemplate/CHANGELOG.md](mods/OniModTemplate/CHANGELOG.md).
+Keep changes focused, update the affected changelog, and open an issue first when a proposal changes module boundaries or public MCP behavior.
+
+## Releases and further reading
+
+- [OniMcp changelog](mods/OniMcp/CHANGELOG.md)
+- [CycleTrim changelog](mods/CycleTrim/CHANGELOG.md)
+- [Template changelog](mods/OniModTemplate/CHANGELOG.md)
+- [Steam publishing workflow](docs/steam-publishing.md)
+- [Architecture and principles](docs/architecture-and-principles.md)
+- [Open-source letter](docs/open-source-letter-en.md)
+
+OniMcp development and agent testing consume model API credits. [Project donations](https://donate.lmm.best/?project=onimcp) support that work. An OpenAI-compatible endpoint is optional; OniMods does not require a specific provider.
 
 ## License
 
-Original materials that LIghtJUNction has the rights to license are offered under [Agent Upstream License 1.0-draft.1](LICENSE). Historical MIT releases retain their original permissions; the former MIT grant is archived as [LICENSE.MIT](LICENSE.MIT). Separately licensed third-party material and adapted upstream contributions keep their own terms; see [LICENSING.md](LICENSING.md). This custom draft is **not** an OSI-approved license. Agent contributors must read [AGENTS.md](AGENTS.md) and [UPSTREAM.toml](UPSTREAM.toml).
+Original material that LIghtJUNction has the right to license is offered under [Agent Upstream License 1.0-draft.1](LICENSE). This custom draft is **not** an OSI-approved license.
+
+Historical MIT releases retain their original permissions in [LICENSE.MIT](LICENSE.MIT). Third-party and adapted upstream material keeps its own terms; see [LICENSING.md](LICENSING.md). Agent contributors must also read [AGENTS.md](AGENTS.md) and [UPSTREAM.toml](UPSTREAM.toml).
