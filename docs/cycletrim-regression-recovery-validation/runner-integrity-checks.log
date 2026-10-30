@@ -1,0 +1,5 @@
+PASS missing revision in pair: incomplete outer pair
+PASS missing whole scenario: missing or unexpected scenario/mode
+PASS duplicate revision: duplicate revision/pair
+PASS different cross-revision output: prior/candidate semantic mismatch: patched
+PASS complete evidence remains accepted

@@ -33,6 +33,7 @@ namespace CycleTrim.Optimizations.Tests
                     Check(Evaluate(cases[index]) == expected[index], "differential path result " + index);
                 TestActualPatch();
                 TestShortCandidateScopes();
+                TestLazyScopesAndNestedReturns();
                 TestForeignPatches();
             }
             finally
@@ -70,28 +71,60 @@ namespace CycleTrim.Optimizations.Tests
                 .Where(item => Equals(item.instruction.operand, search)).Select(item => item.index).ToArray();
             Check(calls.Length == 3, "fixture includes all three original predicate searches");
             var last = calls[2];
-            var modified = ConveyorPathLookupPatch.Transpiler(original).ToArray();
+            var modified = Transpile(original);
             Check(modified.Count(item => item.opcode == OpCodes.Call
-                && item.operand is MethodInfo method && method.DeclaringType == typeof(ConveyorPathLookupPatch)) == 1,
+                && item.operand is MethodInfo method && method.Name == "FindIndexScoped") == 1,
                 "exactly one helper call replaces the membership search");
-            Check(ReferenceEquals(modified[calls[0]], original[calls[0]])
-                && ReferenceEquals(modified[calls[1]], original[calls[1]]), "endpoint searches are untouched");
+            Check(modified.Any(item => ReferenceEquals(item, original[calls[0]]))
+                && modified.Any(item => ReferenceEquals(item, original[calls[1]])), "endpoint searches are untouched");
             Check(original[last].opcode == OpCodes.Callvirt, "input instructions are not mutated");
-            Check(modified[last].labels.SequenceEqual(original[last].labels)
-                && modified[last].blocks.SequenceEqual(original[last].blocks), "labels and exception boundaries survive");
+            var replacement = Array.FindIndex(modified, item => item.operand is MethodInfo method
+                && method.Name == "FindIndexScoped");
+            Check(modified[replacement - 2].labels.SequenceEqual(original[last].labels)
+                && modified[replacement - 2].blocks.Concat(modified[replacement].blocks)
+                    .SequenceEqual(original[last].blocks), "labels and exception boundaries survive");
+            Check(modified.Count(item => item.opcode == OpCodes.Ret) == 1
+                && modified.Any(item => item.blocks.Any(block => block.blockType == ExceptionBlockType.BeginFinallyBlock)),
+                "all original returns leave through the invocation cleanup");
+            var originalFinallyCount = original.Sum(item => item.blocks.Count(block =>
+                block.blockType == ExceptionBlockType.BeginFinallyBlock));
+            Check(originalFinallyCount == 2 && modified.Sum(item => item.blocks.Count(block =>
+                block.blockType == ExceptionBlockType.BeginFinallyBlock)) == originalFinallyCount + 1,
+                "both original foreach finally blocks survive inside the added invocation finally");
+            Check(original.Where(item => item.opcode == OpCodes.Leave || item.opcode == OpCodes.Leave_S)
+                .All(item => modified.Any(candidate => ReferenceEquals(item, candidate))),
+                "original containment and enumerator leave targets are unchanged");
+            Check(original.SelectMany(item => item.labels).All(label => modified.Any(item => item.labels.Contains(label))),
+                "all original branch and exception-handler labels remain defined");
 
             var missing = original.Where((_, index) => index != calls[0]).ToList();
-            Check(ConveyorPathLookupPatch.Transpiler(missing).SequenceEqual(missing), "missing call leaves method unchanged");
+            Check(Transpile(missing).SequenceEqual(missing), "missing call leaves method unchanged");
             var extra = new List<CodeInstruction>(original) { original[last] };
-            Check(ConveyorPathLookupPatch.Transpiler(extra).SequenceEqual(extra), "extra call leaves method unchanged");
+            Check(Transpile(extra).SequenceEqual(extra), "extra call leaves method unchanged");
             var badLambda = new List<CodeInstruction>(original);
             badLambda[last - 2] = new CodeInstruction(OpCodes.Ldftn,
                 AccessTools.Method(typeof(ConveyorPathRegression), nameof(HasSideEffect)));
-            Check(ConveyorPathLookupPatch.Transpiler(badLambda).SequenceEqual(badLambda), "unknown predicate is not bypassed");
+            Check(Transpile(badLambda).SequenceEqual(badLambda), "unknown predicate is not bypassed");
             var prefixed = new List<CodeInstruction>(original);
             prefixed.Insert(last, new CodeInstruction(OpCodes.Constrained, typeof(List<SolidConduitFlow.Conduit>)));
-            Check(ConveyorPathLookupPatch.Transpiler(prefixed).SequenceEqual(prefixed), "prefixed call is not rewritten");
-            ConveyorPathLookupPatch.Transpiler(original).ToArray();
+            Check(Transpile(prefixed).SequenceEqual(prefixed), "prefixed call is not rewritten");
+            var tail = new List<CodeInstruction>(original);
+            tail.InsertRange(tail.Count - 1, new[]
+            {
+                new CodeInstruction(OpCodes.Tailcall),
+                new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ConveyorPathRegression), nameof(Noop)))
+            });
+            Check(Transpile(tail).SequenceEqual(tail), "tail transfer preserves the whole original method and EH metadata");
+            var jump = new List<CodeInstruction>(original);
+            jump.Insert(jump.Count - 1, new CodeInstruction(OpCodes.Jmp, Target));
+            Check(Transpile(jump).SequenceEqual(jump), "direct method transfer cannot bypass scope cleanup");
+            Transpile(original);
+        }
+
+        private static CodeInstruction[] Transpile(IEnumerable<CodeInstruction> instructions)
+        {
+            var generator = new DynamicMethod("conveyor_shape", typeof(void), Type.EmptyTypes).GetILGenerator();
+            return ConveyorPathLookupPatch.Transpiler(instructions, generator).ToArray();
         }
 
         private static bool HasSideEffect(SolidConduitFlow.Conduit value) { return value.idx == Environment.TickCount; }
@@ -133,6 +166,17 @@ namespace CycleTrim.Optimizations.Tests
                 candidate[0] = new SolidConduitFlow.Conduit(999);
                 Check(Lookup(lease, candidate, rail => rail.idx == 999, 999, compatible) == 0,
                     "candidate alias remains current after mutation");
+                var entriesBeforeAlias = lease.IndexEntryCount;
+                var aliasReads = 0;
+                var activeLease = lease;
+                var aliasPosition = ConveyorPathLookupPatch.FindIndexScoped(candidate, rail =>
+                {
+                    aliasReads++;
+                    return rail.idx == 999;
+                }, candidate, ref activeLease);
+                Check(entriesBeforeAlias > 0 && aliasPosition == 0 && aliasReads == 1
+                    && ReferenceEquals(activeLease, lease) && lease.IndexEntryCount == entriesBeforeAlias,
+                    "production path keeps the alias guard after an existing lease acquired an index");
 
                 var nested = ConveyorPathLookup.Enter(Rails(new[] { 1 }), true);
                 Check(lease.IndexEntryCount == 0, "entering nested invocation invalidates parent");
@@ -318,6 +362,96 @@ namespace CycleTrim.Optimizations.Tests
             }
             finally { ConveyorPathLookup.Exit(parent); }
             Check(ConveyorPathLookup.Current == null, "short nested test leaves no scope");
+        }
+
+        private static void TestLazyScopesAndNestedReturns()
+        {
+            var patches = Harmony.GetPatchInfo(Target);
+            Check(!patches.Prefixes.Any(item => item.PatchMethod.DeclaringType == typeof(ConveyorPathLookupPatch))
+                && !patches.Finalizers.Any(item => item.PatchMethod.DeclaringType == typeof(ConveyorPathLookupPatch)),
+                "conveyor patch has no unconditional Harmony invocation wrappers");
+
+            foreach (var length in new[] { 16, 128, ConveyorPathLookup.MaximumPathLength + 1 })
+            {
+                var flow = RepeatedFixture(length, 1);
+                var reads = 0;
+                flow.GetSOAInfo().ObserveRead = () =>
+                {
+                    reads++;
+                    Check(ConveyorPathLookup.Current == null,
+                        "short, oversized and too-few-query paths do not acquire a scope");
+                };
+                flow.AddPath(Rails(new[] { 65000, 0 }));
+                Check(reads == 1, "unindexed control reaches the original membership callback");
+                Check(ConveyorPathLookup.Current == null, "unindexed invocation leaves no scope behind");
+            }
+
+            var parentPath = Rails(Enumerable.Range(0, 64));
+            var parent = ConveyorPathLookup.Enter(Rails(Enumerable.Range(1000, 64)), true);
+            try
+            {
+                FillIndex(parent, parentPath);
+                var eligible = RepeatedFixture(128, 1);
+                var nestedCandidate = Rails(Enumerable.Range(0, 64));
+                nestedCandidate[0] = new SolidConduitFlow.Conduit(65000);
+                nestedCandidate[nestedCandidate.Count - 1] = new SolidConduitFlow.Conduit(65001);
+                var sawNestedIndex = false;
+                var nestedIndexIsolated = true;
+                eligible.GetSOAInfo().ObserveRead = () =>
+                {
+                    var active = ConveyorPathLookup.Current;
+                    if (active != null && active.IndexEntryCount > 0)
+                    {
+                        sawNestedIndex = true;
+                        nestedIndexIsolated &= !ReferenceEquals(active, parent);
+                    }
+                };
+                eligible.AddPath(nestedCandidate);
+                Check(sawNestedIndex && nestedIndexIsolated
+                    && ReferenceEquals(ConveyorPathLookup.Current, parent) && parent.IndexEntryCount == 0,
+                    "eligible nested invocation releases its active lease and barrier in order");
+
+                FillIndex(parent, parentPath);
+                var contained = RepeatedFixture(64, 1);
+                contained.AddPath(Rails(Enumerable.Range(0, 8)));
+                Check(ReferenceEquals(ConveyorPathLookup.Current, parent) && parent.IndexEntryCount == 0,
+                    "nested containment return invalidates and preserves the outer scope");
+
+                for (var attempt = 0; attempt < 2; attempt++)
+                {
+                    FillIndex(parent, parentPath);
+                    var nested = RepeatedFixture(16, 1);
+                    var fail = attempt == 1;
+                    var changedRail = 900 + attempt;
+                    nested.GetSOAInfo().ObserveRead = () =>
+                    {
+                        var barrier = ConveyorPathLookup.Current;
+                        Check(barrier != null && !ReferenceEquals(barrier, parent) && parent.IndexEntryCount == 0,
+                            "nested short invocation isolates and invalidates the parent before its callbacks");
+                        FillIndex(barrier, parentPath);
+                        Check(barrier.IndexEntryCount == 0,
+                            "disabled nesting barrier cannot build or borrow a parent's index");
+                        parentPath[7] = new SolidConduitFlow.Conduit(changedRail);
+                        if (fail)
+                            throw new InvalidOperationException("nested short-path failure");
+                    };
+                    Action run = () => nested.AddPath(Rails(new[] { 65000, 0 }));
+                    if (fail)
+                        Expect<InvalidOperationException>(run);
+                    else
+                        run();
+                    Check(ReferenceEquals(ConveyorPathLookup.Current, parent) && parent.IndexEntryCount == 0,
+                        "nested normal/exceptional exit removes the barrier and invalidates outer answers");
+                    Check(Lookup(parent, parentPath, rail => rail.idx == changedRail, changedRail, () => true) == 7,
+                        "parent observes a same-length mutation after nested cleanup");
+                }
+
+                FillIndex(parent, parentPath);
+                Expect<NullReferenceException>(() => RepeatedFixture(64, 1).AddPath(null));
+                Check(ReferenceEquals(ConveyorPathLookup.Current, parent) && parent.IndexEntryCount == 0,
+                    "failure before the membership phase still invalidates the parent");
+            }
+            finally { ConveyorPathLookup.Exit(parent); }
         }
 
         private static void TestForeignPatches()

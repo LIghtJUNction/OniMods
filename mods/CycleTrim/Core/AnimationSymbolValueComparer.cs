@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace CycleTrim.Core
@@ -31,51 +30,24 @@ namespace CycleTrim.Core
                 FailedWrites.GetValue(owner, NewFailure);
         }
 
-        // Each setter invocation owns this state: 0 = no fields visited,
-        // 1 = only identical fields, 3 = at least one changed field.
-        // Once a change requires MarkDirty, later comparisons cannot affect the
-        // decision. Continue the original writes without reading their old values.
-        // The transpiler invokes these small helpers once per field. Request
-        // inlining so those calls need not dominate a large unchanged range.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void WriteFloat(ref float destination, float value, ref int state)
+        internal static unsafe bool SameBits(float left, float right)
         {
-            if (state != 3)
-            {
-                state = 1;
-                if (SameBits(destination, value))
-                    return;
-                state = 3;
-            }
-            destination = value;
+            // Only reinterpret these two 4-byte value parameters. No pointer
+            // escapes or addresses game storage. This lets the JIT use register
+            // bit moves instead of spilling explicit-layout unions to memory.
+            return *(int*)&left == *(int*)&right;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void WriteVector(ref Vector2 destination, Vector2 value, ref int state)
+        internal static bool SameVectorBits(Vector2 left, Vector2 right)
         {
-            if (state != 3)
-            {
-                state = 1;
-                if (SameBits(destination.x, value.x) && SameBits(destination.y, value.y))
-                    return;
-                state = 3;
-            }
-            destination = value;
+            // Keep each comparison 32-bit: promoted frame components can make
+            // a packed 64-bit union compile to two narrow stores and a wide
+            // reload. These comparisons preserve NaNs and signed zero without
+            // reconstructing that wider temporary.
+            return SameBits(left.x, right.x) && SameBits(left.y, right.y);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static bool SameBits(float left, float right)
-        {
-            return new FloatBits { Value = left }.Bits == new FloatBits { Value = right }.Bits;
-        }
-
-        // net48 has no BitConverter.SingleToInt32Bits. This value-type union
-        // performs the same reinterpretation without unsafe code or allocation.
-        [StructLayout(LayoutKind.Explicit)]
-        private struct FloatBits
-        {
-            [FieldOffset(0)] internal float Value;
-            [FieldOffset(0)] internal int Bits;
-        }
     }
 }

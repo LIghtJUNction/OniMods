@@ -1,0 +1,9 @@
+  Determining projects to restore...
+  Restored /workspace/scratch/2706e06c4375/OniMods/docs/cycletrim-regression-recovery-validation/integrated/BenchmarkDriver/BenchmarkDriver.csproj (in 83 ms).
+  BenchmarkDriver -> /workspace/scratch/2706e06c4375/OniMods/docs/cycletrim-regression-recovery-validation/integrated/BenchmarkDriver/bin/Release/net10.0/BenchmarkDriver.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.25

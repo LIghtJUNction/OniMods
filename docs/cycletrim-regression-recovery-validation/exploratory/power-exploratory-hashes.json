@@ -1,0 +1,6 @@
+{
+  "/tmp/cycletrim-r3-power-check/mods/CycleTrim/Core/PowerOverlayCache.cs": "a565b957968dbadd925be38260e60f36412d6da0baf587416b527c8bccb9328d",
+  "/tmp/cycletrim-r3-power-check/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs": "8fb2e13099c40e6191704bf72af34a10d9e4ce730fe73e21c63259a4151ad9f9",
+  "/tmp/cycletrim-r3-power-check/tests/CycleTrim.Optimizations.Tests/PowerOverlayBenchmark.cs": "777644f3c3e984d783b52229c493a38cfc3755fa76862953abc6100ebb983dcd",
+  "/tmp/cycletrim-r3-power-check/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll": "db386c961cc436e711040b976ba8ab1c3742471c807dbc79ae0ccf8b6c4a40f7"
+}

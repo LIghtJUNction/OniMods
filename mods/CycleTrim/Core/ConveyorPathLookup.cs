@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace CycleTrim.Core
 {
@@ -33,6 +34,24 @@ namespace CycleTrim.Core
 
         internal static ConveyorPathLookup Current { get { return current; } }
         internal int IndexEntryCount { get { return firstPositions.Count; } }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static ConveyorPathLookup BeginInvocation()
+        {
+            // Top-level calls remain lazy. A nested invocation needs a disabled
+            // barrier even when it returns before reaching membership searches:
+            // callbacks must never see or borrow the parent's active scope.
+            return current == null ? null : Enter(null, false);
+        }
+
+        internal static void EndInvocation(ConveyorPathLookup lease, ConveyorPathLookup barrier)
+        {
+            Exit(lease);
+            // An eligible nested call acquires its own lease above this barrier.
+            // Pop both in order; Enter/Exit invalidate the parent before and
+            // after every nested invocation, including short paths and failures.
+            Exit(barrier);
+        }
 
         internal static ConveyorPathLookup Enter(List<SolidConduitFlow.Conduit> newPath, bool allowIndex)
         {
@@ -73,15 +92,26 @@ namespace CycleTrim.Core
                 pooled = lease;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int FindIndex(List<SolidConduitFlow.Conduit> path,
             Predicate<SolidConduitFlow.Conduit> predicate,
             Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
         {
             // Null receiver/predicate errors are still produced by List.FindIndex.
-            // A retained path may alias the path which the game is trimming.
-            if (!enabled || path == null || predicate == null || candidate == null
-                || ReferenceEquals(path, candidate) || path.Count < MinimumPathLength
-                || path.Count > MaximumPathLength)
+            if (path == null || path.Count < MinimumPathLength || path.Count > MaximumPathLength)
+                return path.FindIndex(predicate);
+            return FindEligibleIndex(path, predicate, readRail, canIndex);
+        }
+
+        // The production call site has already checked this path's non-null
+        // receiver and length. Keep per-query state and alias checks here:
+        // later paths in the same invocation need not share the first's identity.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int FindEligibleIndex(List<SolidConduitFlow.Conduit> path,
+            Predicate<SolidConduitFlow.Conduit> predicate,
+            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
+        {
+            if (!enabled || predicate == null || candidate == null || ReferenceEquals(path, candidate))
                 return path.FindIndex(predicate);
 
             if (!ReferenceEquals(indexedPath, path) || pathLength != path.Count)
@@ -92,22 +122,31 @@ namespace CycleTrim.Core
                 expectedQueries = candidate.Count;
             }
 
-            // Pay for an index only after the original searches have already
-            // inspected two path lengths and at least four searches remain.
-            // An early hit costs only index + 1, so it does not invite a table.
-            var buildIndex = !indexed && inspectedRails >= 2L * pathLength
-                && expectedQueries - queries >= MinimumQueriesRemaining;
-            int? rail = null;
-            if (indexed || buildIndex)
+            // The common early-hit path does only scan accounting. Keep table
+            // construction, compatibility and mutation recovery out of this
+            // small method so callers can inline the original-search path.
+            if (!indexed && (inspectedRails < 2L * pathLength
+                || expectedQueries - queries < MinimumQueriesRemaining))
             {
-                // Delegate metadata and its captured field are only needed when
-                // an answer is about to come from the index. Ordinary scans pay
-                // neither reflection nor closure-key extraction costs.
-                rail = readRail(predicate);
-                if (!rail.HasValue)
-                    return path.FindIndex(predicate);
+                queries++;
+                var beforeQuery = version;
+                var found = path.FindIndex(predicate);
+                if (version == beforeQuery)
+                    inspectedRails += found < 0 ? pathLength : found + 1;
+                return found;
             }
-            if (buildIndex)
+
+            return FindIndexed(path, predicate, readRail, canIndex);
+        }
+
+        private int FindIndexed(List<SolidConduitFlow.Conduit> path,
+            Predicate<SolidConduitFlow.Conduit> predicate,
+            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
+        {
+            var rail = readRail(predicate);
+            if (!rail.HasValue)
+                return path.FindIndex(predicate);
+            if (!indexed)
             {
                 var beforeCheck = version;
                 if (!compatibilityChecked)
@@ -131,29 +170,20 @@ namespace CycleTrim.Core
             }
 
             queries++;
-            if (indexed)
+            // A copy of the public enumerator detects even an indexer write
+            // which leaves Count unchanged. The copy never advances our stamp.
+            var stamp = indexStamp;
+            try
             {
-                // A copy of the public enumerator detects even an indexer write
-                // which leaves Count unchanged. The copy never advances our stamp.
-                var stamp = indexStamp;
-                try
-                {
-                    stamp.MoveNext();
-                }
-                catch (InvalidOperationException)
-                {
-                    ResetPath();
-                    return path.FindIndex(predicate);
-                }
-                int position;
-                return firstPositions.TryGetValue(rail.Value, out position) ? position : -1;
+                stamp.MoveNext();
             }
-
-            var beforeQuery = version;
-            var found = path.FindIndex(predicate);
-            if (version == beforeQuery)
-                inspectedRails += found < 0 ? pathLength : found + 1;
-            return found;
+            catch (InvalidOperationException)
+            {
+                ResetPath();
+                return path.FindIndex(predicate);
+            }
+            int position;
+            return firstPositions.TryGetValue(rail.Value, out position) ? position : -1;
         }
 
         private void ResetPath()

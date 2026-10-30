@@ -1,0 +1,268 @@
+{
+  "baseline_commit": "7aa5003c23cd41a385664e684c3debf918a798a2",
+  "final_candidate": "checkpoint-3; identified by the source and binary hashes below",
+  "source_sha256": {
+    "mods/CycleTrim/Core/AnimationSymbolValueComparer.cs": "33a66839318af9e707807f695e78ba3dbeee34be1eb14b18157ede999de82e5c",
+    "mods/CycleTrim/Core/ConveyorPathLookup.cs": "fc7b3a14e383a101262ae4d4ae61f8eb98ce6de2dfbbc7f3451189f1d2754e9c",
+    "mods/CycleTrim/Core/CycleTrimPatchOptions.cs": "ed9892a4ffb68bf14b027d93dd16c04e0359120cbe0db11d5978a868d99eaec0",
+    "mods/CycleTrim/Core/PowerOverlayCache.cs": "37b6838782cbfda0b7cb2a2a2e370240ffa1310863b104230511cecc617a6c17",
+    "mods/CycleTrim/Core/SaveTypeMetadataCache.cs": "554015cde477500bf9ba4bcc49359b7538224cbeea22a82b58fa50e986200efb",
+    "mods/CycleTrim/CycleTrim.csproj": "a74a257bece6f63e1c5ae8a6566fe2d88d620fda7db5f4b188abe2cf5abe1e92",
+    "mods/CycleTrim/Patches/AnimationSymbolOptimizationPatch.cs": "250c1ec7eed516e71b570ce49eaf6cb5e7382ce3b3c171ac354568f72c3cd3b0",
+    "mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs": "16f398add01cea3443d1fc3e6132a7eb153e507d4a0e92ee6bde282ee5d481cb",
+    "mods/CycleTrim/Patches/PowerOverlayCompatibility.cs": "1dc2fc9099bd85101ae13efaae5b0ee670c5bcc143abc02f64171a518fe0e61c",
+    "mods/CycleTrim/Patches/PowerOverlayOptimizationPatch.cs": "7ec14e054272345ab903832bfa3fc801c8026191f9782710f85dfcb0a8631eed",
+    "mods/CycleTrim/Patches/SaveTypeMetadataPatch.cs": "f4ec5443f22310242d5e1346ec29b4c8c7a4774ee2f174b6b070cf5203bcc076",
+    "tests/CycleTrim.Optimizations.Tests/AnimationSymbolBenchmark.cs": "b0fec02e075d967da5970dbcb695e68f3f00875b670d63cf380b9004757dd9ab",
+    "tests/CycleTrim.Optimizations.Tests/AnimationSymbolFixture.cs": "2e495321e5cf751e10b4827410a00664fa247b6bac3bbaee8982ccc7cb55040c",
+    "tests/CycleTrim.Optimizations.Tests/AnimationSymbolRegression.cs": "fb4b17d87078b6ce08d3e57a5adab57cc1933fd2f6b41fb9b64cfd22535fe0ab",
+    "tests/CycleTrim.Optimizations.Tests/ConveyorFixture.cs": "bf8e316947d54eb72c87e533fa832c059c862a8b763b260be4739be5c2433788",
+    "tests/CycleTrim.Optimizations.Tests/ConveyorPathBenchmark.cs": "6e9ccacbfce4f9a975abac987a4b617b6e3078c999800e670a540b0658bd0727",
+    "tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs": "01c4202be035d8cdaf204e16391939d67eda0039ee62d7c56dbd7a1ca4d78852",
+    "tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj": "61386cbc8a0bbbb6c9e5593ce6e0d10f56426e250b729e1be2703397e896e179",
+    "tests/CycleTrim.Optimizations.Tests/PowerOverlayBenchmark.cs": "777644f3c3e984d783b52229c493a38cfc3755fa76862953abc6100ebb983dcd",
+    "tests/CycleTrim.Optimizations.Tests/PowerOverlayFixture.cs": "de8e0945dc7ee23d370051dea70cd67c0b18221af70869563ca8b8f7913db169",
+    "tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs": "828863b59166cccde788ad3e77dbe9798e9d1fbd64f7722d229632d007e758b3",
+    "tests/CycleTrim.Optimizations.Tests/Program.cs": "edda05b7b63270060feb8e1e73df1c7e38be41e348ed5be4e13efef61671159e",
+    "tests/CycleTrim.Optimizations.Tests/SaveMetadataBenchmark.cs": "40f73dacbe370c374aeb65160660c07b4994cbdf92d58c2cf8105ce7b8e4e9e4",
+    "tests/CycleTrim.Optimizations.Tests/SaveMetadataFixture.cs": "a718f5ef4f19e8496ba72835542104b55c5e43224253fb852ed72caccd30c6b3",
+    "tests/CycleTrim.Optimizations.Tests/SaveMetadataRegression.cs": "265edb63956dab14259cb22949e860d493d0cfd61b06be395f3ab0ddeebf5171"
+  },
+  "host_assembly_sha256": "cd5695e2fc48d9f4a873cbd4fb25c49073190eff47394f3bc347cb5806e0a83a",
+  "baseline_host_assembly_sha256": "08bbeaf39e6999c7034cd552609f409e5b0aef4f60c671bfa00f70c82c289942",
+  "reference_mod_assembly_sha256": "4a355a42ccb2d161f2169d55b535058518436f58d77e87c28d652989a41c3146",
+  "environment": {
+    "reference_manifest_sha256": "c25102a89fe47ea1389fce9f0cdf9d5b8adee9bc586e89bc33374a84b8ca6675",
+    "reference_build": 737790,
+    "method_source_build": 744825,
+    "method_source_revision": "8d4ace10c2b6a84cee394653a91b990a5122e636",
+    "verified_files": [
+      {
+        "name": "0Harmony.dll",
+        "size": 1255936,
+        "sha256": "bbf485c419484fd1637e1a7c5bc282a62c63bf2f90571ff0dedc1de584fbfaf8"
+      },
+      {
+        "name": "Assembly-CSharp.dll",
+        "size": 4593664,
+        "sha256": "1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c"
+      },
+      {
+        "name": "Assembly-CSharp-firstpass.dll",
+        "size": 1665536,
+        "sha256": "c2f1596bbc441d9b408457032cff8ddd2fab8b75d3768a9210c552931b23cfc7"
+      },
+      {
+        "name": "Newtonsoft.Json.dll",
+        "size": 176640,
+        "sha256": "e7fdfb49e6140f83ff1fbf4893cc25ad1c1669e72df470c2d284aaa593fe70cf"
+      },
+      {
+        "name": "Unity.TextMeshPro.dll",
+        "size": 128512,
+        "sha256": "ab4f936a841c2580571fc9096a9480347790587fcda8b1a45308b01789564f05"
+      },
+      {
+        "name": "UnityEngine.dll",
+        "size": 184832,
+        "sha256": "89095f7c9f40594c6940584c7f6a4aed843f33163dbba7af8302a23c9e710baa"
+      },
+      {
+        "name": "UnityEngine.CoreModule.dll",
+        "size": 1323520,
+        "sha256": "81c7b8183600ff8d2a36cdadbd73555e75d0b4f99c4d8851bc7be929de786ab1"
+      },
+      {
+        "name": "UnityEngine.UI.dll",
+        "size": 115712,
+        "sha256": "b71fea85d3d4a321ecd88bb787bd1424d4c5a8920b689ec9c938a9ca0560b901"
+      },
+      {
+        "name": "UnityEngine.UIModule.dll",
+        "size": 29184,
+        "sha256": "44e9e848f203e02f65cce5b5557a296b7a1bd0227f469ebb7b43a194744a5b56"
+      },
+      {
+        "name": "UnityEngine.TextRenderingModule.dll",
+        "size": 18432,
+        "sha256": "8590e9a5d4dd726924b1fa8a3da4b12167b288b9347f30e36479a1793fb2da94"
+      },
+      {
+        "name": "UnityEngine.InputLegacyModule.dll",
+        "size": 27136,
+        "sha256": "7449a6637ce4af8984aaa57fe26d45848b71c42392392bc85ed16880ff09a0ca"
+      }
+    ],
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+    "affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "sdk": "10.0.401",
+    "cpu_models": [
+      "AMD EPYC 9V74 80-Core Processor"
+    ],
+    "cpu_allocation": "Pinned CPU 0 on a shared host; no exclusive CPU reservation.",
+    "auxiliary_compile_only_modules_verified": [
+      {
+        "name": "UnityEngine.IMGUIModule.dll",
+        "size": 88576,
+        "sha256": "3fe2afaf000557ec559b485ba664d7de7c3f9190e1747518dc35cdd980b092b4"
+      },
+      {
+        "name": "UnityEngine.ScreenCaptureModule.dll",
+        "size": 10752,
+        "sha256": "e1749ad46587104019dfe18328954fa9c0c24a2748fcbc1da5ed1fdf593e3e2c"
+      }
+    ]
+  },
+  "runtime": "10.0.12",
+  "host_assertions": {
+    "power": 109,
+    "save": 375,
+    "conveyor": 2312,
+    "animation": 4261,
+    "optimization_total": 7057,
+    "settings": 70
+  },
+  "conveyor_original_patched_differential_cases": 2059,
+  "reference_build": {
+    "target": "net48",
+    "configuration": "Release",
+    "IncludeOniSim": false,
+    "warnings": 0,
+    "errors": 0,
+    "restore": "successful network-enabled restore; final source compile used --no-restore"
+  },
+  "settings_evidence": "checkpoint-2 settings/probe run; its linked source files are unchanged at checkpoint-3",
+  "commands": [
+    "dotnet run --project tests/CycleTrim.Optimizations.Tests -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true",
+    "dotnet run --project tests/CycleTrim.PerformanceProbe.Tests -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -- --skip-synthetic-performance",
+    "dotnet build mods/CycleTrim/CycleTrim.csproj -c Release --no-restore -p:OniManagedPath=/tmp/cycletrim-oni-managed -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -p:IncludeOniSim=false",
+    "dotnet build docs/cycletrim-regression-recovery-validation/BenchmarkDriver/BenchmarkDriver.csproj -c Release -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true",
+    "DOTNET_TieredCompilation=0 python3 docs/cycletrim-regression-recovery-validation/run_benchmarks.py run --driver <BenchmarkDriver.dll> --prior <7aa5003-host.dll> --candidate <checkpoint3-host.dll> --output <new-directory> --dotnet <dotnet> --cpu 0 --pairs 7 --label formal-controlled-checkpoint-3",
+    "taskset -c 0 dotnet <prior-or-candidate-host.dll> --benchmark-conveyor",
+    "taskset -c 0 dotnet <prior-or-candidate-host.dll> --benchmark-animation",
+    "taskset -c 0 dotnet <prior-or-candidate-host.dll> --benchmark-power",
+    "python3 docs/cycletrim-regression-recovery-validation/run_benchmarks.py summarize docs/cycletrim-regression-recovery-validation/formal-controlled",
+    "python3 docs/cycletrim-regression-recovery-validation/default-runtime/summarize.py"
+  ],
+  "formal_improved_pairs_out_of_7": {
+    "conveyor/long-misses/lookup": 5,
+    "conveyor/shared-rails/lookup": 4,
+    "conveyor/early-hits/lookup": 5,
+    "conveyor/single-query/lookup": 2,
+    "conveyor/short-paths/lookup": 5,
+    "conveyor/contained-path/lookup": 4,
+    "animation/repeat-single/setter": 7,
+    "animation/repeat-single/consumer": 6,
+    "animation/change-single/setter": 7,
+    "animation/change-single/consumer": 5,
+    "animation/repeat-range4/setter": 7,
+    "animation/repeat-range4/consumer": 6,
+    "animation/repeat-range256/setter": 6,
+    "animation/repeat-range256/consumer": 6,
+    "power/repeated-circuits/query": 3,
+    "power/all-distinct-circuits/query": 3
+  },
+  "formal_scope": "all 16 fixed scenario/mode combinations; seven temporal prior/new pairs; both original controls retained; TieredCompilation=0 on both revisions; no sample trimming",
+  "default_runtime_scope": "unchanged whole benchmark entry points, complete original/patched pairs; separate sessions are not temporal prior/new paired data",
+  "unshipped_experiment": "two-dictionary power cache; reverted after inconsistent benefit, with source patch and measurements retained",
+  "source_review": "Two independent LLM cross-reviews of conveyor and animation source found no blocking issue; not human approval or runtime evidence.",
+  "game_executed": false,
+  "runtime_acceptance_pending": [
+    "Steam-launched ONI",
+    "Unity/Mono",
+    "real saves and mod combinations",
+    "real game frame times"
+  ],
+  "evidence_sha256": {
+    "BenchmarkDriver/BenchmarkDriver.csproj": "68ec05f600440c4061cefeb29474e5c74363defffbcc925f5daea0125bddfca2",
+    "BenchmarkDriver/Program.cs": "a00476272bf65bf97f9af24188ebdee31acafe94516599443d7a500e9217f8f0",
+    "animation-packed-to-scalar.patch": "807e40aa4cd206935da378d47b452f1ccc29af350942d2e51ca24d9b03a12710",
+    "animation-scalar-to-bitcast.patch": "1584d511f7657735e8d6c079a2d639ae068d29525111a40c862e389ea6064e3f",
+    "baseline-host-tests.log": "670db8b8a2290c1bff1a4ee3561e8d429438fabb19589c6f69c353cfd561618a",
+    "conveyor-guard-split.patch": "48fbab6dc15ade9e88b12d1178978849a2956e828addca0937da96e4866aa566",
+    "default-runtime/animation-candidate.log": "dedca7fcf8cf896b0495b20a4fde0ca1c43c4e4d45c2a300f6a941d8ce8405ac",
+    "default-runtime/animation-prior.log": "6588818a9c94e94544b8f5ea48284f21399662e0b1bf9cdcb905b631ff2f35f9",
+    "default-runtime/conveyor-candidate.log": "1782c74784922acbdb5bf28ea6e04e192fb6aac5b8ac8844b8408f8ae4713b70",
+    "default-runtime/conveyor-prior.log": "9a54228179bd6de143893b02201d4bacd94f378e06922c6bcfa1454965e6e6c6",
+    "default-runtime/power-candidate.log": "c6908f5c9d80a081122b269d6f59d36b6f9e696feeec1ca2e7ce7f0cd0cb2d04",
+    "default-runtime/power-prior.log": "a78bbf3429c432d6aaa2a449a1fede66dadddd51556ec2991b80d42f84ae3f84",
+    "default-runtime/run.json": "71fa71bc4b06acecf370c8849d3a7805746e044723acc293a40d490f6ee1ea3e",
+    "default-runtime/summarize.py": "e8741244198027fca81af59705270850ac8f8cf059d8efa87f5573d2b85f032e",
+    "default-runtime/summary.json": "5665b320cac099a2a3c789b9ce4d5b249ca4dee5083774b4ab6bd248087d5675",
+    "evidence-checks.log": "923019d2a7cb92a8a588b81e5af7742c55716278436d4d92dd233f6690a01d99",
+    "exploratory/README.md": "8e31a76f164c65e207b792b409f128f0b4dfb394db66802c13217d28cdadd9d6",
+    "exploratory/checkpoint-1-binary-hashes.json": "a403d785c3e6dba58ca81f3f8d7f94452879bebf7b36e05cf48acde4f8213c51",
+    "exploratory/checkpoint-1-reference-network.log": "15c60d05233d4b87bde329253b426d99509de79d6c20a2f6234a514e2103fcce",
+    "exploratory/checkpoint-1-reference.log": "067ac8715da20d84e47aa899ecfe2d089f7a546ba20fd0202f3b3d314920eb57",
+    "exploratory/checkpoint-1-source-hashes.json": "99a573c1aed0b91c0576d9bd364f847b311bb22366fff2f8b8672456e2795274",
+    "exploratory/checkpoint-2-binary-hashes.json": "dc5ce0021307e0557e2e403ee927e103784036d7da37c91eab197674560fc6f3",
+    "exploratory/checkpoint-2-source-hashes.json": "30b6e47170b7ef4805833a3baa1bc6e31eb010c398d5c1470fae1a6e79774860",
+    "exploratory/exploratory-checkpoint-1/run.json": "bce74d61d8a3368ee5480c1e18343b711a8d8681a81ab17d283b3ead686bbd72",
+    "exploratory/exploratory-checkpoint-1/samples.jsonl": "918bc80ecbfcc2c64aea4ffd078b55fd03f4f1742efbf63bbdc4b10ac8c5df04",
+    "exploratory/exploratory-checkpoint-1/summary.json": "84281e81cf7dbe4c9b2afbdcab67cde66c8dbae6d9100f857b56bef9a0200b35",
+    "exploratory/exploratory-controlled-checkpoint-2/run.json": "38811a397372635f259a44253e53faa0f3aa1c9ea44c8d7e96dea0494000e96b",
+    "exploratory/exploratory-controlled-checkpoint-2/samples.jsonl": "30e31f3d35b9d25d653505a11a6fa519dd3d97f968069ca19909ddabb57cacab",
+    "exploratory/exploratory-controlled-checkpoint-2/summary.json": "092059135c76b301c2273309579be470ddb204fba0a5a961598ad25893c73df7",
+    "exploratory/power-exploratory-hashes.json": "e9c8331df2230e3c5b998d3d6d9657bd0d4c2eff67eb6f642c95ef58d5b8e807",
+    "exploratory/power-trial/exploratory-power-all-distinct-circuits-power-candidate.log": "035f354498fb65ebabe2f94ac91618e45c47528096cd5b12c71fc819f301856a",
+    "exploratory/power-trial/exploratory-power-all-distinct-circuits-prior.log": "9ab444a10e0c6417a099cb8726dc0922825ac593392532951c869273b304ec1b",
+    "exploratory/power-trial/exploratory-power-repeated-circuits-power-candidate.log": "6dfcd8c5abf73a627c8d41a0ea176f15ecd247b81e01513164d28564c57472b8",
+    "exploratory/power-trial/exploratory-power-repeated-circuits-prior.log": "1c08a335ffe08d1e55526dd942862a84c26e3769b6e345aa9865d5e556e59544",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-animation-candidate.log": "a40849392dc822eeffeedaa870daa1b1932fc9f5b48c8c3bc72aa903d4ae16a4",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-animation-prior.log": "74845a5bc7a6d612e910ce122d7c93d26196ce60c3b7aab6a76a6b7e74eba917",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-conveyor-candidate.log": "475d35d22bb1411ba49f7854a9fc602a32949e0c11970ab2f25d3dcc08d7744d",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-conveyor-prior.log": "97866f76b329117d6da2bea41d59389c6dcd841df700ea6d0472d39b805355b1",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-hashes.json": "7f4102f101fd6258029f2c043d7683e8816c550f6ad56efe9714d8056625a35d",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-power-candidate-retry.log": "00413132c35486fdd53f722b912ce2fbb4d0e78a4f3ad066951898c5c2401bc7",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-power-candidate.log": "b5f5cf30c802ae6c92fbd250f2f1fc86e6ed90e58cffc57f1965734dac170a05",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-power-prior.log": "56f9f71c3a9fe5518fcbc5cdbaf9c0c802dc0dc64d5bde2c3bb2240e78ca155b",
+    "exploratory/whole-default-checkpoint-1/whole-default-checkpoint-1-summary.json": "96800a43f13b3aa350808b97336ead50a396c9b24ff55123efa7019f50111f9e",
+    "formal-controlled/run.json": "be6b0eb45596eaf160af649be5ca7ff501155d72e583b330092fe1bb506399b1",
+    "formal-controlled/samples.jsonl": "97db02603d107b4e50b987874ee16d7e3d37527fae0f65c359822ac6318b1039",
+    "formal-controlled/summary.json": "8212aa45bde7fcd5d938fce6f260deb31ebfd1b3b061685451c73836d58638d7",
+    "host-tests.log": "e2ddb9a25143562029ad49445fdc49aa74f1e1a5307220339fca38daffe2eaf3",
+    "jit-observations.json": "5552c207fc611b8e79e05272eeaa9dbbd8d43fc14308a49069c9eb78ca7a445e",
+    "measurement-plan.md": "2b37e7738ce05020cf305406cdc70311d8cce55877eddaab4dded0289347955f",
+    "power-experiment.patch": "4e3ef45cafb5e26ac8cd98feea0536c81d2c324b6f9df314f90dc9f3f1275541",
+    "reference-build.log": "c5b7e8636ce8cfe5ec24e7b99a0bceabba3b3762b288dc630891ff118ef07903",
+    "run_benchmarks.py": "62f7239e5f666fdff5c047a1a624e020696ad412c272a3696b37d4cf433e7bdb",
+    "runner-integrity-checks.log": "b9ed4d66f769632849c13bb4f7a78110132bd4712829cac98ffa6444e595583d",
+    "settings-tests.log": "c46969b2a982909be4b8bc922c68cfb6932c93ef09b155115207f90da72a8ff0"
+  },
+  "settings_source_sha256": {
+    "mods/CycleTrim/Core/CycleTrimPatchOptions.cs": "ed9892a4ffb68bf14b027d93dd16c04e0359120cbe0db11d5978a868d99eaec0",
+    "mods/CycleTrim/Core/PerformanceProbeCounter.cs": "bdc6f90fd37416ffe39105e335401c20322181dc618dbc56e13532c5c24c5d2d",
+    "mods/CycleTrim/Core/PerformanceProbeGenerationCounter.cs": "0ed9bcfb93da2debdc22a1357c95fdfeb6e487eaf4dcc29fda91786df6b53b68",
+    "mods/CycleTrim/Core/RefreshStamp.cs": "65cbaf3804ee7352455a7c5f007a33e9667d63bd9efe27849467867c8f012912",
+    "mods/CycleTrim/ModInfo.OniSim.cs": "57475563bc7d20e5304a7a0f69f99f70a561b0486ad46f7845b955b8854fd09a",
+    "mods/CycleTrim/ModInfo.cs": "ac3354c05a21170cb63604974df13bf5769c845bbe1cbf24b0f5a54b3751ffc9",
+    "mods/CycleTrim/OniSimOptions.cs": "fc651aa4de23dd674c884b137cd8e1edb10be1d16c36cbb14180bc5cb081d94a",
+    "tests/CycleTrim.PerformanceProbe.Tests/BusyRefreshGateRegression.cs": "809966acbf38cb5d257fbe3341691d5cd684c7bf19a3874d68f1d7147c38463f",
+    "tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj": "d5b43bdf8ffadfdb9dfe25c052cbc436edf8cff7033ea23ba9ab2bdfd428cc80",
+    "tests/CycleTrim.PerformanceProbe.Tests/GenerationCounterRegression.cs": "87d2387dbdc5977a45f145cc8a3f38380400d8d3b8d30850d3bbc89225531011",
+    "tests/CycleTrim.PerformanceProbe.Tests/ModLoadRegression.cs": "dfbdd4b7a59884a956abc183baac6872dda89cc6f4f3842b7489d4f0391e753b",
+    "tests/CycleTrim.PerformanceProbe.Tests/OptionsRegression.cs": "6cfbbdf27efc2f0e01316d31241cd85cc47a78336ef7cd726d9de178403f2ab1",
+    "tests/CycleTrim.PerformanceProbe.Tests/Program.cs": "1fa2c569e18a71d5dd61b53cc1fc5ffbc92198f79fb79e6a436c7efe34676809",
+    "tests/CycleTrim.PerformanceProbe.Tests/SkippedPrefixStateRegression.cs": "78421d96f01994e47b1bc5aff07225896da4ccf12ebd34221ac40a0969e908bc"
+  },
+  "integration_status": "Historical pre-integration measurements; not validation of the subsequent 6206791 routing/scope fixes.",
+  "local_checkpoint_commit": "fba163bffc70b4970dab05f23e97cee50ae3391d",
+  "local_checkpoint_published": false,
+  "source_patch": {
+    "path": "pre-integration-source.patch",
+    "sha256": "08601e5851db3be5c0d4ae469dd28b55fea200d97565eb2e4da45da6d9b9340b",
+    "baseline": "7aa5003c23cd41a385664e684c3debf918a798a2",
+    "scope": "9 changed production/test/project files",
+    "reproduction": "git apply --unidiff-zero pre-integration-source.patch on exact 7aa5003 source; all 9 reconstructed hashes verified"
+  }
+}

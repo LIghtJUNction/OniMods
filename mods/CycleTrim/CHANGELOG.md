@@ -17,11 +17,16 @@ Generated from `git log -- mods/CycleTrim`.
 - Guard transformer circuit-resolution callbacks before reusing power-overlay
   answers. Real Harmony dependency patches now retain original per-query
   results and callback counts, including physical and virtual circuits.
-- Stop comparing animation fields after a setter has already found a change;
-  preserve subsequent writes, exact payload bits and partial-failure behavior.
-- Skip top-level conveyor lookup scopes for candidates too short to meet the
-  existing index rule, retaining nested-call isolation and invalidation.
-
+- Create conveyor index scopes lazily, pass the lease through the rewritten
+  call site, and preserve nested cleanup with an injected finally. Short and
+  early-return paths avoid the former unconditional Harmony wrappers; nested
+  calls retain an isolated barrier and invalidate their parent's index.
+- Stop animation comparisons after the first changed field and retain the
+  original remaining stores. Use an exact stack-local float bitcast to avoid
+  explicit-layout union temporaries; pointer access is limited to value parameters.
+- Add paired prior/current regression-recovery measurements, exact-bit property
+  checks, and exception/control-flow regressions. Preserve unsuccessful trials
+  and distinguish controlled JIT measurements from default-runtime checks.
 - Add opt-in conveyor membership indexing scoped to one path-construction call.
   Build only after repeated scans, retain first positions, and discard the index
   on list edits, nested calls and exceptional exits.

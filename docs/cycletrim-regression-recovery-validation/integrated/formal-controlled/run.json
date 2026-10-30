@@ -1,0 +1,37 @@
+{
+  "label": "formal-controlled-6206791-integration",
+  "started_utc": "2026-10-30T15:42:23.360794+00:00",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "cpu": 0,
+  "allowed_cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "pairs": 7,
+  "families": [
+    "conveyor",
+    "animation",
+    "power"
+  ],
+  "assembly_sha256": {
+    "prior": "93ac44988f9f6200b6dbe22c5a2ad4c255a95897467f67ff12cf78e23da38b33",
+    "candidate": "aa25c886154e1b3cdf3063d5b85f7c601293518ed1d9181362ebc4a27e1b58a7"
+  },
+  "driver_sha256": "c4b433537757fd14b7458c6ecc00829852d07b70f726acf71b462512381feccc",
+  "driver_source_sha256": "e00fd56ee8d8437ef8d76e59c2c049308070cd7c05bf9d7b090c8443b25f682e",
+  "runner_source_sha256": "0a875a8a386d51ae6e001a8b49a86109fd47e637a09e99af7d49a1d1856312b2",
+  "runtime_environment": {
+    "DOTNET_TieredCompilation": "0",
+    "COMPlus_TieredCompilation": "runtime-default",
+    "DOTNET_TieredPGO": "runtime-default",
+    "COMPlus_TieredPGO": "runtime-default"
+  },
+  "protocol": "one original/patched pair per process; alternate prior/candidate processes per outer pair"
+}
