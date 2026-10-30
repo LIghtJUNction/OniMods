@@ -1,0 +1,2 @@
+System.ArgumentException: expected no arguments or --benchmark
+   at CycleTrim.Fetch.Tests.Program.Main(String[] args) in /workspace/scratch/dac28420176a/OniMods/tests/CycleTrim.Fetch.Tests/Program.cs:line 14

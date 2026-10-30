@@ -1,0 +1,46 @@
+{
+  "archive": {
+    "name": "OniHarness-Linux-x64-744825-cache-lab.zip",
+    "sha256": "05578eaafe4da68dfade1df5d716fbb203a48314329f74500762a4a2ebe911b2",
+    "full_archive_verified": false,
+    "selected_files_verified": 1837,
+    "selected_file_bytes": 39157021,
+    "verified_chunks": [
+      "001",
+      "008",
+      "010"
+    ]
+  },
+  "game_reference": {
+    "build": 744825,
+    "assembly_csharp_sha256": "6db652990ad1038e86b3493ed43004e12bfd61e62a4be60c787a9a9b9ac52ee1",
+    "use": "compile/static metadata only; not executed",
+    "Pickup": {
+      "pickupable": "Pickupable",
+      "tagBitsHash": "System.Int32",
+      "masterPriority": "System.Int32",
+      "PathCost": "System.UInt16",
+      "freshness": "System.Int32",
+      "foodQuality": "System.Int32"
+    },
+    "Fetchable": {
+      "pickupable": "Pickupable",
+      "tagBitsHash": "System.Int32",
+      "masterPriority": "System.Int32",
+      "freshness": "System.Int32",
+      "foodQuality": "System.Int32"
+    }
+  },
+  "runtime": {
+    "steam_executable_found": false,
+    "known_steam_libraries_found": false,
+    "game_started": false,
+    "native_gameplay_acceptance": "blocked: no authorized Steam client/session in this executor"
+  },
+  "superseded_round": {
+    "file": "round1.log",
+    "reason": "synthetic fixture used float freshness; static metadata establishes int for build 744825",
+    "eligible_for_current_game_shape_performance_claim": false
+  },
+  "source_base": "14c08591cbd0bf66cd0f53b37bfb498bdef4abf6"
+}

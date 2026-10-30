@@ -1,0 +1,67 @@
+[
+  {
+    "log": "fetch-tests.log",
+    "command": [
+      "/tmp/cycletrim-dotnet/dotnet",
+      "run",
+      "--project",
+      "tests/CycleTrim.Fetch.Tests",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-p:TreatWarningsAsErrors=true"
+    ],
+    "started_utc": "2026-10-30T16:43:01.325733+00:00",
+    "exit_code": 0,
+    "production_patch_sha256": "4d7f54a31e862c860ddec0eb47f3ae36eb98faf7bf3e748b207f0f827e3c54df"
+  },
+  {
+    "log": "probe-tests.log",
+    "command": [
+      "/tmp/cycletrim-dotnet/dotnet",
+      "run",
+      "--project",
+      "tests/CycleTrim.PerformanceProbe.Tests",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-p:TreatWarningsAsErrors=true",
+      "--",
+      "--skip-synthetic-performance"
+    ],
+    "started_utc": "2026-10-30T16:43:03.445476+00:00",
+    "exit_code": 0,
+    "production_patch_sha256": "4d7f54a31e862c860ddec0eb47f3ae36eb98faf7bf3e748b207f0f827e3c54df"
+  },
+  {
+    "log": "reference-build-744825.log",
+    "command": [
+      "/tmp/cycletrim-dotnet/dotnet",
+      "build",
+      "mods/CycleTrim/CycleTrim.csproj",
+      "-c",
+      "Release",
+      "-p:OniManagedPath=/workspace/scratch/dac28420176a/handoff-read/game/OxygenNotIncluded_Data/Managed",
+      "-p:IncludeOniSim=false",
+      "-warnaserror"
+    ],
+    "started_utc": "2026-10-30T16:43:04.887565+00:00",
+    "exit_code": 0,
+    "production_patch_sha256": "4d7f54a31e862c860ddec0eb47f3ae36eb98faf7bf3e748b207f0f827e3c54df"
+  },
+  {
+    "log": "ablation-functional.log",
+    "command": [
+      "/tmp/cycletrim-dotnet/dotnet",
+      "run",
+      "--project",
+      "benchmarks/CycleTrim.FetchAblation",
+      "-c",
+      "Release",
+      "-p:TreatWarningsAsErrors=true"
+    ],
+    "started_utc": "2026-10-30T16:44:30.985232+00:00",
+    "exit_code": 0,
+    "purpose": "copied project portability and functional equivalence only; no performance rerun"
+  }
+]
