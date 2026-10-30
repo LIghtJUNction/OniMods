@@ -28,7 +28,7 @@ namespace CycleTrim
                 options.OptimizeAsyncPathProbes, options.LimitCreatureBrainUpdates,
                 options.EnablePerformanceDiagnostics, options.OptimizeSaveMetadata,
                 options.OptimizePowerOverlay, options.OptimizeConveyorPathLookup,
-                options.OptimizeAnimationSymbols);
+                options.OptimizeAnimationSymbols, options.ConduitAnimation);
             LoaderResult result = OniSimLoader.Configure(typeof(Sim).Assembly, enableOniSim);
             Console.WriteLine("[CycleTrim][OniSim] " + result.Message);
         }

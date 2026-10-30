@@ -11,6 +11,8 @@ namespace CycleTrim.Core
         internal static bool OptimizePowerOverlay { get; private set; }
         internal static bool OptimizeConveyorPathLookup { get; private set; }
         internal static bool OptimizeAnimationSymbols { get; private set; }
+        internal static ConduitAnimationQuality ConduitAnimation { get; private set; }
+            = ConduitAnimationQuality.Full;
         internal static bool EnablePerformanceDiagnostics { get; private set; }
 
         // Capture settings before Harmony installs patches. Runtime edits take
@@ -25,7 +27,8 @@ namespace CycleTrim.Core
             bool saveMetadata = true,
             bool powerOverlay = false,
             bool conveyorPathLookup = false,
-            bool animationSymbols = false)
+            bool animationSymbols = false,
+            ConduitAnimationQuality conduitAnimation = ConduitAnimationQuality.Full)
         {
             OptimizePickupCandidates = pickupCandidates;
             ThrottleBusyDuplicants = busyDuplicants;
@@ -37,6 +40,9 @@ namespace CycleTrim.Core
             OptimizePowerOverlay = powerOverlay;
             OptimizeConveyorPathLookup = conveyorPathLookup;
             OptimizeAnimationSymbols = animationSymbols;
+            ConduitAnimation = conduitAnimation == ConduitAnimationQuality.Half
+                || conduitAnimation == ConduitAnimationQuality.Quarter
+                ? conduitAnimation : ConduitAnimationQuality.Full;
         }
     }
 }

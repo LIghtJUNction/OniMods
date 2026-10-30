@@ -46,6 +46,13 @@
       "signature_sha256": "035b042c25237dd26307edab85c63b5f1c6c0a9331618c912e04be04891502ac"
     },
     {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "Game",
+      "resolved_type": "Game",
+      "signature_file": "Assembly-CSharp__Game.signatures.txt",
+      "signature_sha256": "a20606700b8844f4c441b041ad23d95e2e6c8d199835eccb0c575ce2d94b6a7d"
+    },
+    {
       "assembly": "Assembly-CSharp-firstpass.dll",
       "requested_type": "GameInputMapping",
       "resolved_type": "GameInputMapping",

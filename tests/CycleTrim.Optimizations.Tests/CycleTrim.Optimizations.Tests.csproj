@@ -20,5 +20,7 @@
     <Compile Include="../../mods/CycleTrim/Patches/Conveyor*.cs" Link="%(Filename)%(Extension)" />
     <Compile Include="../../mods/CycleTrim/Core/Animation*.cs" Link="%(Filename)%(Extension)" />
     <Compile Include="../../mods/CycleTrim/Patches/Animation*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../mods/CycleTrim/Core/ConduitVisual*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../mods/CycleTrim/Patches/ConduitVisual*.cs" Link="%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
