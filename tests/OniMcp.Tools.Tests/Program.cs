@@ -69,6 +69,23 @@ internal static class Program
 
     private static void TestBuildPlanWriteSafety()
     {
+        var args = JObject.Parse("{plan:'candidate building',limit:1,confirm:true}");
+        var writeArgs = BuildPlanningTools.BuildWriteResolutionArgs(args);
+        Check((int)writeArgs["limit"] == 2, "write resolution must retain a runner-up");
+        Check((int)args["limit"] == 1 && !ReferenceEquals(args, writeArgs),
+            "write candidate budgeting must not mutate the caller's display limit");
+        Check((string)writeArgs["plan"] == (string)args["plan"] && (bool)writeArgs["confirm"],
+            "write candidate budgeting must preserve the remaining request fields");
+        foreach (int limit in new[] { 5, 20, 100 })
+        {
+            args["limit"] = limit;
+            Check((int)BuildPlanningTools.BuildWriteResolutionArgs(args)["limit"] == limit,
+                "larger candidate limits must remain unchanged");
+        }
+        args.Remove("limit");
+        Check((int)BuildPlanningTools.BuildWriteResolutionArgs(args)["limit"] == 5,
+            "default candidate limit remains five");
+
         string reason;
         Check(BuildPlanningTools.SuffixBuildingAliasScore + BuildPlanningTools.MaximumPlanTermOrderBoost
                 < BuildPlanningTools.MinimumAutoWriteBuildingScore,

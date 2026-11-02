@@ -81,6 +81,10 @@ def main() -> int:
             "low-confidence fuzzy rejection is missing")
     require(policy, r'reason\s*=\s*"near_tie"',
             "near-tied fuzzy rejection is missing")
+    require(policy, r'BuildWriteResolutionArgs\(JObject args\).*?args\.DeepClone\(\).*?Math\.Max\(2,\s*ToolUtil\.GetInt\(args,\s*"limit"\)\s*\?\?\s*5\)',
+            "confirmed write resolution must retain a runner-up without mutating caller arguments")
+    require(action, r'var resolutionArgs\s*=\s*!dryRun\s*&&\s*!hadExplicitPrefabId\s*\?\s*BuildWriteResolutionArgs\(args\)\s*:\s*args;\s*var planResolution\s*=\s*ResolveBuildPlan\(resolutionArgs\);',
+            "only inferred confirmed writes may expand the candidate display limit before resolution")
 
     require(parser, r"ResolveBuildingAlias\(term,\s*aliases,\s*out exactAlias\)",
             "building alias resolution no longer distinguishes exact and suffix matches")
