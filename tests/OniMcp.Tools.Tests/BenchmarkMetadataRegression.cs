@@ -16,6 +16,7 @@ internal static class BenchmarkMetadataRegressionEntry
         FarmingUprootRegression.Run();
         PriorityWriteEligibilityRegression.Run();
         RunBenchmarkMetadataRegression();
+        RadboltDirectionEligibilityRegression.Run();
 
         var existing = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
         if (existing == null)

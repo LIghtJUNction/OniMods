@@ -37,6 +37,7 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningBackwallSupportPolicy.cs" Link="Source/BuildPlanningBackwallSupportPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameControlTools.cs" Link="Source/GameControlTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Core/GameplayRequestPolicy.cs" Link="Source/GameplayRequestPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/RadboltDirectionEligibilityPolicy.cs" Link="Source/RadboltDirectionEligibilityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/AgentProgram*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Server/ToolBatch*.cs" Link="Source/%(Filename)%(Extension)" />
     <Compile Include="../../mods/OniMcp/Tools/WorldEditor/WorldEditorQueryTools.cs" Link="Source/WorldEditorQueryTools.cs" />
