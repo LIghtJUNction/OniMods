@@ -13,19 +13,30 @@ namespace OniOnline.Runtime
             error = "";
             if (manager == null || request == null || request.Changes == null || request.Changes.Count == 0)
             { error = "native_mod_activation_invalid"; return false; }
-            if (!NativeModCatalogLifecycle.Idle(manager))
-            { error = "native_mod_loader_busy"; return false; }
-
-            long epoch = NativeModCatalogLifecycle.Epoch(manager);
-            var targets = new List<NativeModActivationTarget>();
-            foreach (var mod in manager.mods.ToArray())
+            List<NativeModActivationTarget> targets;
+            try
             {
-                if (mod == null) { error = "invalid_native_mod_record"; return false; }
-                targets.Add(new NativeModActivationTarget(NativeKModCatalogSource.ReadMod(mod),
-                    enabled => mod.SetEnabledForActiveDlc(enabled)));
+                if (!NativeModCatalogLifecycle.Idle(manager))
+                { error = "native_mod_loader_busy"; return false; }
+
+                long epoch = NativeModCatalogLifecycle.Epoch(manager);
+                targets = new List<NativeModActivationTarget>();
+                foreach (var mod in manager.mods.ToArray())
+                {
+                    if (mod == null) { error = "invalid_native_mod_record"; return false; }
+                    targets.Add(new NativeModActivationTarget(NativeKModCatalogSource.ReadMod(mod),
+                        enabled => mod.SetEnabledForActiveDlc(enabled)));
+                }
+                if (!NativeModCatalogLifecycle.Idle(manager) || NativeModCatalogLifecycle.Epoch(manager) != epoch)
+                { error = "native_mod_catalog_changed"; return false; }
             }
-            if (!NativeModCatalogLifecycle.Idle(manager) || NativeModCatalogLifecycle.Epoch(manager) != epoch)
-            { error = "native_mod_catalog_changed"; return false; }
+            catch (Exception)
+            {
+                // A rejected native record or loader read must never escape the
+                // UI callback or partially apply an already-reviewed request.
+                error = "native_mod_catalog_failed";
+                return false;
+            }
             return NativeModActivationOperations.TryApplyReviewed(targets, request, manager.Save, out error);
         }
     }

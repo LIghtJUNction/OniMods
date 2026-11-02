@@ -15,11 +15,21 @@ A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected 
 - Reuses fetch candidate lookup data for cheaper selection.
 - Throttles expensive refresh work for busy duplicants only; idle duplicants remain responsive.
 - Throttles stationary-critter navigation probing.
+- Reuses immutable component type metadata during saves.
+- Reuses repeated circuit demand queries within each power overlay update.
 
 ## Usage
 
 - Subscribe and enable as normal.
 - No extra configuration is required in most cases.
+
+**Save type metadata** is enabled by default. **Power overlay queries** is opt-in
+because updates with few repeated circuits can cost more; both settings require
+restarting ONI. Power query reuse falls back for unknown electricity interface implementations or
+conflicting patches. The [implementation and validation notes](../../docs/cycletrim-moono-optimizations.md)
+separate host tests and synthetic measurements from pending ONI runtime acceptance.
+These are independent implementations informed by oni-moono's mechanisms, not its
+engine/runtime replacement or its reported whole-game speedup.
 
 ## Compatibility
 

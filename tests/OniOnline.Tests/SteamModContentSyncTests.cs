@@ -134,6 +134,7 @@ internal static class SteamModContentSyncTests
                 "reintroduced extra required mod revokes verified status");
         }
         Activation(check);
+        NativeModActivationAdapterTests.Run(check);
         Catalog(check);
         Diagnostics(check);
         RuntimePolicy(check);

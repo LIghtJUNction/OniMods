@@ -1,0 +1,59 @@
+{
+  "normalization": "Only strip trailing whitespace and ensure one final newline. Raw versions retained in evidence archive.",
+  "logs": [
+    {
+      "raw_path": "checkpoint-9/host.log",
+      "raw_sha256": "f4f6d7273116c50375f7dccb24ea4117285775ac721abe2091e88cd381abf769",
+      "published_path": "checkpoint-9/host.log",
+      "published_sha256": "f4f6d7273116c50375f7dccb24ea4117285775ac721abe2091e88cd381abf769"
+    },
+    {
+      "raw_path": "checkpoint-6/net48-reference.log",
+      "raw_sha256": "2f055ec8efa0db50c9001c57315e4cab32e626749b440a7a6bd2b9755b9877f3",
+      "published_path": "checkpoint-9/net48-reference.log",
+      "published_sha256": "2f055ec8efa0db50c9001c57315e4cab32e626749b440a7a6bd2b9755b9877f3"
+    },
+    {
+      "raw_path": "checkpoint-6/settings-probe.log",
+      "raw_sha256": "c46969b2a982909be4b8bc922c68cfb6932c93ef09b155115207f90da72a8ff0",
+      "published_path": "checkpoint-9/settings-probe.log",
+      "published_sha256": "c46969b2a982909be4b8bc922c68cfb6932c93ef09b155115207f90da72a8ff0"
+    },
+    {
+      "raw_path": "checkpoint-4/host.log",
+      "raw_sha256": "0137379740c77484f6f97406698f22b74527f3a325a01c81012ea028f8d4c149",
+      "published_path": "checkpoint-9/rejected-tests/checkpoint-4-host.log",
+      "published_sha256": "0137379740c77484f6f97406698f22b74527f3a325a01c81012ea028f8d4c149"
+    },
+    {
+      "raw_path": "checkpoint-5/conveyor.log",
+      "raw_sha256": "405ff05e0d844811b43195a3395b758eaa8da1d28223e6933398e2efaaac3e48",
+      "published_path": "checkpoint-9/rejected-tests/checkpoint-5-conveyor.log",
+      "published_sha256": "405ff05e0d844811b43195a3395b758eaa8da1d28223e6933398e2efaaac3e48"
+    },
+    {
+      "raw_path": "checkpoint-6/host.log",
+      "raw_sha256": "5a1bcb558d6557ffdb0da2a83360e5aaf5fa6c570bb79dd5dacbdc92cc5f2b0e",
+      "published_path": "checkpoint-9/rejected-tests/checkpoint-6-host.log",
+      "published_sha256": "5a1bcb558d6557ffdb0da2a83360e5aaf5fa6c570bb79dd5dacbdc92cc5f2b0e"
+    },
+    {
+      "raw_path": "checkpoint-7/host.log",
+      "raw_sha256": "3c31ad402ca3e253438d28b7be69bb2c005106e85d6b4fef49c94eb220c1497f",
+      "published_path": "checkpoint-9/rejected-tests/checkpoint-7-host.log",
+      "published_sha256": "3c31ad402ca3e253438d28b7be69bb2c005106e85d6b4fef49c94eb220c1497f"
+    },
+    {
+      "raw_path": "checkpoint-8/host.log",
+      "raw_sha256": "ed626d82f86d1b68eb6c866736d8f797d3e422eec6212426b20818810bca27b4",
+      "published_path": "checkpoint-9/rejected-tests/checkpoint-8-host.log",
+      "published_sha256": "ed626d82f86d1b68eb6c866736d8f797d3e422eec6212426b20818810bca27b4"
+    },
+    {
+      "raw_path": "checkpoint-8/fallback-jit.log",
+      "raw_sha256": "e10b017e2ea139dfe8a529eacf85f4694770265331e16fa78f36650a6640792e",
+      "published_path": "checkpoint-9/rejected-tests/checkpoint-8-fallback-jit.log",
+      "published_sha256": "e10b017e2ea139dfe8a529eacf85f4694770265331e16fa78f36650a6640792e"
+    }
+  ]
+}

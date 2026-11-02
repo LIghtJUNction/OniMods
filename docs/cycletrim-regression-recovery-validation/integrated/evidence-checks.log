@@ -1,0 +1,8 @@
+PASS all 80 current project source hashes match the measured integrated source checkpoint.
+PASS all preserved baseline and candidate runnable host file hashes match their build receipts.
+PASS complete default-runtime summaries reproduce byte-for-byte and match output/counter/copy checks.
+PASS all historical pre-integration evidence hashes remain unchanged.
+PASS pre-integration zero-context source patch reconstructed all nine archived source/project hashes.
+PASS final controlled summaries reproduce byte-for-byte; 22 cases x seven pairs, 308 process rows.
+PASS current reference manifest validates 11 pinned reference DLLs and two auxiliary compile-only modules.
+PASS exact default conveyor scenario names, matching direction callbacks, expected power query counts and zero setter-only animation copies.

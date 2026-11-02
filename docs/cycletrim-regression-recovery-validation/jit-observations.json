@@ -1,0 +1,20 @@
+{
+  "scope": "JIT disassembly of independently written host fixtures only; game assemblies were not executed.",
+  "diagnostic_commands": [
+    "COMPlus_JitDisasm=*ReadWatts* COMPlus_JitStdOutFile=<output> dotnet BenchmarkDriver.dll <prior-or-checkpoint1-host> power all-distinct-circuits query 0",
+    "COMPlus_JitDisasm=*SetSymbolOverrideInfo* COMPlus_JitStdOutFile=<output> dotnet BenchmarkDriver.dll <prior-or-checkpoint1-host> animation repeat-range256 setter 0",
+    "DOTNET_TieredCompilation=0 COMPlus_JitDisasm=*SetSymbolOverrideInfo* COMPlus_JitStdOutFile=<output> dotnet BenchmarkDriver.dll <checkpoint3-host> animation repeat-range256 setter 0"
+  ],
+  "observed": [
+    "Default isolated ReadWatts remained Tier0 in both revisions: 378-byte bodies, TryGet and Remember called separately. This did not show a new inlining loss.",
+    "Default patched range setters were FullOpts: previous implementation: 983 code bytes/152-byte stack; packed-vector trial: 847/104. Packed comparison assembled two 32-bit stores then reloaded 64 bits; a possible forwarding penalty was inferred, not measured with hardware counters.",
+    "Final controlled bitcast range uses vmovd register bit transfers at comparisons; per-comparison union roundtrips are absent. Frame/source locals still spill. Range: 942 bytes/72-byte stack; single: 698/32. These code sizes are diagnostic observations, not performance estimates."
+  ],
+  "raw_diagnostic_sha256": {
+    "diagnostic-jit-animation-candidate.asm": "addce26e599e79a46037611f256ae7f2bd77d09c19994ad8106b97377f2d9384",
+    "diagnostic-jit-animation-checkpoint-3.asm": "9f6923d2f9b861c8f43cbbbeb221ef391c9af121120fb60e7b57cf5f93ed130e",
+    "diagnostic-jit-animation-prior.asm": "a1b6074f578268796dc80dfcee678b56f105bee7d896359301a7e672ca515f8e",
+    "diagnostic-jit-power-candidate.asm": "9bd36a618b3ebcdfcf357db431f27c33a3c964469d99cdcf5642a5141dd92cbd",
+    "diagnostic-jit-power-prior.asm": "605c06967bfecee378ce9d466d27ca1f9f53bba0f694bccb76ebff1c0540c91a"
+  }
+}

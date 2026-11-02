@@ -1,0 +1,37 @@
+{
+  "label": "exploratory-controlled-checkpoint-2",
+  "started_utc": "2026-10-30T15:10:11.528577+00:00",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "cpu": 0,
+  "allowed_cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "pairs": 1,
+  "families": [
+    "conveyor",
+    "animation",
+    "power"
+  ],
+  "assembly_sha256": {
+    "prior": "08bbeaf39e6999c7034cd552609f409e5b0aef4f60c671bfa00f70c82c289942",
+    "candidate": "54cc702f77e629bfa7115c909e577fedf749455f9012e8e1b5171f1011173271"
+  },
+  "driver_sha256": "00daddf5583d4d4905f0599cde847d9d6533ae3aedcc5fe92c7613d167e64fdf",
+  "driver_source_sha256": "a00476272bf65bf97f9af24188ebdee31acafe94516599443d7a500e9217f8f0",
+  "runner_source_sha256": "62f7239e5f666fdff5c047a1a624e020696ad412c272a3696b37d4cf433e7bdb",
+  "runtime_environment": {
+    "DOTNET_TieredCompilation": "0",
+    "COMPlus_TieredCompilation": "runtime-default",
+    "DOTNET_TieredPGO": "runtime-default",
+    "COMPlus_TieredPGO": "runtime-default"
+  },
+  "protocol": "one original/patched pair per process; alternate prior/candidate processes per outer pair"
+}

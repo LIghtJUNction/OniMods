@@ -1,0 +1,5 @@
+{
+  "mods/CycleTrim/Core/PowerOverlayCache.cs": "240fed8a9903e0e9d1a9a4e02ff486837741f41fcf092c538115d02aa0c7b2d3",
+  "mods/CycleTrim/Patches/PowerOverlayCompatibility.cs": "aa5970fc4cac060e95540fba460d994d87e5a86f8d64b35691f99d36d3afd2c2",
+  "mods/CycleTrim/Patches/PowerOverlayOptimizationPatch.cs": "e4dd9bcbe1eb950b4645601f19ce45eb042304ac79754c25c1f874d57a0f4275"
+}
