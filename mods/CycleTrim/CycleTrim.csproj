@@ -11,7 +11,7 @@
     <ModTitle>CycleTrim</ModTitle>
     <ModDescription>Streamlines fetch pickup candidates, limits expensive pickup/chore refreshes for active duplicants only, and throttles stationary-critter navigation probing; IdleChore, idle duplicants, and explicit priority updates retain the vanilla immediate path. / 优化拾取候选选择，仅限制真正忙碌复制人的高开销拾取与差事刷新，并对静止小动物的导航探针调用进行节流；IdleChore、空闲复制人与显式优先更新均保留原版即时路径。</ModDescription>
     <ModStaticID>LIghtJUNction.CycleTrim</ModStaticID>
-    <ModVersion>0.4.1</ModVersion>
+    <ModVersion>0.4.2</ModVersion>
     <Version>$(ModVersion)</Version>
     <ModApiVersion>2</ModApiVersion>
     <IncludeOniSim Condition="'$(IncludeOniSim)' == ''">true</IncludeOniSim>
