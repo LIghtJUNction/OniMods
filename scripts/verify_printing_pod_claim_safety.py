@@ -56,8 +56,9 @@ def main() -> int:
             "!Immigration.Instance.ImmigrantsAvailable",
             "CurrentCarePackages().ToList()",
             "TryGetImmigrantScreenContainers(out screenContainers)",
-            "telepad.OnAcceptDelivery(selected)",
+            "ReferenceEquals(container.Info, selected)",
             "CloseImmigrantScreen()",
+            "telepad.OnAcceptDelivery(selected)",
             "PrintingPodClaimCleanup.Clear(screenContainers",
         ],
         "ClaimPrintingReward",
@@ -72,10 +73,12 @@ def main() -> int:
         [
             "Immigration.Instance",
             "!immigration.ImmigrantsAvailable",
-            "typeof(CarePackageContainer).GetField",
+            "TryGetImmigrantScreenContainers(out screenContainers)",
         ],
         "CurrentCarePackages",
     )
+    if "typeof(CarePackageContainer).GetField" in current:
+        fail("CurrentCarePackages must read the live immigrant screen, not the static care-package registry")
 
     preflight = method_body(source, "private static bool TryGetImmigrantScreenContainers(")
     for marker in (
