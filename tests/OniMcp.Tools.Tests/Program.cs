@@ -61,6 +61,7 @@ internal static class Program
         ObservedTaskRankingRegression.Run();
         StepUntilResultCacheRegression.Run();
         DuplicantNeedStateRegression.Run();
+        TreeFilterEligibilityRegression.Run();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
     }
 
