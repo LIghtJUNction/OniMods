@@ -53,6 +53,7 @@
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/BuildPlanningExistingMaterialReader.cs" Link="Source/BuildPlanningExistingMaterialReader.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/OrdersAreaTools.cs" Link="Source/OrdersAreaTools.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/SweepEligibilityPolicy.cs" Link="Source/SweepEligibilityPolicy.cs" />
+    <Compile Include="../../mods/OniMcp/Tools/Impl/Orders/PriorityWriteEligibilityPolicy.cs" Link="Source/PriorityWriteEligibilityPolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Build/TreeFilterEligibility.cs" Link="Source/TreeFilterEligibility.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/LogicAlarmUpdatePolicy.cs" Link="Source/LogicAlarmUpdatePolicy.cs" />
     <Compile Include="../../mods/OniMcp/Tools/Impl/Facility/LogicAlarmSideScreenTools.cs" Link="Source/LogicAlarmSideScreenTools.cs" />
