@@ -1,0 +1,18 @@
+  CycleTrim -> /workspace/scratch/2706e06c4375/OniMods/mods/CycleTrim/bin/Release/CycleTrim.dll
+  Added assembly 'bin/Release/CycleTrim.dll'
+  Added assembly 'bin/Release/PLib.dll'
+  Merging 2 assemblies to 'bin/Release/CycleTrim.dll'
+INFO: ------------- IL Repack Arguments -------------
+
+-----------------------------------------------
+INFO: Wrote /workspace/scratch/2706e06c4375/OniMods/mods/CycleTrim/bin/Release/CycleTrim.dll
+  Merge succeeded in 0.8137823 s
+  Zipping directory "/workspace/scratch/2706e06c4375/OniMods/dist/CycleTrim/" to "/workspace/scratch/2706e06c4375/OniMods/dist/CycleTrim.zip".
+  Packaged mod -> /workspace/scratch/2706e06c4375/OniMods/mods/CycleTrim/../../dist/CycleTrim.zip
+  Packaged source -> /workspace/scratch/2706e06c4375/OniMods/mods/CycleTrim/../../dist/CycleTrim-src.tar.gz
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.74

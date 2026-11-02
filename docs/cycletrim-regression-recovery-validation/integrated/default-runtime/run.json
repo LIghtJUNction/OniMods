@@ -1,0 +1,130 @@
+{
+  "started_utc": "2026-10-30T15:48:27.026815+00:00",
+  "protocol": "unchanged whole benchmark entry points; separate sessions, not temporal prior/new pairs",
+  "cpu": 0,
+  "allowed_cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "runtime_settings": "default; listed overrides removed from subprocess environment",
+  "cleared_environment_variables": [
+    "DOTNET_TieredCompilation",
+    "DOTNET_TieredPGO",
+    "DOTNET_JitDisasm",
+    "DOTNET_JitStdOutFile",
+    "COMPlus_TieredCompilation",
+    "COMPlus_TieredPGO",
+    "COMPlus_JitDisasm",
+    "COMPlus_JitStdOutFile"
+  ],
+  "assembly_sha256": {
+    "prior": "93ac44988f9f6200b6dbe22c5a2ad4c255a95897467f67ff12cf78e23da38b33",
+    "candidate": "aa25c886154e1b3cdf3063d5b85f7c601293518ed1d9181362ebc4a27e1b58a7"
+  },
+  "runner_source_sha256": "5d3dfaec27ab858415573fdc00175655d57e1d90f0df799ba5c8b0f8ffd7ae67",
+  "processes": [
+    {
+      "family": "conveyor",
+      "revision": "prior",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/tmp/cycletrim-dotnet/dotnet",
+        "/workspace/scratch/2706e06c4375/cycletrim-r3-validation/integrated/baseline-bin/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-conveyor"
+      ],
+      "exit_code": 0,
+      "variant_rows_or_pairs": 42,
+      "expected": 42,
+      "log_sha256": "046bad0fae2ac053eac58f7906166f8fe3f3edbe2539c30d39748b9738fe1c36"
+    },
+    {
+      "family": "conveyor",
+      "revision": "candidate",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/tmp/cycletrim-dotnet/dotnet",
+        "/workspace/scratch/2706e06c4375/cycletrim-r3-validation/integrated/candidate-bin/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-conveyor"
+      ],
+      "exit_code": 0,
+      "variant_rows_or_pairs": 42,
+      "expected": 42,
+      "log_sha256": "5b6999a78bec2fb011af0c94e3714722f14cfd1660e843e08fa80ebe43eefa39"
+    },
+    {
+      "family": "animation",
+      "revision": "candidate",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/tmp/cycletrim-dotnet/dotnet",
+        "/workspace/scratch/2706e06c4375/cycletrim-r3-validation/integrated/candidate-bin/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-animation"
+      ],
+      "exit_code": 0,
+      "variant_rows_or_pairs": 196,
+      "expected": 196,
+      "log_sha256": "1e9200bf798797541ec4ac0f269865669d8583b9092a0039a18ca034ca3e4fbc"
+    },
+    {
+      "family": "animation",
+      "revision": "prior",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/tmp/cycletrim-dotnet/dotnet",
+        "/workspace/scratch/2706e06c4375/cycletrim-r3-validation/integrated/baseline-bin/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-animation"
+      ],
+      "exit_code": 0,
+      "variant_rows_or_pairs": 196,
+      "expected": 196,
+      "log_sha256": "f5013108f7dad12ebad20b94ff6dda618cd5031e54f3c909f07017ac9888cef4"
+    },
+    {
+      "family": "power",
+      "revision": "prior",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/tmp/cycletrim-dotnet/dotnet",
+        "/workspace/scratch/2706e06c4375/cycletrim-r3-validation/integrated/baseline-bin/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-power"
+      ],
+      "exit_code": 0,
+      "variant_rows_or_pairs": 14,
+      "expected": 14,
+      "log_sha256": "a8eaebd0b473ad186c2e62e0fecc8898a29be4b8f9590a12b368b2b24143e36c"
+    },
+    {
+      "family": "power",
+      "revision": "candidate",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/tmp/cycletrim-dotnet/dotnet",
+        "/workspace/scratch/2706e06c4375/cycletrim-r3-validation/integrated/candidate-bin/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-power"
+      ],
+      "exit_code": 0,
+      "variant_rows_or_pairs": 14,
+      "expected": 14,
+      "log_sha256": "890ba06a6282495ae76e1a8196c4ecc268e8ac0c09228b4a3cead2f12bac2fa5"
+    }
+  ]
+}

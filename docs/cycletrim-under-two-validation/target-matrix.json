@@ -1,0 +1,185 @@
+{
+  "selection_source": "09c496c46b4879cbdce4a8a9056b3f85f9c5c0d3:docs/cycletrim-regression-recovery-validation/integrated/formal-controlled/summary.json",
+  "anchor_commit": "62067913a5aea4daa4a8991689c86aad261b1269",
+  "prior_commit": "09c496c46b4879cbdce4a8a9056b3f85f9c5c0d3",
+  "criterion": "previous paired anchor/prior median < 2.0; this is eligibility, not a new timing result",
+  "selected_count": 21,
+  "matrix": [
+    {
+      "family": "conveyor",
+      "scenario": "long-misses",
+      "mode": "lookup",
+      "selected": true,
+      "previous_620_to_09_median": 1.1744819536682827,
+      "previous_original_to_09_median": 5.9690192546042775
+    },
+    {
+      "family": "conveyor",
+      "scenario": "shared-rails",
+      "mode": "lookup",
+      "selected": true,
+      "previous_620_to_09_median": 1.2704421191365183,
+      "previous_original_to_09_median": 7.615983396672236
+    },
+    {
+      "family": "conveyor",
+      "scenario": "early-hits",
+      "mode": "lookup",
+      "selected": true,
+      "previous_620_to_09_median": 1.0668818027489675,
+      "previous_original_to_09_median": 0.9610195361105163
+    },
+    {
+      "family": "conveyor",
+      "scenario": "single-query",
+      "mode": "lookup",
+      "selected": true,
+      "previous_620_to_09_median": 1.0750025558114558,
+      "previous_original_to_09_median": 1.105090814813443
+    },
+    {
+      "family": "conveyor",
+      "scenario": "short-paths",
+      "mode": "lookup",
+      "selected": true,
+      "previous_620_to_09_median": 1.1411817716125794,
+      "previous_original_to_09_median": 1.009836056265923
+    },
+    {
+      "family": "conveyor",
+      "scenario": "contained-path",
+      "mode": "lookup",
+      "selected": true,
+      "previous_620_to_09_median": 1.0913603148994404,
+      "previous_original_to_09_median": 0.9450151387427735
+    },
+    {
+      "family": "animation",
+      "scenario": "repeat-single",
+      "mode": "setter",
+      "selected": true,
+      "previous_620_to_09_median": 1.466138107272763,
+      "previous_original_to_09_median": 0.5876614284897008
+    },
+    {
+      "family": "animation",
+      "scenario": "repeat-single",
+      "mode": "consumer",
+      "selected": true,
+      "previous_620_to_09_median": 1.3155319591921715,
+      "previous_original_to_09_median": 11.394066485002565
+    },
+    {
+      "family": "animation",
+      "scenario": "change-single",
+      "mode": "setter",
+      "selected": true,
+      "previous_620_to_09_median": 1.0279832603346395,
+      "previous_original_to_09_median": 0.6882885046755606
+    },
+    {
+      "family": "animation",
+      "scenario": "change-single",
+      "mode": "consumer",
+      "selected": true,
+      "previous_620_to_09_median": 1.0261328262358467,
+      "previous_original_to_09_median": 1.0083923832888382
+    },
+    {
+      "family": "animation",
+      "scenario": "repeat-range4",
+      "mode": "setter",
+      "selected": true,
+      "previous_620_to_09_median": 1.9381490708648794,
+      "previous_original_to_09_median": 0.5838015591385215
+    },
+    {
+      "family": "animation",
+      "scenario": "repeat-range4",
+      "mode": "consumer",
+      "selected": true,
+      "previous_620_to_09_median": 1.8176601073625949,
+      "previous_original_to_09_median": 3.8692812949515605
+    },
+    {
+      "family": "animation",
+      "scenario": "repeat-range256",
+      "mode": "setter",
+      "selected": false,
+      "previous_620_to_09_median": 2.1261823998734055,
+      "previous_original_to_09_median": 0.6114655111933719
+    },
+    {
+      "family": "animation",
+      "scenario": "repeat-range256",
+      "mode": "consumer",
+      "selected": true,
+      "previous_620_to_09_median": 1.823844127384157,
+      "previous_original_to_09_median": 0.8591629828966318
+    },
+    {
+      "family": "animation",
+      "scenario": "change-range4",
+      "mode": "setter",
+      "selected": true,
+      "previous_620_to_09_median": 1.0473325070177446,
+      "previous_original_to_09_median": 0.7275489066997162
+    },
+    {
+      "family": "animation",
+      "scenario": "change-range4",
+      "mode": "consumer",
+      "selected": true,
+      "previous_620_to_09_median": 1.093770513268087,
+      "previous_original_to_09_median": 0.9385243683956573
+    },
+    {
+      "family": "animation",
+      "scenario": "change-range256",
+      "mode": "setter",
+      "selected": true,
+      "previous_620_to_09_median": 1.0731889882457677,
+      "previous_original_to_09_median": 0.8635498428641107
+    },
+    {
+      "family": "animation",
+      "scenario": "change-range256",
+      "mode": "consumer",
+      "selected": true,
+      "previous_620_to_09_median": 0.9555211129366671,
+      "previous_original_to_09_median": 0.8810396973355993
+    },
+    {
+      "family": "animation",
+      "scenario": "change-last-range256",
+      "mode": "setter",
+      "selected": true,
+      "previous_620_to_09_median": 1.8672278279739056,
+      "previous_original_to_09_median": 0.663930938989951
+    },
+    {
+      "family": "animation",
+      "scenario": "change-last-range256",
+      "mode": "consumer",
+      "selected": true,
+      "previous_620_to_09_median": 1.946915366242439,
+      "previous_original_to_09_median": 0.714214784365336
+    },
+    {
+      "family": "power",
+      "scenario": "repeated-circuits",
+      "mode": "query",
+      "selected": true,
+      "previous_620_to_09_median": 0.8567532344726821,
+      "previous_original_to_09_median": 2.8052256807756
+    },
+    {
+      "family": "power",
+      "scenario": "all-distinct-circuits",
+      "mode": "query",
+      "selected": true,
+      "previous_620_to_09_median": 1.0012790868792414,
+      "previous_original_to_09_median": 0.9691035932901833
+    }
+  ]
+}
