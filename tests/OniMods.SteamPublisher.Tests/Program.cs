@@ -117,10 +117,21 @@ static void RunPackagedDescriptionLayoutCase()
             throw new InvalidOperationException("Legacy root description precedence changed");
         File.Delete(Path.Combine(root, "steam-description-en.md"));
         Directory.Delete(Path.Combine(root, "docs"), recursive: true);
+        File.WriteAllText(Path.Combine(root, "description.en.txt"), "Jlib English description\n");
+        File.WriteAllText(Path.Combine(root, "description.txt"), "Jlib 中文说明\n");
+        var text = WorkshopMetadataReader.Read(vdf);
+        if (text.EnglishDescription != "Jlib English description" || text.ChineseDescription != "Jlib 中文说明")
+            throw new InvalidOperationException("Jlib localized text descriptions were replaced by the combined VDF fallback");
+        File.WriteAllText(Path.Combine(root, "steam-description-en.md"), "Preferred Markdown description");
+        if (WorkshopMetadataReader.Read(vdf).EnglishDescription != "Preferred Markdown description")
+            throw new InvalidOperationException("Localized text descriptions overrode the existing Markdown layout");
+        File.Delete(Path.Combine(root, "steam-description-en.md"));
+        File.Delete(Path.Combine(root, "description.en.txt"));
+        File.Delete(Path.Combine(root, "description.txt"));
         var fallback = WorkshopMetadataReader.Read(vdf);
         if (fallback.EnglishDescription != "Combined fallback" || fallback.ChineseDescription != "Combined fallback")
             throw new InvalidOperationException("Description fallback failed when no localized file was packaged");
-        Console.WriteLine("packaged docs, legacy root descriptions and combined fallback passed");
+        Console.WriteLine("packaged docs, root Markdown, Jlib localized text and combined fallback passed");
     }
     finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
 }
