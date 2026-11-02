@@ -6,7 +6,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FILTERS = ROOT / "mods/OniMcp/Tools/Impl/Build/FilterTools.cs"
+FILTERS = ROOT / "mods/OniMcp/Tools/Impl/Build/FilterTreeWrite.cs"
 STORAGE = ROOT / "mods/OniMcp/Tools/Impl/Build/StorageTools.cs"
 POLICY = ROOT / "mods/OniMcp/Tools/Impl/Build/TreeFilterEligibility.cs"
 
