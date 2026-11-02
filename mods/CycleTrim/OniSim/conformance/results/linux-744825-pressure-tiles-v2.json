@@ -1,0 +1,875 @@
+{
+  "schema": 1,
+  "scope": "Second owned skew-tile pressure executor proposal; not production or game acceptance",
+  "production_adopted": false,
+  "candidate_pressure_parallel": true,
+  "candidate_sha256": "415fcd5536e01dddd83682e734f8f10ccc2ac33f50cc48031466eedfc0e404e8",
+  "baseline_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "source_sha256": {
+    "float_env.rs": "b53b853ec29d1f0817353a5668f0ddadfd699a353f9d14f543743db6ef168ea2",
+    "simulation_step_fluid.rs": "b66e2a942780e5cb3d0df56132cf1edae6a950ad511a5e696299ae777cefb35a",
+    "pressure_tiles.rs": "a2687c5ab8f38c6bbebeb5b17735b668f07c15eb3441c461cbdf173ea0645cb6",
+    "pressure_tiles_tests.rs": "176797eb35e0fc380c32fdd5ed690c6c1195b5090f93be259ab575fccfe1b254"
+  },
+  "unit_tests": {
+    "passed": 32,
+    "float_control_combinations": 16,
+    "serial_parallel_scenarios": 576,
+    "workers": [
+      2,
+      4
+    ],
+    "log_sha256": "51e28ad128d90c74433388c88b9e3999f536733ed4ed69ff3bfd2d3c8f613663",
+    "immutable_exclusions_checked": true
+  },
+  "changes": [
+    "One thread-pool entry per complete pressure phase with an exclusive coordinator",
+    "Skip only immutable solid/property exclusions before gathering a task footprint",
+    "Other parallel jobs receive only owned patches; coordinator exclusively merges after joins"
+  ],
+  "scratch": {
+    "retained_bytes_per_worker": 151272,
+    "four_workers_bytes": 605088,
+    "eight_workers_bytes": 1210176,
+    "max_source_tasks_per_patch": 512,
+    "patch_public_dimensions": [
+      63,
+      17
+    ],
+    "excludes": "Allocator overhead, thread stacks and whole-game memory"
+  },
+  "criteria": {
+    "scope": "Fixed 32-wave by 16-row owned pressure tiles; original displacement loops and serial fallback unchanged. Prototype, not adopted.",
+    "memory_bound": "One fixed 63x17 public scratch world, bounded tasks/touched/events per worker; at most eight reusable scratch instances. No full-world clones.",
+    "acceptance_before_measurement": "All official one/four-worker conformance; eight alternating full-frame pairs with four workers: at least 5 percent lower median wall time in both fluid and germ_flow, no scene wall regression above 3 percent, CPU-time increase at most 10 percent per scene and peak RSS increase at most 2 MiB per scene. No game FPS claim.",
+    "fallback": "Original order with one worker, insufficient work, unmasked FP exceptions, cache reentrancy or preflight allocation failure.",
+    "measurement_affinity": [
+      16,
+      17,
+      18,
+      19
+    ],
+    "changes": "One pool entry per phase with an exclusive coordinator; skip only immutable solid/property exclusions before gathering footprints. Other acceptance criteria unchanged."
+  },
+  "proof": {
+    "schema": 1,
+    "checked_at_utc": "2026-10-20T18:23:30.779539+00:00",
+    "lean_version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+    "passed": true,
+    "modules": [
+      {
+        "source": "DiseaseMerge.lean",
+        "theorems": [
+          "DiseaseMerge.optimized_eq_general",
+          "DiseaseMerge.same_species_nonpositive_clears",
+          "DiseaseMerge.same_species_positive_preserves_metadata"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "PressureSchedule.lean",
+        "theorems": [
+          "PressureSchedule.disjoint_tasks_commute",
+          "PressureSchedule.distinct_same_wave_disjoint",
+          "PressureSchedule.earlier_inversion_disjoint",
+          "PressureSchedule.insert_membership",
+          "PressureSchedule.insertion_preserves_execution",
+          "PressureSchedule.ordered_overlap_increases_wave",
+          "PressureSchedule.same_wave_overlap_equal",
+          "PressureSchedule.sort_membership",
+          "PressureSchedule.view_after_disjoint",
+          "PressureSchedule.wave_sort_preserves_execution"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "NotificationMembership.lean",
+        "theorems": [
+          "NotificationMembership.clear_sound",
+          "NotificationMembership.fold_membership",
+          "NotificationMembership.raw_append_sound",
+          "NotificationMembership.record_membership",
+          "NotificationMembership.record_sound"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "PressureEnumeration.lean",
+        "theorems": [
+          "PressureEnumeration.emitted_coordinate_reconstructs_unique_wave",
+          "PressureEnumeration.every_cell_is_in_window",
+          "PressureEnumeration.every_cell_wave_is_visited",
+          "PressureEnumeration.window_exact"
+        ],
+        "axioms": [
+          "Classical.choice",
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "PressureTiles.lean",
+        "theorems": [
+          "PressureTiles.distinct_overlapping_tiles_increase_level",
+          "PressureTiles.overlapping_order_monotone_tiles",
+          "PressureTiles.same_level_overlapping_tasks_share_tile",
+          "PressureTiles.tile_footprint_width_bound"
+        ],
+        "axioms": [
+          "Classical.choice",
+          "Quot.sound",
+          "propext"
+        ]
+      }
+    ],
+    "source_sha256": {
+      "DiseaseMerge.lean": "c27d5f175fc06d849bcf7ca921a081a95d150935e22db7ef85e54881216894cd",
+      "PressureSchedule.lean": "b7c15596b5c469934a610b64de79c86c29b9adae520de488b4d271da15fe6e66",
+      "NotificationMembership.lean": "e4d0fae297a3e59953695e6223cbae95e4af362e455580004b7545528a6637e4",
+      "PressureEnumeration.lean": "8de5e01675f32b64e57905701e6c0a3e35d1930413844ebe725ed2265124db01",
+      "PressureTiles.lean": "59b6541198b31b09c5f6a8223a69932edb6a378755dad3bcfb0e6aeec150aa5c",
+      "verify.py": "5f7eaef1a358d9bed9be47b338eff9d0dd5daffcbcf3d2b478d96a477f4fb3fd"
+    },
+    "checked_theorems": 26,
+    "production_pressure_parallel_implemented": false,
+    "scope": "Pure disease-state equivalence, wave-sort execution equivalence for local transitions, finite coordinate enumeration, fixed skew-tile dependencies and notification membership models; not a Rust ownership, event-merge, machine-overflow, complete tiled-executor or game-equivalence proof"
+  },
+  "proposal_patch_sha256": "1719a00fd229350b1a73283f222d327082e68e893ba25dca4c8dcda8fc6e936a",
+  "conformance": [
+    {
+      "workers_requested": 1,
+      "passed": true,
+      "cases": 224,
+      "publications_compared": 8440,
+      "libraries": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "415fcd5536e01dddd83682e734f8f10ccc2ac33f50cc48031466eedfc0e404e8"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "summary_sha256": "32d2f13699b59a7c7a2d2676091d1891a4270572b787802f30ad9acddbf5876e"
+    },
+    {
+      "workers_requested": 4,
+      "passed": true,
+      "cases": 224,
+      "publications_compared": 8440,
+      "libraries": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "415fcd5536e01dddd83682e734f8f10ccc2ac33f50cc48031466eedfc0e404e8"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "summary_sha256": "a3ff6dff9722263a0bb246c921871b02ea958b47266c2adc5a22267894280831"
+    }
+  ],
+  "performance": {
+    "completed": false,
+    "passed": false,
+    "reason": "Concurrent ONI PID 2183835 appeared; per-child guard aborted and no successful summary was produced",
+    "partial_samples": [
+      {
+        "sample_file": "0-fluid-baseline.json",
+        "case": "fluid",
+        "label": "baseline",
+        "cpu_seconds": 0.539803958,
+        "wall_seconds": 0.5104471649974585,
+        "memory": {
+          "vm_hwm_kib": 33124,
+          "rss_kib": 33128,
+          "pss_kib": 23287,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-fluid-candidate.json",
+        "case": "fluid",
+        "label": "candidate",
+        "cpu_seconds": 1.056729693,
+        "wall_seconds": 0.6605101400054991,
+        "memory": {
+          "vm_hwm_kib": 33608,
+          "rss_kib": 33612,
+          "pss_kib": 23788,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-germ_flow-baseline.json",
+        "case": "germ_flow",
+        "label": "baseline",
+        "cpu_seconds": 0.736359746,
+        "wall_seconds": 0.6602510219963733,
+        "memory": {
+          "vm_hwm_kib": 33404,
+          "rss_kib": 33408,
+          "pss_kib": 23530,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-germ_flow-candidate.json",
+        "case": "germ_flow",
+        "label": "candidate",
+        "cpu_seconds": 1.314283885,
+        "wall_seconds": 0.8452066850004485,
+        "memory": {
+          "vm_hwm_kib": 33940,
+          "rss_kib": 33944,
+          "pss_kib": 24068,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-mixed_germs-baseline.json",
+        "case": "mixed_germs",
+        "label": "baseline",
+        "cpu_seconds": 0.826702355,
+        "wall_seconds": 0.7455297559936298,
+        "memory": {
+          "vm_hwm_kib": 33404,
+          "rss_kib": 33408,
+          "pss_kib": 23124,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-mixed_germs-candidate.json",
+        "case": "mixed_germs",
+        "label": "candidate",
+        "cpu_seconds": 1.8307360840000002,
+        "wall_seconds": 1.192594653010019,
+        "memory": {
+          "vm_hwm_kib": 34472,
+          "rss_kib": 34476,
+          "pss_kib": 24114,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-sealed-baseline.json",
+        "case": "sealed",
+        "label": "baseline",
+        "cpu_seconds": 0.516318829,
+        "wall_seconds": 0.487603557005059,
+        "memory": {
+          "vm_hwm_kib": 33160,
+          "rss_kib": 33164,
+          "pss_kib": 23370,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-sealed-candidate.json",
+        "case": "sealed",
+        "label": "candidate",
+        "cpu_seconds": 1.072559963,
+        "wall_seconds": 0.6604767849930795,
+        "memory": {
+          "vm_hwm_kib": 34140,
+          "rss_kib": 34144,
+          "pss_kib": 24373,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-thermal-baseline.json",
+        "case": "thermal",
+        "label": "baseline",
+        "cpu_seconds": 0.210755447,
+        "wall_seconds": 0.19372430500516202,
+        "memory": {
+          "vm_hwm_kib": 32616,
+          "rss_kib": 32620,
+          "pss_kib": 22812,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-thermal-candidate.json",
+        "case": "thermal",
+        "label": "candidate",
+        "cpu_seconds": 0.346008313,
+        "wall_seconds": 0.2885070290067233,
+        "memory": {
+          "vm_hwm_kib": 33192,
+          "rss_kib": 33192,
+          "pss_kib": 23331,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-vacuum-baseline.json",
+        "case": "vacuum",
+        "label": "baseline",
+        "cpu_seconds": 0.890783825,
+        "wall_seconds": 0.8346837020071689,
+        "memory": {
+          "vm_hwm_kib": 43920,
+          "rss_kib": 43924,
+          "pss_kib": 33614,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "0-vacuum-candidate.json",
+        "case": "vacuum",
+        "label": "candidate",
+        "cpu_seconds": 1.3494597289999999,
+        "wall_seconds": 0.83275784298894,
+        "memory": {
+          "vm_hwm_kib": 37816,
+          "rss_kib": 37816,
+          "pss_kib": 27486,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-fluid-baseline.json",
+        "case": "fluid",
+        "label": "baseline",
+        "cpu_seconds": 0.618534868,
+        "wall_seconds": 0.5825573150068521,
+        "memory": {
+          "vm_hwm_kib": 33064,
+          "rss_kib": 33068,
+          "pss_kib": 22694,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-fluid-candidate.json",
+        "case": "fluid",
+        "label": "candidate",
+        "cpu_seconds": 1.222446479,
+        "wall_seconds": 0.7634356369962916,
+        "memory": {
+          "vm_hwm_kib": 33572,
+          "rss_kib": 33572,
+          "pss_kib": 23217,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-germ_flow-baseline.json",
+        "case": "germ_flow",
+        "label": "baseline",
+        "cpu_seconds": 0.6911560539999999,
+        "wall_seconds": 0.6261468970042188,
+        "memory": {
+          "vm_hwm_kib": 33392,
+          "rss_kib": 33396,
+          "pss_kib": 23529,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-germ_flow-candidate.json",
+        "case": "germ_flow",
+        "label": "candidate",
+        "cpu_seconds": 1.3361371659999999,
+        "wall_seconds": 0.8621348349988693,
+        "memory": {
+          "vm_hwm_kib": 33844,
+          "rss_kib": 33844,
+          "pss_kib": 24013,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-mixed_germs-baseline.json",
+        "case": "mixed_germs",
+        "label": "baseline",
+        "cpu_seconds": 0.7236804729999999,
+        "wall_seconds": 0.6565059839922469,
+        "memory": {
+          "vm_hwm_kib": 33392,
+          "rss_kib": 33396,
+          "pss_kib": 23617,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-mixed_germs-candidate.json",
+        "case": "mixed_germs",
+        "label": "candidate",
+        "cpu_seconds": 1.371070039,
+        "wall_seconds": 0.8729901299957419,
+        "memory": {
+          "vm_hwm_kib": 34416,
+          "rss_kib": 34420,
+          "pss_kib": 24654,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-sealed-baseline.json",
+        "case": "sealed",
+        "label": "baseline",
+        "cpu_seconds": 0.49437780200000003,
+        "wall_seconds": 0.46813719399506226,
+        "memory": {
+          "vm_hwm_kib": 33160,
+          "rss_kib": 33164,
+          "pss_kib": 23364,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-sealed-candidate.json",
+        "case": "sealed",
+        "label": "candidate",
+        "cpu_seconds": 1.059724308,
+        "wall_seconds": 0.6544063499895856,
+        "memory": {
+          "vm_hwm_kib": 34160,
+          "rss_kib": 34164,
+          "pss_kib": 24334,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-thermal-baseline.json",
+        "case": "thermal",
+        "label": "baseline",
+        "cpu_seconds": 0.23201190200000002,
+        "wall_seconds": 0.21123929899476934,
+        "memory": {
+          "vm_hwm_kib": 32588,
+          "rss_kib": 32592,
+          "pss_kib": 22723,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-thermal-candidate.json",
+        "case": "thermal",
+        "label": "candidate",
+        "cpu_seconds": 0.30956286600000005,
+        "wall_seconds": 0.25822000901098363,
+        "memory": {
+          "vm_hwm_kib": 33128,
+          "rss_kib": 33132,
+          "pss_kib": 22465,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-vacuum-baseline.json",
+        "case": "vacuum",
+        "label": "baseline",
+        "cpu_seconds": 0.601595986,
+        "wall_seconds": 0.5760808979975991,
+        "memory": {
+          "vm_hwm_kib": 43808,
+          "rss_kib": 43812,
+          "pss_kib": 34122,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "1-vacuum-candidate.json",
+        "case": "vacuum",
+        "label": "candidate",
+        "cpu_seconds": 1.080334932,
+        "wall_seconds": 0.6701806010096334,
+        "memory": {
+          "vm_hwm_kib": 37724,
+          "rss_kib": 37724,
+          "pss_kib": 28011,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-fluid-baseline.json",
+        "case": "fluid",
+        "label": "baseline",
+        "cpu_seconds": 0.553914543,
+        "wall_seconds": 0.5238611600070726,
+        "memory": {
+          "vm_hwm_kib": 33032,
+          "rss_kib": 33036,
+          "pss_kib": 23284,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-fluid-candidate.json",
+        "case": "fluid",
+        "label": "candidate",
+        "cpu_seconds": 0.980313569,
+        "wall_seconds": 0.613545898013399,
+        "memory": {
+          "vm_hwm_kib": 33576,
+          "rss_kib": 33580,
+          "pss_kib": 23794,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-germ_flow-baseline.json",
+        "case": "germ_flow",
+        "label": "baseline",
+        "cpu_seconds": 0.67121841,
+        "wall_seconds": 0.6065873439947609,
+        "memory": {
+          "vm_hwm_kib": 33452,
+          "rss_kib": 33456,
+          "pss_kib": 23652,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-germ_flow-candidate.json",
+        "case": "germ_flow",
+        "label": "candidate",
+        "cpu_seconds": 1.216160526,
+        "wall_seconds": 0.7825481869949726,
+        "memory": {
+          "vm_hwm_kib": 33916,
+          "rss_kib": 33916,
+          "pss_kib": 24136,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-mixed_germs-baseline.json",
+        "case": "mixed_germs",
+        "label": "baseline",
+        "cpu_seconds": 0.743888194,
+        "wall_seconds": 0.6758988090005005,
+        "memory": {
+          "vm_hwm_kib": 33440,
+          "rss_kib": 33444,
+          "pss_kib": 23740,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-mixed_germs-candidate.json",
+        "case": "mixed_germs",
+        "label": "candidate",
+        "cpu_seconds": 1.384407201,
+        "wall_seconds": 0.8882230769959278,
+        "memory": {
+          "vm_hwm_kib": 34424,
+          "rss_kib": 34428,
+          "pss_kib": 24977,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-sealed-baseline.json",
+        "case": "sealed",
+        "label": "baseline",
+        "cpu_seconds": 0.523170122,
+        "wall_seconds": 0.49308682199625764,
+        "memory": {
+          "vm_hwm_kib": 33120,
+          "rss_kib": 33124,
+          "pss_kib": 23385,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-sealed-candidate.json",
+        "case": "sealed",
+        "label": "candidate",
+        "cpu_seconds": 0.9932279009999999,
+        "wall_seconds": 0.6147495829936815,
+        "memory": {
+          "vm_hwm_kib": 34152,
+          "rss_kib": 34156,
+          "pss_kib": 24414,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-thermal-baseline.json",
+        "case": "thermal",
+        "label": "baseline",
+        "cpu_seconds": 0.22285489999999997,
+        "wall_seconds": 0.20431943199946545,
+        "memory": {
+          "vm_hwm_kib": 32584,
+          "rss_kib": 32588,
+          "pss_kib": 22822,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-thermal-candidate.json",
+        "case": "thermal",
+        "label": "candidate",
+        "cpu_seconds": 0.366788137,
+        "wall_seconds": 0.30407352099427953,
+        "memory": {
+          "vm_hwm_kib": 33164,
+          "rss_kib": 33164,
+          "pss_kib": 23369,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-vacuum-baseline.json",
+        "case": "vacuum",
+        "label": "baseline",
+        "cpu_seconds": 0.77651112,
+        "wall_seconds": 0.7337858910032082,
+        "memory": {
+          "vm_hwm_kib": 43856,
+          "rss_kib": 43860,
+          "pss_kib": 35000,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "2-vacuum-candidate.json",
+        "case": "vacuum",
+        "label": "candidate",
+        "cpu_seconds": 1.46296165,
+        "wall_seconds": 0.9126203400082886,
+        "memory": {
+          "vm_hwm_kib": 37796,
+          "rss_kib": 37800,
+          "pss_kib": 28768,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-fluid-baseline.json",
+        "case": "fluid",
+        "label": "baseline",
+        "cpu_seconds": 0.674627285,
+        "wall_seconds": 0.6352323650062317,
+        "memory": {
+          "vm_hwm_kib": 33156,
+          "rss_kib": 33160,
+          "pss_kib": 24149,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-fluid-candidate.json",
+        "case": "fluid",
+        "label": "candidate",
+        "cpu_seconds": 1.334859985,
+        "wall_seconds": 0.8402052309975261,
+        "memory": {
+          "vm_hwm_kib": 33644,
+          "rss_kib": 33644,
+          "pss_kib": 24687,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-germ_flow-baseline.json",
+        "case": "germ_flow",
+        "label": "baseline",
+        "cpu_seconds": 1.049719088,
+        "wall_seconds": 0.9677618739951868,
+        "memory": {
+          "vm_hwm_kib": 33376,
+          "rss_kib": 33380,
+          "pss_kib": 23405,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-germ_flow-candidate.json",
+        "case": "germ_flow",
+        "label": "candidate",
+        "cpu_seconds": 1.445949262,
+        "wall_seconds": 0.936101890009013,
+        "memory": {
+          "vm_hwm_kib": 33908,
+          "rss_kib": 33912,
+          "pss_kib": 24864,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-mixed_germs-baseline.json",
+        "case": "mixed_germs",
+        "label": "baseline",
+        "cpu_seconds": 1.073723043,
+        "wall_seconds": 0.9590431999968132,
+        "memory": {
+          "vm_hwm_kib": 33540,
+          "rss_kib": 33544,
+          "pss_kib": 22867,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-mixed_germs-candidate.json",
+        "case": "mixed_germs",
+        "label": "candidate",
+        "cpu_seconds": 1.836382199,
+        "wall_seconds": 1.1696654359984677,
+        "memory": {
+          "vm_hwm_kib": 34424,
+          "rss_kib": 34428,
+          "pss_kib": 24069,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-sealed-baseline.json",
+        "case": "sealed",
+        "label": "baseline",
+        "cpu_seconds": 0.5673081040000001,
+        "wall_seconds": 0.5327745789982146,
+        "memory": {
+          "vm_hwm_kib": 33136,
+          "rss_kib": 33140,
+          "pss_kib": 24241,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-sealed-candidate.json",
+        "case": "sealed",
+        "label": "candidate",
+        "cpu_seconds": 1.183458738,
+        "wall_seconds": 0.7303555329999654,
+        "memory": {
+          "vm_hwm_kib": 34160,
+          "rss_kib": 34164,
+          "pss_kib": 25324,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-thermal-baseline.json",
+        "case": "thermal",
+        "label": "baseline",
+        "cpu_seconds": 0.293784169,
+        "wall_seconds": 0.26396728400141,
+        "memory": {
+          "vm_hwm_kib": 32732,
+          "rss_kib": 32736,
+          "pss_kib": 23721,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-thermal-candidate.json",
+        "case": "thermal",
+        "label": "candidate",
+        "cpu_seconds": 0.32560927500000003,
+        "wall_seconds": 0.273169981999672,
+        "memory": {
+          "vm_hwm_kib": 33196,
+          "rss_kib": 33200,
+          "pss_kib": 24212,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-vacuum-baseline.json",
+        "case": "vacuum",
+        "label": "baseline",
+        "cpu_seconds": 0.7171609490000002,
+        "wall_seconds": 0.6825174510013312,
+        "memory": {
+          "vm_hwm_kib": 43832,
+          "rss_kib": 43836,
+          "pss_kib": 33279,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      },
+      {
+        "sample_file": "3-vacuum-candidate.json",
+        "case": "vacuum",
+        "label": "candidate",
+        "cpu_seconds": 1.596738465,
+        "wall_seconds": 0.9815219470037846,
+        "memory": {
+          "vm_hwm_kib": 37768,
+          "rss_kib": 37772,
+          "pss_kib": 27186,
+          "swap_kib": 0
+        },
+        "major_faults": 0
+      }
+    ],
+    "decision": "Not adopted. Partial observations show substantial overhead; do not infer a complete eight-pair result."
+  },
+  "game_runtime_validated": false,
+  "decision": "Keep reviewable candidate pending complete timing, then headless and graphical acceptance; no speedup claim"
+}

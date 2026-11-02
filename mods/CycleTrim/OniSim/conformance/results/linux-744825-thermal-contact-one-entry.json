@@ -1,0 +1,327 @@
+{
+  "schema": 1,
+  "kind": "experimental-unadopted",
+  "identity": {
+    "native_sha256": "0631b3dd20e89818ec73cb4f4ea7a654d11fb3ad7a988ebfaf38732b989a4817",
+    "baseline_sha256": "9cddf6640a22a61f28d1026bdb5713b376cc46f62dd0e41f365bb6fc83ee49ff",
+    "release_unit_tests": {
+      "passed": true,
+      "tests": 34,
+      "cache_word_flag_errno_comparisons": 955776,
+      "actual_cache_hits_checked": 387072,
+      "floating_environments": 32,
+      "exit_code": 0
+    },
+    "memory": {
+      "max_release_cache_bytes": 32,
+      "extra_heap_allocations": 0,
+      "scope": "One stack entry per region temperature phase, no PhysicsWorld field"
+    },
+    "compiler_wrappers_disabled": true,
+    "sources": {
+      "float_env.rs": "d814a0832fdb6b0cd9e526acc1b96822957d1c8169b452aa33afbf73b4a76f57",
+      "thermal.rs": "f1f9a0188da61036800a9c01a2ae8497b858c8ca77649a1bea479c1729430472",
+      "thermal_cache_tests.rs": "4388ce0e6cc401b01224174ae14f73ff74839faa7f9cfc6793466ca28fcf3c82",
+      "simulation_step.rs": "49bcc18d2c3c1bd5580168832ed32f6f2425a2d51c5472b3eac1a0ac3cb4ae42"
+    },
+    "production_adopted": false
+  },
+  "correctness": {
+    "1": {
+      "passed": true,
+      "cases": 231,
+      "publications": 9411,
+      "report_sha256": "de8617cee65bc1b0b57cb24fe2cf3294d54058d501d9918241fcd1d6cbe16d2a",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    "4": {
+      "passed": true,
+      "cases": 231,
+      "publications": 9411,
+      "report_sha256": "2e94a5696b94f1582f856e2496ed6b851a2664ad71a13abc9eeadc223bba1faa",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    }
+  },
+  "abstract_lean_proof": {
+    "passed": true,
+    "theorems": 5,
+    "source_sha256": "417792576e84e41f7d96ea92c1ee2f9b670f7dae6433eb16f9f3a3722db8ad0b",
+    "scope": "Abstract raw-word evaluation with sticky exception OR, unchanged control and errno. Actual bounded libm properties, Rust guard and compiler are explicit assumptions, not formally verified.",
+    "external_prover_required": false,
+    "sorry_or_admit": false
+  },
+  "premise_coverage": {
+    "schema": 1,
+    "premise_confirmed_for_thermal_fixture": true,
+    "criterion_before_results": {
+      "thermal_minimum_calls": 1000,
+      "thermal_minimum_reusable_fraction": 0.8
+    },
+    "instrumented_native_sha256": "f2ff02778928792cb9c3192d376c11fbed277fbcf343ac8c557732336c8304b0",
+    "warmup_ticks_excluded": 100,
+    "timed_diagnostic_ticks": 300,
+    "scenes": {
+      "thermal": {
+        "calls": 1434628,
+        "consecutive_key_matches": 1434328,
+        "reusable_with_effect_guards": 1434328,
+        "bounded": 1434628,
+        "controls_rejected": 0,
+        "reusable_fraction": 0.9997908865573515,
+        "final_matches_official": true
+      },
+      "fluid": {
+        "calls": 0,
+        "consecutive_key_matches": 0,
+        "reusable_with_effect_guards": 0,
+        "bounded": 0,
+        "controls_rejected": 0,
+        "reusable_fraction": null,
+        "final_matches_official": true
+      },
+      "germ_flow": {
+        "calls": 0,
+        "consecutive_key_matches": 0,
+        "reusable_with_effect_guards": 0,
+        "bounded": 0,
+        "controls_rejected": 0,
+        "reusable_fraction": null,
+        "final_matches_official": true
+      }
+    },
+    "interpretation": "Operand coverage only. No cache or speedup acceptance; all original computations retained. Changes next action only if the predeclared coverage criterion passes."
+  },
+  "performance": {
+    "schema": 1,
+    "complete": true,
+    "native_sha256": "0631b3dd20e89818ec73cb4f4ea7a654d11fb3ad7a988ebfaf38732b989a4817",
+    "baseline_sha256": "9cddf6640a22a61f28d1026bdb5713b376cc46f62dd0e41f365bb6fc83ee49ff",
+    "passed_predeclared_native_gates": false,
+    "gates": {
+      "thermal_cpu_reduction_at_least_10_percent": true,
+      "no_other_scene_cpu_regression_above_3_percent": false,
+      "no_peak_rss_increase_above_3_percent": true
+    },
+    "samples": 96,
+    "final_publications_match_official": true,
+    "scenes": {
+      "fluid": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.49374699750000006,
+            "minimum": 0.472249154,
+            "maximum": 0.6357517400000001
+          },
+          "candidate": {
+            "median": 0.5014645154999999,
+            "minimum": 0.476668593,
+            "maximum": 0.6347080060000001
+          },
+          "median_speedup": 0.9846100416650521
+        },
+        "cpu_change_percent": 1.5630511251868207,
+        "peak_rss_kib": {
+          "baseline": 33312.0,
+          "candidate": 33300.0
+        },
+        "peak_rss_change_percent": -0.036023054755041084
+      },
+      "thermal": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.21117384499999997,
+            "minimum": 0.18671319100000003,
+            "maximum": 0.249910414
+          },
+          "candidate": {
+            "median": 0.164360434,
+            "minimum": 0.153270008,
+            "maximum": 0.208403648
+          },
+          "median_speedup": 1.2848216560440573
+        },
+        "cpu_change_percent": -22.168186121723544,
+        "peak_rss_kib": {
+          "baseline": 33282.0,
+          "candidate": 33336.0
+        },
+        "peak_rss_change_percent": 0.16224986479178582
+      },
+      "sealed": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.4712236465,
+            "minimum": 0.43580073300000005,
+            "maximum": 0.51382317
+          },
+          "candidate": {
+            "median": 0.4728948745,
+            "minimum": 0.444144898,
+            "maximum": 0.536463132
+          },
+          "median_speedup": 0.9964659629653059
+        },
+        "cpu_change_percent": 0.3546570747060329,
+        "peak_rss_kib": {
+          "baseline": 33214.0,
+          "candidate": 33260.0
+        },
+        "peak_rss_change_percent": 0.13849581501776953
+      },
+      "germ_flow": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.6717443875,
+            "minimum": 0.598313783,
+            "maximum": 0.7553932259999999
+          },
+          "candidate": {
+            "median": 0.6729936905,
+            "minimum": 0.6101620459999999,
+            "maximum": 0.754319214
+          },
+          "median_speedup": 0.9981436631314153
+        },
+        "cpu_change_percent": 0.18597892639631297,
+        "peak_rss_kib": {
+          "baseline": 33328.0,
+          "candidate": 33300.0
+        },
+        "peak_rss_change_percent": -0.08401344215074324
+      },
+      "mixed_germs": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.672348764,
+            "minimum": 0.6353291090000001,
+            "maximum": 0.8071686339999999
+          },
+          "candidate": {
+            "median": 0.6960587635,
+            "minimum": 0.6258875039999999,
+            "maximum": 0.85514585
+          },
+          "median_speedup": 0.9659367847324
+        },
+        "cpu_change_percent": 3.526443531916712,
+        "peak_rss_kib": {
+          "baseline": 33260.0,
+          "candidate": 33288.0
+        },
+        "peak_rss_change_percent": 0.0841852074564109
+      },
+      "vacuum": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.414347262,
+            "minimum": 0.386421172,
+            "maximum": 0.509043119
+          },
+          "candidate": {
+            "median": 0.43043377250000003,
+            "minimum": 0.387567919,
+            "maximum": 0.564766519
+          },
+          "median_speedup": 0.9626272111350184
+        },
+        "cpu_change_percent": 3.882374031471225,
+        "peak_rss_kib": {
+          "baseline": 33250.0,
+          "candidate": 33252.0
+        },
+        "peak_rss_change_percent": 0.006015037593987138
+      }
+    },
+    "raw_report_sha256": "9fbce169c7dedbee9f34ebb88221da3177615f3df54b43fdd28be29e2e220ed6",
+    "interpretation": "Thermal target passes; mixed-germs and vacuum medians exceed 3% regression gate. Keep unadopted. Investigate retired instructions/context before another source fix or timing rerun. No whole-game claim."
+  },
+  "cold_path_hardware_diagnostic": {
+    "samples": 24,
+    "all_final_publications_match_official": true,
+    "report_sha256": "d631f07bf91624758b2ac27de4831490385b80d34efe42eba33232d3c46550ca",
+    "scenes": {
+      "fluid": {
+        "totals": {
+          "baseline": {
+            "instructions": 3901128642,
+            "cycles": 1121285971
+          },
+          "candidate": {
+            "instructions": 3903687473,
+            "cycles": 1110747153
+          }
+        },
+        "instructions_change_percent": 0.06559206923995031,
+        "cycles_change_percent": -0.9398867258279431
+      },
+      "germ_flow": {
+        "totals": {
+          "baseline": {
+            "instructions": 5009940927,
+            "cycles": 1440184719
+          },
+          "candidate": {
+            "instructions": 5009887774,
+            "cycles": 1439668427
+          }
+        },
+        "instructions_change_percent": -0.0010609506334358088,
+        "cycles_change_percent": -0.03584901250435202
+      },
+      "mixed_germs": {
+        "totals": {
+          "baseline": {
+            "instructions": 5123703287,
+            "cycles": 1506519502
+          },
+          "candidate": {
+            "instructions": 5123648137,
+            "cycles": 1516555942
+          }
+        },
+        "instructions_change_percent": -0.001076369901042984,
+        "cycles_change_percent": 0.6662004698031465
+      },
+      "vacuum": {
+        "totals": {
+          "baseline": {
+            "instructions": 3755628124,
+            "cycles": 923079204
+          },
+          "candidate": {
+            "instructions": 3753609612,
+            "cycles": 945983574
+          }
+        },
+        "instructions_change_percent": -0.05374632240878752,
+        "cycles_change_percent": 2.4813006187061726
+      }
+    },
+    "interpretation": "All cold-scene retired-instruction median changes are within 0.07%, below predeclared +0.5% added-work classification. Cycle changes range -0.94% to +2.48%. This does not prove absence of cache/layout effects or replace/relax the failed CPU-time gate. Do not implement a speculative cold-loop fix without new evidence."
+  },
+  "whole_game_performance_measured": false,
+  "runtime_acceptance": false,
+  "source_adopted": false,
+  "production_package_promoted": false,
+  "next_investigation": "Frame engine preflights once before its tick loop, and simulation_step::step repeats preflight every fixed tick. Profile/validate this duplicated work and preserve boundary/lifecycle guarantees before changing it; actual-game CPU/RAM evidence remains outstanding."
+}

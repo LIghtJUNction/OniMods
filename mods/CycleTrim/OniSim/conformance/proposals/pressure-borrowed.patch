@@ -1,0 +1,1151 @@
+--- a/mods/CycleTrim/OniSim/native/src/float_env.rs
++++ b/mods/CycleTrim/OniSim/native/src/float_env.rs
+@@ -24,6 +24,15 @@
+                 options(nostack, preserves_flags));
+         }
+         Self(value)
++    }
++
++    #[cfg(test)]
++    pub(crate) fn control_for_test(self, bits: u32) -> Self {
++        Self((self.0 & !0xe040) | (bits & 0xe040) | 0x1f80)
++    }
++
++    pub(crate) fn all_exceptions_masked(self) -> bool {
++        cfg!(target_arch = "x86_64") && self.0 & 0x1f80 == 0x1f80
+     }
+ 
+     pub(crate) fn install(self) -> FloatEnvGuard {
+@@ -77,6 +86,17 @@
+     use rayon::prelude::*;
+ 
+     #[test]
++    fn reordering_requires_every_exception_to_be_masked() {
++        let original = FloatEnv::capture();
++        for bit in [0x80, 0x100, 0x200, 0x400, 0x800, 0x1000] {
++            let _guard = FloatEnv((original.0 | 0x1f80) & !bit & !0x3f).install();
++            assert!(!FloatEnv::capture().all_exceptions_masked());
++        }
++        let _guard = FloatEnv(original.0 | 0x1f80).install();
++        assert!(FloatEnv::capture().all_exceptions_masked());
++    }
++
++    #[test]
+     fn tasks_inherit_submitter_rounding_and_restore_pool_environment() {
+         let pool = rayon::ThreadPoolBuilder::new()
+             .num_threads(2)
+--- a/mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs
++++ b/mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs
+@@ -1,4 +1,7 @@
+ //! Ordered pressure/liquid traversal from official UpdateData, ELF 0x69730.
++
++#[path = "pressure_borrowed.rs"]
++mod borrowed;
+ 
+ use crate::events::EventQueues;
+ use crate::tables::{DiseaseTable, ElementTable};
+@@ -111,16 +114,18 @@
+     events: &mut EventQueues,
+     region: Region,
+ ) {
+-    for y in region.min_y..region.max_y {
+-        let row = y as usize * world.stride;
+-        let (mut cell, stop) = if world.scan_direction > 0 {
+-            (row + region.min_x as usize, row + region.max_x as usize)
+-        } else {
+-            (row + region.max_x as usize, row + region.min_x as usize)
+-        };
+-        while cell != stop {
+-            pressure_cell(world, elements, diseases, events, cell);
+-            cell = cell.wrapping_add_signed(world.scan_direction as isize);
++    if !borrowed::try_run(world, elements, diseases, events, region) {
++        for y in region.min_y..region.max_y {
++            let row = y as usize * world.stride;
++            let (mut cell, stop) = if world.scan_direction > 0 {
++                (row + region.min_x as usize, row + region.max_x as usize)
++            } else {
++                (row + region.max_x as usize, row + region.min_x as usize)
++            };
++            while cell != stop {
++                pressure_cell(world, elements, diseases, events, cell);
++                cell = cell.wrapping_add_signed(world.scan_direction as isize);
++            }
+         }
+     }
+     let (min_x, max_x, min_y, max_y) = displacement_bounds(world, region);
+--- /dev/null
++++ b/mods/CycleTrim/OniSim/native/src/pressure_borrowed.rs
+@@ -0,0 +1,509 @@
++//! Disjoint row borrows for the pressure stencil. Physics cells stay in their
++//! original SOA allocations; only slice headers and notification indices move.
++use std::cell::RefCell;
++use std::ops::{Index, IndexMut};
++
++use rayon::prelude::*;
++
++use crate::events::EventQueues;
++use crate::float_env::FloatEnv;
++use crate::tables::{DiseaseTable, ElementTable};
++use crate::world::{Cells, PhysicsWorld, Region};
++
++#[path = "pressure_borrowed_kernel.rs"]
++mod kernel;
++
++const BAND: usize = 32;
++const SOURCE_ROWS: usize = 16;
++const ROWS: usize = SOURCE_ROWS + 1;
++const TILES: usize = 8;
++const RANGES: usize = ROWS * TILES;
++const NOTIFICATIONS: usize = 3 * BAND * SOURCE_ROWS;
++
++#[derive(Clone, Copy)]
++struct Coord {
++    global: usize,
++    row: usize,
++}
++
++impl Coord {
++    #[inline]
++    fn side(self, direction: i32) -> Self {
++        Self {
++            global: self.global.wrapping_add_signed(direction as isize),
++            row: self.row,
++        }
++    }
++    #[inline]
++    fn upper(self, stride: usize) -> Self {
++        Self {
++            global: self.global + stride,
++            row: self.row + 1,
++        }
++    }
++}
++
++struct Read<'a, T>(&'a [T]);
++impl<T> Index<Coord> for Read<'_, T> {
++    type Output = T;
++    #[inline]
++    fn index(&self, cell: Coord) -> &T {
++        &self.0[cell.global]
++    }
++}
++
++struct ReadView<'a> {
++    element: Read<'a, u16>,
++    mass: Read<'a, f32>,
++    properties: Read<'a, u8>,
++    disease_count: Read<'a, i32>,
++}
++impl<'a> ReadView<'a> {
++    fn new(cells: &'a Cells) -> Self {
++        Self {
++            element: Read(&cells.element),
++            mass: Read(&cells.mass),
++            properties: Read(&cells.properties),
++            disease_count: Read(&cells.disease_count),
++        }
++    }
++}
++
++#[derive(Clone, Copy, Default)]
++struct Interval {
++    start: usize,
++    end: usize,
++}
++impl Interval {
++    fn is_empty(self) -> bool {
++        self.start >= self.end
++    }
++}
++
++#[derive(Clone, Copy)]
++struct Plan {
++    first_y: usize,
++    source: [Interval; SOURCE_ROWS],
++    starts: [usize; ROWS],
++    lengths: [usize; ROWS],
++}
++impl Default for Plan {
++    fn default() -> Self {
++        Self {
++            first_y: 0,
++            source: [Interval::default(); SOURCE_ROWS],
++            starts: [0; ROWS],
++            lengths: [0; ROWS],
++        }
++    }
++}
++
++impl Plan {
++    fn new(
++        region: Region,
++        stride: usize,
++        direction: i32,
++        band: usize,
++        row_band: usize,
++    ) -> Option<Self> {
++        let width = (region.max_x - region.min_x) as usize;
++        let height = (region.max_y - region.min_y) as usize;
++        let mut plan = Self {
++            first_y: row_band * SOURCE_ROWS,
++            ..Self::default()
++        };
++        for (row, interval) in plan.source.iter_mut().enumerate() {
++            let y = plan.first_y + row;
++            if y >= height {
++                continue;
++            }
++            *interval = Interval {
++                start: (band * BAND).saturating_sub(2 * y),
++                end: ((band + 1) * BAND).saturating_sub(2 * y).min(width),
++            };
++        }
++        if plan.source.iter().all(|r| r.is_empty()) {
++            return None;
++        }
++        for row in 0..ROWS {
++            let current = plan.source.get(row).copied().filter(|r| !r.is_empty());
++            let previous = row
++                .checked_sub(1)
++                .and_then(|r| plan.source.get(r))
++                .copied()
++                .filter(|r| !r.is_empty());
++            let mut start = usize::MAX;
++            let mut end = 0;
++            for interval in [current, previous].into_iter().flatten() {
++                start = start.min(interval.start);
++                end = end.max(interval.end + 1);
++            }
++            if start == usize::MAX {
++                continue;
++            }
++            let physical_x = if direction > 0 {
++                region.min_x as usize + start
++            } else {
++                region.max_x as usize - (end - 1)
++            };
++            plan.starts[row] = (region.min_y as usize + plan.first_y + row) * stride + physical_x;
++            plan.lengths[row] = end - start;
++        }
++        Some(plan)
++    }
++}
++
++#[derive(Clone, Copy, Default)]
++struct Range {
++    start: usize,
++    len: usize,
++    tile: usize,
++    row: usize,
++}
++
++fn ranges(plans: &[Plan; TILES], count: usize) -> ([Range; RANGES], usize) {
++    let mut result = [Range::default(); RANGES];
++    let mut used = 0;
++    for (tile, plan) in plans[..count].iter().enumerate() {
++        for row in 0..ROWS {
++            if plan.lengths[row] == 0 {
++                continue;
++            }
++            result[used] = Range {
++                start: plan.starts[row],
++                len: plan.lengths[row],
++                tile,
++                row,
++            };
++            used += 1;
++        }
++    }
++    result[..used].sort_unstable_by_key(|r| r.start);
++    let mut end = 0;
++    for range in &result[..used] {
++        assert!(range.start >= end, "Pressure tile row borrows overlap");
++        end = range.start + range.len;
++    }
++    (result, used)
++}
++
++struct Rows<'a, T> {
++    plan: &'a Plan,
++    data: [&'a mut [T]; ROWS],
++}
++impl<T> Index<Coord> for Rows<'_, T> {
++    type Output = T;
++    #[inline]
++    fn index(&self, cell: Coord) -> &T {
++        &self.data[cell.row][cell.global - self.plan.starts[cell.row]]
++    }
++}
++impl<T> IndexMut<Coord> for Rows<'_, T> {
++    #[inline]
++    fn index_mut(&mut self, cell: Coord) -> &mut T {
++        &mut self.data[cell.row][cell.global - self.plan.starts[cell.row]]
++    }
++}
++
++fn borrow_rows<'a, T>(
++    data: &'a mut [T],
++    order: &[Range],
++    plans: &'a [Plan; TILES],
++) -> [Option<Rows<'a, T>>; TILES] {
++    let mut result = std::array::from_fn(|tile| {
++        Some(Rows {
++            plan: &plans[tile],
++            data: std::array::from_fn(|_| &mut [] as &mut [T]),
++        })
++    });
++    let mut tail = data;
++    let mut end = 0;
++    for range in order {
++        let (_, from) = tail.split_at_mut(range.start - end);
++        let (row, rest) = from.split_at_mut(range.len);
++        result[range.tile].as_mut().unwrap().data[range.row] = row;
++        tail = rest;
++        end = range.start + range.len;
++    }
++    result
++}
++
++struct WriteView<'a> {
++    element: Rows<'a, u16>,
++    mass: Rows<'a, f32>,
++    temperature: Rows<'a, f32>,
++    disease_idx: Rows<'a, u8>,
++    disease_count: Rows<'a, i32>,
++    disease_infestation: Rows<'a, u8>,
++    disease_growth: Rows<'a, f32>,
++}
++struct View<'a> {
++    read: ReadView<'a>,
++    write: WriteView<'a>,
++    flow: Rows<'a, [f32; 4]>,
++    dirty: Rows<'a, bool>,
++    dirty_flags: Rows<'a, u8>,
++    stride: usize,
++    width: usize,
++    height: usize,
++    scan_direction: i32,
++    sink_element: u16,
++}
++
++fn execute(
++    view: &mut View<'_>,
++    plan: &Plan,
++    region: Region,
++    elements: &ElementTable,
++    diseases: &DiseaseTable,
++    events: &mut Vec<i32>,
++    environment: FloatEnv,
++) {
++    let _guard = environment.install();
++    for (row, source) in plan.source.iter().enumerate() {
++        let y = region.min_y as usize + plan.first_y + row;
++        for u in source.start..source.end {
++            let x = if view.scan_direction > 0 {
++                region.min_x as usize + u
++            } else {
++                region.max_x as usize - u
++            };
++            kernel::pressure_cell(
++                view,
++                elements,
++                diseases,
++                events,
++                Coord {
++                    global: y * view.stride + x,
++                    row,
++                },
++            );
++        }
++    }
++}
++
++fn batch(
++    world: &mut PhysicsWorld,
++    elements: &ElementTable,
++    diseases: &DiseaseTable,
++    region: Region,
++    pool: &rayon::ThreadPool,
++    plans: &[Plan; TILES],
++    count: usize,
++    events: &mut [Vec<i32>],
++    environment: FloatEnv,
++) {
++    let (order, used) = ranges(plans, count);
++    let order = &order[..used];
++    let (stride, width, height, direction, sink) = (
++        world.stride,
++        world.width,
++        world.height,
++        world.scan_direction,
++        world.sink_element,
++    );
++    let read = &world.read;
++    let mut element = borrow_rows(&mut world.write.element, order, plans);
++    let mut mass = borrow_rows(&mut world.write.mass, order, plans);
++    let mut temperature = borrow_rows(&mut world.write.temperature, order, plans);
++    let mut disease_idx = borrow_rows(&mut world.write.disease_idx, order, plans);
++    let mut disease_count = borrow_rows(&mut world.write.disease_count, order, plans);
++    let mut infestation = borrow_rows(&mut world.write.disease_infestation, order, plans);
++    let mut growth = borrow_rows(&mut world.write.disease_growth, order, plans);
++    let mut flow = borrow_rows(&mut world.flow, order, plans);
++    let mut dirty = borrow_rows(&mut world.dirty, order, plans);
++    let mut flags = borrow_rows(&mut world.dirty_flags, order, plans);
++    let mut views: [View<'_>; TILES] = std::array::from_fn(|i| View {
++        read: ReadView::new(read),
++        write: WriteView {
++            element: element[i].take().unwrap(),
++            mass: mass[i].take().unwrap(),
++            temperature: temperature[i].take().unwrap(),
++            disease_idx: disease_idx[i].take().unwrap(),
++            disease_count: disease_count[i].take().unwrap(),
++            disease_infestation: infestation[i].take().unwrap(),
++            disease_growth: growth[i].take().unwrap(),
++        },
++        flow: flow[i].take().unwrap(),
++        dirty: dirty[i].take().unwrap(),
++        dirty_flags: flags[i].take().unwrap(),
++        stride,
++        width,
++        height,
++        scan_direction: direction,
++        sink_element: sink,
++    });
++    for events in &mut events[..count] {
++        events.clear();
++    }
++    if count == 1 {
++        execute(
++            &mut views[0],
++            &plans[0],
++            region,
++            elements,
++            diseases,
++            &mut events[0],
++            environment,
++        );
++    } else {
++        pool.install(|| {
++            views[..count]
++                .par_iter_mut()
++                .zip(events[..count].par_iter_mut())
++                .enumerate()
++                .for_each(|(i, (view, events))| {
++                    execute(
++                        view,
++                        &plans[i],
++                        region,
++                        elements,
++                        diseases,
++                        events,
++                        environment,
++                    )
++                })
++        });
++    }
++}
++
++thread_local! {
++    static EVENTS: RefCell<Vec<Vec<i32>>> = const { RefCell::new(Vec::new()) };
++}
++
++pub(super) fn try_run(
++    world: &mut PhysicsWorld,
++    elements: &ElementTable,
++    diseases: &DiseaseTable,
++    events: &mut EventQueues,
++    region: Region,
++) -> bool {
++    if region.max_x <= region.min_x || region.max_y <= region.min_y {
++        return false;
++    }
++    let width = (region.max_x - region.min_x) as usize;
++    let height = (region.max_y - region.min_y) as usize;
++    let Some(pool) = crate::parallel::pool(width * height) else {
++        return false;
++    };
++    run_with_pool(world, elements, diseases, events, region, pool)
++}
++
++fn run_with_pool(
++    world: &mut PhysicsWorld,
++    elements: &ElementTable,
++    diseases: &DiseaseTable,
++    events: &mut EventQueues,
++    region: Region,
++    pool: &rayon::ThreadPool,
++) -> bool {
++    let environment = FloatEnv::capture();
++    let workers = pool.current_num_threads();
++    if workers <= 1 || workers > TILES || !environment.all_exceptions_masked() {
++        return false;
++    }
++    let any_work = (region.min_y..region.max_y).any(|y| {
++        let first = if world.scan_direction > 0 {
++            region.min_x
++        } else {
++            region.min_x + 1
++        };
++        let end = if world.scan_direction > 0 {
++            region.max_x
++        } else {
++            region.max_x + 1
++        };
++        (first..end).any(|x| {
++            let cell = y as usize * world.stride + x as usize;
++            world.read.properties[cell] & 1 == 0
++                && elements.elements[world.read.element[cell] as usize]
++                    .record
++                    .state
++                    & 2
++                    == 0
++        })
++    });
++    if !any_work {
++        return true;
++    }
++    let width = (region.max_x - region.min_x) as usize;
++    let height = (region.max_y - region.min_y) as usize;
++    let bands = (width - 1 + 2 * (height - 1)) / BAND + 1;
++    let row_bands = height.div_ceil(SOURCE_ROWS);
++    EVENTS.with(|cache| {
++        let Ok(mut cache) = cache.try_borrow_mut() else {
++            return false;
++        };
++        let missing = workers.saturating_sub(cache.len());
++        if cache.try_reserve_exact(missing).is_err() {
++            return false;
++        }
++        while cache.len() < workers {
++            let mut list = Vec::new();
++            if list.try_reserve_exact(NOTIFICATIONS).is_err() {
++                return false;
++            }
++            cache.push(list);
++        }
++        let mut plans = [Plan::default(); TILES];
++        let mut count = 0;
++        for level in 0..bands + row_bands - 1 {
++            for band in level.saturating_sub(row_bands - 1)..=level.min(bands - 1) {
++                let Some(plan) = Plan::new(
++                    region,
++                    world.stride,
++                    world.scan_direction,
++                    band,
++                    level - band,
++                ) else {
++                    continue;
++                };
++                plans[count] = plan;
++                count += 1;
++                if count == workers {
++                    batch(
++                        world,
++                        elements,
++                        diseases,
++                        region,
++                        pool,
++                        &plans,
++                        count,
++                        &mut cache[..count],
++                        environment,
++                    );
++                    for list in &cache[..count] {
++                        for &cell in list {
++                            events.substance_change(cell);
++                        }
++                    }
++                    count = 0;
++                }
++            }
++            if count != 0 {
++                batch(
++                    world,
++                    elements,
++                    diseases,
++                    region,
++                    pool,
++                    &plans,
++                    count,
++                    &mut cache[..count],
++                    environment,
++                );
++                for list in &cache[..count] {
++                    for &cell in list {
++                        events.substance_change(cell);
++                    }
++                }
++                count = 0;
++            }
++        }
++        true
++    })
++}
++
++#[cfg(test)]
++#[path = "pressure_borrowed_tests.rs"]
++mod tests;
+--- /dev/null
++++ b/mods/CycleTrim/OniSim/native/src/pressure_borrowed_kernel.rs
+@@ -0,0 +1,212 @@
++use super::{Coord, View, WriteView};
++use crate::fluid_helpers::{add_disease_fields, cvtt, smax, smin};
++use crate::tables::{DiseaseTable, ElementTable};
++
++fn old_phase(world: &View<'_>, elements: &ElementTable, cell: Coord) -> u8 {
++    elements.elements[world.read.element[cell] as usize]
++        .record
++        .state
++        & 3
++}
++
++fn pressure_target(
++    world: &View<'_>,
++    elements: &ElementTable,
++    source_element: u16,
++    source_phase: u8,
++    cell: Coord,
++) -> bool {
++    let element = world.read.element[cell];
++    let state = elements.elements[element as usize].record.state;
++    world.read.properties[cell] & 1 == 0
++        && world.write.element[cell] == element
++        && state & 2 == 0
++        && (state & 3 != source_phase || element == source_element)
++}
++
++pub(super) fn pressure_cell(
++    world: &mut View<'_>,
++    elements: &ElementTable,
++    diseases: &DiseaseTable,
++    events: &mut Vec<i32>,
++    cell: Coord,
++) {
++    let element = world.read.element[cell];
++    let record = &elements.elements[element as usize].record;
++    let source_phase = record.state & 3;
++    let coefficient = record.flow;
++    if world.read.properties[cell] & 1 != 0
++        || world.write.element[cell] != element
++        || record.state & 2 != 0
++    {
++        return;
++    }
++    let direction = world.scan_direction;
++    let side = cell.side(direction);
++    let horizontal = if pressure_target(world, elements, element, source_phase, side) {
++        direction as f32
++            * update_pressure(
++                world,
++                elements,
++                diseases,
++                events,
++                cell,
++                element,
++                source_phase,
++                coefficient,
++                side,
++            )
++    } else {
++        0.0
++    };
++    world.flow[cell][1] += horizontal;
++    world.flow[side][0] -= horizontal;
++    let upper = cell.upper(world.stride);
++    let vertical = if world.write.element[cell] == element
++        && pressure_target(world, elements, element, source_phase, upper)
++    {
++        update_pressure(
++            world,
++            elements,
++            diseases,
++            events,
++            cell,
++            element,
++            source_phase,
++            coefficient,
++            upper,
++        )
++    } else {
++        0.0
++    };
++    world.flow[cell][2] += vertical;
++    world.flow[upper][3] -= vertical;
++    if (old_phase(world, elements, upper) | old_phase(world, elements, side)) != 3
++        && world.write.element[cell] == element
++        && pressure_target(
++            world,
++            elements,
++            element,
++            source_phase,
++            side.upper(world.stride),
++        )
++    {
++        update_pressure(
++            world,
++            elements,
++            diseases,
++            events,
++            cell,
++            element,
++            source_phase,
++            coefficient,
++            side.upper(world.stride),
++        );
++    }
++}
++
++fn update_pressure(
++    world: &mut View<'_>,
++    tables: &ElementTable,
++    diseases: &DiseaseTable,
++    events: &mut Vec<i32>,
++    a: Coord,
++    element_a: u16,
++    phase_a: u8,
++    coefficient: f32,
++    b: Coord,
++) -> f32 {
++    let element_b = world.read.element[b];
++    let record_b = &tables.elements[element_b as usize].record;
++    let ma = world.read.mass[a];
++    let mb = world.read.mass[b];
++    let coefficient = if phase_a == 1 {
++        coefficient
++    } else {
++        record_b.flow
++    };
++    let flow = smax(smin(coefficient * (ma - mb), 0.125 * ma), -0.125 * mb);
++    let (src, dst, old_mass, amount, source_element, dest_element, dest_phase) = if flow < 0.0 {
++        (b, a, mb, -flow, element_b, element_a, phase_a)
++    } else {
++        (a, b, ma, flow, element_a, element_b, record_b.state & 3)
++    };
++    let amount = smin(amount, old_mass);
++    let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
++    let germ_count = cvtt(world.read.disease_count[src] as f32 * fraction);
++    let germ_id = world.write.disease_idx[src];
++    let source_temperature = world.write.temperature[src];
++    let dest_temperature = world.write.temperature[dst];
++    let dest_mass = world.write.mass[dst];
++    let combined_mass = dest_mass + amount;
++    let temperature = if combined_mass <= 0.0 {
++        0.0
++    } else {
++        let weighted = (dest_mass * dest_temperature + source_temperature * amount) / combined_mass;
++        if dest_temperature > source_temperature {
++            if weighted < source_temperature || weighted.is_nan() || source_temperature.is_nan() {
++                source_temperature
++            } else {
++                smin(dest_temperature, weighted)
++            }
++        } else if dest_temperature <= weighted {
++            smin(source_temperature, weighted)
++        } else {
++            dest_temperature
++        }
++    };
++    world.write.mass[dst] = combined_mass;
++    world.write.temperature[dst] = temperature;
++    add_disease(&mut world.write, diseases, dst, germ_id, germ_count);
++    world.write.mass[src] = smax(world.write.mass[src] - amount, 0.0);
++    let remaining = world.write.disease_count[src].wrapping_sub(germ_count);
++    world.write.disease_count[src] = remaining;
++    if remaining <= 0 {
++        clear_disease(&mut world.write, src);
++    }
++    if dest_phase == 0 {
++        if dest_element == world.sink_element {
++            world.write.mass[dst] = 0.0;
++            world.write.temperature[dst] = 0.0;
++            clear_disease(&mut world.write, dst);
++        } else {
++            world.write.element[dst] = source_element;
++            notify(world, events, dst);
++        }
++    }
++    flow
++}
++
++fn add_disease(
++    cells: &mut WriteView<'_>,
++    tables: &DiseaseTable,
++    cell: Coord,
++    disease: u8,
++    count: i32,
++) {
++    add_disease_fields(
++        tables,
++        &mut cells.disease_idx[cell],
++        &mut cells.disease_count[cell],
++        &mut cells.disease_infestation[cell],
++        &mut cells.disease_growth[cell],
++        disease,
++        count,
++    );
++}
++fn clear_disease(cells: &mut WriteView<'_>, cell: Coord) {
++    cells.disease_idx[cell] = 255;
++    cells.disease_count[cell] = 0;
++    cells.disease_infestation[cell] = 0;
++    cells.disease_growth[cell] = 0.0;
++}
++fn notify(world: &mut View<'_>, events: &mut Vec<i32>, cell: Coord) {
++    let stride = world.stride as i64;
++    let global = cell.global as i64;
++    let index = (global / stride - 1) * (stride - 2) + global % stride - 1;
++    if index >= 0 && index < (world.width * world.height) as i64 {
++        events.push(index as i32);
++    }
++    world.dirty[cell] = true;
++    world.dirty_flags[cell] |= 0x1f;
++}
+--- /dev/null
++++ b/mods/CycleTrim/OniSim/native/src/pressure_borrowed_tests.rs
+@@ -0,0 +1,346 @@
++use super::*;
++use crate::tables::{Disease, RangeInfo};
++
++fn elements() -> ElementTable {
++    let mut bytes = 4_i32.to_le_bytes().to_vec();
++    for (index, hash) in [0xa9360b34_u32, 0x2d39bf75, 0x6d95058c, 0x12345678]
++        .into_iter()
++        .enumerate()
++    {
++        let mut record = [0_u8; 164];
++        record[..4].copy_from_slice(&hash.to_le_bytes());
++        record[8..10].copy_from_slice(&(index as u16).to_le_bytes());
++        record[10] = [0, 0, 3, 1][index];
++        record[36..40].copy_from_slice(&0.25_f32.to_le_bytes());
++        bytes.extend_from_slice(&record);
++    }
++    bytes.extend_from_slice(&[0; 16]);
++    ElementTable::parse(&bytes).unwrap()
++}
++
++fn diseases() -> DiseaseTable {
++    let range = RangeInfo {
++        min_viable: 0.0,
++        min_growth: 0.0,
++        max_growth: 0.0,
++        max_viable: 0.0,
++    };
++    DiseaseTable {
++        element_count: 4,
++        diseases: (0..2)
++            .map(|id| Disease {
++                name: String::new(),
++                raw_header: [0; 76],
++                hash: id,
++                strength: (id + 1) as f32,
++                temperature_range: range.clone(),
++                temperature_half_lives: range.clone(),
++                pressure_range: range.clone(),
++                pressure_half_lives: range.clone(),
++                radiation_kill_rate: 0.0,
++                elements: Vec::new(),
++            })
++            .collect(),
++    }
++}
++
++fn fixture(elements: &ElementTable, direction: i32, seed: usize) -> PhysicsWorld {
++    let mut world =
++        PhysicsWorld::new(137, 79, 42, elements).unwrap_or_else(|e| panic!("{}", e.message));
++    for cell in 0..world.write.mass.len() {
++        let n = cell.wrapping_mul(17).wrapping_add(seed);
++        let x = cell % world.stride;
++        let y = cell / world.stride;
++        world.write.element[cell] =
++            if x == 0 || x == world.stride - 1 || y == 0 || y == world.padded_height - 1 {
++                2
++            } else if n % 11 == 0 {
++                1
++            } else {
++                3
++            };
++        world.write.mass[cell] = [0.0, 0.001, 1.0, 4.0, 1000.0, f32::from_bits(1), -0.0][n % 7];
++        world.write.temperature[cell] =
++            [0.0, 1.0, 273.15, 300.0, 1000.0, f32::from_bits(0x7fc12345)][n % 6];
++        world.write.properties[cell] = u8::from(n % 43 == 0);
++        world.write.disease_idx[cell] = [0, 1, 255][n % 3];
++        world.write.disease_count[cell] = [0, 1, 7, 10000, i32::MAX][n % 5];
++        world.write.disease_growth[cell] = f32::from_bits((n as u32).wrapping_mul(123457));
++        world.write.disease_infestation[cell] = n as u8;
++        world.flow[cell] = [n as f32 * 0.01; 4];
++        world.dirty[cell] = n % 7 == 0;
++        world.dirty_flags[cell] = (n % 32) as u8;
++    }
++    world.read.copy_from(&world.write);
++    world.scan_direction = direction;
++    world
++}
++
++fn equal(actual: &PhysicsWorld, expected: &PhysicsWorld) {
++    let a = &actual.write;
++    let e = &expected.write;
++    assert_eq!(a.element, e.element);
++    assert_eq!(a.disease_idx, e.disease_idx);
++    assert_eq!(a.disease_count, e.disease_count);
++    assert_eq!(a.disease_infestation, e.disease_infestation);
++    assert_eq!(a.properties, e.properties);
++    for (a, e) in [
++        (&a.mass, &e.mass),
++        (&a.temperature, &e.temperature),
++        (&a.disease_growth, &e.disease_growth),
++    ] {
++        assert!(a.iter().zip(e).all(|(a, e)| a.to_bits() == e.to_bits()));
++    }
++    assert!(
++        actual
++            .flow
++            .iter()
++            .flatten()
++            .zip(expected.flow.iter().flatten())
++            .all(|(a, e)| a.to_bits() == e.to_bits())
++    );
++    assert_eq!(actual.dirty, expected.dirty);
++    assert_eq!(actual.dirty_flags, expected.dirty_flags);
++}
++
++fn ids(events: &EventQueues) -> Vec<i32> {
++    let mut ids: Vec<_> = events
++        .substance_change_info
++        .iter()
++        .map(|e| e.cell_idx)
++        .collect();
++    ids.sort_unstable();
++    ids.dedup();
++    ids
++}
++
++#[test]
++fn row_plans_cover_exact_stencils_and_same_level_tiles_are_disjoint() {
++    use std::collections::HashSet;
++    let stride = 1024;
++    for width in [0, 1, 2, 31, 32, 33, 65, 137, 513] {
++        for height in [0, 1, 2, 15, 16, 17, 35, 137] {
++            if width == 0 || height == 0 {
++                continue;
++            }
++            for direction in [-1, 1] {
++                for (min_x, min_y) in [(1, 1), (3, 5)] {
++                    let region = Region {
++                        min_x,
++                        min_y,
++                        max_x: min_x + width,
++                        max_y: min_y + height,
++                        ..Region::default()
++                    };
++                    let nx = width as usize;
++                    let ny = height as usize;
++                    let bands = (nx - 1 + 2 * (ny - 1)) / BAND + 1;
++                    let row_bands = ny.div_ceil(SOURCE_ROWS);
++                    let mut sources = HashSet::new();
++                    for level in 0..bands + row_bands - 1 {
++                        let mut level_cells = HashSet::new();
++                        let mut plans = [Plan::default(); TILES];
++                        let mut count = 0;
++                        for band in level.saturating_sub(row_bands - 1)..=level.min(bands - 1) {
++                            let Some(plan) =
++                                Plan::new(region, stride, direction, band, level - band)
++                            else {
++                                continue;
++                            };
++                            let mut expected = HashSet::new();
++                            for (row, source) in plan.source.iter().enumerate() {
++                                for u in source.start..source.end {
++                                    let x = if direction > 0 {
++                                        min_x as usize + u
++                                    } else {
++                                        region.max_x as usize - u
++                                    };
++                                    let cell = (min_y as usize + plan.first_y + row) * stride + x;
++                                    assert!(sources.insert(cell));
++                                    let side = cell.wrapping_add_signed(direction as isize);
++                                    expected.extend([cell, side, cell + stride, side + stride]);
++                                }
++                            }
++                            let mut actual = HashSet::new();
++                            for row in 0..ROWS {
++                                for cell in plan.starts[row]..plan.starts[row] + plan.lengths[row] {
++                                    assert!(actual.insert(cell));
++                                    assert!(level_cells.insert(cell));
++                                }
++                            }
++                            assert_eq!(actual, expected);
++                            plans[count] = plan;
++                            count += 1;
++                            if count == TILES {
++                                ranges(&plans, count);
++                                count = 0;
++                            }
++                        }
++                        if count != 0 {
++                            ranges(&plans, count);
++                        }
++                    }
++                    assert_eq!(sources.len(), nx * ny);
++                }
++            }
++        }
++    }
++}
++
++#[test]
++fn row_borrows_preserve_original_addresses_and_only_mutate_their_ranges() {
++    let region = Region {
++        min_x: 3,
++        max_x: 140,
++        min_y: 5,
++        max_y: 40,
++        ..Region::default()
++    };
++    let mut plans = [Plan::default(); TILES];
++    plans[0] = Plan::new(region, 256, -1, 2, 0).unwrap();
++    plans[1] = Plan::new(region, 256, -1, 1, 1).unwrap();
++    let (order, used) = ranges(&plans, 2);
++    let order = &order[..used];
++    let mut values: Vec<u32> = (0..256 * 64).collect();
++    let base = values.as_ptr() as usize;
++    let mut touched = vec![false; values.len()];
++    {
++        let mut rows = borrow_rows(&mut values, order, &plans);
++        for range in order {
++            for global in range.start..range.start + range.len {
++                let cell = Coord {
++                    global,
++                    row: range.row,
++                };
++                let view = rows[range.tile].as_mut().unwrap();
++                assert_eq!(
++                    (&view[cell]) as *const u32 as usize,
++                    base + global * std::mem::size_of::<u32>()
++                );
++                view[cell] = u32::MAX;
++                touched[global] = true;
++            }
++        }
++    }
++    for (i, &value) in values.iter().enumerate() {
++        assert_eq!(value, if touched[i] { u32::MAX } else { i as u32 });
++    }
++}
++
++#[test]
++fn borrowed_pressure_matches_all_fields_under_sixteen_fp_controls() {
++    let elements = elements();
++    let diseases = diseases();
++    for rounding in [0, 0x2000, 0x4000, 0x6000] {
++        for denormals in [0, 0x40, 0x8000, 0x8040] {
++            let _guard = FloatEnv::capture()
++                .control_for_test(rounding | denormals)
++                .install();
++            for workers in [2, 4] {
++                let pool = rayon::ThreadPoolBuilder::new()
++                    .num_threads(workers)
++                    .build()
++                    .unwrap();
++                for direction in [-1, 1] {
++                    for seed in [0, 42, 12345] {
++                        for region in [
++                            Region {
++                                min_x: 1,
++                                max_x: 137,
++                                min_y: 1,
++                                max_y: 79,
++                                ..Region::default()
++                            },
++                            Region {
++                                min_x: 3,
++                                max_x: 134,
++                                min_y: 5,
++                                max_y: 76,
++                                ..Region::default()
++                            },
++                            Region {
++                                min_x: 40,
++                                max_x: 41,
++                                min_y: 7,
++                                max_y: 78,
++                                ..Region::default()
++                            },
++                        ] {
++                            let mut serial = fixture(&elements, direction, seed);
++                            let mut parallel = fixture(&elements, direction, seed);
++                            let mut expected = EventQueues::default();
++                            let mut actual = EventQueues::default();
++                            for y in region.min_y..region.max_y {
++                                let x_values: Vec<_> = if direction > 0 {
++                                    (region.min_x..region.max_x).collect()
++                                } else {
++                                    (region.min_x + 1..=region.max_x).rev().collect()
++                                };
++                                for x in x_values {
++                                    let cell = y as usize * serial.stride + x as usize;
++                                    super::super::pressure_cell(
++                                        &mut serial,
++                                        &elements,
++                                        &diseases,
++                                        &mut expected,
++                                        cell,
++                                    );
++                                }
++                            }
++                            assert!(run_with_pool(
++                                &mut parallel,
++                                &elements,
++                                &diseases,
++                                &mut actual,
++                                region,
++                                &pool
++                            ));
++                            equal(&parallel, &serial);
++                            assert_eq!(ids(&actual), ids(&expected));
++                        }
++                    }
++                }
++            }
++        }
++    }
++}
++
++#[test]
++fn immutable_solid_region_skips_pressure_without_mutation() {
++    let elements = elements();
++    let diseases = diseases();
++    let pool = rayon::ThreadPoolBuilder::new()
++        .num_threads(4)
++        .build()
++        .unwrap();
++    let mut world = fixture(&elements, 1, 42);
++    world.read.element.fill(2);
++    world.write.element.fill(2);
++    let before_mass: Vec<_> = world.write.mass.iter().map(|x| x.to_bits()).collect();
++    let mut events = EventQueues::default();
++    let region = Region {
++        min_x: 1,
++        max_x: 137,
++        min_y: 1,
++        max_y: 79,
++        ..Region::default()
++    };
++    assert!(run_with_pool(
++        &mut world,
++        &elements,
++        &diseases,
++        &mut events,
++        region,
++        &pool
++    ));
++    assert_eq!(
++        world
++            .write
++            .mass
++            .iter()
++            .map(|x| x.to_bits())
++            .collect::<Vec<_>>(),
++        before_mass
++    );
++    assert!(events.substance_change_info.is_empty());
++}

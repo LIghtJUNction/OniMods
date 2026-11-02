@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "context_menu_surfaces_audit", "user_menu_coverage_audit" },
                 Tags = new List<string> { "coverage", "audit", "user-menu", "context-menu", "tools", "resources" },
                 Description = "审计 ONI 源码中玩家 UserMenu/context-menu 按钮来源与 MCP 工具/资源覆盖映射，并标注是否来自 U59 OnRefreshUserMenuDelegate 元数据",
                 Parameters = new Dictionary<string, McpToolParameter>

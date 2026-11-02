@@ -1,0 +1,20 @@
+{
+  "checked_at_utc": "2026-10-19T21:12:49.857530+00:00",
+  "lean_version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+  "source_compile_exit_code": 0,
+  "axiom_report_exit_code": 0,
+  "checked_theorem_count": 34,
+  "logical_dependencies": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "source_sha256": {
+    "SimDiamond.lean": "fbf6ffb534e99ddb9189fd0c89a5c7944be53f523eb0c5d9ade3edc94d43b0f5",
+    "ProofChecks.lean": "4e2f01942552dbe7df9484ad3ce31301eaf8d8bbd0c67b7bc0c443f9b9c725af",
+    "lean-toolchain": "55e97be96000b5e9e290c9e74482e5e317861499a5540353ce845471bded8cea",
+    "lakefile.toml": "394b784b6571ab96fb1e74c684c81aa1564a583e4568712b889154a38dcb4215",
+    "verify.sh": "f204fdcb884db526dd8b1586686c2de0b0db2a125afcc20d399bf49a37598b31"
+  },
+  "scope": "Bounded coordinate graph, finite BFS reference, row enumeration, cell-local updates; not the proprietary SimDLL binary or compiled Rust machine code."
+}

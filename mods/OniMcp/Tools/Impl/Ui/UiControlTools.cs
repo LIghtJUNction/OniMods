@@ -14,13 +14,12 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "ui_unified_control", "player_feedback_control" },
                 Tags = new List<string> { "ui", "action", "feedback", "hint", "marker", "management", "overlay" },
                 Description = "UI 聚合入口：domain=action/feedback。action 读取或触发安全 UI Action，feedback 创建通知/浮字/复制人聊天气泡/地图标记。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
                     ["domain"] = new McpToolParameter { Type = "string", Description = "action 或 feedback", Required = true, EnumValues = new List<string> { "action", "feedback" } },
-                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=action: list/trigger/open_management；domain=feedback: notification/popup/speech_bubble/marker", Required = true },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "domain=action: list/trigger/open_management/open_load_menu；domain=feedback: notification/popup/speech_bubble/marker", Required = true },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "domain=action action=list 时过滤类型：all/management/overlay/build/navigation；其他 domain 按子工具语义使用", Required = false },
                     ["uiAction"] = new McpToolParameter { Type = "string", Description = "domain=action action=trigger 时的 Action 枚举名", Required = false },
                     ["screen"] = new McpToolParameter { Type = "string", Description = "domain=action action=open_management 时的页面名", Required = false },

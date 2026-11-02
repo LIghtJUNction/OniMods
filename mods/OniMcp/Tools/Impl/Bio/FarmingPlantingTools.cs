@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "plantable_seeds_list", "seeds_catalog" },
                 Tags = new List<string> { "farming", "plants", "seeds", "catalog" },
                 Description = "兼容入口：请优先使用 farming_planting_control action=seed_catalog。列出 PlantableSeed prefab 及其标签事实；planterBoxCandidate 仅表示 CropSeed 候选，最终兼容性必须由具体 plot 的 IsValidEntity/预览状态验证。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -63,7 +62,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "planter_set_seed", "plant_seed_select" },
                 Tags = new List<string> { "farming", "plants", "planters", "seeds" },
                 Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=set。设置或取消种植箱/农砖的种子请求；可选 removeOccupant=true 先铲除当前植物",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

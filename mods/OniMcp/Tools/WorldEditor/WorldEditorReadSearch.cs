@@ -31,7 +31,7 @@ namespace OniMcp.Tools
                     return GameControlEntryTools.ControlGame().Handler(Child(args, "state", "status"));
                 if (relative == "colony/status.oni")
                     return ColonyTools.ControlColony().Handler(Child(args, "snapshot", "get", ("profile", "minimal")));
-                if (relative == "map/viewport.html" || relative == "map/viewport.md" || relative == "map/index.html" || relative == "map/index.md")
+                if (relative == "map/viewport.html" || relative == "map/viewport.md")
                     return CallToolResult.Text(ReadMapFileWithArgs(args, path));
                 if (TryParseZoomPath(relative, out int zoomX1, out int zoomY1, out int zoomX2, out int zoomY2))
                 {
@@ -90,8 +90,6 @@ namespace OniMcp.Tools
                     return Search(args, "buildings");
                 if (relative == "buildings/plans.oni")
                     return ReadEditableTemplate(path, "Add or change desired buildings by replacing text in this file.");
-                if (relative == "orders/orders.oni")
-                    return CallToolResult.Text("# " + path + "\n\nThis legacy file is read-only. Use `/active/ops/orders.md` for executable orders.\n");
                 if (relative == "resources/inventory.oni")
                     return ReadTools.ControlRead().Handler(Child(args, "resources", "inventory"));
                 if (relative == "resources/food.oni")

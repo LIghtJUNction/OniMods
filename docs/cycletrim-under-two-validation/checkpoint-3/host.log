@@ -1,0 +1,42 @@
+[CycleTrim] Conveyor search call shape changed; retaining original searches.
+PASS Conveyor path lookup: 2358 assertions; 2059 original/patched path-order, identity, mutation and callback comparisons
+[CycleTrim] Power overlay call shape changed; retaining the original calls.
+PASS Power overlay: 280 assertions; real Harmony over original synthetic fixtures
+POWER_GUARD_FAMILIES Finalizers,InnerPostfixes,InnerPrefixes,Postfixes,Prefixes,Transpilers
+[CycleTrim] Save metadata optimization skipped: expected 2 attribute queries and 1 type name, found 1 and 1.
+[CycleTrim] Save metadata optimization skipped: expected 2 attribute queries and 1 type name, found 3 and 1.
+[CycleTrim] Save metadata optimization skipped: expected 2 attribute queries and 1 type name, found 2 and 0.
+[CycleTrim] Save metadata optimization skipped: expected 2 attribute queries and 1 type name, found 2 and 1 with an unsupported IL prefix.
+PASS save metadata: 375 assertions; real Harmony, byte comparison, weak lifetime and concurrency
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+[CycleTrim] Animation symbol optimization skipped: modified or unsupported setter/dirty contract.
+PASS animation symbols: 4894 assertions; real Harmony, exact payload bits, partial failures and upload protocol
+PASS CycleTrim optimization host regressions (synthetic game fixtures)

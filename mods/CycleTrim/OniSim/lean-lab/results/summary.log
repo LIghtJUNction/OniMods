@@ -1,0 +1,34 @@
+{
+  "scope": "Actual disease emitter Rust component with real disease arithmetic; minimal world adapter; no game FPS claim",
+  "timing_unit": "nanoseconds per complete search or update call",
+  "paired_ratio_definition": "For each pair: baseline ns/call divided by candidate ns/call; summarize the eight ratios",
+  "ratio_of_medians_definition": "Median baseline ns/call divided by median candidate ns/call; distinct from median paired ratio",
+  "raw_phase_counts": {
+    "warmup": 537,
+    "calibration": 236,
+    "measured": 960
+  },
+  "measured_blocks": 960,
+  "case_count": 60,
+  "pairs_per_case": 8,
+  "gates": {
+    "correctness_passed": true,
+    "correctness_cases": 65040,
+    "common_depth_cases": 36,
+    "common_depth_median_paired_time_reduction_above_5_percent": true,
+    "failed_common_cases": [],
+    "deeper_or_common_regressions": [],
+    "source_unchanged_during_timing": true,
+    "candidate_zero_allocations_all_cases": true
+  }
+}
+search_1024x1024_d1_e1 K= 1 baseline_us= 11.078553 candidate_us= 0.009987 median_paired_speedup= 1119.127 ratio_of_medians= 1109.27
+update_1024x1024_d1_e8 K= 8 baseline_us= 97.560676 candidate_us= 0.096428 median_paired_speedup= 1006.002 ratio_of_medians= 1011.749
+search_1024x1024_d4_e1 K= 25 baseline_us= 12.232126 candidate_us= 0.050289 median_paired_speedup= 245.153 ratio_of_medians= 243.236
+update_1024x1024_d4_e8 K= 200 baseline_us= 100.834871 candidate_us= 0.765102 median_paired_speedup= 130.69 ratio_of_medians= 131.793
+search_1024x1024_d16_e1 K= 481 baseline_us= 20.474795 candidate_us= 0.526631 median_paired_speedup= 38.98 ratio_of_medians= 38.879
+update_1024x1024_d16_e8 K= 3848 baseline_us= 170.650729 candidate_us= 12.098697 median_paired_speedup= 13.894 ratio_of_medians= 14.105
+search_1024x1024_d64_e1 K= 8065 baseline_us= 147.086664 candidate_us= 10.924904 median_paired_speedup= 13.567 ratio_of_medians= 13.463
+update_1024x1024_d64_e8 K= 63224 baseline_us= 1323.820825 candidate_us= 224.388144 median_paired_speedup= 5.78 ratio_of_medians= 5.9
+search_1024x1024_d255_e1 K= 129541 baseline_us= 2389.9413 candidate_us= 125.672797 median_paired_speedup= 19.113 ratio_of_medians= 19.017
+update_1024x1024_d255_e8 K= 869271 baseline_us= 20974.855 candidate_us= 2725.6585 median_paired_speedup= 7.626 ratio_of_medians= 7.695

@@ -106,7 +106,6 @@ REFERENCE_CONTRACT_INPUTS = (
     "global.json",
     "NuGet.Config",
     "nuget.config",
-    "benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj",
 )
 
 

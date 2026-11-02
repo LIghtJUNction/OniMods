@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify path-probe dequeues do not allocate tracking state for untracked navigators."""
+"""Verify worker dequeues preserve queued identity without allocating untracked state."""
 
 from pathlib import Path
 import re
@@ -34,15 +34,21 @@ def main() -> int:
             "managerState.Navigators.TryGetValue(navigator, out state)",
             "navigator dequeue state lookup must be non-creating",
         ),
-        (
-            "SynchronizeNavigatorTick(managerState, state);",
-            "tracked dequeue must preserve existing tick synchronization",
-        ),
     ):
         if needle not in helper:
             raise AssertionError(message)
     if "GetOrCreateValue" in helper or "States.GetValue" in helper:
         raise AssertionError("non-creating dequeue lookup regressed to allocating state")
+    if "SynchronizeNavigatorTick" in helper or ".BeginTick(" in helper:
+        raise AssertionError("worker dequeue must not discard its queued stamp after the main-thread tick advances")
+
+    creation = body_between(
+        source,
+        "private static NavigatorState GetNavigatorState(",
+        "private static bool TryGetNavigatorState(",
+    )
+    if "SynchronizeNavigatorTick(managerState, state);" not in creation:
+        raise AssertionError("new main-thread work orders must still discard prior-tick queued state")
 
     next_task = body_between(
         source,

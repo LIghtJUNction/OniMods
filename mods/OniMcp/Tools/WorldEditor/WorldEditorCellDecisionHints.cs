@@ -7,8 +7,9 @@ namespace OniMcp.Tools
 {
     public static partial class WorldEditorTools
     {
-        private static void AppendCellDecisionHints(StringBuilder sb, int x, int y, int cell)
+        private static void AppendCellDecisionHints(StringBuilder sb, int x, int y, int cell, bool compact = false)
         {
+            int startLength = sb.Length;
             sb.AppendLine();
             sb.AppendLine("## Decision Hints");
 
@@ -18,8 +19,10 @@ namespace OniMcp.Tools
             wrote |= AppendPortDecisionHint(sb, x, y, cell);
             wrote |= AppendNetworkDecisionHint(sb, x, y, cell);
 
-            if (!wrote)
+            if (!wrote && !compact)
                 sb.AppendLine("- no immediate order/network/thermal hint; use Next Reads for local context.");
+            if (!wrote && compact)
+                sb.Length = startLength;
         }
 
         private static bool AppendThermalDecisionHint(StringBuilder sb, int x, int y, int cell)

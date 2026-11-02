@@ -36,7 +36,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "build_place_area", "build_blueprints" },
                 Tags = new List<string> { "buildings", "batch", "area", "footprint", "建造", "批量" },
                 Description = "按 anchor 列表或区域批量放置建造蓝图。执行前会预检 footprint、支撑、材料和明显碰撞；遇到可挖自然固体时默认先标记挖掘，dryRun=true 只返回预览。",
                 Parameters = parameters,
@@ -94,7 +93,8 @@ namespace OniMcp.Tools
                     foreach (var anchor in anchors)
                     {
                         int worldId = ToolUtil.ResolveWorldId(args);
-                        var batchOverlap = PlannedFootprintOverlap(def, anchor.x, anchor.y, worldId, preflightFootprints);
+                        var batchOverlap = PlannedFootprintOverlap(def, anchor.x, anchor.y, worldId, preflightFootprints,
+                            ParseOrientation(args["orientation"]?.ToString()));
                         if (batchOverlap != null)
                         {
                             previews.Add(ErrorResult(prefabId, anchor.x, anchor.y,
@@ -102,6 +102,7 @@ namespace OniMcp.Tools
                             continue;
                         }
                         var preview = TryPlanOne(prefabId, anchor.x, anchor.y, preflightArgs, preflightSupport);
+                        AddConstructionDiagnostics(preview, prefabId, anchor.x, anchor.y, worldId);
                         bool valid = preview.ContainsKey("valid") && (bool)preview["valid"];
                         if (valid)
                         {
@@ -114,7 +115,8 @@ namespace OniMcp.Tools
                             actionableAnchors.Add(anchor);
                         }
                         if (valid || IsAutoDiggableFailure(preview))
-                            ReservePlannedFootprint(def, anchor.x, anchor.y, worldId, preflightFootprints);
+                            ReservePlannedFootprint(def, anchor.x, anchor.y, worldId, preflightFootprints,
+                                ParseOrientation(args["orientation"]?.ToString()));
                         previews.Add(preview);
                     }
 
@@ -173,6 +175,7 @@ namespace OniMcp.Tools
             foreach (var anchor in executionAnchors)
                     {
                         var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport, autoDigContext);
+                        AddConstructionDiagnostics(result, prefabId, anchor.x, anchor.y, ToolUtil.ResolveWorldId(args));
                         bool wasPlanned = GetBool(result, "planned");
                         bool wasAlreadyPresent = GetBool(result, "alreadyPresent");
                         bool wasAlreadyConnected = GetBool(result, "alreadyConnected");
@@ -238,6 +241,7 @@ namespace OniMcp.Tools
                         ? "Some anchors remain blocked or pending auto-dig. Inspect remainingAction/preflightErrors."
                         : "Batch complete.",
                         ["preflightErrors"] = hardFailedPreviews.Take(50).ToList(),
+                        ["batchConstructionDiagnostics"] = BatchConstructionDiagnostics(results),
                         ["results"] = results
                     };
                     if (!string.IsNullOrEmpty(executionConflictReason))

@@ -224,7 +224,7 @@ namespace OniMcp.Server
                 ApplyCorsHeaders(response, corsOrigin);
 
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS");
-                response.Headers.Add("Access-Control-Allow-Headers", BuildModernCorsAllowedHeaders());
+                response.Headers.Add("Access-Control-Allow-Headers", "Authorization, Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, X-Oni-Mcp-Token");
                 response.Headers.Add("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
 
                 if (request.HttpMethod == "OPTIONS")
@@ -258,12 +258,9 @@ namespace OniMcp.Server
                 string sessionId = request.Headers["Mcp-Session-Id"];
                 string protocolVersion = request.Headers["Mcp-Protocol-Version"];
 
-                if (string.Equals(protocolVersion, ModernProtocolVersion, StringComparison.Ordinal)
-                    && (request.HttpMethod == "GET" || request.HttpMethod == "DELETE"))
+                if (!string.IsNullOrEmpty(protocolVersion) && !IsSupportedProtocolVersion(protocolVersion))
                 {
-                    response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
-                    response.ContentLength64 = 0;
-                    response.Close();
+                    SendJson(response, UnsupportedProtocolVersion(null, protocolVersion), 400);
                     return;
                 }
 

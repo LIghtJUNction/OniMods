@@ -24,11 +24,6 @@ internal static class LegacySessionLifecycleRegressionEntry
         RunLifecycleRegression();
         RunBoundedCleanupStressRegression();
 
-        var existing = typeof(ModernFiniteProgressTokenRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing server regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunLifecycleRegression()
@@ -49,11 +44,6 @@ internal static class LegacySessionLifecycleRegressionEntry
         {
             using (var client = NewClient())
             {
-                using (var modern = PostModernDiscover(client, 31000))
-                    Assert(modern.StatusCode == HttpStatusCode.OK, "Modern discovery failed");
-                Assert(server.GetSessionSummaries().Count == 0,
-                    "Modern 2026 request allocated legacy session state");
-
                 string sessionA = Initialize(client, 31001, HttpStatusCode.OK);
                 var retainedA = FindSession(server, sessionA);
                 Assert(server.GetSessionSummaries().Count == 1, "First initialize did not create exactly one session");
@@ -61,7 +51,7 @@ internal static class LegacySessionLifecycleRegressionEntry
                 string originalClientName = retainedA.ClientInfo?.Name;
 
                 now = now.AddMinutes(1);
-                using (var reinitialize = ReinitializeResponse(client, 31009, sessionA, "2025-06-18"))
+                using (var reinitialize = ReinitializeResponse(client, 31009, sessionA, "2025-11-25"))
                 {
                     Assert(reinitialize.StatusCode == HttpStatusCode.BadRequest,
                         "Established legacy session accepted a second initialize request");
@@ -115,11 +105,6 @@ internal static class LegacySessionLifecycleRegressionEntry
                     using (var stillFull = InitializeResponse(client, 31006))
                         Assert(stillFull.StatusCode == HttpStatusCode.ServiceUnavailable,
                             "Active SSE session stopped counting toward finite retained capacity");
-
-                    using (var modern = PostModernDiscover(client, 31007))
-                        Assert(modern.StatusCode == HttpStatusCode.OK, "Modern discovery changed while legacy sessions existed");
-                    Assert(server.GetSessionSummaries().Count == 2,
-                        "Modern 2026 request changed legacy session state");
 
                     DeleteLegacy(client, sessionC);
                     Assert(server.GetSessionSummaries().Count == 1
@@ -297,19 +282,6 @@ internal static class LegacySessionLifecycleRegressionEntry
         Task<HttpResponseMessage> work = client.SendAsync(request);
         PumpUntil(work);
         return work.GetAwaiter().GetResult();
-    }
-
-    private static HttpResponseMessage PostModernDiscover(HttpClient client, int id)
-    {
-        string body = "{\"jsonrpc\":\"2.0\",\"method\":\"server/discover\",\"id\":" + id
-            + ",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
-            + "\"io.modelcontextprotocol/clientCapabilities\":{}}}}";
-        var request = new HttpRequestMessage(HttpMethod.Post, "");
-        request.Content = new StringContent(body, Encoding.UTF8, "application/json");
-        request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
-        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
-        request.Headers.TryAddWithoutValidation("Mcp-Method", "server/discover");
-        return client.SendAsync(request).GetAwaiter().GetResult();
     }
 
     private static HttpResponseMessage OpenLegacySse(HttpClient client, string sessionId)

@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "scope": "Exact committed-source archive compilation and isolated test preparation; no real-game execution",
+  "source_commit": "ec25fe4666047ef6878e436147c9d8d613c927e2",
+  "source_archive_sha256": "af9b1c176bb010f78ae655fd6cd8e08b703b8d3f34b3944297c0f4bd3c7d0954",
+  "package_sha256": "0fe6fa4e9a8e14de85f080501b990b459850697e15ba272ed146c2ca9d3280b2",
+  "managed_sha256": "86b980aa0e913d02d01fee36ea2b15f109d50a29d30a399f415ceb87ca258be9",
+  "native_sha256": "8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0",
+  "installed_reference_managed_sha256": "6db652990ad1038e86b3493ed43004e12bfd61e62a4be60c787a9a9b9ac52ee1",
+  "isolated_build": true,
+  "ambient_build_imports_disabled": true,
+  "compiler_wrappers_disabled": true,
+  "zip_crc_and_binary_hashes_verified": true,
+  "native_matches_verified_canonical": true,
+  "runtime_accepted": false,
+  "concurrency_accepted": false,
+  "whole_game_speedup_established": false,
+  "promoted": false,
+  "groups": [
+    {
+      "requested_core": "rust",
+      "profiles": 4,
+      "threads_per_profile": 4,
+      "group_sha256": "3683baee907b32bc298c68640a0c516b70cadd6500a08aa70ad2a91c3b783af0",
+      "runtime_validated": false
+    },
+    {
+      "requested_core": "official",
+      "profiles": 4,
+      "threads_per_profile": 4,
+      "group_sha256": "69be64a18479fb6b4ed8495c7d39b8261bcda831604d60b2d918b9d4f35ff4eb",
+      "runtime_validated": false
+    }
+  ],
+  "capacity": {
+    "count1_passed": false,
+    "count4_passed": false,
+    "available_bytes_count1": 4780811264,
+    "required_bytes_count1": 6442450944,
+    "required_bytes_count4": 22548578304,
+    "games_started": 0
+  },
+  "scope_note": "This snapshot follows the ModInfo partial extraction. Historical f872 managed/runtime inputs do not validate this 86b9 DLL."
+}

@@ -65,15 +65,23 @@ namespace OniMcp.Server
 
         private const string CurrentProtocolVersion = "2025-11-25";
 
-        private const string LegacyProtocolVersion = "2025-06-18";
-
         private const int LegacyResourceNotFoundErrorCode = -32002;
 
-        private static readonly string[] SupportedProtocolVersions = { CurrentProtocolVersion, LegacyProtocolVersion };
+        private static readonly string[] SupportedProtocolVersions = { CurrentProtocolVersion };
 
         private static bool IsSupportedProtocolVersion(string protocolVersion)
         {
             return SupportedProtocolVersions.Any(version => string.Equals(version, protocolVersion, StringComparison.Ordinal));
+        }
+
+        private static JsonRpcResponse UnsupportedProtocolVersion(object id, string requestedVersion)
+        {
+            return JsonRpcResponse.MakeError(id, -32022,
+                $"Unsupported protocol version: {requestedVersion}", new JObject
+                {
+                    ["requested"] = requestedVersion,
+                    ["supported"] = new JArray(CurrentProtocolVersion)
+                });
         }
 
         private object HandleInitialize(object id, InitializeParams @params, string sessionId)
@@ -86,8 +94,7 @@ namespace OniMcp.Server
 
             if (!IsSupportedProtocolVersion(clientVersion))
             {
-                return JsonRpcResponse.MakeError(id, McpErrorCode.InvalidRequest,
-                    $"Unsupported protocol version: {clientVersion}. Supported: {string.Join(", ", SupportedProtocolVersions)}");
+                return UnsupportedProtocolVersion(id, clientVersion);
             }
 
             string negotiatedVersion = clientVersion;

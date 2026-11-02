@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "passed": true,
+  "source_native_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "instrumented_native_sha256": "bf9db684d73361c63ba7f7834bca4529280455e9fa2346fdeeee6770dde9079e",
+  "private_summary_sha256": "b31b45a1a05b56c9f4c69f927b40f91e7e05b61156164d583b58a665fbcd9e50",
+  "scope": "Three private instrumented germ-flow runs. Phase wall intervals include scheduling effects and all 400 ticks including warmup. Not performance acceptance or a speedup comparison.",
+  "runs": 3,
+  "ticks_per_run": 400,
+  "all_final_publications_match_official": true,
+  "phase_shares": {
+    "preflight_initial_copy": {
+      "median_percent": 3.095430398412576,
+      "minimum_percent": 3.021749415237287,
+      "maximum_percent": 3.2969603333880064
+    },
+    "temperature": {
+      "median_percent": 6.291699322313095,
+      "minimum_percent": 6.263027900518081,
+      "maximum_percent": 6.314362051536913
+    },
+    "copy_after_temperature": {
+      "median_percent": 0.6265433079350835,
+      "minimum_percent": 0.5986972905902916,
+      "maximum_percent": 0.8108780637426156
+    },
+    "gas_phase": {
+      "median_percent": 36.430276398778815,
+      "minimum_percent": 36.15913409159206,
+      "maximum_percent": 36.60408194397007
+    },
+    "copy_and_merge": {
+      "median_percent": 0.8325292548061004,
+      "minimum_percent": 0.7201624983810522,
+      "maximum_percent": 1.046969035093386
+    },
+    "liquid_and_copy": {
+      "median_percent": 6.603542943266374,
+      "minimum_percent": 6.556929545294271,
+      "maximum_percent": 6.694911766546572
+    },
+    "disease_diffusion": {
+      "median_percent": 20.140057297155828,
+      "minimum_percent": 20.056347153828643,
+      "maximum_percent": 20.18966005353065
+    },
+    "radiation_and_components": {
+      "median_percent": 0.032062719766498216,
+      "minimum_percent": 0.030079556051325323,
+      "maximum_percent": 0.03611341216942945
+    },
+    "cell_postprocess": {
+      "median_percent": 17.53889220082656,
+      "minimum_percent": 17.417469493292234,
+      "maximum_percent": 17.56907272812733
+    },
+    "disease_postprocess": {
+      "median_percent": 8.331166036778647,
+      "minimum_percent": 8.21818874982897,
+      "maximum_percent": 8.473005037241228
+    }
+  },
+  "interpretation": "Gas phase and disease diffusion are the largest stages in this authored germ fixture. These elapsed stage fractions include scheduling and instrumentation effects; they are not game FPS or a direct code-regression attribution."
+}

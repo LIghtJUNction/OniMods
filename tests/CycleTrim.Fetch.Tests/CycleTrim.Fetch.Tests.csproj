@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>7.3</LangVersion>
+    <NuGetAudit>false</NuGetAudit>
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../../mods/CycleTrim/Core/CycleTrimPatchOptions.cs" Link="CycleTrimPatchOptions.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/ThreadLocalObjectPool.cs" Link="ThreadLocalObjectPool.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/FetchCandidateBuffer.cs" Link="FetchCandidateBuffer.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/FetchLayoutControl.cs" Link="FetchLayoutControl.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/FetchLayoutExperiment.cs" Link="FetchLayoutExperiment.cs" />
+    <Compile Include="../../mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs" Link="FetchPickupCandidatePatch.cs" />
+  </ItemGroup>
+</Project>

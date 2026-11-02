@@ -1,0 +1,8 @@
+R3_CONFIG {"family":"regression","scenario":"power","mode":"test","pair":0,"assembly_sha256":"4f0d46fd88a7bea0480009d76c939bc29cb56dae49f5520759d2a5ea802175f4","order":"original,patched"}
+[CycleTrim] Power overlay call shape changed; retaining the original calls.
+System.InvalidOperationException: InnerPrefixes metadata blocks reuse for dependencies
+   at CycleTrim.Optimizations.Tests.PowerOverlayRegression.Check(Boolean condition, String message) in /tmp/cycletrim-r4-power-negative/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs:line 765
+   at CycleTrim.Optimizations.Tests.PowerOverlayRegression.TestsPatchFamilyMetadata() in /tmp/cycletrim-r4-power-negative/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs:line 559
+   at CycleTrim.Optimizations.Tests.PowerOverlayRegression.Run() in /tmp/cycletrim-r4-power-negative/tests/CycleTrim.Optimizations.Tests/PowerOverlayRegression.cs:line 46
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)

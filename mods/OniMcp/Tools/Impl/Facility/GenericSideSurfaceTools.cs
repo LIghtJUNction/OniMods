@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "read/write",
                 Risk = "high",
-                Aliases = new List<string> { "generic_side_surface_control", "side_screen_control", "side_controls" },
                 Tags = new List<string> { "controls", "side-screen", "user-menu", "button", "checklist", "progress", "related-entities", "options", "automation", "facility" },
                 Description = "对象 surface 聚合工具。domain=generic/option/activation/automation/facility/misc/geo_tuner/user_menu/maintenance；generic 下 kind=button/checklist/progress/related，user_menu/maintenance 路由对象 UserMenu 操作。",
                 Parameters = Params(),

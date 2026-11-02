@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <NuGetAudit>false</NuGetAudit>
+    <NoWarn>$(NoWarn);SYSLIB0021;SYSLIB0023;CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../mods/OniOnline/Multiplayer/NativeWorkJournal.cs;../../mods/OniOnline/Multiplayer/RemoteWorkTypes.cs;../../mods/OniOnline/Multiplayer/RemoteWorkAuthority.cs;../../mods/OniOnline/Multiplayer/RemoteWorkWire.cs;../../mods/OniOnline/Multiplayer/RemoteWorkPersistence.cs" Link="Production/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

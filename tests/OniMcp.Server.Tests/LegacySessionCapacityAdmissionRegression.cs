@@ -23,11 +23,6 @@ internal static class LegacySessionCapacityAdmissionRegressionEntry
     {
         RunCapacityAdmissionRegression();
 
-        var existing = typeof(LegacySseDisconnectActivityRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing server regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunCapacityAdmissionRegression()

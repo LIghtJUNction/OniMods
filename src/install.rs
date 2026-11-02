@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use std::env;
-use std::fs;
 use std::path::PathBuf;
 
 use crate::archive;
@@ -12,6 +11,20 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
         Some(path) => PathBuf::from(path),
         None => env::current_dir().context("读取当前目录失败")?,
     };
+
+    let dev_dir = cfg.dev_mod_dir(&selected.name)?;
+    let legacy_dev_dir = cfg.legacy_dev_mod_dir(&selected.name)?;
+    if dev_dir.exists() || (legacy_dev_dir != dev_dir && legacy_dev_dir.exists()) {
+        let shadow = if dev_dir.exists() {
+            dev_dir
+        } else {
+            legacy_dev_dir
+        };
+        anyhow::bail!(
+            "检测到同名 Dev 模组：{}；请先执行 `onim uninstall --scope dev` 或移走该目录，再安装 Local 版本",
+            shadow.display()
+        );
+    }
 
     // 1. 构建 Release
     build::run(cfg, selected, true)?;
@@ -28,14 +41,7 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     let local_dir = cfg.local_mod_dir(&selected.name)?;
     println!("\n📥 安装到 Local 目录：{}", local_dir.display());
 
-    if local_dir.exists() {
-        fs::remove_dir_all(&local_dir)
-            .with_context(|| format!("清理旧 Local 目录失败：{}", local_dir.display()))?;
-    }
-    fs::create_dir_all(&local_dir)
-        .with_context(|| format!("创建 Local 目录失败：{}", local_dir.display()))?;
-
-    archive::unzip(&zip, &local_dir)?;
+    archive::install(&zip, &local_dir, &assembly_name, || Ok(()))?;
 
     println!("✅ 已正式安装到游戏 Local 目录");
     println!("   启动游戏 → Mod 列表 → 启用 '{}'", selected.name);

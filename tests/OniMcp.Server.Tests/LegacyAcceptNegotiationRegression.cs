@@ -20,11 +20,6 @@ internal static class LegacyAcceptNegotiationRegressionEntry
     {
         RunLegacyAcceptNegotiationRegression();
 
-        var existing = typeof(LegacyDiagnosticsExpiredSessionRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing server regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunLegacyAcceptNegotiationRegression()
@@ -107,51 +102,40 @@ internal static class LegacyAcceptNegotiationRegressionEntry
                 Assert(server.GetSessionSummaries().Count == 1,
                     "Rejected malformed request changed legacy session ownership");
 
-                var cases = new (int Id, string Accept, bool LegacyAccepted, bool ModernAccepted, string Scenario)[]
+                var cases = new (int Id, string Accept, bool Accepted, string Scenario)[]
                 {
-                    (51005, null, true, false, "Missing Accept header"),
-                    (51006, "application/*", true, false, "Application wildcard"),
-                    (51007, "application/json, text/event-stream", true, true, "Explicit media types"),
-                    (51008, "application/json;q=0, */*;q=1", false, false, "Exact rejection overrides wildcard"),
-                    (51009, "application/*;q=0, */*;q=1", false, false, "Application rejection overrides wildcard"),
-                    (51010, "application/json;q=0.1, */*;q=0", true, true, "Exact acceptance overrides wildcard"),
-                    (51012, "application/json;profile=fixture, */*;q=0", false, false, "Unmatched JSON parameter"),
-                    (51013, "application/*;version=2, */*;q=0", false, false, "Unmatched wildcard parameter"),
-                    (51014, "application/json;profile=fixture;q=1, application/json;q=0.5", true, true,
+                    (51005, null, true, "Missing Accept header"),
+                    (51006, "application/*", true, "Application wildcard"),
+                    (51007, "application/json, text/event-stream", true, "Explicit media types"),
+                    (51008, "application/json;q=0, */*;q=1", false, "Exact rejection overrides wildcard"),
+                    (51009, "application/*;q=0, */*;q=1", false, "Application rejection overrides wildcard"),
+                    (51010, "application/json;q=0.1, */*;q=0", true, "Exact acceptance overrides wildcard"),
+                    (51012, "application/json;profile=fixture, */*;q=0", false, "Unmatched JSON parameter"),
+                    (51013, "application/*;version=2, */*;q=0", false, "Unmatched wildcard parameter"),
+                    (51014, "application/json;profile=fixture;q=1, application/json;q=0.5", true,
                         "Unmatched range does not mask a matching range"),
-                    (51015, "application/json;q=0.1234", false, false, "Four-digit qvalue"),
-                    (51016, "application/json;q=0.123", true, true, "Three-digit qvalue"),
-                    (51017, "application/json;q=0;q=1", false, false, "Duplicate increasing q weights"),
-                    (51018, "application/json;q=1;q=0", false, false, "Duplicate decreasing q weights"),
-                    (51019, "application/json;q=1;profile=fixture", false, false, "Unmatched parameter after q"),
-                    (51020, "application/json;q=0.5;", false, false, "Empty trailing parameter"),
-                    (51021, "application/json;Q = 0.500", true, true, "Case-insensitive q with whitespace"),
-                    (51022, "application/json;q=0, application/json;q=0.5", true, true, "Matching range alternatives"),
-                    (51023, "application/json;profile=fixture;q=bogus, application/json;q=0.2", true, true,
+                    (51015, "application/json;q=0.1234", false, "Four-digit qvalue"),
+                    (51016, "application/json;q=0.123", true, "Three-digit qvalue"),
+                    (51017, "application/json;q=0;q=1", false, "Duplicate increasing q weights"),
+                    (51018, "application/json;q=1;q=0", false, "Duplicate decreasing q weights"),
+                    (51019, "application/json;q=1;profile=fixture", false, "Unmatched parameter after q"),
+                    (51020, "application/json;q=0.5;", false, "Empty trailing parameter"),
+                    (51021, "application/json;Q = 0.500", true, "Case-insensitive q with whitespace"),
+                    (51022, "application/json;q=0, application/json;q=0.5", true, "Matching range alternatives"),
+                    (51023, "application/json;profile=fixture;q=bogus, application/json;q=0.2", true,
                         "Invalid range does not mask a matching range"),
-                    (51024, ",,application/json;q=1,,", true, true, "Empty list entries")
+                    (51024, ",,application/json;q=1,,", true, "Empty list entries")
                 };
-                var modernAccept = typeof(McpHttpServer).GetMethod("AcceptsModernMediaType",
-                    BindingFlags.NonPublic | BindingFlags.Static);
-                Assert(modernAccept != null, "Modern Accept parser was not found");
                 foreach (var test in cases)
                 {
                     using (var response = Post(client, PingRequest(test.Id), test.Accept, sessionId, "2025-11-25"))
                     {
-                        var expected = test.LegacyAccepted ? HttpStatusCode.OK : HttpStatusCode.NotAcceptable;
+                        var expected = test.Accepted ? HttpStatusCode.OK : HttpStatusCode.NotAcceptable;
                         Assert(response.StatusCode == expected,
                             test.Scenario + ": expected legacy HTTP " + (int)expected + ", got " + (int)response.StatusCode);
                     }
-                    foreach (string mediaType in new[] { "application/json", "text/event-stream" })
-                    {
-                        string accept = test.Accept?.Replace("application/json", mediaType);
-                        bool accepted = (bool)modernAccept.Invoke(null, new object[] { accept, mediaType });
-                        Assert(accepted == test.ModernAccepted,
-                            test.Scenario + ": unexpected modern acceptance for " + mediaType);
-                    }
                 }
-                Console.WriteLine("PASS " + cases.Length + " legacy HTTP Accept cases and "
-                    + (cases.Length * 2) + " production modern media-range assertions");
+                Console.WriteLine("PASS " + cases.Length + " HTTP Accept cases");
 
                 using (var response = Post(client, InitializedNotification(), "text/event-stream", sessionId, "2025-11-25"))
                 {

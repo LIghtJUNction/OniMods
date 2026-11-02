@@ -4,11 +4,11 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::archive;
 use crate::build;
 use crate::config::{Config, SelectedMod};
+use crate::mod_config_backup;
 
 pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
@@ -32,19 +32,19 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     let legacy_dev_dir = cfg.legacy_dev_mod_dir(&selected.name)?;
     println!("\n🔧 安装到 Dev 目录：{}", dev_dir.display());
 
-    if dev_dir.exists() {
-        fs::remove_dir_all(&dev_dir)
-            .with_context(|| format!("清理旧 Dev 目录失败：{}", dev_dir.display()))?;
+    archive::install(&zip, &dev_dir, &assembly_name, || {
+        enable_dev_mod(cfg, selected, &dev_dir)
+    })?;
+    if distinct_legacy_directory(&legacy_dev_dir, &dev_dir).unwrap_or_else(|error| {
+        eprintln!("⚠️ 新 Dev 模组已安装，但无法确认旧目录身份，已保留：{error:#}");
+        false
+    }) && let Err(error) = fs::remove_dir_all(&legacy_dev_dir)
+    {
+        eprintln!(
+            "⚠️ 新 Dev 模组已安装，但旧版小写 dev 目录清理失败：{}：{error}",
+            legacy_dev_dir.display()
+        );
     }
-    if legacy_dev_dir != dev_dir && legacy_dev_dir.exists() {
-        fs::remove_dir_all(&legacy_dev_dir)
-            .with_context(|| format!("清理旧版小写 dev 目录失败：{}", legacy_dev_dir.display()))?;
-    }
-    fs::create_dir_all(&dev_dir)
-        .with_context(|| format!("创建 Dev 目录失败：{}", dev_dir.display()))?;
-
-    archive::unzip(&zip, &dev_dir)?;
-    enable_dev_mod(cfg, selected, &dev_dir)?;
 
     println!("✅ 已安装到游戏 Dev 目录");
 
@@ -55,6 +55,29 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn distinct_legacy_directory(legacy: &Path, current: &Path) -> Result<bool> {
+    if !legacy.try_exists()? {
+        return Ok(false);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        let old = fs::metadata(legacy)?;
+        let new = fs::metadata(current)?;
+        Ok(old.dev() != new.dev() || old.ino() != new.ino())
+    }
+    #[cfg(not(unix))]
+    {
+        let old = fs::canonicalize(legacy)?;
+        let new = fs::canonicalize(current)?;
+        // Dev/dev can be the same directory on a case-insensitive filesystem.
+        // Retain an ambiguous alias rather than deleting the new installation.
+        Ok(!old
+            .to_string_lossy()
+            .eq_ignore_ascii_case(&new.to_string_lossy()))
+    }
 }
 
 fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Result<()> {
@@ -81,18 +104,18 @@ fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Resul
 
         let mut found = false;
         for item in mods.iter_mut() {
-            let same_static_id = item
-                .get("staticID")
-                .and_then(Value::as_str)
-                .map(|value| value == static_id)
-                .unwrap_or(false);
             let same_dev_id = item
                 .get("label")
                 .and_then(|label| label.get("id"))
                 .and_then(Value::as_str)
                 .map(|value| value == selected.name)
                 .unwrap_or(false);
-            if same_static_id || same_dev_id {
+            let is_dev = item
+                .get("label")
+                .and_then(|label| label.get("distribution_platform"))
+                .and_then(Value::as_u64)
+                == Some(4);
+            if same_dev_id && is_dev {
                 item["enabled"] = Value::Bool(true);
                 item["status"] = Value::Number(1.into());
                 ensure_expansion_enabled(item);
@@ -122,24 +145,23 @@ fn enable_dev_mod(cfg: &Config, selected: &SelectedMod, dev_dir: &Path) -> Resul
     }
 
     let formatted = serde_json::to_string_pretty(&data)?;
-    let backup = mods_file.with_extension(format!(
-        "json.onim-backup-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| duration.as_secs())
-            .unwrap_or(0)
-    ));
-    fs::write(&backup, &content)
-        .with_context(|| format!("备份 mods.json 失败：{}", backup.display()))?;
-    fs::write(&mods_file, format!("{}\n", formatted))
-        .with_context(|| format!("写入 mods.json 失败：{}", mods_file.display()))?;
+    let update =
+        mod_config_backup::write_config(&mods_file, &content, &format!("{}\n", formatted))?;
+    let backup = update
+        .backup
+        .as_ref()
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| "配置未变化，未生成备份".to_string());
     println!(
         "✅ 已在 mods.json 启用 Dev mod：{}（启用数 {} -> {}，备份：{}）",
-        static_id,
-        before_enabled,
-        after_enabled,
-        backup.display()
+        static_id, before_enabled, after_enabled, backup
     );
+    if let Some(count) = update.pruned.filter(|count| *count > 0) {
+        println!("🧹 清理 {} 份过期配置备份，最多保留最近 5 份", count);
+    }
+    if let Some(error) = update.cleanup_error {
+        eprintln!("⚠️ 配置已启用，但备份清理未完成：{}", error);
+    }
     Ok(())
 }
 

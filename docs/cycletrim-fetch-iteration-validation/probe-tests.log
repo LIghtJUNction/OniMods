@@ -1,0 +1,12 @@
+[CycleTrim][OniSim] host mapping adapter
+PASS CycleTrim installs patches once with the probe owner ready
+PASS CycleTrim coupled pickup/chore refresh regressions
+[CycleTrim][OniSim] host mapping adapter
+[CycleTrim][OniSim] host mapping adapter
+[CycleTrim][OniSim] host mapping adapter
+[CycleTrim] Settings could not be loaded; using the defaults: settings fixture read failure
+[CycleTrim][OniSim] host mapping adapter
+[CycleTrim][OniSim] host mapping adapter
+PASS CycleTrim options: 47 assertions; configuration applied before patching and dialog registered after
+PASS fetch layout control: 42 assertions
+PASS CycleTrim performance probe counter regressions

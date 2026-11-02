@@ -1,0 +1,184 @@
+{
+  "schema": 1,
+  "passed": true,
+  "scope": "Four additional authored mixed-phase active-region/save-reload fixtures. They do not establish real DLC-world, larger-colony, whole-game performance or four simultaneous game acceptance. Earlier 227-case full suites remain scoped to their recorded harness revisions; this is a selected four-case supplement, not a new complete 231-case suite.",
+  "runs": {
+    "c301-workers1": {
+      "passed": true,
+      "native_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+      "workers": 1,
+      "cases": [
+        {
+          "case": "soak-multi-region-overlap0-reverse0",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "3a7953be818ee4336a42f105390c6e5f280750a5af72f301f317457ff9fb96c4"
+        },
+        {
+          "case": "soak-multi-region-overlap0-reverse1",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "bf00d6c27c2df50cce7d4a1aa173c4ae993769a7948790800cec1d70e74e22e2"
+        },
+        {
+          "case": "soak-multi-region-overlap1-reverse0",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "acde682ab108a9de358421411679b09056d74010f2c93d13d0f8136671bce2a6"
+        },
+        {
+          "case": "soak-multi-region-overlap1-reverse1",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "9054ef2406584b952eff5d0c6a84757447e00b3ff09c1b77e971781025e7d015"
+        }
+      ],
+      "publications": 308,
+      "report_sha256": "cc6ce9b0fd8dff2963baeb8a50ddd8e7d3fe777cddf47512304ed4141214222e",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    "c301-workers4": {
+      "passed": true,
+      "native_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+      "workers": 4,
+      "cases": [
+        {
+          "case": "soak-multi-region-overlap0-reverse0",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "3a7953be818ee4336a42f105390c6e5f280750a5af72f301f317457ff9fb96c4"
+        },
+        {
+          "case": "soak-multi-region-overlap0-reverse1",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "bf00d6c27c2df50cce7d4a1aa173c4ae993769a7948790800cec1d70e74e22e2"
+        },
+        {
+          "case": "soak-multi-region-overlap1-reverse0",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "acde682ab108a9de358421411679b09056d74010f2c93d13d0f8136671bce2a6"
+        },
+        {
+          "case": "soak-multi-region-overlap1-reverse1",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "9054ef2406584b952eff5d0c6a84757447e00b3ff09c1b77e971781025e7d015"
+        }
+      ],
+      "publications": 308,
+      "report_sha256": "7f8abbc8f65e3881e0c0fde17b009d2062f2390d3ccc43be36516fc01f37bb6c",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    "inline-workers1": {
+      "passed": true,
+      "native_sha256": "9a04afbda3e1fe694bdef81633c459af1b73d4ce479e7592d45cc21bddd39b8f",
+      "workers": 1,
+      "cases": [
+        {
+          "case": "soak-multi-region-overlap0-reverse0",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "3a7953be818ee4336a42f105390c6e5f280750a5af72f301f317457ff9fb96c4"
+        },
+        {
+          "case": "soak-multi-region-overlap0-reverse1",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "bf00d6c27c2df50cce7d4a1aa173c4ae993769a7948790800cec1d70e74e22e2"
+        },
+        {
+          "case": "soak-multi-region-overlap1-reverse0",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "acde682ab108a9de358421411679b09056d74010f2c93d13d0f8136671bce2a6"
+        },
+        {
+          "case": "soak-multi-region-overlap1-reverse1",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "9054ef2406584b952eff5d0c6a84757447e00b3ff09c1b77e971781025e7d015"
+        }
+      ],
+      "publications": 308,
+      "report_sha256": "52d4a7e0a7774188cbe42611cebe23f2a920dee4182709daa45a485d2fd43023",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    "inline-workers4": {
+      "passed": true,
+      "native_sha256": "9a04afbda3e1fe694bdef81633c459af1b73d4ce479e7592d45cc21bddd39b8f",
+      "workers": 4,
+      "cases": [
+        {
+          "case": "soak-multi-region-overlap0-reverse0",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "3a7953be818ee4336a42f105390c6e5f280750a5af72f301f317457ff9fb96c4"
+        },
+        {
+          "case": "soak-multi-region-overlap0-reverse1",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "bf00d6c27c2df50cce7d4a1aa173c4ae993769a7948790800cec1d70e74e22e2"
+        },
+        {
+          "case": "soak-multi-region-overlap1-reverse0",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "acde682ab108a9de358421411679b09056d74010f2c93d13d0f8136671bce2a6"
+        },
+        {
+          "case": "soak-multi-region-overlap1-reverse1",
+          "passed": true,
+          "snapshots_compared": 77,
+          "fixture_sha256": "9054ef2406584b952eff5d0c6a84757447e00b3ff09c1b77e971781025e7d015"
+        }
+      ],
+      "publications": 308,
+      "report_sha256": "31dfa513dd158bc750a5cf04e50c604f9ee9bde4d33b6a142039dc166c133b50",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    }
+  },
+  "canonical_fixture_source_sha256": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b"
+}

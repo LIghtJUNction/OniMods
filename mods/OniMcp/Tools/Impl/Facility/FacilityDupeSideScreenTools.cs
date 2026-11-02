@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "bionic_slots_list", "bionic_side_screen_list" },
                 Tags = new List<string> { "dupe", "bionic", "upgrade", "assignable", "side-screen" },
                 Description = "兼容入口：请使用 dupes_control domain=side_screen action=bionic_upgrades。列出 BionicSideScreen 升级槽：锁定/空/已分配/已安装状态、升级组件和功耗；槽位分配/清空使用 assignable_slot_item_set",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -60,7 +59,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "dupe_todos_list", "minion_chore_queue_list" },
                 Tags = new List<string> { "dupe", "todo", "chore", "priority", "side-screen" },
                 Description = "兼容入口：请使用 dupes_control domain=side_screen action=todos。读取 MinionTodoSideScreen 数据：当前差事、可执行差事、阻塞差事、优先级和目标位置",
                 Parameters = new Dictionary<string, McpToolParameter>

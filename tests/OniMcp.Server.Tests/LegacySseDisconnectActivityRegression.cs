@@ -22,11 +22,6 @@ internal static class LegacySseDisconnectActivityRegressionEntry
     {
         RunLongLivedSseDisconnectRegression();
 
-        var existing = typeof(LegacySessionLifecycleRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing legacy session regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunLongLivedSseDisconnectRegression()

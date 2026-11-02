@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using HarmonyLib;
 using Newtonsoft.Json;
 using OniMcp.Core;
 using OniMcp.Support;
@@ -32,7 +33,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "ui_management_list", "ui_hotkeys_list" },
                 Tags = new List<string> { "ui", "management", "screen", "hotkey", "action" },
                 Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=list。列出可由 MCP 安全打开/触发的 UI 页面和 Action，包括管理菜单、覆盖层、建造分类和取消/关闭",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -68,7 +68,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "management_open", "ui_open_screen" },
                 Tags = new List<string> { "ui", "management", "screen", "codex", "research", "skills" },
                 Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=open_management。打开指定管理页面：vitals、consumables、priorities、schedule、skills、research、starmap、report、database/codex",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -123,7 +122,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "ui_hotkey_trigger", "game_action_trigger" },
                 Tags = new List<string> { "ui", "hotkey", "action", "management", "build", "overlay" },
                 Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=trigger。触发白名单内的安全 UI Action，用于打开/关闭界面、覆盖层和建造分类；不会触发 debug 或破坏性游戏操作",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -154,12 +152,13 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "ui_control", "ui_hotkey_control", "game_action_control" },
                 Tags = new List<string> { "ui", "hotkey", "action", "management", "build", "overlay" },
-                Description = "UI Action 聚合工具：action=list/trigger/open_management；读取安全 UI Action 白名单、触发白名单内动作或打开管理页面。",
+                Description = "UI Action 聚合工具：action=list/trigger/open_management/open_load_menu；读取安全 UI Action 白名单、触发白名单内动作或打开原生页面。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "list、trigger 或 open_management", Required = true, EnumValues = new List<string> { "list", "trigger", "open_management" } },
+                    ["action"] = new McpToolParameter { Type = "string", Description = "list、trigger、open_management 或 open_load_menu（只打开加载列表；支持 dryRun，执行需 confirm）", Required = true, EnumValues = new List<string> { "list", "trigger", "open_management", "open_load_menu" } },
+                    ["dryRun"] = new McpToolParameter { Type = "boolean", Description = "open_load_menu：只预览", Required = false },
+                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "open_load_menu：执行需 true", Required = false },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "action=list 时过滤类型：all、management、overlay、build、navigation，默认 all", Required = false, EnumValues = new List<string> { "all", "management", "overlay", "build", "navigation" } },
                     ["uiAction"] = new McpToolParameter { Type = "string", Description = "action=trigger 时的 Action 枚举名，如 ManageVitals、Overlay1、BuildCategoryTiles、Escape", Required = false },
                     ["screen"] = new McpToolParameter { Type = "string", Description = "action=open_management 时的页面名", Required = false, EnumValues = ManagementScreens.Keys.OrderBy(name => name).ToList() },
@@ -180,9 +179,34 @@ namespace OniMcp.Tools
                     }
                     if (action == "open_management")
                         return OpenManagementScreen().Handler(args);
-                    return CallToolResult.Error("action must be list, trigger, or open_management");
+                    if (action == "open_load_menu")
+                        return OpenLoadMenu(args);
+                    return CallToolResult.Error("action must be list, trigger, open_management, or open_load_menu");
                 }
             };
+        }
+
+        private static CallToolResult OpenLoadMenu(Newtonsoft.Json.Linq.JObject args)
+        {
+            bool inGame = Game.Instance != null;
+            object menu = inGame ? (object)PauseScreen.Instance : MainMenu.Instance;
+            var callback = menu == null ? null : AccessTools.Method(menu.GetType(), inGame ? "OnLoad" : "LoadGame", Type.EmptyTypes);
+            if (callback == null)
+                return CallToolResult.Error("Native load-menu callback is not available");
+            if (ToolUtil.GetBool(args, "dryRun", false))
+                return CallToolResult.Text("{\"dryRun\":true,\"wouldOpen\":\"load_menu\",\"wouldLoadSave\":false}");
+            if (!ToolUtil.GetBool(args, "confirm", false))
+                return CallToolResult.Error("confirm=true is required");
+            if (inGame)
+                GameControlTools.ControlGameSpeed().Handler(new Newtonsoft.Json.Linq.JObject { ["action"] = "pause" });
+            callback.Invoke(menu, null);
+            return CallToolResult.Text(JsonConvert.SerializeObject(new
+            {
+                opened = "load_menu",
+                from = inGame ? "pause_menu" : "main_menu",
+                active = LoadScreen.Instance != null && LoadScreen.Instance.IsActive(),
+                loadedSave = false
+            }, McpJsonUtil.Settings));
         }
 
         private static Dictionary<global::Action, string> SafeActions()

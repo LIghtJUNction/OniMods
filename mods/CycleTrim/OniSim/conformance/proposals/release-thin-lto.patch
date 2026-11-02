@@ -1,0 +1,11 @@
+--- a/mods/CycleTrim/OniSim/native/Cargo.toml
++++ b/mods/CycleTrim/OniSim/native/Cargo.toml
+@@ -18,3 +18,8 @@
+ 
+ [lints.rust]
+ unsafe_op_in_unsafe_fn = "deny"
++
++# Candidate only: preserve portable target and exact floating-point semantics.
++[profile.release]
++lto = "thin"
++codegen-units = 1

@@ -1,0 +1,110 @@
+--- a/mods/CycleTrim/Core/ConveyorPathLookup.cs
++++ b/mods/CycleTrim/Core/ConveyorPathLookup.cs
+@@ -74 +74,2 @@
+-            Predicate<SolidConduitFlow.Conduit> predicate, int rail, Func<bool> canIndex)
++            Predicate<SolidConduitFlow.Conduit> predicate,
++            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
+@@ -94,2 +95,13 @@
+-            if (!indexed && inspectedRails >= 2L * pathLength
+-                && expectedQueries - queries >= MinimumQueriesRemaining)
++            var buildIndex = !indexed && inspectedRails >= 2L * pathLength
++                && expectedQueries - queries >= MinimumQueriesRemaining;
++            int? rail = null;
++            if (indexed || buildIndex)
++            {
++                // Delegate metadata and its captured field are only needed when
++                // an answer is about to come from the index. Ordinary scans pay
++                // neither reflection nor closure-key extraction costs.
++                rail = readRail(predicate);
++                if (!rail.HasValue)
++                    return path.FindIndex(predicate);
++            }
++            if (buildIndex)
+@@ -134 +146 @@
+-                return firstPositions.TryGetValue(rail, out position) ? position : -1;
++                return firstPositions.TryGetValue(rail.Value, out position) ? position : -1;
+--- a/mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs
++++ b/mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs
+@@ -24,0 +25 @@
++        private static readonly Func<Predicate<SolidConduitFlow.Conduit>, int?> ReadRail = TryReadRail;
+@@ -138,2 +139 @@
+-            if (scope == null || predicate == null || predicate.Method != membershipPredicate
+-                || predicate.Target == null || predicate.Target.GetType() != membershipPredicate.DeclaringType)
++            if (scope == null)
+@@ -141 +141,13 @@
+-            return scope.FindIndex(path, predicate, capturedRail(predicate.Target).idx, CheckCompatibility);
++            return scope.FindIndex(path, predicate, ReadRail, CheckCompatibility);
++        }
++
++        private static int? TryReadRail(Predicate<SolidConduitFlow.Conduit> predicate)
++        {
++            // The rewritten site constructs this delegate with the exact ldftn
++            // verified by Transpiler. A foreign transpiler disables indexing in
++            // CanIndex. Asking every new delegate for Method repeats reflection
++            // and allocations without supplying another source of identity.
++            var target = predicate == null ? null : predicate.Target;
++            if (target == null || target.GetType() != membershipPredicate.DeclaringType)
++                return null;
++            return capturedRail(target).idx;
+--- a/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs
++++ b/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs
+@@ -111 +111 @@
+-                    Check(lease.FindIndex(path, rail => { inspections++; return rail.idx == key; }, key, compatible) == -1,
++                    Check(Lookup(lease, path, rail => { inspections++; return rail.idx == key; }, key, compatible) == -1,
+@@ -115,0 +116,2 @@
++                Check(lease.FindIndex(path, rail => true, _ => null, compatible) == 0,
++                    "an unknown predicate still runs even when an index is already available");
+@@ -117 +119 @@
+-                Check(lease.FindIndex(path, rail => rail.idx == 999, 999, compatible) == 7,
++                Check(Lookup(lease, path, rail => rail.idx == 999, 999, compatible) == 7,
+@@ -122 +124 @@
+-                Check(lease.FindIndex(path, rail => rail.idx == 999, 999, compatible) == 6,
++                Check(Lookup(lease, path, rail => rail.idx == 999, 999, compatible) == 6,
+@@ -126 +128 @@
+-                Check(lease.FindIndex(path, rail => rail.idx == 999, 999, compatible) == 6,
++                Check(Lookup(lease, path, rail => rail.idx == 999, 999, compatible) == 6,
+@@ -128 +130 @@
+-                Check(lease.FindIndex(candidate, rail => rail.idx == 200, 200, compatible) == 0,
++                Check(Lookup(lease, candidate, rail => rail.idx == 200, 200, compatible) == 0,
+@@ -131 +133 @@
+-                Check(lease.FindIndex(candidate, rail => rail.idx == 999, 999, compatible) == 0,
++                Check(Lookup(lease, candidate, rail => rail.idx == 999, 999, compatible) == 0,
+@@ -154 +156 @@
+-                    rejected.FindIndex(path, rail => rail.idx == 600, 600, () => false);
++                    Lookup(rejected, path, rail => rail.idx == 600, 600, () => false);
+@@ -156,2 +158,2 @@
+-                Expect<NullReferenceException>(() => rejected.FindIndex(null, _ => true, 1, () => true));
+-                Expect<ArgumentNullException>(() => rejected.FindIndex(path, null, 1, () => true));
++                Expect<NullReferenceException>(() => Lookup(rejected, null, _ => true, 1, () => true));
++                Expect<ArgumentNullException>(() => Lookup(rejected, path, null, 1, () => true));
+@@ -171 +173,3 @@
+-                    var result = lease.FindIndex(path, rail => rail.idx == key, key, () => { checks++; return true; });
++                    var result = lease.FindIndex(path, rail => rail.idx == key,
++                        _ => { throw new InvalidOperationException("Unnecessary predicate metadata read"); },
++                        () => { checks++; return true; });
+@@ -182 +186,7 @@
+-                lease.FindIndex(path, rail => rail.idx == 60000, 60000, () => true);
++                Lookup(lease, path, rail => rail.idx == 60000, 60000, () => true);
++        }
++
++        private static int Lookup(ConveyorPathLookup lease, List<SolidConduitFlow.Conduit> path,
++            Predicate<SolidConduitFlow.Conduit> predicate, int key, Func<bool> compatible)
++        {
++            return lease.FindIndex(path, predicate, _ => key, compatible);
+@@ -227 +237,13 @@
+-            flow.GetSOAInfo().ObserveRead = () => indexed |= ConveyorPathLookup.Current?.IndexEntryCount > 0;
++            var unknownPredicateCalls = 0;
++            flow.GetSOAInfo().ObserveRead = () =>
++            {
++                var scope = ConveyorPathLookup.Current;
++                if (scope == null || scope.IndexEntryCount == 0)
++                    return;
++                indexed = true;
++                Check(ConveyorPathLookupPatch.FindIndex(flow.Paths[0], rail =>
++                {
++                    unknownPredicateCalls++;
++                    return rail.idx == 0;
++                }) == 0, "unknown closure in an active indexed scope retains its predicate");
++            };
+@@ -229,0 +252 @@
++            Check(unknownPredicateCalls > 0, "unknown closure callback was not bypassed");

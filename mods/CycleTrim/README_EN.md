@@ -15,17 +15,35 @@ A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected 
 - Reuses fetch candidate lookup data for cheaper selection.
 - Throttles expensive refresh work for busy duplicants only; idle duplicants remain responsive.
 - Throttles stationary-critter navigation probing.
+- Reuses immutable component type metadata during saves.
+- Reuses repeated circuit demand queries within each power overlay update.
 
 ## Usage
 
 - Subscribe and enable as normal.
 - No extra configuration is required in most cases.
 
+**Save type metadata** is enabled by default. **Power overlay queries** is opt-in
+because updates with few repeated circuits can cost more; both settings require
+restarting ONI. Power query reuse falls back for unknown electricity interface implementations or
+conflicting patches. The [implementation and validation notes](../../docs/cycletrim-moono-optimizations.md)
+separate host tests and synthetic measurements from pending ONI runtime acceptance.
+These are independent implementations informed by oni-moono's mechanisms, not its
+engine/runtime replacement or its reported whole-game speedup.
+
 ## Compatibility
 
 - Supports base game and DLC content.
 - Behavior-safe by default for long-running colonies.
 - CycleTrim no longer intercepts `SmartReservoir` automation signaling; vanilla repeated notifications are preserved for stock reservoirs and third-party buildings that reuse the component.
+
+### OniSim native simulation core
+
+OniSim is CycleTrim's native simulation core, with source under [`OniSim/`](OniSim/). Linux x86_64 builds include its native library by default and attempt to map `Assembly-CSharp`'s `SimDLL` imports to OniSim at startup. The PLib CycleTrim Mod option “Use OniSim simulation core” is enabled by default; turn it off and restart ONI to keep the vanilla SimDLL mapping. Mapping cannot be hot-reverted. `CYCLETRIM_ONISIM_ENABLE=0`, `false`, or `off` remains available as a startup override to disable it.
+
+Use only with a disposable test save. OniSim has not passed full message coverage, save/load, DLC, other-Mod, or real-game runtime acceptance and is not a complete replacement yet. The loader accepts only the statically inspected ONI `Assembly-CSharp` and Mono fingerprints; other game versions are refused with a log message.
+
+Linux x86_64 builds include OniSim by default; use `IncludeOniSim=false` to create a package without it. Enable or disable runtime mapping in the game's Mod settings, then restart as prompted by PLib. `CYCLETRIM_ONISIM_ENABLE=0` can force-disable it before startup; `1` explicitly permits loading. `CYCLETRIM_ONISIM_NATIVE_PATH` may override the bundled library with an absolute `.so` path; when unset, the loader uses `OniSim/liboni_sim_core.so` beside the Mod assembly.
 
 ## Benchmark summary
 
@@ -61,14 +79,7 @@ The Brain rate cap is integrated into the production Harmony patch, but it appli
 - Queue quota follows worker and in-flight counts within `1..4`; one worker uses quota 2 while idle and 1 while busy.
 - 10,000-request synthetic matrix (**not in-game FPS**): requested hit rates `0/25/50/75/90%` produced `10000/7701/5501/3301/2000` PathProbe executions and avoided `0/2299/4499/6699/8000` clones, a theoretical probe-work reduction of `0/22.99/44.99/66.99/80.00%`. Bounded fallback makes actual reduction lower than nominal hits.
 
-Reproduction commands:
-
-```bash
-dotnet run --no-restore -c Release --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj
-dotnet run --no-build --no-restore -c Release --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj -- --benchmark
-```
-
-You can use the `benchmark` skill to let an agent run the full benchmark automatically and return normalized JSON results.
+The standalone Brain benchmark project has been retired. The results above are historical measurements; they are not results from the current source. Run the current host checks with `python3 scripts/check_mods.py --skip-synthetic-performance`.
 
 Full scenario notes are in [dist/CycleTrim/README.md](../../dist/CycleTrim/README.md) for reproducible detail.
 

@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "scope": "Single initialized authored 736x304 Oxygen grid per library; whole isolated Python process RSS; no Unity, colony objects, snapshots or gameplay",
+  "runs": [
+    {
+      "role": "candidate",
+      "native_sha256": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+      "width": 736,
+      "height": 304,
+      "before_kib": {
+        "VmHWM": 18908,
+        "VmRSS": 18908,
+        "VmSwap": 0
+      },
+      "initialized_kib": {
+        "VmHWM": 82332,
+        "VmRSS": 82332,
+        "VmSwap": 0
+      },
+      "rss_delta_kib": 63424,
+      "scope": "Whole Python probe process after native world initialization; no full snapshots or game; not a native heap attribution"
+    },
+    {
+      "role": "reference",
+      "native_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+      "width": 736,
+      "height": 304,
+      "before_kib": {
+        "VmHWM": 22540,
+        "VmRSS": 22540,
+        "VmSwap": 0
+      },
+      "initialized_kib": {
+        "VmHWM": 83404,
+        "VmRSS": 73168,
+        "VmSwap": 0
+      },
+      "rss_delta_kib": 50628,
+      "scope": "Whole Python probe process after native world initialization; no full snapshots or game; not a native heap attribution"
+    }
+  ],
+  "probe_source_sha256": "24fa7f95e52e5a62d3bab263f215fbc0f68b3bddaa072a5ec5005f2bae6ff056",
+  "limitations": [
+    "One sample per library; resident memory is not native heap attribution",
+    "No building/dupe/component-rich colony and no Unity/managed allocations",
+    "No inference about RAM bandwidth or cache misses",
+    "No measured memory reduction is claimed"
+  ],
+  "host_observation": {
+    "game_processes": 0,
+    "available_gib_approx": 4.9,
+    "swap_used_gib_approx": 15,
+    "vmstat_interval_seconds": 1,
+    "vmstat_interval_samples": 4,
+    "swap_in_kib_per_second": [
+      172,
+      468,
+      152,
+      212
+    ],
+    "swap_out_kib_per_second": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "cpu_idle_percent": [
+      87,
+      87,
+      88,
+      86
+    ],
+    "interpretation": "No sustained swap-out in these four idle-game samples; existing swap occupancy alone does not prove current thrashing"
+  }
+}

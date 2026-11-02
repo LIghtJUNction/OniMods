@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "game_build": 744825,
+  "unity": "6000.3.5f2",
+  "native_sha256": "d45cb10ed0d4c5bd6ca76ee02d29d505d72b4e9b29501d51f10147e5220ed65c",
+  "cycletrim_dll_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "steam_launched": true,
+  "headless": true,
+  "batch_mode": true,
+  "graphics_device": "Null",
+  "camera_render_callbacks": 0,
+  "game_crash": false,
+  "cell_workers": [
+    "OniSim-cell-0",
+    "OniSim-cell-1",
+    "OniSim-cell-2",
+    "OniSim-cell-3"
+  ],
+  "native_seconds_advanced_before_save": 4.849925994873047,
+  "native_seconds_advanced_after_reload": 2.883289337158203,
+  "reload_clock_equal": true,
+  "reload_clock": 55.466583251953125,
+  "duplicants": 3,
+  "sample_physical_fields_equal": true,
+  "whole_grid_runtime_bitwise_comparison": false,
+  "skipped_timelapse_captures": 4,
+  "restoration": {
+    "process_stopped": true,
+    "original_cycletrim_files_restored": true,
+    "original_mod_enablement_restored": true,
+    "continue_save_preference_restored": true,
+    "source_save_unchanged": true
+  },
+  "startup_wait_timed_out": false,
+  "load_wait_note": "One initial load; first roundtrip preserved clock/dupes but failed its stale hardcoded sample. A second intentional reload of the same paused file verified a valid observed cell, then advanced and paused.",
+  "first_sample_check_failed": true,
+  "source_fixture": {
+    "origin": "Previously generated native survival world; isolated copy",
+    "source_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+    "source_bytes": 1095066
+  },
+  "acceptance_scope": "One newly generated survival colony copy, three duplicants, four cell workers; bounded headless advancement, save and reload with equal clock and displayed physical cell fields, then further advancement. No whole-grid runtime equivalence, long-term, broad DLC/mod compatibility or performance claim.",
+  "private_evidence": "tools/OniHarness/artifacts/cycletrim-rust-20261020/run-sentinel-headless/",
+  "mapped_native_path_sha256_verified": true
+}

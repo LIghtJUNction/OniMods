@@ -1,6 +1,6 @@
 {
   "revision": "2026-07-28",
-  "scope": "partial-local-evidence",
+  "scope": "retired-historical-evidence",
   "upstream": {
     "repository": "modelcontextprotocol/conformance",
     "commit": "7169291ec0b68eb370fddcd9947313ab0d5e4156",
@@ -10,7 +10,7 @@
   "coverage": [
     {
       "scenario": "server-stateless",
-      "claim": "partial",
+      "claim": "historical-source-only",
       "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
       "markers": [
         "Modern request without _meta did not use Invalid Params",
@@ -22,7 +22,7 @@
     },
     {
       "scenario": "tools-list",
-      "claim": "partial",
+      "claim": "historical-source-only",
       "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
       "markers": [
         "Modern tools/list exposed tools outside the read-only allowlist",
@@ -31,7 +31,7 @@
     },
     {
       "scenario": "tools-call-simple-text",
-      "claim": "partial",
+      "claim": "historical-source-only",
       "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
       "markers": [
         "Modern read-only tools/call failed",
@@ -40,20 +40,21 @@
     },
     {
       "scenario": "resources-list",
-      "claim": "partial",
-      "test": "tests/OniMcp.Server.Tests/Program.cs",
+      "claim": "historical-source-only",
+      "test": "tests/OniMcp.ModernProtocol.Tests/ModernResourceListCacheRegression.cs",
       "markers": [
-        "Modern resource list omitted resultType",
-        "Modern resource list cache hints incorrect",
-        "Modern resource list lost resources",
-        "Modern resource list returned a resource without uri",
-        "Modern resource list returned a resource without name",
-        "Modern resource list returned a session id"
+        "omitted complete resultType",
+        "did not mark its deterministic catalog public-cacheable",
+        "did not provide a positive cache TTL",
+        "omitted its list payload",
+        "second call omitted its list payload",
+        "returned non-deterministic list content",
+        "allocated a legacy session header"
       ]
     },
     {
       "scenario": "resources-read-text",
-      "claim": "partial",
+      "claim": "historical-source-only",
       "test": "tests/OniMcp.ResourceReadConformance.Tests/Program.cs",
       "markers": [
         "Modern text resource read omitted resultType",
@@ -71,7 +72,7 @@
     },
     {
       "scenario": "resources-templates-read",
-      "claim": "partial",
+      "claim": "historical-source-only",
       "test": "tests/OniMcp.ResourceReadConformance.Tests/Program.cs",
       "markers": [
         "Modern template resource read omitted resultType",
@@ -87,7 +88,7 @@
     },
     {
       "scenario": "sep-2164-resource-not-found",
-      "claim": "partial",
+      "claim": "historical-source-only",
       "test": "tests/OniMcp.ModernProtocol.Tests/Program.cs",
       "markers": [
         "Missing resource did not use -32602 Invalid Params",
@@ -96,10 +97,20 @@
     }
   ],
   "notClaimed": [
-    "This manifest does not claim full MCP 2026-07-28 conformance.",
-    "The resources-read-text entry validates OniMcp's 2026 raw HTTP text-resource shape using the existing oni://test fixture; it does not claim the official runner's test://static-text fixture is registered in production.",
-    "The resources-templates-read entry validates the production modern resources/read transport against a deterministic oni://template/{id}/data test-boundary registry; it does not claim the official runner's test://template/{id}/data fixture or a live game-backed template handler.",
-    "Scenarios outside coverage remain unsupported, unverified, or intentionally unavailable on OniMcp's modern path.",
-    "Legacy 2025-11-25 and 2025-06-18 compatibility remains covered by OniMods' dedicated dual-era regressions rather than this map."
-  ]
+    "This manifest does not claim full or partial active MCP 2026-07-28 conformance. The version was retired; entries below are historical source-only evidence, not executable tests.",
+    "Archived modern protocol, discovery, resource, and tool checks remain searchable but are no longer compiled against production.",
+    "The compiled RetiredProtocolRegression.cs checks that unsupported versions fail closed without dispatch, catalog/resource reads, session creation, or unexpected side effects, and that supported 2025-11-25 requests still succeed.",
+    "The immutable 2026 conformance requirements pin is retained solely as historical provenance, not as an active implementation or official runner acceptance claim."
+  ],
+  "retirement": {
+    "supportedProtocol": "2025-11-25",
+    "retiredProtocol": "2026-07-28",
+    "regressionTest": "tests/OniMcp.Server.Tests/RetiredProtocolRegression.cs",
+    "projectEntryPoints": {
+      "tests/OniMcp.ModernDiscoveryFinalWire.Tests/OniMcp.ModernDiscoveryFinalWire.Tests.csproj": "RetiredDiscoveryRegressionEntry",
+      "tests/OniMcp.ModernHeaders.Tests/OniMcp.ModernHeaders.Tests.csproj": "RetiredHeadersRegressionEntry",
+      "tests/OniMcp.ModernProtocol.Tests/OniMcp.ModernProtocol.Tests.csproj": "RetiredProtocolRegressionEntry",
+      "tests/OniMcp.ResourceReadConformance.Tests/OniMcp.ResourceReadConformance.Tests.csproj": "RetiredResourcesRegressionEntry"
+    }
+  }
 }

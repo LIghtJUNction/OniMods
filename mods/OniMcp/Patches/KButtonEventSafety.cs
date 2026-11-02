@@ -3,23 +3,6 @@ using System.Reflection;
 
 namespace OniMcp
 {
-    /// <summary>Expands ONI's action bitmap when mods add actions beyond its original size.</summary>
-    public static class KButtonEvent_BoolArrayCtor_Patch
-    {
-        public static void Postfix(KButtonEvent __instance)
-        {
-            KButtonEventSafety.EnsureActionArrayCapacity(__instance);
-        }
-    }
-
-    public static class KButtonEvent_ActionCtor_Patch
-    {
-        public static void Postfix(KButtonEvent __instance)
-        {
-            KButtonEventSafety.EnsureActionArrayCapacity(__instance);
-        }
-    }
-
     internal static class KButtonEventSafety
     {
         private static readonly FieldInfo IsActionField = AccessTools.Field(typeof(KButtonEvent), "mIsAction");

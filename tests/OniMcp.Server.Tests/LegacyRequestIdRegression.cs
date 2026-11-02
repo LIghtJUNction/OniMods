@@ -21,11 +21,6 @@ internal static class LegacyRequestIdRegressionEntry
     {
         RunLegacyRequestIdRegression();
 
-        var existing = typeof(LegacyAcceptNegotiationRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing server regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunLegacyRequestIdRegression()

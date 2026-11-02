@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "sidescreen_surface_audit", "ui_surface_audit" },
                 Tags = new List<string> { "coverage", "audit", "side-screen", "ui", "tools", "resources" },
                 Description = "从运行时类型反射审计 ONI SideScreenContent 子类及辅助侧屏 KScreen 与 MCP 工具/资源覆盖映射，用于发现玩家侧屏操作缺口",
                 Parameters = new Dictionary<string, McpToolParameter>

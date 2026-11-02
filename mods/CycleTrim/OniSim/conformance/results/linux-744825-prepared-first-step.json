@@ -1,0 +1,357 @@
+{
+  "schema": 1,
+  "kind": "experimental-unadopted",
+  "identity": {
+    "native_sha256": "7811921b7d3fd9593bb822cdace22cd1e64948b442d7f786223ee4aeeb65fb5e",
+    "baseline_sha256": "0631b3dd20e89818ec73cb4f4ea7a654d11fb3ad7a988ebfaf38732b989a4817",
+    "release_unit_tests": {
+      "passed": true,
+      "tests": 37,
+      "exit_code": 0,
+      "known_bad_duplicate_fails": true
+    },
+    "compiler_wrappers_disabled": true,
+    "source_sha256": {
+      "simulation_step.rs": "098a9601d0a948ba322f6f938549d6b828752057576afc3ff3466e8430d74b20",
+      "frames_engine.rs": "ac12a78e47548e26729f5d3740176ed81ae746efca0dc8f3e16157fb392847a3",
+      "messages_tests.rs": "e1db549727f623b211ffbc554a0607e736d06e0246c98998f4568e4b3eab87d9"
+    },
+    "proof": {
+      "passed": true,
+      "theorems": 3,
+      "source_sha256": "3bef87a81dd48fbf71ebec5cd7896bc4ec81b99cd5e172343907e60e54523134",
+      "scope": "Pure identical state preflight elimination before first advance, preserved elapsed rejection and arbitrary later validation/advance. No step-preserves-valid-state invariant is assumed. Rust borrowing/compiler correspondence is separate.",
+      "sorry_or_admit": false
+    },
+    "production_adopted": false
+  },
+  "correctness": {
+    "1": {
+      "passed": true,
+      "cases": 231,
+      "publications": 9411,
+      "report_sha256": "2157824622777219f806e45088f535b310839d1dab3ade27e2cfc0709d50d992",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    "4": {
+      "passed": true,
+      "cases": 231,
+      "publications": 9411,
+      "report_sha256": "74598ca73b4a0425e2d503db0d5e9b9a2d27bd2e4a78586f718f500edce47096",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    }
+  },
+  "known_bad": {
+    "expected_failure_observed": true,
+    "exit_code": 101,
+    "exact_test": "messages_tests::prepared_step_validates_once_before_one_advance",
+    "failure": "Reintroducing original duplicate preflight yields observed count 2, expected 1.",
+    "source_restored_sha256": "098a9601d0a948ba322f6f938549d6b828752057576afc3ff3466e8430d74b20"
+  },
+  "single_tick": {
+    "schema": 1,
+    "complete": true,
+    "scope": "96x96 authored native fixtures, 50 individually published 0.2s frames per timing block; not whole-game FPS",
+    "native_sha256": "7811921b7d3fd9593bb822cdace22cd1e64948b442d7f786223ee4aeeb65fb5e",
+    "baseline_sha256": "0631b3dd20e89818ec73cb4f4ea7a654d11fb3ad7a988ebfaf38732b989a4817",
+    "samples": 96,
+    "final_publications_match_official": true,
+    "passed_predeclared_native_gates": false,
+    "gates": {
+      "thermal_cpu_reduction_at_least_5_percent": false,
+      "no_other_scene_cpu_regression_above_3_percent": true,
+      "no_peak_rss_increase_above_3_percent": true
+    },
+    "scenes": {
+      "fluid": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.740783763,
+            "minimum": 0.694945626,
+            "maximum": 0.772949875
+          },
+          "candidate": {
+            "median": 0.718324933,
+            "minimum": 0.6904463890000001,
+            "maximum": 0.7557272869999999
+          },
+          "median_speedup": 1.0312655582010823
+        },
+        "cpu_change_percent": -3.0317659648811723,
+        "peak_rss_kib": {
+          "baseline": 33284.0,
+          "candidate": 33324.0
+        },
+        "peak_rss_change_percent": 0.12017786323759161
+      },
+      "thermal": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.36084576199999996,
+            "minimum": 0.34990983499999995,
+            "maximum": 0.479975953
+          },
+          "candidate": {
+            "median": 0.3430046315,
+            "minimum": 0.317970615,
+            "maximum": 0.412392287
+          },
+          "median_speedup": 1.0520142553818548
+        },
+        "cpu_change_percent": -4.944253855474123,
+        "peak_rss_kib": {
+          "baseline": 33320.0,
+          "candidate": 33274.0
+        },
+        "peak_rss_change_percent": -0.1380552220888398
+      },
+      "sealed": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.6539833694999999,
+            "minimum": 0.622008514,
+            "maximum": 0.7090964319999999
+          },
+          "candidate": {
+            "median": 0.6719376545,
+            "minimum": 0.6359496029999999,
+            "maximum": 0.8183424749999999
+          },
+          "median_speedup": 0.9732798349969535
+        },
+        "cpu_change_percent": 2.74537332864091,
+        "peak_rss_kib": {
+          "baseline": 33262.0,
+          "candidate": 33258.0
+        },
+        "peak_rss_change_percent": -0.012025735073051269
+      },
+      "germ_flow": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.8739263045,
+            "minimum": 0.84686161,
+            "maximum": 0.9217729100000001
+          },
+          "candidate": {
+            "median": 0.8618976654999999,
+            "minimum": 0.8300688970000001,
+            "maximum": 0.9040007399999999
+          },
+          "median_speedup": 1.013955994408016
+        },
+        "cpu_change_percent": -1.376390542092909,
+        "peak_rss_kib": {
+          "baseline": 33340.0,
+          "candidate": 33330.0
+        },
+        "peak_rss_change_percent": -0.029994001199762366
+      },
+      "mixed_germs": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.8650895834999999,
+            "minimum": 0.80127947,
+            "maximum": 0.9661205150000001
+          },
+          "candidate": {
+            "median": 0.8413048615000001,
+            "minimum": 0.7958344420000001,
+            "maximum": 1.08540934
+          },
+          "median_speedup": 1.0282712285265925
+        },
+        "cpu_change_percent": -2.7493941036454306,
+        "peak_rss_kib": {
+          "baseline": 33278.0,
+          "candidate": 33250.0
+        },
+        "peak_rss_change_percent": -0.08413967185527671
+      },
+      "vacuum": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.6838367155,
+            "minimum": 0.6581739099999999,
+            "maximum": 0.725930939
+          },
+          "candidate": {
+            "median": 0.6635173489999999,
+            "minimum": 0.6327796430000001,
+            "maximum": 0.7375739289999999
+          },
+          "median_speedup": 1.0306237154621862
+        },
+        "cpu_change_percent": -2.9713769441500726,
+        "peak_rss_kib": {
+          "baseline": 33184.0,
+          "candidate": 33290.0
+        },
+        "peak_rss_change_percent": 0.31943105110896486
+      }
+    },
+    "raw_report_sha256": "346507106b2e6e1e6ab0998570cfbebc8f5be022948885baefb11520df8b018c",
+    "decision": "Not adopted: measured thermal CPU reduction is below the fixed 5% minimum, all other gates pass. Retain all observations. The original long-frame workload and actual-game measurements remain separate."
+  },
+  "long_frame": {
+    "schema": 1,
+    "complete": true,
+    "scope": "Original 1x10s frame workload, 96 alternating samples, CPU16 worker1; not whole-game FPS",
+    "samples": 96,
+    "final_publications_match_official": true,
+    "all_scene_cpu_regressions_within_3_percent": true,
+    "scenes": {
+      "fluid": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.48043803949999997,
+            "minimum": 0.460021377,
+            "maximum": 0.601318944
+          },
+          "candidate": {
+            "median": 0.492489421,
+            "minimum": 0.47760092099999996,
+            "maximum": 0.572098224
+          },
+          "median_speedup": 0.9755296642199346
+        },
+        "cpu_change_percent": 2.5084153437438195,
+        "peak_rss_kib": {
+          "baseline": 33336.0,
+          "candidate": 33306.0
+        },
+        "peak_rss_change_percent": -0.08999280057595538
+      },
+      "thermal": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.1606113125,
+            "minimum": 0.153969268,
+            "maximum": 0.19044984799999998
+          },
+          "candidate": {
+            "median": 0.16004158400000001,
+            "minimum": 0.15137590700000003,
+            "maximum": 0.209507243
+          },
+          "median_speedup": 1.0035598779127304
+        },
+        "cpu_change_percent": -0.3547250135322644,
+        "peak_rss_kib": {
+          "baseline": 33304.0,
+          "candidate": 33274.0
+        },
+        "peak_rss_change_percent": -0.09007926975738156
+      },
+      "sealed": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.4685998935,
+            "minimum": 0.437071856,
+            "maximum": 0.57127835
+          },
+          "candidate": {
+            "median": 0.45728515300000006,
+            "minimum": 0.448156719,
+            "maximum": 0.5642902890000001
+          },
+          "median_speedup": 1.024743292944829
+        },
+        "cpu_change_percent": -2.4145845223073947,
+        "peak_rss_kib": {
+          "baseline": 33212.0,
+          "candidate": 33280.0
+        },
+        "peak_rss_change_percent": 0.20474527279297217
+      },
+      "germ_flow": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.6469879795,
+            "minimum": 0.61448705,
+            "maximum": 0.6839815220000001
+          },
+          "candidate": {
+            "median": 0.64261663,
+            "minimum": 0.607961015,
+            "maximum": 0.6997332649999999
+          },
+          "median_speedup": 1.0068024219977
+        },
+        "cpu_change_percent": -0.6756461694045979,
+        "peak_rss_kib": {
+          "baseline": 33300.0,
+          "candidate": 33290.0
+        },
+        "peak_rss_change_percent": -0.030030030030026023
+      },
+      "mixed_germs": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.670751607,
+            "minimum": 0.6442644240000001,
+            "maximum": 0.709241478
+          },
+          "candidate": {
+            "median": 0.666487789,
+            "minimum": 0.649991912,
+            "maximum": 0.7382683560000001
+          },
+          "median_speedup": 1.0063974435396594
+        },
+        "cpu_change_percent": -0.6356776421409305,
+        "peak_rss_kib": {
+          "baseline": 33280.0,
+          "candidate": 33234.0
+        },
+        "peak_rss_change_percent": -0.13822115384615197
+      },
+      "vacuum": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.42692455249999994,
+            "minimum": 0.40028523600000004,
+            "maximum": 0.443571781
+          },
+          "candidate": {
+            "median": 0.41165496450000005,
+            "minimum": 0.387882556,
+            "maximum": 0.46940578200000005
+          },
+          "median_speedup": 1.037093171021383
+        },
+        "cpu_change_percent": -3.576647890261564,
+        "peak_rss_kib": {
+          "baseline": 33210.0,
+          "candidate": 33254.0
+        },
+        "peak_rss_change_percent": 0.13249021379102555
+      }
+    },
+    "raw_report_sha256": "e19fd083c6403d2197f1aa9441d63ff46410ab67bd29a57fd35235b79e5cfc7f"
+  },
+  "whole_game_performance_measured": false,
+  "runtime_acceptance": false,
+  "four_real_concurrent_instances_validated": false,
+  "production_promoted": false
+}

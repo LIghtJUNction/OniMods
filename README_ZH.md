@@ -7,6 +7,11 @@
   <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 缺氧性能优化 Mod" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
+<p align="center">
+  <a href="mods/OniOnline/README.md"><img alt="OniOnline — 缺氧星球联机 Mod" src="mods/OniOnline/assets/onionline-logo-v1.png" width="280" /></a><br />
+  <a href="mods/OniOnline/README.md"><strong>OniOnline</strong></a>
+</p>
+
 <div align="center">
   <p>
     <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust-2024-f46623?logo=rust&logoColor=white" /></a>
@@ -17,6 +22,8 @@
 </div>
 
 <p align="center">
+  <a href="#效果展示">效果展示</a>
+  ·
   <a href="#快速入口">快速入口</a>
   · <a href="#oni-mcp-server">ONI MCP</a>
   · <a href="#onim">onim</a>
@@ -35,6 +42,18 @@
 
 > **开源激励计划**：可购买 token，也可以通过参与开源项目贡献赚取 token。服务地址：[api.lmm.best](https://api.lmm.best)；[项目源码](https://github.com/TokenNotIncluded/api.lmm.best)由 [TokenNotIncluded](https://github.com/TokenNotIncluded) 组织托管，欢迎使用与贡献。
 
+## 效果展示
+
+[我把《缺氧》交给 GPT，这三个小人能活下来吗？-哔哩哔哩](https://b23.tv/isOd72t)
+
+让 GPT 通过 OniMcp 操作缺氧殖民地，看看它如何建造、种植，以及过程中遇到的问题。以下截图均取自视频，展示这次实验的实际过程。
+
+[![视频 03:05：GPT 操作后的殖民地全景](docs/images/gpt-oni-demo/colony-overview.jpg)](https://b23.tv/isOd72t)
+
+| 读取状态、下达操作 · 00:18 | 建造与挖掘过程 · 02:10 |
+| --- | --- |
+| ![视频中的 OniMcp 读取状态与下达操作示意](docs/images/gpt-oni-demo/mcp-workflow.jpg) | ![视频中的殖民地建造与挖掘任务](docs/images/gpt-oni-demo/colony-building.jpg) |
+
 ## 快速入口
 
 | 项目 | 路径 | 说明 |
@@ -42,6 +61,9 @@
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP Server Mod |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 针对实测模拟热点的轻量级性能优化 Mod |
+| `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | 自有星球联机、聊天与授权只读观察 |
+| `oni-skills` *(可选)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | 缺氧高阶游戏攻略与工程模块库（社区共建、开放完善） |
+| 架构与核心原理 | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | OniMcp 与 CycleTrim 的底层实现机制、世界文本化与性能优化设计 |
 | `OniMcp` 中文文档 | [mods/OniMcp/README.md](mods/OniMcp/README.md) | 安装、连接和功能说明 |
 | `OniMcp` English docs | [mods/OniMcp/README_EN.md](mods/OniMcp/README_EN.md) | English installation and usage guide |
 | 项目缘起与开源激励 | [写给所有对这个项目感兴趣的人](docs/open-source-letter-zh.md) | 了解 OniMods 的项目缘起与开源激励计划 |
@@ -53,6 +75,8 @@
 支持 OniMcp 的开发与测试：[捐赠](https://donate.lmm.best/?project=onimcp)。
 
 [![OniMcp 捐赠进度](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=zh-CN&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
+
+捐款，加速一切。
 
 <details>
 <summary>展开 Mod 介绍</summary>
@@ -98,6 +122,12 @@ onim doctor
 onim init MyMod
 onim dev -m MyMod
 ```
+
+`onim dev` 只在 `mods.json` 配置实际变化时备份，最多保留最近 5 份有效配置备份。
+每次构建必须生成新的 `dist/<AssemblyName>.zip`；编译成功但没有新包也会失败并恢复旧包。
+安装先解压、检查 DLL 和 `mod_info.yaml`，再替换目录；解压或 Dev 启用失败会保留原安装。
+它只启用选定的 Dev 条目，不会顺带启用同一 Mod 的其他副本。
+配置已写入但备份清理失败时，会单独警告，不把安装误报为失败。
 
 ## 常用工作流
 

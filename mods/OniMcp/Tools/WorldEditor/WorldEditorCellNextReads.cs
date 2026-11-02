@@ -32,7 +32,7 @@ namespace OniMcp.Tools
         {
             if (CellBuildingObject(cell) != null)
                 return true;
-            if (BuildCritterCellMap().ContainsKey(cell))
+            if (FindCritterAtCell(cell) != null)
                 return true;
             if (HasPickupAtCell(cell))
                 return true;
@@ -111,7 +111,7 @@ namespace OniMcp.Tools
                 sb.AppendLine("- cancel preview: `消 建筑" + at + ":6 dryRun=true`");
             }
 
-            if (BuildCritterCellMap().ContainsKey(cell))
+            if (FindCritterAtCell(cell) != null)
             {
                 sb.AppendLine("- capture preview: `捕 小动物" + at + ":7 dryRun=true`");
                 sb.AppendLine("- attack preview: `杀 小动物" + at + ":7 dryRun=true`");

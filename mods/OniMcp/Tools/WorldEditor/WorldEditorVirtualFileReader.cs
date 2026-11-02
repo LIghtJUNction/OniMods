@@ -13,7 +13,7 @@ namespace OniMcp.Tools
 
         public static string ReadFileDirectly(string path)
         {
-            if (path == "/active/map/viewport.md" || path == "/active/map/index.md")
+            if (path == "/active/map/viewport.md")
                 return ReadMapFileWithArgs(new JObject(), path);
             if (path.StartsWith("/active/map/layers/", StringComparison.Ordinal)
                 && path.EndsWith(".md", StringComparison.Ordinal))
@@ -24,7 +24,7 @@ namespace OniMcp.Tools
             if (path == "/active/screenshots/index.md")
                 return ReadScreenshotsIndexMarkdown();
 
-            if (path == "/active/map/viewport.html" || path == "/active/map/index.html")
+            if (path == "/active/map/viewport.html")
             {
                 try
                 {

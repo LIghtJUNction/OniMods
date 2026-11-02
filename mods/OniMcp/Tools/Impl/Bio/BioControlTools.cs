@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "bio",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "life_control", "farming_ranching_control" },
                 Tags = new List<string> { "farming", "ranching", "plants", "critters", "seeds", "incubator", "dropoff" },
                 Description = "生物生产统一入口：domain=farming/ranching。种植、收获、铲除、小动物、投放点和孵化器都通过 domain 参数路由。",
                 Parameters = new Dictionary<string, McpToolParameter>

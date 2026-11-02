@@ -28,7 +28,8 @@ namespace CycleTrim.Patches
 
         private static bool IsCompatible()
         {
-            return AccessTools.TypeByName(FastTrackPatchType) == null;
+            return CycleTrimPatchOptions.LimitCreatureBrainUpdates
+                && AccessTools.TypeByName(FastTrackPatchType) == null;
         }
 
         private static RateState CreateState(BrainScheduler.BrainGroup group)
@@ -120,24 +121,24 @@ namespace CycleTrim.Patches
                 var vanillaBudget = initialProbeCount(__instance);
                 var state = states.GetValue(__instance, StateFactory);
                 state.RateCap.BeginFrame(dt);
-                var normalAllowance = 0;
-                while (normalAllowance < vanillaBudget
+                var runningAllowance = 0;
+                while (runningAllowance < vanillaBudget
                     && state.RateCap.TryAcquireNormal(Core.BrainGroup.Creature))
                 {
-                    normalAllowance++;
+                    runningAllowance++;
                 }
 
                 try
                 {
                     __instance.BeginBrainGroupUpdate();
-                    var cursor = new CreatureBrainScheduleCursor(normalAllowance);
+                    var cursor = new CreatureBrainScheduleCursor(runningAllowance);
                     CreatureBrainSelection selection;
                     while (cursor.TrySelect(
-                        ___brains.Count,
-                        __instance.AllowPriorityBrains(),
-                        ___priorityBrains.Count,
-                        ref ___nextUpdateBrain,
-                        out selection))
+                            ___brains.Count,
+                            __instance.AllowPriorityBrains(),
+                            ___priorityBrains.Count,
+                            ref ___nextUpdateBrain,
+                            out selection))
                     {
                         __instance.debugMaxPriorityBrainCountSeen =
                             CreatureBrainSchedulePolicy.ObservePriorityMaximum(

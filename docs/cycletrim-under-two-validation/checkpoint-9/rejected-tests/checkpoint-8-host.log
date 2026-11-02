@@ -1,0 +1,12 @@
+[CycleTrim] Conveyor search call shape changed; retaining original searches.
+COVERAGE Conveyor outer get_Current: serialized Harmony metadata only; prior native detour attempt failed on this host
+COVERAGE Conveyor outer MoveNext: serialized Harmony metadata only; prior native detour attempt failed on this host
+System.InvalidOperationException: Conveyor regression: optimized invocation observes the late prefix on both remaining full searches; actual=65000,2,1,60000,60001,60002,60003,65001|reads:1,2|predicates:0
+   at CycleTrim.Optimizations.Tests.ConveyorPathRegression.Check(Boolean condition, String message) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs:line 1040
+   at CycleTrim.Optimizations.Tests.ConveyorPathRegression.EvaluateCallbackChange(Boolean patchPredicate, Boolean originalOracle) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs:line 758
+   at CycleTrim.Optimizations.Tests.ConveyorPathRegression.Run() in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs:line 42
+   at CycleTrim.Optimizations.Tests.Program.RunFamily(String family) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 62
+   at CycleTrim.Optimizations.Tests.Program.Main(String[] args) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 36
+System.InvalidOperationException: regression family failed: conveyor; exit=1
+   at CycleTrim.Optimizations.Tests.Program.RunIsolated(String family) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 87
+   at CycleTrim.Optimizations.Tests.Program.Main(String[] args) in /workspace/scratch/2706e06c4375/OniMods/tests/CycleTrim.Optimizations.Tests/Program.cs:line 46
