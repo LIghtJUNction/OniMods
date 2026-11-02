@@ -106,7 +106,7 @@ fn rendered_template_file(
     author: &str,
     description: &str,
     mod_version: &str,
-) -> String {
+) -> Result<String> {
     let static_id = format!("{}.{}", author, namespace);
     let mut contents = template.contents.to_string();
 
@@ -126,11 +126,16 @@ fn rendered_template_file(
             .replace(
                 "<ModStaticID>YourName.OniModTemplate</ModStaticID>",
                 &format!("<ModStaticID>{}</ModStaticID>", xml_escape(&static_id)),
-            )
-            .replace(
-                "<ModVersion>0.1.7</ModVersion>",
-                &format!("<ModVersion>{}</ModVersion>", xml_escape(mod_version)),
             );
+        let start = contents
+            .find("<ModVersion>")
+            .context("内嵌模板缺少 ModVersion")?
+            + "<ModVersion>".len();
+        let end = start
+            + contents[start..]
+                .find("</ModVersion>")
+                .context("内嵌模板的 ModVersion 没有结束标签")?;
+        contents.replace_range(start..end, &xml_escape(mod_version));
     }
 
     contents = contents.replace("OniModTemplate", namespace);
@@ -138,7 +143,7 @@ fn rendered_template_file(
         contents = contents.replace(&format!("# {}", namespace), &format!("# {}", name));
     }
 
-    contents
+    Ok(contents)
 }
 
 fn write_new_file(path: &Path, contents: &str) -> Result<()> {
@@ -175,7 +180,7 @@ fn write_mod_template(
         }
 
         let contents =
-            rendered_template_file(template, name, namespace, author, description, mod_version);
+            rendered_template_file(template, name, namespace, author, description, mod_version)?;
         write_new_file(&destination, &contents)?;
     }
 

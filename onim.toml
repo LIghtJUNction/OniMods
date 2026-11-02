@@ -3,20 +3,24 @@
 
 # 默认 Mod（不指定 -m 时使用）
 default_mod = "OniMcp"
+workshop_owner = 76561199137573787
 
 [mods.OniMcp]
 path = "mods/OniMcp"
 # Steam 创意工坊 ID，首次上传后填写，后续发布时自动使用
 publishedfileid = "3807166922"
 workshop_title = "OniMcp"
+workshop_dependencies = ["Jlib"]
 [mods.CycleTrim]
 path = "mods/CycleTrim"
 publishedfileid = "3807166689"
 workshop_title = "CycleTrim"
+workshop_dependencies = ["Jlib"]
 
 [mods.OniOnline]
 path = "mods/OniOnline"
 workshop_title = "OniOnline"
+workshop_dependencies = ["Jlib"]
 
 [mods.Jlib]
 path = "libs/Jlib/Jlib"

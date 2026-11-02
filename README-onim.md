@@ -49,3 +49,8 @@ path. Legacy lowercase `dev` copies are removed after a successful Dev install.
 - `onim publish` prepares the VDF for OniUploader; it does not use SteamCMD directory uploads.
 
 See the [OniMods repository](https://github.com/LIghtJUNction/OniMods) for the full guide, troubleshooting and source.
+
+The source candidate for `onim 0.2.0` adds native Legacy ZIP publishing through
+the game's Steam API. Its real upload acceptance is still pending; see
+[native publishing progress](docs/onim-native-publishing.md). This candidate has
+not been installed or published as a new CLI release.

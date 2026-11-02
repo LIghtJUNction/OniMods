@@ -14,6 +14,11 @@ pub struct PublishOptions {
     pub auto_note: bool,
     pub non_interactive: bool,
     pub dry_run: bool,
+    pub create: bool,
+    pub visibility: Option<crate::workshop::Visibility>,
+    pub expected_owner: Option<u64>,
+    pub resume: Option<PathBuf>,
+    pub preflight: bool,
 }
 
 fn uploader_path() -> Option<PathBuf> {
@@ -102,7 +107,7 @@ fn reject_directory_upload_for_oni(vdf: &Path) -> Result<()> {
     Ok(())
 }
 
-fn yaml_value(yaml: &str, key: &str) -> Option<String> {
+pub(crate) fn yaml_value(yaml: &str, key: &str) -> Option<String> {
     yaml.lines().find_map(|line| {
         let (candidate, value) = split_yaml_mapping(line)?;
         (candidate.trim() == key).then(|| parse_yaml_scalar(value))
@@ -359,7 +364,26 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         auto_note,
         non_interactive,
         dry_run,
+        create,
+        visibility,
+        expected_owner,
+        resume,
+        preflight,
     } = options;
+    if let Some(path) = resume {
+        return crate::workshop::resume(&path);
+    }
+    let owner = expected_owner.or(cfg.workshop_owner);
+    if preflight {
+        return crate::workshop::preflight(
+            cfg,
+            selected,
+            owner.context("配置 workshop_owner 或使用 --expected-owner 固定发布账号")?,
+        );
+    }
+    if !use_gui && !dry_run && owner.is_none() {
+        anyhow::bail!("配置 workshop_owner 或使用 --expected-owner 固定发布账号");
+    }
     let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
         Some(path) => PathBuf::from(path),
         None => env::current_dir().context("读取当前目录失败")?,
@@ -415,22 +439,20 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         )?
     };
 
-    let publishedfileid = if let Some(ref id) = selected.config.publishedfileid {
-        id.clone()
-    } else if dry_run && matches!(selected.name.as_str(), "OniOnline" | "Jlib") {
-        // First creation is handled by the reviewed, one-shot Legacy publisher.
-        // ID 0 here only prepares metadata and never reaches a Steam upload.
-        "0".to_string()
-    } else if non_interactive || dry_run {
-        anyhow::bail!("无人值守发布要求在 onim.toml 配置 publishedfileid");
-    } else {
-        let id = prompt("已有 Workshop ID？首次上传输入 0: ", Some("0"))?;
-        if id.trim().is_empty() {
-            "0".to_string()
-        } else {
-            id
-        }
-    };
+    let publishedfileid = selected
+        .config
+        .publishedfileid
+        .clone()
+        .unwrap_or_else(|| "0".to_string());
+    let target_id: u64 = publishedfileid
+        .parse()
+        .context("publishedfileid 必须是数值")?;
+    if target_id == 0 && !create && !dry_run {
+        anyhow::bail!("首次发布使用 --create；已有条目先在 onim.toml 登记 publishedfileid");
+    }
+    if create && target_id != 0 {
+        anyhow::bail!("已配置 publishedfileid，不能使用 --create；直接更新现有条目");
+    }
 
     let legacy_vdf = dist_mod.join("workshop.vdf");
     if legacy_vdf.exists() {
@@ -450,21 +472,27 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
     println!("   描述: {} 字符", description_chars);
     println!("   VDF: {}", vdf.display());
 
-    if dry_run {
-        println!("✅ 元数据 dry-run 通过；发布脚本会另行验证单文件 ZIP");
-        return Ok(());
-    }
-
     reject_directory_upload_for_oni(&vdf)?;
-
-    if non_interactive {
-        anyhow::bail!(
-            "无人值守发布请改用单 ZIP 发布器：scripts/publish_onimcp_steam.sh 或 scripts/publish_cycletrim_steam.sh"
-        );
-    }
-
-    launch_uploader(&dist_mod, &preview);
-    Ok(())
+    crate::workshop::upload(
+        cfg,
+        selected,
+        crate::workshop::Publication {
+            folder: &dist_mod,
+            preview: &preview,
+            assembly: &assembly_name,
+            title,
+            fallback: description,
+            change_note: changenote,
+            target_id,
+            owner: owner.unwrap_or(0),
+            visibility,
+        },
+        if dry_run {
+            crate::workshop::Execution::DryRun
+        } else {
+            crate::workshop::Execution::Publish
+        },
+    )
 }
 
 fn launch_uploader(dist_mod: &Path, preview: &Path) {
@@ -642,7 +670,10 @@ mod tests {
         fs::write(&vdf, "\"workshopitem\"\n{\n\"appid\" \"12345\"\n}\n")?;
         assert!(reject_directory_upload_for_oni(&vdf).is_err());
 
-        fs::write(&vdf, "\"workshopitem\"\n{\n\"publishedfileid\" \"457140\"\n}\n")?;
+        fs::write(
+            &vdf,
+            "\"workshopitem\"\n{\n\"publishedfileid\" \"457140\"\n}\n",
+        )?;
         assert!(reject_directory_upload_for_oni(&vdf).is_err());
 
         fs::remove_dir_all(root)?;

@@ -18,6 +18,9 @@ pub struct ModConfig {
     pub publishedfileid: Option<String>,
     /// 可选的 Steam 创意工坊标题；未配置时使用 mod.yaml 的 title
     pub workshop_title: Option<String>,
+    /// 已在本配置登记的必需前置 Mod 名称；发布时保留其他工坊依赖。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub workshop_dependencies: Vec<String>,
 }
 
 impl ModConfig {
@@ -40,6 +43,9 @@ pub struct Config {
     #[serde(default)]
     pub mods: HashMap<String, ModConfig>,
     pub default_mod: Option<String>,
+    /// 发布账号的 Steam ID，防止使用其他已登录账号创建条目。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workshop_owner: Option<u64>,
 }
 
 /// `onim doctor` 所需的非阻断式配置诊断结果。
@@ -302,10 +308,7 @@ impl Config {
                 .clone();
             let name = cfg.mod_name(&key);
             validate_mod_directory_name(&name)?;
-            result.push(SelectedMod {
-                name,
-                config: cfg,
-            });
+            result.push(SelectedMod { name, config: cfg });
         }
         Ok(result)
     }
@@ -351,10 +354,7 @@ impl Config {
             .ok_or_else(|| anyhow::anyhow!("找不到已选择的 Mod：{}", key))?;
         let name = cfg.mod_name(&key);
         validate_mod_directory_name(&name)?;
-        Ok(SelectedMod {
-            name,
-            config: cfg,
-        })
+        Ok(SelectedMod { name, config: cfg })
     }
 
     pub fn managed_path(&self) -> PathBuf {
@@ -431,6 +431,7 @@ pub fn load(explicit_path: Option<PathBuf>) -> Result<Config> {
             game_path,
             mods: HashMap::new(),
             default_mod: None,
+            workshop_owner: None,
         }
     };
 
@@ -527,20 +528,48 @@ mod tests {
             game_path: PathBuf::new(),
             mods: HashMap::new(),
             default_mod: None,
+            workshop_owner: None,
         };
         for name in [
-            "", ".", "..", "../other", "nested/mod", "/tmp/mod", r"..\other",
-            r"C:\mods", "C:mods", r"\\server\share", ".. ", "mod.", "mod ", "bad\0name",
+            "",
+            ".",
+            "..",
+            "../other",
+            "nested/mod",
+            "/tmp/mod",
+            r"..\other",
+            r"C:\mods",
+            "C:mods",
+            r"\\server\share",
+            ".. ",
+            "mod.",
+            "mod ",
+            "bad\0name",
         ] {
             assert!(config.dev_mod_dir(name).is_err(), "Dev accepted {name:?}");
-            assert!(config.legacy_dev_mod_dir(name).is_err(), "dev accepted {name:?}");
-            assert!(config.local_mod_dir(name).is_err(), "Local accepted {name:?}");
+            assert!(
+                config.legacy_dev_mod_dir(name).is_err(),
+                "dev accepted {name:?}"
+            );
+            assert!(
+                config.local_mod_dir(name).is_err(),
+                "Local accepted {name:?}"
+            );
         }
         for name in ["OniMcp", "my_mod-2", "My Mod", "缺氧模组"] {
             let root = config.game_mods_dir().unwrap();
-            assert_eq!(config.dev_mod_dir(name).unwrap(), root.join("Dev").join(name));
-            assert_eq!(config.legacy_dev_mod_dir(name).unwrap(), root.join("dev").join(name));
-            assert_eq!(config.local_mod_dir(name).unwrap(), root.join("Local").join(name));
+            assert_eq!(
+                config.dev_mod_dir(name).unwrap(),
+                root.join("Dev").join(name)
+            );
+            assert_eq!(
+                config.legacy_dev_mod_dir(name).unwrap(),
+                root.join("dev").join(name)
+            );
+            assert_eq!(
+                config.local_mod_dir(name).unwrap(),
+                root.join("Local").join(name)
+            );
         }
     }
 
@@ -556,9 +585,11 @@ mod tests {
                         name: name.map(str::to_string),
                         publishedfileid: None,
                         workshop_title: None,
+                        workshop_dependencies: Vec::new(),
                     },
                 )]),
                 default_mod: Some(key.to_string()),
+                workshop_owner: None,
             };
             assert!(config.select_mod(None).is_err());
             assert!(config.select_mod(Some(key.to_string())).is_err());
@@ -594,6 +625,7 @@ path = "mods/Example"
                     name: None,
                     publishedfileid: None,
                     workshop_title: None,
+                    workshop_dependencies: Vec::new(),
                 },
             ),
             (
@@ -603,6 +635,7 @@ path = "mods/Example"
                     name: None,
                     publishedfileid: None,
                     workshop_title: None,
+                    workshop_dependencies: Vec::new(),
                 },
             ),
         ]);
@@ -610,6 +643,7 @@ path = "mods/Example"
             game_path: PathBuf::new(),
             mods,
             default_mod: None,
+            workshop_owner: None,
         };
 
         let selected = config.select_mod(None)?;
