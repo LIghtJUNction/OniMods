@@ -17,6 +17,7 @@ namespace CycleTrim
             // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
             base.OnLoad(harmony);
             RegisterOniSimOptions();
+            FetchLayoutExperiment.StartIfRequested();
         }
     }
 }

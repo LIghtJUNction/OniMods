@@ -1,0 +1,71 @@
+{
+  "prior_revision": "14c08591cbd0bf66cd0f53b37bfb498bdef4abf6",
+  "candidate_repository_head": "14c08591cbd0bf66cd0f53b37bfb498bdef4abf6",
+  "candidate_is_working_tree_snapshot": true,
+  "sources": [
+    {
+      "source": "mods/CycleTrim/Core/CycleTrimPatchOptions.cs",
+      "snapshot": "Sources/CycleTrimPatchOptions.cs",
+      "sha256": "58ee25c8d1228c1682b293c385d61e0d56929fcd94448248c3c676fcee204817",
+      "transformation": "none"
+    },
+    {
+      "source": "mods/CycleTrim/Core/ThreadLocalObjectPool.cs",
+      "snapshot": "Sources/ThreadLocalObjectPool.cs",
+      "sha256": "a3ebbb23d0bbe8a3fb1fcb65f1a68edc2674ebc76b57ae8fc19e35798f210bc4",
+      "transformation": "none"
+    },
+    {
+      "source": "mods/CycleTrim/Core/FetchCandidateBuffer.cs",
+      "snapshot": "Sources/FetchCandidateBuffer.cs",
+      "sha256": "12a4773093392ceb9a46dfa0e31fd2bca65416052f8e383754449641c020cb59",
+      "transformation": "none"
+    },
+    {
+      "source": "mods/CycleTrim/Core/FetchLayoutControl.cs",
+      "snapshot": "Sources/FetchLayoutControl.cs",
+      "sha256": "2d8fa170f7877cc6c6f84d901f08ea74026e180bc495240e9f74338f601a8e3f",
+      "transformation": "none"
+    },
+    {
+      "source": "mods/CycleTrim/Patches/FetchLayoutExperiment.cs",
+      "snapshot": "Sources/FetchLayoutExperiment.cs",
+      "sha256": "b9add7891caf8eb7519839656e862ae5226eb7f0bea732744929f64ec90a2cce",
+      "transformation": "none"
+    },
+    {
+      "source": "mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs",
+      "snapshot": "Sources/FetchPickupCandidatePatch.cs",
+      "sha256": "3a2fe007bd4697a0ed38b334dabfcc9ffd055d04d913d1358a9c3d055fb1ac09",
+      "transformation": "none"
+    },
+    {
+      "source": "tests/CycleTrim.Fetch.Tests/FetchControlFixture.cs",
+      "snapshot": "Sources/FetchControlFixture.cs",
+      "sha256": "af0087c9b34bd29e9b6eb4d20116bc46151d124c75d0ea418ca78b9b3b401171",
+      "transformation": "none"
+    },
+    {
+      "source": "14c08591cbd0bf66cd0f53b37bfb498bdef4abf6:mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs",
+      "source_sha256": "83d03de0e7a2c82395dd94eda7a026edb02f75ba4f424d0cfa6d2e8e13b2cf44",
+      "snapshot": "Sources/PriorFetchPickupCandidatePatch.cs",
+      "sha256": "a22240a98028a2a77ecf1654b246e24f34e1cdf23c757e26a50cb904c0560bbc",
+      "transformation": "outer class name and TargetMethod string only"
+    },
+    {
+      "source": "artifacts/v1-before-lazy-materialization/FetchPickupCandidatePatch.cs",
+      "source_sha256": "4d7f54a31e862c860ddec0eb47f3ae36eb98faf7bf3e748b207f0f827e3c54df",
+      "snapshot": "Sources/V1FetchPickupCandidatePatch.cs",
+      "sha256": "a243ff25ed49ef25818120c98a8202eae49e76e6e2280e031a5b672e9c0b0d3b",
+      "transformation": "outer class name and TargetMethod string only"
+    },
+    {
+      "source": "tests/CycleTrim.Fetch.Tests/FetchFixture.cs",
+      "source_sha256": "4204161b25007f8f51807bba23e294a3c2ac66a30b2b71448f52af5d3cec9e8d",
+      "snapshot": "Sources/FetchFixture.cs",
+      "sha256": "540b3cf5f9554cb912a978e2424eebd0e5baaca97bbc1af2698c6b9acc1a7a1a",
+      "transformation": "add identical independent prior/V1 targets and original-body counters"
+    }
+  ],
+  "limits": "All paths use actual production collectors through real Harmony wrappers. Synthetic game/Unity APIs and .NET 10 host; includes wrapper, dispatch and code-generation differences. Not an isolated volatile-read measurement, Mono benchmark, or FPS result."
+}
