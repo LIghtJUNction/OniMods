@@ -1,0 +1,30 @@
+{
+  "label": "exploratory-checkpoint-1",
+  "started_utc": "2026-10-30T15:00:45.255542+00:00",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "cpu": 0,
+  "allowed_cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "pairs": 1,
+  "families": [
+    "conveyor",
+    "animation"
+  ],
+  "assembly_sha256": {
+    "prior": "08bbeaf39e6999c7034cd552609f409e5b0aef4f60c671bfa00f70c82c289942",
+    "candidate": "bbc9470244acf0b89473f7260180f4cbf54df1f72c2e4e739b255c62b8e2bd68"
+  },
+  "driver_sha256": "00daddf5583d4d4905f0599cde847d9d6533ae3aedcc5fe92c7613d167e64fdf",
+  "driver_source_sha256": "a00476272bf65bf97f9af24188ebdee31acafe94516599443d7a500e9217f8f0",
+  "runner_source_sha256": "52025af337d720fad069680e7f0ddcfe8666a6e5e17f2fe33cd637e81ffffca8",
+  "protocol": "one original/patched pair per process; alternate prior/candidate processes per outer pair"
+}

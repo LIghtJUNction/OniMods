@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "game_start_control", "game_auto_start" },
                 Tags = new List<string> { "game", "launch", "start", "load", "lifecycle", "automation" },
                 Description = "兼容入口：请优先使用 game_control domain=launch。支持 status/start/restart_load/restart_status，以及 new_game/new_game_status/new_game_select 原生生存模式新开局。",
                 Parameters = new Dictionary<string, McpToolParameter>

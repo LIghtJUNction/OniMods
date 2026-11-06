@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "red_alert_status", "emergency_status" },
                 Tags = new List<string> { "game", "red-alert", "emergency", "priority", "紧急", "红色警戒" },
                 Description = "兼容入口：请优先使用 game_control domain=state action=red_alert_status",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -55,7 +54,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "red_alert_set", "emergency_set", "game_emergency_set" },
                 Tags = new List<string> { "game", "red-alert", "emergency", "priority", "紧急", "红色警戒" },
                 Description = "兼容入口：game_control domain=state action=set_red_alert。默认只修改当前世界；allWorlds=true 可同步全部已加载世界。需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -111,7 +109,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "game_emergency_control" },
                 Tags = new List<string> { "game", "red-alert", "emergency", "state" },
                 Description = "游戏状态：red_alert_status/set_red_alert。写动作需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

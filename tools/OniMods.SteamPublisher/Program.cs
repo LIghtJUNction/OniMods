@@ -25,7 +25,9 @@ internal static class Program
 
     private static int Run(string[] args)
     {
-        var queryOnly = args.Contains("--query-only", StringComparer.Ordinal);
+        if (FirstPublicationRunner.IsMode(args)) return FirstPublicationRunner.Run(args);
+        var queryOwned = args.Contains("--query-owned", StringComparer.Ordinal);
+        var queryOnly = args.Contains("--query-only", StringComparer.Ordinal) || queryOwned;
         var consumerContext = args.Contains("--consumer-context", StringComparer.Ordinal);
         var validateOnly = args.Contains("--validate-vdf", StringComparer.Ordinal);
         var metadataOnly = args.Contains("--metadata-only", StringComparer.Ordinal);
@@ -188,9 +190,10 @@ internal static class Program
         }
 
         SteamAppContext.ValidateHints();
+        if (!queryOnly) vdfPath = Path.GetFullPath(vdfPath);
         var metadata = queryOnly
             ? null
-            : WorkshopMetadataReader.Read(Path.GetFullPath(vdfPath));
+            : WorkshopMetadataReader.Read(vdfPath);
         if (noChangeNote && metadata is not null)
         {
             metadata = metadata with { ChangeNote = string.Empty };
@@ -208,7 +211,7 @@ internal static class Program
             Console.WriteLine($"{WorkshopTarget.DisplayName} legacy Workshop ZIP is valid");
             return 0;
         }
-        var role = consumerContext ? SteamAppRole.Consumer : SteamAppRole.Creator;
+        var role = consumerContext || metadataOnly ? SteamAppRole.Consumer : SteamAppRole.Creator;
         SteamAppContext.Prepare(role);
         if (!SteamAPI.IsSteamRunning())
         {
@@ -225,6 +228,11 @@ internal static class Program
         {
             SteamAppContext.VerifyActive(role);
             SteamWorkshopPublisher.ValidateAccount();
+            if (queryOwned)
+            {
+                SteamWorkshopPublisher.PrintOwnedItems();
+                return 0;
+            }
             var before = SteamWorkshopPublisher.QueryTarget();
             SteamWorkshopPublisher.PrintTarget(before);
             if (queryOnly)
@@ -261,6 +269,7 @@ internal static class Program
 
         if (uploadedPackage is not null)
         {
+            RunConsumerMetadata(vdfPath);
             RunConsumerVerifier(uploadedPackage, previousServerUpdated);
         }
         Console.WriteLine($"{WorkshopTarget.DisplayName} Steam Workshop update completed");
@@ -600,6 +609,31 @@ internal static class Program
         }
         throw new TimeoutException(
             $"Private candidate {newId} did not pass creator-side readback: {lastError}");
+    }
+
+    private static void RunConsumerMetadata(string vdfPath)
+    {
+        var start = new ProcessStartInfo("dotnet")
+        {
+            UseShellExecute = false,
+            WorkingDirectory = SteamAppContext.HintDirectory(SteamAppRole.Consumer),
+        };
+        var appId = WorkshopTarget.ConsumerAppId.ToString(CultureInfo.InvariantCulture);
+        start.Environment["SteamAppId"] = appId;
+        start.Environment["SteamGameId"] = appId;
+        start.ArgumentList.Add(typeof(Program).Assembly.Location);
+        start.ArgumentList.Add("--metadata-only");
+        start.ArgumentList.Add("--vdf");
+        start.ArgumentList.Add(vdfPath);
+        using var child = Process.Start(start)
+            ?? throw new InvalidOperationException("Could not start consumer metadata process");
+        if (!child.WaitForExit(TimeSpan.FromMinutes(42)))
+        {
+            child.Kill(entireProcessTree: true);
+            throw new TimeoutException("Legacy content was uploaded, but consumer metadata timed out; do not upload the content again");
+        }
+        if (child.ExitCode != 0)
+            throw new InvalidOperationException("Legacy content was uploaded, but consumer metadata failed; do not upload the content again");
     }
 
     internal static void RunConsumerVerifier(

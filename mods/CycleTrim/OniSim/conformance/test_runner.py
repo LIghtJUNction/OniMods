@@ -11,7 +11,6 @@ from unittest.mock import patch
 
 from run import build_fixture_clock, differences
 import run as conformance_run
-from texture_probe import build as probe_build
 from texture_probe.validate import LAYOUT, validate_observation
 import copy
 import ctypes
@@ -131,7 +130,144 @@ class CaseConcurrencyTests(unittest.TestCase):
             self.assertFalse((root / "out").exists())
 
 
+class SnapshotRetentionTests(unittest.TestCase):
+    def run_fixture(self, root, *, keep=False, failed=False, summary_error=False, child_error=False):
+        (root / "host.py").write_text("Authored driver fixture; no native code is executed.")
+        reference, candidate = root / "reference.so", root / "candidate.so"
+        reference.write_bytes(b"authored reference")
+        candidate.write_bytes(b"authored candidate")
+        output = root / "output"
+        selected = [dict(name="passing"), dict(name="second")]
+
+        def child(command, **kwargs):
+            target = Path(command[command.index("--output") + 1])
+            role = command[command.index("--role") + 1]
+            changed = failed and target.parent.name == "second" and role == "candidate"
+            target.write_text(json.dumps(dict(snapshots=[dict(
+                arrays=dict(element=[2 if changed else 1]), events={})], message_calls={})))
+            if child_error and role == "candidate":
+                raise RuntimeError("Authored child error")
+            return subprocess.CompletedProcess(command, 0)
+
+        write_text = Path.write_text
+
+        def write(path, content, *args, **kwargs):
+            if summary_error and path == output / "summary.json":
+                raise OSError("Authored summary write error")
+            return write_text(path, content, *args, **kwargs)
+
+        args = [str(RUNNER), "--reference", str(reference), "--candidate", str(candidate),
+                "--output", str(output)]
+        if keep:
+            args.append("--keep-success-snapshots")
+        with patch.object(conformance_run, "ROOT", root), \
+             patch.object(conformance_run, "HARNESS_FILES", ("host.py",)), \
+             patch.object(conformance_run, "cases", return_value=selected), \
+             patch.object(sys, "argv", args), \
+             patch.object(conformance_run.subprocess, "run", side_effect=child), \
+             patch.object(Path, "write_text", autospec=True, side_effect=write):
+            return conformance_run.main()
+
+    def test_success_removes_raw_only_after_writing_the_summary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(self.run_fixture(root), 0)
+            output = root / "output"
+            self.assertTrue(json.loads((output / "summary.json").read_text())["passed"])
+            for name in ("passing", "second"):
+                self.assertTrue((output / name / "case.json").exists())
+                for role in ("reference", "candidate"):
+                    self.assertFalse((output / name / f"{role}.json").exists())
+                    self.assertTrue((output / name / f"{role}.log").exists())
+
+    def test_explicit_opt_in_preserves_successful_raw_snapshots(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(self.run_fixture(root, keep=True), 0)
+            for name in ("passing", "second"):
+                for role in ("reference", "candidate"):
+                    self.assertTrue((root / "output" / name / f"{role}.json").exists())
+
+    def test_one_failed_case_preserves_all_raw_snapshots(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(self.run_fixture(root, failed=True), 1)
+            report = json.loads((root / "output/summary.json").read_text())
+            self.assertFalse(report["passed"])
+            self.assertTrue(report["cases"][0]["passed"])
+            self.assertFalse(report["cases"][1]["passed"])
+            for name in ("passing", "second"):
+                for role in ("reference", "candidate"):
+                    self.assertTrue((root / "output" / name / f"{role}.json").exists())
+
+    def test_summary_write_error_preserves_successful_raw_snapshots(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(OSError, "summary write error"):
+                self.run_fixture(root, summary_error=True)
+            for name in ("passing", "second"):
+                for role in ("reference", "candidate"):
+                    self.assertTrue((root / "output" / name / f"{role}.json").exists())
+
+    def test_child_exception_preserves_raw_outputs_without_a_summary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(RuntimeError, "child error"):
+                self.run_fixture(root, child_error=True)
+            self.assertFalse((root / "output/summary.json").exists())
+            for role in ("reference", "candidate"):
+                self.assertTrue((root / "output/passing" / f"{role}.json").exists())
+
+    def test_busy_output_rejects_another_run_without_touching_its_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "output"
+            folder = output / "passing"
+            folder.mkdir(parents=True)
+            summary = output / "summary.json"
+            summary.write_text("Existing receipt belongs to another runner.")
+            raw = folder / "reference.json"
+            raw.write_text("Existing raw belongs to another runner.")
+            with (output / ".run.lock").open("a") as owner:
+                conformance_run.fcntl.flock(owner.fileno(), conformance_run.fcntl.LOCK_EX)
+                with self.assertRaises(SystemExit) as error:
+                    self.run_fixture(root)
+            self.assertEqual(error.exception.code, 2)
+            self.assertEqual(summary.read_text(), "Existing receipt belongs to another runner.")
+            self.assertEqual(raw.read_text(), "Existing raw belongs to another runner.")
+            # Closing the owner releases the lock so the next run can succeed.
+            self.assertEqual(self.run_fixture(root), 0)
+
+
 class LibraryPreflightTests(unittest.TestCase):
+    def test_optional_pressure_context_records_missing_and_denied_counters(self):
+        def read(path):
+            if path.name == 'cpu':
+                raise FileNotFoundError(2, 'PSI not exposed')
+            if path.name == 'memory':
+                raise PermissionError(13, 'PSI not readable')
+            return 'some avg10=0.25 total=42\n'
+
+        with patch.object(frame_benchmark.os, 'sched_getaffinity', return_value={0}), \
+             patch.object(Path, 'exists', return_value=False), \
+             patch.object(Path, 'read_text', autospec=True, side_effect=read):
+            context = frame_benchmark.host_context()
+        self.assertEqual(context['pressure'], dict(cpu=None, memory=None,
+                                                  io='some avg10=0.25 total=42'))
+        self.assertEqual(context['pressure_unavailable'], dict(
+            cpu=dict(error='FileNotFoundError', errno=2),
+            memory=dict(error='PermissionError', errno=13)))
+
+    def test_available_pressure_context_retains_each_observation(self):
+        with patch.object(frame_benchmark.os, 'sched_getaffinity', return_value={0}), \
+             patch.object(Path, 'exists', return_value=False), \
+             patch.object(Path, 'read_text', autospec=True,
+                          side_effect=lambda path: f'{path.name} observation\n'):
+            context = frame_benchmark.host_context()
+        self.assertEqual(context['pressure'], {kind: f'{kind} observation'
+                                              for kind in ('cpu', 'memory', 'io')})
+        self.assertEqual(context['pressure_unavailable'], {})
+
     def test_interrupted_timing_binds_inputs_and_excludes_rejected_child(self):
         for fail_at, mutate in [(1, False), (7, False), (7, True)]:
             with self.subTest(fail_at=fail_at, mutate=mutate), tempfile.TemporaryDirectory() as directory:
@@ -294,6 +430,8 @@ class LibraryPreflightTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, "changed during comparison"):
                         conformance_run.main()
                 self.assertFalse(summary.exists())
+                for role in ("reference", "candidate"):
+                    self.assertTrue((output / "identity" / f"{role}.json").exists())
 
     def test_comparison_rejects_extra_missing_and_null_fields(self):
         reference = [dict(arrays=dict(temperature=[1]), events={})]
@@ -340,33 +478,6 @@ class LibraryPreflightTests(unittest.TestCase):
         del bad["textures"]["Flow"]
         with self.assertRaises(ValueError):
             validate_observation(bad, 1)
-
-    def test_probe_receipt_rejects_stale_source_binary_and_failed_build(self):
-        with tempfile.TemporaryDirectory(prefix="cycletrim-probe-") as directory:
-            root = Path(directory)
-            for name in probe_build.SOURCES:
-                (root / name).write_text("authored test source")
-            binary = root / "probe.dll"
-            binary.write_bytes(b"authored test artifact")
-            receipt = root / "receipt.json"
-            data = {"build_exit_code": 0, "output_dll": str(binary),
-                    "probe_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-                    "source_sha256": {name: hashlib.sha256((root / name).read_bytes()).hexdigest()
-                                      for name in probe_build.SOURCES}}
-            receipt.write_text(json.dumps(data))
-            with patch.object(probe_build, "ROOT", root):
-                self.assertEqual(probe_build.verify_receipt(receipt), data)
-                (root / "TextureProbe.cs").write_text("changed source")
-                with self.assertRaisesRegex(RuntimeError, "source changed"):
-                    probe_build.verify_receipt(receipt)
-                (root / "TextureProbe.cs").write_text("authored test source")
-                binary.write_bytes(b"stale binary")
-                with self.assertRaisesRegex(RuntimeError, "DLL differs"):
-                    probe_build.verify_receipt(receipt)
-                binary.write_bytes(b"authored test artifact")
-                receipt.write_text(json.dumps({**data, "build_exit_code": 1}))
-                with self.assertRaisesRegex(RuntimeError, "did not succeed"):
-                    probe_build.verify_receipt(receipt)
 
     def test_fixed_realtime_preserves_monotonic_progress(self):
         with tempfile.TemporaryDirectory(prefix="cycletrim-clock-") as directory:

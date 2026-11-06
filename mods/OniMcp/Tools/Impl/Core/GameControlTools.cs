@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "game_system_control" },
                 Tags = new List<string> { "game", "speed", "pause", "save", "launch", "dlc", "red-alert", "ui", "feedback" },
                 Description = "正常游戏控制：launch/speed/state/save/dlc/ui。观察和下达指令时暂停；短时间运行后再次暂停并核对结果。建造和工作由游戏完成，不提供直接改写世界的功能。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -22,7 +21,7 @@ namespace OniMcp.Tools
                     ["domain"] = new McpToolParameter { Type = "string", Description = "launch、speed、state、save、dlc、ui", Required = true, EnumValues = new List<string> { "launch", "speed", "state", "save", "dlc", "ui" } },
                     ["action"] = new McpToolParameter { Type = "string", Description = "launch=status/start/restart_load/restart_status/new_game/new_game_status/new_game_select；speed=time/pause/resume/set_speed/step_until/step_status/step_facts/step_cancel；state=red_alert_status/set_red_alert；save=list/save/load/quit；dlc=list/activate；ui 按 uiDomain 路由", Required = true },
                     ["kind"] = new McpToolParameter { Type = "string", Description = "ui action=list 的类型过滤", Required = false, EnumValues = new List<string> { "all", "management", "overlay", "build", "navigation" } },
-                    ["uiDomain"] = new McpToolParameter { Type = "string", Description = "ui 子域：action、feedback", Required = false, EnumValues = new List<string> { "action", "feedback" } },
+                    ["uiDomain"] = new McpToolParameter { Type = "string", Description = "ui 子域：action、feedback；默认 action", Required = false, EnumValues = new List<string> { "action", "feedback" } },
                     ["speed"] = new McpToolParameter { Type = "integer", Description = "set_speed：0=暂停，1=正常，2=快进，3=超快", Required = false },
                     ["condition"] = new McpToolParameter { Type = "string", Description = "speed step_until 兼容条件；dupe_idle 为任一工作时段复制人空闲，all_dupes_idle 为全部；与 until 二选一", Required = false },
                     ["until"] = new McpToolParameter { Type = "object", Description = "speed step_until：fact 原子条件或 all/any 数组组合（深度≤4，节点≤32）。例 {fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2}；fact 还支持 orders_complete、cycle_end、alert、alarm、new_notification、notification、printing_pod_ready、research_complete；printing_pod_ready 已就绪时默认恢复前返回", Required = false },
@@ -102,8 +101,22 @@ namespace OniMcp.Tools
             bool uiDomainFromKind = false;
             if (string.IsNullOrWhiteSpace(uiDomain))
             {
-                uiDomain = (forwarded["kind"]?.ToString() ?? string.Empty).Trim();
-                uiDomainFromKind = true;
+                string kind = (forwarded["kind"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
+                switch (kind)
+                {
+                    case "action":
+                    case "ui_action":
+                    case "actions":
+                    case "feedback":
+                    case "hint":
+                    case "hints":
+                        uiDomain = kind;
+                        uiDomainFromKind = true;
+                        break;
+                    default:
+                        uiDomain = "action";
+                        break;
+                }
             }
 
             forwarded["domain"] = uiDomain;

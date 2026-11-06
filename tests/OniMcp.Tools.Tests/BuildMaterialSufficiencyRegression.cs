@@ -25,6 +25,17 @@ internal static class BuildMaterialSufficiencyRegression
             inventory.Local["SandStone"] = amount;
             Check((bool)Select(single, "SandStone")["valid"], "exact and excess local mass must be accepted");
         }
+        foreach (string material in new[] { "auto", "default", "BuildableRaw" })
+        {
+            inventory.Local["SandStone"] = 49.999f;
+            var boundary = Select(single, material);
+            Check(!(bool)boundary["valid"] && Equals(boundary["satisfied"], false)
+                && (string)boundary["reasonCode"] == "insufficient_material",
+                "rounded diagnostics and selection mode must not admit sub-required mass: " + material);
+            inventory.Local["SandStone"] = 50f;
+            Check((bool)Select(single, material)["valid"],
+                "exact local mass must pass through the unified gate for " + material);
+        }
         inventory.Local["SandStone"] = 0f;
         Check(!(bool)Select(single, "SandStone")["valid"], "foreign-only explicit stock must fail");
         Check(!(bool)Select(single, "auto")["valid"], "foreign-only auto stock must fail");
@@ -56,9 +67,40 @@ internal static class BuildMaterialSufficiencyRegression
                     "invalid demand must not look like an unknown executable requirement");
             }
         }
+        VerifyInvalidStockAndAggregates();
         UtilityMaterialPreflightRegression.Run();
         Reset();
         Console.WriteLine("Build material production regression checks passed: " + assertions);
+    }
+
+    private static void VerifyInvalidStockAndAggregates()
+    {
+        var recipe = ConstructionRecipeAdapter.Read(new[] { 50f }, new[] { "BuildableRaw" });
+        foreach (float stock in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity, -1f })
+        {
+            Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(recipe, new[] { "SandStone" },
+                new[] { stock }, 1, out string reason, out string error)
+                && reason == "invalid_material_inventory" && !string.IsNullOrEmpty(error),
+                "the final material gate must reject non-finite or negative stock");
+        }
+        foreach (int count in new[] { 0, -1 })
+        {
+            Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(recipe, new[] { "SandStone" },
+                new[] { 100f }, count, out string reason, out string error)
+                && reason == "invalid_material_requirement",
+                "new placement demand must be positive");
+        }
+        var repeated = ConstructionRecipeAdapter.Read(new[] { 50f, 25f }, new[] { "BuildableRaw", "BuildableRaw" });
+        Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(repeated, new[] { "SandStone", "SandStone" },
+            new[] { 100f, 74.999f }, 1, out string repeatedReason, out string repeatedError)
+            && repeatedReason == "insufficient_material",
+            "disagreeing snapshots of one material pool must use the smaller available amount");
+        var huge = new ConstructionRecipe(new[] { new ConstructionRecipeSlot(0, float.MaxValue, "BuildableRaw") },
+            true, float.MaxValue, null);
+        Check(!BuildMaterialSufficiencyPolicy.IsSatisfied(huge, new[] { "SandStone" },
+            new[] { float.MaxValue }, 2, out string overflowReason, out string overflowError)
+            && overflowReason == "invalid_material_requirement",
+            "overflowed aggregate demand must never authorize a placement");
     }
 
     internal static WorldInventory Reset()

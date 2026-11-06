@@ -84,33 +84,20 @@ fn diffusion_scale(world: &PhysicsWorld, diseases: &DiseaseTable, cell: usize) -
     }
 }
 
-// ELF 0x34640. The final arguments are a pair of internal cells, not a range.
-// The native implementation receives dt/events but does not read them.
-pub(crate) fn update_cells(
+#[inline(always)]
+fn update_cells_inner(
     world: &mut PhysicsWorld,
-    elements: &ElementTable,
     diseases: &DiseaseTable,
-    _events: &mut Events,
-    _dt: f32,
     first: usize,
     second: usize,
-) -> Result<()> {
-    if first >= world.read.element.len() || second >= world.read.element.len() {
-        return Err(Error::new(
-            Status::InvalidArgument,
-            "disease cell index is out of range",
-        ));
-    }
-    if phase(elements, world.read.element[first]) != phase(elements, world.read.element[second]) {
-        return Ok(());
-    }
-    let first_id = world.read.disease_idx[first];
-    let second_id = world.read.disease_idx[second];
+    first_id: u8,
+    second_id: u8,
+) {
     let first_count = world.read.disease_count[first];
     let second_count = world.read.disease_count[second];
     let (first_delta, second_delta, first_added, second_added) = if first_id == second_id {
         if first_id == u8::MAX {
-            return Ok(());
+            return;
         }
         let difference = second_count.wrapping_sub(first_count);
         let donor = if difference > 0 { second } else { first };
@@ -156,7 +143,52 @@ pub(crate) fn update_cells(
             second_delta,
         );
     }
+}
+
+// ELF 0x34640. The final arguments are a pair of internal cells, not a range.
+// The native implementation receives dt/events but does not read them.
+pub(crate) fn update_cells(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    diseases: &DiseaseTable,
+    _events: &mut Events,
+    _dt: f32,
+    first: usize,
+    second: usize,
+) -> Result<()> {
+    if first >= world.read.element.len() || second >= world.read.element.len() {
+        return Err(Error::new(
+            Status::InvalidArgument,
+            "disease cell index is out of range",
+        ));
+    }
+    if phase(elements, world.read.element[first]) != phase(elements, world.read.element[second]) {
+        return Ok(());
+    }
+    let first_id = world.read.disease_idx[first];
+    let second_id = world.read.disease_idx[second];
+    update_cells_inner(world, diseases, first, second, first_id, second_id);
     Ok(())
+}
+
+// The diffusion walker has already loaded and validated both old-snapshot
+// disease IDs before deciding to call. Avoid loading them a second time and
+// keep the hot pair kernel inline; all index and table validation still occurs
+// in the surrounding prepared-step preflight.
+#[inline(always)]
+pub(crate) fn update_cells_known(
+    world: &mut PhysicsWorld,
+    elements: &ElementTable,
+    diseases: &DiseaseTable,
+    first: usize,
+    second: usize,
+    first_id: u8,
+    second_id: u8,
+) {
+    if phase(elements, world.read.element[first]) != phase(elements, world.read.element[second]) {
+        return;
+    }
+    update_cells_inner(world, diseases, first, second, first_id, second_id);
 }
 
 fn grow_cell(

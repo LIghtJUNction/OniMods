@@ -15,7 +15,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "cluster_location_filter_control" },
                 Tags = new List<string> { "automation", "space", "cluster", "location", "sensor", "side-screen" },
                 Description = "星图位置传感器聚合工具：action=list 查询过滤状态；action=set 设置空太空或指定星图坐标过滤开关",
                 Parameters = ClusterLocationSensorControlParams(),
@@ -40,7 +39,6 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "cluster_location_filters_list" },
                 Tags = new List<string> { "automation", "space", "cluster", "location", "sensor", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=cluster_location_sensor action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -61,7 +59,6 @@ namespace OniMcp.Tools
                 Group = "automation",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "cluster_location_filter_set" },
                 Tags = new List<string> { "automation", "space", "cluster", "location", "sensor", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=cluster_location_sensor action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -117,7 +114,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "railgun_launch_mass_control" },
                 Tags = new List<string> { "space", "railgun", "launcher", "mass", "side-screen" },
                 Description = "轨道炮聚合工具：action=list 查询发射质量/库存/辐射粒子能量；action=set_launch_mass 设置发射质量",
                 Parameters = RailGunControlParams(),
@@ -142,7 +138,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "railgun_launch_mass_list" },
                 Tags = new List<string> { "space", "railgun", "launcher", "mass", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=railgun action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -163,7 +158,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "railgun_mass_set" },
                 Tags = new List<string> { "space", "railgun", "launcher", "mass", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=space_building kind=railgun action=set_launch_mass",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

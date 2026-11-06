@@ -19,7 +19,7 @@ namespace OniSim.CycleTrim
         private readonly ImageFilename imageFilename;
         private readonly InsertMap insertMap;
 
-        internal MonoImageMapper(LinuxModule mono)
+        internal MonoImageMapper(NativeModule mono)
         {
             foreachAssembly = mono.Bind<AssemblyForeach>("mono_assembly_foreach");
             assemblyImage = mono.Bind<AssemblyImage>("mono_assembly_get_image");
@@ -37,7 +37,8 @@ namespace OniSim.CycleTrim
                 {
                     IntPtr image = assemblyImage(assembly);
                     IntPtr name = image == IntPtr.Zero ? IntPtr.Zero : imageFilename(image);
-                    if (name != IntPtr.Zero && string.Equals(Path.GetFullPath(ReadUtf8(name)), expectedFilename, StringComparison.Ordinal))
+                    if (name != IntPtr.Zero && string.Equals(Path.GetFullPath(ReadUtf8(name)), expectedFilename,
+                        NativePlatform.IsWindows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
                     {
                         if (found != IntPtr.Zero && found != image) throw new InvalidOperationException("More than one matching MonoImage exists.");
                         found = image;

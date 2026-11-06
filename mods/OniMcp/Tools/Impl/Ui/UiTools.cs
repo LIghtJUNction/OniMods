@@ -33,7 +33,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "ui_management_list", "ui_hotkeys_list" },
                 Tags = new List<string> { "ui", "management", "screen", "hotkey", "action" },
                 Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=list。列出可由 MCP 安全打开/触发的 UI 页面和 Action，包括管理菜单、覆盖层、建造分类和取消/关闭",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -69,7 +68,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "management_open", "ui_open_screen" },
                 Tags = new List<string> { "ui", "management", "screen", "codex", "research", "skills" },
                 Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=open_management。打开指定管理页面：vitals、consumables、priorities、schedule、skills、research、starmap、report、database/codex",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -124,7 +122,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "ui_hotkey_trigger", "game_action_trigger" },
                 Tags = new List<string> { "ui", "hotkey", "action", "management", "build", "overlay" },
                 Description = "兼容入口：请使用 game_control domain=ui uiDomain=action action=trigger。触发白名单内的安全 UI Action，用于打开/关闭界面、覆盖层和建造分类；不会触发 debug 或破坏性游戏操作",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -155,7 +152,6 @@ namespace OniMcp.Tools
                 Group = "ui",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "ui_control", "ui_hotkey_control", "game_action_control" },
                 Tags = new List<string> { "ui", "hotkey", "action", "management", "build", "overlay" },
                 Description = "UI Action 聚合工具：action=list/trigger/open_management/open_load_menu；读取安全 UI Action 白名单、触发白名单内动作或打开原生页面。",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -15,7 +15,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "missile_ammunition_control", "missile_launcher_ammunition_control" },
                 Tags = new List<string> { "buildings", "rocket", "missile", "ammunition", "side-screen" },
                 Description = "导弹发射器聚合工具：action=list 查询弹药允许状态；action=set_ammunition 设置弹药允许状态",
                 Parameters = MissileLauncherControlParams(),
@@ -40,7 +39,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "missile_ammunition_list" },
                 Tags = new List<string> { "buildings", "rocket", "missile", "ammunition", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=missile_launcher action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -84,7 +82,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "missile_launcher_ammunition_set" },
                 Tags = new List<string> { "buildings", "rocket", "missile", "ammunition", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=missile_launcher action=set_ammunition",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -127,7 +124,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "monument_facade_control" },
                 Tags = new List<string> { "buildings", "monument", "decor", "facade", "side-screen" },
                 Description = "纪念碑部件聚合工具：action=list 查询可选外观；action=set 设置外观或 rotate=true 翻转",
                 Parameters = MonumentPartControlParams(),
@@ -152,7 +148,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "monument_facades_list" },
                 Tags = new List<string> { "buildings", "monument", "decor", "facade", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=monument_part action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -198,7 +193,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "monument_facade_set" },
                 Tags = new List<string> { "buildings", "monument", "decor", "facade", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=monument_part action=set",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

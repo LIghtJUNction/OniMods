@@ -15,11 +15,35 @@ A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected 
 - Reuses fetch candidate lookup data for cheaper selection.
 - Throttles expensive refresh work for busy duplicants only; idle duplicants remain responsive.
 - Throttles stationary-critter navigation probing.
+- Reuses immutable component type metadata during saves.
+- Reuses repeated circuit demand queries within each power overlay update.
+- Optionally samples gas/liquid conduit display mesh rebuilding while retaining simulation calls, every-frame drawing and audio.
 
 ## Usage
 
 - Subscribe and enable as normal.
 - No extra configuration is required in most cases.
+
+**Save type metadata** is enabled by default and reuses adjacent type queries
+within each save invocation. **Power overlay queries** is opt-in
+because updates with few repeated circuits can cost more; both settings require
+restarting ONI. Power query reuse falls back for unknown electricity interface implementations or
+conflicting patches. The [implementation and validation notes](../../docs/cycletrim-moono-optimizations.md)
+separate host tests and synthetic measurements from pending ONI runtime acceptance.
+These are independent implementations informed by oni-moono's mechanisms, not its
+engine/runtime replacement or its reported whole-game speedup.
+
+**State machine lookups** is opt-in and requires restarting ONI. It reuses query
+results while the state-machine list is unchanged. List changes invalidate the
+answers; short lists and worker-thread queries keep the original path.
+
+**Conduit animation refresh** defaults to Full. Half / Quarter rebuild the display
+every 2 / 4 rendered frames when inputs are stable and continue drawing the completed
+meshes between rebuilds. Simulation, camera, world and style changes refresh immediately;
+a 100 ms age limit is checked on the next render call. Content overlays and audio
+requests retain full updates. Restart is required; FastTrack or incompatible rendering
+patches disable this group. Small workloads can cost more because of cache validation.
+See the [implementation, complete measurements and acceptance scope](../../docs/cycletrim-visual-refresh.md).
 
 ## Compatibility
 
@@ -69,14 +93,7 @@ The Brain rate cap is integrated into the production Harmony patch, but it appli
 - Queue quota follows worker and in-flight counts within `1..4`; one worker uses quota 2 while idle and 1 while busy.
 - 10,000-request synthetic matrix (**not in-game FPS**): requested hit rates `0/25/50/75/90%` produced `10000/7701/5501/3301/2000` PathProbe executions and avoided `0/2299/4499/6699/8000` clones, a theoretical probe-work reduction of `0/22.99/44.99/66.99/80.00%`. Bounded fallback makes actual reduction lower than nominal hits.
 
-Reproduction commands:
-
-```bash
-dotnet run --no-restore -c Release --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj
-dotnet run --no-build --no-restore -c Release --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj -- --benchmark
-```
-
-You can use the `benchmark` skill to let an agent run the full benchmark automatically and return normalized JSON results.
+The standalone Brain benchmark project has been retired. The results above are historical measurements; they are not results from the current source. Run the current host checks with `python3 scripts/check_mods.py --skip-synthetic-performance`.
 
 Full scenario notes are in [dist/CycleTrim/README.md](../../dist/CycleTrim/README.md) for reproducible detail.
 

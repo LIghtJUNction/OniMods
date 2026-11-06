@@ -44,7 +44,7 @@ def main():
         license_path = (checkout / "mods/CycleTrim/OniSim/native/../../../../LICENSE").resolve()
         if not project.is_file() or license_path != checkout / "LICENSE" or not license_path.is_file():
             raise RuntimeError("Source archive lacks the canonical project/license layout")
-        command = ["rtk", "proxy", "dotnet", "build", str(project), "-c", "Release",
+        command = ["dotnet", "build", str(project), "-c", "Release",
                    "--disable-build-servers",
                    "-p:ImportDirectoryBuildProps=false", "-p:ImportDirectoryBuildTargets=false",
                    f"-p:OniManagedPath={managed}", "-p:IncludeOniSim=true",
@@ -58,7 +58,7 @@ def main():
             raise RuntimeError(f"Extracted source build failed ({result.returncode}); inspect source-build.log")
         rebuilt_package = checkout / "dist/CycleTrim.zip"
         with zipfile.ZipFile(rebuilt_package) as package:
-            native = hashlib.sha256(package.read("OniSim/liboni_sim_core.so")).hexdigest()
+            native = hashlib.sha256(package.read("OniSim/linux-x64/liboni_sim_core.so")).hexdigest()
             wrapper = hashlib.sha256(package.read("CycleTrim.dll")).hexdigest()
         if hashlib.sha256(archive_path.read_bytes()).hexdigest() != digest:
             raise RuntimeError("Source archive changed during its isolated build")

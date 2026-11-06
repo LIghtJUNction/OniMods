@@ -259,8 +259,6 @@ namespace OniMcp.Core
         [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
         public Dictionary<string, SchemaProperty> Properties { get; set; }
 
-        [JsonProperty("x-mcp-header", NullValueHandling = NullValueHandling.Ignore)]
-        public string McpHeader { get; set; }
     }
 
     /// <summary>

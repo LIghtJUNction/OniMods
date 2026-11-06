@@ -1,0 +1,195 @@
+{
+  "revision": "29fa09cb352f4bb45f32bc03ee1f326b0e8d15f5",
+  "cpu": 0,
+  "benchmark": "state-machine",
+  "assembly_sha256": "2d92a0faf399bf4dc74dd35409fe0241d19a4c713b1ae44eb82d558bbc0ddf0a",
+  "started_utc": "2026-11-06T08:11:56.942890+00:00",
+  "runs": [
+    {
+      "mode": "default",
+      "process": 1,
+      "log": "default-1.log",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-state-machine"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "environment_overrides": {
+        "DOTNET_TieredCompilation": null,
+        "DOTNET_TieredPGO": null,
+        "DOTNET_ReadyToRun": null,
+        "DOTNET_TC_OnStackReplacement": null,
+        "DOTNET_TC_QuickJit": null,
+        "DOTNET_TC_QuickJitForLoops": null,
+        "COMPlus_TieredCompilation": null,
+        "COMPlus_TieredPGO": null,
+        "COMPlus_ReadyToRun": null,
+        "COMPlus_TC_OnStackReplacement": null,
+        "COMPlus_TC_QuickJit": null,
+        "COMPlus_TC_QuickJitForLoops": null,
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+      }
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "log": "default-2.log",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-state-machine"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "environment_overrides": {
+        "DOTNET_TieredCompilation": null,
+        "DOTNET_TieredPGO": null,
+        "DOTNET_ReadyToRun": null,
+        "DOTNET_TC_OnStackReplacement": null,
+        "DOTNET_TC_QuickJit": null,
+        "DOTNET_TC_QuickJitForLoops": null,
+        "COMPlus_TieredCompilation": null,
+        "COMPlus_TieredPGO": null,
+        "COMPlus_ReadyToRun": null,
+        "COMPlus_TC_OnStackReplacement": null,
+        "COMPlus_TC_QuickJit": null,
+        "COMPlus_TC_QuickJitForLoops": null,
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+      }
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "log": "default-3.log",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-state-machine"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "environment_overrides": {
+        "DOTNET_TieredCompilation": null,
+        "DOTNET_TieredPGO": null,
+        "DOTNET_ReadyToRun": null,
+        "DOTNET_TC_OnStackReplacement": null,
+        "DOTNET_TC_QuickJit": null,
+        "DOTNET_TC_QuickJitForLoops": null,
+        "COMPlus_TieredCompilation": null,
+        "COMPlus_TieredPGO": null,
+        "COMPlus_ReadyToRun": null,
+        "COMPlus_TC_OnStackReplacement": null,
+        "COMPlus_TC_QuickJit": null,
+        "COMPlus_TC_QuickJitForLoops": null,
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+      }
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "log": "tiering-off-1.log",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-state-machine"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "environment_overrides": {
+        "DOTNET_TieredCompilation": "0",
+        "DOTNET_TieredPGO": null,
+        "DOTNET_ReadyToRun": null,
+        "DOTNET_TC_OnStackReplacement": null,
+        "DOTNET_TC_QuickJit": null,
+        "DOTNET_TC_QuickJitForLoops": null,
+        "COMPlus_TieredCompilation": null,
+        "COMPlus_TieredPGO": null,
+        "COMPlus_ReadyToRun": null,
+        "COMPlus_TC_OnStackReplacement": null,
+        "COMPlus_TC_QuickJit": null,
+        "COMPlus_TC_QuickJitForLoops": null,
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+      }
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "log": "tiering-off-2.log",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-state-machine"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "environment_overrides": {
+        "DOTNET_TieredCompilation": "0",
+        "DOTNET_TieredPGO": null,
+        "DOTNET_ReadyToRun": null,
+        "DOTNET_TC_OnStackReplacement": null,
+        "DOTNET_TC_QuickJit": null,
+        "DOTNET_TC_QuickJitForLoops": null,
+        "COMPlus_TieredCompilation": null,
+        "COMPlus_TieredPGO": null,
+        "COMPlus_ReadyToRun": null,
+        "COMPlus_TC_OnStackReplacement": null,
+        "COMPlus_TC_QuickJit": null,
+        "COMPlus_TC_QuickJitForLoops": null,
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+      }
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "log": "tiering-off-3.log",
+      "command": [
+        "taskset",
+        "-c",
+        "0",
+        "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet",
+        "/workspace/scratch/a26820df7acf/OniMods/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll",
+        "--benchmark-state-machine"
+      ],
+      "exit_code": 0,
+      "timed_out": false,
+      "environment_overrides": {
+        "DOTNET_TieredCompilation": "0",
+        "DOTNET_TieredPGO": null,
+        "DOTNET_ReadyToRun": null,
+        "DOTNET_TC_OnStackReplacement": null,
+        "DOTNET_TC_QuickJit": null,
+        "DOTNET_TC_QuickJitForLoops": null,
+        "COMPlus_TieredCompilation": null,
+        "COMPlus_TieredPGO": null,
+        "COMPlus_ReadyToRun": null,
+        "COMPlus_TC_OnStackReplacement": null,
+        "COMPlus_TC_QuickJit": null,
+        "COMPlus_TC_QuickJitForLoops": null,
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+      }
+    }
+  ]
+}

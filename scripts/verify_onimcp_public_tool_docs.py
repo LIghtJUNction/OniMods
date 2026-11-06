@@ -28,9 +28,9 @@ def extract_nested_tool_list(text: str, marker: str, source: str) -> set[str]:
 
 def extract_quick_start_tools(text: str) -> set[str]:
     for line in text.splitlines():
-        if line.startswith("- Legacy/default public tools:"):
+        if line.startswith("- Public tools:"):
             return set(re.findall(r"`([a-z0-9_]+)`", line))
-    fail("docs/mcp-tools-reference.md: missing Legacy/default public tools line")
+    fail("docs/mcp-tools-reference.md: missing Public tools line")
 
 
 def extract_core_tool_table(text: str) -> set[str]:

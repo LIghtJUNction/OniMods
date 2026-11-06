@@ -17,7 +17,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "build_validate", "building_preview" },
                 Tags = new List<string> { "buildings", "preview", "footprint", "placement", "建造", "预检" },
                 Description = "兼容入口：请使用 building_control domain=planning action=preview",
                 Parameters = BuildPlacementParameters(includeConfirm: false, includeArea: false),
@@ -32,6 +31,7 @@ namespace OniMcp.Tools
                     var previewArgs = (JObject)args.DeepClone();
                     previewArgs["dryRun"] = true;
                     var result = TryPlanOne(args["prefabId"]?.ToString(), x, y, previewArgs);
+                    AddConstructionDiagnostics(result, args["prefabId"]?.ToString(), x, y, ToolUtil.ResolveWorldId(previewArgs));
                     return CallToolResult.Text(JsonConvert.SerializeObject(result, McpJsonUtil.Settings));
                 }
             };

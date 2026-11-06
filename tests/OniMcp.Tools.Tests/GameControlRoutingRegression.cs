@@ -33,6 +33,31 @@ internal static class GameControlRoutingRegression
         Require(tool.Parameters.Count - stepInputs.Length <= 34, "unrelated game control inputs must stay within their existing schema budget");
         Require(tool.Handler(null).IsError, "missing domain must return an error");
 
+        foreach (string kind in new[] { null, "all", "management", "overlay", "build", "navigation" })
+        {
+            var args = new JObject { ["domain"] = "ui", ["action"] = "list" };
+            if (kind != null)
+                args["kind"] = kind;
+            Require(!tool.Handler(args).IsError, "UI list must dispatch without an explicit uiDomain");
+            Require((string)GameControlRouteTestDoubles.LastArgs["domain"] == "action",
+                "list filters must not be interpreted as UI domains");
+            Require((string)GameControlRouteTestDoubles.LastArgs["kind"] == kind,
+                "UI list filters must reach the downstream handler unchanged");
+            Require((string)args["domain"] == "ui", "UI forwarding must not mutate the caller's arguments");
+        }
+        foreach (string kind in new[] { "action", "ui_action", "actions", "feedback", "hint", "hints" })
+        {
+            tool.Handler(new JObject { ["domain"] = "ui", ["action"] = "list", ["kind"] = " " + kind.ToUpperInvariant() + " " });
+            Require((string)GameControlRouteTestDoubles.LastArgs["domain"] == kind
+                && GameControlRouteTestDoubles.LastArgs["kind"] == null,
+                "legacy kind routing must remain supported without forwarding the selector as a filter");
+        }
+        tool.Handler(new JObject { ["domain"] = "ui", ["uiDomain"] = "feedback", ["action"] = "notification", ["kind"] = "all" });
+        Require((string)GameControlRouteTestDoubles.LastArgs["domain"] == "feedback"
+            && (string)GameControlRouteTestDoubles.LastArgs["kind"] == "all"
+            && GameControlRouteTestDoubles.LastArgs["uiDomain"] == null,
+            "explicit UI domain must take precedence and be consumed before forwarding");
+
         GameControlRouteTestDoubles.Calls = 0;
         Game.Instance = new Game();
         SpeedControlScreen.Instance = new SpeedControlScreen();
@@ -61,9 +86,10 @@ namespace OniMcp.Tools
     internal static class GameControlRouteTestDoubles
     {
         internal static int Calls;
+        internal static JObject LastArgs;
         internal static McpTool Tool()
         {
-            return new McpTool { Handler = args => { Calls++; return CallToolResult.Text("game boundary"); } };
+            return new McpTool { Handler = args => { Calls++; LastArgs = args; return CallToolResult.Text("game boundary"); } };
         }
     }
 

@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "map_search", "world_find", "find_on_map" },
                 Tags = new List<string> { "world", "map", "search", "find", "elements", "buildings", "items", "dupes", "地图", "搜索", "查找" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=search。按自然语言/query 在同一区域内搜索格子元素、建筑、物品和复制人；支持 nearX/nearY 最近排序。",
                 Parameters = CommonSearchParameters(includeKinds: true),
@@ -55,7 +54,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "map_search_cells", "world_find_cells", "element_cells_search" },
                 Tags = new List<string> { "world", "map", "search", "cells", "elements", "temperature", "mass", "地图", "格子", "元素" },
                 Description = "兼容入口：请优先使用 world_search kinds=cells/elements。",
                 Parameters = CellSearchParameters(),
@@ -66,38 +64,6 @@ namespace OniMcp.Tools
 
                     var request = SearchRequest.From(args, "hits");
                     return CallToolResult.Text(JsonConvert.SerializeObject(BuildResult("world_search_cells", request, SearchCells(request)), McpJsonUtil.Settings));
-                }
-            };
-        }
-
-        public static McpTool SearchObjects()
-        {
-            return new McpTool
-            {
-                Name = "world_search_objects",
-                Group = "world",
-                Mode = "read",
-                Risk = "none",
-                Hidden = true,
-                Aliases = new List<string> { "map_search_objects", "world_find_objects", "object_search" },
-                Tags = new List<string> { "world", "map", "search", "buildings", "items", "dupes", "objects", "地图", "对象", "建筑", "物品" },
-                Description = "兼容入口：请优先使用 world_search kinds=buildings/items/dupes。",
-                Parameters = ObjectSearchParameters(),
-                Handler = args =>
-                {
-                    if (Game.Instance == null)
-                        return CallToolResult.Error("Game not initialized");
-
-                    var request = SearchRequest.From(args, "hits");
-                    var results = new List<SearchHit>();
-                    if (request.IncludeKind("buildings"))
-                        results.AddRange(SearchBuildings(request));
-                    if (request.IncludeKind("items") || request.IncludeKind("resources"))
-                        results.AddRange(SearchItems(request));
-                    if (request.IncludeKind("dupes") || request.IncludeKind("duplicants"))
-                        results.AddRange(SearchDupes(request));
-
-                    return CallToolResult.Text(JsonConvert.SerializeObject(BuildResult("world_search_objects", request, results), McpJsonUtil.Settings));
                 }
             };
         }

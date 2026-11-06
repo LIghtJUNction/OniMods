@@ -17,7 +17,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "dupes_skills", "skills_list" },
                 Hidden = true,
                 Description = "兼容入口：请使用 dupes_control domain=skill action=list。列出复制人技能树中的技能、前置技能、技能组、士气期望和可学习状态",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -61,7 +60,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "learn_skill", "dupe_skill_learn", "skills_learn" },
                 Hidden = true,
                 Description = "兼容入口：请使用 dupes_control domain=skill action=learn。让复制人学习一个技能；默认遵守技能点、前置技能和职业限制，force=true 可用 GrantSkill 作为外部授予",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -126,7 +124,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "dupe_skill_control", "skills_control" },
                 Tags = new List<string> { "dupes", "skills", "management" },
                 Description = "复制人技能查询/学习统一入口：action=list/learn；学习技能需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -167,7 +164,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "skills_hats_list", "dupe_hats_list" },
                 Tags = new List<string> { "dupes", "skills", "hats", "cosmetic", "management" },
                 Description = "兼容入口：列出复制人帽子选项；新调用请使用 dupes_control domain=hat action=list",
                 Parameters = DupeLookupParams(),
@@ -189,7 +185,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "dupe_hat_control", "skills_hat_control", "hat_control" },
                 Tags = new List<string> { "dupes", "skills", "hats", "cosmetic", "management" },
                 Description = "统一列出和设置复制人帽子。action=list/set；set 可传 hat 或 clear=true，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -226,7 +221,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "set_hat", "skills_hat_set", "dupe_hat_set" },
                 Tags = new List<string> { "dupes", "skills", "hats", "cosmetic", "management" },
                 Description = "兼容入口：设置复制人的目标帽子或清空帽子；新调用请使用 dupes_control domain=hat action=set，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

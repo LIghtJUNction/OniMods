@@ -1,6 +1,31 @@
 # Native differential fixtures
 
-Current source-built native: `2772e526…`. The borrowed pressure-sweep source
+## 2026-10-21 source recheck and rejected scheduling experiment
+
+The native source tree at `adc4b2e` rebuilds here as `55d5a236…` with Rust
+1.99.1. All 43 Release Rust tests and 57 Python harness tests pass. Both one
+and four workers pass all 287 official-library cases / 9,739 publications;
+the parallel emitter case observes `OniSim-cell-0` through `OniSim-cell-3`.
+See `results/linux-744825-native-recheck-20261021.json`. This is native fixture
+evidence; no Steam/Unity client was launched in this recheck.
+The earlier one/four-worker scaling gates remain without a passing result;
+these correctness runs do not establish a four-worker performance improvement.
+
+The frame benchmark now records missing or unreadable Linux PSI counters as
+unknown, with the OS error, instead of aborting when a container does not expose
+`/proc/pressure`. Required process memory and worker observations stay strict.
+
+An experiment divided disease cleanup into equal row bands for the actual
+worker count. All 96 timed 96×96 final states match the official library and
+all samples observe four working cell threads. The original performance gates
+fail: mixed-germ CPU rises 4.30% and wall time rises 5.69%. Production scheduling
+is unchanged. The proposal and every sample are retained in
+`proposals/disease-balanced-rows-20261021.patch` and
+`results/linux-744825-balanced-disease-rows-20261021.json`.
+
+## Earlier acceptance records
+
+Earlier source-built native: `2772e526…`. The borrowed pressure-sweep source
 passes 43 release Rust tests and 50 pure Python tests. Both 2772e526 and preceding
 8bd415ce pass the expanded 287 cases / 9739 publications at one and four workers.
 The 24 new flow-metadata fixtures retain exact signed-zero, subnormal, infinity
@@ -148,6 +173,13 @@ Worker names are recorded from `/proc/self/task` before shutdown.
 `artifacts/` contains generated raw snapshots, logs and debugger traces and is
 ignored by Git and excluded from CycleTrim's source package. Hashes bind a result
 to its tested artifact; rebuilding requires rerunning the comparison.
+Conformance runs remove raw `reference.json` and `candidate.json` only after the
+entire comparison passes and `summary.json` is written. Use
+`--keep-success-snapshots` to retain them. A failed comparison, interrupted run or
+summary-write error preserves all raw outputs; fixtures, logs and summaries are
+always retained.
+An output directory has one non-blocking runner lock; concurrent runs must use
+different `--output` directories so they cannot replace each other's evidence.
 
 ## Recorded run (2026-10-21)
 

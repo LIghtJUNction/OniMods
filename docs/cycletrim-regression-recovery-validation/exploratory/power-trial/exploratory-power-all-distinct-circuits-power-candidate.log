@@ -1,0 +1,3 @@
+R3_CONFIG {"family":"power","scenario":"all-distinct-circuits","mode":"query","pair":0,"assembly_sha256":"db386c961cc436e711040b976ba8ab1c3742471c807dbc79ae0ccf8b6c4a40f7","order":"original,patched"}
+R3_SAMPLE {"variant":"original","pair":0,"milliseconds":33.647233,"allocated_bytes":7782400,"checksum":356400,"counter_name":"Calls","counter":51200}
+R3_SAMPLE {"variant":"patched","pair":0,"milliseconds":36.6479,"allocated_bytes":7782400,"checksum":356400,"counter_name":"Calls","counter":51200}

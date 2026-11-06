@@ -13,6 +13,7 @@ import zipfile
 
 from cases import cases
 from run import HARNESS_FILES
+from texture_probe.build import PROBE as TEXTURE_PROBE
 from texture_probe.validate import validate_observation
 
 ROOT = Path(__file__).resolve().parent
@@ -55,7 +56,7 @@ def verify(dist):
     with zipfile.ZipFile(dist / "CycleTrim.zip") as package:
         require(not any(Path(name).name == "CycleTrim.TextureProbe.dll" for name in package.namelist()),
                 "The opt-in texture probe must not be included in the production mod")
-        native = sha(package.read("OniSim/liboni_sim_core.so"))
+        native = sha(package.read("OniSim/linux-x64/liboni_sim_core.so"))
         managed = sha(package.read("CycleTrim.dll"))
         for workers in (1, 4):
             name = f"results/linux-744825-workers{workers}.json"
@@ -120,14 +121,8 @@ def verify(dist):
                 and graphics["restoration"]
                 and all(value is True for value in graphics["restoration"].values()),
                 "Graphical runtime cleanup or preservation is incomplete")
-        for name, digest in graphics["probe_source_sha256"].items():
-            require(name in ("TextureProbe.cs", "TextureProbe.csproj", "mod.yaml", "mod_info.yaml", "build.py"),
-                    "Unexpected graphical probe source")
-            require(sha((ROOT / "texture_probe" / name).read_bytes()) == digest,
-                    f"Graphical probe source changed since observation: {name}")
-        require(set(graphics["probe_source_sha256"]) == {
-            "TextureProbe.cs", "TextureProbe.csproj", "mod.yaml", "mod_info.yaml", "build.py"},
-            "Graphical probe source identity is incomplete")
+        require(graphics["probe_source_sha256"] == TEXTURE_PROBE.source_hashes(),
+                "Graphical probe source identity is incomplete or changed since observation")
         for name in ("PROGRESS.md", "RUNTIME-VALIDATION.md", "PARALLEL-VALIDATION.md", "PERFORMANCE.md", "conformance/README.md"):
             require(package.read("OniSim/" + name) == (MOD / "OniSim" / name).read_bytes(),
                     f"Packaged document is stale: {name}")
@@ -141,7 +136,7 @@ def verify(dist):
                 "Source archive contains generated or excluded trees")
         for name in (*HARNESS_FILES, "test_runner.py", "verify_package.py", "build_source_package.py",
                      "prepare_instances.py", "verify_instances.py", "step_instance.py", "mcp_roundtrip.py",
-                     "test_instances.py", "test_mcp_roundtrip.py",
+                     "test_instances.py", "test_mcp_roundtrip.py", "probe_build.py", "test_probe_build.py",
                      "texture_probe/TextureProbe.cs", "texture_probe/TextureProbe.csproj", "texture_probe/build.py",
                      "texture_probe/validate.py",
                      "texture_probe/mod.yaml", "texture_probe/mod_info.yaml", "texture_probe/README.md"):

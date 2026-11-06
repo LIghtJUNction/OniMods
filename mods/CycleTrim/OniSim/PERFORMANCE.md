@@ -1,6 +1,39 @@
 # Native frame performance work
 
-The canonical source-built native candidate is
+## Current source baseline, 2026-10-26
+
+Source `35f9785` rebuilds to Linux native
+`e8bfcb479c1a093cebfb9239c881c6051ef36a116dd15cccad1d17c9f66e8056`.
+Two follow-up experiments are rejected: moving the temperature threshold guard
+before element lookups, and enabling Thin LTO with one codegen unit. Each has
+eight alternating pairs in all six 96x96 scenes, two warmup batches and six timed
+batches per sample, on CPU0 with one worker. All 192 timed final states match
+the installed official library exactly, with zero timed major faults. The LTO
+file separately passes all 287 conformance cases at one worker.
+
+Neither experiment meets the unchanged CPU performance gates. CPU frequencies
+vary substantially within each run, so these measurements do not establish
+stable regression magnitudes or a speedup. The source edit is reverted and the
+release profile remains unchanged. No 192x192, four-worker, actual-game or FPS
+acceptance is claimed for either experiment. See the
+[rejection receipt](conformance/results/linux-744825-thermal-guard-lto.json).
+
+A same-gas SSE2 pressure-triplet experiment remains unadopted. Its release build
+passes 57 Rust tests (two existing microbenchmarks ignored), 1,849,056 edge
+comparisons across 32 MXCSR environments and all 287 official cases at one
+worker. Eight alternating pairs in six 96x96 scenes produce 96 exact final
+states and zero timed major faults. The median-based gates nominally pass, but
+all paired uncertainty intervals cross zero while CPU frequency and host load
+vary widely. The planned 192x192 run stops at the unchanged 60-second timeout
+in its first baseline vacuum sample; only ten earlier timed rows are accepted.
+There is no reliable speed claim or complete large-grid acceptance. Source and
+the normal native build are restored to `e8bfcb47`; a base-bound patch and the
+[inconclusive receipt](conformance/results/linux-744825-pressure-triplet.json)
+retain the experiment without enabling it.
+
+## Earlier 2772e526 measurements
+
+The earlier source-built native candidate is
 `2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f`.
 The numeric helper is adopted in source and retained in the current candidate.
 The earlier C301/EA8 native/managed pair passed targeted Steam headless and graphical

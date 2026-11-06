@@ -31,7 +31,6 @@ namespace OniMcp.Tools
                 add("map/", "dir", "World map code files.");
                 add("infrastructure/", "dir", "Power, pipe, and room files.");
                 add("buildings/", "dir", "Building state and desired build plan file.");
- add("orders/", "dir", "Order intent file.");
  add("resources/", "dir", "Inventory files.");
                 add("dupes/", "dir", "Duplicant files.");
                 add("symbols/", "dir", "Generated one-character glyph mapping files.");
@@ -50,8 +49,7 @@ namespace OniMcp.Tools
                     add("status.oni", "file", "Colony snapshot.");
                 else if (relative == "map/")
                 {
-                    add("index.html", "file", "Visual floor layout HTML page of the CURRENT visible camera screen.");
-                    add("index.md", "file", "Token-efficient Markdown map of the CURRENT visible camera screen.");
+                    add("viewport.html", "file", "Visual floor layout HTML page of the current camera viewport.");
                     add("viewport.md", "file", "Editable Markdown map of the current camera viewport; read with format=edit before changing cells.");
                     add("layers/", "dir", "Visual floor layout pages divided by height layers.");
                 }
@@ -117,8 +115,6 @@ namespace OniMcp.Tools
                     foreach (var go in LiveCompletedBuildings())
                         add(GetBuildingDetailFileName(go), "file", "Editable parameters for " + go.GetProperName() + ".");
                 }
-                else if (relative == "orders/")
-                    add("orders.oni", "file", "Read-only legacy guide. Use /active/ops/orders.md for executable orders.");
                 else if (relative == "resources/")
                 {
                     add("inventory.oni", "file", "Resource inventory.");
@@ -271,7 +267,6 @@ namespace OniMcp.Tools
                     || relative == "map/layers/"
                     || relative == "infrastructure/"
                     || relative == "buildings/"
-                    || relative == "orders/"
                     || relative == "resources/"
                     || relative == "dupes/"
                     || relative == "symbols/"

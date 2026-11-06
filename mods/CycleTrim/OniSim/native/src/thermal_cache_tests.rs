@@ -2,16 +2,19 @@ use super::*;
 use std::hint::black_box;
 
 unsafe extern "C" {
-    fn __errno_location() -> *mut i32;
+    #[cfg_attr(target_os = "linux", link_name = "__errno_location")]
+    #[cfg_attr(target_os = "macos", link_name = "__error")]
+    #[cfg_attr(target_os = "windows", link_name = "_errno")]
+    fn errno_location() -> *mut i32;
 }
 
 fn errno() -> i32 {
-    // glibc returns the current thread's live errno slot.
-    unsafe { *__errno_location() }
+    // Each platform's C runtime returns the current thread's live errno slot.
+    unsafe { *errno_location() }
 }
 fn set_errno(value: i32) {
     unsafe {
-        *__errno_location() = value;
+        *errno_location() = value;
     }
 }
 fn csr() -> u32 {

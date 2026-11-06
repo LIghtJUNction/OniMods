@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "schedules",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "optimize_schedules", "schedule_stagger_shifts", "stagger_dupe_schedules" },
                 Tags = new List<string> { "schedule", "schedules", "dupe", "duplicant", "shift", "stagger", "optimize", "日程", "复制人", "错峰", "轮班", "优化" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=management kind=schedule action=optimize。错峰优化日程：支持 natural 自然中文命名、夜猫子/早起鸟/呼噜怪智能特质分班、可配置睡眠/洗漱/娱乐时长",
                 Parameters = new Dictionary<string, McpToolParameter>

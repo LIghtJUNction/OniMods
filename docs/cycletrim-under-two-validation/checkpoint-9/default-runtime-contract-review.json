@@ -1,0 +1,76 @@
+{
+  "scope": "Parser validation only; retained genuine prior-run CLI logs. No new benchmark execution.",
+  "source": "docs/cycletrim-under-two-validation/default-runtime/summarize.py",
+  "source_sha256": "a9832cf5b1fa67649d1a44f1171d839f085656ef0e4c11692449943ef6ac1e53",
+  "fixtures": {
+    "conveyor-anchor.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/conveyor-prior.log",
+      "sha256": "046bad0fae2ac053eac58f7906166f8fe3f3edbe2539c30d39748b9738fe1c36"
+    },
+    "conveyor-prior.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/conveyor-candidate.log",
+      "sha256": "5b6999a78bec2fb011af0c94e3714722f14cfd1660e843e08fa80ebe43eefa39"
+    },
+    "conveyor-candidate.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/conveyor-candidate.log",
+      "sha256": "5b6999a78bec2fb011af0c94e3714722f14cfd1660e843e08fa80ebe43eefa39"
+    },
+    "animation-anchor.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/animation-prior.log",
+      "sha256": "f5013108f7dad12ebad20b94ff6dda618cd5031e54f3c909f07017ac9888cef4"
+    },
+    "animation-prior.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/animation-candidate.log",
+      "sha256": "1e9200bf798797541ec4ac0f269865669d8583b9092a0039a18ca034ca3e4fbc"
+    },
+    "animation-candidate.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/animation-candidate.log",
+      "sha256": "1e9200bf798797541ec4ac0f269865669d8583b9092a0039a18ca034ca3e4fbc"
+    },
+    "power-anchor.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/power-prior.log",
+      "sha256": "a8eaebd0b473ad186c2e62e0fecc8898a29be4b8f9590a12b368b2b24143e36c"
+    },
+    "power-prior.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/power-candidate.log",
+      "sha256": "890ba06a6282495ae76e1a8196c4ecc268e8ac0c09228b4a3cead2f12bac2fa5"
+    },
+    "power-candidate.log": {
+      "source": "docs/cycletrim-regression-recovery-validation/integrated/default-runtime/power-candidate.log",
+      "sha256": "890ba06a6282495ae76e1a8196c4ecc268e8ac0c09228b4a3cead2f12bac2fa5"
+    }
+  },
+  "positive": {
+    "outcome": "pass",
+    "scenario_mode_count": 22,
+    "revisions": 3,
+    "description": "620 logs as anchor;09 logs as prior and candidate solely for parser validation"
+  },
+  "negative": [
+    {
+      "corruption": "iterations_per_sample",
+      "outcome": "rejected",
+      "message": "conveyor workload contract changed"
+    },
+    {
+      "corruption": "retained_paths",
+      "outcome": "rejected",
+      "message": "conveyor workload contract changed"
+    },
+    {
+      "corruption": "rails_per_path",
+      "outcome": "rejected",
+      "message": "conveyor workload contract changed"
+    },
+    {
+      "corruption": "new_path_rails",
+      "outcome": "rejected",
+      "message": "conveyor workload contract changed"
+    },
+    {
+      "corruption": "order",
+      "outcome": "rejected",
+      "message": "conveyor variant order changed"
+    }
+  ]
+}

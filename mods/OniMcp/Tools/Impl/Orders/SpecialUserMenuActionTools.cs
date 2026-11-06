@@ -11,34 +11,6 @@ namespace OniMcp.Tools
 {
     public static class SpecialUserMenuActionTools
     {
-        public static McpTool ControlMutantSeed()
-        {
-            return new McpTool
-            {
-                Name = "mutant_seed_control",
-                Group = "production",
-                Mode = "write",
-                Risk = "medium",
-                Aliases = new List<string> { "accept_mutant_seeds_control", "mutated_seed_toggle_control" },
-                Tags = new List<string> { "production", "farming", "mutant-seeds", "fish-feeder", "spice-grinder", "fabricator", "user-menu" },
-                Description = "兼容入口：请优先使用 building_control domain=production action=mutant_seed_list/mutant_seed_set。突变种子接收开关：action=list 查询玩家菜单开关；action=set 设置接受/拒收",
-                Parameters = MutantSeedControlParams(),
-                Handler = args =>
-                {
-                    string action = (args["action"]?.ToString() ?? "").Trim().ToLowerInvariant();
-                    switch (action)
-                    {
-                        case "list":
-                            return ListMutantSeedControls().Handler(args);
-                        case "set":
-                            return SetMutantSeedControl().Handler(args);
-                        default:
-                            return CallToolResult.Error("action must be list or set");
-                    }
-                }
-            };
-        }
-
         public static McpTool ListMutantSeedControls()
         {
             return new McpTool
@@ -47,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "accept_mutant_seeds_list", "mutated_seed_toggles_list" },
                 Tags = new List<string> { "production", "farming", "mutant-seeds", "fish-feeder", "spice-grinder", "fabricator", "user-menu" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=production action=mutant_seed_list",
                 Hidden = true,
@@ -83,7 +54,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "accept_mutant_seeds_set", "mutated_seed_toggle_set" },
                 Tags = new List<string> { "production", "farming", "mutant-seeds", "fish-feeder", "spice-grinder", "fabricator", "user-menu" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=production action=mutant_seed_set",
                 Hidden = true,
@@ -122,7 +92,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "rocket_usage_restriction_control", "rocket_controlled_building_control" },
                 Tags = new List<string> { "rocket", "usage", "restriction", "control-station", "user-menu" },
                 Description = "火箭内部建筑使用限制聚合工具：action=list 查询状态；action=set 设置是否受 RocketControlStation 限制",
                 Parameters = RocketUsageControlParams(),
@@ -150,7 +119,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "rocket_usage_restrictions_list", "rocket_controlled_buildings_list" },
                 Tags = new List<string> { "rocket", "usage", "restriction", "control-station", "user-menu" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=usage action=list",
                 Hidden = true,
@@ -186,7 +154,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "rocket_usage_restriction_set", "rocket_controlled_building_set" },
                 Tags = new List<string> { "rocket", "usage", "restriction", "control-station", "user-menu" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=usage action=set",
                 Hidden = true,

@@ -7,6 +7,11 @@
   <a href="mods/CycleTrim/README.md"><img alt="CycleTrim — 缺氧性能优化 Mod" src="mods/CycleTrim/preview.png" width="47%" /></a>
 </p>
 
+<p align="center">
+  <a href="mods/OniOnline/README.md"><img alt="OniOnline — 缺氧星球联机 Mod" src="mods/OniOnline/assets/onionline-logo-v1.png" width="280" /></a><br />
+  <a href="mods/OniOnline/README.md"><strong>OniOnline</strong></a>
+</p>
+
 <div align="center">
   <p>
     <a href="Cargo.toml"><img alt="Rust" src="https://img.shields.io/badge/Rust-2024-f46623?logo=rust&logoColor=white" /></a>
@@ -56,6 +61,7 @@
 | `onim` | [src/](src/) | Rust 编写的 Mod 开发工具链 |
 | `OniMcp` | [mods/OniMcp/](mods/OniMcp/) | ONI MCP Server Mod |
 | `CycleTrim` | [mods/CycleTrim/](mods/CycleTrim/) | 针对实测模拟热点的轻量级性能优化 Mod |
+| `OniOnline` | [mods/OniOnline/](mods/OniOnline/) | 自有星球联机、聊天与授权只读观察 |
 | `oni-skills` *(可选)* | [oni-skills/](oni-skills/) · [GitHub](https://github.com/LIghtJUNction/oni-skills) | 缺氧高阶游戏攻略与工程模块库（社区共建、开放完善） |
 | 架构与核心原理 | [docs/architecture-and-principles.md](docs/architecture-and-principles.md) | OniMcp 与 CycleTrim 的底层实现机制、世界文本化与性能优化设计 |
 | `OniMcp` 中文文档 | [mods/OniMcp/README.md](mods/OniMcp/README.md) | 安装、连接和功能说明 |
@@ -69,6 +75,8 @@
 支持 OniMcp 的开发与测试：[捐赠](https://donate.lmm.best/?project=onimcp)。
 
 [![OniMcp 捐赠进度](https://donate.lmm.best/badge.svg?project=onimcp&currency=CNY&lang=zh-CN&period=all&layout=compact&theme=dark&width=360&title=OniMCP)](https://donate.lmm.best/?project=onimcp)
+
+捐款，加速一切。
 
 <details>
 <summary>展开 Mod 介绍</summary>
@@ -116,6 +124,8 @@ onim dev -m MyMod
 ```
 
 `onim dev` 只在 `mods.json` 配置实际变化时备份，最多保留最近 5 份有效配置备份。
+每次构建必须生成新的 `dist/<AssemblyName>.zip`；编译成功但没有新包也会失败并恢复旧包。
+安装先解压、检查 DLL 和 `mod_info.yaml`，再替换目录；解压或 Dev 启用失败会保留原安装。
 它只启用选定的 Dev 条目，不会顺带启用同一 Mod 的其他副本。
 配置已写入但备份清理失败时，会单独警告，不把安装误报为失败。
 

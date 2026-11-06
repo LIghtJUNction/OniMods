@@ -25,19 +25,20 @@ namespace OniSim.CycleTrim
         {
             if (assembly == null || assembly.GetName().Name != "Assembly-CSharp")
                 throw new InvalidOperationException("The loader requires the loaded official Assembly-CSharp assembly.");
-            RequireDigest(assembly.Location, AssemblySha256, "Assembly-CSharp");
+            if (NativePlatform.IsLinux)
+                RequireDigest(assembly.Location, AssemblySha256, "Assembly-CSharp");
+            else
+                PortableProfile.Validate(assembly);
         }
 
-        internal static string MonoPath(string assemblyPath)
+        internal static void ValidateMono(string path)
         {
-            string managed = Path.GetDirectoryName(Path.GetFullPath(assemblyPath));
-            string data = Path.GetDirectoryName(managed);
-            return Path.Combine(data, "MonoBleedingEdge", "x86_64", "libmonobdwgc-2.0.so");
+            if (NativePlatform.IsLinux) RequireDigest(path, MonoSha256, "Unity Mono runtime");
+            // Other platforms bind only the already-loaded, game-local Unity runtime's
+            // public embedding exports. No offsets or Linux runtime bytes are reused.
         }
 
-        internal static void ValidateMono(string path) { RequireDigest(path, MonoSha256, "Unity Mono runtime"); }
-
-        internal static void ValidateTarget(LinuxModule module)
+        internal static void ValidateTarget(NativeModule module)
         {
             foreach (string entry in Imports) module.RequireSymbol(entry);
             module.RequireSymbol("ONISIM_TryInitialize");

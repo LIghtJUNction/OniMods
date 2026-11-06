@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "purpose": "Allocation attribution diagnostic; not formal performance evidence.",
+  "evidence_origin": "Executed tool history and the retained diagnostic logs; no new test was run to create this receipt.",
+  "project": "/workspace/scratch/a26820df7acf/smi-allocation-diagnostic/SmiAllocationDiagnostic.csproj",
+  "source_snapshot": "/workspace/scratch/a26820df7acf/smi-allocation-diagnostic/Sources",
+  "source_stage": "Second SMI implementation before the later ExecuteLoop extraction and full-length warmup correction.",
+  "instrumentation": "Independent copy only: preallocated per-iteration allocation-event buffers, five phase boundaries, Answers and Dictionary construction counters, DIAGNOSTIC log markers.",
+  "phases": {
+    "0": "loop start/backedge gap",
+    "1": "owner creation or list mutation",
+    "2": "query selection",
+    "3": "lookup call",
+    "4": "checksum tail"
+  },
+  "fixed_workload": {
+    "warmup_batches": 20,
+    "warmup_iterations": 5000,
+    "cold_warmup_iterations": 500,
+    "pairs": 7,
+    "normal_iterations": 60000,
+    "cold_iterations": 10000,
+    "warm_allocation_gate_bytes": 0
+  },
+  "runtime_reported_in_logs": ".NET 10.0.12",
+  "environment_scope": "Full inherited environment was not captured. Only the explicit unset/override operations below are recorded. In the default diagnostic, OSR environment variables were not explicitly set or cleared.",
+  "affinity_scope": "Both actual commands request CPU 0 through taskset. No separate effective-affinity snapshot was captured.",
+  "runs": [
+    {
+      "name": "default",
+      "command": "env -u DOTNET_TieredCompilation -u COMPlus_TieredCompilation DOTNET_ROOT=/workspace/scratch/5d2f77a00d9c/toolchain/dotnet taskset -c 0 /workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet /workspace/scratch/a26820df7acf/smi-allocation-diagnostic/bin/Release/net10.0/SmiAllocationDiagnostic.dll --benchmark-state-machine > /workspace/scratch/a26820df7acf/validation/smi-allocation-phase-default.log 2>&1",
+      "cwd": "/workspace/scratch/a26820df7acf/OniMods",
+      "environment_unset": [
+        "DOTNET_TieredCompilation",
+        "COMPlus_TieredCompilation"
+      ],
+      "environment_overrides": {
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet"
+      },
+      "requested_cpu_affinity": [
+        0
+      ],
+      "exit_code": 0,
+      "log": "smi-allocation-phase-default.log",
+      "timed_sample_rows": 98,
+      "non_cold_sample_rows": 84,
+      "non_cold_samples_with_nonzero_allocations": 0,
+      "non_cold_allocation_events": [
+        {
+          "scenario": "tail-hit-64",
+          "variant": "candidate",
+          "sample": -1,
+          "iteration": 0,
+          "phase": 0,
+          "bytes": 352
+        },
+        {
+          "scenario": "tail-hit-64",
+          "variant": "candidate",
+          "sample": -1,
+          "iteration": 9997,
+          "phase": 0,
+          "bytes": 160
+        }
+      ],
+      "answer_creations_during_these_events": 0,
+      "dictionary_creations_during_these_events": 0
+    },
+    {
+      "name": "no-osr",
+      "command": "env -u DOTNET_TieredCompilation -u COMPlus_TieredCompilation DOTNET_TC_OnStackReplacement=0 DOTNET_ROOT=/workspace/scratch/5d2f77a00d9c/toolchain/dotnet taskset -c 0 /workspace/scratch/5d2f77a00d9c/toolchain/dotnet/dotnet /workspace/scratch/a26820df7acf/smi-allocation-diagnostic/bin/Release/net10.0/SmiAllocationDiagnostic.dll --benchmark-state-machine > /workspace/scratch/a26820df7acf/validation/smi-allocation-phase-no-osr.log 2>&1",
+      "cwd": "/workspace/scratch/a26820df7acf/OniMods",
+      "environment_unset": [
+        "DOTNET_TieredCompilation",
+        "COMPlus_TieredCompilation"
+      ],
+      "environment_overrides": {
+        "DOTNET_TC_OnStackReplacement": "0",
+        "DOTNET_ROOT": "/workspace/scratch/5d2f77a00d9c/toolchain/dotnet"
+      },
+      "requested_cpu_affinity": [
+        0
+      ],
+      "exit_code": 0,
+      "log": "smi-allocation-phase-no-osr.log",
+      "timed_sample_rows": 98,
+      "non_cold_sample_rows": 84,
+      "non_cold_samples_with_nonzero_allocations": 0,
+      "non_cold_allocation_events": [
+        {
+          "scenario": "tail-hit-64",
+          "variant": "candidate",
+          "sample": -1,
+          "iteration": 0,
+          "phase": 0,
+          "bytes": 352
+        }
+      ],
+      "answer_creations_during_these_events": 0,
+      "dictionary_creations_during_these_events": 0
+    }
+  ],
+  "original_smoke": {
+    "log": "/workspace/scratch/a26820df7acf/smi-build/benchmark-v2-smoke.log",
+    "scenario": "mutation-every-query",
+    "sample": 1,
+    "variant": "candidate",
+    "allocated_bytes": 160
+  },
+  "followup_loop_smoke": {
+    "log": "/workspace/scratch/a26820df7acf/smi-build/benchmark-v2-loop-smoke.log",
+    "scenario": "mutation-every-query",
+    "sample": 0,
+    "baseline_allocated_bytes": 160,
+    "candidate_allocated_bytes": 0
+  },
+  "interpretation": "The diagnostic 160-byte event occurs at a loop boundary near 10000 iterations and disappears with OSR explicitly disabled. Its lookup phase and both production-construction counters remain zero. This supports an OSR-related measurement/runtime transition.",
+  "limitations": [
+    "Instrumentation changed execution timing and moved the observed event into preflight work; diagnostic timings must not be combined with formal benchmark samples.",
+    "The original smoke and these diagnostics did not capture allocation stacks. The exact 160-byte object type is unconfirmed; no specific CLR or Harmony class is asserted.",
+    "The no-osr log reports tieredCompilation=default because tiering remained enabled. The distinct OSR switch is recorded in this receipt.",
+    "The 352-byte first-iteration initialization event is separate from the later 160-byte event.",
+    "The original failed smoke records remain evidence; successful diagnostic runs do not erase or replace them."
+  ]
+}

@@ -16,7 +16,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "automatable_manual_controls_list", "automation_manual_allowed_list" },
                 Tags = new List<string> { "automation", "side-screen", "automatable", "manual", "storage" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=automatable action=list。列出 AutomatableSideScreen 控件，显示建筑是否只允许自动化搬运以及是否允许复制人手动搬运",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -64,7 +63,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "automatable_manual_control_set", "automation_manual_allowed_set" },
                 Tags = new List<string> { "automation", "side-screen", "automatable", "manual", "storage" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=automatable action=set。设置 AutomatableSideScreen 的允许手动搬运开关；会影响复制人是否能手动搬运，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -105,7 +103,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "automatable_manual_controls_batch_set" },
                 Tags = new List<string> { "automation", "side-screen", "automatable", "batch" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=automatable action=batch。批量设置 AutomatableSideScreen 的允许手动搬运开关，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -174,7 +171,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "critter_count_sensors_list", "logic_critter_sensors_list" },
                 Tags = new List<string> { "automation", "sensor", "critter", "egg", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=critter_sensor action=list。列出 CritterSensorSideScreen / LogicCritterCountSensor 的小动物/蛋计数开关、阈值和当前计数",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -222,7 +218,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "critter_count_sensor_set", "logic_critter_sensor_set" },
                 Tags = new List<string> { "automation", "sensor", "critter", "egg", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=critter_sensor action=set。设置 CritterSensorSideScreen 的 Count Critters / Count Eggs 开关；阈值仍用 building_control domain=config action=set_threshold，需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -263,7 +258,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "critter_count_sensors_batch_set" },
                 Tags = new List<string> { "automation", "sensor", "critter", "egg", "batch" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface surface=automation kind=critter_sensor action=batch。批量设置 CritterSensorSideScreen 的 Count Critters / Count Eggs 开关，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -70,11 +70,12 @@ def verify_glyph_lookup_contract(
     require(lookup, "token.Type != JTokenType.String", "glyph batch string-only validation")
     require(lookup, "string.IsNullOrWhiteSpace(token.ToString())", "mixed blank glyph batch rejection")
     require(lookup, 'error = "queries must contain only non-blank strings";', "strict glyph batch item error")
-    require(lookup, "legacySingle ? 200 : 20", "legacy and batch limit defaults")
-    require(lookup, "legacySingle ? 1000 : 100", "legacy and batch limit caps")
-    require(lookup, 'result["query"]', "single-query compatibility query")
-    require(lookup, 'result["count"]', "single-query compatibility count")
-    require(lookup, 'result["symbols"]', "single-query compatibility symbols")
+    require(lookup, 'error = "queries must be an array of non-blank strings";', "required batch glyph input")
+    require(lookup, 'ToolUtil.GetInt(args, "perQueryLimit") ?? 20', "batch limit default")
+    require(lookup, "Math.Min(requestedLimit, 100)", "batch limit cap")
+    for obsolete in ("legacySingle", 'result["query"]', 'result["symbols"]', 'ToolUtil.GetInt(args, "limit")'):
+        if obsolete in lookup:
+            fail(f"obsolete single-query glyph compatibility remains: {obsolete}")
     for field in ("input", "resolvedDirection", "exact", "count", "matches"):
         require(lookup, f'["{field}"]', f"per-query glyph result {field}")
 

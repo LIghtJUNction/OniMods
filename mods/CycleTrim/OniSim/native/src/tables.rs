@@ -13,6 +13,7 @@ const MAX_TABLE_BYTES: usize = 64 * 1024 * 1024;
 #[derive(Clone, Debug, Default)]
 pub(crate) struct ElementTable {
     pub(crate) elements: Vec<Element>,
+    pub(crate) has_zero_id: bool,
     pub(crate) trailing_zero_bytes: usize,
 }
 
@@ -135,14 +136,14 @@ impl ElementTable {
         }
         let records = reader.take(record_bytes)?;
         let mut elements = reserve(count)?;
+        let mut has_zero_id = false;
         for raw in records.as_chunks::<ELEMENT_BYTES>().0 {
             let name = reader.string()?;
             let mut record = [0; ELEMENT_BYTES];
             record.copy_from_slice(raw);
-            elements.push(Element {
-                name,
-                record: ElementRecord::parse(record),
-            });
+            let record = ElementRecord::parse(record);
+            has_zero_id |= record.id == 0;
+            elements.push(Element { name, record });
         }
         // Elements_CreateTable sends MemoryStream.GetBuffer(), including capacity.
         let trailing_zero_bytes = reader.remaining();
@@ -151,6 +152,7 @@ impl ElementTable {
         }
         Ok(Self {
             elements,
+            has_zero_id,
             trailing_zero_bytes,
         })
     }

@@ -92,7 +92,7 @@ internal static class StepPrintingPodRegression
 }
 
 // Native read surface only; the host does not load game assemblies or initialize reward UI.
-internal sealed class Immigration
+internal sealed partial class Immigration
 {
     internal static Immigration Instance;
     internal bool ImmigrantsAvailable;

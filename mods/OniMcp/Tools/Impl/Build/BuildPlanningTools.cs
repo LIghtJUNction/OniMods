@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
-using UnityEngine;
 
 namespace OniMcp.Tools
 {
@@ -77,7 +76,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "buildings_planning_control", "build_control" },
                 Tags = new List<string> { "buildings", "materials", "preview", "placement", "utility", "建造", "材料", "预检", "候选" },
  Description = "建造规划组合工具：action=search_defs/materials/preview/placement_candidates/auto_connect/build_area/room_template/pending_build",
                 Parameters = BuildPlanningControlParams(),

@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "sick_dupes_list", "injured_dupes_list", "patients_list" },
                 Tags = new List<string> { "medical", "patients", "sickness", "health", "dupes" },
                 Description = "兼容入口：列出需要医疗关注的复制人。新调用请使用 colony_control domain=management kind=medical action=patients。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -64,7 +63,6 @@ namespace OniMcp.Tools
                 Group = "medical",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "medical_care_control", "clinic_control", "patient_control" },
                 Tags = new List<string> { "medical", "patients", "clinic", "doctor", "threshold", "assign", "batch" },
                 Description = "统一读取和管理医疗状态。action=patients/clinics/doctor_stations/set_threshold/batch_set_threshold/assign_bed。",
                 Parameters = RectParams(LookupParams(new Dictionary<string, McpToolParameter>
@@ -108,7 +106,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "medical_beds_list", "clinics_list" },
                 Tags = new List<string> { "medical", "clinic", "bed", "threshold", "care" },
                 Description = "兼容入口：列出医疗床/诊所及其治疗阈值、分配对象和优先级。新调用请使用 colony_control domain=management kind=medical action=clinics。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -140,40 +137,6 @@ namespace OniMcp.Tools
             };
         }
 
-        public static McpTool ControlClinic()
-        {
-            return new McpTool
-            {
-                Name = "medical_clinic_control",
-                Group = "medical",
-                Mode = "write",
-                Risk = "medium",
-                Hidden = true,
-                Aliases = new List<string> { "medical_clinics_control", "medical_bed_control", "clinic_threshold_control" },
-                Tags = new List<string> { "medical", "clinic", "bed", "threshold", "care", "batch" },
-                Description = "兼容入口：统一读取/设置医疗床或诊所治疗阈值。新调用请使用 colony_control domain=management kind=medical action=clinics/set_threshold/batch_set_threshold。",
-                Parameters = RectParams(LookupParams(new Dictionary<string, McpToolParameter>
-                {
-                    ["action"] = new McpToolParameter { Type = "string", Description = "list、set、batch，默认 list", Required = false, EnumValues = new List<string> { "list", "set", "batch" } },
-                    ["thresholdPercent"] = new McpToolParameter { Type = "number", Description = "治疗阈值百分比 0-100；action=set/batch 时必填", Required = false },
-                    ["query"] = new McpToolParameter { Type = "string", Description = "action=batch/list 时按医疗床/诊所名称或 prefabId 筛选", Required = false },
-                    ["limit"] = new McpToolParameter { Type = "integer", Description = "最多返回或处理数量，默认 100，最大 500", Required = false },
-                    ["confirm"] = new McpToolParameter { Type = "boolean", Description = "action=set/batch 修改阈值时必须为 true", Required = false }
-                })),
-                Handler = args =>
-                {
-                    string action = (args["action"]?.ToString() ?? "list").Trim().ToLowerInvariant();
-                    if (action == "list")
-                        return ListClinics().Handler(args);
-                    if (action == "set")
-                        return SetClinicThreshold().Handler(args);
-                    if (action == "batch")
-                        return BatchSetClinicThreshold().Handler(args);
-                    return CallToolResult.Error("action must be list, set, or batch");
-                }
-            };
-        }
-
         public static McpTool ListDoctorStations()
         {
             return new McpTool
@@ -183,7 +146,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "medical_doctor_stations_list", "treatment_stations_list" },
                 Tags = new List<string> { "medical", "doctor", "station", "medicine", "treatment" },
                 Description = "兼容入口：列出医生站/高级医生站、药品库存、可治疗疾病和当前可治疗患者。新调用请使用 colony_control domain=management kind=medical action=doctor_stations。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -228,7 +190,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "medical_bed_threshold_set", "clinic_threshold_set" },
                 Tags = new List<string> { "medical", "clinic", "bed", "threshold", "care" },
                 Description = "兼容入口：设置医疗床/诊所的治疗阈值百分比。新调用请使用 colony_control domain=management kind=medical action=set_threshold。",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "duplicant_priorities_list", "jobs_priorities_list", "personal_priorities_list" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "chore-groups" },
                 Description = "兼容入口：读取个人优先级；新调用请使用 dupes_control domain=priority action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -58,7 +57,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "duplicant_priority_control", "jobs_priority_control", "personal_priority_control", "dupes_priorities_control" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "chore-groups", "batch", "settings" },
                 Description = "统一读取、设置、批量设置和配置 Jobs/Priorities 个人优先级。action=list/set/batch/settings_get/settings_set/reset；写操作需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -108,7 +106,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "duplicant_priority_set", "jobs_priority_set", "personal_priority_set", "set_personal_priority" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "chore-groups" },
                 Description = "兼容入口：设置单个复制人个人优先级；新调用请使用 dupes_control domain=priority action=set，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -163,7 +160,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "duplicant_priorities_batch_set", "jobs_priorities_batch_set" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "batch" },
                 Description = "兼容入口：批量设置个人优先级；新调用请使用 dupes_control domain=priority action=batch，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -219,7 +215,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "jobs_priority_settings_get", "personal_priority_settings_get" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "settings" },
                 Description = "兼容入口：读取 Jobs/Priorities 全局设置；新调用请使用 dupes_control domain=priority action=settings_get",
                 Parameters = new Dictionary<string, McpToolParameter>(),
@@ -236,7 +231,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "jobs_priority_settings_set", "personal_priority_settings_set", "dupes_priorities_reset" },
                 Tags = new List<string> { "dupes", "priorities", "jobs", "management", "settings" },
                 Description = "兼容入口：设置 Jobs/Priorities 全局设置或 reset；新调用请使用 dupes_control domain=priority action=settings_set/reset，需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

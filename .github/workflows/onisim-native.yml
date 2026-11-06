@@ -1,0 +1,87 @@
+name: OniSim native platforms
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'mods/CycleTrim/OniSim/**'
+      - 'tests/OniSim.Loader.Tests/**'
+      - 'scripts/build_onisim_native.py'
+      - '.github/workflows/onisim-native.yml'
+  pull_request:
+    paths:
+      - 'mods/CycleTrim/OniSim/**'
+      - 'tests/OniSim.Loader.Tests/**'
+      - 'scripts/build_onisim_native.py'
+      - '.github/workflows/onisim-native.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: windows-2022
+            platform: windows-x64
+          - os: macos-15-intel
+            platform: macos-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      RUSTC_WRAPPER: ''
+      RUSTC_WORKSPACE_WRAPPER: ''
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+      CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: '-C target-feature=+crt-static'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: rustup toolchain install 1.99.1 --profile minimal
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.401'
+      - name: Test native simulation behavior
+        working-directory: mods/CycleTrim/OniSim
+        run: cargo +1.99.1 test --release --locked --manifest-path native/Cargo.toml
+      - name: Build native library and identity receipt
+        run: python scripts/build_onisim_native.py --output-root artifacts/OniSim
+      - name: Test platform loader against the built native library
+        run: >-
+          dotnet run --project tests/OniSim.Loader.Tests -c Release
+          -p:ImportDirectoryBuildProps=false -- artifacts/OniSim
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onisim-${{ matrix.platform }}
+          path: artifacts/OniSim/
+          if-no-files-found: error
+          retention-days: 14
+  bundle:
+    needs: native
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: onisim-*
+          path: artifacts/OniSim
+          merge-multiple: true
+      - name: Require all three matching platform builds
+        run: python3 scripts/build_onisim_native.py --validate-bundle artifacts/OniSim
+      - name: Reject incomplete, stale and tampered native bundles
+        run: python3 -m unittest discover -s tests/OniSim.Loader.Tests -p 'test_*.py' -v
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onisim-all-platforms
+          path: artifacts/OniSim/
+          if-no-files-found: error
+          retention-days: 14

@@ -18,7 +18,6 @@ namespace OniMcp.Server
         // external request backlog to the same finite width permits normal parallel
         // reads without allowing an arbitrary number of Unity-thread actions to pile up.
         internal const int MaxPendingMainThreadHttpRequests = 20;
-        // MCP 2026-07-28 reserves -32000..-32019 for implementation-defined server errors.
         internal const int MainThreadBusyErrorCode = -32000;
         internal const int GameContextLifecycleErrorCode = -32001;
 
@@ -88,19 +87,19 @@ namespace OniMcp.Server
         }
 
         private bool TryAcquireMainThreadHttpAdmission(HttpListenerResponse response, object requestId,
-            string sessionId, bool modern, out MainThreadHttpAdmissionLease lease)
+            string sessionId, out MainThreadHttpAdmissionLease lease)
         {
             // On the legacy POST path, sessionless requests can reach this point only
             // for initialize: ping returns earlier and all other methods require a session.
             // Capacity is therefore deterministic transport state and must not consume
             // or be masked by a scarce Unity/main-thread admission slot.
-            if (!modern && string.IsNullOrEmpty(sessionId) && TryRejectNewLegacySessionAtCapacity(response))
+            if (string.IsNullOrEmpty(sessionId) && TryRejectNewLegacySessionAtCapacity(response))
             {
                 lease = null;
                 return false;
             }
 
-            if (!modern && !string.IsNullOrEmpty(sessionId))
+            if (!string.IsNullOrEmpty(sessionId))
                 PruneExpiredLegacySessionsBeforeMainThreadAdmission();
 
             lock (_mainThreadAdmissionLock)
@@ -114,11 +113,7 @@ namespace OniMcp.Server
             }
 
             lease = null;
-            if (modern)
-            {
-                response.Headers["Mcp-Protocol-Version"] = ModernProtocolVersion;
-            }
-            else if (!string.IsNullOrEmpty(sessionId))
+            if (!string.IsNullOrEmpty(sessionId))
             {
                 SetResponseSessionId(response, sessionId);
                 SetResponseProtocolVersion(response, sessionId);

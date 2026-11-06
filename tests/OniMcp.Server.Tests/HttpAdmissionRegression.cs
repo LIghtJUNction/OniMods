@@ -62,26 +62,6 @@ internal static class HttpAdmissionRegression
                         "Busy legacy response lost the negotiated session id");
                 }
 
-                using (var response = SendModern(client, ModernResourcesList(15201), "resources/list"))
-                {
-                    Assert(response.StatusCode == HttpStatusCode.OK,
-                        "Metadata-only modern request was blocked by main-thread admission; got " + (int)response.StatusCode);
-                    Assert(response.Headers.Contains("Mcp-Protocol-Version")
-                        && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
-                        "Metadata-only modern response lost the protocol version");
-                }
-                Assert(QueuedActions() == ExpectedCapacity,
-                    "Metadata-only modern request changed the saturated main-thread queue size");
-
-                using (var response = SendModern(client, ModernResourceRead(15203, "oni://test"),
-                    "resources/read", "oni://test"))
-                {
-                    AssertBusy(response, "modern live-backed request");
-                    Assert(response.Headers.Contains("Mcp-Protocol-Version")
-                        && response.Headers.GetValues("Mcp-Protocol-Version").Single() == "2026-07-28",
-                        "Busy modern response lost the protocol version");
-                }
-
                 int sessionsBeforeBusyInitialize = server.GetSessionSummaries().Count;
                 using (var response = SendLegacy(client, InitializeBody(15202), null))
                 {
@@ -164,11 +144,9 @@ internal static class HttpAdmissionRegression
             using (var legacyReadRequest = BuildLegacyRequest(
                 "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15702,\"params\":{\"uri\":\"oni://test\"}}",
                 sessionId))
-            using (var modernReadRequest = BuildModernResourceReadRequest(15710, "oni://test"))
             using (var legacyCatalogRequest = BuildLegacyRequest(
                 "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":15711,\"params\":{\"uri\":\"oni://tools/manifest?query=power\"}}",
                 sessionId))
-            using (var modernCatalogRequest = BuildModernResourceReadRequest(15712, "oni://tools/manifest"))
             {
                 var load = client.SendAsync(loadRequest);
                 WaitForQueuedActions(1);
@@ -176,18 +154,13 @@ internal static class HttpAdmissionRegression
                 WaitForQueuedActions(2);
                 var legacyRead = client.SendAsync(legacyReadRequest);
                 WaitForQueuedActions(3);
-                var modernRead = client.SendAsync(modernReadRequest);
-                WaitForQueuedActions(4);
                 var legacyCatalog = client.SendAsync(legacyCatalogRequest);
-                WaitForQueuedActions(5);
-                var modernCatalog = client.SendAsync(modernCatalogRequest);
-                WaitForQueuedActions(6);
+                WaitForQueuedActions(4);
 
                 // One Update drains the whole snapshot, including work admitted
                 // against the old colony after the load action starts teardown.
                 Invoke(_bridge, "Update");
-                Assert(Task.WaitAll(new Task[] { load, stale, legacyRead, modernRead,
-                    legacyCatalog, modernCatalog }, 5000),
+                Assert(Task.WaitAll(new Task[] { load, stale, legacyRead, legacyCatalog }, 5000),
                     "A save-load queue left an HTTP request hanging");
                 using (var response = load.GetAwaiter().GetResult())
                     Assert(ReadJson(response)["result"] != null, "Load stand-in failed");
@@ -195,20 +168,15 @@ internal static class HttpAdmissionRegression
                     AssertContextError(response, "stale_game_context");
                 using (var response = legacyRead.GetAwaiter().GetResult())
                     AssertContextError(response, "stale_game_context");
-                using (var response = modernRead.GetAwaiter().GetResult())
-                    AssertContextError(response, "stale_game_context");
                 using (var response = legacyCatalog.GetAwaiter().GetResult())
                     Assert(ReadJson(response)["result"] != null,
                         "Legacy catalog resource was rejected after a load began");
-                using (var response = modernCatalog.GetAwaiter().GetResult())
-                    Assert(ReadJson(response)["result"] != null,
-                        "Modern catalog resource was rejected after a load began");
             }
             Assert(OniToolRegistry.Calls == initialCalls + 1,
                 "A stale queued tool body ran after the load boundary");
             Assert(OniResourceRegistry.ResourceReads == initialReads,
                 "A stale queued resource read reached game state");
-            Assert(OniResourceRegistry.CatalogReads == initialCatalogReads + 2,
+            Assert(OniResourceRegistry.CatalogReads == initialCatalogReads + 1,
                 "Safe catalog reads did not remain available across the load boundary");
             Assert(PendingMainThreadRequests(server) == 0,
                 "Stale request releases leaked main-thread admission slots");
@@ -324,17 +292,6 @@ internal static class HttpAdmissionRegression
             + ",\"params\":{\"name\":\"deferred\",\"arguments\":{},\"task\":{}}}";
     }
 
-    private static HttpRequestMessage BuildModernResourceReadRequest(int id, string uri)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, "");
-        request.Content = new StringContent(ModernResourceRead(id, uri), Encoding.UTF8, "application/json");
-        request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
-        request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
-        request.Headers.TryAddWithoutValidation("Mcp-Method", "resources/read");
-        request.Headers.TryAddWithoutValidation("Mcp-Name", uri);
-        return request;
-    }
-
     private static void AssertContextError(HttpResponseMessage response, string reason)
     {
         Assert(response.StatusCode == HttpStatusCode.OK,
@@ -373,22 +330,6 @@ internal static class HttpAdmissionRegression
             + "\"clientInfo\":{\"name\":\"admission-regression\",\"version\":\"1.0\"}}}";
     }
 
-    private static string ModernResourcesList(int id)
-    {
-        return "{\"jsonrpc\":\"2.0\",\"method\":\"resources/list\",\"id\":" + id
-            + ",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
-            + "\"io.modelcontextprotocol/clientCapabilities\":{},"
-            + "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"admission-regression\",\"version\":\"1.0\"}}}}";
-    }
-
-    private static string ModernResourceRead(int id, string uri)
-    {
-        return "{\"jsonrpc\":\"2.0\",\"method\":\"resources/read\",\"id\":" + id
-            + ",\"params\":{\"uri\":\"" + uri + "\",\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
-            + "\"io.modelcontextprotocol/clientCapabilities\":{},"
-            + "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"admission-regression\",\"version\":\"1.0\"}}}}";
-    }
-
     private static List<PendingRequest> QueueLegacyRequests(HttpClient client, string sessionId, int count, int firstId)
     {
         var result = new List<PendingRequest>();
@@ -424,20 +365,6 @@ internal static class HttpAdmissionRegression
         if (!string.IsNullOrEmpty(sessionId))
             request.Headers.TryAddWithoutValidation("Mcp-Session-Id", sessionId);
         return request;
-    }
-
-    private static HttpResponseMessage SendModern(HttpClient client, string body, string method, string name = null)
-    {
-        using (var request = new HttpRequestMessage(HttpMethod.Post, ""))
-        {
-            request.Content = new StringContent(body, Encoding.UTF8, "application/json");
-            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
-            request.Headers.TryAddWithoutValidation("Mcp-Protocol-Version", "2026-07-28");
-            request.Headers.TryAddWithoutValidation("Mcp-Method", method);
-            if (!string.IsNullOrEmpty(name))
-                request.Headers.TryAddWithoutValidation("Mcp-Name", name);
-            return client.SendAsync(request).GetAwaiter().GetResult();
-        }
     }
 
     private static void AssertBusy(HttpResponseMessage response, string label)

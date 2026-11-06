@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "get_world_text_map", "world_serialize_area" },
                 Tags = new List<string> { "map", "text", "markdown", "sequence", "world", "地图", "格子" },
                 Hidden = true,
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 read_control domain=world action=text_map",

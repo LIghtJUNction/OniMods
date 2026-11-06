@@ -81,10 +81,19 @@ def host_context():
         path = Path(f'/sys/devices/system/cpu/cpu{cpu}/cpufreq/scaling_cur_freq')
         if path.exists():
             frequencies[str(cpu)] = int(path.read_text())
+    pressure, pressure_unavailable = {}, {}
+    for kind in ('cpu', 'memory', 'io'):
+        try:
+            pressure[kind] = Path(f'/proc/pressure/{kind}').read_text().strip()
+        except OSError as error:
+            # PSI is optional host context. Some containers expose no PSI files;
+            # preserve that absence instead of inventing zero load or aborting
+            # otherwise valid timing. Required process/thread reads stay strict.
+            pressure[kind] = None
+            pressure_unavailable[kind] = dict(error=type(error).__name__, errno=error.errno)
     return dict(unix_seconds=time.time(), load_average=os.getloadavg(), allowed_cpus=cpus,
                 cpu_frequency_khz=frequencies,
-                pressure={kind: Path(f'/proc/pressure/{kind}').read_text().strip()
-                          for kind in ('cpu', 'memory', 'io')})
+                pressure=pressure, pressure_unavailable=pressure_unavailable)
 
 
 def child(args):

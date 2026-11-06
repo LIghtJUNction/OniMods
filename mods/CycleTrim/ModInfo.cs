@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CycleTrim.Patches;
 using HarmonyLib;
 
@@ -17,6 +18,15 @@ namespace CycleTrim
             // UserMod2.OnLoad already calls PatchAll on this mod's assembly.
             base.OnLoad(harmony);
             RegisterOniSimOptions();
+            FetchLayoutExperiment.StartIfRequested();
+        }
+
+        public override void OnAllModsLoaded(
+            Harmony harmony,
+            IReadOnlyList<KMod.Mod> mods)
+        {
+            base.OnAllModsLoaded(harmony, mods);
+            FetchPickupCandidatePatch.InstallAfterAllModsLoaded(harmony);
         }
     }
 }

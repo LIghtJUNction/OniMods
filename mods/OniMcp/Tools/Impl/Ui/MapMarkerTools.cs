@@ -93,7 +93,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "low",
                 Hidden = true,
-                Aliases = new List<string> { "map_markers_control", "map_marker_manage" },
                 Tags = new List<string> { "map", "marker", "create", "list", "clear", "ui" },
                 Description = "兼容入口：请优先使用 game_control domain=ui uiDomain=feedback action=marker markerAction=create/list/clear。统一管理 MCP 地图标记。",
                 Parameters = new Dictionary<string, McpToolParameter>

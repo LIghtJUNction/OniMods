@@ -53,7 +53,8 @@ namespace CycleTrim.Patches
 
         private static bool IsCompatible()
         {
-            return AccessTools.TypeByName(FastTrackPatchType) == null
+            return CycleTrimPatchOptions.OptimizeAsyncPathProbes
+                && AccessTools.TypeByName(FastTrackPatchType) == null
                 && IsSentinelRecycleSafe();
         }
 
@@ -118,7 +119,11 @@ namespace CycleTrim.Patches
                 return false;
             }
 
-            SynchronizeNavigatorTick(managerState, state);
+            // Native NextTask releases the manager lock before this worker's
+            // postfix runs. TickFrame can already have advanced Tick while the
+            // dequeued navigator is marked in flight. Its queued stamp still
+            // belongs to this work order: only makeWorkOrder may discard that
+            // stamp when preparing a replacement in a later tick.
             return true;
         }
 

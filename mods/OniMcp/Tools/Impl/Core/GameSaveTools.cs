@@ -23,7 +23,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "game_saves_control", "game_lifecycle_control" },
                 Tags = new List<string> { "game", "save", "load", "quit", "pause-menu", "lifecycle" },
                 Description = "游戏存档/生命周期聚合工具：action=list/save/load/quit；save/load/quit 必须传 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -69,7 +68,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "saves_list", "save_files_list" },
                 Tags = new List<string> { "game", "save", "load", "pause-menu", "lifecycle" },
                 Description = "兼容入口：请优先使用 game_control domain=save action=list",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -113,7 +111,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "save_game", "save_as" },
                 Tags = new List<string> { "game", "save", "save-as", "pause-menu", "filesystem" },
                 Description = "兼容入口：请优先使用 game_control domain=save action=save。必须 confirm=true；覆盖已有文件还需 overwrite=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -184,7 +181,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "load_save", "game_load" },
                 Tags = new List<string> { "game", "load", "save", "pause-menu", "lifecycle" },
                 Description = "兼容入口：请优先使用 game_control domain=save action=load。必须先用 game_control domain=save action=list 确认 index/path，并传 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -235,7 +231,6 @@ namespace OniMcp.Tools
                 Group = "game",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "quit_game", "game_quit_to_menu", "game_quit_to_desktop" },
                 Tags = new List<string> { "game", "quit", "pause-menu", "lifecycle", "desktop" },
                 Description = "兼容入口：请优先使用 game_control domain=save action=quit。可先保存；操作会中断当前游戏场景，desktop 会结束游戏进程。必须 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>

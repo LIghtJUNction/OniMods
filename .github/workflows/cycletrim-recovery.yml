@@ -1,0 +1,101 @@
+name: CycleTrim recovery evidence
+
+on:
+  pull_request:
+    paths:
+      - 'mods/CycleTrim/Core/PowerOverlayCache.cs'
+      - 'tests/CycleTrim.Optimizations.Tests/**'
+      - 'scripts/run_cycletrim_recovery.py'
+      - '.github/workflows/cycletrim-recovery.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cycletrim-recovery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  paired-host-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASELINE_SHA: 0509cbe65cd8dc10a4918dfce83b5fb9d12d21be
+      CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.401'
+      - name: Build exact baseline and candidate host fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence "$RUNNER_TEMP/recovery-sdk"
+          git diff --check "$BASELINE_SHA" "$CANDIDATE_SHA"
+          git worktree add --detach "$RUNNER_TEMP/recovery-baseline" "$BASELINE_SHA"
+          # The CLI and project SDK resolvers search from different directories.
+          # Pin both without changing tracked source or any runner installation.
+          printf '%s\n' '{"sdk":{"version":"10.0.401","rollForward":"disable"}}' \
+            > "$RUNNER_TEMP/recovery-sdk/global.json"
+          for root in "$GITHUB_WORKSPACE" "$RUNNER_TEMP/recovery-baseline"; do
+            test ! -e "$root/global.json"
+            cp "$RUNNER_TEMP/recovery-sdk/global.json" "$root/global.json"
+          done
+          cp "$RUNNER_TEMP/recovery-sdk/global.json" evidence/sdk-global.json
+          (
+            cd "$RUNNER_TEMP/recovery-sdk"
+            test "$(dotnet --version)" = '10.0.401'
+            dotnet --info > "$GITHUB_WORKSPACE/evidence/build-sdk-info.txt"
+            for variant in baseline candidate; do
+              root="$GITHUB_WORKSPACE"
+              if [[ "$variant" == baseline ]]; then root="$RUNNER_TEMP/recovery-baseline"; fi
+              dotnet msbuild "$root/tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj" \
+                -nologo -p:Configuration=Release -p:ImportDirectoryBuildProps=false \
+                -getProperty:NETCoreSdkVersion,MSBuildVersion,MSBuildSDKsPath,RoslynTargetsPath \
+                > "$GITHUB_WORKSPACE/evidence/$variant-sdk.json"
+              python3 -c 'import json,sys; p=json.load(open(sys.argv[1]))["Properties"]; assert p["NETCoreSdkVersion"] == "10.0.401", p; assert "/sdk/10.0.401/" in p["MSBuildSDKsPath"], p; assert "/sdk/10.0.401/" in p["RoslynTargetsPath"], p' \
+                "$GITHUB_WORKSPACE/evidence/$variant-sdk.json"
+              dotnet build "$root/tests/CycleTrim.Optimizations.Tests" -c Release \
+                -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/$variant-bin" \
+                2>&1 | tee "$GITHUB_WORKSPACE/evidence/$variant-build.log"
+            done
+          )
+          git diff "$BASELINE_SHA" "$CANDIDATE_SHA" -- mods/CycleTrim/Core/PowerOverlayCache.cs \
+            tests/CycleTrim.Optimizations.Tests > evidence/source.patch
+          git rev-parse HEAD > evidence/candidate-sha.txt
+          sha256sum mods/CycleTrim/Core/PowerOverlayCache.cs tests/CycleTrim.Optimizations.Tests/*.cs \
+            > evidence/source-sha256.txt
+      - name: Run both complete optimization suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet "$RUNNER_TEMP/baseline-bin/CycleTrim.Optimizations.Tests.dll" 2>&1 | tee evidence/baseline-host.log
+          dotnet "$RUNNER_TEMP/candidate-bin/CycleTrim.Optimizations.Tests.dll" 2>&1 | tee evidence/candidate-host.log
+      - name: Adjacent old/new measurements and unchanged controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/recovery-sdk"
+          test "$(dotnet --version)" = '10.0.401'
+          python3 "$GITHUB_WORKSPACE/scripts/run_cycletrim_recovery.py" \
+            --baseline "$RUNNER_TEMP/baseline-bin/CycleTrim.Optimizations.Tests.dll" \
+            --candidate "$RUNNER_TEMP/candidate-bin/CycleTrim.Optimizations.Tests.dll" \
+            --baseline-sha "$BASELINE_SHA" --candidate-sha "$CANDIDATE_SHA" \
+            --output "$GITHUB_WORKSPACE/evidence" 2>&1 | tee "$GITHUB_WORKSPACE/evidence/measurement.log"
+      - name: Preserve only text evidence, never game or host binaries
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cycletrim-recovery-${{ github.event.pull_request.head.sha }}
+          path: |
+            evidence/*.log
+            evidence/*.json
+            evidence/*.txt
+            evidence/*.patch
+          retention-days: 14
+          if-no-files-found: error

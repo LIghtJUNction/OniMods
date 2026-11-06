@@ -33,7 +33,6 @@ Convenience forwards also support game speed, camera/view/overlay, and screensho
 |---|---|---|
 | `/active/index.md` | Read-only colony index and optional first-call state | read only |
 | `/active/map/viewport.md` | Terrain, objects, and orders in a framed rectangle | map tokens |
-| `/active/map/index.md` | Alias of the editable viewport map | map tokens |
 | `/active/map/layers/layer_<yMin>_<yMax>.md` | World-height slice rendered with the current active overlay | map tokens, except connection glyphs |
 | `/active/symbols/glyphs.md` | Generated token table | read only |
 | `/active/ops/tools.md` | Current public typed operation files and tools | read only |
@@ -118,7 +117,7 @@ Y=165: ...
 
 Include **all three** `百位X`, `十位X`, and `个位X` headers in SEARCH, followed by the relevant Y rows. Current preflight derives the exact rectangle and rereads that rectangle from source without moving, focusing, or depending on the current camera. It forces `format=edit compact=false` internally before matching.
 
-This exact-source behavior applies to `/active/map/viewport.md`, its `/active/map/index.md` alias, `/active/map/layers/layer_<yMin>_<yMax>.md`, and infrastructure Markdown maps. It does not make the read-only colony index at `/active/index.md` editable.
+This exact-source behavior applies to `/active/map/viewport.md`, `/active/map/layers/layer_<yMin>_<yMax>.md`, and infrastructure Markdown maps. It does not make the read-only colony index at `/active/index.md` editable.
 
 If SEARCH attempts any explicit X header but the set is incomplete, malformed, inconsistent, or otherwise invalid, preflight fails closed. It does not silently fall back to viewport-relative coordinates.
 
