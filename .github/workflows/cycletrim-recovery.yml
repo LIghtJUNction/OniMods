@@ -35,15 +35,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p evidence
+          mkdir -p evidence "$RUNNER_TEMP/recovery-sdk"
           git diff --check "$BASELINE_SHA" "$CANDIDATE_SHA"
           git worktree add --detach "$RUNNER_TEMP/recovery-baseline" "$BASELINE_SHA"
-          dotnet build "$RUNNER_TEMP/recovery-baseline/tests/CycleTrim.Optimizations.Tests" -c Release \
-            -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/baseline-bin" \
-            2>&1 | tee evidence/baseline-build.log
-          dotnet build tests/CycleTrim.Optimizations.Tests -c Release \
-            -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/candidate-bin" \
-            2>&1 | tee evidence/candidate-build.log
+          # Installing an SDK does not select it when the runner has newer SDKs.
+          # Use an isolated working directory so neither source tree is modified.
+          printf '%s\n' '{"sdk":{"version":"10.0.401","rollForward":"disable"}}' \
+            > "$RUNNER_TEMP/recovery-sdk/global.json"
+          (
+            cd "$RUNNER_TEMP/recovery-sdk"
+            test "$(dotnet --version)" = '10.0.401'
+            dotnet --info > "$GITHUB_WORKSPACE/evidence/build-sdk-info.txt"
+            dotnet build "$RUNNER_TEMP/recovery-baseline/tests/CycleTrim.Optimizations.Tests" -c Release \
+              -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/baseline-bin" \
+              2>&1 | tee "$GITHUB_WORKSPACE/evidence/baseline-build.log"
+            dotnet build "$GITHUB_WORKSPACE/tests/CycleTrim.Optimizations.Tests" -c Release \
+              -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/candidate-bin" \
+              2>&1 | tee "$GITHUB_WORKSPACE/evidence/candidate-build.log"
+          )
           git diff "$BASELINE_SHA" "$CANDIDATE_SHA" -- mods/CycleTrim/Core/PowerOverlayCache.cs \
             tests/CycleTrim.Optimizations.Tests > evidence/source.patch
           git rev-parse HEAD > evidence/candidate-sha.txt
@@ -59,11 +68,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/run_cycletrim_recovery.py \
+          cd "$RUNNER_TEMP/recovery-sdk"
+          test "$(dotnet --version)" = '10.0.401'
+          python3 "$GITHUB_WORKSPACE/scripts/run_cycletrim_recovery.py" \
             --baseline "$RUNNER_TEMP/baseline-bin/CycleTrim.Optimizations.Tests.dll" \
             --candidate "$RUNNER_TEMP/candidate-bin/CycleTrim.Optimizations.Tests.dll" \
             --baseline-sha "$BASELINE_SHA" --candidate-sha "$CANDIDATE_SHA" \
-            --output evidence 2>&1 | tee evidence/measurement.log
+            --output "$GITHUB_WORKSPACE/evidence" 2>&1 | tee "$GITHUB_WORKSPACE/evidence/measurement.log"
       - name: Preserve only text evidence, never game or host binaries
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
