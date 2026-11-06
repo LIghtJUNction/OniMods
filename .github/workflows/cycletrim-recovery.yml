@@ -1,0 +1,78 @@
+name: CycleTrim recovery evidence
+
+on:
+  pull_request:
+    paths:
+      - 'mods/CycleTrim/Core/PowerOverlayCache.cs'
+      - 'tests/CycleTrim.Optimizations.Tests/**'
+      - 'scripts/run_cycletrim_recovery.py'
+      - '.github/workflows/cycletrim-recovery.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cycletrim-recovery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  paired-host-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASELINE_SHA: 0509cbe65cd8dc10a4918dfce83b5fb9d12d21be
+      CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.401'
+      - name: Build exact baseline and candidate host fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git diff --check "$BASELINE_SHA" "$CANDIDATE_SHA"
+          git worktree add --detach "$RUNNER_TEMP/recovery-baseline" "$BASELINE_SHA"
+          dotnet build "$RUNNER_TEMP/recovery-baseline/tests/CycleTrim.Optimizations.Tests" -c Release \
+            -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/baseline-bin" \
+            2>&1 | tee evidence/baseline-build.log
+          dotnet build tests/CycleTrim.Optimizations.Tests -c Release \
+            -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true -o "$RUNNER_TEMP/candidate-bin" \
+            2>&1 | tee evidence/candidate-build.log
+          git diff "$BASELINE_SHA" "$CANDIDATE_SHA" -- mods/CycleTrim/Core/PowerOverlayCache.cs \
+            tests/CycleTrim.Optimizations.Tests > evidence/source.patch
+          git rev-parse HEAD > evidence/candidate-sha.txt
+          sha256sum mods/CycleTrim/Core/PowerOverlayCache.cs tests/CycleTrim.Optimizations.Tests/*.cs \
+            > evidence/source-sha256.txt
+      - name: Run both complete optimization suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet "$RUNNER_TEMP/baseline-bin/CycleTrim.Optimizations.Tests.dll" 2>&1 | tee evidence/baseline-host.log
+          dotnet "$RUNNER_TEMP/candidate-bin/CycleTrim.Optimizations.Tests.dll" 2>&1 | tee evidence/candidate-host.log
+      - name: Adjacent old/new measurements and unchanged controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/run_cycletrim_recovery.py \
+            --baseline "$RUNNER_TEMP/baseline-bin/CycleTrim.Optimizations.Tests.dll" \
+            --candidate "$RUNNER_TEMP/candidate-bin/CycleTrim.Optimizations.Tests.dll" \
+            --baseline-sha "$BASELINE_SHA" --candidate-sha "$CANDIDATE_SHA" \
+            --output evidence 2>&1 | tee evidence/measurement.log
+      - name: Preserve only text evidence, never game or host binaries
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cycletrim-recovery-${{ github.event.pull_request.head.sha }}
+          path: |
+            evidence/*.log
+            evidence/*.json
+            evidence/*.txt
+            evidence/*.patch
+          retention-days: 14
+          if-no-files-found: error
