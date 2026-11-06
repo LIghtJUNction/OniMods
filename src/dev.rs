@@ -1,8 +1,7 @@
 use anyhow::{Context, Result};
 use serde_json::Value;
-use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use crate::archive;
@@ -11,28 +10,13 @@ use crate::config::{Config, SelectedMod};
 use crate::mod_config_backup;
 
 pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
-    let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
-        Some(path) => PathBuf::from(path),
-        None => env::current_dir().context("读取当前目录失败")?,
-    };
-
-    // 1. 构建
-    build::run(cfg, selected, false)?;
-
-    // 2. 安装到 Dev 目录
-    let dist = cfg.dist_dir(&repo_root);
-    let assembly_name = selected.assembly_name(&repo_root);
-    let zip = dist.join(format!("{}.zip", assembly_name));
-
-    if !zip.exists() {
-        anyhow::bail!("找不到构建产物：{}", zip.display());
-    }
+    let package = build::run(cfg, selected, false)?;
 
     let dev_dir = cfg.dev_mod_dir(&selected.name)?;
     let legacy_dev_dir = cfg.legacy_dev_mod_dir(&selected.name)?;
     println!("\n🔧 安装到 Dev 目录：{}", dev_dir.display());
 
-    archive::install(&zip, &dev_dir, &assembly_name, || {
+    archive::install(&package.archive, &dev_dir, &package.assembly_name, || {
         enable_dev_mod(cfg, selected, &dev_dir)
     })?;
     if distinct_legacy_directory(&legacy_dev_dir, &dev_dir).unwrap_or_else(|error| {

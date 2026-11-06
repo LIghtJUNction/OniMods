@@ -79,15 +79,8 @@ fn prompt(question: &str, default: Option<&str>) -> Result<String> {
     }
 }
 
-fn managed_relative_path(os: &str) -> &'static str {
-    match os {
-        "macos" => "OxygenNotIncluded.app/Contents/Resources/Data/Managed",
-        _ => "OxygenNotIncluded_Data/Managed",
-    }
-}
-
 fn managed_path(game_path: &Path, os: &str) -> PathBuf {
-    game_path.join(managed_relative_path(os))
+    game_path.join(crate::config::managed_relative_path(os))
 }
 
 fn auto_detect() -> Option<PathBuf> {
@@ -240,7 +233,7 @@ pub fn run() -> Result<()> {
 
     // 4. 写入 Directory.Build.props
     let sep = std::path::MAIN_SEPARATOR_STR;
-    let managed_relative = managed_relative_path(env::consts::OS).replace('/', sep);
+    let managed_relative = crate::config::managed_relative_path(env::consts::OS).replace('/', sep);
     let props_content = format!(
         r#"<Project>
 
@@ -288,25 +281,26 @@ pub fn run() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::managed_relative_path;
+    use super::managed_path;
+    use std::path::Path;
 
     #[test]
     fn uses_current_macos_managed_layout() {
         assert_eq!(
-            managed_relative_path("macos"),
-            "OxygenNotIncluded.app/Contents/Resources/Data/Managed"
+            managed_path(Path::new("game"), "macos"),
+            Path::new("game/OxygenNotIncluded.app/Contents/Resources/Data/Managed")
         );
     }
 
     #[test]
     fn preserves_windows_and_linux_managed_layout() {
         assert_eq!(
-            managed_relative_path("windows"),
-            "OxygenNotIncluded_Data/Managed"
+            managed_path(Path::new("game"), "windows"),
+            Path::new("game/OxygenNotIncluded_Data/Managed")
         );
         assert_eq!(
-            managed_relative_path("linux"),
-            "OxygenNotIncluded_Data/Managed"
+            managed_path(Path::new("game"), "linux"),
+            Path::new("game/OxygenNotIncluded_Data/Managed")
         );
     }
 }
