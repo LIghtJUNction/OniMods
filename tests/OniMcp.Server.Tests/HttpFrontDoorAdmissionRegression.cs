@@ -11,11 +11,11 @@ using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class HttpFrontDoorAdmissionRegressionEntry
+internal static class HttpFrontDoorAdmissionRegression
 {
     private const int ExpectedFrontDoorCapacity = 8;
 
-    private static void Main()
+    internal static void Run()
     {
         RunFrontDoorAdmissionRegression();
         RunLegacySseIsolationRegression();

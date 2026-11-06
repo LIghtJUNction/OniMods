@@ -15,7 +15,12 @@ impl Project {
         let id = NEXT_PROJECT.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("onim-build-cli-{}-{id}", std::process::id()));
         fs::create_dir(&root).unwrap();
-        let game = root.join("game/OxygenNotIncluded_Data/Managed");
+        let managed = if cfg!(target_os = "macos") {
+            "game/OxygenNotIncluded.app/Contents/Resources/Data/Managed"
+        } else {
+            "game/OxygenNotIncluded_Data/Managed"
+        };
+        let game = root.join(managed);
         fs::create_dir_all(&game).unwrap();
         fs::write(game.join("Assembly-CSharp.dll"), []).unwrap();
         fs::write(
@@ -117,8 +122,12 @@ exit "${ONIM_UNZIP_EXIT-0}"
     }
 
     fn mods(&self) -> PathBuf {
-        self.0
-            .join("home/.config/unity3d/Klei/Oxygen Not Included/mods")
+        let relative = if cfg!(target_os = "macos") {
+            "home/Library/Application Support/unity.Klei.Oxygen Not Included/mods"
+        } else {
+            "home/.config/unity3d/Klei/Oxygen Not Included/mods"
+        };
+        self.0.join(relative)
     }
 
     fn installed(&self, scope: &str) -> PathBuf {
@@ -164,6 +173,27 @@ fn debug_build_ignores_an_inherited_msbuild_server() {
 }
 
 #[test]
+fn explicit_config_builds_the_selected_project_from_another_working_directory() {
+    let caller = Project::new();
+    let selected = Project::new();
+    let relative = PathBuf::from("..")
+        .join(selected.0.file_name().unwrap())
+        .join("onim.toml");
+
+    for config in [relative, selected.0.join("onim.toml")] {
+        let output = caller.run(&["--config", config.to_str().unwrap(), "build"], "0");
+        assert!(output.status.success(), "{output:?}");
+        assert!(selected.0.join("dist/Alpha.zip").is_file());
+        assert!(!caller.0.join("dist").exists());
+    }
+    let calls = caller.calls();
+    assert_eq!(calls.len(), 2);
+    for call in calls {
+        assert!(call.starts_with(&selected.0.join("mods/Alpha").display().to_string()));
+    }
+}
+
+#[test]
 fn release_build_all_isolates_each_project_from_build_servers() {
     let project = Project::new();
     let output = project.run(&["build", "--release", "--all"], "0");
@@ -191,9 +221,7 @@ fn dev_all_stops_on_a_real_build_failure_without_installing() {
 #[test]
 fn install_refuses_a_dev_shadow_before_building_or_overwriting_local() {
     let project = Project::new();
-    let shadow = project
-        .0
-        .join("home/.config/unity3d/Klei/Oxygen Not Included/mods/Dev/Alpha");
+    let shadow = project.mods().join("Dev/Alpha");
     fs::create_dir_all(&shadow).unwrap();
     fs::write(shadow.join("OniOnline.dll"), "old-dev-copy").unwrap();
 
@@ -202,12 +230,7 @@ fn install_refuses_a_dev_shadow_before_building_or_overwriting_local() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("同名 Dev 模组"), "{stderr}");
     assert!(!project.0.join("calls.txt").exists());
-    assert!(
-        !project
-            .0
-            .join("home/.config/unity3d/Klei/Oxygen Not Included/mods/Local/Alpha")
-            .exists()
-    );
+    assert!(!project.mods().join("Local/Alpha").exists());
     assert_eq!(
         fs::read_to_string(shadow.join("OniOnline.dll")).unwrap(),
         "old-dev-copy"

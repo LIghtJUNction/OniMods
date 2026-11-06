@@ -10,6 +10,12 @@ namespace CycleTrim.Patches
     {
         private const string FastTrackPatchType =
             "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate";
+        private const string EfficientSupplyType =
+            "PeterHan.EfficientFetch.EfficientFetchManager";
+        // QualityOfLifeONI@3709f6c985fc2a73836679da7a924a873c320d67 bundled
+        // the same Efficient Fetch semantics under its own namespace.
+        private const string BundledEfficientFetchType =
+            "QualityOfLifeONI.EfficientFetchManager";
         private const string NoWasteWantPatchType =
             "PeterHan.NoWasteWant.NoWasteWantPatches";
         private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
@@ -54,6 +60,13 @@ namespace CycleTrim.Patches
             {
                 if (!CycleTrimPatchOptions.OptimizePickupCandidates)
                     return false;
+                if (!FetchPatchActivationPolicy.AllowsCycleTrimReplacement(
+                        AccessTools.TypeByName(EfficientSupplyType) != null,
+                        AccessTools.TypeByName(BundledEfficientFetchType) != null))
+                {
+                    return false;
+                }
+
                 // Waste Not, Want Not reverses the vanilla freshness comparator. This replacement
                 // cannot preserve that transpiler safely, so leave the original method in control.
                 if (AccessTools.TypeByName(NoWasteWantPatchType) != null)
@@ -80,6 +93,13 @@ namespace CycleTrim.Patches
                 int worker,
                 Dictionary<int, int> ___cellCosts)
             {
+                // Capture once, including across callbacks and nested updates.
+                // The ordinary path keeps the established dictionary loop.
+                var compact = FetchLayoutExperiment.Compact;
+                FetchLayoutExperiment.RecordUpdate(compact);
+                if (compact)
+                    return UpdateCompact(__instance, worker_navigator, worker, ___cellCosts);
+
                 var candidates = ThreadLocalObjectPool<
                     Dictionary<PickupKey, FetchManager.Pickup>>.Rent();
 
@@ -137,6 +157,61 @@ namespace CycleTrim.Patches
                     candidates.Clear();
                     ThreadLocalObjectPool<
                         Dictionary<PickupKey, FetchManager.Pickup>>.Return(candidates);
+                }
+            }
+
+            private static bool UpdateCompact(
+                FetchManager.FetchablesByPrefabId instance,
+                Navigator navigator,
+                int worker,
+                Dictionary<int, int> cellCosts)
+            {
+                var candidates = ThreadLocalObjectPool<
+                    FetchCandidateBuffer<PickupKey, FetchManager.Pickup>>.Rent();
+                try
+                {
+                    cellCosts.Clear();
+                    instance.finalPickups.Clear();
+                    foreach (var fetchable in instance.fetchables.GetDataList())
+                    {
+                        var pickupable = fetchable.pickupable;
+                        if (!pickupable.CouldBePickedUpByMinion(worker))
+                            continue;
+
+                        var cell = pickupable.cachedCell;
+                        if (!cellCosts.TryGetValue(cell, out var pathCost))
+                        {
+                            pathCost = pickupable.GetNavigationCost(navigator, cell);
+                            cellCosts[cell] = pathCost;
+                        }
+                        if (pathCost == -1)
+                            continue;
+
+                        var pickup = new FetchManager.Pickup
+                        {
+                            pickupable = pickupable,
+                            tagBitsHash = fetchable.tagBitsHash,
+                            PathCost = (ushort)pathCost,
+                            masterPriority = fetchable.masterPriority,
+                            freshness = fetchable.freshness,
+                            foodQuality = fetchable.foodQuality
+                        };
+                        var key = new PickupKey(pickup.tagBitsHash, pickup.masterPriority);
+                        if (!candidates.TryGetIndex(key, out var index))
+                            candidates.Add(key, pickup);
+                        else if (IsBetter(pickup, candidates[index]))
+                            candidates[index] = pickup;
+                    }
+
+                    candidates.AppendTo(instance.finalPickups);
+                    instance.finalPickups.Sort(FinalPickupOrder);
+                    return false;
+                }
+                finally
+                {
+                    candidates.Clear();
+                    ThreadLocalObjectPool<
+                        FetchCandidateBuffer<PickupKey, FetchManager.Pickup>>.Return(candidates);
                 }
             }
 

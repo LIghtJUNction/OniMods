@@ -1,0 +1,7 @@
+System.InvalidOperationException: callback observation Compact: expected none|2:1:5:10:0:1000,3:3:5:2:0:1000|costs=1:10,2:10,3:2|calls=1:1,1:1,1:1|trace=eligible:1:;nav:1:;eligible:2:;nav:2:;eligible:3:;nav:3:, got none|2:1:5:10:0:1000,3:3:5:2:0:1000|costs=1:10,2:10,3:2|calls=1:1,1:1,1:1|trace=eligible:1:;nav:1:;eligible:2:1:3:5:10:0:1000;nav:2:1:3:5:10:0:1000;eligible:3:1:3:5:10:0:1000,2:1:5:10:0:1000;nav:3:1:3:5:10:0:1000,2:1:5:10:0:1000
+   at CycleTrim.Fetch.Tests.FetchRegression.Check(Boolean value, String message) in /workspace/scratch/dac28420176a/OniMods/tests/CycleTrim.Fetch.Tests/FetchRegression.cs:line 416
+   at CycleTrim.Fetch.Tests.FetchRegression.Equal[T](T expected, T actual, String label) in /workspace/scratch/dac28420176a/OniMods/tests/CycleTrim.Fetch.Tests/FetchRegression.cs:line 421
+   at CycleTrim.Fetch.Tests.FetchRegression.CompareCase(Input[] input, String label, Action`3 configure) in /workspace/scratch/dac28420176a/OniMods/tests/CycleTrim.Fetch.Tests/FetchRegression.cs:line 375
+   at CycleTrim.Fetch.Tests.FetchRegression.CallbacksExceptionsAndReentry() in /workspace/scratch/dac28420176a/OniMods/tests/CycleTrim.Fetch.Tests/FetchRegression.cs:line 172
+   at CycleTrim.Fetch.Tests.FetchRegression.Run() in /workspace/scratch/dac28420176a/OniMods/tests/CycleTrim.Fetch.Tests/FetchRegression.cs:line 40
+   at CycleTrim.Fetch.Tests.Program.Main(String[] args) in /workspace/scratch/dac28420176a/OniMods/tests/CycleTrim.Fetch.Tests/Program.cs:line 17

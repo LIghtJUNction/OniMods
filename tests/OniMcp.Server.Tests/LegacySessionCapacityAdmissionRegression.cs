@@ -14,12 +14,12 @@ using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class LegacySessionCapacityAdmissionRegressionEntry
+internal static class LegacySessionCapacityAdmissionRegression
 {
     private const int MainThreadCapacity = 20;
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunCapacityAdmissionRegression();
 

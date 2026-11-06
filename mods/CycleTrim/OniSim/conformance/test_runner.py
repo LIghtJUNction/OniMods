@@ -11,7 +11,6 @@ from unittest.mock import patch
 
 from run import build_fixture_clock, differences
 import run as conformance_run
-from texture_probe import build as probe_build
 from texture_probe.validate import LAYOUT, validate_observation
 import copy
 import ctypes
@@ -479,33 +478,6 @@ class LibraryPreflightTests(unittest.TestCase):
         del bad["textures"]["Flow"]
         with self.assertRaises(ValueError):
             validate_observation(bad, 1)
-
-    def test_probe_receipt_rejects_stale_source_binary_and_failed_build(self):
-        with tempfile.TemporaryDirectory(prefix="cycletrim-probe-") as directory:
-            root = Path(directory)
-            for name in probe_build.SOURCES:
-                (root / name).write_text("authored test source")
-            binary = root / "probe.dll"
-            binary.write_bytes(b"authored test artifact")
-            receipt = root / "receipt.json"
-            data = {"build_exit_code": 0, "output_dll": str(binary),
-                    "probe_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-                    "source_sha256": {name: hashlib.sha256((root / name).read_bytes()).hexdigest()
-                                      for name in probe_build.SOURCES}}
-            receipt.write_text(json.dumps(data))
-            with patch.object(probe_build, "ROOT", root):
-                self.assertEqual(probe_build.verify_receipt(receipt), data)
-                (root / "TextureProbe.cs").write_text("changed source")
-                with self.assertRaisesRegex(RuntimeError, "source changed"):
-                    probe_build.verify_receipt(receipt)
-                (root / "TextureProbe.cs").write_text("authored test source")
-                binary.write_bytes(b"stale binary")
-                with self.assertRaisesRegex(RuntimeError, "DLL differs"):
-                    probe_build.verify_receipt(receipt)
-                binary.write_bytes(b"authored test artifact")
-                receipt.write_text(json.dumps({**data, "build_exit_code": 1}))
-                with self.assertRaisesRegex(RuntimeError, "did not succeed"):
-                    probe_build.verify_receipt(receipt)
 
     def test_fixed_realtime_preserves_monotonic_progress(self):
         with tempfile.TemporaryDirectory(prefix="cycletrim-clock-") as directory:

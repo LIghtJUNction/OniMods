@@ -169,7 +169,7 @@ def main():
     # access. copy2 in the controller preserves this mode in each game profile.
     # The caller's source is only read; this private test input must be loadable.
     copied_save.chmod(0o600)
-    command = ["rtk", "proxy", sys.executable, str(controller), "--root", str(root), "init",
+    command = [sys.executable, str(controller), "--root", str(root), "init",
                "--game-path", str(args.game_path.resolve()), "--companion", str(companion),
                "--save", str(copied_save), "--count", str(args.count), "--base-port", str(args.base_port),
                "--mod", json.dumps(dict(id="CycleTrim", staticID="LIghtJUNction.CycleTrim", source=str(stage / "mod")))]

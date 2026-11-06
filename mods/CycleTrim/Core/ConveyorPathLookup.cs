@@ -109,10 +109,12 @@ namespace CycleTrim.Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int FindEligibleIndex(List<SolidConduitFlow.Conduit> path,
             Predicate<SolidConduitFlow.Conduit> predicate,
-            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
+            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex,
+            int? knownRail = null)
         {
-            if (!enabled || predicate == null || candidate == null || ReferenceEquals(path, candidate))
-                return path.FindIndex(predicate);
+            if (!enabled || (predicate == null && !knownRail.HasValue)
+                || candidate == null || ReferenceEquals(path, candidate))
+                return Search(path, predicate, knownRail);
 
             if (!ReferenceEquals(indexedPath, path) || pathLength != path.Count)
             {
@@ -130,20 +132,20 @@ namespace CycleTrim.Core
             {
                 queries++;
                 var beforeQuery = version;
-                var found = path.FindIndex(predicate);
+                var found = Search(path, predicate, knownRail);
                 if (version == beforeQuery)
                     inspectedRails += found < 0 ? pathLength : found + 1;
                 return found;
             }
 
-            return FindIndexed(path, predicate, readRail, canIndex);
+            return FindIndexed(path, predicate, readRail, canIndex, knownRail);
         }
 
         private int FindIndexed(List<SolidConduitFlow.Conduit> path,
             Predicate<SolidConduitFlow.Conduit> predicate,
-            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
+            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex, int? knownRail)
         {
-            var rail = readRail(predicate);
+            var rail = knownRail ?? readRail(predicate);
             if (!rail.HasValue)
                 return path.FindIndex(predicate);
             if (!indexed)
@@ -155,7 +157,7 @@ namespace CycleTrim.Core
                     {
                         enabled = false;
                         ResetPath();
-                        return path.FindIndex(predicate);
+                        return Search(path, predicate, knownRail);
                     }
                     compatibilityChecked = true;
                 }
@@ -180,10 +182,35 @@ namespace CycleTrim.Core
             catch (InvalidOperationException)
             {
                 ResetPath();
-                return path.FindIndex(predicate);
+                return Search(path, predicate, knownRail);
             }
             int position;
             return firstPositions.TryGetValue(rail.Value, out position) ? position : -1;
+        }
+
+        // Only the exact, unpatched integer-equality predicates use this path.
+        // No delegate invocation or candidate indexer is repeated per rail.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static int Scan(List<SolidConduitFlow.Conduit> path, int rail)
+        {
+            for (var index = 0; index < path.Count; index++)
+                if (path[index].idx == rail)
+                    return index;
+            return -1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int Search(List<SolidConduitFlow.Conduit> path,
+            Predicate<SolidConduitFlow.Conduit> predicate, int? knownRail)
+        {
+            return knownRail.HasValue ? Scan(path, knownRail.Value) : path.FindIndex(predicate);
+        }
+
+        internal void Disable()
+        {
+            enabled = false;
+            compatibilityChecked = false;
+            ResetPath();
         }
 
         private void ResetPath()

@@ -12,6 +12,7 @@ namespace CycleTrim.Core
         private static readonly ConditionalWeakTable<object, FailedWrite>.CreateValueCallback NewFailure =
             owner => new FailedWrite();
         private static volatile bool suppressionEnabled;
+        private static volatile bool hasFailures;
 
         internal static void BeginPatchingSession() { suppressionEnabled = true; }
         internal static void DisableSuppression() { suppressionEnabled = false; }
@@ -21,13 +22,27 @@ namespace CycleTrim.Core
         {
             // A failed range can have changed bytes without reaching MarkDirty.
             // Keep original dirtying for that instance on every later call.
-            return !suppressionEnabled || state != 1 || FailedWrites.TryGetValue(owner, out _);
+            return !suppressionEnabled || state != 1
+                || (hasFailures && FailedWrites.TryGetValue(owner, out _));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void RememberFailure(object owner, Exception error)
         {
+            // Harmony supplies a constant null exception on successful calls.
+            // Keep this guard small enough to fold away with its finalizer.
             if (owner != null && error != null)
-                FailedWrites.GetValue(owner, NewFailure);
+                RecordFailure(owner);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void RecordFailure(object owner)
+        {
+            FailedWrites.GetValue(owner, NewFailure);
+            // Publish after the weak entry exists, and never clear this
+            // flag on a patching-session change: surviving failed owners
+            // must keep their original dirtying behavior across sessions.
+            hasFailures = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

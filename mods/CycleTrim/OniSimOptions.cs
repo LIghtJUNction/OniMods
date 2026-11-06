@@ -67,6 +67,12 @@ namespace CycleTrim
         [RestartRequired]
         public bool OptimizeAnimationSymbols { get; set; }
 
+        [Option("状态机查询复用 / State machine lookups",
+            "复用列表未变化时的状态机查询结果，减少重复扫描。默认关闭，需要重启游戏。",
+            "优化 / Optimizations")]
+        [RestartRequired]
+        public bool OptimizeStateMachineLookups { get; set; }
+
         [Option("管道动画刷新 / Conduit animation refresh",
             "Full 保持每帧；Half 每2帧、Quarter 每4帧重建普通管道动画，最长100毫秒后下次绘制刷新。查看内容、音效、模拟或视野变化时立即刷新；物质传输按原时序运行。默认Full，修改后需要重启。",
             "显示 / Visuals")]

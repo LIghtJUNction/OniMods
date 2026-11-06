@@ -22,17 +22,21 @@ namespace CycleTrim.Optimizations.Tests
         {
             AnimationSymbolFixture.InstallOriginalCopies();
             OptionOffKeepsOriginal();
+            WholePayloadProofShapes();
             Enable();
             try
             {
                 BitComparisonsAreExact();
                 ArbitraryBitPatternsMatchHostReference();
                 EveryPayloadFieldMatches();
+                StableOperandsAndAliasesMatch();
                 FirstChangeKeepsLaterWritesAndFailures();
+                ChangedContinuationKeepsLaterIterationFailures();
                 RangeOutputsAndUploadsMatch();
                 InvalidInputsAndPartialWritesMatch();
                 RepeatedArrayAddressesPreserveFailures();
                 FailedRangesKeepLaterDirtying();
+                FailureHistorySurvivesSessionsAndThreads();
                 EmptyRangesAndVersionWrap();
                 ThreadsAndNestedCallsAreIndependent();
                 TranspilerRejectsChangedInstructions();
@@ -56,6 +60,49 @@ namespace CycleTrim.Optimizations.Tests
         {
             CycleTrimPatchOptions.Configure(true, true, true, true, true, false, animationSymbols: true);
             new Harmony(Owner).CreateClassProcessor(typeof(AnimationSymbolOptimizationPatch)).Patch();
+        }
+
+        private static void WholePayloadProofShapes()
+        {
+            foreach (var method in new[] { AnimationSymbolFixture.One, AnimationSymbolFixture.Range,
+                AnimationSymbolFixture.StableArrayAddresses })
+            {
+                var original = PatchProcessor.GetOriginalInstructions(method, out var generator);
+                var changed = AnimationSymbolOptimizationPatch.Transpiler(original, method, generator).ToList();
+                var wideReads = changed.Select((instruction, index) => new { instruction, index })
+                    .Where(item => item.instruction.opcode == OpCodes.Ldind_I8).ToList();
+                Equal(8, wideReads.Count, "stable operands use exactly four paired vector field reads");
+                var rawReads = changed.Select((instruction, index) => new { instruction, index })
+                    .Where(item => item.instruction.opcode == OpCodes.Ldind_I8
+                        || item.instruction.opcode == OpCodes.Ldind_I4);
+                Check(rawReads.All(item => changed[item.index - 1].opcode == OpCodes.Unaligned
+                    && Equals(changed[item.index - 1].operand, (byte)1)),
+                    "scalar and vector bit reads explicitly support unaligned storage");
+
+                // A changed range must continue only within the original loop,
+                // never return through the comparison loop on its next symbol.
+                var continuation = changed.Skip(changed.Count - original.Count).ToList();
+                for (int index = 0; index < original.Count; index++)
+                {
+                    if (!(original[index].operand is Label target)) continue;
+                    int destination = original.FindIndex(instruction => instruction.labels.Contains(target));
+                    Check(continuation[index].operand is Label cloned
+                        && continuation[destination].labels.Contains(cloned)
+                        && !original[destination].labels.Contains(cloned),
+                        "original continuation branch stays in its independently labeled method copy");
+                }
+            }
+            foreach (var method in new[] { AnimationSymbolFixture.ArrayAddresses,
+                AnimationSymbolFixture.DifferentArrayAddresses, AnimationSymbolFixture.LateFrameRead })
+            {
+                var original = PatchProcessor.GetOriginalInstructions(method, out var generator);
+                var changed = AnimationSymbolOptimizationPatch.Transpiler(original, method, generator).ToList();
+                Check(!changed.Any(instruction => instruction.opcode == OpCodes.Ldind_I8)
+                    && changed.Any(instruction => instruction.operand is MethodInfo helper
+                        && helper.DeclaringType == typeof(AnimationSymbolValueComparer)
+                        && helper.Name == "SameBits"),
+                    "different addresses, late nullable frame and source callbacks keep fieldwise evaluation");
+            }
         }
 
         private static void OptionOffKeepsOriginal()
@@ -174,6 +221,148 @@ namespace CycleTrim.Optimizations.Tests
             }
         }
 
+        private static void StableOperandsAndAliasesMatch()
+        {
+            const string owner = "cycletrim.tests.animation.payload-operands";
+            var harmony = new Harmony(owner);
+            foreach (var method in new[] { AnimationSymbolFixture.StableArrayAddresses,
+                AnimationSymbolFixture.DifferentArrayAddresses, AnimationSymbolFixture.LateFrameRead })
+                harmony.Patch(method,
+                    transpiler: new HarmonyMethod(typeof(AnimationSymbolOptimizationPatch), "Transpiler"),
+                    finalizer: new HarmonyMethod(typeof(AnimationSymbolOptimizationPatch), "Finalizer"));
+            try
+            {
+                uint random = 0xC845712Du;
+                for (int sample = 0; sample < 128; sample++)
+                {
+                    var baseline = new SymbolOverrideInfoGpuData(1);
+                    var candidate = new SymbolOverrideInfoGpuData(1);
+                    var frame = AnimationSymbolFixture.Frame(sample);
+                    for (int component = 0; component < 8; component++)
+                        SetComponent(ref frame, component, BitConverter.Int32BitsToSingle(
+                            unchecked((int)NextBits(ref random))));
+                    baseline.Entries[0].unused1 = candidate.Entries[0].unused1 =
+                        BitConverter.Int32BitsToSingle(unchecked((int)NextBits(ref random)));
+                    baseline.Entries[0].unused2 = candidate.Entries[0].unused2 = -0f;
+                    AnimationSymbolFixture.OriginalStableArrayAddresses(baseline, 0, ref frame);
+                    candidate.StableArrayAddressesForTest(0, ref frame);
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "packed arbitrary payload initial bytes");
+                    int version = candidate.version;
+                    candidate.StableArrayAddressesForTest(0, ref frame);
+                    Equal(version, candidate.version, "packed arbitrary payload repeats without dirtying");
+                    SetComponent(ref frame, sample & 7, BitConverter.Int32BitsToSingle(
+                        FloatPatterns[sample % FloatPatterns.Length]));
+                    AnimationSymbolFixture.OriginalStableArrayAddresses(baseline, 0, ref frame);
+                    candidate.StableArrayAddressesForTest(0, ref frame);
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "packed changed edge-pattern bytes");
+                }
+                foreach (int index in new[] { -1, 0, 1 })
+                {
+                    var baseline = new SymbolOverrideInfoGpuData(1);
+                    var candidate = new SymbolOverrideInfoGpuData(1);
+                    var expected = MissingFrameError(baseline, index, true, false);
+                    Equal(index == 0 ? typeof(NullReferenceException) : typeof(IndexOutOfRangeException),
+                        expected, "stable receiver faults before a missing frame when its index is invalid");
+                    Equal(expected, MissingFrameError(candidate, index, false, false),
+                        "whole-payload receiver and first-value exception order");
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "first operand failure writes no fields");
+                }
+                foreach (bool initialized in new[] { false, true })
+                {
+                    var baseline = new SymbolOverrideInfoGpuData(1);
+                    var candidate = new SymbolOverrideInfoGpuData(1);
+                    if (initialized)
+                    {
+                        baseline.Entries[0].atlas = candidate.Entries[0].atlas = 17f;
+                        baseline.Entries[0].isoverriden = candidate.Entries[0].isoverriden = 1f;
+                    }
+                    Equal(typeof(NullReferenceException), MissingFrameError(baseline, 0, true, true),
+                        "late frame fixture fails after its scalar stores");
+                    Equal(typeof(NullReferenceException), MissingFrameError(candidate, 0, false, true),
+                        "nullable later frame remains on the original evaluation path");
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "later null frame preserves scalar writes");
+                    Equal(17f, candidate.Entries[0].atlas, "atlas precedes a later frame failure");
+                    Equal(1f, candidate.Entries[0].isoverriden, "override flag precedes a later frame failure");
+                }
+                foreach (int symbols in new[] { 1, 2 })
+                {
+                    var baseline = new SymbolOverrideInfoGpuData(symbols);
+                    var candidate = new SymbolOverrideInfoGpuData(symbols);
+                    var frame = AnimationSymbolFixture.Frame(7);
+                    Equal(Error(() => AnimationSymbolFixture.OriginalDifferentArrayAddresses(baseline, 0, ref frame)),
+                        Error(() => candidate.DifferentArrayAddressesForTest(0, ref frame)),
+                        "a different later receiver keeps its own bounds check");
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "different receiver partial writes");
+                    Equal(baseline.version, candidate.version, "different receiver completion or failure dirtying");
+                }
+                AliasedFramesUseOriginalWriteOrder();
+            }
+            finally { harmony.UnpatchAll(owner); }
+        }
+
+        private static unsafe Type MissingFrameError(SymbolOverrideInfoGpuData data, int index,
+            bool original, bool late)
+        {
+            KAnim.Build.SymbolFrameInstance* frame = null;
+            try
+            {
+                if (late)
+                {
+                    if (original) AnimationSymbolFixture.OriginalLateFrameRead(data, index, ref *frame);
+                    else data.LateFrameReadForTest(index, ref *frame);
+                }
+                else
+                {
+                    if (original) AnimationSymbolFixture.OriginalStableArrayAddresses(data, index, ref *frame);
+                    else data.StableArrayAddressesForTest(index, ref *frame);
+                }
+                return null;
+            }
+            catch (Exception error) { return error.GetType(); }
+        }
+
+        private static unsafe void AliasedFramesUseOriginalWriteOrder()
+        {
+            foreach (bool arrayReceiver in new[] { false, true })
+            {
+                foreach (bool changed in new[] { false, true })
+                {
+                    var baseline = new SymbolOverrideInfoGpuData(1);
+                    var candidate = new SymbolOverrideInfoGpuData(1);
+                    var entry = new SymbolOverrideInfoGpuData.SymbolOverrideInfo
+                    {
+                        atlas = 0f, isoverriden = 1f, unused1 = changed ? 9f : 1f, unused2 = 1f,
+                        bboxMin = new UnityEngine.Vector2(1f, 1f), bboxMax = new UnityEngine.Vector2(1f, 1f),
+                        uvMin = new UnityEngine.Vector2(1f, 1f), uvMax = new UnityEngine.Vector2(1f, 1f)
+                    };
+                    baseline.Entries[0] = candidate.Entries[0] = entry;
+                    // This synthetic frame is wholly inside the 48-byte entry.
+                    // Original early writes can change later frame reads; a
+                    // changed payload must execute those reads in original order.
+                    fixed (SymbolOverrideInfoGpuData.SymbolOverrideInfo* left = &baseline.Entries[0])
+                    fixed (SymbolOverrideInfoGpuData.SymbolOverrideInfo* right = &candidate.Entries[0])
+                    {
+                        if (arrayReceiver)
+                        {
+                            AnimationSymbolFixture.OriginalStableArrayAddresses(baseline, 0,
+                                ref *(KAnim.Build.SymbolFrameInstance*)left);
+                            candidate.StableArrayAddressesForTest(0, ref *(KAnim.Build.SymbolFrameInstance*)right);
+                        }
+                        else
+                        {
+                            AnimationSymbolFixture.OriginalOne(baseline, 0,
+                                ref *(KAnim.Build.SymbolFrameInstance*)left);
+                            candidate.SetSymbolOverrideInfo(0, ref *(KAnim.Build.SymbolFrameInstance*)right);
+                        }
+                    }
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "aliased source preserves original stores and reads");
+                    Equal(changed ? 2 : 1, candidate.version, "aliased identical payload alone skips dirtying");
+                    Equal(changed ? 9f : 1f, candidate.Entries[0].uvMax.y,
+                        "later aliased reads observe earlier stores");
+                }
+            }
+        }
+
         private static uint NextBits(ref uint value)
         {
             value ^= value << 13;
@@ -281,6 +470,72 @@ namespace CycleTrim.Optimizations.Tests
                 candidateTexture.Update(replacement);
                 Equal(2L, candidateTexture.Copies, "consumer checks object identity");
             }
+        }
+
+        private static void ChangedContinuationKeepsLaterIterationFailures()
+        {
+            foreach (bool sourceFailure in new[] { false, true })
+            {
+                foreach (int changedAt in new[] { 0, 3, 6 })
+                {
+                    var frames = Enumerable.Range(0, sourceFailure ? 7 : 8)
+                        .Select(index => AnimationSymbolFixture.Frame(index + 1)).ToArray();
+                    var source = new KBatchGroupData(frames);
+                    int symbols = sourceFailure ? 8 : 7;
+                    var baseline = new SymbolOverrideInfoGpuData(symbols);
+                    var candidate = new SymbolOverrideInfoGpuData(symbols);
+                    AnimationSymbolFixture.OriginalRange(baseline, 0, 7, 4, source, 0, frames.Length);
+                    candidate.SetSymbolOverrideInfo(0, 7, 4, source, 0, frames.Length);
+                    int version = candidate.version;
+                    var originalTexture = new AnimationSymbolFixture.TextureConsumer(symbols);
+                    var candidateTexture = new AnimationSymbolFixture.TextureConsumer(symbols);
+                    originalTexture.Update(baseline);
+                    candidateTexture.Update(candidate);
+                    var changed = source.symbolFrameInstances[changedAt];
+                    changed.uvMax.y = BitConverter.Int32BitsToSingle(unchecked((int)0xFFC56789));
+                    source.symbolFrameInstances[changedAt] = changed;
+
+                    var expected = Error(() => AnimationSymbolFixture.OriginalRange(
+                        baseline, 0, 8, 4, source, 0, 8));
+                    Equal(sourceFailure ? typeof(ArgumentOutOfRangeException) : typeof(IndexOutOfRangeException),
+                        expected, "continuation fixture fails in a later original loop iteration");
+                    Equal(expected, Error(() => candidate.SetSymbolOverrideInfo(0, 8, 4, source, 0, 8)),
+                        "early, middle and late changes preserve a later iteration failure");
+                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "original continuation partial range bytes");
+                    Equal(version, candidate.version, "original continuation does not dirty a failed range");
+                    originalTexture.Update(baseline);
+                    candidateTexture.Update(candidate);
+                    EqualBytes(originalTexture.Bytes, candidateTexture.Bytes,
+                        "failed continuation keeps the preceding consumer version");
+
+                    AnimationSymbolFixture.OriginalRange(baseline, 0, 7, 4, source, 0, frames.Length);
+                    candidate.SetSymbolOverrideInfo(0, 7, 4, source, 0, frames.Length);
+                    Equal(unchecked(version + 1), candidate.version,
+                        "identical retry after continuation failure still dirties");
+                    originalTexture.Update(baseline);
+                    candidateTexture.Update(candidate);
+                    EqualBytes(originalTexture.Bytes, candidateTexture.Bytes,
+                        "continuation retry publishes all pending bytes");
+                }
+            }
+        }
+
+        private static void FailureHistorySurvivesSessionsAndThreads()
+        {
+            var failed = new object();
+            var healthy = new object();
+            Task.Run(() => AnimationSymbolValueComparer.RememberFailure(failed,
+                new InvalidOperationException("published on another thread"))).GetAwaiter().GetResult();
+            Check(AnimationSymbolValueComparer.NeedsDirty(failed, 1),
+                "completed failure publication is visible across threads");
+            AnimationSymbolValueComparer.DisableSuppression();
+            Check(AnimationSymbolValueComparer.NeedsDirty(healthy, 1), "disabled session keeps original dirtying");
+            AnimationSymbolValueComparer.BeginPatchingSession();
+            Check(AnimationSymbolValueComparer.NeedsDirty(failed, 1),
+                "starting a new session does not reset surviving weak failure history");
+            Check(!AnimationSymbolValueComparer.NeedsDirty(healthy, 1),
+                "failure history does not disable a healthy instance");
+            Check(AnimationSymbolValueComparer.NeedsDirty(healthy, 0), "unvisited ranges retain dirtying");
         }
 
         private static void InvalidInputsAndPartialWritesMatch()

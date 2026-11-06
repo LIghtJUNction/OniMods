@@ -6,6 +6,8 @@ namespace CycleTrim.Optimizations.Tests
 {
     internal static class SaveMetadataBenchmark
     {
+        internal static void RunScoped() { SaveMetadataScopedBenchmark.Run(); }
+
         // Informational paired measurements, never a noisy CI timing gate.
         // Both versions execute the original workload's two checks + one name.
         internal static void Run()

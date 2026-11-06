@@ -1,28 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Tools;
 
-internal static class BenchmarkMetadataRegressionEntry
+internal static class BenchmarkMetadataRegression
 {
-    private static void Main()
-    {
-        WorldEditorTools.RunMapContractRegressions();
-        MapReadPolicyRegression.Run();
-        BuildPlanningRegression.Run();
-        ObservationReadinessRegression.Run();
-        FarmingUprootRegression.Run();
-        RunBenchmarkMetadataRegression();
-
-        var existing = typeof(Program).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing tools regression entrypoint was not found");
-        existing.Invoke(null, null);
-    }
-
-    private static void RunBenchmarkMetadataRegression()
+    public static void Run()
     {
         if (!HarvestMarkPolicy.ShouldMarkNow(true, true)
             || !HarvestMarkPolicy.ShouldMarkNow(true, false)

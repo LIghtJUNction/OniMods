@@ -31,7 +31,7 @@ namespace CycleTrim.Patches
         // No serialization loop, object state or written byte is cached here.
         [HarmonyPriority(Priority.Last)]
         internal static IEnumerable<CodeInstruction> Transpiler(
-            IEnumerable<CodeInstruction> instructions)
+            IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
             var original = new List<CodeInstruction>(instructions);
             var attributeQuery = AccessTools.Method(typeof(MemberInfo), "IsDefined",
@@ -67,19 +67,45 @@ namespace CycleTrim.Patches
                 return original;
             }
 
-            var cachedQuery = AccessTools.Method(typeof(SaveTypeMetadataCache), "IsDefined");
-            var cachedName = AccessTools.Method(typeof(SaveTypeMetadataCache), "TypeName");
-            foreach (var index in checks)
-                original[index] = ReplaceCall(original[index], cachedQuery);
-            foreach (var index in names)
-                original[index] = ReplaceCall(original[index], cachedName);
-            return original;
+            var localType = typeof(SaveTypeMetadataCache.LocalCache);
+            var local = generator.DeclareLocal(localType);
+            var cachedQuery = AccessTools.Method(typeof(SaveTypeMetadataCache), "IsDefined",
+                new[] { typeof(MemberInfo), typeof(Type), typeof(bool), localType.MakeByRefType() });
+            var cachedName = AccessTools.Method(typeof(SaveTypeMetadataCache), "TypeName",
+                new[] { typeof(object), localType.MakeByRefType() });
+            var result = new List<CodeInstruction>(original.Count + 5)
+            {
+                new CodeInstruction(OpCodes.Ldloca, local),
+                new CodeInstruction(OpCodes.Initobj, localType)
+            };
+            for (int index = 0; index < original.Count; index++)
+            {
+                var replacement = checks.Contains(index) ? cachedQuery
+                    : names.Contains(index) ? cachedName : null;
+                if (replacement == null)
+                    result.Add(original[index]);
+                else
+                    AppendCall(result, original[index], replacement, local);
+            }
+            return result;
         }
 
-        private static CodeInstruction ReplaceCall(CodeInstruction instruction, MethodInfo method)
+        private static void AppendCall(List<CodeInstruction> result, CodeInstruction instruction,
+            MethodInfo method, LocalBuilder local)
         {
-            // Keep branches and exception-region boundaries on the same instruction.
-            return new CodeInstruction(instruction) { opcode = OpCodes.Call, operand = method };
+            // Branches and handler entries must push the extra address too.
+            // End markers stay after the replacement call, so it remains in
+            // the original exception region.
+            var address = new CodeInstruction(OpCodes.Ldloca, local);
+            address.labels.AddRange(instruction.labels);
+            var call = new CodeInstruction(OpCodes.Call, method);
+            foreach (var block in instruction.blocks)
+                if (block.blockType == ExceptionBlockType.EndExceptionBlock)
+                    call.blocks.Add(block);
+                else
+                    address.blocks.Add(block);
+            result.Add(address);
+            result.Add(call);
         }
     }
 }

@@ -15,11 +15,11 @@ using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class LegacySessionLifecycleRegressionEntry
+internal static class LegacySessionLifecycleRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunLifecycleRegression();
         RunBoundedCleanupStressRegression();

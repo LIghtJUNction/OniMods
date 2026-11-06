@@ -45,6 +45,8 @@ protected List<Brain> brains;
 protected Queue<Brain> priorityBrains;
 protected int nextUpdateBrain;
 public int debugMaxPriorityBrainCountSeen;
+private List<StateMachine.Instance> stateMachines;
+public StateMachine.Instance GetSMI(Type type);
 public void UpdateProbe(bool force = false);
 public NavGrid NavGrid;
 public NavType CurrentNavType;
@@ -81,6 +83,8 @@ WORK_ORDER_EXECUTE = (
     "PathFinder.PotentialScratchPad scratch, "
     "ref AsyncPathProber.WorkResult result);\n"
 )
+SMI_METHOD = "public StateMachine.Instance GetSMI(Type type);\n"
+SMI_FIELD = "private List<StateMachine.Instance> stateMachines;\n"
 
 
 def require(condition: bool, message: str) -> None:
@@ -137,11 +141,32 @@ def main() -> int:
             "AsyncPathProber.WorkOrder.Execute" in missing_execute.stderr,
             "missing dynamic WorkOrder target must be identified in checker diagnostics",
         )
+
+        missing_smi = run_checker(SYNTHETIC_REFERENCE.replace(SMI_METHOD, ""))
+        require(
+            missing_smi.returncode != 0,
+            "reference API checker must reject a missing StateMachineController.GetSMI(Type)",
+        )
+        require(
+            "StateMachineController.GetSMI(Type)" in missing_smi.stderr,
+            "missing state-machine lookup must be identified in checker diagnostics",
+        )
+
+        wrong_smi_field = run_checker(SYNTHETIC_REFERENCE.replace(
+            SMI_FIELD, "private IList<StateMachine.Instance> stateMachines;\n"))
+        require(
+            wrong_smi_field.returncode != 0,
+            "reference API checker must reject a stateMachines field with a different list type",
+        )
+        require(
+            "StateMachineController.stateMachines" in wrong_smi_field.stderr,
+            "wrong state-machine field type must be identified in checker diagnostics",
+        )
     except (AssertionError, OSError, subprocess.TimeoutExpired) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
 
-    print("PASS: CycleTrim reference API checker covers AsyncPathProber.WorkOrder.Execute")
+    print("PASS: CycleTrim reference API checker covers WorkOrder.Execute and state-machine lookup dependencies")
     return 0
 
 

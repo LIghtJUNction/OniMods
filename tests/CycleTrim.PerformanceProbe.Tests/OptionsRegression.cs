@@ -18,6 +18,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                 "conveyor lookup candidate must remain opt-in");
             Check(!new OniSimOptions().OptimizeAnimationSymbols,
                 "animation version coalescing must remain opt-in");
+            Check(!new OniSimOptions().OptimizeStateMachineLookups,
+                "state machine lookup reuse must remain opt-in");
             Check(new OniSimOptions().ConduitAnimation == ConduitAnimationQuality.Full,
                 "conduit display sampling must preserve full quality by default");
             Load(null, expectedEnabled: true);
@@ -34,12 +36,16 @@ namespace CycleTrim.PerformanceProbe.Tests
                 OptimizePowerOverlay = false,
                 OptimizeConveyorPathLookup = false,
                 OptimizeAnimationSymbols = false,
+                OptimizeStateMachineLookups = false,
                 EnablePerformanceDiagnostics = true
             };
             Load(disabled, expectedEnabled: false);
             disabled.OptimizePickupCandidates = true;
             Check(!CycleTrimPatchOptions.OptimizePickupCandidates,
                 "editing a settings object must not partly enable a live patch group");
+            disabled.OptimizeStateMachineLookups = true;
+            Check(!CycleTrimPatchOptions.OptimizeStateMachineLookups,
+                "state machine setting edits require a restart before patch installation");
 
             var mixed = new OniSimOptions
             {
@@ -48,6 +54,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 OptimizePowerOverlay = true,
                 OptimizeConveyorPathLookup = true,
                 OptimizeAnimationSymbols = true,
+                OptimizeStateMachineLookups = true,
                 ConduitAnimation = ConduitAnimationQuality.Quarter
             };
             Load(mixed, expectedEnabled: true);
@@ -90,6 +97,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                     "conveyor lookup setting before patch install");
                 Check(CycleTrimPatchOptions.OptimizeAnimationSymbols == expected.OptimizeAnimationSymbols,
                     "animation symbol setting before patch install");
+                Check(CycleTrimPatchOptions.OptimizeStateMachineLookups == expected.OptimizeStateMachineLookups,
+                    "state machine lookup setting before patch install");
                 Check(CycleTrimPatchOptions.ConduitAnimation == expected.ConduitAnimation,
                     "conduit display quality applied before patch install");
                 Check(OniSim.CycleTrim.OniSimLoader.LastEnabled == expectedEnabled,

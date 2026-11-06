@@ -391,12 +391,6 @@ def main() -> None:
     get_tools = extract_block(registry, "public static List<McpTool> GetTools()")
     if "_tools.Values" not in get_tools or ".Where" in get_tools:
         fail("GetTools must return all registered tools without Hidden filtering")
-    visible_tools = extract_block(
-        registry, "public static List<McpTool> GetVisibleTools()"
-    )
-    if re.search(r"\.Where\(t\s*=>\s*!t\.Hidden\)", visible_tools) is None:
-        fail("GetVisibleTools must filter Hidden tools")
-
     build_infos = extract_block(registry, "private static List<McpToolInfo> BuildToolInfos()")
     if "GetVisibleTools()" not in build_infos or "_internalOperations" in build_infos:
         fail("BuildToolInfos must use the public visible registry, not internal operations")

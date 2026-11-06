@@ -13,6 +13,17 @@ internal static class Program
 
     private static void Main()
     {
+        LogicAlarmRegression.Run();
+        WorldEditorTools.RunMapContractRegressions();
+        MapReadPolicyRegression.Run();
+        BuildPlanningRegression.Run();
+        ObservationReadinessRegression.Run();
+        FarmingUprootRegression.Run();
+        PriorityWriteEligibilityRegression.Run();
+        BenchmarkMetadataRegression.Run();
+        RadboltDirectionEligibilityRegression.Run();
+        AttackDesignationPolicyRegression.Run();
+
         OniToolRegistry.Tools["ok"] = new McpTool
         {
             Name = "ok", Mode = "read", Risk = "low",
@@ -32,6 +43,7 @@ internal static class Program
             },
             Handler = args => { calls++; return CallToolResult.Text("ok"); }
         };
+        TestBuildPlanWriteSafety();
         TestBatchFailures();
         TestProgramValidation();
         TestProgramExecution();
@@ -61,7 +73,53 @@ internal static class Program
         ObservedTaskRankingRegression.Run();
         StepUntilResultCacheRegression.Run();
         DuplicantNeedStateRegression.Run();
+        TreeFilterEligibilityRegression.Run();
+        TestThresholdValuePolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
+    }
+
+    private static void TestBuildPlanWriteSafety()
+    {
+        var args = JObject.Parse("{plan:'candidate building',limit:1,confirm:true}");
+        var writeArgs = BuildPlanningTools.BuildWriteResolutionArgs(args);
+        Check((int)writeArgs["limit"] == 2, "write resolution must retain a runner-up");
+        Check((int)args["limit"] == 1 && !ReferenceEquals(args, writeArgs),
+            "write candidate budgeting must not mutate the caller's display limit");
+        Check((string)writeArgs["plan"] == (string)args["plan"] && (bool)writeArgs["confirm"],
+            "write candidate budgeting must preserve the remaining request fields");
+        foreach (int limit in new[] { 5, 20, 100 })
+        {
+            args["limit"] = limit;
+            Check((int)BuildPlanningTools.BuildWriteResolutionArgs(args)["limit"] == limit,
+                "larger candidate limits must remain unchanged");
+        }
+        args.Remove("limit");
+        Check((int)BuildPlanningTools.BuildWriteResolutionArgs(args)["limit"] == 5,
+            "default candidate limit remains five");
+
+        string reason;
+        Check(BuildPlanningTools.SuffixBuildingAliasScore + BuildPlanningTools.MaximumPlanTermOrderBoost
+                < BuildPlanningTools.MinimumAutoWriteBuildingScore,
+            "suffix-derived alias scores must remain below the confirmed-write floor");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("alias", 950, 949, out reason) && reason == null,
+            "exact aliases remain executable even when text candidates are nearby");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("prefabId", 10000, 9999, out reason) && reason == null,
+            "explicit prefab ids remain executable");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 700, out reason) && reason == null,
+            "clear strong fuzzy matches remain executable");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe(
+                "alias_suffix",
+                BuildPlanningTools.SuffixBuildingAliasScore + BuildPlanningTools.MaximumPlanTermOrderBoost,
+                0,
+                out reason)
+            && reason == "low_confidence",
+            "suffix-derived aliases cannot masquerade as exact aliases at the write boundary");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 699, 0, out reason) && reason == "low_confidence",
+            "low-confidence fuzzy matches fail closed");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 701, out reason) && reason == "near_tie",
+            "near-tied fuzzy matches fail closed");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 700, out reason),
+            "the minimum accepted score gap is inclusive");
     }
 
     private static void TestBatchFailures()
@@ -333,6 +391,34 @@ internal static class Program
         GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
         Check(zeroSpeed.PauseCount == 1, "speed zero followed by pause must own only one reference");
         GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+    }
+
+    private static void TestThresholdValuePolicy()
+    {
+        const float celsiusInput = 9600f;
+        const float nativeMin = 0f;
+        const float nativeMax = 9999f;
+        float processedKelvin = celsiusInput + 273.15f;
+
+        float retained = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            processedKelvin, nativeMin, nativeMax);
+        Check(Math.Abs(retained - processedKelvin) < 0.01f,
+            "converted threshold must remain in the native unit domain after processing");
+
+        float high = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            11000f, nativeMin, nativeMax);
+        Check(Math.Abs(high - nativeMax) < 0.01f,
+            "processed threshold above the native range must clamp to native max");
+
+        float low = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            -10f, nativeMin, nativeMax);
+        Check(Math.Abs(low - nativeMin) < 0.01f,
+            "processed threshold below the native range must clamp to native min");
+
+        float identity = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            42f, 0f, 100f);
+        Check(Math.Abs(identity - 42f) < 0.01f,
+            "identity threshold conversions must remain unchanged");
     }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });

@@ -57,4 +57,9 @@ namespace CycleTrim.Patches
         internal static string Owner;
         internal static void SetHarmonyId(string id) { Owner = id; }
     }
+
+    internal static class FetchLayoutExperiment
+    {
+        internal static void StartIfRequested() { }
+    }
 }

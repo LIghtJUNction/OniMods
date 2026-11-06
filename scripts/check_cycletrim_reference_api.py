@@ -109,6 +109,14 @@ def main() -> int:
         ):
             expect("BrainScheduler", pattern, label)
 
+        # State-machine lookup reuse depends on this exact list and Type overload.
+        expect("StateMachineController",
+               r"\bprivate\s+List<StateMachine\.Instance>\s+stateMachines\s*;",
+               "StateMachineController.stateMachines: List<StateMachine.Instance>")
+        expect("StateMachineController", method(r"public\s+StateMachine\.Instance", "GetSMI",
+                                               r"(?:System\.)?Type\s+\w+"),
+               "StateMachineController.GetSMI(Type)")
+
         # Developer performance-probe target used to rank vanilla room rebuild work.
         expect("RoomProber", method(r"public\s+void", "Sim1000ms", r"float\s+\w+"),
                "RoomProber.Sim1000ms(float)")

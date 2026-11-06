@@ -1,0 +1,25 @@
+{
+  "commit": "840719ee75d12c57284cbe22a4e28cf7705a4689",
+  "workflow_runs": [
+    {
+      "id": 41099643496,
+      "name": "Mod quality",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_number": 1323,
+      "jobs_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/41099643496/jobs",
+      "logs_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/41099643496/logs",
+      "workflow_id": 352828508
+    },
+    {
+      "id": 41099643415,
+      "name": "ONI reference compatibility",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 1286,
+      "jobs_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/41099643415/jobs",
+      "logs_url": "https://api.github.com/repos/LIghtJUNction/OniMods/actions/runs/41099643415/logs",
+      "workflow_id": 358189171
+    }
+  ]
+}
