@@ -20,6 +20,11 @@ namespace CycleTrim.Optimizations.Tests
                     SaveMetadataBenchmark.RunScoped();
                     return 0;
                 }
+                if (args.Length == 1 && args[0] == "--benchmark-state-machine")
+                {
+                    StateMachineLookupBenchmark.Run();
+                    return 0;
+                }
                 if (args.Length == 1 && args[0] == "--benchmark-power")
                 {
                     PowerOverlayRegression.Benchmark();
@@ -43,14 +48,15 @@ namespace CycleTrim.Optimizations.Tests
                 }
                 if (args.Length != 0)
                     throw new ArgumentException("expected no arguments or --benchmark-"
-                        + "save, save-scoped, power, conveyor or animation; --regression- selects one family");
+                        + "save, save-scoped, power, conveyor, animation or state-machine; "
+                        + "--regression- selects one family");
                 // Several negative cases irreversibly load another provider or
                 // a growable assembly. Each complete family gets its own process
                 // so those real invalidations cannot poison a later family's
                 // clean-environment cases. Benchmark entry points stay above.
                 // Conveyor's fresh native detours and warmed index invalidation
                 // have separate assertions; neither assumes retroactive uninlining.
-                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation" })
+                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine" })
                     RunIsolated(family);
                 Console.WriteLine("PASS CycleTrim optimization host regressions (synthetic game fixtures)");
                 return 0;
@@ -72,6 +78,7 @@ namespace CycleTrim.Optimizations.Tests
                 case "power-provider": PowerOverlayRegression.RunProviderRegression(); break;
                 case "save": SaveMetadataRegression.Run(); break;
                 case "animation": AnimationSymbolRegression.Run(); break;
+                case "state-machine": StateMachineLookupRegression.Run(); break;
                 default: throw new ArgumentException("unknown regression family: " + family);
             }
         }

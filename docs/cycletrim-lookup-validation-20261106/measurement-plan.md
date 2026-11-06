@@ -1,6 +1,9 @@
 # CycleTrim lookup optimization measurement plan
 
-Fixed before candidate measurements on 2026-11-06.
+Initial workload matrix and gates recorded on 2026-11-06 before formal sampling.
+The state-machine warmup amendment below records a later diagnostic-driven
+protocol correction made before its accepted matrix; the workload sizes, cache
+limits, seven-pair sampling and allocation gates remain unchanged.
 
 ## Scope and baselines
 
@@ -65,3 +68,27 @@ The state-machine option stays off by default pending a Steam-launched ONI run.
 Reference binaries declare build 737790, while the pinned method-body source
 declares 744825. Host timing is not a game FPS or save-pause measurement. Actual
 Unity/Mono, save roundtrip and mod-combination acceptance remain separate.
+
+## State-machine warmup amendment before the formal matrix
+
+The development smoke runs exposed a 160-byte measurement-window allocation.
+An instrumented diagnostic localized a matching event to the loop backedge near
+iteration 9,997, with zero allocation in the production query phase and no cache
+value or dictionary construction. The event disappeared with on-stack replacement
+(OSR) disabled while tiering remained enabled. After extracting a shared
+`NoInlining ExecuteLoop`, another smoke run observed 160 bytes in the original
+baseline rather than the candidate. The exact allocated object was not captured;
+these observations identify an OSR-related measurement/runtime transition, not a
+specific runtime object type.
+
+The earlier warmup batches executed 5,000 iterations for normal scenarios and
+500 for cold-owner scenarios, while measured batches executed 60,000 and 10,000.
+Before any accepted state-machine matrix, fix each of the 20 warmup batches to
+`scenario.Iterations`, the exact measured batch length, in that same shared loop.
+This covers the long-loop runtime path for both variants without choosing a
+warmup length by trial-and-error. Keep seven alternating pairs, all scenarios,
+the 4-entry bypass and 16-answer cap, and the strict zero-byte warm-path gate.
+Default and tiering-disabled modes remain the formal comparison modes; OSR-off
+is a diagnostic control only. Preserve the earlier smoke and diagnostic records
+separately and do not mix them into the formal results. The save protocol is
+unchanged.
