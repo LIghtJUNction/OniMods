@@ -44,14 +44,16 @@ internal static class Program
                 {
                     TcpClient sender = clientFirst ? client : server;
                     TcpClient receiver = clientFirst ? server : client;
+                    NetworkStream senderStream = sender.GetStream();
+                    NetworkStream receiverStream = receiver.GetStream();
                     byte[] request = Enumerable.Range(0, 2051).Select(i => (byte)(i % 251)).ToArray();
                     byte[] reply = Enumerable.Range(0, 3077).Select(i => (byte)(255 - i % 251)).ToArray();
-                    await sender.GetStream().WriteAsync(request.AsMemory()).AsTask().WaitAsync(Deadline);
+                    await senderStream.WriteAsync(request.AsMemory()).AsTask().WaitAsync(Deadline);
                     sender.Client.Shutdown(SocketShutdown.Send);
-                    await ReadThroughEof(receiver.GetStream(), request);
-                    await receiver.GetStream().WriteAsync(reply.AsMemory()).AsTask().WaitAsync(Deadline);
+                    await ReadThroughEof(receiverStream, request);
+                    await receiverStream.WriteAsync(reply.AsMemory()).AsTask().WaitAsync(Deadline);
                     receiver.Client.Shutdown(SocketShutdown.Send);
-                    await ReadThroughEof(sender.GetStream(), reply);
+                    await ReadThroughEof(senderStream, reply);
                     await Until(() => proxy.ActiveConnections == 0, "completed half-close pair was retained");
                 }
             }
