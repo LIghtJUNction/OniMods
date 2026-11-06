@@ -1,0 +1,250 @@
+TYPE Assembly-CSharp.dll StateMachineController base=KMonoBehaviour flags=Public, BeforeFieldInit
+FIELD Public DefHandle defHandle
+FIELD Private System.Collections.Generic.List`1<StateMachine+Instance> stateMachines
+FIELD Private LoggerFSSSS log
+FIELD Private StateMachineSerializer serializer
+FIELD Private, Static, InitOnly EventSystem+IntraObjectHandler`1<StateMachineController> OnTargetDestroyedDelegate
+METHOD Public, HideBySig, SpecialName StateMachineController+CmpDef get_cmpdef() RVA=0
+METHOD Public, HideBySig System.Collections.Generic.IEnumerator`1<StateMachine+Instance> GetEnumerator() RVA=0
+METHOD Public, HideBySig Void AddStateMachineInstance(StateMachine+Instance state_machine) RVA=0
+METHOD Public, HideBySig Void RemoveStateMachineInstance(StateMachine+Instance state_machine) RVA=0
+METHOD Public, HideBySig Boolean HasStateMachineInstance(StateMachine+Instance state_machine) RVA=0
+METHOD Public, HideBySig Void AddDef(StateMachine+BaseDef def) RVA=0
+METHOD Public, HideBySig LoggerFSSSS GetLog() RVA=0
+METHOD Family, Virtual, HideBySig Void OnPrefabInit() RVA=0
+METHOD Private, HideBySig Void OnTargetDestroyed(Object data) RVA=0
+METHOD Family, Virtual, HideBySig Void OnLoadLevel() RVA=0
+METHOD Family, Virtual, HideBySig Void OnCleanUp() RVA=0
+METHOD Public, Final, Virtual, HideBySig, VtableLayoutMask Void CreateSMIS() RVA=0
+METHOD Public, Final, Virtual, HideBySig, VtableLayoutMask Void StartSMIS() RVA=0
+METHOD Public, Final, Virtual, HideBySig, VtableLayoutMask Void Serialize(System.IO.BinaryWriter writer) RVA=0
+METHOD Public, Final, Virtual, HideBySig, VtableLayoutMask Void Deserialize(IReader reader) RVA=0
+METHOD Public, HideBySig Boolean Restore(StateMachine+Instance smi) RVA=0
+METHOD Public, HideBySig !!0 GetDef<DefType>() RVA=0
+METHOD Public, HideBySig !!0 GetDefImplementingInterfaceOfType<InterfaceType>() RVA=0
+METHOD Public, HideBySig System.Collections.Generic.List`1<!!0> GetDefs<DefType>() RVA=0
+METHOD Public, HideBySig StateMachine+Instance GetSMI(System.Type type) RVA=0
+METHOD Public, HideBySig !!0 GetSMI<StateMachineInstanceType>() RVA=0
+METHOD Public, HideBySig System.Collections.Generic.List`1<!!0> GetAllSMI<StateMachineInstanceType>() RVA=0
+METHOD Public, HideBySig System.Collections.Generic.List`1<IGameObjectEffectDescriptor> GetDescriptors() RVA=0
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor() RVA=0
+METHOD Private, Static, HideBySig, SpecialName, RTSpecialName Void .cctor() RVA=0
+TYPE Assembly-CSharp.dll StateMachineControllerExtensions base=System.Object flags=Public, Abstract, Sealed, BeforeFieldInit
+METHOD Public, Static, HideBySig !!0 GetSMI<StateMachineInstanceType>(StateMachine+Instance smi) RVA=0
+METHOD Public, Static, HideBySig !!0 GetDef<DefType>(UnityEngine.Component cmp) RVA=0
+METHOD Public, Static, HideBySig !!0 GetDef<DefType>(UnityEngine.GameObject go) RVA=0
+METHOD Public, Static, HideBySig !!0 GetDefImplementingInterface<InterfaceType>(UnityEngine.GameObject go) RVA=0
+METHOD Public, Static, HideBySig !!0 GetSMI<StateMachineInstanceType>(UnityEngine.Component cmp) RVA=0
+METHOD Public, Static, HideBySig !!0 GetSMI<StateMachineInstanceType>(UnityEngine.GameObject go) RVA=0
+METHOD Public, Static, HideBySig System.Collections.Generic.List`1<!!0> GetAllSMI<StateMachineInstanceType>(UnityEngine.Component cmp) RVA=0
+METHOD Public, Static, HideBySig System.Collections.Generic.List`1<!!0> GetAllSMI<StateMachineInstanceType>(UnityEngine.GameObject go) RVA=0
+TYPE Assembly-CSharp.dll CheckedHandleVector`1 base=System.Object flags=Public, BeforeFieldInit
+FIELD Private HandleVector`1<!0> handleVector
+FIELD Private System.Collections.Generic.List`1<String> debugInfo
+FIELD Private System.Collections.Generic.List`1<Boolean> isFree
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor(Int32 initial_size) RVA=0
+METHOD Public, HideBySig HandleVector`1+Handle<!0> Add(!0 item, String debug_info) RVA=0
+METHOD Public, HideBySig !0 Release(HandleVector`1+Handle<!0> handle) RVA=0
+METHOD Public, HideBySig !0 Get(HandleVector`1+Handle<!0> handle) RVA=0
+TYPE Assembly-CSharp.dll GameScenePartitioner base=KMonoBehaviour flags=Public, BeforeFieldInit
+FIELD Public ScenePartitionerLayer solidChangedLayer
+FIELD Public ScenePartitionerLayer backwallChangedLayer
+FIELD Public ScenePartitionerLayer liquidChangedLayer
+FIELD Public ScenePartitionerLayer digDestroyedLayer
+FIELD Public ScenePartitionerLayer fogOfWarChangedLayer
+FIELD Public ScenePartitionerLayer decorProviderLayer
+FIELD Public ScenePartitionerLayer attackableEntitiesLayer
+FIELD Public ScenePartitionerLayer fetchChoreLayer
+FIELD Public ScenePartitionerLayer pickupablesLayer
+FIELD Public ScenePartitionerLayer storedPickupablesLayer
+FIELD Public ScenePartitionerLayer pickupablesChangedLayer
+FIELD Public ScenePartitionerLayer gasConduitsLayer
+FIELD Public ScenePartitionerLayer liquidConduitsLayer
+FIELD Public ScenePartitionerLayer solidConduitsLayer
+FIELD Public ScenePartitionerLayer wiresLayer
+FIELD Public ScenePartitionerLayer[] objectLayers
+FIELD Public ScenePartitionerLayer noisePolluterLayer
+FIELD Public ScenePartitionerLayer validNavCellChangedLayer
+FIELD Public ScenePartitionerLayer dirtyNavCellUpdateLayer
+FIELD Public ScenePartitionerLayer trapsLayer
+FIELD Public ScenePartitionerLayer floorSwitchActivatorLayer
+FIELD Public ScenePartitionerLayer floorSwitchActivatorChangedLayer
+FIELD Public ScenePartitionerLayer collisionLayer
+FIELD Public ScenePartitionerLayer lure
+FIELD Public ScenePartitionerLayer plants
+FIELD Public ScenePartitionerLayer plantsChangedLayer
+FIELD Public ScenePartitionerLayer industrialBuildings
+FIELD Public ScenePartitionerLayer completeBuildings
+FIELD Public ScenePartitionerLayer prioritizableObjects
+FIELD Public ScenePartitionerLayer contactConductiveLayer
+FIELD Private ScenePartitioner partitioner
+FIELD Private, Static GameScenePartitioner instance
+FIELD Private KCompactedVector`1<ScenePartitionerEntry> scenePartitionerEntries
+FIELD Private System.Collections.Generic.List`1<Int32> changedCells
+METHOD Public, Static, HideBySig, SpecialName GameScenePartitioner get_Instance() RVA=0
+METHOD Public, HideBySig Boolean Lookup(HandleVector`1+Handle<Int32> handle, ScenePartitionerEntry& entry) RVA=0
+METHOD Family, Virtual, HideBySig Void OnPrefabInit() RVA=0
+METHOD Family, Virtual, HideBySig Void OnForcedCleanUp() RVA=0
+METHOD Family, Virtual, HideBySig Void OnSpawn() RVA=0
+METHOD Public, HideBySig HandleVector`1+Handle<Int32> Add(String name, Object obj, Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, System.Action`1<Object> event_callback) RVA=0
+METHOD Public, HideBySig HandleVector`1+Handle<Int32> Add(String name, Object obj, Extents extents, ScenePartitionerLayer layer, System.Action`1<Object> event_callback) RVA=0
+METHOD Public, HideBySig HandleVector`1+Handle<Int32> Add(String name, Object obj, Int32 cell, ScenePartitionerLayer layer, System.Action`1<Object> event_callback) RVA=0
+METHOD Public, HideBySig Void AddGlobalLayerListener(ScenePartitionerLayer layer, System.Action`2<Int32,Object> action) RVA=0
+METHOD Public, HideBySig Void RemoveGlobalLayerListener(ScenePartitionerLayer layer, System.Action`2<Int32,Object> action) RVA=0
+METHOD Public, HideBySig Void TriggerEvent(System.Collections.Generic.List`1<Int32> cells, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Public, HideBySig Void TriggerEvent(Extents extents, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Public, HideBySig Void TriggerEvent(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Public, HideBySig Void TriggerEvent(Int32 cell, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Public, HideBySig Void GatherEntries(Extents extents, ScenePartitionerLayer layer, System.Collections.Generic.List`1<ScenePartitionerEntry> gathered_entries) RVA=0
+METHOD Public, HideBySig Void GatherEntries(Int32 x_bottomLeft, Int32 y_bottomLeft, Int32 width, Int32 height, ScenePartitionerLayer layer, System.Collections.Generic.List`1<ScenePartitionerEntry> gathered_entries) RVA=0
+METHOD Public, HideBySig Void VisitEntries<ContextType>(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, System.Func`3<Object,!!0,Util+IterationInstruction> visitor, !!0 context) RVA=0
+METHOD Public, HideBySig Void VisitEntries<ContextType>(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, GameScenePartitioner+VisitorRef`1<!!0> visitor, !!0& context) RVA=0
+METHOD Public, HideBySig Void ReadonlyVisitEntries<ContextType>(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, System.Func`3<Object,!!0,Util+IterationInstruction> visitor, !!0 context) RVA=0
+METHOD Public, HideBySig Void ReadonlyVisitEntries<ContextType>(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, GameScenePartitioner+VisitorRef`1<!!0> visitor, !!0& context) RVA=0
+METHOD Private, HideBySig Void OnValidNavCellChanged(Int32 cell, NavType nav_type) RVA=0
+METHOD Private, HideBySig Void OnNavGridUpdateComplete(System.Collections.Generic.List`1<Int32> dirty_nav_cells) RVA=0
+METHOD Public, HideBySig Void UpdatePosition(HandleVector`1+Handle<Int32> handle, Int32 cell) RVA=0
+METHOD Public, HideBySig Void UpdatePosition(HandleVector`1+Handle<Int32> handle, Int32 x, Int32 y) RVA=0
+METHOD Public, HideBySig Void UpdatePosition(HandleVector`1+Handle<Int32> handle, Extents ext) RVA=0
+METHOD Public, HideBySig Void Free(HandleVector`1+Handle<Int32>& handle) RVA=0
+METHOD Family, Virtual, HideBySig Void OnCleanUp() RVA=0
+METHOD Public, HideBySig Boolean DoDebugLayersContainItemsOnCell(Int32 cell) RVA=0
+METHOD Public, HideBySig System.Collections.Generic.List`1<ScenePartitionerLayer> GetLayers() RVA=0
+METHOD Public, HideBySig Void SetToggledLayers(System.Collections.Generic.HashSet`1<ScenePartitionerLayer> toggled_layers) RVA=0
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor() RVA=0
+TYPE Assembly-CSharp.dll ScenePartitioner base=System.Object flags=Public, BeforeFieldInit
+FIELD Public System.Collections.Generic.List`1<ScenePartitionerLayer> layers
+FIELD Private Int32 nodeSize
+FIELD Private System.Collections.Generic.List`1<ScenePartitioner+DirtyNode> dirtyNodes
+FIELD Private ScenePartitioner+ScenePartitionerNode[,,] nodes
+FIELD Private Int32 queryId
+FIELD Public System.Collections.Generic.HashSet`1<ScenePartitionerLayer> toggledLayers
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor(Int32 node_size, Int32 layer_count, Int32 scene_width, Int32 scene_height) RVA=0
+METHOD Public, HideBySig Void FreeResources() RVA=0
+METHOD Public, HideBySig ScenePartitionerLayer CreateMask(HashedString name) RVA=0
+METHOD Public, HideBySig ScenePartitionerLayer CreateMask(String name) RVA=0
+METHOD Private, HideBySig Int32 ClampNodeX(Int32 x) RVA=0
+METHOD Private, HideBySig Int32 ClampNodeY(Int32 y) RVA=0
+METHOD Private, HideBySig Extents GetNodeExtents(Int32 x, Int32 y, Int32 width, Int32 height) RVA=0
+METHOD Private, HideBySig Extents GetNodeExtents(ScenePartitionerEntry entry) RVA=0
+METHOD Private, HideBySig Void Insert(HandleVector`1+Handle<Int32> handle) RVA=0
+METHOD Private, HideBySig Void Withdraw(Int32 layer, Extents extents, HandleVector`1+Handle<Int32> handle) RVA=0
+METHOD Public, HideBySig Void Add(HandleVector`1+Handle<Int32> entry) RVA=0
+METHOD Public, HideBySig Void UpdatePosition(Int32 x, Int32 y, HandleVector`1+Handle<Int32> handle) RVA=0
+METHOD Public, HideBySig Void UpdatePosition(Extents e, HandleVector`1+Handle<Int32> handle) RVA=0
+METHOD Public, HideBySig Void Remove(HandleVector`1+Handle<Int32> handle) RVA=0
+METHOD Public, Final, Virtual, HideBySig, VtableLayoutMask Void Sim1000ms(Single dt) RVA=0
+METHOD Public, HideBySig Void TriggerEvent(System.Collections.Generic.IEnumerable`1<Int32> cells, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Public, HideBySig Void TriggerEvent(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Private, HideBySig Void TriggerEventInternal(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Private, HideBySig Void RunLayerGlobalEvent(System.Collections.Generic.IEnumerable`1<Int32> cells, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Private, HideBySig Void RunLayerGlobalEvent(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, Object event_data) RVA=0
+METHOD Public, HideBySig Void GatherEntries(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, Object event_data, System.Collections.Generic.List`1<ScenePartitionerEntry> gathered_entries) RVA=0
+METHOD Public, HideBySig Void GatherEntries(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, Object event_data, System.Collections.Generic.List`1<ScenePartitionerEntry> gathered_entries, Int32 query_id) RVA=0
+METHOD Public, HideBySig Void VisitEntries<ContextType>(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, System.Func`3<Object,!!0,Util+IterationInstruction> visitor, !!0 context) RVA=0
+METHOD Public, HideBySig Void VisitEntries<ContextType>(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, GameScenePartitioner+VisitorRef`1<!!0> visitor, !!0& context) RVA=0
+METHOD Public, HideBySig Void ReadonlyVisitEntries<ContextType>(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, System.Func`3<Object,!!0,Util+IterationInstruction> visitor, !!0 context) RVA=0
+METHOD Public, HideBySig Void ReadonlyVisitEntries<ContextType>(Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, GameScenePartitioner+VisitorRef`1<!!0> visitor, !!0& context) RVA=0
+METHOD Public, HideBySig Void Cleanup() RVA=0
+METHOD Private, Static, HideBySig Util+IterationInstruction checkForAnyObjectHelper(Object obj, Boolean& found) RVA=0
+METHOD Public, HideBySig Boolean DoDebugLayersContainItemsOnCell(Int32 cell) RVA=0
+TYPE Assembly-CSharp.dll ScenePartitionerEntry base=System.Object flags=Public, BeforeFieldInit
+FIELD Public Int32 x
+FIELD Public Int32 y
+FIELD Public Int32 width
+FIELD Public Int32 height
+FIELD Public Int32 layer
+FIELD Public Int32 queryId
+FIELD Public ScenePartitioner partitioner
+FIELD Public System.Action`1<Object> eventCallback
+FIELD Public Object obj
+FIELD Public, Static UnityEngine.Pool.ObjectPool`1<ScenePartitionerEntry> EntryPool
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor() RVA=0
+METHOD Public, HideBySig Void Init(String name, Object obj, Int32 x, Int32 y, Int32 width, Int32 height, ScenePartitionerLayer layer, ScenePartitioner partitioner, System.Action`1<Object> event_callback) RVA=0
+METHOD Public, HideBySig Void UpdatePosition(HandleVector`1+Handle<Int32> handle, Int32 x, Int32 y) RVA=0
+METHOD Public, HideBySig Void UpdatePosition(HandleVector`1+Handle<Int32> handle, Extents e) RVA=0
+METHOD Public, HideBySig Void Release(HandleVector`1+Handle<Int32> handle) RVA=0
+METHOD Private, Static, HideBySig, SpecialName, RTSpecialName Void .cctor() RVA=0
+TYPE Assembly-CSharp.dll ScenePartitionerLayer base=System.Object flags=Public, BeforeFieldInit
+FIELD Public HashedString name
+FIELD Public Int32 layer
+FIELD Public System.Action`2<Int32,Object> OnEvent
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor(HashedString name, Int32 layer) RVA=0
+TYPE Assembly-CSharp.dll StateMachineController+CmpDef base=System.Object flags=NestedPublic, BeforeFieldInit
+FIELD Public System.Collections.Generic.List`1<StateMachine+BaseDef> defs
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor() RVA=0
+TYPE Assembly-CSharp.dll StateMachineController+<>c base=System.Object flags=NestedPrivate, Sealed, Serializable, BeforeFieldInit
+FIELD Public, Static, InitOnly StateMachineController+<>c <>9
+METHOD Private, Static, HideBySig, SpecialName, RTSpecialName Void .cctor() RVA=0
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor() RVA=0
+METHOD Assembly, HideBySig Void <.cctor>b__31_0(StateMachineController component, Object data) RVA=0
+TYPE Assembly-CSharp.dll Game+ComplexCallbackHandleVector`1 base=System.Object flags=NestedPublic, BeforeFieldInit
+FIELD Private HandleVector`1<Game+ComplexCallbackInfo`1<!0>> baseMgr
+FIELD Private System.Collections.Generic.Dictionary`2<Int32,String> releaseInfo
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor(Int32 initial_size) RVA=0
+METHOD Public, HideBySig HandleVector`1+Handle<Game+ComplexCallbackInfo`1<!0>> Add(System.Action`2<!0,Object> cb, Object callback_data, String debug_info) RVA=0
+METHOD Public, HideBySig Game+ComplexCallbackInfo`1<!0> GetItem(HandleVector`1+Handle<Game+ComplexCallbackInfo`1<!0>> handle) RVA=0
+METHOD Public, HideBySig Game+ComplexCallbackInfo`1<!0> Release(HandleVector`1+Handle<Game+ComplexCallbackInfo`1<!0>> handle, String release_info) RVA=0
+METHOD Public, HideBySig Void Clear() RVA=0
+METHOD Public, HideBySig Boolean IsVersionValid(HandleVector`1+Handle<Game+ComplexCallbackInfo`1<!0>> handle) RVA=0
+TYPE Assembly-CSharp.dll GameScenePartitioner+VisitorRef`1 base=System.MulticastDelegate flags=NestedPublic, Sealed
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor(Object object, IntPtr method) RVA=0
+METHOD Public, Virtual, HideBySig, VtableLayoutMask Util+IterationInstruction Invoke(Object obj, !0& context) RVA=0
+METHOD Public, Virtual, HideBySig, VtableLayoutMask System.IAsyncResult BeginInvoke(Object obj, !0& context, System.AsyncCallback callback, Object object) RVA=0
+METHOD Public, Virtual, HideBySig, VtableLayoutMask Util+IterationInstruction EndInvoke(!0& context, System.IAsyncResult result) RVA=0
+TYPE Assembly-CSharp.dll ScenePartitioner+ScenePartitionerNode base=System.ValueType flags=NestedPrivate, SequentialLayout, Sealed, BeforeFieldInit
+FIELD Public HybridListHashSet`1<HandleVector`1+Handle<Int32>> entries
+FIELD Public Boolean dirty
+TYPE Assembly-CSharp.dll ScenePartitioner+DirtyNode base=System.ValueType flags=NestedPrivate, SequentialLayout, Sealed, BeforeFieldInit
+FIELD Public Int32 layer
+FIELD Public Int32 x
+FIELD Public Int32 y
+TYPE Assembly-CSharp.dll ScenePartitionerEntry+<>c base=System.Object flags=NestedPrivate, Sealed, Serializable, BeforeFieldInit
+FIELD Public, Static, InitOnly ScenePartitionerEntry+<>c <>9
+METHOD Private, Static, HideBySig, SpecialName, RTSpecialName Void .cctor() RVA=0
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor() RVA=0
+METHOD Assembly, HideBySig ScenePartitionerEntry <.cctor>b__15_0() RVA=0
+TYPE Assembly-CSharp-firstpass.dll FrameDelayedHandleVector`1 base=HandleVector`1<!0> flags=Public, BeforeFieldInit
+FIELD Private System.Collections.Generic.List`1<HandleVector`1+Handle<!0>>[] frameDelayedFreeHandles
+FIELD Private Int32 curFrame
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor(Int32 initial_size) RVA=0
+METHOD Public, Virtual, HideBySig Void Clear() RVA=0
+METHOD Public, Virtual, HideBySig !0 Release(HandleVector`1+Handle<!0> handle) RVA=0
+METHOD Public, HideBySig Void NextFrame() RVA=0
+TYPE Assembly-CSharp-firstpass.dll HandleVector`1 base=System.Object flags=Public, BeforeFieldInit
+FIELD Public, Static, InitOnly HandleVector`1+Handle<!0> InvalidHandle
+FIELD Family System.Collections.Generic.Stack`1<HandleVector`1+Handle<!0>> freeHandles
+FIELD Family System.Collections.Generic.List`1<!0> items
+FIELD Family System.Collections.Generic.List`1<Byte> versions
+METHOD Public, HideBySig, SpecialName System.Collections.Generic.List`1<!0> get_Items() RVA=0
+METHOD Public, HideBySig, SpecialName System.Collections.Generic.Stack`1<HandleVector`1+Handle<!0>> get_Handles() RVA=0
+METHOD Public, Virtual, HideBySig, VtableLayoutMask Void Clear() RVA=0
+METHOD Public, HideBySig, SpecialName, RTSpecialName Void .ctor(Int32 initial_size) RVA=0
+METHOD Private, HideBySig Void Initialize(Int32 size) RVA=0
+METHOD Public, Virtual, HideBySig, VtableLayoutMask HandleVector`1+Handle<!0> Add(!0 item) RVA=0
+METHOD Public, Virtual, HideBySig, VtableLayoutMask !0 Release(HandleVector`1+Handle<!0> handle) RVA=0
+METHOD Public, HideBySig !0 GetItem(HandleVector`1+Handle<!0> handle) RVA=0
+METHOD Private, HideBySig HandleVector`1+Handle<!0> PackHandle(Int32 index) RVA=0
+METHOD Public, HideBySig Void UnpackHandle(HandleVector`1+Handle<!0> handle, Byte& version, Int32& index) RVA=0
+METHOD Public, HideBySig Void UnpackHandleUnchecked(HandleVector`1+Handle<!0> handle, Byte& version, Int32& index) RVA=0
+METHOD Public, HideBySig Boolean IsValid(HandleVector`1+Handle<!0> handle) RVA=0
+METHOD Public, HideBySig Boolean IsVersionValid(HandleVector`1+Handle<!0> handle) RVA=0
+METHOD Private, Static, HideBySig, SpecialName, RTSpecialName Void .cctor() RVA=0
+TYPE Assembly-CSharp-firstpass.dll IStateMachineControllerHack base= flags=Public, ClassSemanticsMask, Abstract
+METHOD Public, Virtual, HideBySig, VtableLayoutMask, Abstract Void CreateSMIS() RVA=0
+METHOD Public, Virtual, HideBySig, VtableLayoutMask, Abstract Void StartSMIS() RVA=0
+TYPE Assembly-CSharp-firstpass.dll HandleVector`1+Handle base=System.ValueType flags=NestedPublic, SequentialLayout, Sealed, BeforeFieldInit
+FIELD Private, Static, Literal, HasDefault Int32 InvalidIndex
+FIELD Private Int32 _index
+FIELD Public, Static, InitOnly HandleVector`1+Handle<!0> InvalidHandle
+METHOD Public, HideBySig, SpecialName Int32 get_index() RVA=0
+METHOD Public, HideBySig, SpecialName Void set_index(Int32 value) RVA=0
+METHOD Public, HideBySig Boolean IsValid() RVA=0
+METHOD Public, HideBySig Void Clear() RVA=0
+METHOD Public, Final, Virtual, HideBySig, VtableLayoutMask Int32 CompareTo(HandleVector`1+Handle<!0> obj) RVA=0
+METHOD Public, Virtual, HideBySig Boolean Equals(Object obj) RVA=0
+METHOD Public, Final, Virtual, HideBySig, VtableLayoutMask Boolean Equals(HandleVector`1+Handle<!0> other) RVA=0
+METHOD Public, Virtual, HideBySig Int32 GetHashCode() RVA=0
+METHOD Public, Static, HideBySig, SpecialName Boolean op_Equality(HandleVector`1+Handle<!0> x, HandleVector`1+Handle<!0> y) RVA=0
+METHOD Public, Static, HideBySig, SpecialName Boolean op_Inequality(HandleVector`1+Handle<!0> x, HandleVector`1+Handle<!0> y) RVA=0
+METHOD Private, Static, HideBySig, SpecialName, RTSpecialName Void .cctor() RVA=0

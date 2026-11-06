@@ -5,16 +5,15 @@
 ## 快速开始
 
 - MCP 地址: `http://localhost:8788/mcp/`
-- 协议兼容: `2026-07-28` 无会话兼容路径 + `2025-11-25` / `2025-06-18` legacy initialize/session 路径
-- Legacy/default public tools: 7 entrypoints: `benchmark`, `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
-- Modern `2026-07-28` `tools/list`: 当前只广告只读 `benchmark`
+- 支持协议: `2025-11-25`，使用 `initialize` 和服务端签发的 `Mcp-Session-Id`
+- Public tools: 7 entrypoints: `benchmark`, `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
 - 旧聚合入口: 仅作为虚拟文件工作流的内部操作，不再注册为 MCP 工具
 - `coordinate_control` 不属于当前公开运行时；普通聚合工具拒绝 raw coordinates
 - Tool descriptions: default-public tool descriptions and parameter descriptions are in English
 
-现代 `2026-07-28` 请求不使用 `initialize`，也不要求或返回 `Mcp-Session-Id`。每个请求携带 `_meta`、`MCP-Protocol-Version` 和 `Mcp-Method`；`resources/read` / `tools/call` 等有具体资源或工具名的请求还需匹配的 `Mcp-Name`。推荐先调用 `server/discover` 并以实际 capability 为准。
+客户端先以 `2025-11-25` 调用 `initialize`，读取响应中的 `Mcp-Session-Id`。后续会话请求携带该 ID 和 `Mcp-Protocol-Version: 2025-11-25`，再调用 `tools/list` 获取当前工具清单。
 
-Legacy `2025-11-25` / `2025-06-18` 客户端继续先调用 `initialize`，随后请求携带协商得到的 `Mcp-Session-Id` 和 `Mcp-Protocol-Version`。
+`2026-07-28` 无会话路径、`server/discover` 以及 `2025-06-18` 已退出支持范围。历史资料见 [协议回归与历史来源](mcp-protocol-retirement.md)。
 
 ## 定位与执行原则
 
@@ -70,10 +69,22 @@ operations and are not callable as MCP tools.
 | `benchmark` | `cases`, `iterations`, `tool`, `includeDetails` | read | 固定工具链路基准与诊断，不修改游戏状态 |
 | `world_editor` | `cd`, `ls`, `read`, `search`, `edit`, `plan`, `connect` | read/write/execute | 虚拟文件化世界访问、搜索、规划与受控编辑 |
 | `server_control` | `catalog`, `batch`, `program` | read/execute | 健康检查、工具清单、工具搜索、目标指南、批量调用、agent program |
-| `game_control` | `speed`, `state`, `save`, `sandbox`, `ui` | read/execute/dangerous | 暂停、恢复、调速、存档、沙盒、UI 编辑标记 |
+| `game_control` | `launch`, `speed`, `state`, `save`, `dlc`, `ui` | read/execute/dangerous | 原生新开局、暂停、恢复、调速、存档、DLC、UI 编辑标记 |
 | `navigation_control` | `camera` 或按已知相机 `action` 推断 | execute | 相机移动、世界切换、覆盖层、聚焦和截图 |
 | `building_control` | `planning`, `config`, `storage`, `filter`, `production`, `side_surface`, `rocket` | read/write/execute | 建造规划、材料检查、蓝图、建筑侧屏配置、储存过滤、生产队列、火箭 |
 | `orders_control` | `area`, `priority`, `designation`, `conduit` | execute/dangerous | 挖掘、清扫、拖地、拆除、优先级、区域订单、线路/管线剪断 |
+
+## 原生新开局
+
+使用 `game_control domain=launch action=new_game_status` 读取当前菜单阶段与可选 `choices`。在主菜单调用 `action=new_game`，随后使用 `action=new_game_select name=<choice id>` 逐步选择；写操作先 `dryRun=true` 预览，再 `confirm=true` 执行。每次选择后重新读取状态，等待原生异步切换完成。
+
+生存模式经典泰拉星路径为 `survival` → `classic` → `generate_world` → 等待 `characters` → `embark`。只能选择当前状态广告的选项；生成世界与开始殖民地要求生存模式且沙盒关闭。`embark` 使用原生生成的三名初始候选，进场后自动暂停；验证 `baseAlreadyCreated=true`、`liveDuplicants=3`、`isPaused=true` 与 `pauseAfterStart=ready_paused` 后再开始游玩。已有殖民地内不会直接新开局，须先保存并退出到主菜单。
+
+当前入口提供上述原生流程，不提供候选属性编辑或自定义难度设置。
+
+打开主菜单或暂停菜单中的加载列表：`game_control domain=ui uiDomain=action action=open_load_menu`。先 `dryRun=true`，再 `confirm=true`；这只打开原生列表，不选择或载入存档，游戏内打开时保持暂停。OniMcp 会忽略迁移时确认缺失的可选 PNG 预览图；存档本体及其他迁移错误仍由游戏原生检查。
+
+`active` 是原生 `KScreen.IsActive()` 标志。有模组差异等子弹窗时，列表可见而该标志为 `false`；应检查当前弹窗，不要因此重复打开菜单。原生加载列表可能整理本地与云端的重叠存档，文件路径可以变化。
 
 ## 建造规划
 
@@ -107,7 +118,7 @@ operations and are not callable as MCP tools.
 }
 ```
 
-调用方应优先检查 `materials.satisfied`。如果为 `false`，向用户返回需要材料、可用材料和缺口，而不是继续下达蓝图。
+调用方应先检查结果及 `materials.valid` 和 `reasonCode`；`valid=false` 必须停止执行。`insufficient_material` 表示目标世界本地库存不足，`invalid_material_requirement` 表示配方缺失或无效（包括 NaN/Infinity），两者均返回 `materials.satisfied=false`。需求无效时 `requiredKg=null` 不代表可以执行。随后检查 `materials.satisfied`，为 `false` 时展示需求、可用材料和已知缺口；为 `null` 时材料可达性仍未证实。
 
 ### 线路和管路
 
@@ -154,9 +165,12 @@ This directly creates a continuous line, with no separate follow-up connection s
 - `get_view`：读取当前相机位置、缩放和激活世界。
 - `set_active_world`：切换激活世界并移动相机。
 - `set_view` / `move`：设置或平移相机。
+- `set_zoom zoom=23`：保持当前中心缩放，不需要 `x/y`。`zoom` 是视野的半高，数值越大看得越远；默认立即生效。
 - `switch_view`：切换氧气、电力、管线、温度等覆盖层，可选截图。
 - `focus_cell` / `focus_dupe`：聚焦格子或复制人。
 - `screenshot` / `coordinate_screenshot`：保存普通截图或带坐标网格的区域截图。
+
+相机动作可直接传对应的 `x/y`、`dx/dy` 或截图边界坐标；这不会开放建造、订单等工具的坐标输入。`set_view` 和 `move` 省略 `zoom` 时保持当前缩放，`snap=false` 同时平滑移动与缩放。随后用 `get_view` 核对当前 `orthographicSize` 与原生目标 `targetOrthographicSize`。`world_editor command=zoom ... syncView=true` 默认完整取景；显式 `focusMode=detail` 才使用可能裁切范围的近景模式。
 
 建造和任务操作应直接使用 `building_control` 与 `orders_control`。每次工具调用必填的 `task` 文本会自动显示在玩家鼠标附近，无需额外定位流程。
 
@@ -212,10 +226,10 @@ Prefer extending aggregate entrypoints in `Tools/Entry/` for new public capabili
 
 ## 兼容性说明
 
-新客户端建议按双协议处理：
+客户端按当前会话协议接入：
 
-1. 优先以 `2026-07-28` 调用 `server/discover`，使用返回的 capability；现代请求不发送 `Mcp-Session-Id`。
-2. 若目标服务端只支持旧协议，再走 `initialize` + `Mcp-Session-Id` 的 `2025-11-25` / `2025-06-18` 路径。
+1. 以 `2025-11-25` 调用 `initialize`，保存响应中的 `Mcp-Session-Id`。
+2. 后续请求携带该会话 ID 和 `Mcp-Protocol-Version: 2025-11-25`。
 3. 不要硬编码旧版细粒度工具列表；按当前协议调用 `tools/list` 或读取运行时 manifest。
 4. 调用 `server_control domain=catalog action=search` 或读取 `oni://tools/guide` 查找目标流程。
 5. 优先传语义定位参数。

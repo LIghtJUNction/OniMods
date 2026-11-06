@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "kind": "experimental-unadopted",
+  "native_sha256": "5ffcee2513258ae225bccf8a23c0be7f609f69d09f0aeb87bd60c210426d8439",
+  "baseline_sha256": "268977a5b35f167a77c29ab5fca27b0356feaecacf00c4e167e64603de4374ba",
+  "scope": "96x96 native fixtures; eight alternating pairs, CPU16 worker1; not whole-game FPS",
+  "release_unit_tests": 40,
+  "conformance": {
+    "1": {
+      "exit_code": 0,
+      "passed": true,
+      "cases": 231
+    },
+    "4": {
+      "exit_code": 0,
+      "passed": true,
+      "cases": 231
+    }
+  },
+  "static_audit": {
+    "scope": "Static machine-code sites; not executed counts or performance proof",
+    "variants": {
+      "baseline": {
+        "function_bytes": 1597,
+        "panic_bounds_call_sites": 20,
+        "slice_length_failure_call_sites": 0,
+        "conditional_branch_sites": 39
+      },
+      "candidate": {
+        "function_bytes": 1397,
+        "panic_bounds_call_sites": 5,
+        "slice_length_failure_call_sites": 0,
+        "conditional_branch_sites": 35
+      }
+    }
+  },
+  "samples": 96,
+  "all_finals_match_official": true,
+  "timed_major_faults": 0,
+  "scenes": {
+    "fluid": {
+      "cpu_change_percent": -6.821731638434192,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.5456860804999999,
+          "minimum": 0.49025027000000004,
+          "maximum": 0.6188957509999999
+        },
+        "candidate": {
+          "median": 0.5084608405,
+          "minimum": 0.462489542,
+          "maximum": 0.6393281390000001
+        },
+        "median_speedup": 1.0732116163820877
+      },
+      "peak_rss_kib": {
+        "baseline": 33206.0,
+        "candidate": 33202.0
+      },
+      "peak_rss_change_percent": -0.012046015780275976
+    },
+    "thermal": {
+      "cpu_change_percent": -0.3658775760584154,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.172987781,
+          "minimum": 0.143533194,
+          "maximum": 0.26115820199999995
+        },
+        "candidate": {
+          "median": 0.17235485749999996,
+          "minimum": 0.13990336,
+          "maximum": 0.18829172700000002
+        },
+        "median_speedup": 1.003672211559225
+      },
+      "peak_rss_kib": {
+        "baseline": 33222.0,
+        "candidate": 33242.0
+      },
+      "peak_rss_change_percent": 0.060201071579069065
+    },
+    "sealed": {
+      "cpu_change_percent": 2.739559300003447,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.496865536,
+          "minimum": 0.45812534299999996,
+          "maximum": 0.555598625
+        },
+        "candidate": {
+          "median": 0.510477462,
+          "minimum": 0.457981904,
+          "maximum": 0.564638051
+        },
+        "median_speedup": 0.9733349128741751
+      },
+      "peak_rss_kib": {
+        "baseline": 33178.0,
+        "candidate": 33158.0
+      },
+      "peak_rss_change_percent": -0.06028090903610339
+    },
+    "germ_flow": {
+      "cpu_change_percent": -1.2340169976670978,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.707717237,
+          "minimum": 0.639446736,
+          "maximum": 0.9373486630000001
+        },
+        "candidate": {
+          "median": 0.698983886,
+          "minimum": 0.6246673759999999,
+          "maximum": 0.9436105290000001
+        },
+        "median_speedup": 1.0124943524091483
+      },
+      "peak_rss_kib": {
+        "baseline": 33228.0,
+        "candidate": 33234.0
+      },
+      "peak_rss_change_percent": 0.018057060310572304
+    },
+    "mixed_germs": {
+      "cpu_change_percent": 1.4543320209749577,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.698077114,
+          "minimum": 0.65561751,
+          "maximum": 0.9641700099999999
+        },
+        "candidate": {
+          "median": 0.7082294729999999,
+          "minimum": 0.652762001,
+          "maximum": 0.911992359
+        },
+        "median_speedup": 0.9856651560164598
+      },
+      "peak_rss_kib": {
+        "baseline": 33182.0,
+        "candidate": 33164.0
+      },
+      "peak_rss_change_percent": -0.05424627810258764
+    },
+    "vacuum": {
+      "cpu_change_percent": -0.3220986618762578,
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.4373324595,
+          "minimum": 0.41136691500000006,
+          "maximum": 0.6242557879999999
+        },
+        "candidate": {
+          "median": 0.4359238175,
+          "minimum": 0.399339531,
+          "maximum": 0.796537027
+        },
+        "median_speedup": 1.0032313948984906
+      },
+      "peak_rss_kib": {
+        "baseline": 33126.0,
+        "candidate": 33180.0
+      },
+      "peak_rss_change_percent": 0.16301394674878011
+    }
+  },
+  "gates": {
+    "fluid_cpu_reduction_at_least_5_percent": true,
+    "no_other_scene_cpu_regression_above_3_percent": true,
+    "no_peak_rss_increase_above_3_percent": true
+  },
+  "passes_predeclared_incremental_gates": true,
+  "production_adopted": false,
+  "runtime_acceptance": false,
+  "whole_game_speedup_established": false,
+  "raw_report_sha256": "7d62d5d34594ce63e1c7769135ba834a2aff63046577e5cdc163f48824674c96",
+  "interpretation": "Incremental gates pass. Direct official performance and actual-game acceptance of this binary remain separate. All rows retained, including host slowdown and wide dispersion.",
+  "source_adoption_blocked_by_expanded_thermal_cases": true,
+  "superseding_correctness_receipt": "linux-744825-thermal-minss.json"
+}

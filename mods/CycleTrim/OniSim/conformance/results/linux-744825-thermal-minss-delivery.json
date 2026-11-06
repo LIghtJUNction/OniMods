@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "package_sha256": "96ad55bc82f52f9ee09d10d068b581b0c11530493f803ea36c40399961b1a1ea",
+  "native_sha256": "8bd415cea1129c5b7a1e94b08dc269e829f00c815d8c38d06b733437f8c2e0e0",
+  "managed_sha256": "f87262375973bc33e6d2ca7fe7b67a33ca71daf98f29e0cded48afd501c4da0a",
+  "source_archive_sha256": "f1eee3ed284e4b66cedf984f13408184750b3b8b3dfeae1380abc0047b37fad1",
+  "zip_allowlist_valid": true,
+  "zip_crc_valid": true,
+  "source_archive_build_verified": true,
+  "runtime_validated": false,
+  "whole_game_speedup_established": false,
+  "promoted": false,
+  "prepared_groups": [
+    {
+      "core": "rust",
+      "group_sha256": "e2c4d93ba2c1eea83935b3ea4b4d53e6f60f5a8245b93805f2c063043aee6abe",
+      "instances": 4,
+      "prepared": true,
+      "started": false
+    },
+    {
+      "core": "official",
+      "group_sha256": "c044ee84d259d8f9df1a35ac1e68b5426a5b3ab4174f7d481ff37c1e93c9b0b8",
+      "instances": 4,
+      "prepared": true,
+      "started": false
+    }
+  ],
+  "post_package_tool_changes": [
+    "memory_probe/capture.py",
+    "memory_probe/core_identity.py",
+    "memory_probe/test_core_identity.py",
+    "memory_probe/README.md"
+  ],
+  "tool_test_count": 12,
+  "scope": "Experimental exact-archive source build and offline preparation; no actual ONI run for this package",
+  "evidence_sha256": "bdb72ee2231659d062b71c41bd604eec408f637dcbbb06a922f117e119816d09",
+  "memory_capture_tests": 12,
+  "diff_check_passed": true
+}

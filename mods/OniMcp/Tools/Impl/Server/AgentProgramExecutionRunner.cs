@@ -107,9 +107,9 @@ namespace OniMcp.Tools
                         vars[property.Name] = property.Value.DeepClone();
                 }
 
-                var steps = obj["steps"] as JArray ?? obj["do"] as JArray;
+                var steps = obj["steps"] as JArray ?? obj["do"] as JArray ?? obj["code"] as JArray ?? obj["script"] as JArray;
                 if (steps == null)
-                    throw new AgentProgramException("program.steps array is required");
+                    throw new AgentProgramException("program.steps / code array is required");
                 return steps;
             }
 

@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "acceptance_passed": false,
+  "game_ready": false,
+  "runtime_validated": false,
+  "trials": [
+    {
+      "kind": "large-normal-colony-copy",
+      "passed": false,
+      "observation": "180 second load wait and control timed out; sustained paging and Mono GC observed. Root cause unproven."
+    },
+    {
+      "kind": "smaller-normal-colony-copy",
+      "passed": false,
+      "observation": "Four duplicants restored, but Constructable material lookup asserted and OnSpawn threw."
+    }
+  ],
+  "required_next": "Longer realistic colony, multi-world/DLC/mod and concurrent lifecycle coverage; current-hash headless and graphical small-colony smoke passed.",
+  "tracking": "SQLite lock interrupted watchers; recovery hit the metadata budget. Later writes are not fully tracked.",
+  "rust_off_baseline": {
+    "passed": false,
+    "same_save": true,
+    "same_managed_dll": true,
+    "official_native_mapped": true,
+    "rust_mapped": false,
+    "error": "Assert failed: Missing primary element for Constructable",
+    "saved_mod_count": 22,
+    "active_mod_count": 3,
+    "interpretation": "Reproduces without Rust; source/content compatibility must be resolved before judging this fixture."
+  },
+  "acceptance_scope": "Current native hash passed targeted Steam headless and OpenGLCore small-colony save/reload; five full native/Unity/GPU texture buffers match before and after graphical reload. Full compatibility and whole-game performance remain unproven.",
+  "current_smoke_passed": true,
+  "previous_smoke_native_sha256": "d45cb10ed0d4c5bd6ca76ee02d29d505d72b4e9b29501d51f10147e5220ed65c",
+  "current_world_generation": {
+    "passed": true,
+    "fix": "Accept and retain 0xffff absent-backwall indices; new differential fixtures pass against the pinned official library",
+    "original_tests_fail_fixed_tests_pass": 3,
+    "actual_game_retest": "Native survival world generated, three duplicants embarked and paused; test save written without overwrite; owned game stopped and original files/settings restored.",
+    "graphical_probe": "Five full buffers matched native, Unity CPU and GPU readback; see linux-744825-graphics.json",
+    "previous_error": "Backwall null sentinel was rejected as an unknown element index",
+    "previous_failed_native_sha256": "b5b0bd4d860b9451399771e9a3b6ddf527b53b22119172b1ed15cb9e3457000f",
+    "tested_native_sha256": "d45cb10ed0d4c5bd6ca76ee02d29d505d72b4e9b29501d51f10147e5220ed65c",
+    "current_candidate_retest": "Existing generated save loaded under current candidate; world generation itself not rerun"
+  },
+  "new_differential_regression": {
+    "native_sha256": "d45cb10ed0d4c5bd6ca76ee02d29d505d72b4e9b29501d51f10147e5220ed65c",
+    "case": "world-pair-save-lifecycle-8",
+    "first_difference": "Temperature word differs by one ULP; then saved bytes diverge",
+    "isolation": "Reproduces with no reload and with zero conductivity after restoring the same authored state; absent when flow is blocked",
+    "status": "Fixed convection clamp: keep cold endpoint when rounded weighted mean is below it; minimal and eight-roundtrip fixtures pass against the pinned official library"
+  },
+  "previous_headless_receipt": "linux-744825-runtime.json",
+  "current_graphics_attempts": [
+    {
+      "run": "run-convection-graphics",
+      "result": "User clicked native mod-update restart; restart child failed SingleInstance; all ONI processes were confirmed absent before a new Steam launch.",
+      "colony_tested": false,
+      "tested_native_sha256": "82460a88a5f1738c92843f9a77a6a821a8102348b1e343c130c2a3975cd4af2d"
+    },
+    {
+      "run": "run-convection-graphics-restart",
+      "result": "Startup waited on paging. User requested RAM cleanup; owned process stopped before colony load and original files/settings/controller restored.",
+      "colony_tested": false,
+      "restoration_verified": true,
+      "tested_native_sha256": "82460a88a5f1738c92843f9a77a6a821a8102348b1e343c130c2a3975cd4af2d"
+    }
+  ],
+  "resource_constraint": "Real-game targeted acceptance completed after authorized restart; processes stopped and recorded settings restored. Paging invalidates performance conclusions.",
+  "numeric_optimization": {
+    "source": "native/src/numeric.rs",
+    "tests": 25,
+    "previous_candidate_sha256": "82460a88a5f1738c92843f9a77a6a821a8102348b1e343c130c2a3975cd4af2d",
+    "performance_receipt": "linux-744825-frame-performance.json",
+    "actual_game_retest": "Retained in 1f56c9b2; targeted headless and graphical smoke passed",
+    "tested_native_sha256": "937d4131c92119be8f7f86d45607f2df3049b2e1c4e7fb9e4e5690c790b0355a",
+    "retained_in_current_candidate": true
+  },
+  "rust2024_migration_receipt": "linux-744825-rust2024.json",
+  "load_memory_receipt": "linux-744825-load-memory.json",
+  "current_targeted_runtime_receipt": "linux-744825-rust2024-runtime.json"
+}

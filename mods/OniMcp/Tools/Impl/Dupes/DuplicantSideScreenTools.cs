@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "dupe_actions_list", "duplicant_commands_list" },
                 Tags = new List<string> { "dupes", "commands", "move", "assignables", "skills", "equipment" },
                 Description = "兼容入口：请使用 dupes_control domain=side_screen action=direct_commands。列出复制人可直接执行/配置的玩家操作入口：移动到这里、技能、分配对象、装备槽和相关 MCP 工具",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -63,7 +62,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "equipment_slots_list", "dupe_equipment_list" },
                 Tags = new List<string> { "dupes", "equipment", "suits", "assignables" },
                 Description = "兼容入口：请使用 dupes_control domain=side_screen action=equipment。列出复制人装备槽、当前装备、可用 Assignable/Equippable 分配对象；槽位选择/清空使用 dupes_control domain=assignable action=set_slot",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -99,7 +97,6 @@ namespace OniMcp.Tools
                 Group = "dupes",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "dupe_side_screen_control", "duplicant_side_screen_control" },
                 Tags = new List<string> { "dupes", "side-screen", "commands", "equipment", "todo", "bionic" },
                 Description = "复制人侧屏只读聚合工具：action=direct_commands/equipment/todos/bionic_upgrades",
                 Parameters = DupeSideScreenControlParams(),

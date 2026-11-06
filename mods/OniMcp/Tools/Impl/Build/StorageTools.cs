@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "storage_list" },
                 Description = "兼容入口：请优先使用 building_control domain=storage action=list。列出储物箱/储液库/储气库等储存建筑，包含容量、已存质量和过滤器摘要",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -59,7 +58,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "storage_detail" },
                 Description = "兼容入口：请优先使用 building_control domain=storage action=detail。读取单个储存建筑的过滤标签、库存物品和容量信息",
                 Parameters = StorageLookupParams(),
                 Handler = args =>
@@ -104,6 +102,8 @@ namespace OniMcp.Tools
                         return CallToolResult.Error("tags must contain at least one resource tag");
 
                     string mode = (args["mode"]?.ToString() ?? "replace").Trim().ToLowerInvariant();
+                    if (mode != "replace" && mode != "add" && mode != "remove")
+                        return CallToolResult.Error("mode must be replace, add, or remove");
                     if (!TreeFilterSelection.TryApply(filterable, tags, mode, out error))
                         return CallToolResult.Error(error);
                     target.AcceptedTags = filterable.GetTags().Select(tag => tag.Name).OrderBy(tag => tag).ToList();
@@ -121,7 +121,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "resources_storage_control", "storage_filter_control" },
                 Tags = new List<string> { "resources", "storage", "filter", "inventory" },
                 Description = "储存建筑聚合工具：action=list/detail/set_filter；读取储存列表/详情，或修改储存过滤标签。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -160,7 +159,6 @@ namespace OniMcp.Tools
                 Group = "resources",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "storage_controls", "inventory_storage_control" },
                 Tags = new List<string> { "resources", "storage", "filter", "inventory", "side-screen", "receptacle" },
                 Description = "储存/过滤/实体插槽聚合工具：domain=storage/tile_selection/filter/receptacle，再用 action 参数执行对应子操作。",
                 Parameters = new Dictionary<string, McpToolParameter>

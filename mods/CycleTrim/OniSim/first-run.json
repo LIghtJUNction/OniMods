@@ -1,0 +1,115 @@
+{
+  "evidenceKind": "independent-library-usage",
+  "stage": "buffer-transport-and-grid-storage",
+  "gitBase": "084206301cc34c28ea5a5613a924de4d03dd2acd",
+  "sourceStatus": "uncommitted",
+  "builds": {
+    "rustRelease": "success",
+    "managedRelease": {
+      "projects": 2,
+      "warnings": 0,
+      "errors": 0
+    }
+  },
+  "runs": {
+    "describe": {
+      "exitCode": 0,
+      "output": {
+        "protocolVersion": 1,
+        "generation": 1,
+        "supportedMessages": [
+          1092408308,
+          2062421945,
+          -931446686,
+          -1252920804
+        ],
+        "knownUnsupportedMessages": [
+          -775326397
+        ],
+        "batchLifecycle": false,
+        "callbacks": false,
+        "saveLoad": false,
+        "radiationSimulation": false,
+        "radiationStorage": "zero-filled",
+        "gameReady": false,
+        "simulationStep": false
+      }
+    },
+    "grid-demo": {
+      "exitCode": 0,
+      "output": {
+        "operation": "grid-storage-and-buffer-transport",
+        "source": "independent-rust-core",
+        "width": 4,
+        "height": 3,
+        "changedCell": 5,
+        "executedMessages": 1,
+        "patchCells": null,
+        "elementIndex": 0,
+        "temperatureK": 300,
+        "massKg": 3,
+        "descriptorBytes": 496,
+        "elementPointerStable": true,
+        "massPointerStable": true,
+        "simulationExecuted": false,
+        "gameReady": false
+      }
+    },
+    "batch-demo": {
+      "exitCode": 0,
+      "output": {
+        "operation": "grid-storage-and-buffer-transport",
+        "source": "independent-rust-core",
+        "width": 4,
+        "height": 3,
+        "changedCell": 5,
+        "executedMessages": 3,
+        "patchCells": 2,
+        "elementIndex": 0,
+        "temperatureK": 305,
+        "massKg": 4,
+        "descriptorBytes": 496,
+        "elementPointerStable": true,
+        "massPointerStable": true,
+        "simulationExecuted": false,
+        "gameReady": false
+      }
+    }
+  },
+  "resolvedDuringIntegration": [
+    "Linux dlopen flag RTLD_NOLOAD was erroneously combined with RTLD_NOW; changed to RTLD_NOW with Linux RTLD_LOCAL=0.",
+    "Repeated cell writes in a batch now emit one final patch per cell.",
+    "Managed single-cell patches no longer clone or rescan the whole grid."
+  ],
+  "officialLibraryExecuted": false,
+  "gameLaunched": false,
+  "benchmark": false,
+  "notEstablished": [
+    "physics equivalence",
+    "complete official ABI compatibility",
+    "live mod compatibility",
+    "FPS or simulation throughput improvement"
+  ],
+  "sourceFilesChecked": 18,
+  "sourceSha256": {
+    "PROTOCOL.md": "44fdb31193fa27d9c67c9881def6dc27589b3cf8ea4b6e43e7261f3dd94a7183",
+    "managed/OniSim.Compatibility/GridImage.cs": "41257515a3702d9d51825e91482feaa29aefaa0014b9cb31dd91b91dec41bf91",
+    "managed/OniSim.Compatibility/GridView.cs": "e96eead595b3e1099d8957adcf966149fff948eb2156532426a94698208893d4",
+    "managed/OniSim.Compatibility/NativeLibrary.cs": "8441e52b46ecc0b542b559e5461e8b725835dc422035b371ae309fb84750adc3",
+    "managed/OniSim.Compatibility/OniSim.Compatibility.csproj": "a45ac04fe157aea61d95a89007087bd992587626a86e5238352fbe11c2db29bc",
+    "managed/OniSim.Compatibility/OniSimSession.cs": "9f0311503f7309343fffe36277a9d911f936e4f39c55fb31d95390b7e280effe",
+    "managed/OniSim.Compatibility/Protocol.cs": "b64ce3daa3914083ec89c9f1fc7c0ceca32da41d7c16f04a96e10c39a7526270",
+    "managed/OniSim.Host/OniSim.Host.csproj": "ddc32a69a2717157ccb6a58eb073f602d66437f7f39c10678c5765d22f17783b",
+    "managed/OniSim.Host/Program.cs": "150b298b6ba703f0a9d885148f9c8068355e3ec2c04e67341f9f017a13244388",
+    "native/Cargo.lock": "c644e3753adfb8453c06f0be32bfa1f173a2dd41359ae3253ac47db34b0ace19",
+    "native/Cargo.toml": "660aaaa615920e6697a413a46eb1bb11bd999f5190841e599190a840f99aaafd",
+    "native/src/lib.rs": "309a4cd6093ceb24282805008541926c8ec267d51127260042025582318916d9",
+    "native/src/model.rs": "13bae82576bc8289ebdd40edb0cec743741430c03fd60855f65a1de47a363abb",
+    "native/src/protocol.rs": "3edf5c1a337f6bf82e45cd77a73aacf37b8c222827ec37bd5bf70ae3e1d65d8c"
+  },
+  "artifactSha256": {
+    "native/target/release/liboni_sim_core.so": "01ea8a59f295475950a39905627580f2ef81ebeb1d3fdf6b878ba87c1a968e0e",
+    "managed/OniSim.Compatibility/bin/Release/netstandard2.0/OniSim.Compatibility.dll": "c56f8bc3a3d6e1acbca94033d5c217355b17c1f150f3753f84c65fca059eec6a",
+    "managed/OniSim.Host/bin/Release/net10.0/OniSim.Host.dll": "827cc94f9f7ba1f367bcb3faba14b519c688cf05e527ce95749c0794a752ba0e"
+  }
+}

@@ -139,7 +139,7 @@ namespace OniMcp.Tools
         private static IEnumerable<BridgeEndpointTarget> NativeBridgeEndpointTargets(
             BuildingDef def, PlacementDetails placement)
         {
-            int anchorCell = Grid.XYToCell(placement.AnchorX, placement.AnchorY);
+            int anchorCell = Grid.PosToCell(placement.PlacementPoint);
             if (def.BuildLocationRule == BuildLocationRule.Conduit)
             {
                 if (def.InputConduitType != ConduitType.None)
@@ -185,29 +185,7 @@ namespace OniMcp.Tools
         private static IEnumerable<FootprintCell> PlacementSafetyFootprint(
             BuildingDef def, PlacementDetails placement)
         {
-            if (!UsesNativeBridgeEndpointRegistration(def) || def.PlacementOffsets == null)
-            {
-                foreach (var item in placement.Footprint)
-                    yield return item;
-                yield break;
-            }
-
-            int anchorCell = Grid.XYToCell(placement.AnchorX, placement.AnchorY);
-            foreach (var offset in def.PlacementOffsets)
-            {
-                var rotated = Rotatable.GetRotatedCellOffset(offset, placement.Orientation);
-                int cell = Grid.OffsetCell(anchorCell, rotated);
-                yield return new FootprintCell
-                {
-                    X = Grid.IsValidCell(cell) ? Grid.CellColumn(cell) : -1,
-                    Y = Grid.IsValidCell(cell) ? Grid.CellRow(cell) : -1,
-                    Cell = cell,
-                    WorldId = placement.WorldId,
-                    Valid = Grid.IsValidCell(cell),
-                    Visible = Grid.IsValidCell(cell) && Grid.IsVisible(cell),
-                    InWorld = Grid.IsValidCell(cell) && ToolUtil.CellMatchesWorld(cell, placement.WorldId)
-                };
-            }
+            return placement.Footprint;
         }
 
         private static string PlacementObjectPrefabId(GameObject go)
@@ -386,32 +364,6 @@ namespace OniMcp.Tools
             };
         }
 
-        private static Dictionary<string, object> ExistingPlacementResult(
-            BuildingDef def,
-            PlacementDetails placement,
-            Dictionary<string, object> existing,
-            bool utility)
-        {
-            return new Dictionary<string, object>
-            {
-                ["planned"] = false,
-                ["blueprintPlaced"] = false,
-                ["alreadyPresent"] = !utility,
-                ["alreadyConnected"] = utility,
-                ["valid"] = true,
-                ["prefabId"] = def.PrefabID,
-                ["name"] = ToolUtil.CleanName(def.Name),
-                ["x"] = placement.AnchorX,
-                ["y"] = placement.AnchorY,
-                ["anchor"] = AnchorDictionary(placement.AnchorX, placement.AnchorY, placement.WorldId),
-                ["worldId"] = placement.WorldId,
-                ["placement"] = placement.ToDictionary(),
-                ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
-                [utility ? "existingUtility" : "existing"] = existing,
-                ["safety"] = "same_prefab_idempotent_reuse"
-            };
-        }
-
         private static bool HasUnsafeExecutionConflict(FootprintValidation validation)
         {
             if (validation == null || validation.Valid)
@@ -431,11 +383,12 @@ namespace OniMcp.Tools
             int x,
             int y,
             int worldId,
-            HashSet<int> reservedCells)
+            HashSet<int> reservedCells,
+            Orientation orientation = Orientation.Neutral)
         {
             if (def == null || reservedCells == null)
                 return null;
-            var overlaps = FootprintCells(def, x, y, worldId)
+            var overlaps = FootprintCells(def, x, y, worldId, orientation)
                 .Where(item => item.Valid && reservedCells.Contains(item.Cell))
                 .Select(item => item.ToDictionary())
                 .ToList();
@@ -454,11 +407,12 @@ namespace OniMcp.Tools
             int x,
             int y,
             int worldId,
-            HashSet<int> reservedCells)
+            HashSet<int> reservedCells,
+            Orientation orientation = Orientation.Neutral)
         {
             if (def == null || reservedCells == null)
                 return;
-            foreach (var item in FootprintCells(def, x, y, worldId).Where(item => item.Valid))
+            foreach (var item in FootprintCells(def, x, y, worldId, orientation).Where(item => item.Valid))
                 reservedCells.Add(item.Cell);
         }
     }

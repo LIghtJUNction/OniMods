@@ -80,7 +80,7 @@ namespace OniMcp.Tools
                                 continue;
                             if (normalized == "toollist")
                                 caseSet.Add("toollist");
-                            else if (normalized == "toollookup" || normalized == "lookup")
+                            else if (normalized == "toollookup")
                                 caseSet.Add("toollookup");
                             else if (normalized == "jsonserialize")
                                 caseSet.Add("jsonserialize");
@@ -261,7 +261,6 @@ namespace OniMcp.Tools
                     ["group"] = resolvedTool?.Group,
                     ["mode"] = resolvedTool?.Mode,
                     ["risk"] = resolvedTool?.Risk,
-                    ["aliasCount"] = resolvedTool?.Aliases?.Count ?? 0,
                     ["parameterCount"] = resolvedTool?.Parameters?.Count ?? 0
                 };
             }

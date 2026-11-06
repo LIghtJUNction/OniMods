@@ -10,18 +10,20 @@ namespace OniMcp.Tools
             var options = new HashSet<Tag>();
             var flat = tree.GetComponent<FlatTagFilterable>();
             if (flat != null)
-                options.UnionWith(flat.tagOptions);
+            {
+                // Match the native side screen's visibility and editability.
+                if (!flat.currentlyUserAssignable)
+                    return options;
+                var discovered = DiscoveredResources.Instance;
+                options.UnionWith(flat.tagOptions.Where(tag => !flat.displayOnlyDiscoveredTags
+                    || (discovered != null && discovered.IsDiscovered(tag))));
+            }
             else
             {
-                var categories = tree.GetFilterStorage()?.storageFilters;
-                var discovered = DiscoveredResources.Instance;
-                if (categories != null && discovered != null)
-                {
-                    // Native tree rows select discovered resources under this
-                    // storage's categories, not arbitrary category/tag names.
-                    foreach (var category in categories)
-                        options.UnionWith(discovered.GetDiscoveredResourcesFromTag(category));
-                }
+                // Preserve native category rows, discovered children and the
+                // CreatureDeliveryPoint exception already used by tree writes.
+                options.UnionWith(TreeFilterSelectableTags.For(tree.gameObject, tree)
+                    .Select(name => new Tag(name)));
             }
             options.ExceptWith(tree.ForbiddenTags);
             return options;
@@ -30,48 +32,36 @@ namespace OniMcp.Tools
         internal static bool TryApply(TreeFilterable tree, List<Tag> requested, string mode, out string error)
         {
             error = null;
-            if (mode != "replace" && mode != "add" && mode != "remove" && mode != "clear")
-                error = "mode must be replace, add, remove or clear";
-            else if (mode != "clear" && requested.Count == 0)
-                error = "tags must contain at least one tag unless mode=clear";
-            else if (mode == "replace" || mode == "add")
+            var flat = tree.GetComponent<FlatTagFilterable>();
+            if (flat != null && !flat.currentlyUserAssignable)
             {
-                var options = GetOptions(tree);
-                foreach (var tag in requested)
-                {
-                    if (!options.Contains(tag))
-                    {
-                        error = "Tag is not selectable for this filter: " + tag.Name;
-                        break;
-                    }
-                }
+                error = "This flat filter is not currently user assignable";
+                return false;
             }
-            if (error != null)
+            HashSet<string> selected;
+            if (!TreeFilterEligibility.TryApply(mode,
+                tree.GetTags().Select(tag => tag.Name),
+                requested.Select(tag => tag.Name),
+                new HashSet<string>(GetOptions(tree).Select(tag => tag.Name)),
+                out selected, out error))
                 return false;
 
-            var next = mode == "replace" || mode == "clear"
-                ? new HashSet<Tag>() : new HashSet<Tag>(tree.GetTags());
-            if (mode == "remove")
-                next.ExceptWith(requested);
-            else if (mode != "clear")
-                next.UnionWith(requested);
-
-            var flat = tree.GetComponent<FlatTagFilterable>();
             if (flat != null)
             {
-                next.IntersectWith(flat.tagOptions);
                 // SelectTag updates storage immediately. Keep existing selections
                 // and add new ones before removing deselected tags so a temporary
                 // empty filter cannot eject contents that should remain accepted.
-                foreach (var tag in next)
-                    if (!flat.selectedTags.Contains(tag))
-                        flat.SelectTag(tag, true);
-                foreach (var tag in flat.selectedTags.ToList())
-                    if (!next.Contains(tag))
-                        flat.SelectTag(tag, false);
-                next = new HashSet<Tag>(flat.selectedTags);
+                // Saved tags that no longer occur in tagOptions must not be sent
+                // to SelectTag: the native method asserts that they are options.
+                var plan = TreeFilterEligibility.PlanFlatUpdates(
+                    flat.selectedTags.Select(tag => tag.Name), selected,
+                    flat.tagOptions.Select(tag => tag.Name));
+                foreach (var edit in plan)
+                    flat.SelectTag(flat.tagOptions.First(tag => tag.Name == edit.Key), edit.Value);
+                tree.UpdateFilters(new HashSet<Tag>(flat.selectedTags));
             }
-            tree.UpdateFilters(next);
+            else
+                tree.UpdateFilters(new HashSet<Tag>(selected.Select(name => new Tag(name))));
             return true;
         }
     }

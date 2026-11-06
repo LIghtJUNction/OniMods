@@ -1,0 +1,399 @@
+
+RUN scripts/verify_attack_designation_safety.py
+OniMcp attack designation safety contract verified
+
+RUN scripts/verify_auth_options_contract.py
+auth/options contract passed
+manual UI check: open OniMcp Options; verify controls fit, token is masked, and the optional Donate link opens the OniMcp project at donate.lmm.best
+
+RUN scripts/verify_bridge_endpoint_stomp_safety.py
+bridge endpoint stomp safety contract passed
+
+RUN scripts/verify_build_placement_stomp_safety.py
+build placement stomp safety verification passed
+
+RUN scripts/verify_building_blueprint_safety.py
+OK: 7 material reuse guard mutations were rejected
+OK: 9 native recipe and stock guard mutations were rejected
+OK: normal utility paths use native placement and preserve material identity
+
+RUN scripts/verify_ci_evidence_matrix.py
+PASS: CI separates correctness evidence from synthetic wall-clock timing and covers compatibility/publisher inputs
+
+RUN scripts/verify_ci_whitespace.py
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.278s
+
+OK
+
+RUN scripts/verify_cycletrim_fasttrack_fetch_contract.py
+OK: CycleTrim FastTrack fetch/pickup/scheduler compatibility contract (local, peterhaneve/ONIMods@30f4beb7b574c9f95801c3fa7dea8590737dd752)
+
+RUN scripts/verify_cycletrim_fasttrack_stationary_contract.py
+OK: CycleTrim FastTrack stationary-critter compatibility contract (local, peterhaneve/ONIMods@30f4beb7b574c9f95801c3fa7dea8590737dd752)
+
+RUN scripts/verify_cycletrim_fetch_pool_source.py
+PASS CycleTrim fetch candidate pool source contract
+
+RUN scripts/verify_cycletrim_fetch_source_contract.py
+SOURCE_PROVENANCE FetchManager.cs commit=8d4ace10c2b6a84cee394653a91b990a5122e636 blob_sha=85ac7fedf30f9c337b2759a15490974d856fadf5 bytes=21358
+SOURCE_PROVENANCE KleiVersion.cs commit=8d4ace10c2b6a84cee394653a91b990a5122e636 blob_sha=2f5b3266033b2868e9b475a55ac208f70eca647a bytes=367
+PASS FetchablesByPrefabId.UpdatePickups source contract matches ONI 744825 at Kupie/ONI_Decomp@8d4ace10c2b6a84cee394653a91b990a5122e636
+
+RUN scripts/verify_cycletrim_navgrid_capture_freshness.py
+PASS CycleTrim NavGrid capture freshness requires a same-run baseline, a newer deferred report, and an exact post-baseline histogram delta
+
+RUN scripts/verify_cycletrim_navgrid_probe_contract.py
+PASS CycleTrim NavGrid workload probe remains opt-in, observational, pause-safe, and anchored complete captures are analyzed as exact histogram deltas
+
+RUN scripts/verify_cycletrim_no_waste_want_contract.py
+PASS CycleTrim Waste Not, Want Not compatibility contract
+
+RUN scripts/verify_cycletrim_pathprobe_dequeue_tracking.py
+CycleTrim path-probe dequeue tracking contract passed
+
+RUN scripts/verify_cycletrim_pathprobe_quota_cache.py
+PASS: CycleTrim path-probe queue quota is cached once per TickFrame
+
+RUN scripts/verify_cycletrim_perf_probe_analyzer.py
+PASS CycleTrim performance probe analyzer regressions
+
+RUN scripts/verify_cycletrim_perf_probe_external_ownership.py
+PASS CycleTrim perf probe reports generic Harmony ownership
+
+RUN scripts/verify_cycletrim_perf_probe_session_generation.py
+PASS CycleTrim performance probe game-session generation wiring
+
+RUN scripts/verify_cycletrim_perf_probe_source.py
+PASS CycleTrim opt-in performance probe source contract
+
+RUN scripts/verify_cycletrim_process_profile.py
+......
+----------------------------------------------------------------------
+Ran 6 tests in 1.367s
+
+OK
+
+RUN scripts/verify_cycletrim_reference_api_checker_behavior.py
+PASS: CycleTrim reference API checker covers WorkOrder.Execute and state-machine lookup dependencies
+
+RUN scripts/verify_dupe_speech_bubble_contract.py
+duplicant speech-bubble contract passed
+
+RUN scripts/verify_glyph_lookup_contract.py
+OK: authoritative bidirectional glyph lookup contract
+
+RUN scripts/verify_harmony_api_surface_contract.py
+PASS stable Harmony API surface regression
+
+RUN scripts/verify_logic_bridge_read_contract.py
+logic bridge read contract passed
+
+RUN scripts/verify_oni_reference_provenance.py
+REFERENCE_STATUS official_oni_build=744825 compile_reference_declared_build=737790 source=Sgt-Imalas/Sgt_Imalas-Oni-Mods@be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d
+::warning title=ONI reference lag::Pinned compile/API reference source declares ONI 737790, while the manifest tracks official ONI 744825. Compile and API-surface success must not be reported as 744825 binary compatibility.
+
+RUN scripts/verify_oni_reference_provenance_contract.py
+PASS: official/upstream reference and method-body drift classification, provenance metadata, authenticated GitHub API coverage, CI input coverage, and SDK pin
+
+RUN scripts/verify_onimcp_build_plan_write_safety.py
+OK: build_area keeps fuzzy discovery available while confirmed ambiguous writes fail closed
+
+RUN scripts/verify_onimcp_building_alias_contract.py
+OK: build planning keeps 洗手盆/WashBasin distinct from 洗手池/WashSink and exact aliases high-confidence
+
+RUN scripts/verify_onimcp_deconstruction_eligibility.py
+OniMcp deconstruction preview/execution eligibility contract verified
+
+RUN scripts/verify_onimcp_developer_guide.py
+OK: developer guide public surface and 4 tools/call examples match runtime admission
+
+RUN scripts/verify_onimcp_facility_option_eligibility.py
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.004s
+
+OK
+
+RUN scripts/verify_onimcp_loopback_transport.py
+PASS OniMcp runtime helpers cover legacy/modern MCP over direct loopback without disabling remote proxy policy
+
+RUN scripts/verify_onimcp_priority_write_safety.py
+OniMcp single-target priority write safety contract passed
+
+RUN scripts/verify_onimcp_protocol_docs.py
+OK: public examples use the supported 2025-11-25 session protocol
+
+RUN scripts/verify_onimcp_public_tool_docs.py
+OK: OniMcp READMEs, tool reference, and runtime smoke exactly 7 registered public tools
+
+RUN scripts/verify_onimcp_radbolt_direction_safety.py
+OniMcp radbolt direction safety contract passed
+
+RUN scripts/verify_onimcp_research_clear_contract.py
+OniMcp research clear contract: PASS
+
+RUN scripts/verify_onimcp_research_source_contract.py
+SOURCE_PROVENANCE Research.cs commit=8d4ace10c2b6a84cee394653a91b990a5122e636 blob_sha=d92cec77f8593c92fdedf7aba2bf435d3eff4857 bytes=14879
+SOURCE_PROVENANCE KleiVersion.cs commit=8d4ace10c2b6a84cee394653a91b990a5122e636 blob_sha=2f5b3266033b2868e9b475a55ac208f70eca647a bytes=367
+PASS Research queue source contract matches ONI 744825 at Kupie/ONI_Decomp@8d4ace10c2b6a84cee394653a91b990a5122e636
+
+RUN scripts/verify_onimcp_research_source_contract_regression.py
+PASS rejects activeResearch reset that exists only on the non-null path
+PASS rejects activeResearch reset that exists only when clearQueue=true
+PASS rejects activeResearch reset guarded by an outer condition
+
+RUN scripts/verify_onimcp_save_load_context_contract.py
+PASS OniMcp save-load context invalidation precedes scene teardown
+
+RUN scripts/verify_onimcp_survival_only.py
+OniMcp survival-only implementation contract verified
+
+RUN scripts/verify_onimcp_tool_surface.py
+OK: seven-tool runtime smoke uses authoritative glyph and live public virtual files
+OK: public=7, internal=5, aliases=0, operation-files=24, resource-controls=8
+Registered: benchmark, building_control, game_control, navigation_control, orders_control, server_control, world_editor
+Internal: colony_control, coordinate_control, dupes_control, read_control, search_control
+
+RUN scripts/verify_onimcp_tree_filter_eligibility.py
+PASS OniMcp tree filter eligibility source contract
+
+RUN scripts/verify_options_compact_integer_inputs.py
+OK: compact validated text inputs for large integer PLib options
+
+RUN scripts/verify_reference_api_diagnostics_contract.py
+PASS: CycleTrim reference-API failure diagnostics are sanitized and allowlisted before upload
+
+RUN scripts/verify_restart_load_contract.py
+restart/load lifecycle contract passed
+
+RUN scripts/verify_runtime_smoke_surface.py
+OK: seven-tool runtime smoke uses authoritative glyph and live public virtual files
+
+RUN scripts/verify_utility_bridge_readiness_contract.py
+utility bridge readiness contract passed
+
+RUN scripts/verify_utility_network_read_contract.py
+PASS: physical utility read-only validation; pending plans do not claim a connected network
+
+RUN scripts/verify_world_editor_building_files.py
+OK: editable per-building world-editor virtual files
+
+RUN scripts/verify_world_editor_logic_gate_read_contract.py
+world_editor LogicGate/Gantry read contract passed
+
+RUN scripts/verify_world_editor_native_edit_contract.py
+world_editor native infrastructure-plan contract passed
+
+RUN scripts/verify_world_editor_safety.py
+OK: world_editor path, policy, ops, map, symmetry, examples, and line-cap guards
+
+RUN mods/CycleTrim/OniSim/conformance
+test_explicit_offline_build_still_uses_the_lockfile (test_component_build.ComponentBuildTests.test_explicit_offline_build_still_uses_the_lockfile) ... ok
+test_fresh_build_can_fetch_locked_dependencies (test_component_build.ComponentBuildTests.test_fresh_build_can_fetch_locked_dependencies) ... ok
+test_boundary_catalog_is_unique_and_encodable (test_element_words.ElementWordsTests.test_boundary_catalog_is_unique_and_encodable) ... ok
+test_empty_overrides_do_not_change_existing_wire_data (test_element_words.ElementWordsTests.test_empty_overrides_do_not_change_existing_wire_data) ... ok
+test_malformed_overrides_fail (test_element_words.ElementWordsTests.test_malformed_overrides_fail) ... ok
+test_pressure_flow_catalog_preserves_exact_words (test_element_words.ElementWordsTests.test_pressure_flow_catalog_preserves_exact_words) ... ok
+test_selected_fields_preserve_the_exact_word_and_other_bytes (test_element_words.ElementWordsTests.test_selected_fields_preserve_the_exact_word_and_other_bytes) ... ok
+test_bad_step_responses_fail_without_retry (test_instances.BoundedStepTests.test_bad_step_responses_fail_without_retry) ... ok
+test_cleanup_remains_under_the_test_lock (test_instances.BoundedStepTests.test_cleanup_remains_under_the_test_lock) ... ok
+test_first_headless_precondition_sends_no_command (test_instances.BoundedStepTests.test_first_headless_precondition_sends_no_command) ... ok
+test_one_native_step_verifies_clock_identity_and_headless_first (test_instances.BoundedStepTests.test_one_native_step_verifies_clock_identity_and_headless_first) ... ok
+test_complete_game_scope_and_overlap_are_recomputed (test_instances.ConcurrencyAuditTests.test_complete_game_scope_and_overlap_are_recomputed) ... ok
+test_false_acceptance_inputs_are_rejected (test_instances.ConcurrencyAuditTests.test_false_acceptance_inputs_are_rejected) ... ok
+test_managed_only_package_cannot_be_used_for_a_rust_test_group (test_instances.InstancePreparationTests.test_managed_only_package_cannot_be_used_for_a_rust_test_group) ... ok
+test_native_override_is_copied_without_executing_or_changing_its_source (test_instances.InstancePreparationTests.test_native_override_is_copied_without_executing_or_changing_its_source) ... ok
+test_only_runtime_allowlist_is_staged_and_existing_stage_is_preserved (test_instances.InstancePreparationTests.test_only_runtime_allowlist_is_staged_and_existing_stage_is_preserved) ... ok
+test_real_controller_init_creates_config_without_launching_a_game (test_instances.InstancePreparationTests.test_real_controller_init_creates_config_without_launching_a_game) ... ok
+test_failure_replaces_a_stale_success_but_never_overwrites_an_input (test_instances.NativeMappingAuditTests.test_failure_replaces_a_stale_success_but_never_overwrites_an_input) ... ok
+test_live_assembly_run_and_pid_must_all_match (test_instances.NativeMappingAuditTests.test_live_assembly_run_and_pid_must_all_match) ... ok
+test_mapping_binds_bytes_device_inode_and_profile (test_instances.NativeMappingAuditTests.test_mapping_binds_bytes_device_inode_and_profile) ... ok
+test_changed_task_set_is_rejected (test_instances.NativeThreadAuditTests.test_changed_task_set_is_rejected) ... ok
+test_duplicate_misnamed_and_missing_physics_threads_are_rejected (test_instances.NativeThreadAuditTests.test_duplicate_misnamed_and_missing_physics_threads_are_rejected) ... ok
+test_observed_names_and_explicit_count_gate (test_instances.NativeThreadAuditTests.test_observed_names_and_explicit_count_gate) ... ok
+test_serial_does_not_invent_one_pool_worker (test_instances.NativeThreadAuditTests.test_serial_does_not_invent_one_pool_worker) ... ok
+test_unreadable_or_empty_tasks_never_mean_zero_workers (test_instances.NativeThreadAuditTests.test_unreadable_or_empty_tasks_never_mean_zero_workers) ... ok
+test_core_selection_is_an_exact_mod_local_setting (test_instances.SimulationOptionsTests.test_core_selection_is_an_exact_mod_local_setting) ... ok
+test_existing_settings_are_never_overwritten (test_instances.SimulationOptionsTests.test_existing_settings_are_never_overwritten) ... ok
+test_unknown_selection_writes_nothing (test_instances.SimulationOptionsTests.test_unknown_selection_writes_nothing) ... ok
+test_changed_pid_and_zero_progress_cannot_reach_save (test_mcp_roundtrip.RoundtripTests.test_changed_pid_and_zero_progress_cannot_reach_save) ... ok
+test_checkpoint_roundtrip_requires_clock_rollback_and_later_progress (test_mcp_roundtrip.RoundtripTests.test_checkpoint_roundtrip_requires_clock_rollback_and_later_progress) ... ok
+test_escaped_checkpoint_is_rejected_before_write (test_mcp_roundtrip.RoundtripTests.test_escaped_checkpoint_is_rejected_before_write) ... ok
+test_existing_checkpoint_is_never_overwritten (test_mcp_roundtrip.RoundtripTests.test_existing_checkpoint_is_never_overwritten) ... ok
+test_missing_mcp_configuration_replaces_old_green_without_game_action (test_mcp_roundtrip.RoundtripTests.test_missing_mcp_configuration_replaces_old_green_without_game_action) ... ok
+test_new_process_during_reload_is_not_adopted (test_mcp_roundtrip.RoundtripTests.test_new_process_during_reload_is_not_adopted) ... ok
+test_path_change_without_clock_restore_is_not_a_reload (test_mcp_roundtrip.RoundtripTests.test_path_change_without_clock_restore_is_not_a_reload) ... ok
+test_save_pointer_and_source_mutations_are_rejected (test_mcp_roundtrip.RoundtripTests.test_save_pointer_and_source_mutations_are_rejected) ... ok
+test_transient_reload_staleness_waits_for_fresh_native_status (test_mcp_roundtrip.RoundtripTests.test_transient_reload_staleness_waits_for_fresh_native_status) ... ok
+test_both_clis_bind_probe_and_shared_sources_to_the_build (test_probe_build.ProbeBuildTests.test_both_clis_bind_probe_and_shared_sources_to_the_build) ... ok
+test_failed_or_mutated_rebuild_never_leaves_a_successful_receipt (test_probe_build.ProbeBuildTests.test_failed_or_mutated_rebuild_never_leaves_a_successful_receipt) ... ok
+test_receipts_reject_stale_sources_binaries_and_failed_builds (test_probe_build.ProbeBuildTests.test_receipts_reject_stale_sources_binaries_and_failed_builds) ... ok
+test_cases_overlap_with_bounded_workers_and_keep_receipt_order (test_runner.CaseConcurrencyTests.test_cases_overlap_with_bounded_workers_and_keep_receipt_order) ... ok
+test_cpu_budget_failure_starts_no_native_child (test_runner.CaseConcurrencyTests.test_cpu_budget_failure_starts_no_native_child) ... usage: run.py [-h] --reference REFERENCE --candidate CANDIDATE
+              [--workers {1,2,3,4,5,6,7,8}] [--jobs {1,2,3,4,5,6,7,8}]
+              [--case CASE] [--output OUTPUT] [--keep-success-snapshots]
+run.py: error: jobs * workers exceeds the current CPU affinity; reduce explicit native concurrency
+ok
+test_error_drains_active_case_before_returning (test_runner.CaseConcurrencyTests.test_error_drains_active_case_before_returning) ... ok
+test_parallel_case_still_requires_actual_cell_workers (test_runner.CaseConcurrencyTests.test_parallel_case_still_requires_actual_cell_workers) ... FAIL authored-parallel: 0 field/frame differences
+PASS authored-parallel: 0 field/frame differences
+ok
+test_available_pressure_context_retains_each_observation (test_runner.LibraryPreflightTests.test_available_pressure_context_retains_each_observation) ... ok
+test_changed_inputs_cannot_issue_or_retain_a_green_summary (test_runner.LibraryPreflightTests.test_changed_inputs_cannot_issue_or_retain_a_green_summary) ... PASS identity: 0 field/frame differences
+PASS identity: 0 field/frame differences
+ok
+test_comparison_rejects_extra_missing_and_null_fields (test_runner.LibraryPreflightTests.test_comparison_rejects_extra_missing_and_null_fields) ... ok
+test_fixed_realtime_preserves_monotonic_progress (test_runner.LibraryPreflightTests.test_fixed_realtime_preserves_monotonic_progress) ... ok
+test_frame_memory_uses_current_exec_peak_and_separate_pss (test_runner.LibraryPreflightTests.test_frame_memory_uses_current_exec_peak_and_separate_pss) ... ok
+test_frame_timing_refuses_a_concurrent_game (test_runner.LibraryPreflightTests.test_frame_timing_refuses_a_concurrent_game) ... ok
+test_interrupted_timing_binds_inputs_and_excludes_rejected_child (test_runner.LibraryPreflightTests.test_interrupted_timing_binds_inputs_and_excludes_rejected_child) ... 0 fluid baseline 1
+0 fluid baseline 1
+ok
+test_invalid_save_buffer_is_released_and_bad_options_never_call_native (test_runner.LibraryPreflightTests.test_invalid_save_buffer_is_released_and_bad_options_never_call_native) ... ok
+test_missing_candidate_is_rejected_before_output_creation (test_runner.LibraryPreflightTests.test_missing_candidate_is_rejected_before_output_creation) ... ok
+test_missing_reference_is_rejected_before_output_creation (test_runner.LibraryPreflightTests.test_missing_reference_is_rejected_before_output_creation) ... ok
+test_optional_pressure_context_records_missing_and_denied_counters (test_runner.LibraryPreflightTests.test_optional_pressure_context_records_missing_and_denied_counters) ... ok
+test_parallel_frame_cpu_set_is_explicit_and_validated (test_runner.LibraryPreflightTests.test_parallel_frame_cpu_set_is_explicit_and_validated) ... ok
+test_replacing_save_buffers_copies_each_before_the_next_begin (test_runner.LibraryPreflightTests.test_replacing_save_buffers_copies_each_before_the_next_begin) ... ok
+test_texture_observation_requires_complete_matching_buffers (test_runner.LibraryPreflightTests.test_texture_observation_requires_complete_matching_buffers) ... ok
+test_busy_output_rejects_another_run_without_touching_its_evidence (test_runner.SnapshotRetentionTests.test_busy_output_rejects_another_run_without_touching_its_evidence) ... usage: run.py [-h] --reference REFERENCE --candidate CANDIDATE
+              [--workers {1,2,3,4,5,6,7,8}] [--jobs {1,2,3,4,5,6,7,8}]
+              [--case CASE] [--output OUTPUT] [--keep-success-snapshots]
+run.py: error: Another comparison is using output directory: /tmp/tmpnjxbbre2/output
+PASS passing: 0 field/frame differences
+PASS second: 0 field/frame differences
+ok
+test_child_exception_preserves_raw_outputs_without_a_summary (test_runner.SnapshotRetentionTests.test_child_exception_preserves_raw_outputs_without_a_summary) ... ok
+test_explicit_opt_in_preserves_successful_raw_snapshots (test_runner.SnapshotRetentionTests.test_explicit_opt_in_preserves_successful_raw_snapshots) ... PASS passing: 0 field/frame differences
+PASS second: 0 field/frame differences
+ok
+test_one_failed_case_preserves_all_raw_snapshots (test_runner.SnapshotRetentionTests.test_one_failed_case_preserves_all_raw_snapshots) ... PASS passing: 0 field/frame differences
+FAIL second: 1 field/frame differences
+ok
+test_success_removes_raw_only_after_writing_the_summary (test_runner.SnapshotRetentionTests.test_success_removes_raw_only_after_writing_the_summary) ... PASS passing: 0 field/frame differences
+PASS second: 0 field/frame differences
+ok
+test_summary_write_error_preserves_successful_raw_snapshots (test_runner.SnapshotRetentionTests.test_summary_write_error_preserves_successful_raw_snapshots) ... PASS passing: 0 field/frame differences
+PASS second: 0 field/frame differences
+ok
+test_observed_scaled_window_matches_pixels_and_rejects_invalid_geometry (test_runner.WindowGeometryTests.test_observed_scaled_window_matches_pixels_and_rejects_invalid_geometry) ... ok
+
+----------------------------------------------------------------------
+Ran 65 tests in 2.708s
+
+OK
+
+RUN mods/CycleTrim/OniSim/conformance/memory_probe
+test_bad_gc_counters_are_rejected (test_capture.ObservationTests.test_bad_gc_counters_are_rejected) ... ok
+test_failed_or_cross_run_observations_are_rejected (test_capture.ObservationTests.test_failed_or_cross_run_observations_are_rejected) ... ok
+test_missing_negative_or_boolean_memory_is_rejected (test_capture.ObservationTests.test_missing_negative_or_boolean_memory_is_rejected) ... ok
+test_runtime_generation_count_is_preserved (test_capture.ObservationTests.test_runtime_generation_count_is_preserved) ... ok
+test_same_paused_run_is_accepted (test_capture.ObservationTests.test_same_paused_run_is_accepted) ... ok
+test_mapped_inode_must_match_file (test_core_identity.CoreIdentityTests.test_mapped_inode_must_match_file) ... ok
+test_mapped_reference_accepts_spaces_and_multiple_segments (test_core_identity.CoreIdentityTests.test_mapped_reference_accepts_spaces_and_multiple_segments) ... ok
+test_missing_deleted_or_foreign_official_library_is_rejected (test_core_identity.CoreIdentityTests.test_missing_deleted_or_foreign_official_library_is_rejected) ... ok
+test_replaced_bytes_are_rejected (test_core_identity.CoreIdentityTests.test_replaced_bytes_are_rejected) ... ok
+test_rust_mapping_rejects_official_baseline_even_if_deleted (test_core_identity.CoreIdentityTests.test_rust_mapping_rejects_official_baseline_even_if_deleted) ... ok
+test_rust_requires_actual_private_mapping_and_candidate_hash (test_core_identity.CoreIdentityTests.test_rust_requires_actual_private_mapping_and_candidate_hash) ... ok
+test_unknown_core_and_unpinned_official_are_rejected (test_core_identity.CoreIdentityTests.test_unknown_core_and_unpinned_official_are_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.007s
+
+OK
+
+RUN tests/OniOnline.Tests
+test_arm_permits_pin_each_actual_optional_cycletrim_and_framework (test_multiplayer_runtime.CollectorValidation.test_arm_permits_pin_each_actual_optional_cycletrim_and_framework) ... ok
+test_both_games_must_keep_publishing_throughout_window (test_multiplayer_runtime.CollectorValidation.test_both_games_must_keep_publishing_throughout_window) ... ok
+test_chat_author_and_sequence_cannot_be_forged (test_multiplayer_runtime.CollectorValidation.test_chat_author_and_sequence_cannot_be_forged) ... ok
+test_cli_requires_framework_and_cycletrim_is_optional (test_multiplayer_runtime.CollectorValidation.test_cli_requires_framework_and_cycletrim_is_optional) ... ok
+test_continuous_new_native_frames_complete_observation (test_multiplayer_runtime.CollectorValidation.test_continuous_new_native_frames_complete_observation) ... ok
+test_controller_elapsed_time_cannot_replace_native_publications (test_multiplayer_runtime.CollectorValidation.test_controller_elapsed_time_cannot_replace_native_publications) ... ok
+test_copied_probe_cannot_count_as_two_clients (test_multiplayer_runtime.CollectorValidation.test_copied_probe_cannot_count_as_two_clients) ... ok
+test_cycletrim_can_be_absent_and_base_game_keeps_observation (test_multiplayer_runtime.CollectorValidation.test_cycletrim_can_be_absent_and_base_game_keeps_observation) ... ok
+test_different_probe_nonces_still_require_different_processes (test_multiplayer_runtime.CollectorValidation.test_different_probe_nonces_still_require_different_processes) ... ok
+test_disposable_copy_is_fingerprinted_without_writing (test_multiplayer_runtime.CollectorValidation.test_disposable_copy_is_fingerprinted_without_writing) ... ok
+test_either_unpaused_game_is_rejected (test_multiplayer_runtime.CollectorValidation.test_either_unpaused_game_is_rejected) ... ok
+test_existing_harness_copy_is_allowed_without_recopied_bytes (test_multiplayer_runtime.CollectorValidation.test_existing_harness_copy_is_allowed_without_recopied_bytes) ... ok
+test_explicit_expected_cycletrim_requires_an_actual_match (test_multiplayer_runtime.CollectorValidation.test_explicit_expected_cycletrim_requires_an_actual_match) ... ok
+test_fixture_mutations_fail_closed (test_multiplayer_runtime.CollectorValidation.test_fixture_mutations_fail_closed) ... ok
+test_interrupt_keeps_a_failure_receipt (test_multiplayer_runtime.CollectorValidation.test_interrupt_keeps_a_failure_receipt) ... ok
+test_late_new_file_does_not_hide_an_observation_gap (test_multiplayer_runtime.CollectorValidation.test_late_new_file_does_not_hide_an_observation_gap) ... ok
+test_loaded_framework_must_match_this_candidate (test_multiplayer_runtime.CollectorValidation.test_loaded_framework_must_match_this_candidate) ... ok
+test_missing_chat_is_pending_but_duplicate_is_failure (test_multiplayer_runtime.CollectorValidation.test_missing_chat_is_pending_but_duplicate_is_failure) ... ok
+test_missing_runtime_writes_blocked_zero_clients (test_multiplayer_runtime.CollectorValidation.test_missing_runtime_writes_blocked_zero_clients) ... ok
+test_older_probe_without_framework_identity_cannot_pass (test_multiplayer_runtime.CollectorValidation.test_older_probe_without_framework_identity_cannot_pass) ... ok
+test_optional_cycletrim_has_explicit_per_participant_identity (test_multiplayer_runtime.CollectorValidation.test_optional_cycletrim_has_explicit_per_participant_identity) ... ok
+test_optional_cycletrim_never_accepts_empty_or_ambiguous_identity (test_multiplayer_runtime.CollectorValidation.test_optional_cycletrim_never_accepts_empty_or_ambiguous_identity) ... ok
+test_optional_dependencies_do_not_remove_native_adapter_gates (test_multiplayer_runtime.CollectorValidation.test_optional_dependencies_do_not_remove_native_adapter_gates) ... ok
+test_protocol_process_cannot_claim_native_game (test_multiplayer_runtime.CollectorValidation.test_protocol_process_cannot_claim_native_game) ... ok
+test_publication_frame_and_timestamp_must_advance_together (test_multiplayer_runtime.CollectorValidation.test_publication_frame_and_timestamp_must_advance_together) ... ok
+test_receipt_cannot_overwrite_live_probe_state (test_multiplayer_runtime.CollectorValidation.test_receipt_cannot_overwrite_live_probe_state) ... ok
+test_recent_frozen_status_cannot_complete_observation (test_multiplayer_runtime.CollectorValidation.test_recent_frozen_status_cannot_complete_observation) ... ok
+test_restart_cannot_reuse_an_earlier_process_receipt (test_multiplayer_runtime.CollectorValidation.test_restart_cannot_reuse_an_earlier_process_receipt) ... ok
+test_same_account_is_not_steam_multiplayer_acceptance (test_multiplayer_runtime.CollectorValidation.test_same_account_is_not_steam_multiplayer_acceptance) ... ok
+test_same_machine_is_not_two_device_steam_acceptance (test_multiplayer_runtime.CollectorValidation.test_same_machine_is_not_two_device_steam_acceptance) ... ok
+test_stale_and_future_status_are_rejected (test_multiplayer_runtime.CollectorValidation.test_stale_and_future_status_are_rejected) ... ok
+test_valid_collector_fixture (test_multiplayer_runtime.CollectorValidation.test_valid_collector_fixture) ... ok
+test_any_retained_cache_prevents_revocation_completion (test_multiplayer_runtime.ObservationValidation.test_any_retained_cache_prevents_revocation_completion) ... ok
+test_both_directions_interleave_chat_with_viewports_and_release_observers (test_multiplayer_runtime.ObservationValidation.test_both_directions_interleave_chat_with_viewports_and_release_observers) ... ok
+test_default_viewport_cannot_include_unrequested_numeric_values (test_multiplayer_runtime.ObservationValidation.test_default_viewport_cannot_include_unrequested_numeric_values) ... ok
+test_default_viewport_cannot_leak_hidden_or_outside_cells (test_multiplayer_runtime.ObservationValidation.test_default_viewport_cannot_leak_hidden_or_outside_cells) ... ok
+test_detail_epoch_and_dimensions_must_match_the_native_owner (test_multiplayer_runtime.ObservationValidation.test_detail_epoch_and_dimensions_must_match_the_native_owner) ... ok
+test_details_cannot_come_from_another_visible_cell (test_multiplayer_runtime.ObservationValidation.test_details_cannot_come_from_another_visible_cell) ... ok
+test_hidden_entity_or_wrong_native_position_is_failure (test_multiplayer_runtime.ObservationValidation.test_hidden_entity_or_wrong_native_position_is_failure) ... ok
+test_independent_native_sources_and_full_viewport_are_accepted (test_multiplayer_runtime.ObservationValidation.test_independent_native_sources_and_full_viewport_are_accepted) ... ok
+test_missing_native_observation_capability_is_rejected (test_multiplayer_runtime.ObservationValidation.test_missing_native_observation_capability_is_rejected) ... ok
+test_partial_viewport_or_unbound_motion_is_pending (test_multiplayer_runtime.ObservationValidation.test_partial_viewport_or_unbound_motion_is_pending) ... ok
+test_same_planet_or_lineage_is_not_independent_gameplay (test_multiplayer_runtime.ObservationValidation.test_same_planet_or_lineage_is_not_independent_gameplay) ... ok
+test_source_is_bound_to_its_real_owner_world_and_dimensions (test_multiplayer_runtime.ObservationValidation.test_source_is_bound_to_its_real_owner_world_and_dimensions) ... ok
+test_unexpected_epoch_or_visual_change_is_failure (test_multiplayer_runtime.ObservationValidation.test_unexpected_epoch_or_visual_change_is_failure) ... ok
+test_visibility_baseline_cannot_omit_or_overlap_cells (test_multiplayer_runtime.ObservationValidation.test_visibility_baseline_cannot_omit_or_overlap_cells) ... ok
+test_visible_details_match_native_cell_and_numeric_values (test_multiplayer_runtime.ObservationValidation.test_visible_details_match_native_cell_and_numeric_values) ... ok
+
+----------------------------------------------------------------------
+Ran 47 tests in 0.016s
+
+OK
+
+RUN tests/OniSim.Loader.Tests
+test_all_three_matching_platforms (test_native_bundle.NativeBundleTests.test_all_three_matching_platforms) ... ok
+test_changed_binary_refused (test_native_bundle.NativeBundleTests.test_changed_binary_refused) ... ok
+test_missing_platform_refused (test_native_bundle.NativeBundleTests.test_missing_platform_refused) ... ok
+test_stale_source_refused (test_native_bundle.NativeBundleTests.test_stale_source_refused) ... ok
+test_unexpected_file_refused (test_native_bundle.NativeBundleTests.test_unexpected_file_refused) ... ok
+test_wrong_architecture_refused_even_with_matching_checksum (test_native_bundle.NativeBundleTests.test_wrong_architecture_refused_even_with_matching_checksum) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.147s
+
+OK
+
+RUN tests/Tooling.Tests
+test_empty_python_discovery_is_an_error (test_check_mods.CheckModsTests.test_empty_python_discovery_is_an_error) ... ok
+test_game_dependent_checks_are_visible_and_never_started (test_check_mods.CheckModsTests.test_game_dependent_checks_are_visible_and_never_started) ... ok
+test_host_failure_cannot_be_reported_as_success (test_check_mods.CheckModsTests.test_host_failure_cannot_be_reported_as_success) ... ok
+test_host_projects_keep_their_own_execution_modes (test_check_mods.CheckModsTests.test_host_projects_keep_their_own_execution_modes) ... ok
+test_missing_conformance_prerequisites_are_explicit_failures (test_check_mods.CheckModsTests.test_missing_conformance_prerequisites_are_explicit_failures) ... ok
+test_missing_projects_cannot_be_a_successful_host_run (test_check_mods.CheckModsTests.test_missing_projects_cannot_be_a_successful_host_run) ... ok
+test_missing_sdk_fails_before_running_checks (test_check_mods.CheckModsTests.test_missing_sdk_fails_before_running_checks) ... ok
+test_python_discovery_runs_new_suites_once_without_dotnet (test_check_mods.CheckModsTests.test_python_discovery_runs_new_suites_once_without_dotnet) ... ok
+test_python_failure_is_reported_after_other_checks_finish (test_check_mods.CheckModsTests.test_python_failure_is_reported_after_other_checks_finish) ... ok
+test_historical_note_does_not_advertise_an_active_example (test_onimcp_protocol_docs.ProtocolDocumentationTests.test_historical_note_does_not_advertise_an_active_example) ... ok
+test_retired_request_examples_are_rejected (test_onimcp_protocol_docs.ProtocolDocumentationTests.test_retired_request_examples_are_rejected) ... ok
+test_session_guidance_is_required (test_onimcp_protocol_docs.ProtocolDocumentationTests.test_session_guidance_is_required) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.970s
+
+OK
+NOT RUN verify_cycletrim_target_contract.py: requires the installed game's Assembly-CSharp.dll and ilspycmd
+NOT RUN verify_cycletrim_release_binary.py: requires a built CycleTrim Release DLL and ilspycmd
+NOT RUN verify_cycletrim_navgrid_source_contract.py: requires the pinned online ONI 744825 decompilation source
+NOT RUN verify_restart_packaging.py: requires an OniMcp Debug build and distribution archive
+NOT RUN test_legacy_workshop_package.py: requires a built Steam publisher and the installed game's Steamworks files
+NOT RUN executable C# regressions (--static-only)
+
+60/60 checks passed

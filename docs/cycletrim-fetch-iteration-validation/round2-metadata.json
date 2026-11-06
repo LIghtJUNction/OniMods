@@ -1,0 +1,48 @@
+{
+  "command": [
+    "flock",
+    "-n",
+    "-E",
+    "75",
+    "/tmp/oni-tiered-benchmark.lock",
+    "taskset",
+    "-c",
+    "0",
+    "/tmp/cycletrim-dotnet/dotnet",
+    "bin/Release/net10.0/DefaultDispatchAblation.dll",
+    "--benchmark"
+  ],
+  "source_sha256": {
+    "Ablation.cs": "3e4cceb101a49a27feb80d82d5d5b90f64aaba97f2de6866dd7bb99001c82abe",
+    "DefaultDispatchAblation.csproj": "e1bfb549a8ddc92e92eab6ddcd5870db948496fc90b4ea803982ec681d620099",
+    "sources.json": "3864796eb1a48cfefeaf217aaf1166c68dcf284ab8b14441fbbce1a17a5faaaa",
+    "Sources/CycleTrimPatchOptions.cs": "58ee25c8d1228c1682b293c385d61e0d56929fcd94448248c3c676fcee204817",
+    "Sources/FetchCandidateBuffer.cs": "12a4773093392ceb9a46dfa0e31fd2bca65416052f8e383754449641c020cb59",
+    "Sources/FetchControlFixture.cs": "af0087c9b34bd29e9b6eb4d20116bc46151d124c75d0ea418ca78b9b3b401171",
+    "Sources/FetchFixture.cs": "540b3cf5f9554cb912a978e2424eebd0e5baaca97bbc1af2698c6b9acc1a7a1a",
+    "Sources/FetchLayoutControl.cs": "2d8fa170f7877cc6c6f84d901f08ea74026e180bc495240e9f74338f601a8e3f",
+    "Sources/FetchLayoutExperiment.cs": "b9add7891caf8eb7519839656e862ae5226eb7f0bea732744929f64ec90a2cce",
+    "Sources/FetchPickupCandidatePatch.cs": "3a2fe007bd4697a0ed38b334dabfcc9ffd055d04d913d1358a9c3d055fb1ac09",
+    "Sources/PriorFetchPickupCandidatePatch.cs": "a22240a98028a2a77ecf1654b246e24f34e1cdf23c757e26a50cb904c0560bbc",
+    "Sources/ThreadLocalObjectPool.cs": "a3ebbb23d0bbe8a3fb1fcb65f1a68edc2674ebc76b57ae8fc19e35798f210bc4",
+    "Sources/V1FetchPickupCandidatePatch.cs": "a243ff25ed49ef25818120c98a8202eae49e76e6e2280e031a5b672e9c0b0d3b"
+  },
+  "environment": {
+    "DOTNET_TieredCompilation": "0",
+    "DOTNET_gcServer": "0"
+  },
+  "assembly_sha256": "fdfecb65156eaaccca1c61e9f3684a2f4e72879e276869c78e1079bb1cde82ed",
+  "host_load_before": [
+    0.61083984375,
+    1.07568359375,
+    1.6640625
+  ],
+  "complete": true,
+  "exit_code": 0,
+  "wall_seconds": 39.23747678200016,
+  "host_load_after": [
+    0.92138671875,
+    1.09912109375,
+    1.6484375
+  ]
+}

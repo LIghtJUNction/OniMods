@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -360,16 +359,9 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         non_interactive,
         dry_run,
     } = options;
-    let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
-        Some(path) => PathBuf::from(path),
-        None => env::current_dir().context("读取当前目录失败")?,
-    };
-
-    let assembly_name = selected.assembly_name(&repo_root);
     println!("🚀 构建发布包：{}", selected.name);
-    build::run(cfg, selected, true)?;
-
-    let dist_mod = cfg.dist_dir(&repo_root).join(&assembly_name);
+    let package = build::run(cfg, selected, true)?;
+    let dist_mod = package.directory;
     if !dist_mod.join("mod_info.yaml").exists() {
         anyhow::bail!("发布包缺少 mod_info.yaml: {}", dist_mod.display());
     }
@@ -403,7 +395,7 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
         anyhow::bail!("Steam 描述超过 8000 字符：{}", description_chars);
     }
 
-    let project_dir = selected.config.project_abs(&repo_root);
+    let project_dir = selected.config.project_abs(&cfg.repo_root);
     let default_changenote = extract_changelog_summary(&project_dir, 6)
         .unwrap_or_else(|| format!("Release {}", version));
     let changenote = if auto_note || non_interactive || dry_run {
@@ -417,6 +409,10 @@ pub fn run(cfg: &Config, selected: &SelectedMod, options: PublishOptions) -> Res
 
     let publishedfileid = if let Some(ref id) = selected.config.publishedfileid {
         id.clone()
+    } else if dry_run && selected.name == "OniOnline" {
+        // First creation is handled by the reviewed, one-shot Legacy publisher.
+        // ID 0 here only prepares metadata and never reaches a Steam upload.
+        "0".to_string()
     } else if non_interactive || dry_run {
         anyhow::bail!("无人值守发布要求在 onim.toml 配置 publishedfileid");
     } else {
@@ -507,6 +503,7 @@ fn launch_uploader(dist_mod: &Path, preview: &Path) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
     use std::error::Error;
     use std::io;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -638,7 +635,10 @@ mod tests {
         fs::write(&vdf, "\"workshopitem\"\n{\n\"appid\" \"12345\"\n}\n")?;
         assert!(reject_directory_upload_for_oni(&vdf).is_err());
 
-        fs::write(&vdf, "\"workshopitem\"\n{\n\"publishedfileid\" \"457140\"\n}\n")?;
+        fs::write(
+            &vdf,
+            "\"workshopitem\"\n{\n\"publishedfileid\" \"457140\"\n}\n",
+        )?;
         assert!(reject_directory_upload_for_oni(&vdf).is_err());
 
         fs::remove_dir_all(root)?;

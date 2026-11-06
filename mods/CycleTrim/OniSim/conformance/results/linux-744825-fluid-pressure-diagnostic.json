@@ -1,0 +1,238 @@
+{
+  "schema": 1,
+  "native_sha256": "268977a5b35f167a77c29ab5fca27b0356feaecacf00c4e167e64603de4374ba",
+  "scope": "Own userspace hardware counts and five fluid IP profiles; not whole-game or timing acceptance",
+  "counter_samples": 18,
+  "counters": {
+    "fluid": {
+      "totals": {
+        "baseline": {
+          "instructions": 3533729232,
+          "cycles": 1043351719
+        },
+        "candidate": {
+          "instructions": 3818985502,
+          "cycles": 1077504651
+        }
+      },
+      "instructions_change_percent": 8.072386175398961,
+      "cycles_change_percent": 3.2733862779019463
+    },
+    "germ_flow": {
+      "totals": {
+        "baseline": {
+          "instructions": 4560952607,
+          "cycles": 1381722129
+        },
+        "candidate": {
+          "instructions": 4914933553,
+          "cycles": 1407660897
+        }
+      },
+      "instructions_change_percent": 7.761118707015768,
+      "cycles_change_percent": 1.8772781773982894
+    },
+    "sealed": {
+      "totals": {
+        "baseline": {
+          "instructions": 3779949328,
+          "cycles": 1043528838
+        },
+        "candidate": {
+          "instructions": 4084768114,
+          "cycles": 1014478229
+        }
+      },
+      "instructions_change_percent": 8.064097149188033,
+      "cycles_change_percent": -2.7838817617803158
+    }
+  },
+  "all_finals_match_official": true,
+  "profile": {
+    "total_samples": 2871,
+    "native_samples": 2754,
+    "threads_with_samples": 10,
+    "lost": 0,
+    "corrupt": 0,
+    "symbols": [
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "samples": 1155,
+        "percent_of_native_samples": 41.93899782135076
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+        "samples": 346,
+        "percent_of_native_samples": 12.563543936092955
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+        "samples": 265,
+        "percent_of_native_samples": 9.62236746550472
+      },
+      {
+        "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+        "samples": 217,
+        "percent_of_native_samples": 7.879448075526507
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core12partial_melt5apply",
+        "samples": 158,
+        "percent_of_native_samples": 5.737109658678286
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core5fluid13update_liquid",
+        "samples": 102,
+        "percent_of_native_samples": 3.7037037037037037
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11sublimation17apply_with_source",
+        "samples": 96,
+        "percent_of_native_samples": 3.485838779956427
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease19post_process_bounds",
+        "samples": 85,
+        "percent_of_native_samples": 3.0864197530864197
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+        "samples": 74,
+        "percent_of_native_samples": 2.6870007262164126
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+        "samples": 71,
+        "percent_of_native_samples": 2.5780682643427744
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.5248903603187395721",
+        "samples": 67,
+        "percent_of_native_samples": 2.4328249818445897
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers6notify",
+        "samples": 26,
+        "percent_of_native_samples": 0.944081336238199
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers13swap_material",
+        "samples": 15,
+        "percent_of_native_samples": 0.5446623093681917
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step14validate_cells",
+        "samples": 11,
+        "percent_of_native_samples": 0.39941902687000724
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core5fluid15transfer_liquid",
+        "samples": 11,
+        "percent_of_native_samples": 0.39941902687000724
+      }
+    ],
+    "hot_instruction_offsets": [
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87c78",
+        "samples": 136
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87c8d",
+        "samples": 71
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87c57",
+        "samples": 42
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+        "elf_virtual_address_hex": "0x7649d",
+        "samples": 39
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87ca2",
+        "samples": 38
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87bab",
+        "samples": 38
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87bb4",
+        "samples": 37
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87c9c",
+        "samples": 35
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87ba5",
+        "samples": 33
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+        "elf_virtual_address_hex": "0x7648b",
+        "samples": 26
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87b95",
+        "samples": 25
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87bad",
+        "samples": 23
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87c99",
+        "samples": 22
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87bc8",
+        "samples": 20
+      },
+      {
+        "symbol": "_RNvMNtCsesrpLENfIw6_12oni_sim_core15simulation_stepNtB2_12PreparedStep3run",
+        "elf_virtual_address_hex": "0x592b0",
+        "samples": 19
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+        "elf_virtual_address_hex": "0x3bed0",
+        "samples": 19
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87d1f",
+        "samples": 18
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87c59",
+        "samples": 18
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+        "elf_virtual_address_hex": "0x87bcf",
+        "samples": 17
+      },
+      {
+        "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+        "elf_virtual_address_hex": "0x726d9",
+        "samples": 17
+      }
+    ]
+  },
+  "interpretation": "Fluid instructions +8.07%, cycles +3.27% versus official; candidate gas::update_pressure accounts for 41.94% of native samples. Hottest sampled IP follows DIVSS, but software IP sampling does not establish precise stall attribution. Test exact paired divisions as an isolated proposal."
+}

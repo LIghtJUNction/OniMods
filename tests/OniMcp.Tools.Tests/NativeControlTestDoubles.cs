@@ -12,12 +12,9 @@ namespace UnityEngine
 {
     internal sealed partial class GameObject
     {
-        internal string name { get; set; } = "Fixture";
         internal int WorldId { get; set; }
-        internal int Cell { get; set; }
         internal TestTransform transform => new TestTransform(Cell);
         internal int GetInstanceID() => GetComponent<KPrefabID>()?.InstanceID ?? 0;
-        internal string GetProperName() => name;
         internal int GetMyWorldId() => WorldId;
         internal T GetSMI<T>() where T : class => GetComponent<T>();
         internal Klei.AI.Sicknesses GetSicknesses() => GetComponent<Klei.AI.Sicknesses>();
@@ -27,7 +24,7 @@ namespace UnityEngine
     {
         private readonly int cell;
         internal TestTransform(int cell) { this.cell = cell; }
-        internal TestPosition GetPosition() => new TestPosition(cell % 1000, cell / 1000);
+        internal TestPosition GetPosition() => new TestPosition(Grid.CellColumn(cell), Grid.CellRow(cell));
     }
 
     internal struct TestPosition
@@ -37,10 +34,9 @@ namespace UnityEngine
         internal float y { get; }
     }
 
-    internal static class Mathf
+    internal static partial class Mathf
     {
         internal static float Clamp(float value, float min, float max) => Math.Max(min, Math.Min(value, max));
-        internal static int RoundToInt(float value) => (int)Math.Round(value);
     }
 }
 
@@ -53,20 +49,10 @@ internal class KMonoBehaviour
     internal int GetMyWorldId() => gameObject.GetMyWorldId();
 }
 
-internal sealed partial class KPrefabID
-{
-    internal int InstanceID { get; set; }
-    internal Tag PrefabTag { get; set; }
-}
-
 internal partial struct Tag : IEquatable<Tag>
 {
     internal string ProperName() => Name;
     public bool Equals(Tag other) => string.Equals(Name, other.Name, StringComparison.Ordinal);
-    public override bool Equals(object other) => other is Tag && Equals((Tag)other);
-    public override int GetHashCode() => Name == null ? 0 : StringComparer.Ordinal.GetHashCode(Name);
-    public static bool operator ==(Tag left, Tag right) => left.Equals(right);
-    public static bool operator !=(Tag left, Tag right) => !left.Equals(right);
 }
 
 internal static partial class GameTags
@@ -88,12 +74,7 @@ internal static partial class Grid
     }
 
     internal static readonly TestWorldIndex WorldIdx = new TestWorldIndex();
-    internal static int XYToCell(int x, int y) => x < 0 || x >= 1000 || y < 0 ? -1 : x + y * 1000;
-    internal static int PosToCell(GameObject go) => go.Cell;
     internal static int PosToCell(TestPosition pos) => XYToCell((int)pos.x, (int)pos.y);
-    internal static int CellColumn(int cell) => cell % 1000;
-    internal static int CellRow(int cell) => cell / 1000;
-    internal static bool IsVisible(int cell) => IsValidCell(cell);
     internal static bool IsWorldValidCell(int cell) => IsValidCell(cell);
 }
 
@@ -115,6 +96,7 @@ internal interface IAssignableIdentity
 internal sealed class MinionIdentity : KMonoBehaviour, IAssignableIdentity
 {
     internal TestRef<MinionAssignablesProxy> assignableProxy { get; } = new TestRef<MinionAssignablesProxy>();
+    internal Klei.AI.Amounts GetAmounts() => GetComponent<Klei.AI.Amounts>();
     public Ownables GetSoleOwner() => assignableProxy.Get()?.GetSoleOwner();
     public IEnumerable<Ownables> GetOwners() => assignableProxy.Get()?.GetOwners();
     public bool IsNull() => false;
@@ -402,7 +384,6 @@ namespace OniMcp.Tools
 {
     public static partial class ToolUtil
     {
-        internal static float? GetFloat(JObject args, string key) => (float?)args[key];
         internal static int ClampLimit(JObject args, int fallback, int maximum) => Math.Max(1, Math.Min((int?)args["limit"] ?? fallback, maximum));
         internal static int ResolveWorldId(JObject args, int fallback) => (int?)args["worldId"] ?? fallback;
         internal static bool GameObjectMatchesWorld(GameObject go, int worldId) => worldId < 0 || go.WorldId == worldId;

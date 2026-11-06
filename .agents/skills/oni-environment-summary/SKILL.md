@@ -1,6 +1,6 @@
 ---
 name: oni-mcp-environment-summary
-description: 当用户要求快速总结 ONI 附近环境/资源、开局区域概览、周围资源、附近危险、扩张方向，或问“我周围有什么”时使用。指导 agent 使用低 token 的只读 MCP 工具，尤其是 read_control domain=world action=area_snapshot，并返回简洁、可执行的环境/资源摘要，不执行游戏动作。
+description: 当用户要求快速总结 ONI 附近环境/资源、开局区域概览、周围资源、附近危险、扩张方向，或问“我周围有什么”时使用。指导 agent 使用低 token 的公开只读工具，如 world_editor 虚拟文件 /active/map/viewport.md 和 /active/colony/status.oni，并返回简洁、可执行的环境/资源摘要，不执行游戏动作。
 ---
 
 # ONI MCP 环境摘要
@@ -9,6 +9,9 @@ description: 当用户要求快速总结 ONI 附近环境/资源、开局区域�
 
 用户还要求扩张建议或资源利用方向时，按 [阶段判断](../oni-mcp-colony-strategy/references/stages.md) 区分当前生存缺口和未来模块资源。发现泉、硫、石油或火山只代表候选资源，不代表研究、材料、通行和安全开发前置已齐全。需要模块建议才读取相应参考并附原文链接，纯环境摘要不加载整个知识库。
 
+## 通信须知
+
+MCP 请求必须使用 IPv4 地址 `http://127.0.0.1:8788/mcp/`（避免 `localhost` 解析为 IPv6 `::1` 导致超时）。直接 curl 时需携带 `Mcp-Session-Id` header 及协议版本 `2025-11-25`。
 
 ## 目的
 
@@ -16,38 +19,35 @@ description: 当用户要求快速总结 ONI 附近环境/资源、开局区域�
 
 ## 快速路径
 
-用最少读取回答问题：
+用最少读取回答问题，统一使用公开 7 工具及 `world_editor`：
 
 ```
-colony_control domain=snapshot action=get profile=brief includeAtmosphere=false
-navigation_control action=get_view
-read_control domain=world action=area_snapshot preset=utilities encoding=plain includeScreenshot=false
+world_editor command=read path=/active/colony/status.oni profile=minimal
+world_editor command=read path=/active/map/viewport.md compact=true syncView=false focusCamera=false
 ```
-
-如果用户提供了 `areaId` 或坐标，把它们传给 `read_control domain=world action=area_snapshot`。
 
 如果存在玩家编辑标记请求，或用户说“框选区域/标记区域/玩家规划”，先读取：
 
 ```
 game_control domain=ui uiDomain=edit_mark action=list limit=5
-read_control domain=world action=area_snapshot areaId=<request.areaId> preset=utilities encoding=plain
 ```
 
 ## 何时补充细节
 
-只有快速路径不够时才添加：
+只有快速路径不够时才通过对应虚拟文件添加：
 
-- `read_control domain=world action=element_summary state=solid|liquid|gas`：查看世界级质量/温度上下文。
-- `read_control domain=resources action=inventory limit=30`：查看已知库存/碎片资源。
-- `read_control domain=resources action=food limit=20`：查看食物数量和千卡。
-- `colony_control domain=bio bioDomain=farming action=list_harvestables x1/y1/x2/y2 readyOnly=false limit=80`：查看附近野生植物/食物。
-- `read_control domain=world action=text_map profile=standard encoding=plain`：当 `read_control domain=world action=area_snapshot` 范围太小时做更大地形扫描。
+- 库存水平：`world_editor command=read path=/active/resources/inventory.oni`
+- 食物储备：`world_editor command=read path=/active/resources/food.oni`
+- 电网总览：`world_editor command=read path=/active/infrastructure/power.md`
+- 房间划分：`world_editor command=read path=/active/infrastructure/rooms.oni`
+- 复制人状态：`world_editor command=read path=/active/dupes/index.oni`
+- 温度覆盖：`world_editor command=read path=/active/map/viewport.md view=temperature compact=true syncView=false focusCamera=false`
 
 除非用户要求视觉确认，否则避免截图。
 
 ## 地图阅读规则
 
-先读 `maps.base` 或 `read_control domain=world action=text_map` 的 base 视图：
+先读视口地图或 `world_editor command=read path=/active/map/viewport.md`：
 
 - `sol`：天然固体砖；候选挖掘/资源
 - `tile`：人工砖/地基
@@ -102,15 +102,14 @@ read_control domain=world action=area_snapshot areaId=<request.areaId> preset=ut
 
 允许：
 
-- 只读工具
+- 公开 7 工具只读操作（`world_editor command=read`）
 - `game_control domain=ui uiDomain=edit_mark action=list`
-- `read_control domain=world action=area_snapshot`
-- `read_control domain=world action=text_map`
-- 库存/农业读取工具
+- `world_editor command=read path=/active/map/viewport.md`
+- 虚拟文件库存/食物/电力/房间读取
 
 不允许：
 
-- 任何 `orders_control`、`building_control`、`dupes_control`、`game_control` 写入或执行动作
+- 任何 `orders_control`、`building_control`、`game_control` 写入或执行动作
 - 任何其他会改变游戏状态的配置/写入/执行工具
 
 如果用户在摘要后要求动作，切换到规划/建造控制技能，并在执行前 dry-run。

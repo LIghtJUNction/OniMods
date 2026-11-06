@@ -51,6 +51,11 @@ def main() -> int:
         return 1
 
     try:
+        loader = method_body(decompile(assembly, "KMod.UserMod2"), "void OnLoad(Harmony harmony)")
+        if len(re.findall(r"harmony\.PatchAll\(assembly\)", loader)) != 1:
+            print("FAIL: UserMod2.OnLoad single PatchAll contract drifted", file=sys.stderr)
+            return 1
+        print("PASS: installed UserMod2.OnLoad installs the mod assembly once")
         # FetchManager / sensor pipeline: candidate selection and sorting should remain compatible.
         fetch_source = decompile(assembly, "FetchManager")
         fetch_failures = []
@@ -422,10 +427,6 @@ def main() -> int:
             Path(__file__).resolve().parents[1]
             / "mods/CycleTrim/Core/CreatureBrainSchedulePolicy.cs"
         ).read_text(encoding="utf-8")
-        scheduler_simulator_source = (
-            Path(__file__).resolve().parents[1]
-            / "benchmarks/CycleTrim.BrainBenchmarks/CreatureBrainSchedulerSimulator.cs"
-        ).read_text(encoding="utf-8")
         for needle, message in (
             (
                 "typeof(BrainScheduler.BrainGroup)",
@@ -451,7 +452,7 @@ def main() -> int:
             ('"OnPrefabInit"', "BrainScheduler lifecycle reset target missing"),
             ("ResetRateCaps();", "BrainScheduler lifecycle rate reset missing"),
             (
-                "new CreatureBrainScheduleCursor(normalAllowance)",
+                "new CreatureBrainScheduleCursor(runningAllowance)",
                 "shared scheduler cursor missing",
             ),
             ("cursor.TrySelect(", "shared scheduler selection missing"),
@@ -470,8 +471,8 @@ def main() -> int:
             ),
             ("scanned >= currentBrainCount", "bounded dynamic scheduler scan missing"),
             (
-                "selection.Kind == CreatureBrainSelectionKind.Normal",
-                "running normal allowance policy missing",
+                "selection.Kind != CreatureBrainSelectionKind.None",
+                "running allowance policy missing",
             ),
         ):
             if needle not in scheduler_core_source:
@@ -502,18 +503,6 @@ def main() -> int:
             generation_failures.append(
                 "production scheduler duplicated shared scan algorithm"
             )
-        if (
-            "new CreatureBrainScheduleCursor(normalAllowance)"
-            not in scheduler_simulator_source
-        ):
-            generation_failures.append(
-                "scheduler simulator does not exercise shared cursor"
-            )
-        if "for (var scanned" in scheduler_simulator_source:
-            generation_failures.append(
-                "scheduler simulator duplicated shared scan algorithm"
-            )
-
         async_patch_source = (
             Path(__file__).resolve().parents[1]
             / "mods/CycleTrim/Patches/AsyncPathProbeOptimizationPatch.cs"

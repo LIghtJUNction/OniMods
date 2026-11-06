@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "passed": true,
+  "scope": "Same native source compiled in two different source roots and fresh Cargo targets. Compiler wrappers explicitly disabled for release. No runtime or performance claims transfer to this binary.",
+  "native_sha256": "a1ef3400389fa2e8c0fcd0db703dc683df362d9b132eff2771530887b45e8f07",
+  "outputs": [
+    "mods/CycleTrim/OniSim/conformance/artifacts/adopted-dedup-v2/clean-target/release/liboni_sim_core.so",
+    "mods/CycleTrim/OniSim/conformance/artifacts/change-notification-dedup-v2/target-clean/release/liboni_sim_core.so"
+  ],
+  "source_landed": true,
+  "runtime_validated": false,
+  "whole_game_performance_measured": false,
+  "concurrency_validated": false,
+  "production_package_updated": false,
+  "release_environment": {
+    "RUSTC_WRAPPER": "",
+    "RUSTC_WORKSPACE_WRAPPER": ""
+  },
+  "legacy_intermediate_sha256": "3bbf40158ce9075e3b0d835dd98caec3c65255576e68ab0c17fe91f1b0429255",
+  "prior_runtime_candidate_sha256": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89",
+  "canonical_build_matches": true,
+  "conformance": [
+    {
+      "workers": 1,
+      "cases": 224,
+      "publications_compared": 8440,
+      "summary_sha256": "93d1084a069c41472eb4b1c6407a834d3a04b64a1cbacfdd24d522d146d8eb57",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    {
+      "workers": 4,
+      "cases": 224,
+      "publications_compared": 8440,
+      "summary_sha256": "cf34876117f23c9989d7151558dd9a553f1d933b8e3bb010c8bc56b922b605f4",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    }
+  ],
+  "native_conformance_passed": true
+}

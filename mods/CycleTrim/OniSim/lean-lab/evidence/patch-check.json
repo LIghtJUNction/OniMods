@@ -1,0 +1,11 @@
+{
+  "command": [
+    "git",
+    "apply",
+    "--check",
+    "/workspace/scratch/d2db565d18f3/onisim-lean-lab/optimization.patch"
+  ],
+  "exit_code": 0,
+  "patch_sha256": "c4a189e7cbc168230cd80f946ebfcb0da12ef9bd766da0944da025f85e594f62",
+  "scope": "applies cleanly to the exact archived source; no git repository history check"
+}

@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "source_integrated": false,
+  "runtime_accepted": false,
+  "candidate_native_sha256": "7762e6768ea4c6f780118cad94c687911997e0ed3691e116f8f80e592015dd3d",
+  "release_unit_tests": 41,
+  "runs": [
+    {
+      "workers": 1,
+      "passed": true,
+      "cases": 263,
+      "publications_compared": 9571,
+      "summary_sha256": "42d19cea394f8d3b1449afb07de1ea961ec7228a96b3bccbdcb637498ecf7827",
+      "parallel_case_workers": []
+    },
+    {
+      "workers": 4,
+      "passed": true,
+      "cases": 263,
+      "publications_compared": 9571,
+      "summary_sha256": "5079961780cde0651e1667a40ac62a23ef1ef59dbb2d3aa32e233bec47408d41",
+      "parallel_case_workers": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ]
+    }
+  ],
+  "performance_status": "complete, rejected by original gates",
+  "policy": "When a valid region contains no disease IDs, run existing serial cleanup instead of dispatching growth workers. Existing forced-pool tests retain the parallel branch.",
+  "sizes": {
+    "96": {
+      "samples": 96,
+      "scenes": {
+        "fluid": {
+          "cpu_change_percent": -20.02014997667111,
+          "wall_change_percent": -12.150501629706778,
+          "peak_rss_change_percent": -0.310521915681361
+        },
+        "thermal": {
+          "cpu_change_percent": -11.56792956478111,
+          "wall_change_percent": 18.830541493033447,
+          "peak_rss_change_percent": -0.31662584383774783
+        },
+        "sealed": {
+          "cpu_change_percent": -5.976907578173862,
+          "wall_change_percent": 4.918378145153524,
+          "peak_rss_change_percent": -0.531946685792839
+        },
+        "germ_flow": {
+          "cpu_change_percent": -0.6139954956149385,
+          "wall_change_percent": -1.348704261928546,
+          "peak_rss_change_percent": 0.023886301206266225
+        },
+        "mixed_germs": {
+          "cpu_change_percent": -0.9556394540727542,
+          "wall_change_percent": -1.4064451057406946,
+          "peak_rss_change_percent": 0.1137520205950926
+        },
+        "vacuum": {
+          "cpu_change_percent": -15.049865312911692,
+          "wall_change_percent": -3.733272418945799,
+          "peak_rss_change_percent": -0.4127534844768799
+        }
+      },
+      "gates": {
+        "all_final_states_match_official": true,
+        "one_scene_cpu_reduction_at_least_5_percent": true,
+        "no_scene_cpu_regression_over_3_percent": true,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true
+      },
+      "passes_predeclared_gates": false,
+      "timed_major_faults": 0,
+      "raw_summary_sha256": "720cedc3befbd25a39b46a3492e1b1296bb328e4ccc5b1e5059d03ac92af1835",
+      "clean_scenes_create_no_cell_workers": true,
+      "germ_scenes_keep_four_workers": true
+    },
+    "192": {
+      "samples": 60,
+      "scenes": {
+        "fluid": {
+          "cpu_change_percent": 1.7566526214235045,
+          "wall_change_percent": 6.688845776623631,
+          "peak_rss_change_percent": -0.1949025487256395
+        },
+        "thermal": {
+          "cpu_change_percent": -4.781036775447078,
+          "wall_change_percent": 9.243059136182396,
+          "peak_rss_change_percent": -0.233609645817634
+        },
+        "sealed": {
+          "cpu_change_percent": 7.602010738519094,
+          "wall_change_percent": 12.509185088184172,
+          "peak_rss_change_percent": -0.3246017966331949
+        },
+        "germ_flow": {
+          "cpu_change_percent": -1.2844289656031127,
+          "wall_change_percent": -1.0726612850086026,
+          "peak_rss_change_percent": -0.022132054592405304
+        },
+        "mixed_germs": {
+          "cpu_change_percent": 6.497051046502711,
+          "wall_change_percent": 6.204854361833756,
+          "peak_rss_change_percent": 0.03693580556991538
+        },
+        "vacuum": {
+          "cpu_change_percent": -11.341432326755585,
+          "wall_change_percent": -7.568940304937655,
+          "peak_rss_change_percent": -0.2552006805351503
+        }
+      },
+      "gates": {
+        "all_final_states_match_official": true,
+        "one_scene_cpu_reduction_at_least_5_percent": true,
+        "no_scene_cpu_regression_over_3_percent": false,
+        "no_scene_wall_regression_over_3_percent": false,
+        "no_scene_peak_rss_increase_over_3_percent": true
+      },
+      "passes_predeclared_gates": false,
+      "timed_major_faults": 0,
+      "raw_summary_sha256": "18cfe12813fb401bf90e357adf9f117f2c0fa8c9918ddc8c338f0184579d25c3",
+      "clean_scenes_create_no_cell_workers": true,
+      "germ_scenes_keep_four_workers": true
+    }
+  },
+  "complete": true,
+  "adopted": false,
+  "scope": "Isolated native dispatch-policy experiment, not whole-game performance",
+  "decision": "Reject: removing dispatch reduces CPU work but can lengthen critical-path execution; retain canonical8bd. Do not weaken wall-time gates.",
+  "whole_game_speedup_established": false
+}

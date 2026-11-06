@@ -25,7 +25,6 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "agent_script_run", "agent_flow_execute", "agent_program_run" },
                 Tags = new List<string> { "agent", "program", "script", "flow", "if", "while", "loop", "control", "脚本", "流程" },
                 Description = "执行受限 agent 流程 DSL：支持变量、if/while/repeat、break/continue/return，并可按条件调用已注册 MCP 工具",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -65,7 +64,7 @@ namespace OniMcp.Tools
                 {
                     JToken program;
                     string error;
-                    if (!TryReadProgram(args["program"], out program, out error))
+                    if (!TryReadProgram(args["program"] ?? args["code"] ?? args["script"] ?? args["steps"], out program, out error))
                         return CallToolResult.Error(error);
 
                     bool dryRun = ToolUtil.GetBool(args, "dryRun", false);
@@ -88,7 +87,7 @@ namespace OniMcp.Tools
             error = null;
             if (token == null || token.Type == JTokenType.Null)
             {
-                error = "program is required";
+                error = "program/code is required";
                 return false;
             }
 

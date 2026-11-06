@@ -1,0 +1,2 @@
+PASS conduit visual refresh gate: 74 assertions; cadence, age, failed rebuilds, clock/frame resets and zero allocation
+PASS conduit visuals: 366 assertions; real Harmony, every-frame draws/audio, invalidation and lifecycle failures

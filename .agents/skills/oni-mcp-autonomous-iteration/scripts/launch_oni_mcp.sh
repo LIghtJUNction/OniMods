@@ -3,7 +3,7 @@ set -euo pipefail
 
 readonly APP_ID=457140
 GAME_DIR="${ONI_GAME_DIR:-$HOME/.local/share/Steam/steamapps/common/OxygenNotIncluded}"
-MCP_URL="${ONI_MCP_URL:-http://localhost:8788/mcp/}"
+MCP_URL="${ONI_MCP_URL:-http://127.0.0.1:8788/mcp/}"
 WAIT_SECONDS="${ONI_MCP_WAIT_SECONDS:-240}"
 LOG_DIR="${ONI_LAUNCH_LOG_DIR:-/tmp}"
 STEAM_WAIT_SECONDS="${ONI_STEAM_LAUNCH_WAIT_SECONDS:-90}"

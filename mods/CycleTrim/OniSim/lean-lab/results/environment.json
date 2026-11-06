@@ -1,0 +1,96 @@
+{
+  "started_utc": "2026-10-19T21:01:55.532464+00:00",
+  "os": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "architecture": "x86_64",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.1\nLLVM version: 23.1.1",
+  "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)",
+  "allowed_cpus_before_pin": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "selected_cpu": 8,
+  "actual_cpu_affinity": [
+    8
+  ],
+  "affinity_error": null,
+  "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+  "cpu_governor": null,
+  "cgroup_cpu_max": "800000 100000",
+  "clock": "Rust std::time::Instant; elapsed nanoseconds",
+  "profile": "Cargo release defaults; no RUSTFLAGS; no fast-math; default target CPU",
+  "allocation_counter_in_timing_binary": false,
+  "commands": {
+    "build_timing": [
+      "cargo",
+      "build",
+      "--release",
+      "--offline",
+      "--manifest-path",
+      "/workspace/scratch/d2db565d18f3/onisim-lean-lab/harness/Cargo.toml",
+      "--target-dir",
+      "/tmp/oni-rust-env/lab-build/timing"
+    ],
+    "build_allocation": [
+      "cargo",
+      "build",
+      "--release",
+      "--offline",
+      "--manifest-path",
+      "/workspace/scratch/d2db565d18f3/onisim-lean-lab/harness/Cargo.toml",
+      "--locked",
+      "--features",
+      "allocation_stats",
+      "--target-dir",
+      "/tmp/oni-rust-env/lab-build/allocation"
+    ],
+    "verify": [
+      "/tmp/oni-rust-env/lab-build/timing/release/onisim-diamond-validation",
+      "verify",
+      "/workspace/scratch/d2db565d18f3/onisim-lean-lab/results/correctness.json"
+    ],
+    "benchmark": [
+      "/tmp/oni-rust-env/lab-build/timing/release/onisim-diamond-validation",
+      "benchmark",
+      "/workspace/scratch/d2db565d18f3/onisim-lean-lab/results/raw-samples.csv"
+    ],
+    "allocations": [
+      "/tmp/oni-rust-env/lab-build/allocation/release/onisim-diamond-validation",
+      "allocations",
+      "/workspace/scratch/d2db565d18f3/onisim-lean-lab/results/allocations.csv"
+    ],
+    "summary": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "/workspace/scratch/d2db565d18f3/onisim-lean-lab/harness/summarize.py"
+    ]
+  },
+  "source_sha256": {
+    "onisim-lean-lab/baseline/disease_emitters.rs": "c1eda38521c5873ba36e5266ceb169c877319480a84a614fef2ea9b0214a5af8",
+    "onisim-lean-lab/baseline/fluid_helpers.rs": "6428eca63f3407fdaa664f1a6bb37f32b0221565babd383247c637f066a62b97",
+    "onisim-lean-lab/baseline/numeric.rs": "0ddf89d84afae2bbbb82b9992c43966dfdb7e529aca59324fd57a6363a77621e",
+    "onisim-lean-lab/baseline/status.rs": "ec7729bca8d9e9172789f2bd6b65a0ec732ea36df99ddedc520d2d4889a90af1",
+    "onisim-lean-lab/baseline/tables.rs": "dd1ba491e528189eb09332bc47d5f4263228e6800ce1eb779f203153b3194367",
+    "onisim-lean-lab/baseline/world_cells.rs": "91b9975505a805379ad515948ab4ff001c429c8f6203da4a3cbb6801bc27712c",
+    "onisim-lean-lab/harness/Cargo.lock": "cd9d0864f093fe608e0590b29884a12cf73f20b47fe40401a0917742ca127d53",
+    "onisim-lean-lab/harness/Cargo.toml": "5da518d9041b1875e972bb7d87e047db7deee75e02183ba8f9f34abd2bced465",
+    "onisim-lean-lab/harness/src/allocation.rs": "60ba1976e981591c865b7511e1b168de3f8d039ce045d537758d1196454e6928",
+    "onisim-lean-lab/harness/src/benchmark.rs": "5d91c16ae6d45ea56169bc17f49282a86a76574dbadbeba1d5171abbbef571fd",
+    "onisim-lean-lab/harness/src/disease_helpers.rs": "ce42cdc2cc224d6cefd5f0a1aaaa64110a70c33aa96df8d9fc0ae8147ea16ee2",
+    "onisim-lean-lab/harness/src/main.rs": "0b39153dd176faa8ea4768059fe53f80d08df261b6f6e96e06d1d463dad1937c",
+    "onisim-lean-lab/harness/src/shared.rs": "bcbdc54b5e61a3ee3665db896ff079decef6e36a6f45fab200cc4df1e2e797fd",
+    "onisim-lean-lab/harness/src/verify.rs": "f1b90ff1ff97bea5475191a3046f1465602708cc04e5fdd58dcae908308b9896",
+    "onisim-lean-lab/harness/src/world.rs": "b29075f9c2dfa6667414c9931d13450b53dc0519aeb39e5f5f44d3238ce6117d",
+    "onisim-source/experimental/OniSim/native/src/diamond.rs": "d500edd4f2604c672c86862707d05aebe6a1e7ced98cd3b3d07553a72d2539ad",
+    "onisim-source/experimental/OniSim/native/src/disease_emitters.rs": "6b5eabdb4b3ee962f3d09b793dd7e872cb6a983f004c66a8b9fee36944c2693d"
+  },
+  "protocol_sha256": "a6826168948ac43f786381a4a9580c1f190034e95981724e41d0a7ea4102bcf8",
+  "timing_binary_sha256": "cfe6ac0bfbfdfd9bc59856e0686ca14225559f6b882075cb5249cec75a93a9b1",
+  "finished_utc": "2026-10-19T21:02:45.686328+00:00",
+  "source_unchanged_during_timing": true
+}

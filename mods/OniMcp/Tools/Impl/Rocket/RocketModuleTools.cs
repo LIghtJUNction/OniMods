@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "reorderable_modules_list", "rocket_module_side_screen_list" },
                 Tags = new List<string> { "rockets", "modules", "reorder", "side-screen", "buildings" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=module action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -71,7 +70,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "rocket_module_buildables_list" },
                 Tags = new List<string> { "rockets", "modules", "build", "replace", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=rocket rocketDomain=module action=list_defs",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -115,7 +113,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "high",
-                Aliases = new List<string> { "rocket_module_side_screen_action", "reorderable_module_control" },
                 Tags = new List<string> { "rockets", "modules", "reorder", "build", "side-screen" },
                 Description = "火箭模块聚合工具：action=list/list_defs 查询模块或定义；action=swap_up/swap_down/remove/cancel_remove/add/replace 修改模块。结构变更需 confirm=true",
                 Parameters = ModuleControlParams(),
@@ -190,8 +187,10 @@ namespace OniMcp.Tools
                 var world = ClusterManager.Instance?.GetWorld(module.GetMyWorldId());
                 if (world?.worldInventory == null)
                     return CallToolResult.Error("Target world inventory is not available");
+                var discovered = DiscoveredResources.Instance;
                 IList<Tag> materials;
                 var materialError = RocketModuleMaterialPolicy.Resolve(def, args["materials"]?.ToString(),
+                    discovered == null ? (Func<Tag, bool>)null : tag => discovered.IsDiscovered(tag),
                     tag => world.worldInventory.GetAmount(tag, true),
                     MaterialSelector.AllowInsufficientMaterialBuild(), out materials);
                 if (materialError != null)

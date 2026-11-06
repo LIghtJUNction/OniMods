@@ -30,7 +30,6 @@ internal partial class BuildingDef
 {
     internal Recipe CraftRecipe { get; set; }
     internal IList<Tag> Defaults { get; set; }
-    internal IList<Tag> DefaultElements() => Defaults;
 }
 
 internal sealed class Recipe

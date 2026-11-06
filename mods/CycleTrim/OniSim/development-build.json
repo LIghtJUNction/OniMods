@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "kind": "development-build-only",
+  "createdAtUtc": "2026-10-19T19:10:46.809705+00:00",
+  "baseCommit": "084206301cc34c28ea5a5613a924de4d03dd2acd",
+  "implementation": "direct C ABI with native-owned SoA Grid; OSB1 retired",
+  "checks": [
+    {
+      "command": "rtk cargo build --offline --locked --release --manifest-path experimental/OniSim/native/Cargo.toml",
+      "exitCode": 0
+    },
+    {
+      "command": "rtk dotnet build experimental/OniSim/managed/OniSim.Host/OniSim.Host.csproj -c Release --no-restore",
+      "exitCode": 0,
+      "warnings": 0,
+      "errors": 0
+    },
+    {
+      "command": "C11 and C++17 header syntax compilation including layout assertions",
+      "exitCode": 0
+    },
+    {
+      "command": "per-untracked-file git diff --no-index --check against /dev/null",
+      "exitCode": 0,
+      "fileCount": 28
+    },
+    {
+      "command": "rtk git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "rtk cargo fmt --manifest-path experimental/OniSim/native/Cargo.toml --check",
+      "exitCode": 0
+    }
+  ],
+  "execution": {
+    "tests": "not-run-user-deferred",
+    "hostDemos": "not-run",
+    "nativeLibraryLoaded": false,
+    "officialLibraryExecuted": false,
+    "gameLaunched": false,
+    "performanceMeasured": false,
+    "modCompatibilityValidated": false
+  },
+  "capabilities": {
+    "gameReady": false,
+    "simulationStep": false,
+    "officialCommandScheduling": false
+  },
+  "knownLimits": [
+    "Immediate cell storage mutations differ from official frame scheduling.",
+    "Element and disease tables are parsed and retained; their physics is not executed.",
+    "Events, callbacks, radiation and save/load remain unimplemented."
+  ],
+  "previousReceipt": "first-run.json belongs to the historical OSB1 implementation and does not validate this version.",
+  "sourceSha256": {
+    "experimental/OniSim/PROTOCOL.md": "5f8e8336216e7b35a4af166c08c47aa7db068e55552ed502a51ea0b7f85b009b",
+    "experimental/OniSim/README.md": "1b755f81ee6019b25725a8762a5912a0a007dd43464eb281bda136d7b3febb2f",
+    "experimental/OniSim/SIMULATION.md": "d5a3c3b8353e9ab3e071a354d65988cf8c00be01d1639de94306623fe7c20b57",
+    "experimental/OniSim/first-run.json": "7735149b36caf5dde9fc6dd2209bff849d90a6fa3bdd2e381c1a5e87e3cf62ff",
+    "experimental/OniSim/history/OSB1.md": "4efaa4c53970834be5c89f1eed80aee4cf988f68f6e42edde3ed927c0e1d9e7f",
+    "experimental/OniSim/inspect_official.py": "21af35e38e50bfd8df7664fc3d3f8d60c2b625939a03b795d18c37dadac0db3e",
+    "experimental/OniSim/managed/OniSim.Compatibility/BinaryLayout.cs": "0a789b53b8da31f309159a55864dd0b4672e521931a87eba1e8b980497e03187",
+    "experimental/OniSim/managed/OniSim.Compatibility/GridImage.cs": "464bc273212f89fb78debd0ac9ace3c0bfe0f35ae9b0d4013b545ce4d3f223b8",
+    "experimental/OniSim/managed/OniSim.Compatibility/GridView.cs": "0bb1235d4f5bb5a560546da8875cd0d8073dae721799fb886072b4c372474297",
+    "experimental/OniSim/managed/OniSim.Compatibility/NativeLibrary.cs": "e43d71acacf95ec4d7509bfe8524447d6a4e92b667254547f4af0189c2d759ff",
+    "experimental/OniSim/managed/OniSim.Compatibility/OfficialMessage.cs": "7d02d8ee853ff4e416b13746a9255a09fa846d6193aea7edf611f3ed2b13d2c4",
+    "experimental/OniSim/managed/OniSim.Compatibility/OniSim.Compatibility.csproj": "a45ac04fe157aea61d95a89007087bd992587626a86e5238352fbe11c2db29bc",
+    "experimental/OniSim/managed/OniSim.Compatibility/OniSimSession.cs": "3a3b2316e85ffed822634420c1cbf4a6311f371ec762cd0aabbdb6dd50b68023",
+    "experimental/OniSim/managed/OniSim.Compatibility/README.md": "7cfcf6b041fc822610248c34a471fba140d234127850af1eead24eded1b022a9",
+    "experimental/OniSim/managed/OniSim.Host/OniSim.Host.csproj": "ddc32a69a2717157ccb6a58eb073f602d66437f7f39c10678c5765d22f17783b",
+    "experimental/OniSim/managed/OniSim.Host/Program.cs": "c46d76304c368de8aaaf8ca1bbce078d478c66a55b5e5d4f68a1b0351a514ba4",
+    "experimental/OniSim/native/Cargo.lock": "c644e3753adfb8453c06f0be32bfa1f173a2dd41359ae3253ac47db34b0ace19",
+    "experimental/OniSim/native/Cargo.toml": "660aaaa615920e6697a413a46eb1bb11bd999f5190841e599190a840f99aaafd",
+    "experimental/OniSim/native/include/oni_sim.h": "52545a4bd1249ce8795d845e05274dbc92b046a895c883ca40d2439f4b70500a",
+    "experimental/OniSim/native/src/bytes.rs": "f68aef91dbfa81e67997e04206268de9866f70537dadcea9d40dafcdcdf3ca4d",
+    "experimental/OniSim/native/src/grid.rs": "a90a01c6e6bb3c9fb7a6672e217bac347bee0f50294f8f86a8170a6888fddb89",
+    "experimental/OniSim/native/src/lib.rs": "4fb122d23cbd68960f14e658132c9843f6f12fef46882208a82fc29e0731ca2c",
+    "experimental/OniSim/native/src/messages.rs": "4b41cdee1fe14e8ade466f5046073d259682cf84f8599d101d55e3220110230b",
+    "experimental/OniSim/native/src/state.rs": "d46e7391fd281a456869ecaa51913a402eee083ef5121075c353517e84829709",
+    "experimental/OniSim/native/src/status.rs": "ec7729bca8d9e9172789f2bd6b65a0ec732ea36df99ddedc520d2d4889a90af1",
+    "experimental/OniSim/native/src/tables.rs": "dd1ba491e528189eb09332bc47d5f4263228e6800ce1eb779f203153b3194367",
+    "experimental/OniSim/official-abi.json": "cedc365ca7d82dcf7f6c127199fa96a354fbbbb2219e2865de6577ba97b2a727"
+  },
+  "artifacts": {
+    "experimental/OniSim/native/target/release/liboni_sim_core.so": {
+      "bytes": 507472,
+      "sha256": "9d7de099db62276766f0f9f9a764cbc1874ac1320f2ae46d52bc876947a62842"
+    },
+    "experimental/OniSim/managed/OniSim.Compatibility/bin/Release/netstandard2.0/OniSim.Compatibility.dll": {
+      "bytes": 25600,
+      "sha256": "954becb6979b9095b0663f37979bf020ef902fc8eadf3219ddb2d7051fdb81df"
+    },
+    "experimental/OniSim/managed/OniSim.Host/bin/Release/net10.0/OniSim.Host.dll": {
+      "bytes": 12800,
+      "sha256": "a62608ad976f94452342f00dfbdb71bd48425dbee9b1ae906da1d73857ac00bf"
+    }
+  }
+}

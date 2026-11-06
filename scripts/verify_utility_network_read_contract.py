@@ -12,7 +12,7 @@ def main() -> None:
         assert forbidden not in text, forbidden
     for required in ("IsCompletedUtilityPath", "BuildingComplete", "ReferenceEquals", "TryExpectedConnectionBits", "is_physical_building: true"):
         assert required in text, required
-    for name in ("BuildPlanningNativeUtilityPath.cs", "BuildPlanningActionPlacement.cs"):
+    for name in ("BuildPlanningActionPlacement.cs",):
         caller = (BUILD / name).read_text(encoding="utf-8")
         assert "ValidateCompletedUtilityPathNetwork" in caller
         assert '"networkConnected"' in caller and '"requiresVerification"' in caller

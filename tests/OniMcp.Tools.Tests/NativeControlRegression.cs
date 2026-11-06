@@ -6,7 +6,7 @@ using OniMcp.Core;
 using OniMcp.Tools;
 using UnityEngine;
 
-internal static class NativeControlRegression
+internal static partial class NativeControlRegression
 {
     private static int checks;
 
@@ -19,6 +19,7 @@ internal static class NativeControlRegression
         RunCase("#313 medical assignment", CheckMedicalAssignment, failures);
         RunCase("#308 native bionic slots", CheckBionicSlots, failures);
         RunCase("#321 tree filters", CheckTreeFilters, failures);
+        RunCase("#321 native category rows", CheckTreeCategories, failures);
         RunCase("#321 flat filters", CheckFlatFilters, failures);
         if (failures.Count > 0)
             throw new InvalidOperationException(string.Join(Environment.NewLine, failures));
@@ -212,109 +213,6 @@ internal static class NativeControlRegression
         Check(normalSlot.assignable == hat, "ordinary equipment does not require a bionic monitor slot");
     }
 
-    private static void CheckTreeFilters()
-    {
-        var tree = AddTree(40);
-        foreach (string domain in new[] { "storage", "filter" })
-        {
-            foreach (string mode in new[] { "replace", "add" })
-            {
-                foreach (string invalid in new[] { "TypoTag", "UndiscoveredOre", "Water", "ForbiddenOre", "Solid" })
-                {
-                    var before = Snapshot(tree);
-                    var request = FilterArgs(40, domain, mode, "Dirt", invalid);
-                    Check(StorageTools.ControlStorageSystem().Handler(request).IsError,
-                        domain + " " + mode + " rejects non-selectable tag " + invalid);
-                    CheckUnchanged(tree, before, domain + " invalid tag " + invalid);
-                }
-            }
-            var badModeBefore = Snapshot(tree);
-            Check(StorageTools.ControlStorageSystem().Handler(FilterArgs(40, domain, "typo", "Dirt")).IsError,
-                domain + " rejects unknown mode");
-            CheckUnchanged(tree, badModeBefore, domain + " unknown mode");
-            JObject response = Success(StorageTools.ControlStorageSystem().Handler(FilterArgs(40, domain, "replace", "Dirt", "SandStone")));
-            Check(tree.GetTags().SetEquals(new[] { new Tag("Dirt"), new Tag("SandStone") }),
-                domain + " accepts discovered leaves in the target storage category");
-            Check(tree.GetFilterStorage().items.Count == 1, domain + " accepted existing content stays stored");
-            if (domain == "storage")
-                Check(((JArray)response["acceptedTags"]).Values<string>().Contains("SandStone"),
-                    "storage response reflects the successfully updated filter");
-            tree.Selected.Add(new Tag("OldInvalidSavedTag"));
-            Success(StorageTools.ControlStorageSystem().Handler(FilterArgs(40, domain, "remove", "OldInvalidSavedTag")));
-            Check(!tree.Selected.Contains(new Tag("OldInvalidSavedTag")) && tree.Selected.Contains(new Tag("Dirt")),
-                domain + " can remove an old invalid selection without losing valid selections");
-        }
-
-        JObject options = Success(FilterTools.ControlFilter().Handler(new JObject
-        {
-            ["action"] = "list", ["includeOptions"] = true, ["kind"] = "tree"
-        }));
-        var offered = options["filters"][0]["tree"]["options"].Select(tag => (string)tag["tag"]).ToList();
-        Check(new HashSet<string>(offered).SetEquals(new[] { "Dirt", "SandStone" }),
-            "read-side options use the same discovered/category/forbidden eligibility as writes");
-
-        var firstStorage = tree.GetComponent<Storage>();
-        var alternate = new Storage();
-        alternate.storageFilters.Add(new Tag("Liquid"));
-        tree.FilterStorage = alternate;
-        Check(StorageTools.ControlStorageSystem().Handler(FilterArgs(40, "storage", "replace", "Dirt")).IsError,
-            "validation uses native GetFilterStorage rather than first component");
-        Success(StorageTools.ControlStorageSystem().Handler(FilterArgs(40, "filter", "replace", "Water")));
-        Check(tree.Selected.SetEquals(new[] { new Tag("Water") }) && firstStorage.items.Count == 1,
-            "alternate native filter storage supplies its own selectable category");
-        DiscoveredResources.Instance = null;
-        var beforeMissing = Snapshot(tree);
-        Check(StorageTools.ControlStorageSystem().Handler(FilterArgs(40, "filter", "add", "Water")).IsError,
-            "unavailable discovery state cannot authorize adding a tag");
-        CheckUnchanged(tree, beforeMissing, "missing discovery state");
-        Success(StorageTools.ControlStorageSystem().Handler(FilterArgs(40, "filter", "clear")));
-        Check(tree.Selected.Count == 0, "clear remains available with unavailable discovery state");
-    }
-
-    private static void CheckFlatFilters()
-    {
-        var tree = AddTree(50);
-        var flat = new FlatTagFilterable();
-        flat.tagOptions.AddRange(new[] { new Tag("Dirt"), new Tag("Algae") });
-        flat.selectedTags.Add(new Tag("Dirt"));
-        tree.gameObject.Add(flat);
-        DiscoveredResources.Instance = null;
-        foreach (string domain in new[] { "storage", "filter" })
-        {
-            var before = Snapshot(tree);
-            int selectCalls = flat.SelectCalls;
-            Check(StorageTools.ControlStorageSystem().Handler(FilterArgs(50, domain, "replace", "NoOption")).IsError,
-                domain + " flat rejects tags outside tagOptions");
-            CheckUnchanged(tree, before, domain + " invalid flat option");
-            Check(flat.SelectCalls == selectCalls && flat.selectedTags.SequenceEqual(new[] { new Tag("Dirt") }),
-                domain + " invalid flat option causes no SelectTag calls");
-        }
-        foreach (string domain in new[] { "storage", "filter" })
-        {
-            Success(StorageTools.ControlStorageSystem().Handler(FilterArgs(50, domain, "add", "Algae")));
-            Check(tree.GetFilterStorage().MassStored() == 42 && tree.GetFilterStorage().items.Count == 1,
-                domain + " flat add never temporarily removes accepted Dirt or ejects its contents");
-            Success(StorageTools.ControlStorageSystem().Handler(FilterArgs(50, domain, "replace", "Dirt", "Algae")));
-            Check(tree.GetFilterStorage().MassStored() == 42 && tree.GetFilterStorage().items.Count == 1,
-                domain + " identical flat replace preserves existing contents");
-        }
-        // A replacement must add the new selection before removing the old one.
-        // This also preserves a newly accepted item already present in storage.
-        flat.selectedTags.Remove(new Tag("Algae"));
-        tree.Selected.Remove(new Tag("Algae"));
-        tree.GetFilterStorage().items.Add(AddObject(151, "Algae").Add(new PrimaryElement { Mass = 43 }));
-        Success(StorageTools.ControlStorageSystem().Handler(FilterArgs(50, "filter", "replace", "Algae")));
-        Check(flat.selectedTags.SequenceEqual(new[] { new Tag("Algae") })
-            && tree.Selected.SetEquals(flat.selectedTags), "valid flat options still use native SelectTag and synchronize tree selection");
-        Check(tree.GetFilterStorage().MassStored() == 43
-            && tree.GetFilterStorage().items.Single().GetComponent<KPrefabID>().PrefabTag == new Tag("Algae"),
-            "flat replace preserves accepted Algae while dropping only deselected Dirt");
-        Success(StorageTools.ControlStorageSystem().Handler(FilterArgs(50, "storage", "add", "Dirt")));
-        Check(tree.Selected.SetEquals(new[] { new Tag("Dirt"), new Tag("Algae") })
-            && new HashSet<Tag>(flat.selectedTags).SetEquals(tree.Selected), "storage route also keeps flat and tree selections synchronized");
-        Check(tree.GetFilterStorage().MassStored() == 43, "flat add preserves existing accepted Algae");
-    }
-
     private static JObject CommandArgs(int id, string command) => new JObject
     {
         ["domain"] = "command", ["action"] = "force_action", ["commandAction"] = command,
@@ -377,6 +275,8 @@ internal static class NativeControlRegression
             new Tag("Dirt"), new Tag("SandStone"), new Tag("ForbiddenOre")
         };
         DiscoveredResources.Instance.Categories[new Tag("Liquid")] = new HashSet<Tag> { new Tag("Water") };
+        DiscoveredResources.Instance.Discovered.UnionWith(new[]
+        { new Tag("Solid"), new Tag("Liquid"), new Tag("Dirt"), new Tag("SandStone"), new Tag("ForbiddenOre"), new Tag("Water") });
         return tree;
     }
 

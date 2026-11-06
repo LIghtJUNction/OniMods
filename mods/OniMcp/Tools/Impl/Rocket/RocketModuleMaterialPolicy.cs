@@ -7,7 +7,8 @@ namespace OniMcp.Tools
     internal static class RocketModuleMaterialPolicy
     {
         internal static Dictionary<string, object> Resolve(BuildingDef def, string requested,
-            Func<Tag, float> availableAmount, bool allowInsufficient, out IList<Tag> materials)
+            Func<Tag, bool> isDiscovered, Func<Tag, float> availableAmount,
+            bool allowInsufficient, out IList<Tag> materials)
         {
             materials = string.IsNullOrWhiteSpace(requested)
                 ? def.DefaultElements()
@@ -15,6 +16,8 @@ namespace OniMcp.Tools
             var ingredients = def.CraftRecipe?.Ingredients;
             if (ingredients == null || materials == null || materials.Count != ingredients.Count)
                 return Failure("invalid_material_count", "materials must contain exactly one tag per recipe slot");
+            if (isDiscovered == null)
+                return Failure("material_discovery_unavailable", "material discovery information is not available");
 
             var required = new Dictionary<Tag, double>();
             for (int slot = 0; slot < ingredients.Count; slot++)
@@ -31,6 +34,14 @@ namespace OniMcp.Tools
                 }
                 if (float.IsNaN(ingredient.amount) || float.IsInfinity(ingredient.amount) || ingredient.amount < 0)
                     return Failure("invalid_material_requirement", "recipe material requirement must be finite and nonnegative");
+                // The native selector hides undiscovered materials independently of its stock setting.
+                if (!isDiscovered(material))
+                {
+                    var error = Failure("undiscovered_material", "material has not been discovered");
+                    error["slot"] = slot;
+                    error["material"] = material.Name;
+                    return error;
+                }
                 double previous;
                 required.TryGetValue(material, out previous);
                 required[material] = previous + ingredient.amount;

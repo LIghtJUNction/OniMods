@@ -44,7 +44,7 @@ namespace OniMcp.Tools
                 return ReadToolResource(uri, resource.ToolName, arguments, resource.Info.MimeType);
             }
 
-            return ReadDynamicResource(uri);
+            return ReadDynamicResource(uri, parsed);
         }
 
 
@@ -440,12 +440,8 @@ namespace OniMcp.Tools
             return templates;
         }
 
-        private static ReadResourceResult ReadDynamicResource(string uri)
+        private static ReadResourceResult ReadDynamicResource(string uri, Uri parsed)
         {
-            Uri parsed;
-            if (!Uri.TryCreate(uri, UriKind.Absolute, out parsed) || parsed.Scheme != "oni")
-                return null;
-
             ReadResourceResult result;
             result = ReadWorldAndColonyResourceRoutes(uri, parsed);
             if (result != null)

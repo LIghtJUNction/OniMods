@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "native_sha256": "9a04afbda3e1fe694bdef81633c459af1b73d4ce479e7592d45cc21bddd39b8f",
+  "baseline_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "correctness": {
+    "1": {
+      "passed": true,
+      "cases": 227,
+      "publications": 9103,
+      "report_sha256": "b8f7bb24f8b98e42693c659044ad8ba25faa403bb458e01a171d6b62d85b97e1"
+    },
+    "4": {
+      "passed": true,
+      "cases": 227,
+      "publications": 9103,
+      "report_sha256": "b7911cce041ee11aabba3ad294ce421d73c3564153a7726a65e6c68a273fe973"
+    }
+  },
+  "release_unit_tests": 31,
+  "compiler_change": "inline(always) outer disease helper, inline inner field helper; no unsafe indexing or numerical change",
+  "static_pressure_call_elimination_verified": true,
+  "native_performance_measured": true,
+  "native_performance_gate_passed": false,
+  "performance_status": "Not adopted. Germ-flow target passes, thermal CPU median +3.15% exceeds the original 3% other-scene limit. Dispersion does not establish a code regression; acceptance gate stays failed. No game performance or runtime claim.",
+  "performance_failure_sha256": "7430e87e11184cf8f7dca2f34d0bc06b4b65d8eec20013bd61baab0d67496be2",
+  "runtime_acceptance": false,
+  "canonical_source_adopted": false,
+  "production_package_promoted": false,
+  "performance": {
+    "schema": 1,
+    "complete": true,
+    "passed_predeclared_native_gates": false,
+    "gates": {
+      "germ_flow_cpu_reduction_at_least_5_percent": true,
+      "no_other_scene_cpu_regression_above_3_percent": false,
+      "no_peak_rss_increase_above_3_percent": true
+    },
+    "scope": "96x96 native frame fixtures, not whole-game FPS",
+    "native_sha256": "9a04afbda3e1fe694bdef81633c459af1b73d4ce479e7592d45cc21bddd39b8f",
+    "baseline_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+    "samples": 96,
+    "final_publications_match_official": true,
+    "major_faults": 0,
+    "raw_report_sha256": "8aef807a7d26236fb45d730b29007624f49f74a4bf5638fee926d003e060f1bb",
+    "endpoint_cpu_frequency_khz_range": [
+      1384014,
+      2700088
+    ],
+    "scenes": {
+      "fluid": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.498620651,
+            "minimum": 0.472484214,
+            "maximum": 0.563931379
+          },
+          "candidate": {
+            "median": 0.46327516249999995,
+            "minimum": 0.444117659,
+            "maximum": 0.5454772910000001
+          },
+          "median_speedup": 1.076294805681494
+        },
+        "cpu_change_percent": -7.088653153276658,
+        "peak_rss_kib": {
+          "baseline": 33344.0,
+          "candidate": 33332.0
+        },
+        "peak_rss_change_percent": -0.035988483685223116
+      },
+      "thermal": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.20384958,
+            "minimum": 0.19509498900000002,
+            "maximum": 0.26889556700000006
+          },
+          "candidate": {
+            "median": 0.210280908,
+            "minimum": 0.195416328,
+            "maximum": 0.282986894
+          },
+          "median_speedup": 0.969415540092684
+        },
+        "cpu_change_percent": 3.154938067569235,
+        "peak_rss_kib": {
+          "baseline": 33344.0,
+          "candidate": 33298.0
+        },
+        "peak_rss_change_percent": -0.1379558541266812
+      },
+      "sealed": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.4785809195,
+            "minimum": 0.458067064,
+            "maximum": 0.5305182829999999
+          },
+          "candidate": {
+            "median": 0.4509496125,
+            "minimum": 0.413662877,
+            "maximum": 0.561388279
+          },
+          "median_speedup": 1.0612736018261908
+        },
+        "cpu_change_percent": -5.773591439639503,
+        "peak_rss_kib": {
+          "baseline": 33234.0,
+          "candidate": 33236.0
+        },
+        "peak_rss_change_percent": 0.006017933441659906
+      },
+      "germ_flow": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.652117708,
+            "minimum": 0.618106966,
+            "maximum": 0.78074983
+          },
+          "candidate": {
+            "median": 0.612029283,
+            "minimum": 0.594364431,
+            "maximum": 0.718408262
+          },
+          "median_speedup": 1.065500828332098
+        },
+        "cpu_change_percent": -6.1474216246862,
+        "peak_rss_kib": {
+          "baseline": 33330.0,
+          "candidate": 33328.0
+        },
+        "peak_rss_change_percent": -0.006000600060007688
+      },
+      "mixed_germs": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.7023892774999999,
+            "minimum": 0.6784594979999999,
+            "maximum": 0.836234087
+          },
+          "candidate": {
+            "median": 0.624292901,
+            "minimum": 0.621692011,
+            "maximum": 0.7800340240000001
+          },
+          "median_speedup": 1.1250957305055114
+        },
+        "cpu_change_percent": -11.118674359319202,
+        "peak_rss_kib": {
+          "baseline": 33288.0,
+          "candidate": 33280.0
+        },
+        "peak_rss_change_percent": -0.02403268445085871
+      },
+      "vacuum": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.43338200649999997,
+            "minimum": 0.41909706199999996,
+            "maximum": 0.49822774000000003
+          },
+          "candidate": {
+            "median": 0.389965832,
+            "minimum": 0.38212415499999997,
+            "maximum": 0.43050664600000005
+          },
+          "median_speedup": 1.1113332782960328
+        },
+        "cpu_change_percent": -10.017991944480965,
+        "peak_rss_kib": {
+          "baseline": 33252.0,
+          "candidate": 33214.0
+        },
+        "peak_rss_change_percent": -0.1142788403705075
+      }
+    },
+    "decision": "Not adopted. Germ-flow target passes, thermal CPU median +3.15% exceeds the original 3% other-scene limit. Dispersion does not establish a code regression; acceptance gate stays failed. No game performance or runtime claim."
+  }
+}

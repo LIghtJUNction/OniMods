@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "overlay_menu_audit", "build_menu_audit", "ui_hotkey_surface_audit" },
                 Tags = new List<string> { "coverage", "audit", "ui", "overlay", "build-menu", "hotkey", "tools", "resources" },
                 Description = "审计 ONI 覆盖层菜单、建造分类入口和安全 UI hotkey surface 与 MCP 工具/资源覆盖映射",
                 Parameters = new Dictionary<string, McpToolParameter>

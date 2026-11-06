@@ -55,6 +55,8 @@ internal static class Program
     {
         var options = OniMcpOptions.Current;
         Check(!options.AuthEnabled && options.Host == "localhost", "New installs must keep the existing defaults.");
+        Check(options.AutoDismissTutorialNotifications, "Tutorial notifications should be dismissed by default.");
+        Check(options.ToolTextFormat == "toon", "New installations should use TOON tool text by default.");
         Check(!string.IsNullOrEmpty(options.AuthToken), "New installs need a persistent token ready for opt-in.");
         Check(JObject.Parse(File.ReadAllText(OniMcpPaths.ConfigPath))["AuthToken"].Value<string>() == options.AuthToken,
             "The default token must be saved exactly once.");
@@ -137,6 +139,8 @@ internal static class Program
         File.WriteAllText(OniMcpPaths.ConfigPath, "{\"AuthEnabled\":true,\"AuthToken\":\" token \",\"Port\":99999}");
         var options = OniMcpOptions.Current;
         Check(options.AuthEnabled && options.AuthToken == "token", "Migration must retain opted-in authentication.");
+        Check(options.AutoDismissTutorialNotifications, "Configs without the new setting should inherit its enabled default.");
+        Check(options.ToolTextFormat == "toon", "Legacy configs should inherit the TOON text default.");
         Check(options.Port == 8788 && options.SecurityMigrationVersion == 1, "Migration and validation did not run.");
         OniMcpOptions.Reload();
         Check(OniMcpOptions.Current.AuthEnabled && OniMcpOptions.Current.AuthToken == "token", "Migrated settings did not persist.");

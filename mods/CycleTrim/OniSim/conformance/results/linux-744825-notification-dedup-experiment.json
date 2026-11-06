@@ -1,0 +1,483 @@
+{
+  "schema": 1,
+  "scope": "96x96 native frame fixtures; not whole-game FPS or multiplayer acceptance",
+  "libraries": {
+    "baseline": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+    "candidate": "9ac4bae959769a8d0f3ef8b8918d39c0edc12e03cc6af949d3e8c49b4350ede3"
+  },
+  "candidate_source_sha256": {
+    "events.rs": "625d9168009d31876175567ef9cd735718f19a89aa4944ab098533a7157ede38",
+    "frames_engine.rs": "a3d3fb0f7c26054adcc18d1b6c58d8f8d8c668ac37966ce163b1f4b2876ba09f"
+  },
+  "production_adopted": false,
+  "game_runtime_validated": false,
+  "decision": "Native timing and differential conformance passed. Superseded pending fixed-capacity V2: repeated dimension growth can exceed advertised tracker capacity with amortized try_reserve. Not adopted or game-validated.",
+  "predeclared_criteria": {
+    "scope": "Early suppression of repeated valid-cell substance notifications within one unpublished batch; final canonicalization unchanged",
+    "memory": "One bit per public cell per output buffer; at most 2 MiB, fall back to ordinary append if reservation fails or exceeds cap",
+    "acceptance": "At least 15 percent CPU-time reduction and 10 percent process peak-RSS reduction in vacuum scene; no other scene median CPU regression above 3 percent in eight alternating pairs; all official conformance required.",
+    "invariant": "A marked valid cell always has at least one retained substance record; append/merge and final sort/dedup preserve membership; reset clears marks. Other event queues and invalid indices retain original behavior."
+  },
+  "unit_tests": {
+    "passed": 30,
+    "rust": "1.99.1",
+    "profile": "release"
+  },
+  "proof": {
+    "receipt_sha256": "cd5019f11696e32702eb4ee7bcda783d4e3337f358c1caede50b40de7484a3d9",
+    "checked_theorems": 13,
+    "notification_membership_theorems": 5,
+    "scope": "Abstract retained membership; no compiled Rust, allocation, aliasing or full-engine proof",
+    "receipt": "linux-744825-notification-membership-proof.json"
+  },
+  "timing_runs": [
+    {
+      "receipt_sha256": "39b8f9e3aa021ce00f8b64903c88f369b402c6d64edabd2cd17ec376581a73f7",
+      "cpu_affinity": [
+        16
+      ],
+      "workers": 1,
+      "samples_per_role_per_scene": 8,
+      "final_publications_match_official": true,
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b",
+        "benchmark_frames.py": "46d141b12ceec77cab7ae8678a5dfd4c9187d239b9393a2e7468e0e0ef9ec5bb"
+      },
+      "scenes": {
+        "fluid": {
+          "baseline": {
+            "median": 0.47222841649999997,
+            "minimum": 0.463401835,
+            "maximum": 0.810510074
+          },
+          "candidate": {
+            "median": 0.4669074955,
+            "minimum": 0.456082114,
+            "maximum": 0.7815864030000002
+          },
+          "median_speedup": 1.0113960924835912
+        },
+        "thermal": {
+          "baseline": {
+            "median": 0.203604405,
+            "minimum": 0.18914179199999998,
+            "maximum": 0.267554627
+          },
+          "candidate": {
+            "median": 0.20820234799999998,
+            "minimum": 0.19167201600000003,
+            "maximum": 0.277364025
+          },
+          "median_speedup": 0.9779159887284269
+        },
+        "sealed": {
+          "baseline": {
+            "median": 0.47210070049999997,
+            "minimum": 0.44853781600000003,
+            "maximum": 0.7015836249999999
+          },
+          "candidate": {
+            "median": 0.463709314,
+            "minimum": 0.444666706,
+            "maximum": 0.6035087140000001
+          },
+          "median_speedup": 1.0180962215910978
+        },
+        "germ_flow": {
+          "baseline": {
+            "median": 0.63723354,
+            "minimum": 0.6086491350000001,
+            "maximum": 0.966455257
+          },
+          "candidate": {
+            "median": 0.63475189,
+            "minimum": 0.599933488,
+            "maximum": 0.7739564750000001
+          },
+          "median_speedup": 1.0039096378271517
+        },
+        "mixed_germs": {
+          "baseline": {
+            "median": 0.673051227,
+            "minimum": 0.637301759,
+            "maximum": 0.849584647
+          },
+          "candidate": {
+            "median": 0.682343693,
+            "minimum": 0.645767476,
+            "maximum": 0.8035525
+          },
+          "median_speedup": 0.986381546286235
+        },
+        "vacuum": {
+          "baseline": {
+            "median": 0.5785447945,
+            "minimum": 0.5483121230000001,
+            "maximum": 0.630829101
+          },
+          "candidate": {
+            "median": 0.4241992515,
+            "minimum": 0.406655872,
+            "maximum": 0.48818694700000004
+          },
+          "median_speedup": 1.3638515213174534
+        }
+      },
+      "major_faults": 0,
+      "memory_limitation": "Legacy getrusage peak inherited from pre-exec parent masks child differences; not evidence of equal memory use"
+    },
+    {
+      "receipt_sha256": "b91b251c0ad91182429f5f6d1ce35ee1ec3ee39781fc76ca4c91724b1fe06a90",
+      "cpu_affinity": [
+        16
+      ],
+      "workers": 1,
+      "samples_per_role_per_scene": 8,
+      "final_publications_match_official": true,
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b",
+        "benchmark_frames.py": "64ac86dd8c0f49a0a4011c36a493b792e6b37b978276557247246826bb4732d0"
+      },
+      "scenes": {
+        "fluid": {
+          "baseline": {
+            "median": 0.4680039805,
+            "minimum": 0.45975260399999995,
+            "maximum": 0.476513012
+          },
+          "candidate": {
+            "median": 0.46197494000000006,
+            "minimum": 0.44835064299999994,
+            "maximum": 0.482864518
+          },
+          "median_speedup": 1.0130505791071698
+        },
+        "thermal": {
+          "baseline": {
+            "median": 0.190964968,
+            "minimum": 0.18236681899999999,
+            "maximum": 0.217916519
+          },
+          "candidate": {
+            "median": 0.1891663555,
+            "minimum": 0.18310585899999998,
+            "maximum": 0.20244348499999998
+          },
+          "median_speedup": 1.0095080993406358
+        },
+        "sealed": {
+          "baseline": {
+            "median": 0.44797591700000006,
+            "minimum": 0.43969758899999994,
+            "maximum": 0.47967880000000007
+          },
+          "candidate": {
+            "median": 0.4370264585,
+            "minimum": 0.42364119599999994,
+            "maximum": 0.460608121
+          },
+          "median_speedup": 1.0250544521665388
+        },
+        "germ_flow": {
+          "baseline": {
+            "median": 0.6117826239999999,
+            "minimum": 0.599380764,
+            "maximum": 0.6368026689999999
+          },
+          "candidate": {
+            "median": 0.6116712765,
+            "minimum": 0.59625775,
+            "maximum": 0.6367747619999999
+          },
+          "median_speedup": 1.000182038137604
+        },
+        "mixed_germs": {
+          "baseline": {
+            "median": 0.6470334759999999,
+            "minimum": 0.63305479,
+            "maximum": 0.678732342
+          },
+          "candidate": {
+            "median": 0.647444322,
+            "minimum": 0.6164284449999999,
+            "maximum": 0.6678472930000001
+          },
+          "median_speedup": 0.9993654342372933
+        },
+        "vacuum": {
+          "baseline": {
+            "median": 0.5747968699999999,
+            "minimum": 0.5586908509999999,
+            "maximum": 0.605666056
+          },
+          "candidate": {
+            "median": 0.417725395,
+            "minimum": 0.39585381000000003,
+            "maximum": 0.45468781900000005
+          },
+          "median_speedup": 1.376016102636039
+        }
+      },
+      "major_faults": 0,
+      "vacuum_memory_kib": {
+        "vm_hwm_kib": {
+          "baseline": {
+            "median": 43594.0,
+            "minimum": 43516,
+            "maximum": 43676
+          },
+          "candidate": {
+            "median": 32258.0,
+            "minimum": 32140,
+            "maximum": 32340
+          }
+        },
+        "rss_kib": {
+          "baseline": {
+            "median": 43594.0,
+            "minimum": 43516,
+            "maximum": 43676
+          },
+          "candidate": {
+            "median": 32258.0,
+            "minimum": 32140,
+            "maximum": 32340
+          }
+        },
+        "pss_kib": {
+          "baseline": {
+            "median": 34846.5,
+            "minimum": 33875,
+            "maximum": 34884
+          },
+          "candidate": {
+            "median": 23454.5,
+            "minimum": 22110,
+            "maximum": 23571
+          }
+        },
+        "swap_kib": {
+          "baseline": {
+            "median": 0.0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "candidate": {
+            "median": 0.0,
+            "minimum": 0,
+            "maximum": 0
+          }
+        }
+      },
+      "vacuum_peak_rss_reduction_percent": 26.00357847410194,
+      "vacuum_cpu_reduction_percent": 27.32643185757082
+    }
+  ],
+  "memory_measurement_correction": {
+    "scope": "Measurement correction before the second timing run; candidate and acceptance thresholds unchanged",
+    "reproduction": {
+      "parent_allocated_mib": 80,
+      "child_ru_maxrss_kib": 93968,
+      "child_proc_vm_hwm_kib": 12260
+    },
+    "initial_result": "Vacuum CPU median decreased 26.68 percent; both roles reported median ru_maxrss 47384 KiB. Legacy ru_maxrss cannot establish current-exec memory savings.",
+    "correction": "Read /proc/self/status VmHWM and /proc/self/smaps_rollup before converting final native snapshots. Preserve original max_rss_kib and all first-run samples.",
+    "criteria": "At least 15 percent less vacuum CPU and 10 percent lower current-exec RSS peak; no other scene CPU median regression above 3 percent; official conformance before adoption."
+  },
+  "conformance": [
+    {
+      "workers": 1,
+      "passed": true,
+      "cases": 224,
+      "publications_compared": 8440,
+      "message_ids_exercised": [
+        -1993857213,
+        -1914877797,
+        -1899123924,
+        -1853671274,
+        -1836204275,
+        -1822987624,
+        -1683118492,
+        -1586724321,
+        -1524118282,
+        -1505895314,
+        -1387601379,
+        -1348791658,
+        -1338718217,
+        -1252920804,
+        -1167792921,
+        -1019841536,
+        -931446686,
+        -930289787,
+        -912908555,
+        -898773121,
+        -895846551,
+        -781641650,
+        -775326397,
+        -752676153,
+        -727746602,
+        -704259919,
+        -672538170,
+        -605421515,
+        -563057023,
+        -505471181,
+        -503965465,
+        -469311643,
+        -457308393,
+        -456116629,
+        -449718014,
+        -435115907,
+        -409964931,
+        -374911358,
+        348345681,
+        377112707,
+        403589164,
+        468135926,
+        697100730,
+        797274363,
+        818320644,
+        825301935,
+        833038498,
+        894417742,
+        1020555667,
+        1078620451,
+        1092408308,
+        1108437482,
+        1154135737,
+        1445724082,
+        1486783027,
+        1575539738,
+        1593243982,
+        1727657959,
+        1739021608,
+        1818001569,
+        2024405073,
+        2062421945
+      ],
+      "summary_sha256": "c491b0a88feb263514d2f3fde3336e4ae1bfe8e6346ba2f558edce50d4ad3dd3",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    {
+      "workers": 4,
+      "passed": true,
+      "cases": 224,
+      "publications_compared": 8440,
+      "message_ids_exercised": [
+        -1993857213,
+        -1914877797,
+        -1899123924,
+        -1853671274,
+        -1836204275,
+        -1822987624,
+        -1683118492,
+        -1586724321,
+        -1524118282,
+        -1505895314,
+        -1387601379,
+        -1348791658,
+        -1338718217,
+        -1252920804,
+        -1167792921,
+        -1019841536,
+        -931446686,
+        -930289787,
+        -912908555,
+        -898773121,
+        -895846551,
+        -781641650,
+        -775326397,
+        -752676153,
+        -727746602,
+        -704259919,
+        -672538170,
+        -605421515,
+        -563057023,
+        -505471181,
+        -503965465,
+        -469311643,
+        -457308393,
+        -456116629,
+        -449718014,
+        -435115907,
+        -409964931,
+        -374911358,
+        348345681,
+        377112707,
+        403589164,
+        468135926,
+        697100730,
+        797274363,
+        818320644,
+        825301935,
+        833038498,
+        894417742,
+        1020555667,
+        1078620451,
+        1092408308,
+        1108437482,
+        1154135737,
+        1445724082,
+        1486783027,
+        1575539738,
+        1593243982,
+        1727657959,
+        1739021608,
+        1818001569,
+        2024405073,
+        2062421945
+      ],
+      "summary_sha256": "b1a6fcdcdda2cf148121c092e3f698a4814f4c4a2d0f6f645f7d69c4f3e92ee2",
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    }
+  ],
+  "proposal_patch_sha256": "69f338f1a70400ae4b5cb34158c498610acbc53a0f8d16214f5db8685014ec84",
+  "limits": [
+    "CPU frequency and host load uncontrolled",
+    "Peak RSS includes Python fixture orchestration and native allocations",
+    "Eight alternating pairs are fixture measurements; realistic colony savings remain unmeasured",
+    "No multi-instance game acceptance or package update in this experiment"
+  ],
+  "capacity_review": {
+    "confirmed_defect": true,
+    "cause": "Vec::try_reserve amortizes growth; clearing length retains capacity, and subsequent larger dimensions can double allocation beyond the 262144-u64 budget.",
+    "regression_before_fix_failed": true,
+    "before_log_sha256": "a71a1a23e2e15218f534e21a999929d67119d979c604c676bad461f139e8f22d",
+    "repair": "Use try_reserve_exact and test growing dimensions; V2 requires fresh conformance, timing and headless/graphics acceptance."
+  }
+}

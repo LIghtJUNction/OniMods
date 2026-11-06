@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "toolbar_surfaces_audit", "sandbox_toolbar_audit" },
                 Tags = new List<string> { "coverage", "audit", "toolbar", "tool-menu", "orders", "sandbox", "tools", "resources" },
                 Description = "审计 ONI 主工具栏和沙盒工具栏按钮与 MCP 工具/资源覆盖映射",
                 Parameters = new Dictionary<string, McpToolParameter>

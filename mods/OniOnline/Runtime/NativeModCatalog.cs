@@ -1,0 +1,308 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using OniOnline.Sdk;
+
+namespace OniOnline.Runtime
+{
+    // ContentRoot stays inside this adapter and must never be serialized into a manifest or error.
+    internal sealed class NativeModRecord
+    {
+        internal string Id, Version, ContentRoot;
+        internal IReadOnlyCollection<string> ContentExtensions = null;
+        internal ModDistributionSource Source;
+        internal ulong WorkshopId;
+        internal ModSyncPolicy Policy;
+        internal bool ConfiguredEnabled, Loaded, Installed;
+    }
+
+    internal sealed class NativeModCatalogIssue
+    {
+        internal string Id { get; }
+        internal string Code { get; }
+        internal bool Blocking { get; }
+        internal NativeModCatalogIssue(string id, string code, bool blocking = true)
+        { Id = id ?? ""; Code = code; Blocking = blocking; }
+    }
+
+    internal sealed class NativeModCatalogSnapshot
+    {
+        internal ModManifest InstalledManifest { get; }
+        internal ModManifest ActivationManifest { get; }
+        internal ModManifest ActiveManifest { get; }
+        internal IReadOnlyList<NativeModCatalogIssue> Issues { get; }
+        internal bool IsComplete { get { return Issues.All(issue => !issue.Blocking); } }
+        // Disk identity can be reviewed before a restart supplies loaded-code
+        // evidence. Room admission must continue to require IsComplete.
+        internal bool CanReviewInstalled { get { return Issues.All(issue => !issue.Blocking ||
+            issue.Code == "native_mod_restart_required" || issue.Code == "native_mod_not_loaded"); } }
+        internal NativeModCatalogSnapshot(ModManifest installed, IList<NativeModCatalogIssue> issues, ModManifest activation = null)
+        {
+            InstalledManifest = installed;
+            ActivationManifest = activation ?? installed;
+            ActiveManifest = new ModManifest(installed.Entries.Where(e => e.Enabled));
+            Issues = new ReadOnlyCollection<NativeModCatalogIssue>(new List<NativeModCatalogIssue>(issues));
+        }
+    }
+
+    // CaptureLoadedSnapshot belongs at OnAllModsLoaded, before any package update can replace disk content.
+    // A fresh file digest can invalidate loaded evidence; it cannot establish that Unity reloaded assemblies.
+    internal sealed class NativeModCatalog
+    {
+        private readonly Func<IEnumerable<NativeModRecord>> source;
+        private readonly Func<long> loaderEpoch;
+        private readonly Func<bool> loaderIdle;
+        private readonly Dictionary<string, ModManifestEntry> loaded = new Dictionary<string, ModManifestEntry>(StringComparer.Ordinal);
+        private bool captured;
+
+        internal NativeModCatalog(Func<IEnumerable<NativeModRecord>> source, Func<long> loaderEpoch, Func<bool> loaderIdle)
+        {
+            this.source = source ?? throw new ArgumentNullException(nameof(source));
+            this.loaderEpoch = loaderEpoch ?? throw new ArgumentNullException(nameof(loaderEpoch));
+            this.loaderIdle = loaderIdle ?? throw new ArgumentNullException(nameof(loaderIdle));
+        }
+
+        internal NativeModCatalogSnapshot CaptureLoadedSnapshot()
+        {
+            if (captured) throw new InvalidOperationException("loaded_mod_snapshot_already_captured");
+            var snapshot = Capture(true, null);
+            if (!snapshot.IsComplete) return snapshot;
+            foreach (var entry in snapshot.InstalledManifest.Entries)
+                if (entry.Enabled) loaded.Add(entry.Id, entry);
+            captured = true;
+            return snapshot;
+        }
+
+        internal NativeModCatalogSnapshot CaptureInstalled(ModManifest desired = null)
+        {
+            if (!captured)
+                return new NativeModCatalogSnapshot(new ModManifest(new ModManifestEntry[0]),
+                    new[] { new NativeModCatalogIssue("", "loaded_mod_snapshot_missing") });
+            return Capture(false, desired);
+        }
+
+        private NativeModCatalogSnapshot Capture(bool initial, ModManifest desired)
+        {
+            var issues = new List<NativeModCatalogIssue>();
+            var entries = new List<ModManifestEntry>();
+            var activationEntries = desired == null ? null : new List<ModManifestEntry>();
+            var requiredIds = desired == null ? null : new HashSet<string>(desired.Entries
+                .Where(entry => entry.Enabled && entry.Policy == ModSyncPolicy.Required).Select(entry => entry.Id), StringComparer.Ordinal);
+            long epoch;
+            List<NativeModRecord> records;
+            try
+            {
+                if (!loaderIdle()) return Failure("native_mod_loader_busy");
+                epoch = loaderEpoch();
+                records = source().Take(ModManifest.MaximumEntries + 1).ToList();
+            }
+            catch { return Failure("native_mod_catalog_failed"); }
+            if (records.Count > ModManifest.MaximumEntries) return Failure("native_mod_catalog_budget");
+            foreach (var record in SelectRecords(records, desired, issues))
+            {
+                if (record == null) { issues.Add(new NativeModCatalogIssue("", "invalid_native_mod_record")); continue; }
+                if (!record.Installed)
+                {
+                    if (record.ConfiguredEnabled) issues.Add(new NativeModCatalogIssue(record.Id, "native_mod_not_installed"));
+                    continue;
+                }
+                if (!NativeModContentDigest.TryCompute(record.ContentRoot, record.ContentExtensions,
+                    () => loaderIdle() && loaderEpoch() == epoch, out var digest, out var error))
+                { issues.Add(new NativeModCatalogIssue(record.Id, error)); continue; }
+                try
+                {
+                    var content = new ModManifestEntry(record.Id, record.Version, record.Policy, record.Source,
+                        record.WorkshopId, digest, false);
+                    bool enabled = record.Loaded;
+                    if (!initial)
+                        enabled = enabled && loaded.TryGetValue(record.Id, out var original) && SteamModContentSync.ContentsMatch(original, content);
+                    if (record.Loaded && !enabled || record.ConfiguredEnabled != enabled)
+                        issues.Add(new NativeModCatalogIssue(record.Id, record.Loaded ? "native_mod_restart_required" : "native_mod_not_loaded"));
+                    var entry = new ModManifestEntry(content.Id, content.Version, content.Policy, content.Source,
+                        content.WorkshopId, content.ContentSha256, enabled);
+                    entries.Add(entry);
+                    // Required packages still need verified loaded code. Extra
+                    // packages must be disabled even when a disk update has
+                    // invalidated their old loaded-content identity.
+                    bool activationEnabled = enabled || requiredIds != null && !requiredIds.Contains(content.Id) &&
+                        (record.ConfiguredEnabled || record.Loaded);
+                    activationEntries?.Add(activationEnabled == enabled ? entry : new ModManifestEntry(content.Id,
+                        content.Version, content.Policy, content.Source, content.WorkshopId, content.ContentSha256, activationEnabled));
+                }
+                catch (ArgumentException) { issues.Add(new NativeModCatalogIssue(record.Id, "invalid_native_mod_metadata")); }
+            }
+            try
+            {
+                if (!loaderIdle() || loaderEpoch() != epoch) return Failure("native_mod_catalog_changed");
+            }
+            catch { return Failure("native_mod_catalog_failed"); }
+            return new NativeModCatalogSnapshot(new ModManifest(entries), issues,
+                activationEntries == null ? null : new ModManifest(activationEntries));
+        }
+
+        private static NativeModCatalogSnapshot Failure(string code)
+        { return new NativeModCatalogSnapshot(new ModManifest(new ModManifestEntry[0]), new[] { new NativeModCatalogIssue("", code) }); }
+
+        private static IEnumerable<NativeModRecord> SelectRecords(List<NativeModRecord> records, ModManifest desired,
+            IList<NativeModCatalogIssue> issues)
+        {
+            foreach (var group in records.GroupBy(record => record?.Id, StringComparer.Ordinal))
+            {
+                var candidates = group.ToList();
+                if (candidates.Count == 1) { yield return candidates[0]; continue; }
+                var active = candidates.Where(record => record != null && (record.Loaded || record.ConfiguredEnabled)).ToList();
+                if (active.Count > 1)
+                { issues.Add(new NativeModCatalogIssue(group.Key, "native_mod_identity_ambiguous")); continue; }
+                if (active.Count == 1)
+                {
+                    issues.Add(new NativeModCatalogIssue(group.Key, "inactive_native_mod_copies_ignored", false));
+                    yield return active[0]; continue;
+                }
+                var expected = desired?.Entries.FirstOrDefault(entry => entry.Id == group.Key);
+                if (expected != null)
+                {
+                    candidates = candidates.Where(record => record != null && record.Source == expected.Source &&
+                        record.WorkshopId == expected.WorkshopId && record.Version == expected.Version).ToList();
+                    if (candidates.Count == 1)
+                    {
+                        issues.Add(new NativeModCatalogIssue(group.Key, "inactive_native_mod_copy_selected", false));
+                        yield return candidates[0]; continue;
+                    }
+                }
+                // No loaded identity is hidden. An ambiguous disabled copy remains Missing in a sync plan.
+                issues.Add(new NativeModCatalogIssue(group.Key, "inactive_native_mod_copies_ambiguous", false));
+            }
+        }
+    }
+
+    internal sealed class NativeModActivationChange
+    {
+        internal string Id { get { return Content?.Id; } }
+        internal ModManifestEntry Content { get; }
+        internal bool Enable { get; }
+        internal NativeModActivationChange(ModManifestEntry content, bool enable) { Content = content; Enable = enable; }
+    }
+
+    internal sealed class NativeModActivationTarget
+    {
+        internal string Id { get; }
+        internal bool Installed, Enabled, Loaded;
+        private readonly string version;
+        private readonly ModDistributionSource source;
+        private readonly ulong workshopId;
+        internal Action<bool> SetEnabled { get; }
+        internal NativeModActivationTarget(NativeModRecord record, Action<bool> setEnabled)
+        {
+            Id = record.Id; version = record.Version; source = record.Source; workshopId = record.WorkshopId;
+            Installed = record.Installed; Enabled = record.ConfiguredEnabled; Loaded = record.Loaded; SetEnabled = setEnabled;
+        }
+
+        // Content digests are checked by TryCreate immediately before this
+        // adapter. Match the same native package that the catalog selected.
+        internal bool Matches(ModManifestEntry content)
+        { return content != null && Id == content.Id && version == content.Version && source == content.Source && workshopId == content.WorkshopId; }
+    }
+
+    internal static class NativeModActivationOperations
+    {
+        internal static bool TryApplyReviewed(IReadOnlyList<NativeModActivationTarget> targets,
+            NativeModActivationRequest request, Func<bool> save, out string error)
+        {
+            if (TryApply(targets, request?.Changes, save, out error)) return true;
+            // Every target was checked before TryApply reports a no-op. A
+            // reviewed loaded-state mismatch can need only a native restart.
+            if (error != "native_mod_activation_noop") return false;
+            error = "";
+            return true;
+        }
+
+        internal static bool TryApply(IReadOnlyList<NativeModActivationTarget> targets,
+            IReadOnlyList<NativeModActivationChange> changes, Func<bool> save, out string error)
+        {
+            error = "";
+            if (targets == null || changes == null || changes.Count == 0 || save == null)
+            { error = "native_mod_activation_invalid"; return false; }
+            var groups = targets.Where(target => target != null && target.Id != null)
+                .GroupBy(target => target.Id, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+            var requested = new Dictionary<string, NativeModActivationChange>(StringComparer.Ordinal);
+            foreach (var change in changes)
+            {
+                if (change == null || string.IsNullOrEmpty(change.Id))
+                { error = "native_mod_activation_invalid"; return false; }
+                if (requested.TryGetValue(change.Id, out var previous) && (previous.Enable != change.Enable ||
+                    !SteamModContentSync.ContentsMatch(previous.Content, change.Content) || previous.Content.Policy != change.Content.Policy))
+                { error = "native_mod_activation_conflict"; return false; }
+                requested[change.Id] = change;
+            }
+            var assignments = new List<System.Tuple<NativeModActivationTarget, bool>>();
+            foreach (var change in requested)
+            {
+                if (!groups.TryGetValue(change.Key, out var group))
+                { error = "native_mod_not_found"; return false; }
+                var active = group.Where(candidate => candidate.Enabled || candidate.Loaded).ToList();
+                NativeModActivationTarget selected;
+                if (active.Count == 1) selected = active[0];
+                else if (active.Count == 0)
+                {
+                    var matching = group.Where(candidate => candidate.Matches(change.Value.Content)).ToList();
+                    if (matching.Count == 0) { error = "native_mod_content_not_ready"; return false; }
+                    if (matching.Count != 1) { error = "native_mod_identity_ambiguous"; return false; }
+                    selected = matching[0];
+                }
+                else { error = "native_mod_identity_ambiguous"; return false; }
+                if (!selected.Matches(change.Value.Content))
+                { error = "native_mod_content_not_ready"; return false; }
+                if (!selected.Installed || selected.SetEnabled == null)
+                { error = "native_mod_not_installed"; return false; }
+                if (selected.Enabled != change.Value.Enable) assignments.Add(System.Tuple.Create(selected, selected.Enabled));
+            }
+            if (assignments.Count == 0) { error = "native_mod_activation_noop"; return false; }
+            try
+            {
+                foreach (var assignment in assignments)
+                {
+                    var desired = requested[assignment.Item1.Id].Enable;
+                    assignment.Item1.SetEnabled(desired);
+                    assignment.Item1.Enabled = desired;
+                }
+                if (save()) return true;
+                error = "native_mod_settings_write_failed";
+            }
+            catch (Exception) { error = "native_mod_settings_write_failed"; }
+            foreach (var assignment in assignments)
+                try { assignment.Item1.SetEnabled(assignment.Item2); assignment.Item1.Enabled = assignment.Item2; } catch (Exception) { }
+            try { save(); } catch (Exception) { }
+            return false;
+        }
+    }
+
+    // Preparation is reversible and side-effect free. Actual changes belong to an idle native-menu adapter.
+    internal sealed class NativeModActivationRequest
+    {
+        internal string PlanFingerprint { get; }
+        internal IReadOnlyList<NativeModActivationChange> Changes { get; }
+        private NativeModActivationRequest(ModSyncPlan plan, IList<NativeModActivationChange> changes)
+        { PlanFingerprint = plan.Fingerprint; Changes = new ReadOnlyCollection<NativeModActivationChange>(changes); }
+
+        internal static bool TryCreate(ModSyncPlan plan, string confirmedFingerprint, ModManifest currentRequired,
+            ModManifest currentInstalled, out NativeModActivationRequest request, out string error)
+        {
+            request = null; error = "";
+            if (plan == null || plan.Fingerprint != confirmedFingerprint || !plan.IsCurrent(currentRequired, currentInstalled))
+            { error = "mod_sync_plan_changed"; return false; }
+            var changes = new List<NativeModActivationChange>();
+            foreach (var change in plan.Changes)
+            {
+                if (change.Kind == ModSyncChangeKind.Unexpected)
+                    changes.Add(new NativeModActivationChange(change.Installed, false));
+                else if (change.Installed != null && !change.Installed.Enabled && SteamModContentSync.ContentsMatch(change.Expected, change.Installed))
+                    changes.Add(new NativeModActivationChange(change.Installed, true));
+                else { error = "native_mod_content_not_ready"; return false; }
+            }
+            request = new NativeModActivationRequest(plan, changes);
+            return true;
+        }
+    }
+}

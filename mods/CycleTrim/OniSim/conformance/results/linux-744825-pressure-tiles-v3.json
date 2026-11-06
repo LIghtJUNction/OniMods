@@ -1,0 +1,433 @@
+{
+  "schema": 1,
+  "scope": "Asynchronous owned-tile pressure executor candidate; not production or game acceptance",
+  "production_adopted": false,
+  "candidate_pressure_parallel": true,
+  "candidate_sha256": "2c2bd90bb8d54e172c203eb16f91863e06bf332338f27c754954a384db341c46",
+  "baseline_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "source_sha256": {
+    "float_env.rs": "b53b853ec29d1f0817353a5668f0ddadfd699a353f9d14f543743db6ef168ea2",
+    "simulation_step_fluid.rs": "b66e2a942780e5cb3d0df56132cf1edae6a950ad511a5e696299ae777cefb35a",
+    "pressure_tiles.rs": "c9a73b1c68e86b800d5c33eb9586ec49c643b70b40ded142b506f0c1887495d9",
+    "pressure_tiles_tests.rs": "c2476f90fd4429be74f48c3ecc942be268158f3fe20fb076ba57cf5cff97f96c",
+    "pressure_dag.rs": "1716d45ad1911bd352576ca5ea43dfe72c17713d151fff9fb030547c6a481c9c"
+  },
+  "unit_tests": {
+    "passed": 36,
+    "float_control_combinations": 16,
+    "serial_parallel_scenarios": 576,
+    "log_sha256": "10aabfdb48bbdf726f3803ea6f227044402cb36024fa2fbbbc904d24318f85f6",
+    "additional_cases": [
+      "Dependency ready order and unique completion",
+      "65536-node cap and overflow fallback",
+      "Kernel panic drains patch ownership and permits clean reuse",
+      "Nested same-pool entry falls back before world changes"
+    ]
+  },
+  "scratch": {
+    "retained_bytes_per_worker": 151272,
+    "max_graph_nodes": 65536,
+    "graph_capacity_test_upper_bound_bytes": 614400,
+    "scope": "Bounded patch/object/vector storage, excludes allocator overhead, channels and threads/stacks"
+  },
+  "criteria": {
+    "scope": "Fixed 32-wave by 16-row owned pressure tiles; original displacement loops and serial fallback unchanged. Prototype, not adopted.",
+    "memory_bound": "One fixed 63x17 public scratch world, bounded tasks/touched/events per worker; at most eight reusable scratch instances. No full-world clones.",
+    "acceptance_before_measurement": "All official one/four-worker conformance; eight alternating full-frame pairs with four workers: at least 5 percent lower median wall time in both fluid and germ_flow, no scene wall regression above 3 percent, CPU-time increase at most 10 percent per scene and peak RSS increase at most 2 MiB per scene. No game FPS claim.",
+    "fallback": "Original order with one worker, insufficient work, unmasked FP exceptions, cache reentrancy or preflight allocation failure.",
+    "measurement_affinity": [
+      16,
+      17,
+      18,
+      19
+    ],
+    "changes": "Bounded asynchronous grid-DAG executor; calling simulation thread owns gather/commit. Scoped pool workers receive owned patches over bounded channels. Completed tiles immediately unlock successors; no global per-level barrier.",
+    "graph_limit": "At most 65536 tile nodes; fallible metadata preflight or serial fallback before world writes. Worker buffers remain at most eight."
+  },
+  "proof": {
+    "schema": 1,
+    "checked_at_utc": "2026-10-20T18:23:30.779539+00:00",
+    "lean_version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+    "passed": true,
+    "modules": [
+      {
+        "source": "DiseaseMerge.lean",
+        "theorems": [
+          "DiseaseMerge.optimized_eq_general",
+          "DiseaseMerge.same_species_nonpositive_clears",
+          "DiseaseMerge.same_species_positive_preserves_metadata"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "PressureSchedule.lean",
+        "theorems": [
+          "PressureSchedule.disjoint_tasks_commute",
+          "PressureSchedule.distinct_same_wave_disjoint",
+          "PressureSchedule.earlier_inversion_disjoint",
+          "PressureSchedule.insert_membership",
+          "PressureSchedule.insertion_preserves_execution",
+          "PressureSchedule.ordered_overlap_increases_wave",
+          "PressureSchedule.same_wave_overlap_equal",
+          "PressureSchedule.sort_membership",
+          "PressureSchedule.view_after_disjoint",
+          "PressureSchedule.wave_sort_preserves_execution"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "NotificationMembership.lean",
+        "theorems": [
+          "NotificationMembership.clear_sound",
+          "NotificationMembership.fold_membership",
+          "NotificationMembership.raw_append_sound",
+          "NotificationMembership.record_membership",
+          "NotificationMembership.record_sound"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "PressureEnumeration.lean",
+        "theorems": [
+          "PressureEnumeration.emitted_coordinate_reconstructs_unique_wave",
+          "PressureEnumeration.every_cell_is_in_window",
+          "PressureEnumeration.every_cell_wave_is_visited",
+          "PressureEnumeration.window_exact"
+        ],
+        "axioms": [
+          "Classical.choice",
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "PressureTiles.lean",
+        "theorems": [
+          "PressureTiles.distinct_overlapping_tiles_increase_level",
+          "PressureTiles.overlapping_order_monotone_tiles",
+          "PressureTiles.same_level_overlapping_tasks_share_tile",
+          "PressureTiles.tile_footprint_width_bound"
+        ],
+        "axioms": [
+          "Classical.choice",
+          "Quot.sound",
+          "propext"
+        ]
+      }
+    ],
+    "source_sha256": {
+      "DiseaseMerge.lean": "c27d5f175fc06d849bcf7ca921a081a95d150935e22db7ef85e54881216894cd",
+      "PressureSchedule.lean": "b7c15596b5c469934a610b64de79c86c29b9adae520de488b4d271da15fe6e66",
+      "NotificationMembership.lean": "e4d0fae297a3e59953695e6223cbae95e4af362e455580004b7545528a6637e4",
+      "PressureEnumeration.lean": "8de5e01675f32b64e57905701e6c0a3e35d1930413844ebe725ed2265124db01",
+      "PressureTiles.lean": "59b6541198b31b09c5f6a8223a69932edb6a378755dad3bcfb0e6aeec150aa5c",
+      "verify.py": "5f7eaef1a358d9bed9be47b338eff9d0dd5daffcbcf3d2b478d96a477f4fb3fd"
+    },
+    "checked_theorems": 26,
+    "production_pressure_parallel_implemented": false,
+    "scope": "Pure disease-state equivalence, wave-sort execution equivalence for local transitions, finite coordinate enumeration, fixed skew-tile dependencies and notification membership models; not a Rust ownership, event-merge, machine-overflow, complete tiled-executor or game-equivalence proof"
+  },
+  "performance": {
+    "completed": true,
+    "accepted": false,
+    "samples_per_scene_per_role": 8,
+    "affinity": [
+      16,
+      17,
+      18,
+      19
+    ],
+    "workers": 4,
+    "major_faults": 0,
+    "all_final_publications_match_reference": true,
+    "harness_sha256": {
+      "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+      "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+      "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+      "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+      "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+      "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+      "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+      "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+      "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b",
+      "benchmark_frames.py": "96a0b6bc338eb6a024dcaec3b6ee354717dbcbede34e6b2daf421ade87a30e87"
+    },
+    "summary_sha256": "e03adead0a82ea290659173a36331df3d22cb85b8697efc866c38018a8c2831f",
+    "scenes": {
+      "fluid": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.5286526935,
+            "minimum": 0.507346955,
+            "maximum": 0.645722409
+          },
+          "candidate": {
+            "median": 0.9889527065,
+            "minimum": 0.9265359620000001,
+            "maximum": 1.0476297149999998
+          },
+          "candidate_change_percent": 87.07039965171388
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.5031178110002656,
+            "minimum": 0.48108536200015806,
+            "maximum": 0.6069875169923762
+          },
+          "candidate": {
+            "median": 0.747975995996967,
+            "minimum": 0.703910292009823,
+            "maximum": 0.7912491180031793
+          },
+          "candidate_change_percent": 48.66816074547042
+        },
+        "vm_hwm_kib": {
+          "baseline": 33098.0,
+          "candidate": 33984.0
+        },
+        "pss_kib": {
+          "baseline": 23305.0,
+          "candidate": 24194.0
+        }
+      },
+      "thermal": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.23509016250000003,
+            "minimum": 0.21932759500000001,
+            "maximum": 0.31334769100000004
+          },
+          "candidate": {
+            "median": 0.27622997400000004,
+            "minimum": 0.260568968,
+            "maximum": 0.40646309999999997
+          },
+          "candidate_change_percent": 17.499588695039513
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.21408409250580007,
+            "minimum": 0.19923978399310727,
+            "maximum": 0.2804400299937697
+          },
+          "candidate": {
+            "median": 0.2285663225047756,
+            "minimum": 0.21601809300773311,
+            "maximum": 0.32657279299746733
+          },
+          "candidate_change_percent": 6.76473895349472
+        },
+        "vm_hwm_kib": {
+          "baseline": 32636.0,
+          "candidate": 33302.0
+        },
+        "pss_kib": {
+          "baseline": 22836.5,
+          "candidate": 23486.0
+        }
+      },
+      "sealed": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.5046967745,
+            "minimum": 0.471260672,
+            "maximum": 0.7227874809999999
+          },
+          "candidate": {
+            "median": 0.839747661,
+            "minimum": 0.7953806660000001,
+            "maximum": 0.878499125
+          },
+          "candidate_change_percent": 66.38657178499562
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.47856049949041335,
+            "minimum": 0.4465523389953887,
+            "maximum": 0.6776398729998618
+          },
+          "candidate": {
+            "median": 0.6397581104974961,
+            "minimum": 0.6051680770033272,
+            "maximum": 0.6663826190051623
+          },
+          "candidate_change_percent": 33.68385213128353
+        },
+        "vm_hwm_kib": {
+          "baseline": 33108.0,
+          "candidate": 34038.0
+        },
+        "pss_kib": {
+          "baseline": 23379.0,
+          "candidate": 24321.5
+        }
+      },
+      "germ_flow": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.7032562505,
+            "minimum": 0.667375227,
+            "maximum": 0.7415779159999999
+          },
+          "candidate": {
+            "median": 1.0932212159999999,
+            "minimum": 1.0423925070000002,
+            "maximum": 1.169820306
+          },
+          "candidate_change_percent": 55.451333027291724
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.6359526944943354,
+            "minimum": 0.6041560979938367,
+            "maximum": 0.6668430999998236
+          },
+          "candidate": {
+            "median": 0.8278245424953639,
+            "minimum": 0.7902153390023159,
+            "maximum": 0.8829622079938417
+          },
+          "candidate_change_percent": 30.17077365378431
+        },
+        "vm_hwm_kib": {
+          "baseline": 33346.0,
+          "candidate": 34246.0
+        },
+        "pss_kib": {
+          "baseline": 23562.5,
+          "candidate": 24461.0
+        }
+      },
+      "mixed_germs": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.7516384919999999,
+            "minimum": 0.712442687,
+            "maximum": 0.770372048
+          },
+          "candidate": {
+            "median": 1.1312029455000001,
+            "minimum": 1.095685219,
+            "maximum": 1.222402426
+          },
+          "candidate_change_percent": 50.498272446111
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.6819055040032254,
+            "minimum": 0.6481826340022963,
+            "maximum": 0.698399993008934
+          },
+          "candidate": {
+            "median": 0.8476747515087482,
+            "minimum": 0.8209742680046475,
+            "maximum": 0.9146252579957945
+          },
+          "candidate_change_percent": 24.309709561273564
+        },
+        "vm_hwm_kib": {
+          "baseline": 33396.0,
+          "candidate": 34342.0
+        },
+        "pss_kib": {
+          "baseline": 23659.5,
+          "candidate": 24596.5
+        }
+      },
+      "vacuum": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.634400018,
+            "minimum": 0.590961002,
+            "maximum": 0.746921164
+          },
+          "candidate": {
+            "median": 0.9400103005,
+            "minimum": 0.891823695,
+            "maximum": 1.0660139350000002
+          },
+          "candidate_change_percent": 48.17312008651298
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.6070172845065827,
+            "minimum": 0.565288095996948,
+            "maximum": 0.7094991699996172
+          },
+          "candidate": {
+            "median": 0.697686542502197,
+            "minimum": 0.6657760630041594,
+            "maximum": 0.7872709700022824
+          },
+          "candidate_change_percent": 14.936849462089906
+        },
+        "vm_hwm_kib": {
+          "baseline": 43888.0,
+          "candidate": 38002.0
+        },
+        "pss_kib": {
+          "baseline": 34122.5,
+          "candidate": 28284.0
+        }
+      }
+    }
+  },
+  "proposal_patch_sha256": "40996199e2b3dfdfd80cab50a9fbf6116b7db6749d8d15990e70c16c05a11a57",
+  "conformance": [
+    {
+      "workers_requested": 1,
+      "cases": 224,
+      "publications_compared": 8440,
+      "passed": true,
+      "libraries": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "2c2bd90bb8d54e172c203eb16f91863e06bf332338f27c754954a384db341c46"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "summary_sha256": "eb1d04d3e15c7bfd877f531531fed7780d16e8af7b4b9d5b4d4beba11041fb15"
+    },
+    {
+      "workers_requested": 4,
+      "cases": 224,
+      "publications_compared": 8440,
+      "passed": true,
+      "libraries": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "2c2bd90bb8d54e172c203eb16f91863e06bf332338f27c754954a384db341c46"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "summary_sha256": "74c1607461b179c64eda4ec64be463c9834323065cec7af93944a1f0011fe4ef"
+    }
+  ],
+  "game_runtime_validated": false,
+  "decision": "Rejected: complete measured CPU and wall regressions violate predeclared gates. Test the full-CellSOA-copy premise before another scheduling fix."
+}

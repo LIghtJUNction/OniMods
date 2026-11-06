@@ -2,6 +2,11 @@
 
 [b]Lightweight performance optimization mod for Oxygen Not Included[/b]
 
+[h2]v0.4.0 OniSim core[/h2]
+The Rust simulation core is bundled and enabled by default on Windows x64, macOS x64 and Linux x64. Disable it in CycleTrim Mod settings and restart ONI to use the original core; CYCLETRIM_ONISIM_ENABLE=0 also disables it before startup. Unknown game profiles refuse takeover and keep the original core.
+
+Windows/macOS have CI native builds and host loader tests; ONI runtime acceptance on those platforms remains unverified. Earlier Linux runtime receipts apply only to their recorded binaries and saves.
+
 [h2]v0.3.1 fix[/h2]
 CycleTrim previously treated any non-null `currentChore` as active work. ONI keeps a non-null `IdleChore` while a duplicant is idle, so the mod also throttled pickup and chore refreshes for idle duplicants.
 

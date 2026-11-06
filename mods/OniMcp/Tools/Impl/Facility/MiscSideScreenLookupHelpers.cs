@@ -37,27 +37,6 @@ namespace OniMcp.Tools
             });
         }
 
-        private static GameObject FindTarget(JObject args, Func<GameObject, bool> predicate)
-        {
-            int? id = ToolUtil.GetInt(args, "id");
-            int? x = ToolUtil.GetInt(args, "x");
-            int? y = ToolUtil.GetInt(args, "y");
-            int? cell = x.HasValue && y.HasValue ? Grid.XYToCell(x.Value, y.Value) : (int?)null;
-            int worldId = cell.HasValue ? ToolUtil.ResolveWorldId(args) : (ToolUtil.GetInt(args, "worldId") ?? -1);
-            foreach (var building in Components.BuildingCompletes.Items)
-            {
-                var go = building?.gameObject;
-                if (go == null || !ToolUtil.GameObjectMatchesWorld(go, worldId) || !predicate(go))
-                    continue;
-                var kpid = go.GetComponent<KPrefabID>();
-                if (id.HasValue && kpid != null && kpid.InstanceID == id.Value)
-                    return go;
-                if (cell.HasValue && Grid.PosToCell(go) == cell.Value)
-                    return go;
-            }
-            return null;
-        }
-
         private static bool MatchesTarget(GameObject go, Dictionary<string, int> rect, int worldId)
         {
             if (go == null || !ToolUtil.GameObjectMatchesWorld(go, worldId))
@@ -199,13 +178,6 @@ namespace OniMcp.Tools
                    && Grid.CellColumn(cell) <= rect["x2"]
                    && Grid.CellRow(cell) >= rect["y1"]
                    && Grid.CellRow(cell) <= rect["y2"];
-        }
-
-        private static string Truncate(string value, int maxLength)
-        {
-            if (value == null || value.Length <= maxLength)
-                return value;
-            return value.Substring(0, maxLength);
         }
 
         private static CallToolResult JsonResult(Dictionary<string, object> payload)

@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "variant": "phase-barriers-v1",
+  "complete": true,
+  "passed_predeclared_native_gates": false,
+  "gates": {
+    "germ_flow_cpu_reduction_at_least_5_percent": false,
+    "thermal_cpu_reduction_at_least_5_percent": true,
+    "no_other_scene_cpu_regression_above_3_percent": true,
+    "no_peak_rss_increase_above_3_percent": true
+  },
+  "native_sha256": "098d360d0a2a4fdaf3ffbfb3aa5b15ecb2f510f15c18e7824213e57a66a2a98b",
+  "baseline_sha256": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+  "samples": 96,
+  "final_publications_match_official": true,
+  "major_faults": 0,
+  "scenes": {
+    "fluid": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.48643086950000003,
+          "minimum": 0.469015323,
+          "maximum": 0.639327958
+        },
+        "candidate": {
+          "median": 0.4683409545,
+          "minimum": 0.449416374,
+          "maximum": 0.571466536
+        },
+        "median_speedup": 1.0386255244735383
+      },
+      "cpu_change_percent": -3.718907687457118,
+      "peak_rss_kib": {
+        "baseline": 33328.0,
+        "candidate": 33334.0
+      },
+      "peak_rss_change_percent": 0.018002880460876725
+    },
+    "thermal": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.2132827985,
+          "minimum": 0.18959767599999997,
+          "maximum": 0.249961263
+        },
+        "candidate": {
+          "median": 0.1995677295,
+          "minimum": 0.185968623,
+          "maximum": 0.263414594
+        },
+        "median_speedup": 1.0687238815331614
+      },
+      "cpu_change_percent": -6.430461854615999,
+      "peak_rss_kib": {
+        "baseline": 33328.0,
+        "candidate": 33342.0
+      },
+      "peak_rss_change_percent": 0.04200672107537162
+    },
+    "sealed": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.45399877349999995,
+          "minimum": 0.44264009499999996,
+          "maximum": 0.710575892
+        },
+        "candidate": {
+          "median": 0.436127696,
+          "minimum": 0.42121156299999996,
+          "maximum": 0.48938469399999995
+        },
+        "median_speedup": 1.0409767085739035
+      },
+      "cpu_change_percent": -3.936371317091225,
+      "peak_rss_kib": {
+        "baseline": 33256.0,
+        "candidate": 33278.0
+      },
+      "peak_rss_change_percent": 0.06615347606446775
+    },
+    "germ_flow": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.63519332,
+          "minimum": 0.6250715179999999,
+          "maximum": 0.7345471299999999
+        },
+        "candidate": {
+          "median": 0.603866351,
+          "minimum": 0.585269189,
+          "maximum": 0.6375254749999999
+        },
+        "median_speedup": 1.051877321775129
+      },
+      "cpu_change_percent": -4.931879478833312,
+      "peak_rss_kib": {
+        "baseline": 33308.0,
+        "candidate": 33368.0
+      },
+      "peak_rss_change_percent": 0.18013690404707905
+    },
+    "mixed_germs": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.6656449,
+          "minimum": 0.647272376,
+          "maximum": 0.6947440920000001
+        },
+        "candidate": {
+          "median": 0.6136173865,
+          "minimum": 0.599491954,
+          "maximum": 0.65381257
+        },
+        "median_speedup": 1.0847881996902968
+      },
+      "cpu_change_percent": -7.816106380443988,
+      "peak_rss_kib": {
+        "baseline": 33276.0,
+        "candidate": 33300.0
+      },
+      "peak_rss_change_percent": 0.07212405337180261
+    },
+    "vacuum": {
+      "cpu_seconds": {
+        "baseline": {
+          "median": 0.427208075,
+          "minimum": 0.411370308,
+          "maximum": 0.44144362699999995
+        },
+        "candidate": {
+          "median": 0.38402383149999997,
+          "minimum": 0.374185392,
+          "maximum": 0.39602206100000004
+        },
+        "median_speedup": 1.1124519885427997
+      },
+      "cpu_change_percent": -10.108480159229217,
+      "peak_rss_kib": {
+        "baseline": 33264.0,
+        "candidate": 33296.0
+      },
+      "peak_rss_change_percent": 0.09620009620010528
+    }
+  },
+  "raw_report_sha256": "a09d39a3270eebe2ae90fa6c49aa2622592e3d311a59a07da82d83a4b95f614f",
+  "decision": "Not adopted: germ-flow CPU median reduction below predeclared 5%; other gates pass. Scope is native fixtures, not whole-game FPS or memory."
+}

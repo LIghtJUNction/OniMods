@@ -60,6 +60,7 @@ internal static partial class WorkshopMetadataReader
     private static string? ReadLocalizedDescription(string contentFolder, string fileName)
     {
         var path = Path.Combine(contentFolder, fileName);
+        if (!File.Exists(path)) path = Path.Combine(contentFolder, "docs", fileName);
         return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
     }
 

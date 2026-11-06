@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "special_side_building_control" },
                 Tags = new List<string> { "buildings", "special", "side-screen", "art", "ranching", "rocket", "monument" },
                 Description = "特殊建筑侧屏聚合工具：kind=artable/creature_lure/gene_shuffler/missile_launcher/monument_part，action 使用对应旧 control 的动作。",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -74,7 +73,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "artwork_selection_control", "artable_facade_control" },
                 Tags = new List<string> { "buildings", "art", "decor", "facade", "side-screen" },
                 Description = "艺术建筑外观聚合工具：action=list 查询可选阶段；action=set_stage 设置阶段或 clear=true 重做",
                 Parameters = ArtableControlParams(),
@@ -99,7 +97,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "artwork_selection_list", "artable_facades_list" },
                 Tags = new List<string> { "buildings", "art", "decor", "facade", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=artable action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -149,7 +146,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "artwork_selection_set", "artable_facade_set" },
                 Tags = new List<string> { "buildings", "art", "decor", "facade", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=artable action=set_stage",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

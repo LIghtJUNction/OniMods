@@ -11,6 +11,10 @@
              Link="CandidateCreationJournal.cs" />
     <Compile Include="../../tools/OniMods.SteamPublisher/LegacyCandidatePlan.cs"
              Link="LegacyCandidatePlan.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/FirstPublicationPlan.cs"
+             Link="FirstPublicationPlan.cs" />
+    <Compile Include="../../tools/OniMods.SteamPublisher/FirstPublicationJournal.cs"
+             Link="FirstPublicationJournal.cs" />
     <Compile Include="../../tools/OniMods.SteamPublisher/LegacyPackage.cs"
              Link="LegacyPackage.cs" />
     <Compile Include="../../tools/OniMods.SteamPublisher/WorkshopMetadata.cs"

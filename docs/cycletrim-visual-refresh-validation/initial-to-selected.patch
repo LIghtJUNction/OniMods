@@ -1,0 +1,332 @@
+--- a/mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs
++++ b/mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs
+@@ -22 +22,2 @@
+-        private static bool installed, enabled;
++        private static bool installed;
++        private static volatile bool enabled;
+@@ -24,0 +26,3 @@
++        private delegate void RenderMeshCall(ConduitFlowVisualizer instance,
++            float z, int renderLayer, float lerpPercent, bool triggerAudio);
++        private static RenderMeshCall renderMesh;
+@@ -31,10 +34,0 @@
+-        }
+-
+-        internal struct Invocation
+-        {
+-            internal State State;
+-            internal ConduitVisualSnapshot Snapshot;
+-            internal long Generation;
+-            internal int Frame;
+-            internal double Now;
+-            internal bool OriginalRequested, Eligible;
+@@ -116,4 +110,8 @@
+-                harmony.Patch(RenderMethod(),
+-                    prefix: Patch(nameof(BeforeRender), Priority.Last),
+-                    transpiler: Patch(nameof(MarkCompletedBuild), Priority.Last),
+-                    finalizer: Patch(nameof(AfterRender), Priority.Last));
++                var meshMethod = RenderMethod();
++                harmony.Patch(meshMethod,
++                    transpiler: Patch(nameof(MarkCompletedBuild), Priority.Last));
++                // Bind the live method entry, not a reverse-patched snapshot.
++                // Later patches must still run after sampling is disabled.
++                renderMesh = (RenderMeshCall)Delegate.CreateDelegate(typeof(RenderMeshCall), meshMethod);
++                harmony.Patch(RenderEntryMethod(),
++                    transpiler: Patch(nameof(DispatchRenderCall), Priority.Last));
+@@ -144,0 +143,6 @@
++        internal static MethodInfo RenderEntryMethod()
++        {
++            return AccessTools.DeclaredMethod(typeof(ConduitFlowVisualizer), "Render",
++                new[] { typeof(float), typeof(int), typeof(float), typeof(bool) });
++        }
++
+@@ -156,0 +161 @@
++            var entry = RenderEntryMethod();
+@@ -159,0 +165 @@
++                || entry == null || entry.IsStatic || entry.ReturnType != typeof(void)
+@@ -160,0 +167,2 @@
++                return false;
++            if (!TryGetRenderCallsite(PatchProcessor.GetOriginalInstructions(entry), out _))
+@@ -224,0 +233,63 @@
++        // Keep the outer animation clock and audio calls in their original
++        // positions. Only the one instance RenderMesh call becomes a dispatcher.
++        internal static IEnumerable<CodeInstruction> DispatchRenderCall(
++            IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
++        {
++            var code = new List<CodeInstruction>(instructions);
++            var previous = Harmony.GetPatchInfo(__originalMethod);
++            if ((previous != null && previous.Owners.Count != 0)
++                || !TryGetRenderCallsite(code, out var call))
++            {
++                // A late wrapper rebuild can add a prefix that changes what
++                // Render means. Leave its complete original call chain intact.
++                enabled = false;
++                return code;
++            }
++            code[call] = new CodeInstruction(code[call])
++            {
++                opcode = OpCodes.Call,
++                operand = AccessTools.DeclaredMethod(typeof(ConduitVisualRefreshPatch), nameof(Dispatch))
++            };
++            return code;
++        }
++
++        internal static bool TryGetRenderCallsite(List<CodeInstruction> code, out int call)
++        {
++            call = -1;
++            var target = RenderMethod();
++            for (var index = 0; index < code.Count; index++)
++            {
++                var instruction = code[index];
++                if (instruction.blocks.Count != 0 || instruction.opcode.OpCodeType == OpCodeType.Prefix)
++                    return false;
++                if (!instruction.Calls(target))
++                    continue;
++                if (call >= 0 || instruction.opcode != OpCodes.Call)
++                    return false;
++                call = index;
++            }
++            if (call < 0)
++                return false;
++
++            var cursor = call;
++            for (var argument = 4; argument >= 0; argument--)
++            {
++                while (--cursor >= 0 && code[cursor].opcode == OpCodes.Nop) { }
++                if (cursor < 0 || !LoadsArgument(code[cursor], argument))
++                    return false;
++                if (argument != 0 && code[cursor].labels.Count != 0)
++                    return false;
++            }
++            return true;
++        }
++
++        private static bool LoadsArgument(CodeInstruction instruction, int index)
++        {
++            if (instruction.opcode == OpCodes.Ldarg_0) return index == 0;
++            if (instruction.opcode == OpCodes.Ldarg_1) return index == 1;
++            if (instruction.opcode == OpCodes.Ldarg_2) return index == 2;
++            if (instruction.opcode == OpCodes.Ldarg_3) return index == 3;
++            return (instruction.opcode == OpCodes.Ldarg || instruction.opcode == OpCodes.Ldarg_S)
++                && Convert.ToInt32(instruction.operand) == index;
++        }
++
+@@ -306,7 +377,9 @@
+-        private static bool BeforeRender(ConduitFlowVisualizer __instance, float z,
+-            bool trigger_audio, bool __runOriginal, out Invocation __state)
+-        {
+-            __state = default(Invocation);
+-            if (!enabled || !__runOriginal || Thread.CurrentThread.ManagedThreadId != renderThread)
+-                return true;
+-            var state = states.GetValue(__instance, NewState);
++        private static void Dispatch(ConduitFlowVisualizer instance, float z,
++            int renderLayer, float lerpPercent, bool triggerAudio)
++        {
++            if (!enabled || Thread.CurrentThread.ManagedThreadId != renderThread)
++            {
++                renderMesh(instance, z, renderLayer, lerpPercent, triggerAudio);
++                return;
++            }
++            var state = states.GetValue(instance, NewState);
+@@ -314 +387,4 @@
+-                return true;
++            {
++                renderMesh(instance, z, renderLayer, lerpPercent, triggerAudio);
++                return;
++            }
+@@ -321 +397,2 @@
+-                return true;
++                renderMesh(instance, z, renderLayer, lerpPercent, triggerAudio);
++                return;
+@@ -325,8 +402,58 @@
+-            __state.State = state;
+-            __state.OriginalRequested = true;
+-            __state.Frame = Time.frameCount;
+-            __state.Now = Time.unscaledTimeAsDouble;
+-            __state.Generation = Volatile.Read(ref generation);
+-            if (trigger_audio || ConduitVisualSnapshot.Access.ShowContents(__instance)
+-                || !TryCapture(__instance, __state.Generation, state, out __state.Snapshot))
+-            {
++            try
++            {
++                var quality = CycleTrimPatchOptions.ConduitAnimation;
++                if (triggerAudio || quality == ConduitAnimationQuality.Full
++                    || ConduitVisualSnapshot.Access.ShowContents(instance))
++                {
++                    // These calls never reuse a mesh. Avoid collecting a large
++                    // snapshot while retaining invalidation and reentry handling.
++                    state.Gate.Invalidate();
++                    renderMesh(instance, z, renderLayer, lerpPercent, triggerAudio);
++                    return;
++                }
++
++                int frame = Time.frameCount;
++                double now = Time.unscaledTimeAsDouble;
++                long version = Volatile.Read(ref generation);
++                ConduitVisualSnapshot snapshot;
++                if (!TryCapture(instance, version, state, out snapshot)
++                    || !enabled || state.Disabled || version != Volatile.Read(ref generation))
++                {
++                    state.Gate.Invalidate();
++                    renderMesh(instance, z, renderLayer, lerpPercent, triggerAudio);
++                    return;
++                }
++                // Expired or invalidated meshes already require a rebuild. Only
++                // compare the previous inputs when reuse is still possible.
++                bool rebuild = state.Gate.ShouldRebuild(frame, now, quality, false);
++                if (!rebuild && !state.Snapshot.SameInputs(snapshot))
++                {
++                    state.Gate.Invalidate();
++                    rebuild = true;
++                }
++                if (!rebuild)
++                {
++                    // End would clear and upload again. A draw alone retains
++                    // this frame's depth while sampling only geometry/sprites.
++                    snapshot.Draw(z);
++                    return;
++                }
++
++                renderMesh(instance, z, renderLayer, lerpPercent, triggerAudio);
++                ConduitVisualSnapshot current;
++                if (enabled && state.Completed && !state.Disabled && version == Volatile.Read(ref generation)
++                    && TryCapture(instance, version, state, out current)
++                    && snapshot.SameInputs(current) && enabled && !state.Disabled
++                    && version == Volatile.Read(ref generation))
++                {
++                    state.Snapshot = snapshot;
++                    state.Gate.Complete(frame, now);
++                }
++                else
++                    state.Gate.Invalidate();
++            }
++            catch
++            {
++                // Includes partial cached draws. Propagate once; replaying the
++                // original method could duplicate a draw that already succeeded.
++                state.Disabled = true;
+@@ -334,17 +461,6 @@
+-                return true;
+-            }
+-            if (state.Disabled || __state.Generation != Volatile.Read(ref generation))
+-            {
+-                state.Gate.Invalidate();
+-                return true;
+-            }
+-            __state.Eligible = true;
+-            if (state.Gate.ShouldRebuild(__state.Frame, __state.Now,
+-                CycleTrimPatchOptions.ConduitAnimation, !state.Snapshot.SameInputs(__state.Snapshot)))
+-                return true;
+-
+-            __state.OriginalRequested = false;
+-            // End would clear and upload the mesh again. Drawing only retains
+-            // every frame's draw and current z while sampling geometry/sprites.
+-            __state.Snapshot.Draw(z);
+-            return false;
++                throw;
++            }
++            finally
++            {
++                state.InProgress = false;
++            }
+@@ -358,30 +473,0 @@
+-        }
+-
+-        private static Exception AfterRender(ConduitFlowVisualizer __instance,
+-            Exception __exception, Invocation __state)
+-        {
+-            var state = __state.State;
+-            if (state == null)
+-                return __exception;
+-            if (__exception != null)
+-            {
+-                state.Disabled = true;
+-                state.Gate.Invalidate();
+-            }
+-            else if (__state.OriginalRequested)
+-            {
+-                ConduitVisualSnapshot current;
+-                if (__state.Eligible && state.Completed && !state.Disabled
+-                    && __state.Generation == Volatile.Read(ref generation)
+-                    && TryCapture(__instance, __state.Generation, state, out current)
+-                    && __state.Snapshot.SameInputs(current) && !state.Disabled
+-                    && __state.Generation == Volatile.Read(ref generation))
+-                {
+-                    state.Snapshot = __state.Snapshot;
+-                    state.Gate.Complete(__state.Frame, __state.Now);
+-                }
+-                else
+-                    state.Gate.Invalidate();
+-            }
+-            state.InProgress = false;
+-            return __exception;
+--- a/mods/CycleTrim/Patches/ConduitVisualSnapshot.cs
++++ b/mods/CycleTrim/Patches/ConduitVisualSnapshot.cs
+@@ -49,34 +49,31 @@
+-            snapshot = new ConduitVisualSnapshot
+-            {
+-                generation = generation,
+-                world = cluster == null ? -1 : cluster.activeWorldId,
+-                width = Grid.WidthInCells,
+-                height = Grid.HeightInCells,
+-                minX = Math.Max(0, area.Min.x - 1),
+-                minY = Math.Max(0, area.Min.y - 1),
+-                maxX = Math.Min(Grid.WidthInCells - 1, area.Max.x + 1),
+-                maxY = Math.Min(Grid.HeightInCells - 1, area.Max.y + 1),
+-                layer = Access.Layer(instance),
+-                highlightedCell = Access.HighlightedCell(instance),
+-                highlightColour = Access.HighlightColour(instance),
+-                flow = Access.Flow(instance),
+-                tuning = tuning,
+-                style = style,
+-                size = tuning.size,
+-                sprites = tuning.spriteCount,
+-                framesPerSecond = tuning.framesPerSecond,
+-                background = tuning.backgroundTexture,
+-                foreground = tuning.foregroundTexture,
+-                tint = style.tint,
+-                insulatedTint = style.insulatedTint,
+-                radiantTint = style.radiantTint,
+-                massRange = style.overlayMassScaleRange,
+-                massValues = style.overlayMassScaleValues,
+-                gridOffset = Access.GridOffset(),
+-                movingHolder = moving,
+-                staticHolder = stationary,
+-                movingMesh = movingMesh,
+-                staticMesh = staticMesh,
+-                movingMaterial = movingMaterial,
+-                staticMaterial = staticMaterial
+-            };
++            snapshot.generation = generation;
++            snapshot.world = cluster == null ? -1 : cluster.activeWorldId;
++            snapshot.width = Grid.WidthInCells;
++            snapshot.height = Grid.HeightInCells;
++            snapshot.minX = Math.Max(0, area.Min.x - 1);
++            snapshot.minY = Math.Max(0, area.Min.y - 1);
++            snapshot.maxX = Math.Min(Grid.WidthInCells - 1, area.Max.x + 1);
++            snapshot.maxY = Math.Min(Grid.HeightInCells - 1, area.Max.y + 1);
++            snapshot.layer = Access.Layer(instance);
++            snapshot.highlightedCell = Access.HighlightedCell(instance);
++            snapshot.highlightColour = Access.HighlightColour(instance);
++            snapshot.flow = Access.Flow(instance);
++            snapshot.tuning = tuning;
++            snapshot.style = style;
++            snapshot.size = tuning.size;
++            snapshot.sprites = tuning.spriteCount;
++            snapshot.framesPerSecond = tuning.framesPerSecond;
++            snapshot.background = tuning.backgroundTexture;
++            snapshot.foreground = tuning.foregroundTexture;
++            snapshot.tint = style.tint;
++            snapshot.insulatedTint = style.insulatedTint;
++            snapshot.radiantTint = style.radiantTint;
++            snapshot.massRange = style.overlayMassScaleRange;
++            snapshot.massValues = style.overlayMassScaleValues;
++            snapshot.gridOffset = Access.GridOffset();
++            snapshot.movingHolder = moving;
++            snapshot.staticHolder = stationary;
++            snapshot.movingMesh = movingMesh;
++            snapshot.staticMesh = staticMesh;
++            snapshot.movingMaterial = movingMaterial;
++            snapshot.staticMaterial = staticMaterial;
+@@ -86 +83 @@
+-        internal bool SameInputs(ConduitVisualSnapshot other)
++        internal bool SameInputs(in ConduitVisualSnapshot other)

@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "fabricator_queue_batch_set", "crafting_queue_batch_set" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "batch", "craft" },
                 Description = "兼容入口：请优先使用 building_control domain=production action=batch。批量设置同一制作站的多个配方队列。items 支持短字段 r/m/c，defaults 可共享 mode/count，适合一次规划多个制作订单",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -39,12 +38,24 @@ namespace OniMcp.Tools
                     if (fabricator == null)
                         return CallToolResult.Error("ComplexFabricator target not found");
 
-                    var items = args["items"] as JArray ?? new JArray();
+                    var itemsToken = args["items"];
+                    if (itemsToken != null && itemsToken.Type != JTokenType.Null && !(itemsToken is JArray))
+                        return CallToolResult.Error("items must be an array");
+                    var items = itemsToken as JArray ?? new JArray();
                     bool clearAll = ToolUtil.GetBool(args, "clearAll", false);
                     if (!clearAll && items.Count == 0)
                         return CallToolResult.Error("items must contain at least one operation unless clearAll=true");
 
-                    var defaults = args["defaults"] as JObject ?? args["defaultArguments"] as JObject;
+                    // A malformed container is not the same as an omitted one.
+                    // In particular, never turn invalid items into clearAll-only
+                    // or silently drop invalid defaults before committing a batch.
+                    var defaultsToken = args["defaults"];
+                    var defaultArgumentsToken = args["defaultArguments"];
+                    if (defaultsToken != null && defaultsToken.Type != JTokenType.Null && !(defaultsToken is JObject))
+                        return CallToolResult.Error("defaults must be an object");
+                    if (defaultArgumentsToken != null && defaultArgumentsToken.Type != JTokenType.Null && !(defaultArgumentsToken is JObject))
+                        return CallToolResult.Error("defaultArguments must be an object");
+                    var defaults = defaultsToken as JObject ?? defaultArgumentsToken as JObject;
                     var before = QueueSummary(fabricator);
                     var changes = new List<Dictionary<string, object>>();
                     var plannedCounts = new Dictionary<ComplexRecipe, int>();
@@ -130,7 +141,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "fabricator_queue_control", "crafting_queue_control" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "batch", "craft" },
                 Description = "生产队列聚合工具：action=list_fabricators/list_recipes/set/batch/set_mutant_seeds/mutant_seed_list/mutant_seed_set；读取制作站和配方，设置队列或突变种子策略。",
                 Parameters = ProductionQueueControlParams(),
@@ -165,7 +175,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "fabricator_mutant_seeds_set", "production_seed_mutations_set" },
                 Tags = new List<string> { "production", "fabricator", "seeds", "mutations", "spaced-out" },
                 Description = "兼容入口：请优先使用 building_control domain=production action=set_mutant_seeds。设置制作站是否拒收突变种子，对应 DLC 制作站用户菜单的接受/拒绝突变种子开关",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

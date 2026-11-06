@@ -1,30 +1,14 @@
 #!/usr/bin/env python3
 """Run CycleTrim synthetic timing without treating runner noise as correctness failure."""
 
-from pathlib import Path
 import subprocess
 import sys
 
+from mod_test_plan import ROOT, build_probe_command
 
-ROOT = Path(__file__).resolve().parents[1]
-PROJECT = ROOT / "tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj"
+
 SYNTHETIC_TIMING_REGRESSION_EXIT_CODE = 2
 SYNTHETIC_TIMING_REGRESSION_MARKER = "ONIMODS_SYNTHETIC_TIMING_REGRESSION:"
-
-
-def build_probe_command(dotnet: str = "dotnet") -> list[str]:
-    return [
-        dotnet,
-        "run",
-        "--project",
-        str(PROJECT),
-        "--configuration",
-        "Release",
-        "-p:ImportDirectoryBuildProps=false",
-        "-p:TreatWarningsAsErrors=true",
-        "--",
-        "--synthetic-performance-only",
-    ]
 
 
 def classify_probe_exit_code(return_code: int, stderr: str = "") -> int:

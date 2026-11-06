@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "hud_control_surface_audit", "pause_menu_surface_audit" },
                 Tags = new List<string> { "coverage", "audit", "hud", "pause", "speed", "sandbox", "global", "tools", "resources" },
                 Description = "审计 ONI 顶层 HUD 控件、速度控件、暂停菜单和外部账号/生命周期菜单与 MCP 覆盖映射",
                 Parameters = new Dictionary<string, McpToolParameter>

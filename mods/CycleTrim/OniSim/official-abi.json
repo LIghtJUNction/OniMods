@@ -1,0 +1,27 @@
+{
+  "evidenceKind": "static-binary-inventory",
+  "nativeFileType": "ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=95798440c484c3120f4cc6fbedb173358ffdde0e, stripped",
+  "nativeSha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "managedSha256": "6db652990ad1038e86b3493ed43004e12bfd61e62a4be60c787a9a9b9ac52ee1",
+  "matchesInspectedProfile": true,
+  "exports": {
+    "SIM_Initialize": true,
+    "SIM_Shutdown": true,
+    "SIM_HandleMessage": true,
+    "SIM_HandleMessages": true,
+    "SIM_BeginSave": true,
+    "SIM_EndSave": true,
+    "SIM_DebugCrash": true,
+    "SYSINFO_Acquire": true,
+    "SYSINFO_Release": true,
+    "ConduitTemperatureManager_Initialize": true,
+    "ConduitTemperatureManager_Shutdown": true,
+    "ConduitTemperatureManager_Add": true,
+    "ConduitTemperatureManager_Set": true,
+    "ConduitTemperatureManager_Remove": true,
+    "ConduitTemperatureManager_Clear": true,
+    "ConduitTemperatureManager_Update": true
+  },
+  "runtimeExecuted": false,
+  "gameCompatibilityEstablished": false
+}

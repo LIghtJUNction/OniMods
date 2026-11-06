@@ -1,0 +1,23 @@
+{
+  "base_commit": "6aa40cfd71ebb33d794373f5a830b87f8eefaf01",
+  "recorded_at_utc": "2026-10-20T00:21:16.615027+00:00",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "processor_model": "AMD EPYC 9V74 80-Core Processor",
+  "cpu_affinity": "CPU 0 for timing; CPU 1 for concurrent preparation; virtualized, not exclusive",
+  "available_logical_cpus": 5,
+  "rustc": "rustc 1.90.0 (1159e78c4 2025-09-14)\nbinary: rustc\ncommit-hash: 1159e78c4747b02ef996e55082b704c09b970588\ncommit-date: 2025-09-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.90.0\nLLVM version: 20.1.8",
+  "cargo": "cargo 1.90.0 (840b83a10 2025-07-30)",
+  "lean": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+  "timing_binary_sha256": "365186e4a6c83cc993cc84848bbd5938fbd03846fb0c1ef3b52d6baa9af7ad5e",
+  "allocation_binary_sha256": "27108f1b7a7bbb4e623efa88c949a9fa99f03fe751add777fd33b5022c57e1ab",
+  "rust_profile": {
+    "opt_level": 3,
+    "codegen_units": 1,
+    "fast_math": false,
+    "target_cpu_native": false,
+    "allocation_count_during_timing": false
+  },
+  "float_environment": "x86_64 default round-to-nearest; timing FTZ enabled, DAZ/rounding/exception bits inherited; correctness FTZ off and on; exception status flags not compared",
+  "timing": "8 alternating AB/BA pairs per case; 2 warm-up calls per variant; each timed batch sums actual kernel calls until >=100 ms; state restoration outside timing",
+  "boundary": "standalone production-component harness; no native full build or game runtime acceptance"
+}

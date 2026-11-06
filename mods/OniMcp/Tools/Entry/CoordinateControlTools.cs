@@ -15,7 +15,6 @@ namespace OniMcp.Tools
                 Group = "coordinates",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "coordinate_gateway", "coordinate_tool" },
                 Tags = new List<string> { "coordinates", "fallback", "gateway", "debug" },
                 Description = "Coordinate auxiliary entrypoint. Only this public tool accepts raw x/y, rectangles, cells, points, and anchors. It forwards to targetTool with payload; wrapper actions like cell_ref/anchors_ref adapt coordinates without overriding payload.action.",
                 Parameters = new Dictionary<string, McpToolParameter>

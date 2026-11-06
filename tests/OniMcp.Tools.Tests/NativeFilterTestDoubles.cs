@@ -6,8 +6,7 @@ using UnityEngine;
 // Native storage/filter boundaries used by the linked production handlers.
 // Source contract: Kupie/ONI_Decomp@8d4ace10c2b6a84cee394653a91b990a5122e636.
 // SelectTag deliberately invokes UpdateFilters immediately, matching the game.
-internal class Building : KMonoBehaviour { internal BuildingDef Def { get; set; } }
-internal sealed class BuildingComplete : Building { }
+internal partial class Building : KMonoBehaviour { }
 internal sealed class Storage : KMonoBehaviour
 {
     internal List<Tag> storageFilters { get; } = new List<Tag>();
@@ -16,6 +15,7 @@ internal sealed class Storage : KMonoBehaviour
     internal float MassStored() => items.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0);
 }
 internal sealed class StorageLocker { internal float UserMaxCapacity { get; set; } }
+internal sealed class CreatureDeliveryPoint : KMonoBehaviour { }
 
 internal sealed class TreeFilterable : KMonoBehaviour
 {
@@ -45,10 +45,13 @@ internal sealed class FlatTagFilterable : KMonoBehaviour
     internal List<Tag> tagOptions { get; } = new List<Tag>();
     internal List<Tag> selectedTags { get; } = new List<Tag>();
     internal bool currentlyUserAssignable { get; set; } = true;
+    internal bool displayOnlyDiscoveredTags { get; set; } = true;
     internal int SelectCalls { get; private set; }
     internal string GetHeaderText() => "Fixture";
     internal void SelectTag(Tag tag, bool selected)
     {
+        if (!tagOptions.Contains(tag))
+            throw new InvalidOperationException("Native SelectTag requires a current tag option");
         SelectCalls++;
         if (selected)
         {
@@ -71,6 +74,8 @@ internal sealed class DiscoveredResources
 {
     internal static DiscoveredResources Instance { get; set; }
     internal Dictionary<Tag, HashSet<Tag>> Categories { get; } = new Dictionary<Tag, HashSet<Tag>>();
+    internal HashSet<Tag> Discovered { get; } = new HashSet<Tag>();
+    internal bool IsDiscovered(Tag tag) => Discovered.Contains(tag);
     internal HashSet<Tag> GetDiscoveredResourcesFromTag(Tag category)
     {
         HashSet<Tag> tags;

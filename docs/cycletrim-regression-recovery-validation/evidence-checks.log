@@ -1,0 +1,7 @@
+PASS reverse check: animation-scalar-to-bitcast.patch
+PASS reverse check: conveyor-guard-split.patch
+PASS forward check: unshipped power experiment
+PASS exact scalar checkpoint helper restoration
+PASS exact packed checkpoint helper restoration
+PASS frozen candidate source hashes
+PASS complete formal and default-runtime summary reproduction

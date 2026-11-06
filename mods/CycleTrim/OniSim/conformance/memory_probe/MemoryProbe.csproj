@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework Condition="'$(ProbeProtocolTests)' != 'true'">net48</TargetFramework>
+    <TargetFramework Condition="'$(ProbeProtocolTests)' == 'true'">net10.0</TargetFramework>
+    <OutputType Condition="'$(ProbeProtocolTests)' == 'true'">Exe</OutputType>
+    <AssemblyName>CycleTrim.MemoryProbe</AssemblyName>
+    <LangVersion>7.3</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="MemoryRequest.cs" />
+    <Compile Include="MemoryProbe.cs" Condition="'$(ProbeProtocolTests)' != 'true'" />
+    <Compile Include="MemoryRequestTests.cs" Condition="'$(ProbeProtocolTests)' == 'true'" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ProbeProtocolTests)' == 'true'">
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ProbeProtocolTests)' != 'true'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="Assembly-CSharp" HintPath="$(OniManagedPath)/Assembly-CSharp.dll" Private="false" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(OniManagedPath)/Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(OniManagedPath)/0Harmony.dll" Private="false" />
+    <Reference Include="Newtonsoft.Json" HintPath="$(OniManagedPath)/Newtonsoft.Json.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(OniManagedPath)/UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(OniManagedPath)/UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="Unity.Collections" HintPath="$(OniManagedPath)/Unity.Collections.dll" Private="false" />
+  </ItemGroup>
+</Project>

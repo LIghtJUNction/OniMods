@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "rocket_cargo_and_harvest_status", "rocket_cargo_harvest_control" },
                 Tags = new List<string> { "rocket", "cargo", "collector", "harvest", "diamond", "side-screen" },
                 Description = "读取火箭货舱收集器和太空钻探模块状态：action=collectors 或 harvest_modules",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -51,7 +50,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "cargo_module_status_list", "hex_cell_collectors_list" },
                 Tags = new List<string> { "rocket", "cargo", "collector", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=cargo_status action=collectors。列出 CargoModuleSideScreen 星图货舱收集模块容量、库存和收集进度",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -193,7 +191,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "space_miner_modules_list", "harvest_module_status_list" },
                 Tags = new List<string> { "rocket", "harvest", "diamond", "poi", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=cargo_status action=harvest_modules。列出 HarvestModuleSideScreen 太空钻探模块钻探状态、钻石库存和容量",
                 Parameters = new Dictionary<string, McpToolParameter>

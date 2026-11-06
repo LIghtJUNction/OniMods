@@ -1,0 +1,1641 @@
+{
+  "benchmark": "state-machine",
+  "revision": "29fa09cb352f4bb45f32bc03ee1f326b0e8d15f5",
+  "method": "median within each process of seven paired baseline/candidate time ratios, then median of three process medians",
+  "validated": {
+    "processes": 6,
+    "sample_windows": 588,
+    "paired_windows": 294,
+    "zero_allocation_warm_windows": 504,
+    "equal_paired_checksums": true,
+    "alternating_order": true
+  },
+  "aggregates": [
+    {
+      "mode": "default",
+      "scenario": "tail-hit-64",
+      "median_of_process_medians": 15.357346708649283,
+      "process_medians": [
+        12.675060019582961,
+        15.357346708649283,
+        16.396392914264226
+      ],
+      "pair_range": [
+        10.478110711651466,
+        18.353671859351966
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 521.2334,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 34.499766666666666,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "miss-64",
+      "median_of_process_medians": 16.184442917801984,
+      "process_medians": [
+        16.415314206388242,
+        16.184442917801984,
+        15.759850774140975
+      ],
+      "pair_range": [
+        10.129283120127834,
+        21.91250240194718
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 513.50595,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 31.726933333333335,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "head-hit-64",
+      "median_of_process_medians": 0.9380072110164861,
+      "process_medians": [
+        0.8147623055333812,
+        0.9380072110164861,
+        0.9797458491255747
+      ],
+      "pair_range": [
+        0.5721478430026319,
+        1.4173493987361334
+      ],
+      "improved_pairs": 3,
+      "pairs": 21,
+      "baseline_ns_per_operation": 6.782366666666666,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 7.55255,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "short-hit-4",
+      "median_of_process_medians": 0.7993018626395005,
+      "process_medians": [
+        0.7993018626395005,
+        0.797085707968224,
+        0.8480906037346089
+      ],
+      "pair_range": [
+        0.6177782762747783,
+        1.016982869711016
+      ],
+      "improved_pairs": 1,
+      "pairs": 21,
+      "baseline_ns_per_operation": 31.268583333333332,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 39.21136666666666,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "mutation-every-query",
+      "median_of_process_medians": 0.9393928852009858,
+      "process_medians": [
+        0.9393442088973442,
+        0.9393928852009858,
+        0.9695793880254205
+      ],
+      "pair_range": [
+        0.8632108013870367,
+        1.1149648663978393
+      ],
+      "improved_pairs": 4,
+      "pairs": 21,
+      "baseline_ns_per_operation": 417.7898666666667,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 430.9812166666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "cold-owner-every-query",
+      "median_of_process_medians": 0.44828864021741033,
+      "process_medians": [
+        0.4199031804078909,
+        0.47209776536462117,
+        0.44828864021741033
+      ],
+      "pair_range": [
+        0.25807888337758844,
+        0.7519685415991553
+      ],
+      "improved_pairs": 0,
+      "pairs": 21,
+      "baseline_ns_per_operation": 705.8486,
+      "baseline_bytes_per_operation_range": [
+        592.0,
+        592.0
+      ],
+      "candidate_ns_per_operation": 1469.4955,
+      "candidate_bytes_per_operation_range": [
+        648.3944,
+        664.7888
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "capacity-17",
+      "median_of_process_medians": 6.3130745864377475,
+      "process_medians": [
+        6.151905028325887,
+        6.3130745864377475,
+        6.586390839454288
+      ],
+      "pair_range": [
+        5.147885528810593,
+        6.837102936125789
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 419.37705,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 68.00905,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "tail-hit-64",
+      "median_of_process_medians": 16.844266147572323,
+      "process_medians": [
+        16.381025126486783,
+        16.844266147572323,
+        17.49922572069073
+      ],
+      "pair_range": [
+        13.431867463649713,
+        20.20031691620432
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 514.4154666666667,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 30.345016666666666,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "miss-64",
+      "median_of_process_medians": 16.452156820879306,
+      "process_medians": [
+        16.289427558647567,
+        17.52329518570689,
+        16.452156820879306
+      ],
+      "pair_range": [
+        13.984416262253378,
+        21.266834424201505
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 552.6283333333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 32.25823333333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "head-hit-64",
+      "median_of_process_medians": 0.9596392274978925,
+      "process_medians": [
+        0.8638784297995031,
+        0.9596392274978925,
+        0.9659134831818327
+      ],
+      "pair_range": [
+        0.5400280665625934,
+        1.7021141049416384
+      ],
+      "improved_pairs": 5,
+      "pairs": 21,
+      "baseline_ns_per_operation": 7.0336,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 7.639166666666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "short-hit-4",
+      "median_of_process_medians": 0.7769957080861377,
+      "process_medians": [
+        0.7669813186615603,
+        0.8096889252227862,
+        0.7769957080861377
+      ],
+      "pair_range": [
+        0.6562125894094315,
+        1.0115736901574612
+      ],
+      "improved_pairs": 1,
+      "pairs": 21,
+      "baseline_ns_per_operation": 31.523783333333334,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 40.79943333333333,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "mutation-every-query",
+      "median_of_process_medians": 0.9896657750777916,
+      "process_medians": [
+        0.9337455722931869,
+        1.0270226134631895,
+        0.9896657750777916
+      ],
+      "pair_range": [
+        0.8786526497618571,
+        1.076733921030177
+      ],
+      "improved_pairs": 7,
+      "pairs": 21,
+      "baseline_ns_per_operation": 532.4905,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 553.5408666666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "cold-owner-every-query",
+      "median_of_process_medians": 0.4216954176701146,
+      "process_medians": [
+        0.4216954176701146,
+        0.41202859918113566,
+        0.45937984882702393
+      ],
+      "pair_range": [
+        0.3294460854780412,
+        0.7680975127025367
+      ],
+      "improved_pairs": 0,
+      "pairs": 21,
+      "baseline_ns_per_operation": 862.6176,
+      "baseline_bytes_per_operation_range": [
+        592.0,
+        592.0
+      ],
+      "candidate_ns_per_operation": 1873.8441,
+      "candidate_bytes_per_operation_range": [
+        648.3944,
+        664.7888
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "capacity-17",
+      "median_of_process_medians": 7.471076229850905,
+      "process_medians": [
+        7.266901014004668,
+        8.1264355974541,
+        7.471076229850905
+      ],
+      "pair_range": [
+        6.693190868135113,
+        9.496206988909435
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 568.5170833333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 74.42205,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "process_results": [
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "tail-hit-64",
+      "median_ratio": 12.675060019582961,
+      "pair_ratios": [
+        16.01954887636541,
+        16.85880728823363,
+        15.926325291290986,
+        12.37892398036036,
+        12.563309848387402,
+        12.675060019582961,
+        10.478110711651466
+      ],
+      "pair_range": [
+        10.478110711651466,
+        16.85880728823363
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 493.90545,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 38.758183333333335,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "miss-64",
+      "median_ratio": 16.415314206388242,
+      "pair_ratios": [
+        15.08403598573292,
+        16.51764438651317,
+        15.585681262193948,
+        16.415314206388242,
+        21.91250240194718,
+        10.129283120127834,
+        16.47519150435151
+      ],
+      "pair_range": [
+        10.129283120127834,
+        21.91250240194718
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 547.8843666666667,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 33.120533333333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "head-hit-64",
+      "median_ratio": 0.8147623055333812,
+      "pair_ratios": [
+        0.9238120966259027,
+        0.7310081058167771,
+        0.7005786693736332,
+        1.1841760802439538,
+        0.824399068856626,
+        0.8147623055333812,
+        0.5721478430026319
+      ],
+      "pair_range": [
+        0.5721478430026319,
+        1.1841760802439538
+      ],
+      "improved_pairs": 1,
+      "baseline_ns_per_operation": 6.782366666666666,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 8.689233333333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "short-hit-4",
+      "median_ratio": 0.7993018626395005,
+      "pair_ratios": [
+        0.7998551740024182,
+        0.998937538845613,
+        0.7993018626395005,
+        0.7384628024051165,
+        0.6177782762747783,
+        0.7169773505559073,
+        0.8222079523064162
+      ],
+      "pair_range": [
+        0.6177782762747783,
+        0.998937538845613
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 31.06345,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 41.8203,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "mutation-every-query",
+      "median_ratio": 0.9393442088973442,
+      "pair_ratios": [
+        0.9393442088973442,
+        0.9292926525162359,
+        1.0198903520047227,
+        0.8632108013870367,
+        1.1149648663978393,
+        0.9288923819544368,
+        1.0150632675974955
+      ],
+      "pair_range": [
+        0.8632108013870367,
+        1.1149648663978393
+      ],
+      "improved_pairs": 3,
+      "baseline_ns_per_operation": 435.46075,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 455.86463333333336,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "cold-owner-every-query",
+      "median_ratio": 0.4199031804078909,
+      "pair_ratios": [
+        0.5345469388928726,
+        0.7519685415991553,
+        0.29910930798881546,
+        0.3231097940821456,
+        0.35708568053192297,
+        0.6637138869285658,
+        0.4199031804078909
+      ],
+      "pair_range": [
+        0.29910930798881546,
+        0.7519685415991553
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 691.5662,
+      "baseline_bytes_per_operation_range": [
+        592.0,
+        592.0
+      ],
+      "candidate_ns_per_operation": 1597.9617,
+      "candidate_bytes_per_operation_range": [
+        648.3944,
+        664.7888
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "capacity-17",
+      "median_ratio": 6.151905028325887,
+      "pair_ratios": [
+        6.476105191035745,
+        6.448815205847362,
+        6.151905028325887,
+        5.870117535319957,
+        5.147885528810593,
+        5.4682120506308864,
+        6.654854683396932
+      ],
+      "pair_range": [
+        5.147885528810593,
+        6.654854683396932
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 419.37705,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 68.00905,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "tail-hit-64",
+      "median_ratio": 15.357346708649283,
+      "pair_ratios": [
+        15.189270137036203,
+        15.357346708649283,
+        15.24751326820568,
+        15.780090654603363,
+        15.102602086362534,
+        16.503355477992656,
+        17.11519410980843
+      ],
+      "pair_range": [
+        15.102602086362534,
+        17.11519410980843
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 530.2341333333334,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 34.499766666666666,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "miss-64",
+      "median_ratio": 16.184442917801984,
+      "pair_ratios": [
+        17.115759691030124,
+        15.25376821380932,
+        17.278757357126633,
+        16.184442917801984,
+        16.111355203422384,
+        16.6745400372723,
+        15.09278792309684
+      ],
+      "pair_range": [
+        15.09278792309684,
+        17.278757357126633
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 513.50595,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 31.726933333333335,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "head-hit-64",
+      "median_ratio": 0.9380072110164861,
+      "pair_ratios": [
+        0.9380072110164861,
+        0.741947394502366,
+        0.9545476398811527,
+        0.947934158675475,
+        0.8863778258195576,
+        0.9143999846082067,
+        0.9840933064537445
+      ],
+      "pair_range": [
+        0.741947394502366,
+        0.9840933064537445
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 6.551683333333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 6.936283333333333,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "short-hit-4",
+      "median_ratio": 0.797085707968224,
+      "pair_ratios": [
+        0.7977814256240325,
+        0.7614512745945464,
+        0.790636260000847,
+        0.762352932595761,
+        0.797085707968224,
+        0.8357255774811831,
+        0.8618433046271025
+      ],
+      "pair_range": [
+        0.7614512745945464,
+        0.8618433046271025
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 31.35705,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 39.21136666666666,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "mutation-every-query",
+      "median_ratio": 0.9393928852009858,
+      "pair_ratios": [
+        0.9018487767751185,
+        0.8904330710813363,
+        0.9393928852009858,
+        0.9510821756244087,
+        0.9264604054299368,
+        0.9607334600232899,
+        0.9521166509952648
+      ],
+      "pair_range": [
+        0.8904330710813363,
+        0.9607334600232899
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 403.69596666666666,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 429.60448333333335,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "cold-owner-every-query",
+      "median_ratio": 0.47209776536462117,
+      "pair_ratios": [
+        0.47209776536462117,
+        0.7239467784295387,
+        0.3507696715029928,
+        0.25807888337758844,
+        0.40709542754279016,
+        0.6749235377463189,
+        0.4803339649560002
+      ],
+      "pair_range": [
+        0.25807888337758844,
+        0.7239467784295387
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 705.8486,
+      "baseline_bytes_per_operation_range": [
+        592.0,
+        592.0
+      ],
+      "candidate_ns_per_operation": 1469.4955,
+      "candidate_bytes_per_operation_range": [
+        648.3944,
+        664.7888
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "capacity-17",
+      "median_ratio": 6.3130745864377475,
+      "pair_ratios": [
+        5.560152101887508,
+        6.3130745864377475,
+        5.28054458091507,
+        6.432043555164804,
+        6.193862610952019,
+        6.366004158500842,
+        6.317408166164053
+      ],
+      "pair_range": [
+        5.28054458091507,
+        6.432043555164804
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 432.61131666666665,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 68.64653333333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "tail-hit-64",
+      "median_ratio": 16.396392914264226,
+      "pair_ratios": [
+        18.353671859351966,
+        16.396392914264226,
+        16.915548129843874,
+        16.15775737593526,
+        13.634416425465252,
+        16.45508559416672,
+        16.202333832068536
+      ],
+      "pair_range": [
+        13.634416425465252,
+        18.353671859351966
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 521.2334,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 31.714583333333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "miss-64",
+      "median_ratio": 15.759850774140975,
+      "pair_ratios": [
+        15.12303064015604,
+        15.759850774140975,
+        18.200049899879684,
+        14.829030901358047,
+        17.33159133121406,
+        15.510528254192323,
+        16.712330204104738
+      ],
+      "pair_range": [
+        14.829030901358047,
+        18.200049899879684
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 503.96705,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 31.415466666666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "head-hit-64",
+      "median_ratio": 0.9797458491255747,
+      "pair_ratios": [
+        1.4173493987361334,
+        0.8409167122610706,
+        0.9797458491255747,
+        0.999083575067469,
+        1.0165065662149428,
+        0.9042083675503814,
+        0.7175764183902148
+      ],
+      "pair_range": [
+        0.7175764183902148,
+        1.4173493987361334
+      ],
+      "improved_pairs": 2,
+      "baseline_ns_per_operation": 6.863333333333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 7.55255,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "short-hit-4",
+      "median_ratio": 0.8480906037346089,
+      "pair_ratios": [
+        0.9126285856414711,
+        0.7252549930706829,
+        0.7903518197549874,
+        0.8480906037346089,
+        0.8518843925349195,
+        1.016982869711016,
+        0.7548689578879364
+      ],
+      "pair_range": [
+        0.7252549930706829,
+        1.016982869711016
+      ],
+      "improved_pairs": 1,
+      "baseline_ns_per_operation": 31.268583333333332,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 38.20718333333333,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "mutation-every-query",
+      "median_ratio": 0.9695793880254205,
+      "pair_ratios": [
+        0.9980125907976812,
+        0.9197593130200656,
+        0.9578105356718369,
+        0.9695793880254205,
+        0.9740058590460863,
+        0.883865917658989,
+        1.0048670159499813
+      ],
+      "pair_range": [
+        0.883865917658989,
+        1.0048670159499813
+      ],
+      "improved_pairs": 1,
+      "baseline_ns_per_operation": 417.7898666666667,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 430.9812166666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "cold-owner-every-query",
+      "median_ratio": 0.44828864021741033,
+      "pair_ratios": [
+        0.43224254131358303,
+        0.6935121023677863,
+        0.44828864021741033,
+        0.5608017255096717,
+        0.3798077334485624,
+        0.5371532327633435,
+        0.41934116370295843
+      ],
+      "pair_range": [
+        0.3798077334485624,
+        0.6935121023677863
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 771.5656,
+      "baseline_bytes_per_operation_range": [
+        592.0,
+        592.0
+      ],
+      "candidate_ns_per_operation": 1437.3691,
+      "candidate_bytes_per_operation_range": [
+        648.3944,
+        664.7888
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "capacity-17",
+      "median_ratio": 6.586390839454288,
+      "pair_ratios": [
+        6.837102936125789,
+        6.621080424349543,
+        6.774225641342847,
+        6.586390839454288,
+        6.159815099023399,
+        6.312744069182606,
+        6.0319891414649085
+      ],
+      "pair_range": [
+        6.0319891414649085,
+        6.837102936125789
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 408.52006666666665,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 63.527816666666666,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "tail-hit-64",
+      "median_ratio": 16.381025126486783,
+      "pair_ratios": [
+        15.88162382389448,
+        17.754999752202966,
+        16.381025126486783,
+        15.57980174470461,
+        16.95591064871103,
+        18.671370152793124,
+        13.431867463649713
+      ],
+      "pair_range": [
+        13.431867463649713,
+        18.671370152793124
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 549.0080833333334,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 32.773516666666666,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "miss-64",
+      "median_ratio": 16.289427558647567,
+      "pair_ratios": [
+        16.289427558647567,
+        15.83826795873867,
+        17.85581322438229,
+        17.31071344059966,
+        15.42764710129796,
+        21.266834424201505,
+        13.984416262253378
+      ],
+      "pair_range": [
+        13.984416262253378,
+        21.266834424201505
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 558.4130333333334,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 32.25823333333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "head-hit-64",
+      "median_ratio": 0.8638784297995031,
+      "pair_ratios": [
+        0.8238509931045851,
+        1.0376586053573364,
+        0.9714213250132825,
+        0.8532417245900831,
+        0.8962189752491752,
+        0.8638784297995031,
+        0.8156073880935415
+      ],
+      "pair_range": [
+        0.8156073880935415,
+        1.0376586053573364
+      ],
+      "improved_pairs": 1,
+      "baseline_ns_per_operation": 6.71495,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 7.8868833333333335,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "short-hit-4",
+      "median_ratio": 0.7669813186615603,
+      "pair_ratios": [
+        0.7106955903137365,
+        0.6562125894094315,
+        0.7784200713391122,
+        0.7669813186615603,
+        0.7642806048943651,
+        1.0115736901574612,
+        0.8077650075419934
+      ],
+      "pair_range": [
+        0.6562125894094315,
+        1.0115736901574612
+      ],
+      "improved_pairs": 1,
+      "baseline_ns_per_operation": 31.523783333333334,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 40.79943333333333,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "mutation-every-query",
+      "median_ratio": 0.9337455722931869,
+      "pair_ratios": [
+        0.9524089053139138,
+        0.8830558583641125,
+        0.9848994810474745,
+        0.9337455722931869,
+        0.9051601643362733,
+        0.8786526497618571,
+        1.0259657543040863
+      ],
+      "pair_range": [
+        0.8786526497618571,
+        1.0259657543040863
+      ],
+      "improved_pairs": 1,
+      "baseline_ns_per_operation": 518.6162833333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 553.5408666666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "cold-owner-every-query",
+      "median_ratio": 0.4216954176701146,
+      "pair_ratios": [
+        0.3934296879066793,
+        0.3991220285752819,
+        0.46034651441920915,
+        0.4216954176701146,
+        0.3294460854780412,
+        0.7482828777881584,
+        0.43255968758834634
+      ],
+      "pair_range": [
+        0.3294460854780412,
+        0.7482828777881584
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 862.6176,
+      "baseline_bytes_per_operation_range": [
+        592.0,
+        592.0
+      ],
+      "candidate_ns_per_operation": 1873.8441,
+      "candidate_bytes_per_operation_range": [
+        648.3944,
+        664.7888
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "capacity-17",
+      "median_ratio": 7.266901014004668,
+      "pair_ratios": [
+        6.693190868135113,
+        7.269372890988648,
+        7.266901014004668,
+        7.089360039604945,
+        8.0164672790756,
+        7.222098602945408,
+        7.325846299839185
+      ],
+      "pair_range": [
+        6.693190868135113,
+        8.0164672790756
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 537.4833833333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 74.42205,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "tail-hit-64",
+      "median_ratio": 16.844266147572323,
+      "pair_ratios": [
+        20.20031691620432,
+        16.71159569857983,
+        16.71249256589752,
+        18.120688300508316,
+        16.844266147572323,
+        17.217812763188007,
+        16.6703858491857
+      ],
+      "pair_range": [
+        16.6703858491857,
+        20.20031691620432
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 510.50258333333335,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 30.345016666666666,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "miss-64",
+      "median_ratio": 17.52329518570689,
+      "pair_ratios": [
+        17.809195341159935,
+        17.63111280899393,
+        17.52329518570689,
+        17.492997101556277,
+        16.05620053611252,
+        18.448097311796236,
+        17.492610719063144
+      ],
+      "pair_range": [
+        16.05620053611252,
+        18.448097311796236
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 524.5464,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 29.453683333333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "head-hit-64",
+      "median_ratio": 0.9596392274978925,
+      "pair_ratios": [
+        1.7021141049416384,
+        0.9596392274978925,
+        0.5400280665625934,
+        0.8975374349146241,
+        1.325395435061724,
+        1.0251604615235388,
+        0.7692059806384115
+      ],
+      "pair_range": [
+        0.5400280665625934,
+        1.7021141049416384
+      ],
+      "improved_pairs": 3,
+      "baseline_ns_per_operation": 7.7742,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 7.639166666666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "short-hit-4",
+      "median_ratio": 0.8096889252227862,
+      "pair_ratios": [
+        0.8096889252227862,
+        0.8874628041427349,
+        0.8652505928407422,
+        0.759829163158855,
+        0.65647906507318,
+        0.8170617424444152,
+        0.7979588076371429
+      ],
+      "pair_range": [
+        0.65647906507318,
+        0.8874628041427349
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 29.150066666666667,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 36.45255,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "mutation-every-query",
+      "median_ratio": 1.0270226134631895,
+      "pair_ratios": [
+        1.0270226134631895,
+        1.0743744255074075,
+        1.0314406823332756,
+        0.9745747445360669,
+        0.9739359158581057,
+        0.9555710959335598,
+        1.076733921030177
+      ],
+      "pair_range": [
+        0.9555710959335598,
+        1.076733921030177
+      ],
+      "improved_pairs": 4,
+      "baseline_ns_per_operation": 547.4722333333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 555.2083833333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "cold-owner-every-query",
+      "median_ratio": 0.41202859918113566,
+      "pair_ratios": [
+        0.3946558608506824,
+        0.41202859918113566,
+        0.41730911764909023,
+        0.3947515041894868,
+        0.3743460547283079,
+        0.7680975127025367,
+        0.5886525780651815
+      ],
+      "pair_range": [
+        0.3743460547283079,
+        0.7680975127025367
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 787.3314,
+      "baseline_bytes_per_operation_range": [
+        592.0,
+        592.0
+      ],
+      "candidate_ns_per_operation": 1853.2672,
+      "candidate_bytes_per_operation_range": [
+        648.3944,
+        664.7888
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "capacity-17",
+      "median_ratio": 8.1264355974541,
+      "pair_ratios": [
+        7.883766088431631,
+        9.496206988909435,
+        7.977489258963011,
+        7.096645249084733,
+        8.12969844319046,
+        8.269499772116793,
+        8.1264355974541
+      ],
+      "pair_range": [
+        7.096645249084733,
+        9.496206988909435
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 568.5170833333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 69.88071666666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "tail-hit-64",
+      "median_ratio": 17.49922572069073,
+      "pair_ratios": [
+        17.32844095395726,
+        17.8104605842641,
+        17.534875606721915,
+        16.644887120590475,
+        16.532883026056325,
+        17.49922572069073,
+        17.817228806886536
+      ],
+      "pair_range": [
+        16.532883026056325,
+        17.817228806886536
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 514.4154666666667,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 29.61275,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "miss-64",
+      "median_ratio": 16.452156820879306,
+      "pair_ratios": [
+        17.561669121026416,
+        17.61529696504196,
+        15.34530983670924,
+        15.179184945745298,
+        15.741820234182004,
+        16.452156820879306,
+        18.292512721983314
+      ],
+      "pair_range": [
+        15.179184945745298,
+        18.292512721983314
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 552.6283333333333,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 34.07748333333333,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "head-hit-64",
+      "median_ratio": 0.9659134831818327,
+      "pair_ratios": [
+        0.9993132941516342,
+        0.9777921112070074,
+        0.9659134831818327,
+        0.9405670792750817,
+        0.8925599586002867,
+        0.9502907912933108,
+        1.4059497037605257
+      ],
+      "pair_range": [
+        0.8925599586002867,
+        1.4059497037605257
+      ],
+      "improved_pairs": 1,
+      "baseline_ns_per_operation": 7.0336,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 7.260933333333333,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "short-hit-4",
+      "median_ratio": 0.7769957080861377,
+      "pair_ratios": [
+        0.7426477280973331,
+        0.834707693459817,
+        0.6837459891361253,
+        0.8615252874184254,
+        0.7899996496603777,
+        0.7194685931596262,
+        0.7769957080861377
+      ],
+      "pair_range": [
+        0.6837459891361253,
+        0.8615252874184254
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 32.24705,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 42.877383333333334,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "mutation-every-query",
+      "median_ratio": 0.9896657750777916,
+      "pair_ratios": [
+        0.9896657750777916,
+        0.9981805837321452,
+        0.9426047401404768,
+        0.966192155272792,
+        0.9804366110952237,
+        1.0086055211701581,
+        1.0096249444232215
+      ],
+      "pair_range": [
+        0.9426047401404768,
+        1.0096249444232215
+      ],
+      "improved_pairs": 2,
+      "baseline_ns_per_operation": 532.4905,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 543.1156833333333,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "cold-owner-every-query",
+      "median_ratio": 0.45937984882702393,
+      "pair_ratios": [
+        0.43168389533526536,
+        0.45937984882702393,
+        0.43698280233689507,
+        0.46559269551498955,
+        0.41271048978876407,
+        0.7657942459097961,
+        0.516157823608632
+      ],
+      "pair_range": [
+        0.41271048978876407,
+        0.7657942459097961
+      ],
+      "improved_pairs": 0,
+      "baseline_ns_per_operation": 878.8061,
+      "baseline_bytes_per_operation_range": [
+        592.0,
+        592.0
+      ],
+      "candidate_ns_per_operation": 1898.1637,
+      "candidate_bytes_per_operation_range": [
+        648.3944,
+        664.7888
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "capacity-17",
+      "median_ratio": 7.471076229850905,
+      "pair_ratios": [
+        6.793748429297087,
+        7.070928221060237,
+        8.224385327578549,
+        7.847011082058077,
+        7.360552300125727,
+        7.650686418680852,
+        7.471076229850905
+      ],
+      "pair_range": [
+        6.793748429297087,
+        8.224385327578549
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 588.9506666666666,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 79.60551666666667,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    }
+  ]
+}

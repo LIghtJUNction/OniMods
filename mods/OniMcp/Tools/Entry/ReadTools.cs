@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "read",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "state_read_control", "query_control" },
 Tags = new List<string> { "read", "state", "world", "area", "buildings", "resources", "infrastructure" },
 Description = "Unified read entrypoint. Routes current state, world cells/maps/search, area handles, buildings, resources, and infrastructure. First agent call can use domain=state action=current. For local infrastructure ports use domain=infrastructure action=nearby_ports x/y/radius kind=power|liquid|gas|logic|rail|all.",
                 Parameters = Parameters(),

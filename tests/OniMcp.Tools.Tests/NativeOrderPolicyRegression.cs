@@ -54,8 +54,8 @@ internal static class NativeOrderPolicyRegression
         def.CraftRecipe.Ingredients.Add(new Recipe.Ingredient { tag = metal, amount = 200 });
         def.CraftRecipe.Ingredients.Add(new Recipe.Ingredient { tag = transparent, amount = 100 });
         IList<Tag> materials;
-        Check(RocketModuleMaterialPolicy.Resolve(def, "Steel,Glass", tag => 200, false, out materials) == null, "valid slots and exact mass");
-        Check(RocketModuleMaterialPolicy.Resolve(def, null, tag => 200, false, out materials) == null
+        Check(RocketModuleMaterialPolicy.Resolve(def, "Steel,Glass", tag => true, tag => 200, false, out materials) == null, "valid slots and exact mass");
+        Check(RocketModuleMaterialPolicy.Resolve(def, null, tag => true, tag => 200, false, out materials) == null
             && materials.Count == 2, "default materials use same checks");
         Check(Code(def, "Steel", tag => 200) == "invalid_material_count", "too few materials");
         Check(Code(def, "Steel,Glass,Iron", tag => 200) == "invalid_material_count", "too many materials");
@@ -66,11 +66,39 @@ internal static class NativeOrderPolicyRegression
         Check(Code(def, "Steel,Glass", tag => tag.Equals(glass) ? 99 : 200) == "insufficient_material", "insufficient second material");
         Check(Code(def, "Steel,Glass", tag => float.NaN) == "insufficient_material", "NaN inventory rejected");
         Check(Code(def, "Steel,Glass", tag => float.PositiveInfinity) == "insufficient_material", "infinite inventory rejected");
-        Check(RocketModuleMaterialPolicy.Resolve(def, "Steel,Glass", tag => 0, true, out materials) == null, "native insufficient-material setting");
-        Check(RocketModuleMaterialPolicy.Resolve(def, "Glass,Steel", tag => 0, true, out materials) != null, "setting cannot bypass slot checks");
+        Check(RocketModuleMaterialPolicy.Resolve(def, "Steel,Glass", tag => true, tag => 0, true, out materials) == null, "discovered materials allow zero inventory under the native insufficient-material setting");
+        Check(RocketModuleMaterialPolicy.Resolve(def, "Glass,Steel", tag => true, tag => 0, true, out materials) != null, "setting cannot bypass slot checks");
+        int inventoryReads = 0;
+        Func<Tag, float> inventory = tag => { inventoryReads++; return 1000; };
+        foreach (bool allowInsufficient in new[] { false, true })
+        {
+            var undiscovered = RocketModuleMaterialPolicy.Resolve(def, "Steel,Glass",
+                tag => tag.Equals(steel), inventory, allowInsufficient, out materials);
+            Check(undiscovered != null && (string)undiscovered["reasonCode"] == "undiscovered_material"
+                && (int)undiscovered["slot"] == 1 && (string)undiscovered["material"] == "Glass",
+                "undiscovered second material rejected with allowInsufficient=" + allowInsufficient);
+            Check(inventoryReads == 0, "all discovery checks precede inventory queries");
+            var missingDiscovery = RocketModuleMaterialPolicy.Resolve(def, "Steel,Glass",
+                null, inventory, allowInsufficient, out materials);
+            Check(missingDiscovery != null && (string)missingDiscovery["reasonCode"] == "material_discovery_unavailable",
+                "missing discovery predicate rejected with allowInsufficient=" + allowInsufficient);
+            Check(inventoryReads == 0, "missing discovery data never queries inventory");
+        }
+        var discoveredMaterials = new List<Tag>();
+        Check(RocketModuleMaterialPolicy.Resolve(def, "Steel,Glass",
+            tag => { discoveredMaterials.Add(tag); return true; },
+            tag => { inventoryReads++; return 0; }, true, out materials) == null,
+            "stock relaxation retains discovery validation");
+        Check(discoveredMaterials.Count == 2 && discoveredMaterials[0].Equals(steel)
+            && discoveredMaterials[1].Equals(glass) && inventoryReads == 0,
+            "both recipe materials are checked even when inventory is not required");
+        var defaultDiscovery = RocketModuleMaterialPolicy.Resolve(def, null,
+            tag => tag.Equals(steel), inventory, true, out materials);
+        Check(defaultDiscovery != null && (string)defaultDiscovery["reasonCode"] == "undiscovered_material"
+            && inventoryReads == 0, "default materials cannot bypass discovery or query inventory on rejection");
         def.CraftRecipe.Ingredients[1].tag = metal;
         Check(Code(def, "Steel,Steel", tag => 250) == "insufficient_material", "same material sums across slots");
-        Check(RocketModuleMaterialPolicy.Resolve(def, "Steel,Steel", tag => 300, false, out materials) == null, "summed material exact balance");
+        Check(RocketModuleMaterialPolicy.Resolve(def, "Steel,Steel", tag => true, tag => 300, false, out materials) == null, "summed material exact balance");
         def.CraftRecipe.Ingredients[0].amount = float.NaN;
         Check(Code(def, "Steel,Steel", tag => 1000) == "invalid_material_requirement", "invalid recipe amount rejected");
     }
@@ -78,7 +106,7 @@ internal static class NativeOrderPolicyRegression
     private static string Code(BuildingDef def, string requested, Func<Tag, float> available)
     {
         IList<Tag> materials;
-        var error = RocketModuleMaterialPolicy.Resolve(def, requested, available, false, out materials);
+        var error = RocketModuleMaterialPolicy.Resolve(def, requested, tag => true, available, false, out materials);
         return error == null ? null : (string)error["reasonCode"];
     }
 

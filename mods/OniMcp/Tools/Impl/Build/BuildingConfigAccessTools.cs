@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "copy_building_settings", "settings_copy" },
                 Tags = new List<string> { "buildings", "copy", "settings", "side-screen", "batch" },
                 Description = "兼容入口：请使用 building_control domain=config action=copy_settings",
                 Hidden = true,
@@ -151,10 +150,7 @@ namespace OniMcp.Tools
         {
             return LookupParams(RectParams(new Dictionary<string, McpToolParameter>
             {
-                ["action"] = new McpToolParameter { Type = "string", Description = "list/list_automation/set_enabled/set_toggle/set_threshold/set_slider/set_valve_flow/set_limit_valve/set_logic_timer/set_logic_ribbon_bit/set_door_state/get_access/set_access/copy_settings/batch_set/batch_set_automation/state_list/state_set/visual；兼容 operation", Required = false },
-                ["operation"] = new McpToolParameter { Type = "string", Description = "兼容旧参数；优先使用 action", Required = false },
-                ["items"] = new McpToolParameter { Type = "array", Description = "action=batch_set/batch_set_automation 的批量操作数组", Required = false },
-                ["defaults"] = new McpToolParameter { Type = "object", Description = "action=batch_set/batch_set_automation 合并到每个子项的默认参数", Required = false },
+                ["action"] = new McpToolParameter { Type = "string", Description = "list/list_automation/set_enabled/set_toggle/set_threshold/set_slider/set_valve_flow/set_limit_valve/set_logic_timer/set_logic_ribbon_bit/set_door_state/get_access/set_access/copy_settings/state_list/state_set/visual", Required = false },
                 ["capability"] = new McpToolParameter { Type = "string", Description = "action=list 时过滤配置能力", Required = false },
                 ["query"] = new McpToolParameter { Type = "string", Description = "action=list/list_automation 时按名称或 prefabId 筛选", Required = false },
                 ["limit"] = new McpToolParameter { Type = "number", Description = "action=list/list_automation 时为返回上限；action=set_limit_valve 时为目标通过上限", Required = false },

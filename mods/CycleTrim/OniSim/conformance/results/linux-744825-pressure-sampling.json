@@ -1,0 +1,395 @@
+{
+  "schema": 3,
+  "symbolization": "Runtime load bias from offset-zero PT_LOAD; sample IP minus bias must fall inside a sized nm text symbol. File offsets are not treated as ELF virtual addresses.",
+  "scope": "Three germ-flow profiles per library; 1ms own-process userspace CPU clock sampling. Sampling and observer bias apply. Native percentages exclude Python and other libraries. Not timing acceptance or whole-game evidence.",
+  "native_sha256": {
+    "baseline": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+    "inline": "9a04afbda3e1fe694bdef81633c459af1b73d4ce479e7592d45cc21bddd39b8f"
+  },
+  "profiles": {
+    "baseline": {
+      "total_samples": 2244,
+      "native_samples": 2131,
+      "threads_with_samples": 6,
+      "lost": 0,
+      "corrupt": 0,
+      "symbols": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "samples": 493,
+          "percent_of_native_samples": 23.13467855466917
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers11add_disease",
+          "samples": 216,
+          "percent_of_native_samples": 10.13608634443923
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "samples": 216,
+          "percent_of_native_samples": 10.13608634443923
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "samples": 176,
+          "percent_of_native_samples": 8.259033317691225
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "samples": 159,
+          "percent_of_native_samples": 7.461285781323323
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease19post_process_bounds",
+          "samples": 140,
+          "percent_of_native_samples": 6.569685593618019
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step4step",
+          "samples": 137,
+          "percent_of_native_samples": 6.428906616611919
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "samples": 85,
+          "percent_of_native_samples": 3.988737681839512
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core12partial_melt5apply",
+          "samples": 77,
+          "percent_of_native_samples": 3.613327076489911
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core14disease_fields18add_disease_fields",
+          "samples": 67,
+          "percent_of_native_samples": 3.1440638198029096
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core5fluid13update_liquid",
+          "samples": 61,
+          "percent_of_native_samples": 2.8625058657907085
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11sublimation17apply_with_source",
+          "samples": 51,
+          "percent_of_native_samples": 2.3932426091037073
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.9527748416075230197",
+          "samples": 46,
+          "percent_of_native_samples": 2.1586109807602063
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+          "samples": 43,
+          "percent_of_native_samples": 2.017832003754106
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "samples": 35,
+          "percent_of_native_samples": 1.6424213984045049
+        }
+      ],
+      "hot_instruction_offsets": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers11add_disease",
+          "elf_virtual_address_hex": "0x75141",
+          "samples": 143
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x76765",
+          "samples": 39
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7675d",
+          "samples": 39
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x76785",
+          "samples": 37
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease19post_process_bounds",
+          "elf_virtual_address_hex": "0x777f9",
+          "samples": 30
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x76780",
+          "samples": 29
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x77154",
+          "samples": 25
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x76805",
+          "samples": 23
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x7677c",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x83ad6",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x766c1",
+          "samples": 20
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x83ac6",
+          "samples": 18
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "elf_virtual_address_hex": "0x773ab",
+          "samples": 18
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "elf_virtual_address_hex": "0x773ad",
+          "samples": 15
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.9527748416075230197",
+          "elf_virtual_address_hex": "0x427da",
+          "samples": 15
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x766b2",
+          "samples": 13
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core14disease_fields18add_disease_fields",
+          "elf_virtual_address_hex": "0x84e0a",
+          "samples": 12
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x7702a",
+          "samples": 12
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core12partial_melt5apply",
+          "elf_virtual_address_hex": "0x895ad",
+          "samples": 12
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x76800",
+          "samples": 11
+        }
+      ]
+    },
+    "inline": {
+      "total_samples": 2006,
+      "native_samples": 1894,
+      "threads_with_samples": 6,
+      "lost": 0,
+      "corrupt": 0,
+      "symbols": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "samples": 547,
+          "percent_of_native_samples": 28.880675818373813
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "samples": 234,
+          "percent_of_native_samples": 12.35480464625132
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "samples": 167,
+          "percent_of_native_samples": 8.817317845828933
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease19post_process_bounds",
+          "samples": 149,
+          "percent_of_native_samples": 7.866948257655755
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid9gas_phase",
+          "samples": 149,
+          "percent_of_native_samples": 7.866948257655755
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step4step",
+          "samples": 118,
+          "percent_of_native_samples": 6.2302006335797255
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "samples": 114,
+          "percent_of_native_samples": 6.019007391763464
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core12partial_melt5apply",
+          "samples": 71,
+          "percent_of_native_samples": 3.7486800422386484
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.4315159319461038856",
+          "samples": 60,
+          "percent_of_native_samples": 3.167898627243928
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core5fluid13update_liquid",
+          "samples": 56,
+          "percent_of_native_samples": 2.956705385427666
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+          "samples": 45,
+          "percent_of_native_samples": 2.3759239704329462
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core21simulation_step_fluid12liquid_phase",
+          "samples": 43,
+          "percent_of_native_samples": 2.2703273495248153
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11sublimation17apply_with_source",
+          "samples": 42,
+          "percent_of_native_samples": 2.2175290390707496
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step14validate_cells",
+          "samples": 32,
+          "percent_of_native_samples": 1.689545934530095
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core13fluid_helpers31add_mass_and_update_temperature",
+          "samples": 12,
+          "percent_of_native_samples": 0.6335797254487856
+        }
+      ],
+      "hot_instruction_offsets": [
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x554d8",
+          "samples": 70
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x554ed",
+          "samples": 50
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "elf_virtual_address_hex": "0x56f0b",
+          "samples": 25
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease19post_process_bounds",
+          "elf_virtual_address_hex": "0x57359",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x56947",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x554b7",
+          "samples": 24
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease15diffusion_scale",
+          "elf_virtual_address_hex": "0x56f0d",
+          "samples": 17
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x56897",
+          "samples": 16
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x55502",
+          "samples": 16
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.4315159319461038856",
+          "elf_virtual_address_hex": "0x59dcd",
+          "samples": 16
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease12update_cells",
+          "elf_virtual_address_hex": "0x5681a",
+          "samples": 14
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x97ceb",
+          "samples": 14
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core7disease19post_process_bounds",
+          "elf_virtual_address_hex": "0x5735d",
+          "samples": 13
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core15simulation_step4step",
+          "elf_virtual_address_hex": "0x6cefd",
+          "samples": 13
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core10transition32do_state_transition_from_element.llvm.4315159319461038856",
+          "elf_virtual_address_hex": "0x59dca",
+          "samples": 13
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x55405",
+          "samples": 12
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core11postprocess4cell",
+          "elf_virtual_address_hex": "0x97cfd",
+          "samples": 12
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x55428",
+          "samples": 11
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core3gas15update_pressure",
+          "elf_virtual_address_hex": "0x554b1",
+          "samples": 11
+        },
+        {
+          "symbol": "_RNvNtCsesrpLENfIw6_12oni_sim_core20postprocess_pressure20density_displacement",
+          "elf_virtual_address_hex": "0x5f2c9",
+          "samples": 11
+        }
+      ]
+    }
+  },
+  "all_six_finals_match_official": true,
+  "symbolization_validation_passed": true,
+  "input_sha256": {
+    "baseline": "c301cc3ead6bfe0edebf928b901f767c144a6dc143eb75cdf260ebff4288ba42",
+    "inline": "9a04afbda3e1fe694bdef81633c459af1b73d4ce479e7592d45cc21bddd39b8f"
+  },
+  "tool_sha256": {
+    "sampler.c": "f143307cbecd1aecfb1f4dd8645395770db534e3177b59b594794649621445a7",
+    "sampler.so": "3e3f50002b3b00c487e44c040dc6a719997f113936b1b72961bad4305d0e0337",
+    "symbolize_samples.py": "6feaa9d879d97ed3a5dc6b12c0ea7c4cbf02b28bc29ae8df9d611e58e2e599db"
+  },
+  "performance_acceptance": false
+}

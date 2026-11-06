@@ -46,6 +46,13 @@
       "signature_sha256": "035b042c25237dd26307edab85c63b5f1c6c0a9331618c912e04be04891502ac"
     },
     {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "Game",
+      "resolved_type": "Game",
+      "signature_file": "Assembly-CSharp__Game.signatures.txt",
+      "signature_sha256": "a20606700b8844f4c441b041ad23d95e2e6c8d199835eccb0c575ce2d94b6a7d"
+    },
+    {
       "assembly": "Assembly-CSharp-firstpass.dll",
       "requested_type": "GameInputMapping",
       "resolved_type": "GameInputMapping",
@@ -69,6 +76,20 @@
       "resolved_type": "Navigator",
       "signature_file": "Assembly-CSharp__Navigator.signatures.txt",
       "signature_sha256": "33af98fad5ccfc0b00c1dcdf3a87e9b5d0f3483523b0e004dc5152764291a5bf"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "NotificationManager",
+      "resolved_type": "NotificationManager",
+      "signature_file": "Assembly-CSharp__NotificationManager.signatures.txt",
+      "signature_sha256": "91a0176da06e8015f2711427419b2efc8bcaac8141c65f43f0fee7742d8cf1a7"
+    },
+    {
+      "assembly": "Assembly-CSharp.dll",
+      "requested_type": "NotificationScreen",
+      "resolved_type": "NotificationScreen",
+      "signature_file": "Assembly-CSharp__NotificationScreen.signatures.txt",
+      "signature_sha256": "7574457a85ee9fefa85556e29a9c385aed7f933d2a8217d870b2feb3c95e7096"
     }
   ]
 }

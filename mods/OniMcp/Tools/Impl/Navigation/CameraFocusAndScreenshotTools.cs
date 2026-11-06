@@ -183,7 +183,6 @@ namespace OniMcp.Tools
                 Group = "camera",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "world_coordinate_screenshot", "map_coordinate_screenshot", "coordinate_screenshot" },
                 Tags = new List<string> { "camera", "screenshot", "coordinates", "grid", "vision", "map", "截图", "坐标" },
                 Description = "兼容入口：请优先使用 navigation_control action=coordinate_screenshot。给视觉模型优先用坐标截图：图片里直接有 x/y 坐标、格线和 HTTP URL。",
                 Parameters = new Dictionary<string, McpToolParameter>

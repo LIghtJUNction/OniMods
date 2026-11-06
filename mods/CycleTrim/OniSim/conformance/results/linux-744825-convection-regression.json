@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "reference_native_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "known_bad_native_sha256": "d45cb10ed0d4c5bd6ca76ee02d29d505d72b4e9b29501d51f10147e5220ed65c",
+  "fixed_native_sha256": "82460a88a5f1738c92843f9a77a6a821a8102348b1e343c130c2a3975cd4af2d",
+  "known_bad_case": {
+    "name": "liquid-convection-rounded-below-cold",
+    "passed": false,
+    "differences": 19,
+    "first_difference": {
+      "frame": 2,
+      "path": "arrays.temperature",
+      "reference_length": 64,
+      "candidate_length": 64,
+      "different_entries": 2,
+      "first": [
+        [
+          28,
+          1134886896,
+          1134886897
+        ],
+        [
+          36,
+          1134886896,
+          1134886897
+        ]
+      ]
+    }
+  },
+  "fixed_cases": [
+    {
+      "name": "liquid-convection-rounded-below-cold",
+      "passed": true,
+      "differences": 0,
+      "publications": 20
+    },
+    {
+      "name": "world-pair-save-lifecycle-8",
+      "passed": true,
+      "differences": 0,
+      "publications": 73
+    }
+  ],
+  "harness_sha256": {
+    "host.py": "2b5b5cdb74bf16502027868e254d3b3abed67525ea9a7c4fb98a78098cd44961",
+    "run.py": "a5172d844ac6323bab385b264d7d4b2b22af669f51ad3ae490600081e27da73f",
+    "cases.py": "d97d25c97f7635ffb35c9bfe7a5fc8e4597840cbbeb19ca89b3e88ca63ebf65b",
+    "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+    "cell_cases.py": "b5d240d2de18bc25bf9e4323aa0149e754171ea65289ecbb657a2f27ca8a4619",
+    "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+    "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+  },
+  "cause": "Same-element liquid convection: an f32 weighted mean can round below the colder endpoint. Preserve the cold endpoint in that branch and clamp the upper endpoint, matching pinned ELF 0x6fe48..0x6fe51.",
+  "scope": "Authored local native fixtures only. Exact IEEE words, ordered events and saved bytes; no game-runtime acceptance for this new hash."
+}

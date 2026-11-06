@@ -9,7 +9,7 @@ using OniMcp.Support;
 
 namespace OniMcp.Tools
 {
-    public static class FilterTools
+    public static partial class FilterTools
     {
         public static McpTool ListFilters()
         {
@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Group = "filters",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "building_filters_list", "filterable_controls_list" },
                 Tags = new List<string> { "filters", "filterable", "tree-filter", "element-filter", "side-screen", "conduit" },
                 Description = "兼容入口：请优先使用 building_control domain=filter action=list。列出玩家可配置过滤器：气/液/固体管道过滤器、元素传感器、储存/树形过滤器和平铺 tag 过滤器",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -83,7 +82,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "element_filter_set", "filterable_set" },
                 Tags = new List<string> { "filters", "filterable", "element-filter", "sensor", "conduit" },
                 Description = "兼容入口：请优先使用 building_control domain=filter action=set kind=single",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -104,7 +102,6 @@ namespace OniMcp.Tools
                 Group = "filters",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "filters_set", "building_filter_set" },
                 Tags = new List<string> { "filters", "filterable", "tree-filter", "flat-tag-filter", "element-filter", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=filter action=set。kind=single 设置单选 Filterable；kind=tree/flat 设置 TreeFilterable/FlatTagFilterable 多选标签。",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -143,7 +140,6 @@ namespace OniMcp.Tools
                 Group = "filters",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "filters_control", "building_filter_control" },
                 Tags = new List<string> { "filters", "filterable", "tree-filter", "flat-tag-filter", "element-filter", "side-screen", "conduit" },
                 Description = "过滤器聚合工具：action=list/set；读取可配置过滤器，或设置 single/tree/flat 过滤标签。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -182,7 +178,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "tree_filter_set", "flat_tag_filter_set", "multi_filter_set" },
                 Tags = new List<string> { "filters", "tree-filter", "flat-tag-filter", "storage", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=filter action=set kind=tree 或 kind=flat",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -226,34 +221,6 @@ namespace OniMcp.Tools
                 ["before"] = TagInfo(before),
                 ["selected"] = TagInfo(filterable.SelectedTag),
                 ["changed"] = before != filterable.SelectedTag
-            }, McpJsonUtil.Settings));
-        }
-
-        private static CallToolResult SetTreeFilter(JObject args)
-        {
-            var go = FindTarget(args);
-            if (go == null)
-                return CallToolResult.Error("Target not found");
-            var tree = go.GetComponent<TreeFilterable>();
-            if (tree == null)
-                return CallToolResult.Error("Target does not expose TreeFilterable");
-
-            string mode = (args["mode"]?.ToString() ?? "replace").Trim().ToLowerInvariant();
-            var before = tree.GetTags().Select(TagInfo).ToList();
-            var requested = ParseTags(args["tags"]);
-            string error;
-            if (!TreeFilterSelection.TryApply(tree, requested, mode, out error))
-                return CallToolResult.Error(error);
-
-            var flat = go.GetComponent<FlatTagFilterable>();
-
-            return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
-            {
-                ["target"] = TargetInfo(go),
-                ["kind"] = flat != null ? "flat" : "tree",
-                ["mode"] = mode,
-                ["before"] = before,
-                ["selected"] = tree.GetTags().Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList()
             }, McpJsonUtil.Settings));
         }
 
@@ -302,7 +269,8 @@ namespace OniMcp.Tools
                     ["currentlyUserAssignable"] = flat.currentlyUserAssignable
                 };
                 if (includeOptions)
-                    flatInfo["options"] = flat.tagOptions.Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList();
+                    flatInfo["options"] = (tree != null ? TreeFilterSelection.GetOptions(tree) : new HashSet<Tag>())
+                        .Select(TagInfo).OrderBy(item => item["tag"].ToString()).ToList();
                 result["flat"] = flatInfo;
             }
 

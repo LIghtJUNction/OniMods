@@ -1,0 +1,23 @@
+--- a/mods/CycleTrim/Core/AnimationSymbolValueComparer.cs
++++ b/mods/CycleTrim/Core/AnimationSymbolValueComparer.cs
+@@ -3 +2,0 @@
+-using System.Runtime.InteropServices;
+@@ -35 +34 @@
+-        internal static bool SameBits(float left, float right)
++        internal static unsafe bool SameBits(float left, float right)
+@@ -37 +36,4 @@
+-            return new FloatBits { Value = left }.Bits == new FloatBits { Value = right }.Bits;
++            // Only reinterpret these two 4-byte value parameters. No pointer
++            // escapes or addresses game storage. This lets the JIT use register
++            // bit moves instead of spilling explicit-layout unions to memory.
++            return *(int*)&left == *(int*)&right;
+@@ -50,9 +51,0 @@
+-        // net48 has no BitConverter.SingleToInt32Bits. This value-type union
+-        // performs the same reinterpretation without unsafe code or allocation.
+-        [StructLayout(LayoutKind.Explicit)]
+-        private struct FloatBits
+-        {
+-            [FieldOffset(0)] internal float Value;
+-            [FieldOffset(0)] internal int Bits;
+-        }
+-

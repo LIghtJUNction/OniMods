@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "harvest_area", "plants_harvest_area" },
                 Description = "兼容入口：请优先使用 orders_control domain=area action=harvest。标记、取消或设置区域内植物/可收获对象的收获命令；mode=mark 仅标记当前可收获，when_ready 设置成熟即收获",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -140,7 +139,6 @@ namespace OniMcp.Tools
                 Group = "ranching",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "orders_capture", "critters_wrangle" },
                 Description = "兼容入口：请优先使用 orders_control domain=designation action=capture。按对象或区域标记/取消抓捕小动物；action=release 可释放已捆绑小动物",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {

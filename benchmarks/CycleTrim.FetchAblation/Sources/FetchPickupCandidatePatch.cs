@@ -1,0 +1,271 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using CycleTrim.Core;
+using HarmonyLib;
+
+namespace CycleTrim.Patches
+{
+    internal static class FetchPickupCandidatePatch
+    {
+        private const string FastTrackPatchType =
+            "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate";
+        private const string NoWasteWantPatchType =
+            "PeterHan.NoWasteWant.NoWasteWantPatches";
+        private static readonly Comparison<FetchManager.Pickup> FinalPickupOrder =
+            CompareIncludingPriority;
+
+        private readonly struct PickupKey : IEquatable<PickupKey>
+        {
+            private readonly int tagBitsHash;
+            private readonly int masterPriority;
+
+            internal PickupKey(int tagBitsHash, int masterPriority)
+            {
+                this.tagBitsHash = tagBitsHash;
+                this.masterPriority = masterPriority;
+            }
+
+            public bool Equals(PickupKey other)
+            {
+                return tagBitsHash == other.tagBitsHash
+                    && masterPriority == other.masterPriority;
+            }
+
+            public override bool Equals(object value)
+            {
+                return value is PickupKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (tagBitsHash * 397) ^ masterPriority;
+                }
+            }
+        }
+
+        [HarmonyPatch]
+        private static class UpdatePickupsPatch
+        {
+            // Inspired by Peter Han's FastTrack (MIT), with a smaller vanilla-equivalent design.
+            private static bool Prepare()
+            {
+                if (!CycleTrimPatchOptions.OptimizePickupCandidates)
+                    return false;
+                // Waste Not, Want Not reverses the vanilla freshness comparator. This replacement
+                // cannot preserve that transpiler safely, so leave the original method in control.
+                if (AccessTools.TypeByName(NoWasteWantPatchType) != null)
+                {
+                    return false;
+                }
+
+                return AccessTools.TypeByName(FastTrackPatchType) == null;
+            }
+
+            private static MethodBase TargetMethod()
+            {
+                return AccessTools.Method(
+                        typeof(FetchManager.FetchablesByPrefabId),
+                        "UpdatePickups",
+                        new[] { typeof(Navigator), typeof(int) })
+                    ?? throw new InvalidOperationException(
+                        "CycleTrim could not find FetchablesByPrefabId.UpdatePickups(Navigator, int).");
+            }
+
+            private static bool Prefix(
+                FetchManager.FetchablesByPrefabId __instance,
+                Navigator worker_navigator,
+                int worker,
+                Dictionary<int, int> ___cellCosts)
+            {
+                // Capture once, including across callbacks and nested updates.
+                // The ordinary path keeps the established dictionary loop.
+                var compact = FetchLayoutExperiment.Compact;
+                FetchLayoutExperiment.RecordUpdate(compact);
+                if (compact)
+                    return UpdateCompact(__instance, worker_navigator, worker, ___cellCosts);
+
+                var candidates = ThreadLocalObjectPool<
+                    Dictionary<PickupKey, FetchManager.Pickup>>.Rent();
+
+                try
+                {
+                    ___cellCosts.Clear();
+                    __instance.finalPickups.Clear();
+                    foreach (var fetchable in __instance.fetchables.GetDataList())
+                    {
+                        var pickupable = fetchable.pickupable;
+                        if (!pickupable.CouldBePickedUpByMinion(worker))
+                        {
+                            continue;
+                        }
+
+                        var cell = pickupable.cachedCell;
+                        if (!___cellCosts.TryGetValue(cell, out var pathCost))
+                        {
+                            pathCost = pickupable.GetNavigationCost(worker_navigator, cell);
+                            ___cellCosts[cell] = pathCost;
+                        }
+
+                        if (pathCost == -1)
+                        {
+                            continue;
+                        }
+
+                        var pickup = new FetchManager.Pickup
+                        {
+                            pickupable = pickupable,
+                            tagBitsHash = fetchable.tagBitsHash,
+                            PathCost = (ushort)pathCost,
+                            masterPriority = fetchable.masterPriority,
+                            freshness = fetchable.freshness,
+                            foodQuality = fetchable.foodQuality
+                        };
+                        var key = new PickupKey(pickup.tagBitsHash, pickup.masterPriority);
+                        if (!candidates.TryGetValue(key, out var current)
+                            || IsBetter(pickup, current))
+                        {
+                            candidates[key] = pickup;
+                        }
+                    }
+
+                    foreach (var candidate in candidates.Values)
+                    {
+                        __instance.finalPickups.Add(candidate);
+                    }
+
+                    __instance.finalPickups.Sort(FinalPickupOrder);
+                    return false;
+                }
+                finally
+                {
+                    candidates.Clear();
+                    ThreadLocalObjectPool<
+                        Dictionary<PickupKey, FetchManager.Pickup>>.Return(candidates);
+                }
+            }
+
+            private static bool UpdateCompact(
+                FetchManager.FetchablesByPrefabId instance,
+                Navigator navigator,
+                int worker,
+                Dictionary<int, int> cellCosts)
+            {
+                var candidates = ThreadLocalObjectPool<
+                    FetchCandidateBuffer<PickupKey, FetchManager.Pickup>>.Rent();
+                try
+                {
+                    cellCosts.Clear();
+                    instance.finalPickups.Clear();
+                    foreach (var fetchable in instance.fetchables.GetDataList())
+                    {
+                        var pickupable = fetchable.pickupable;
+                        if (!pickupable.CouldBePickedUpByMinion(worker))
+                            continue;
+
+                        var cell = pickupable.cachedCell;
+                        if (!cellCosts.TryGetValue(cell, out var pathCost))
+                        {
+                            pathCost = pickupable.GetNavigationCost(navigator, cell);
+                            cellCosts[cell] = pathCost;
+                        }
+                        if (pathCost == -1)
+                            continue;
+
+                        var candidateCost = (ushort)pathCost;
+                        var key = new PickupKey(fetchable.tagBitsHash, fetchable.masterPriority);
+                        var found = candidates.TryGetIndex(key, out var index);
+                        if (found)
+                        {
+                            var current = candidates[index];
+                            // Reject losing duplicates before materializing a full
+                            // Pickup. Preserve IsBetter's order and strict tests,
+                            // including first-wins ties and integer freshness.
+                            if (candidateCost != current.PathCost)
+                            {
+                                if (!(candidateCost < current.PathCost))
+                                    continue;
+                            }
+                            else if (fetchable.foodQuality != current.foodQuality)
+                            {
+                                if (!(fetchable.foodQuality > current.foodQuality))
+                                    continue;
+                            }
+                            else if (!(fetchable.freshness > current.freshness))
+                                continue;
+                        }
+
+                        var pickup = new FetchManager.Pickup
+                        {
+                            pickupable = pickupable,
+                            tagBitsHash = fetchable.tagBitsHash,
+                            PathCost = candidateCost,
+                            masterPriority = fetchable.masterPriority,
+                            freshness = fetchable.freshness,
+                            foodQuality = fetchable.foodQuality
+                        };
+                        if (found)
+                            candidates[index] = pickup;
+                        else
+                            candidates.Add(key, pickup);
+                    }
+
+                    candidates.AppendTo(instance.finalPickups);
+                    instance.finalPickups.Sort(FinalPickupOrder);
+                    return false;
+                }
+                finally
+                {
+                    candidates.Clear();
+                    ThreadLocalObjectPool<
+                        FetchCandidateBuffer<PickupKey, FetchManager.Pickup>>.Return(candidates);
+                }
+            }
+
+            private static bool IsBetter(
+                FetchManager.Pickup candidate,
+                FetchManager.Pickup current)
+            {
+                if (candidate.PathCost != current.PathCost)
+                {
+                    return candidate.PathCost < current.PathCost;
+                }
+
+                if (candidate.foodQuality != current.foodQuality)
+                {
+                    return candidate.foodQuality > current.foodQuality;
+                }
+
+                return candidate.freshness > current.freshness;
+            }
+        }
+
+        private static int CompareIncludingPriority(
+            FetchManager.Pickup left,
+            FetchManager.Pickup right)
+        {
+            var order = left.tagBitsHash.CompareTo(right.tagBitsHash);
+            if (order != 0)
+            {
+                return order;
+            }
+
+            order = right.masterPriority.CompareTo(left.masterPriority);
+            if (order != 0)
+            {
+                return order;
+            }
+
+            order = left.PathCost.CompareTo(right.PathCost);
+            if (order != 0)
+            {
+                return order;
+            }
+
+            order = right.foodQuality.CompareTo(left.foodQuality);
+            return order != 0 ? order : right.freshness.CompareTo(left.freshness);
+        }
+    }
+}

@@ -1,0 +1,251 @@
+--- a/mods/CycleTrim/OniSim/native/src/fluid_helpers.rs
++++ b/mods/CycleTrim/OniSim/native/src/fluid_helpers.rs
+@@ -186,5 +186,5 @@
+ }
+ 
+ pub(crate) fn phase(tables: &ElementTable, element: u16) -> u8 {
+-    tables.elements[element as usize].record.state & 3
++    tables.phase(element)
+ }
+--- a/mods/CycleTrim/OniSim/native/src/gas.rs
++++ b/mods/CycleTrim/OniSim/native/src/gas.rs
+@@ -48,19 +48,19 @@
+     let write_disease_growth = &mut world.write.disease_growth[..count];
+ 
+     let element_b = read_element[b];
+-    let record_b = &tables.elements[element_b as usize].record;
++    let properties_b = tables.fluid_properties(element_b);
+     let ma = read_mass[a];
+     let mb = read_mass[b];
+     let coefficient = if phase_a == 1 {
+         coefficient
+     } else {
+-        record_b.flow
++        properties_b.flow()
+     };
+     let flow = smax(smin(coefficient * (ma - mb), 0.125 * ma), -0.125 * mb);
+     let (src, dst, old_mass, amount, source_element, dest_element, dest_phase) = if flow < 0.0 {
+         (b, a, mb, -flow, element_b, element_a, phase_a)
+     } else {
+-        (a, b, ma, flow, element_a, element_b, record_b.state & 3)
++        (a, b, ma, flow, element_a, element_b, properties_b.phase)
+     };
+     let amount = smin(amount, old_mass);
+     let fraction = smax(smin(amount / old_mass, 1.0), 0.0);
+--- a/mods/CycleTrim/OniSim/native/src/presentation.rs
++++ b/mods/CycleTrim/OniSim/native/src/presentation.rs
+@@ -111,7 +111,7 @@
+                 "texture images no longer match the initialized world",
+             ));
+         }
+-        for element in &elements.elements {
++        for element in elements.elements.iter() {
+             let record = &element.record;
+             if record.gradient_count as usize > record.gradient.len()
+                 || [record.low_transition, record.high_transition]
+--- a/mods/CycleTrim/OniSim/native/src/simulation_step.rs
++++ b/mods/CycleTrim/OniSim/native/src/simulation_step.rs
+@@ -143,7 +143,7 @@
+             return Err(invalid("physics active region is outside padded interiors"));
+         }
+     }
+-    for element in &elements.elements {
++    for element in elements.elements.iter() {
+         for target in [
+             element.record.low_transition,
+             element.record.high_transition,
+--- a/mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs
++++ b/mods/CycleTrim/OniSim/native/src/simulation_step_fluid.rs
+@@ -5,10 +5,7 @@
+ use crate::world::{PhysicsWorld, Region};
+ 
+ fn old_phase(world: &PhysicsWorld, elements: &ElementTable, cell: usize) -> u8 {
+-    elements.elements[world.read.element[cell] as usize]
+-        .record
+-        .state
+-        & 3
++    elements.phase(world.read.element[cell])
+ }
+ 
+ fn pressure_target(
+@@ -19,7 +16,7 @@
+     cell: usize,
+ ) -> bool {
+     let element = world.read.element[cell];
+-    let state = elements.elements[element as usize].record.state;
++    let state = elements.phase(element);
+     world.read.properties[cell] & 1 == 0
+         && world.write.element[cell] == element
+         && state & 2 == 0
+@@ -34,12 +31,12 @@
+     cell: usize,
+ ) -> bool {
+     let element = world.read.element[cell];
+-    let record = &elements.elements[element as usize].record;
+-    let source_phase = record.state & 3;
+-    let coefficient = record.flow;
++    let properties = elements.fluid_properties(element);
++    let source_phase = properties.phase;
++    let coefficient = properties.flow();
+     if world.read.properties[cell] & 1 != 0
+         || world.write.element[cell] != element
+-        || record.state & 2 != 0
++        || source_phase & 2 != 0
+     {
+         return false;
+     }
+--- a/mods/CycleTrim/OniSim/native/src/tables.rs
++++ b/mods/CycleTrim/OniSim/native/src/tables.rs
+@@ -12,8 +12,38 @@
+ 
+ #[derive(Clone, Debug, Default)]
+ pub(crate) struct ElementTable {
+-    pub(crate) elements: Vec<Element>,
++    pub(crate) elements: ElementRecords,
+     pub(crate) trailing_zero_bytes: usize,
++}
++
++// Keep the records and their compact lookup together. No DerefMut is exposed:
++// callers cannot mutate a record and leave the derived properties stale.
++#[derive(Clone, Debug, Default)]
++pub(crate) struct ElementRecords {
++    records: Vec<Element>,
++    fluid: Vec<FluidProperties>,
++}
++
++impl std::ops::Deref for ElementRecords {
++    type Target = [Element];
++
++    fn deref(&self) -> &Self::Target {
++        &self.records
++    }
++}
++
++#[derive(Clone, Copy, Debug)]
++#[repr(C)]
++pub(crate) struct FluidProperties {
++    flow_bits: u32,
++    pub(crate) phase: u8,
++}
++
++impl FluidProperties {
++    #[inline]
++    pub(crate) fn flow(self) -> f32 {
++        f32::from_bits(self.flow_bits)
++    }
+ }
+ 
+ #[derive(Clone, Debug)]
+@@ -149,10 +179,30 @@
+         if reader.take(trailing_zero_bytes)?.iter().any(|&b| b != 0) {
+             return Err("nonzero bytes after element names".into());
+         }
++        let mut fluid = reserve(count)?;
++        for element in &elements {
++            fluid.push(FluidProperties {
++                flow_bits: element.record.flow.to_bits(),
++                phase: element.record.state & 3,
++            });
++        }
+         Ok(Self {
+-            elements,
++            elements: ElementRecords {
++                records: elements,
++                fluid,
++            },
+             trailing_zero_bytes,
+         })
++    }
++
++    #[inline]
++    pub(crate) fn fluid_properties(&self, element: u16) -> FluidProperties {
++        self.elements.fluid[element as usize]
++    }
++
++    #[inline]
++    pub(crate) fn phase(&self, element: u16) -> u8 {
++        self.elements.fluid[element as usize].phase
+     }
+ 
+     pub(crate) fn len(&self) -> usize {
+@@ -375,3 +425,80 @@
+         Ok(value)
+     }
+ }
++
++#[cfg(test)]
++mod fluid_properties_tests {
++    use super::*;
++
++    const WORDS: [u32; 12] = [
++        0, 0x80000000, 1, 0x80000001, 0x007fffff, 0x00800000, 0x3f800000, 0x7f800000, 0xff800000,
++        0x7f800001, 0x7fc12345, 0xff812345,
++    ];
++
++    fn encoded(count: usize) -> Vec<u8> {
++        let mut bytes = Vec::with_capacity(4 + count * (ELEMENT_BYTES + 4));
++        bytes.extend_from_slice(&(count as u32).to_le_bytes());
++        for i in 0..count {
++            let mut raw = [0; ELEMENT_BYTES];
++            // The lookup key is array position, not the independent wire index.
++            raw[8..10].copy_from_slice(&(!(i as u16)).to_le_bytes());
++            raw[10] = i as u8;
++            raw[36..40].copy_from_slice(&WORDS[i % WORDS.len()].to_le_bytes());
++            bytes.extend_from_slice(&raw);
++        }
++        bytes.resize(bytes.len() + count * 4, 0); // empty names
++        bytes
++    }
++
++    fn check(table: &ElementTable) {
++        assert_eq!(table.elements.fluid.len(), table.len());
++        for (i, element) in table.elements.iter().enumerate() {
++            let properties = table.fluid_properties(i as u16);
++            assert_eq!(table.phase(i as u16), element.record.state & 3);
++            assert_eq!(properties.phase, element.record.state & 3);
++            assert_eq!(properties.flow().to_bits(), element.record.flow.to_bits());
++            assert_eq!(properties.flow_bits, WORDS[i % WORDS.len()]);
++        }
++    }
++
++    #[test]
++    fn every_state_and_raw_flow_word_survives_parse_and_clone() {
++        let original = ElementTable::parse(&encoded(256 * WORDS.len())).unwrap();
++        check(&original);
++        let cloned = original.clone();
++        drop(original);
++        check(&cloned);
++        assert_eq!(std::mem::size_of::<FluidProperties>(), 8);
++    }
++
++    #[test]
++    fn full_u16_domain_includes_last_element() {
++        let table = ElementTable::parse(&encoded(MAX_ELEMENTS)).unwrap();
++        assert_eq!(table.len(), MAX_ELEMENTS);
++        check(&table);
++        assert_eq!(table.phase(u16::MAX), 3);
++    }
++
++    #[test]
++    fn replacement_and_empty_tables_keep_lookup_lengths_coherent() {
++        let mut table = ElementTable::parse(&encoded(7)).unwrap();
++        table.elements = ElementTable::parse(&encoded(13)).unwrap().elements;
++        check(&table);
++        table.elements = ElementRecords::default();
++        assert!(table.is_empty());
++        assert!(table.elements.fluid.is_empty());
++        check(&ElementTable::parse(&encoded(0)).unwrap());
++    }
++
++    #[test]
++    fn invalid_lookup_panics_instead_of_supplying_default_properties() {
++        for count in [0, 1, 17, 255] {
++            let table = ElementTable::parse(&encoded(count)).unwrap();
++            for invalid in [count as u16, u16::MAX] {
++                assert!(std::panic::catch_unwind(|| table.phase(invalid)).is_err());
++                assert!(std::panic::catch_unwind(|| table.fluid_properties(invalid)).is_err());
++                assert!(std::panic::catch_unwind(|| &table.elements[invalid as usize]).is_err());
++            }
++        }
++    }
++}

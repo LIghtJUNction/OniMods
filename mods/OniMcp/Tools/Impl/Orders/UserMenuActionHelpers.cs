@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Group = "controls",
                 Mode = "write",
                 Risk = "high",
-                Aliases = new List<string> { "user_menu_control", "context_action_control", "object_action_control" },
                 Tags = new List<string> { "controls", "user-menu", "context-menu", "maintenance", "buttons", "actions", "batch" },
                 Description = "用户菜单动作聚合入口：domain=generic/maintenance；generic 路由对象 UserMenu 按钮 list/press/batch，maintenance 路由带状态机或槽位参数的 list/execute/batch。",
                 Parameters = new Dictionary<string, McpToolParameter>

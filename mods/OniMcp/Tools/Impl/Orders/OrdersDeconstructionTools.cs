@@ -32,13 +32,24 @@ namespace OniMcp.Tools
 
                     if (ToolUtil.GetBool(args, "dryRun", false))
                     {
-                        return CallToolResult.Text(JsonConvert.SerializeObject(new Dictionary<string, object>
+                        DeconstructionEligibility eligibility = EvaluateDeconstructionEligibility(go);
+                        var preview = new Dictionary<string, object>
                         {
                             ["dryRun"] = true,
-                            ["wouldQueue"] = true,
-                            ["target"] = DeconstructionTargetInfo(go),
-                            ["next"] = "Re-run with confirm=true and dryRun=false to queue deconstruction."
-                        }, McpJsonUtil.Settings));
+                            ["wouldQueue"] = eligibility.CanQueue,
+                            ["target"] = DeconstructionTargetInfo(go)
+                        };
+                        if (eligibility.CanQueue)
+                        {
+                            preview["next"] = "Re-run with confirm=true and dryRun=false to queue deconstruction.";
+                        }
+                        else
+                        {
+                            preview["reasonCode"] = eligibility.ReasonCode;
+                            preview["reason"] = eligibility.Error;
+                        }
+
+                        return CallToolResult.Text(JsonConvert.SerializeObject(preview, McpJsonUtil.Settings));
                     }
 
                     if (!ToolUtil.GetBool(args, "confirm", false))

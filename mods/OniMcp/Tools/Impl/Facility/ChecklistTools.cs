@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "checkbox_list_group_controls_list", "quest_checklists_list", "side_screen_checklists_list" },
                 Tags = new List<string> { "controls", "side-screen", "checklist", "quest", "conditions", "read-only" },
                 Description = "兼容入口：请优先使用 building_control domain=side_surface kind=checklist action=list。列出实现 ICheckboxListGroupControl 的只读侧屏清单",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>

@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "lights_control", "light_color_control" },
                 Tags = new List<string> { "lights", "color", "user-menu", "buildings" },
                 Description = "灯光颜色聚合工具：action=list 查询灯光和颜色预设；action=set_color 选择 LightColorMenu 预设颜色",
                 Parameters = LightControlParams(),
@@ -44,7 +43,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "light_color_controls_list" },
                 Tags = new List<string> { "lights", "color", "user-menu", "buildings" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=light action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -95,7 +93,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "light_color_set" },
                 Tags = new List<string> { "lights", "color", "user-menu", "buildings" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=special kind=light action=set_color",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

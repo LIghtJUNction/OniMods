@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "area_save", "rect_save" },
                 Description = "兼容入口：请优先使用 read_control domain=area action=define。把一个矩形区域保存为短 areaId；区域左下角作为 origin，后续支持 areaId 的工具可用它代替绝对矩形",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -44,7 +43,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "area_rect" },
                 Description = "兼容入口：请优先使用 read_control domain=area action=get。查询 areaId 对应的区域坐标、origin、relativeRect 和世界 ID",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -70,7 +68,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "areas" },
                 Description = "兼容入口：请优先使用 read_control domain=area action=list。列出当前会话保存的 areaId，最近使用的排在前面",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -102,7 +99,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "world_blocks", "area_grid", "world_area_blocks" },
                 Description = "兼容入口：请优先使用 read_control domain=area action=blocks。把一个世界自动切成 blk 开头的地图块句柄（blk1、blk2...）。每块默认约 40x40，可传 blockWidth/blockHeight/maxCells 调整；返回的 blk* 可像普通 areaId 一样用于 world_text_map、world_area_snapshot 和支持 areaId 的整块工具。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -187,7 +183,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "area_union", "area_compose", "merge_areas" },
                 Description = "兼容入口：请优先使用 read_control domain=area action=merge。把多个 areaId（例如 blk1+blk2+blk3 或 [\"blk1\",\"blk2\"]）拼接成一个新的 a* 区域句柄。拼接使用同一世界内的外接矩形；非相邻区域会包含中间空隙并返回 continuity/gapCellsPercent/warning。",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -287,7 +282,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "areas_control", "area_handle_control", "world_area_control" },
                 Tags = new List<string> { "area", "region", "handle", "blocks", "merge", "world" },
                 Description = "统一管理区域句柄。action=define/get/list/blocks/merge/forget；用 areaId 代替重复坐标，blocks 生成 blk* 地图块，merge 生成复用区域。",
                 Parameters = new Dictionary<string, McpToolParameter>

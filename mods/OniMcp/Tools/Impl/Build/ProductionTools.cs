@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "fabricators_list", "crafting_stations_list" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "craft", "refinery", "kitchen" },
                 Description = "兼容入口：请优先使用 building_control domain=production action=list_fabricators。列出制作站/精炼/厨房等 ComplexFabricator 的配方队列、当前订单、下一订单和运行状态",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -69,7 +68,6 @@ namespace OniMcp.Tools
                 Group = "production",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "fabricator_recipes_list", "crafting_recipes_list" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "ingredients", "results" },
                 Description = "兼容入口：请优先使用 building_control domain=production action=list_recipes。列出制作站可用 ComplexRecipe，包含 recipeId、分类、材料、产物、科技锁和当前队列数量；可按单个制作站、区域或关键词筛选",
                 Parameters = LookupParams(RectParams(new Dictionary<string, McpToolParameter>
@@ -137,7 +135,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "fabricator_queue_set", "crafting_queue_set" },
                 Tags = new List<string> { "production", "fabricator", "recipe", "queue", "craft" },
                 Description = "兼容入口：请优先使用 building_control domain=production action=set。设置制作站配方队列数量：set/add/remove/infinite/clear，对应制作站侧屏队列加减和无限制作",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

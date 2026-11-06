@@ -36,7 +36,6 @@ namespace OniMcp.Tools
                 Mode = "execute",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "build_place_area", "build_blueprints" },
                 Tags = new List<string> { "buildings", "batch", "area", "footprint", "建造", "批量" },
                 Description = "按 anchor 列表或区域批量放置建造蓝图。执行前会预检 footprint、支撑、材料和明显碰撞；遇到可挖自然固体时默认先标记挖掘，dryRun=true 只返回预览。",
                 Parameters = parameters,
@@ -45,9 +44,55 @@ namespace OniMcp.Tools
                     if (!ToolUtil.GetBool(args, "confirm", false) && !ToolUtil.GetBool(args, "dryRun", false))
                         return CallToolResult.Error("confirm=true is required unless dryRun=true");
 
-                    var planResolution = ResolveBuildPlan(args);
-                    if (args["prefabId"] == null && !string.IsNullOrWhiteSpace(planResolution.PrefabId))
+                    bool dryRun = IsDryRun(args);
+                    bool hadExplicitPrefabId = args["prefabId"] != null
+                        && !string.IsNullOrWhiteSpace(args["prefabId"]?.ToString());
+                    var resolutionArgs = !dryRun && !hadExplicitPrefabId
+                        ? BuildWriteResolutionArgs(args) : args;
+                    var planResolution = ResolveBuildPlan(resolutionArgs);
+                    if (!hadExplicitPrefabId && !string.IsNullOrWhiteSpace(planResolution.PrefabId))
+                    {
+                        var writeCandidates = planResolution.BuildingCandidates;
+                        var topCandidate = writeCandidates.FirstOrDefault();
+                        if (topCandidate != null
+                            && (string.Equals(topCandidate.MatchKind, "sequence", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(topCandidate.MatchKind, "sequence_first", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            var sequenceBuilding = planResolution.SequenceItems.FirstOrDefault(item =>
+                                item.IsKind("building")
+                                && string.Equals(item.PrefabId, planResolution.PrefabId, StringComparison.OrdinalIgnoreCase));
+                            if (sequenceBuilding != null
+                                && sequenceBuilding.BuildingCandidates != null
+                                && sequenceBuilding.BuildingCandidates.Count > 0)
+                                writeCandidates = sequenceBuilding.BuildingCandidates;
+                        }
+
+                        topCandidate = writeCandidates.FirstOrDefault();
+                        var secondCandidate = writeCandidates.Skip(1).FirstOrDefault();
+                        string writeSafetyReason;
+                        if (!dryRun && !IsAutoWriteBuildingResolutionSafe(
+                            topCandidate?.MatchKind,
+                            topCandidate?.Score ?? 0,
+                            secondCandidate?.Score ?? 0,
+                            out writeSafetyReason))
+                        {
+                            var rejection = new Dictionary<string, object>
+                            {
+                                ["success"] = false,
+                                ["reasonCode"] = "ambiguous_plan_building",
+                                ["writeBlocked"] = true,
+                                ["resolutionReason"] = writeSafetyReason,
+                                ["resolvedPrefabId"] = planResolution.PrefabId,
+                                ["planResolution"] = planResolution.ToDictionary(),
+                                ["candidates"] = writeCandidates.Take(3).Select(item => item.ToDictionary()).ToList(),
+                                ["next"] = "Run dryRun=true to inspect ranked candidates, then retry confirm=true with an explicit prefabId.",
+                                ["tokenHint"] = "Choose a concrete candidates[].prefabId. Exact aliases and explicit prefabId remain one-call safe."
+                            };
+                            return CallToolResult.Error(JsonConvert.SerializeObject(rejection, McpJsonUtil.Settings));
+                        }
+
                         args["prefabId"] = planResolution.PrefabId;
+                    }
                     if (args["material"] == null && !string.IsNullOrWhiteSpace(planResolution.Material))
                         args["material"] = planResolution.Material;
                     if (args["query"] == null && args["target"] == null && args["search"] == null && !string.IsNullOrWhiteSpace(planResolution.AnchorQuery))
@@ -78,7 +123,6 @@ namespace OniMcp.Tools
                     if (anchors.Count > maxAnchors)
                         return CallToolResult.Error($"Refusing to process {anchors.Count} anchors; maxAnchors={maxAnchors}");
 
-                    bool dryRun = IsDryRun(args);
             bool allowPartial = ToolUtil.GetBool(args, "allowPartial", false);
             int maxCommitAnchors = Math.Max(1, Math.Min(ToolUtil.GetInt(args, "maxCommitAnchors") ?? 32, 128));
                     var preflightArgs = (JObject)args.DeepClone();
@@ -94,7 +138,8 @@ namespace OniMcp.Tools
                     foreach (var anchor in anchors)
                     {
                         int worldId = ToolUtil.ResolveWorldId(args);
-                        var batchOverlap = PlannedFootprintOverlap(def, anchor.x, anchor.y, worldId, preflightFootprints);
+                        var batchOverlap = PlannedFootprintOverlap(def, anchor.x, anchor.y, worldId, preflightFootprints,
+                            ParseOrientation(args["orientation"]?.ToString()));
                         if (batchOverlap != null)
                         {
                             previews.Add(ErrorResult(prefabId, anchor.x, anchor.y,
@@ -102,6 +147,7 @@ namespace OniMcp.Tools
                             continue;
                         }
                         var preview = TryPlanOne(prefabId, anchor.x, anchor.y, preflightArgs, preflightSupport);
+                        AddConstructionDiagnostics(preview, prefabId, anchor.x, anchor.y, worldId);
                         bool valid = preview.ContainsKey("valid") && (bool)preview["valid"];
                         if (valid)
                         {
@@ -114,7 +160,8 @@ namespace OniMcp.Tools
                             actionableAnchors.Add(anchor);
                         }
                         if (valid || IsAutoDiggableFailure(preview))
-                            ReservePlannedFootprint(def, anchor.x, anchor.y, worldId, preflightFootprints);
+                            ReservePlannedFootprint(def, anchor.x, anchor.y, worldId, preflightFootprints,
+                                ParseOrientation(args["orientation"]?.ToString()));
                         previews.Add(preview);
                     }
 
@@ -173,6 +220,7 @@ namespace OniMcp.Tools
             foreach (var anchor in executionAnchors)
                     {
                         var result = TryPlanOne(prefabId, anchor.x, anchor.y, args, actualSupport, autoDigContext);
+                        AddConstructionDiagnostics(result, prefabId, anchor.x, anchor.y, ToolUtil.ResolveWorldId(args));
                         bool wasPlanned = GetBool(result, "planned");
                         bool wasAlreadyPresent = GetBool(result, "alreadyPresent");
                         bool wasAlreadyConnected = GetBool(result, "alreadyConnected");
@@ -238,6 +286,7 @@ namespace OniMcp.Tools
                         ? "Some anchors remain blocked or pending auto-dig. Inspect remainingAction/preflightErrors."
                         : "Batch complete.",
                         ["preflightErrors"] = hardFailedPreviews.Take(50).ToList(),
+                        ["batchConstructionDiagnostics"] = BatchConstructionDiagnostics(results),
                         ["results"] = results
                     };
                     if (!string.IsNullOrEmpty(executionConflictReason))
