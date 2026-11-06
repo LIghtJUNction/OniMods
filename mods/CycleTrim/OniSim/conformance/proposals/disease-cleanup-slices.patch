@@ -1,0 +1,133 @@
+--- a/src/disease.rs
++++ b/src/disease.rs
+@@ -210,6 +210,32 @@
+     min_y: usize,
+     max_y: usize,
+ ) -> Result<()> {
++    let work = max_x
++        .saturating_sub(min_x)
++        .saturating_mul(max_y.saturating_sub(min_y));
++    // A clean region still needs cleanup and infestation advancement, but has
++    // no expensive growth calls to amortize a worker dispatch. Invalid bounds
++    // are left to the existing validator before any writes occur.
++    let valid_bounds =
++        max_x <= world.stride && max_y <= world.padded_height && min_x <= max_x && min_y <= max_y;
++    let has_growth = work >= crate::parallel::MIN_PARALLEL_CELLS
++        && valid_bounds
++        && (min_y..max_y).any(|y| {
++            world.write.disease_idx[y * world.stride + min_x..y * world.stride + max_x]
++                .iter()
++                .any(|&id| id != u8::MAX)
++        });
++    if valid_bounds && work >= crate::parallel::MIN_PARALLEL_CELLS && !has_growth {
++        // The ID scan proved there can be no grow_cell call. Cleanup still
++        // visits every selected cell, including unusual positive clean counts.
++        cleanup_region(&mut world.write, world.stride, (min_x, max_x, min_y, max_y));
++        return Ok(());
++    }
++    let pool = if has_growth {
++        crate::parallel::pool(work)
++    } else {
++        None
++    };
+     post_process_cells(
+         &mut world.write,
+         diseases,
+@@ -217,11 +243,7 @@
+         world.padded_height,
+         world.radiation_enabled,
+         (min_x, max_x, min_y, max_y),
+-        crate::parallel::pool(
+-            max_x
+-                .saturating_sub(min_x)
+-                .saturating_mul(max_y.saturating_sub(min_y)),
+-        ),
++        pool,
+     )
+ }
+ 
+@@ -317,18 +339,37 @@
+             );
+         }
+     }
++    cleanup_region(cells, stride, (min_x, max_x, min_y, max_y));
++    Ok(())
++}
++
++// Bounds are validated before entry. Equal row slices keep all indexing safe
++// and expose the independent integer/bitwise cleanup operations to the compiler.
++fn cleanup_region(
++    cells: &mut crate::world::Cells,
++    stride: usize,
++    (min_x, max_x, min_y, max_y): (usize, usize, usize, usize),
++) {
+     for y in min_y..max_y {
+-        for x in min_x..max_x {
+-            let cell = y * stride + x;
+-            if cells.disease_count[cell] < 1 {
+-                clear_disease(cells, cell);
++        let start = y * stride + min_x;
++        let end = y * stride + max_x;
++        let ids = &mut cells.disease_idx[start..end];
++        let counts = &mut cells.disease_count[start..end];
++        let infestation = &mut cells.disease_infestation[start..end];
++        let growth = &mut cells.disease_growth[start..end];
++        for (((id, count), infestation), growth) in
++            ids.iter_mut().zip(counts).zip(infestation).zip(growth)
++        {
++            if *count < 1 {
++                *id = u8::MAX;
++                *count = 0;
++                *infestation = 0;
++                *growth = 0.0;
+             }
+-            // Even a cleared cell advances from zero to one in this pass.
+-            cells.disease_infestation[cell] =
+-                (cells.disease_infestation[cell] as u16 + 1).min(254) as u8;
+-        }
+-    }
+-    Ok(())
++            // A cleared cell advances from zero to one; 255 also clamps to 254.
++            *infestation = (*infestation as u16 + 1).min(254) as u8;
++        }
++    }
+ }
+ 
+ pub(crate) fn post_process(
+--- a/src/disease_tests.rs
++++ b/src/disease_tests.rs
+@@ -135,3 +135,34 @@
+         equal(&cells, &original);
+     }
+ }
++
++#[test]
++fn cleanup_slices_preserve_positive_counts_float_words_and_partial_rows() {
++    let stride = 259;
++    let height = 137;
++    for bounds in [
++        (0, stride, 0, height),
++        (3, 251, 2, 131),
++        (1, 2, 1, height),
++        (0, 0, 0, height),
++    ] {
++        let mut actual = fixture(stride * height);
++        actual.disease_idx.fill(u8::MAX);
++        let mut expected = actual.clone();
++        let (min_x, max_x, min_y, max_y) = bounds;
++        for y in min_y..max_y {
++            for x in min_x..max_x {
++                let cell = y * stride + x;
++                if expected.disease_count[cell] < 1 {
++                    expected.disease_count[cell] = 0;
++                    expected.disease_growth[cell] = 0.0;
++                    expected.disease_infestation[cell] = 0;
++                }
++                expected.disease_infestation[cell] =
++                    (expected.disease_infestation[cell] as u16 + 1).min(254) as u8;
++            }
++        }
++        cleanup_region(&mut actual, stride, bounds);
++        equal(&actual, &expected);
++    }
++}

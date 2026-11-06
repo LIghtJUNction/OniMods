@@ -5,6 +5,7 @@ ONI 性能优化 Mod。该 Mod 针对缺氧的几个高频模拟路径做降频�
 ## 快速索引（本页为总览）
 
 - [核心优化](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#核心功能简要)
+- [架构与优化原理](../../docs/architecture-and-principles.md)
 - [安装与运行](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#使用方式)
 - [验证与兼容性](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#兼容与说明)
 - [性能实测摘要](https://github.com/LIghtJUNction/OniMods/blob/main/mods/CycleTrim/README.md#性能实测摘要)
@@ -15,17 +16,50 @@ ONI 性能优化 Mod。该 Mod 针对缺氧的几个高频模拟路径做降频�
 - 优化拾取候选的成本复用逻辑。
 - 仅对忙碌复制人的高开销任务进行间歇刷新，空闲复制人不受影响。
 - 节流静止小动物的重复导航探测。
+- 存档时复用组件类型的固定标记和名称，减少重复反射查询。
+- 电力视图每次刷新时复用同一电路的需求功率查询。
+- 输送轨道构建中，重复搜索较多的长路径可使用临时索引。
+- 动画覆盖数据逐位相同时，避免重复增加版本号和复制纹理数据。
 
 ## 使用方式
 
 - 订阅后按常规启用即可。
 - 推荐配合现有存档直接运行，无需额外配置。
 
+### 模组设置
+
+在游戏的**模组 → CycleTrim → 设置**中调整。PLib 已内置，不需要另装配置工具；更改后按提示重启游戏。
+
+- **OniSim 仿真核心**：沿用原有默认值；关闭后在下次启动保留原版 SimDLL。
+- **物流候选、忙碌复制人刷新、静止小动物寻路、异步寻路去重、小动物思考刷新**：五项优化可分别关闭，便于排查其他模组的兼容问题；默认保持开启。关闭某项后不安装该组优化补丁。
+- **性能诊断日志**：默认关闭。开启后把耗时和内存统计写入 `Player.log`，统计本身有额外开销。
+- **存档类型信息缓存**：默认开启，减少存档时重复反射，并在同一次存档内复用相邻的类型查询；可单独关闭，修改后需要重启。
+- **电力视图查询复用**：默认关闭，可选开启。它只在本次视图更新内复用；电路重复少时可能增加开销，未知电力组件或冲突补丁保留原查询。修改后需要重启。
+- **输送轨道路径查找**：默认关闭。在一次路径构建内，扫描量足够大时才建立索引；短路径、早期命中和少量查询保留直接搜索。路径被修改时重新搜索，修改设置后需要重启。
+- **动画重复更新优化**：默认关闭。按浮点位模式比较覆盖数据，完全相同时保留版本号，让显示端复用已经复制的数据；发生过写入异常的实例继续保留原更新行为。修改设置后需要重启。
+- **状态机查询复用**：默认关闭。列表未变化时复用状态机查找结果；列表变更后重新查找，短列表和工作线程保留原路径。修改后需要重启。
+
+这些优化来自对 oni-moono 机制的研究，使用独立实现。存档与电力视图的验证见[首轮说明](../../docs/cycletrim-moono-optimizations.md)，轨道查找与动画更新的设计、测试及收益范围见[后续优化报告](../../docs/cycletrim-moono-followup.md)。各项合成基准分别度量具体工作量；实机性能需用同一存档和设置交替测量。
+
+短轨道、提前返回和动画比较等退化路径的后续改进，见[开销回收与复测报告](../../docs/cycletrim-regression-recovery.md)。其中保留了旧版与新版的交错样本，以及未采纳方案的记录。
+
+如果列表里只有旧的 `CycleTrimHarness` 测试副本，需退出游戏后更新到包含 PLib 的 CycleTrim 包，并确认只启用一份相同 `staticID` 的安装。源码中存在设置页，不代表当前游戏加载的旧 DLL 也有这个入口。
+
 ## 兼容与说明
 
 - 与 ONI DLC 与主线兼容。
 - 以稳定性优先，避免影响原版关键玩法。
 - CycleTrim 不再接管 `SmartReservoir` 的 automation 信号发送；储液罐/气库及复用该组件的第三方建筑保留原版重复通知语义。
+
+### OniSim 原生仿真内核
+
+OniSim 是 CycleTrim 的原生仿真核心，源码位于 [`OniSim/`](OniSim/)。Windows x64、macOS x64、Linux x64 构建默认把本机原生库打入 Mod 包；Steam 发布包通过三平台 CI 合并全部原生库，并在启动阶段尝试把 `Assembly-CSharp` 的 `SimDLL` 导入映射到 OniSim。PLib 的 CycleTrim Mod 设置中“Use OniSim simulation core”默认开启；关闭后重启 ONI，启动时就会保留原版 SimDLL。映射无法热撤销。`CYCLETRIM_ONISIM_ENABLE=0`、`false` 或 `off` 仍可作为启动前的强制关闭开关。
+
+疾病发射范围使用 Lean 证明的逐行菱形扫描，发射范围与疾病生长后处理已接入最多 8 线程的常驻线程池；小任务保留串行。启动前设置 `CYCLETRIM_ONISIM_WORKERS=1` 可关闭内核并行。源码内的验收记录见 [`OniSim/PARALLEL-VALIDATION.md`](OniSim/PARALLEL-VALIDATION.md)。
+
+隔离实测已通过加载、4 工作线程短步运行、另存、重载和继续运行，见 [`OniSim/RUNTIME-VALIDATION.md`](OniSim/RUNTIME-VALIDATION.md)。仅用于可丢弃的测试存档；完整原版对照、长时运行、DLC 和其他 Mod 兼容性仍未验收，不能视为完整替代品。Linux 保留已检查的 `Assembly-CSharp` 和 Mono 整文件指纹检查；Windows/macOS 要求 ONI 744825 正式版、相同的原生接口与消息结构布局。其他版本或布局会拒绝映射并在日志中说明原因。
+
+Windows x64、macOS x64、Linux x64 下构建默认包含 OniSim；可用 `IncludeOniSim=false` 生成不带核心的包。正常情况下通过游戏 Mod 设置页启用或关闭，并按 PLib 提示重启 ONI。`CYCLETRIM_ONISIM_ENABLE=0` 可在启动前强制关闭，`1` 可显式允许加载。`CYCLETRIM_ONISIM_NATIVE_PATH` 可用绝对路径覆盖包内 `.so`；未设置时使用 Mod 目录下 `OniSim/<platform>/` 中的 `.dll`、`.dylib` 或 `.so`。macOS 需要 x64 游戏进程（Apple Silicon 上使用 Rosetta）。三平台 CI 构建与宿主加载器测试不等于全平台 ONI 实机验收。
 
 ## 性能实测摘要
 
@@ -59,18 +93,12 @@ Brain 限流已接入生产 Harmony 补丁，但只作用于原版普通 `Creatu
 
 - 仅支持精确的原版 `CreaturePathFinderAbilities`；Minion、Robot 与自定义 abilities 因动态权限/装备状态无法完整证明，全部回退原版。
 - 缓存只在 `Navigator.TakeResult` 正常应用后成立；排队清空、注销、过期未应用及异常不会写入缓存。相同快照最多连续跳过 8 次，随后强制刷新。
+- 0.3.3 修复工作线程出队后、回调前主线程已进入下一 tick 的交错：工作线程保留该任务原有的排队标记，只有主线程准备替换任务时才推进标记。跨 tick 及注销后的迟到回调有直接调用生产补丁的宿主回归覆盖。
 - 启动时会验证 Creature 的 sentinel 回收方法仍为空实现；若游戏更新改变该契约，整组 Async 优化会自动禁用而不是冒险运行。
 - 队列背压按 worker 与 in-flight 动态计算，范围 `1..4`；1 worker 空闲时 quota=2、忙碌时 quota=1。
 - 10,000 请求合成矩阵（**不是游戏内 FPS**）：目标命中率 `0/25/50/75/90%` 时，实际 PathProbe 执行为 `10000/7701/5501/3301/2000`，避免 clone 为 `0/2299/4499/6699/8000`；理论 probe 工作下降 `0/22.99/44.99/66.99/80.00%`。8 次有界回退使实际降幅低于名义命中率。
 
-可复现命令：
-
-```bash
-dotnet run --no-restore -c Release --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj
-dotnet run --no-build --no-restore -c Release --project benchmarks/CycleTrim.BrainBenchmarks/CycleTrim.BrainBenchmarks.csproj -- --benchmark
-```
-
-可直接使用 `benchmark` 技能让 agent 自动跑完整基准测试并返回标准化 JSON 结果。
+上述数字来自已退役的合成基准项目，保留为历史测量记录。当前宿主回归位于 `tests/`；历史数字不代表当前游戏性能。
 
 完整场景明细见：[dist/CycleTrim/README.md](../../dist/CycleTrim/README.md)（打包产物中的实测段落）。
 
@@ -79,6 +107,7 @@ dotnet run --no-build --no-restore -c Release --project benchmarks/CycleTrim.Bra
 ```text
 mods/CycleTrim/
 ├── ModInfo.cs          # KMod 入口
+├── OniSim/             # 原生仿真核心、C ABI 与加载器
 ├── Core/               # 与游戏补丁无关的核心逻辑（如 BrainRateCap）
 ├── Patches/            # Harmony 补丁
 ├── docs/               # Steam 描述等

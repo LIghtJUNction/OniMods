@@ -1,0 +1,4 @@
+supportedContent: ALL
+minimumSupportedBuild: 744825
+APIVersion: 2
+version: "0.1.0"

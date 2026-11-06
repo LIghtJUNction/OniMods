@@ -61,7 +61,6 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "diagnostic_settings_list", "all_diagnostics_settings_list" },
                 Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=diagnostic action=list_settings",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -104,7 +103,6 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "set_diagnostic_settings", "diagnostic_settings_set", "all_diagnostics_settings_set" },
                 Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=diagnostic action=set_settings；需 confirm=true",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -187,7 +185,6 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "auto_disinfect_set", "global_auto_disinfect_set", "disable_auto_disinfect_global" },
                 Tags = new List<string> { "auto-disinfect", "disinfect", "global", "care", "消毒", "全局", "禁用消毒" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 colony_control domain=diagnostic action=set_auto_disinfect；disabled=true 会关闭现有和新出现对象的 AutoDisinfectable",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -229,7 +226,6 @@ namespace OniMcp.Tools
                 Group = "colony",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "colony_diagnostic_control", "diagnostic_settings_control" },
                 Tags = new List<string> { "diagnostics", "alerts", "all-diagnostics", "settings", "criteria", "auto-disinfect" },
                 Description = "殖民地诊断聚合工具：action=diagnostics 读取诊断汇总；action=alerts 读取告警；action=list_settings 读取诊断设置；action=set_settings 修改诊断/子条件/Debug 通知；action=set_auto_disinfect 设置全局自动消毒策略",
                 Parameters = new Dictionary<string, McpToolParameter>

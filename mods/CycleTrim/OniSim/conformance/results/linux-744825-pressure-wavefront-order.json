@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "scope": "Serial pressure traversal order prerequisite for future bounded parallel tiles; not an implemented parallel pressure kernel",
+  "production_adopted": false,
+  "pressure_tasks_executed_in_parallel": false,
+  "runtime_validated": false,
+  "candidate_sha256": "4e09e75930497eabf348064960eac445376d5abf4d43b0b479f4cea037426526",
+  "baseline_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "candidate_source_sha256": {
+    "float_env.rs": "05330eb9f552f18091df1d778b9be41ceb0d326e25ca2a1ecd89908b08d27cd2",
+    "simulation_step_fluid.rs": "a5b979a82e93bf2be07f79efcf352f236d63df8b74e9fcfae76a18f665a2abe7"
+  },
+  "patch_sha256": "474d50ba1211ee5a22dbde7ef085ee3965571d1b75618cae32de4fcfc98766f3",
+  "unit_tests": {
+    "passed": 30,
+    "log_sha256": "e9e2ef7323cea8d86f3b6494b5aefddf329f834a01ca4920223e41ed13141a21",
+    "covers": "Empty/single/shifted/reversed rectangles, each coordinate exactly once, original order of every overlapping 2x2 footprint, and all-six-exception-mask fallback gate"
+  },
+  "proof": {
+    "schema": 1,
+    "checked_at_utc": "2026-10-20T18:16:35.937152+00:00",
+    "lean_version": "Lean (version 4.19.0, x86_64-unknown-linux-gnu, commit 6caaee842e94, Release)",
+    "passed": true,
+    "modules": [
+      {
+        "source": "DiseaseMerge.lean",
+        "theorems": [
+          "DiseaseMerge.optimized_eq_general",
+          "DiseaseMerge.same_species_nonpositive_clears",
+          "DiseaseMerge.same_species_positive_preserves_metadata"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "PressureSchedule.lean",
+        "theorems": [
+          "PressureSchedule.disjoint_tasks_commute",
+          "PressureSchedule.distinct_same_wave_disjoint",
+          "PressureSchedule.earlier_inversion_disjoint",
+          "PressureSchedule.insert_membership",
+          "PressureSchedule.insertion_preserves_execution",
+          "PressureSchedule.ordered_overlap_increases_wave",
+          "PressureSchedule.same_wave_overlap_equal",
+          "PressureSchedule.sort_membership",
+          "PressureSchedule.view_after_disjoint",
+          "PressureSchedule.wave_sort_preserves_execution"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "NotificationMembership.lean",
+        "theorems": [
+          "NotificationMembership.clear_sound",
+          "NotificationMembership.fold_membership",
+          "NotificationMembership.raw_append_sound",
+          "NotificationMembership.record_membership",
+          "NotificationMembership.record_sound"
+        ],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      {
+        "source": "PressureEnumeration.lean",
+        "theorems": [
+          "PressureEnumeration.emitted_coordinate_reconstructs_unique_wave",
+          "PressureEnumeration.every_cell_is_in_window",
+          "PressureEnumeration.every_cell_wave_is_visited",
+          "PressureEnumeration.window_exact"
+        ],
+        "axioms": [
+          "Classical.choice",
+          "Quot.sound",
+          "propext"
+        ]
+      }
+    ],
+    "source_sha256": {
+      "DiseaseMerge.lean": "c27d5f175fc06d849bcf7ca921a081a95d150935e22db7ef85e54881216894cd",
+      "PressureSchedule.lean": "b7c15596b5c469934a610b64de79c86c29b9adae520de488b4d271da15fe6e66",
+      "NotificationMembership.lean": "e4d0fae297a3e59953695e6223cbae95e4af362e455580004b7545528a6637e4",
+      "PressureEnumeration.lean": "8de5e01675f32b64e57905701e6c0a3e35d1930413844ebe725ed2265124db01",
+      "verify.py": "51896ca99c34f5e53a3c9767a185059af6c118848c0b0b6b67d18ad393f21644"
+    },
+    "checked_theorems": 22,
+    "production_pressure_parallel_implemented": false,
+    "scope": "Pure disease-state equivalence, wave-sort execution equivalence for local transitions, finite coordinate enumeration and notification membership models; not a Rust implementation, event-order, aliasing, tiled parallel scheduler or game-equivalence proof"
+  },
+  "conformance": [
+    {
+      "workers_requested": 1,
+      "pressure_tasks_executed_in_parallel": false,
+      "passed": true,
+      "cases": 224,
+      "publications_compared": 8440,
+      "library_sha256": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "4e09e75930497eabf348064960eac445376d5abf4d43b0b479f4cea037426526"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "summary_sha256": "f1337b78a962a81650d68a2007f9a4633d84ac64bbb7a3fb3baccf7f19b7e39b"
+    },
+    {
+      "workers_requested": 4,
+      "pressure_tasks_executed_in_parallel": false,
+      "passed": true,
+      "cases": 224,
+      "publications_compared": 8440,
+      "library_sha256": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "4e09e75930497eabf348064960eac445376d5abf4d43b0b479f4cea037426526"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "summary_sha256": "005c6c898f8767d759cf3eee6043444a09d53624b01f95c7fc5a1b279435d995"
+    }
+  ],
+  "remaining": [
+    "Formal link between finite coordinate enumeration and stable wave-sorting sequence",
+    "Actual Rust access/aliasing contract and event-merge bridge",
+    "Skew-tile dependency proof and owned bounded scratch kernel",
+    "Parallel native differential validation and measured performance",
+    "Headless then graphical game acceptance"
+  ]
+}

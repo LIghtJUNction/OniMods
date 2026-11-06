@@ -1,0 +1,9 @@
+{
+  "cpu": 0,
+  "runtime": "default tiered compilation settings",
+  "assembly_sha256": {
+    "prior": "08bbeaf39e6999c7034cd552609f409e5b0aef4f60c671bfa00f70c82c289942",
+    "candidate": "cd5695e2fc48d9f4a873cbd4fb25c49073190eff47394f3bc347cb5806e0a83a"
+  },
+  "protocol": "unchanged whole benchmark entry points; prior then candidate per family; within each entry point7 alternating original/patched pairs"
+}

@@ -36,6 +36,8 @@ impl ModConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     #[serde(skip)]
+    pub repo_root: PathBuf,
+    #[serde(skip)]
     pub game_path: PathBuf,
     #[serde(default)]
     pub mods: HashMap<String, ModConfig>,
@@ -115,6 +117,22 @@ fn to_pascal_case(s: &str) -> String {
         .collect()
 }
 
+/// Installation names are directory names, never paths. Check Windows syntax
+/// on every host too, so a shared onim.toml cannot escape its root after moving OS.
+pub(crate) fn validate_mod_directory_name(name: &str) -> Result<()> {
+    if name.is_empty()
+        || name == "."
+        || name == ".."
+        || name.ends_with(['.', ' '])
+        || name
+            .chars()
+            .any(|c| c.is_control() || matches!(c, '/' | '\\' | ':'))
+    {
+        anyhow::bail!("Mod 名称必须是单个目录名，不能包含路径或以点/空格结尾：{name:?}");
+    }
+    Ok(())
+}
+
 /// 从 Directory.Build.props 读取游戏路径
 fn read_game_path_from_props(repo_root: &Path) -> Result<PathBuf> {
     let props = repo_root.join(BUILD_PROPS);
@@ -149,7 +167,7 @@ fn parse_game_path_from_props(content: &str) -> Result<PathBuf> {
 
 /// 读取 `onim doctor` 的配置诊断信息，不执行常规命令的路径验证。
 pub fn read_doctor_diagnostics(explicit_path: Option<PathBuf>) -> Result<DoctorConfigDiagnostics> {
-    let (config_path, repo_root) = resolve_doctor_config_location(explicit_path)?;
+    let (config_path, repo_root) = resolve_config_location(explicit_path)?;
     let (mods, config_error) = inspect_config_for_doctor(&config_path);
     let props_path = repo_root.join(BUILD_PROPS);
     let (game_path, game_path_error) = inspect_game_path_for_doctor(&props_path);
@@ -173,7 +191,7 @@ pub fn read_doctor_diagnostics(explicit_path: Option<PathBuf>) -> Result<DoctorC
     })
 }
 
-fn resolve_doctor_config_location(explicit_path: Option<PathBuf>) -> Result<(PathBuf, PathBuf)> {
+fn resolve_config_location(explicit_path: Option<PathBuf>) -> Result<(PathBuf, PathBuf)> {
     let current_dir = env::current_dir().context("无法获取当前工作目录")?;
     let config_path = match explicit_path {
         Some(path) if path.is_absolute() => path,
@@ -245,24 +263,15 @@ fn inspect_game_path_for_doctor(props_path: &Path) -> (Option<PathBuf>, Option<S
     }
 }
 
+pub(crate) fn managed_relative_path(os: &str) -> &'static str {
+    match os {
+        "macos" => "OxygenNotIncluded.app/Contents/Resources/Data/Managed",
+        _ => "OxygenNotIncluded_Data/Managed",
+    }
+}
+
 fn managed_path_for_game(game_path: &Path) -> PathBuf {
-    #[cfg(target_os = "windows")]
-    {
-        game_path.join("OxygenNotIncluded_Data").join("Managed")
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let mac_managed = game_path
-            .join("OxygenNotIncluded.app")
-            .join("Contents")
-            .join("OxygenNotIncluded_Data")
-            .join("Managed");
-        if mac_managed.exists() {
-            mac_managed
-        } else {
-            game_path.join("OxygenNotIncluded_Data").join("Managed")
-        }
-    }
+    game_path.join(managed_relative_path(env::consts::OS))
 }
 
 impl Config {
@@ -284,10 +293,9 @@ impl Config {
                 .get(&key)
                 .with_context(|| format!("配置缺失：{}", key))?
                 .clone();
-            result.push(SelectedMod {
-                name: cfg.mod_name(&key),
-                config: cfg,
-            });
+            let name = cfg.mod_name(&key);
+            validate_mod_directory_name(&name)?;
+            result.push(SelectedMod { name, config: cfg });
         }
         Ok(result)
     }
@@ -331,10 +339,9 @@ impl Config {
             .get(&key)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("找不到已选择的 Mod：{}", key))?;
-        Ok(SelectedMod {
-            name: cfg.mod_name(&key),
-            config: cfg,
-        })
+        let name = cfg.mod_name(&key);
+        validate_mod_directory_name(&name)?;
+        Ok(SelectedMod { name, config: cfg })
     }
 
     pub fn managed_path(&self) -> PathBuf {
@@ -347,19 +354,22 @@ impl Config {
     }
 
     pub fn dev_mod_dir(&self, mod_name: &str) -> Result<PathBuf> {
+        validate_mod_directory_name(mod_name)?;
         Ok(self.game_mods_dir()?.join("Dev").join(mod_name))
     }
 
     pub fn legacy_dev_mod_dir(&self, mod_name: &str) -> Result<PathBuf> {
+        validate_mod_directory_name(mod_name)?;
         Ok(self.game_mods_dir()?.join("dev").join(mod_name))
     }
 
     pub fn local_mod_dir(&self, mod_name: &str) -> Result<PathBuf> {
+        validate_mod_directory_name(mod_name)?;
         Ok(self.game_mods_dir()?.join("Local").join(mod_name))
     }
 
-    pub fn dist_dir(&self, repo_root: &Path) -> PathBuf {
-        repo_root.join("dist")
+    pub fn dist_dir(&self) -> PathBuf {
+        self.repo_root.join("dist")
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -382,18 +392,7 @@ impl Config {
 }
 
 pub fn load(explicit_path: Option<PathBuf>) -> Result<Config> {
-    let config_path = if let Some(p) = explicit_path {
-        p
-    } else {
-        find_config_file()?.unwrap_or_else(|| PathBuf::from(DEFAULT_CONFIG_NAME))
-    };
-
-    let repo_root = match config_path.parent() {
-        Some(parent) => parent.to_path_buf(),
-        None => env::current_dir().context("读取当前目录失败")?,
-    };
-
-    // 从 Directory.Build.props 读取游戏路径
+    let (config_path, repo_root) = resolve_config_location(explicit_path)?;
     let game_path = read_game_path_from_props(&repo_root)?;
 
     let cfg: Config = if config_path.exists() {
@@ -401,10 +400,12 @@ pub fn load(explicit_path: Option<PathBuf>) -> Result<Config> {
             .with_context(|| format!("读取配置文件失败：{}", config_path.display()))?;
         let mut parsed: Config = toml::from_str(&content)
             .with_context(|| format!("解析配置文件失败：{}", config_path.display()))?;
+        parsed.repo_root = repo_root;
         parsed.game_path = game_path;
         parsed
     } else {
         Config {
+            repo_root,
             game_path,
             mods: HashMap::new(),
             default_mod: None,
@@ -412,7 +413,7 @@ pub fn load(explicit_path: Option<PathBuf>) -> Result<Config> {
     };
 
     for (key, m) in &cfg.mods {
-        let abs = m.project_abs(&repo_root);
+        let abs = m.project_abs(&cfg.repo_root);
         if !abs.exists() {
             anyhow::bail!(
                 "Mod '{}' 的路径不存在：{}\n请在 {} 中检查 [mods.{}] 的 path",
@@ -422,10 +423,6 @@ pub fn load(explicit_path: Option<PathBuf>) -> Result<Config> {
                 key
             );
         }
-    }
-
-    unsafe {
-        env::set_var("ONI_CLI_REPO_ROOT", repo_root.as_os_str());
     }
 
     cfg.validate()?;
@@ -494,9 +491,116 @@ fn game_user_data_dir() -> Result<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Config, ModConfig, parse_config_for_doctor};
+    use super::{Config, ModConfig, load, parse_config_for_doctor};
     use std::collections::HashMap;
     use std::path::{Path, PathBuf};
+
+    #[test]
+    fn loaded_projects_keep_independent_roots_without_process_state() -> anyhow::Result<()> {
+        let root = std::env::temp_dir().join(format!("onim-config-roots-{}", std::process::id()));
+        let inherited = std::env::var_os("ONI_CLI_REPO_ROOT");
+        let result = (|| -> anyhow::Result<()> {
+            let mut configs = Vec::new();
+            for name in ["first", "second"] {
+                let project = root.join(name);
+                let game = project.join("game");
+                let managed = super::managed_path_for_game(&game);
+                std::fs::create_dir_all(&managed)?;
+                std::fs::write(managed.join("Assembly-CSharp.dll"), [])?;
+                std::fs::write(
+                    project.join("Directory.Build.props"),
+                    format!(
+                        "<Project><OniGamePath>{}</OniGamePath></Project>",
+                        game.display()
+                    ),
+                )?;
+                std::fs::write(project.join("onim.toml"), "")?;
+                configs.push(load(Some(project.join("onim.toml")))?);
+            }
+            for (config, name) in configs.iter().zip(["first", "second"]) {
+                assert_eq!(config.dist_dir(), root.join(name).join("dist"));
+                assert!(config.managed_path().join("Assembly-CSharp.dll").is_file());
+            }
+            assert_eq!(std::env::var_os("ONI_CLI_REPO_ROOT"), inherited);
+            Ok(())
+        })();
+        let _ = std::fs::remove_dir_all(root);
+        result
+    }
+
+    #[test]
+    fn installation_paths_reject_names_that_escape_the_mod_directory() {
+        let config = Config {
+            repo_root: PathBuf::new(),
+            game_path: PathBuf::new(),
+            mods: HashMap::new(),
+            default_mod: None,
+        };
+        for name in [
+            "",
+            ".",
+            "..",
+            "../other",
+            "nested/mod",
+            "/tmp/mod",
+            r"..\other",
+            r"C:\mods",
+            "C:mods",
+            r"\\server\share",
+            ".. ",
+            "mod.",
+            "mod ",
+            "bad\0name",
+        ] {
+            assert!(config.dev_mod_dir(name).is_err(), "Dev accepted {name:?}");
+            assert!(
+                config.legacy_dev_mod_dir(name).is_err(),
+                "dev accepted {name:?}"
+            );
+            assert!(
+                config.local_mod_dir(name).is_err(),
+                "Local accepted {name:?}"
+            );
+        }
+        for name in ["OniMcp", "my_mod-2", "My Mod", "缺氧模组"] {
+            let root = config.game_mods_dir().unwrap();
+            assert_eq!(
+                config.dev_mod_dir(name).unwrap(),
+                root.join("Dev").join(name)
+            );
+            assert_eq!(
+                config.legacy_dev_mod_dir(name).unwrap(),
+                root.join("dev").join(name)
+            );
+            assert_eq!(
+                config.local_mod_dir(name).unwrap(),
+                root.join("Local").join(name)
+            );
+        }
+    }
+
+    #[test]
+    fn selection_rejects_unsafe_keys_and_name_overrides_before_building() {
+        for (key, name) in [("..", None), ("OniMcp", Some("../other"))] {
+            let config = Config {
+                repo_root: PathBuf::new(),
+                game_path: PathBuf::new(),
+                mods: HashMap::from([(
+                    key.to_string(),
+                    ModConfig {
+                        path: PathBuf::from("mods/OniMcp"),
+                        name: name.map(str::to_string),
+                        publishedfileid: None,
+                        workshop_title: None,
+                    },
+                )]),
+                default_mod: Some(key.to_string()),
+            };
+            assert!(config.select_mod(None).is_err());
+            assert!(config.select_mod(Some(key.to_string())).is_err());
+            assert!(config.select_all_mods().is_err());
+        }
+    }
 
     #[test]
     fn doctor_config_parser_should_preserve_resolvable_mods() -> anyhow::Result<()> {
@@ -539,6 +643,7 @@ path = "mods/Example"
             ),
         ]);
         let config = Config {
+            repo_root: PathBuf::new(),
             game_path: PathBuf::new(),
             mods,
             default_mod: None,

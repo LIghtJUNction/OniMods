@@ -21,7 +21,7 @@
     <ModTitle>ONI MCP Server</ModTitle>
     <ModDescription>ONI MCP Server - /mcp/ exposes the Model Context Protocol endpoint. The root path shows a virtual save and world file browser for feedback.</ModDescription>
     <ModStaticID>LIghtJUNction.OniMcp</ModStaticID>
-    <ModVersion>0.2.5</ModVersion>
+    <ModVersion>0.2.6</ModVersion>
     <Version>$(ModVersion)</Version>
 
     <!-- mod_info.yaml 元数据 -->
@@ -93,6 +93,11 @@
   <ItemGroup>
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.png" Condition="Exists('$(MSBuildProjectDirectory)/preview.png')" />
     <PreviewImage Include="$(MSBuildProjectDirectory)/preview.jpg" Condition="Exists('$(MSBuildProjectDirectory)/preview.jpg')" />
+    <Content Include="$(MSBuildProjectDirectory)/THIRD_PARTY_NOTICES.txt">
+      <Link>THIRD_PARTY_NOTICES.txt</Link>
+      <TargetPath>THIRD_PARTY_NOTICES.txt</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -109,12 +114,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.45">
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="PLib" Version="4.24.0" GeneratePathProperty="true" />
+    <PackageReference Include="PLib" Version="4.25.0" GeneratePathProperty="true" />
+    <PackageReference Include="Toon.Format" Version="1.0.0" />
+    <PackageReference Include="Markdig" Version="1.4.2" />
+    <!-- Unity Mono does not provide the ValueTuple facade assumed by net48 NuGet resolution. -->
+    <PackageReference Include="System.ValueTuple" Version="4.6.1" GeneratePathProperty="true" ExcludeAssets="all" />
   </ItemGroup>
 
   <!-- 构建后生成元数据文件 -->
@@ -150,7 +159,7 @@
   <!-- 构建后打包 Mod 到仓库根目录 dist/ -->
   <Target Name="PackageMod" AfterTargets="GenerateModFiles">
     <PropertyGroup>
-      <DistPath>$(MSBuildProjectDirectory)/../../dist/</DistPath>
+      <DistPath Condition="'$(DistPath)' == ''">$(MSBuildProjectDirectory)/../../dist/</DistPath>
       <DistModPath>$(DistPath)$(AssemblyName)/</DistModPath>
       <ZipFile>$(DistPath)$(AssemblyName).zip</ZipFile>
     </PropertyGroup>
@@ -163,6 +172,7 @@
     <!-- 复制 mod 文件到 dist/ModName/ -->
     <ItemGroup>
       <ModOutputFiles Include="$(OutputPath)$(AssemblyName).dll" />
+      <ModOutputFiles Include="$(OutputPath)THIRD_PARTY_NOTICES.txt" />
       <ModOutputFiles Include="$(OutputPath)mod.yaml" />
       <ModOutputFiles Include="$(OutputPath)mod_info.yaml" />
       <ModOutputFiles Include="$(OutputPath)preview.png" Condition="Exists('$(OutputPath)preview.png')" />

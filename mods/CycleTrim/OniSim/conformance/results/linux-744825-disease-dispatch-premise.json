@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "complete": true,
+  "scope": "Production disease post_process_cells component, not full frames or game FPS",
+  "base_commit": "8f8cc4150ff9f85ee8c6110662144038bad7e12f",
+  "cpus": [
+    0,
+    2,
+    4,
+    6
+  ],
+  "samples": 36,
+  "iterations_per_sample": 1000,
+  "all_states_unchanged": true,
+  "scenes": {
+    "96": {
+      "roles": {
+        "serial": {
+          "wall_us_per_call": {
+            "median": 46.14388650000001,
+            "min": 40.903022,
+            "max": 50.489883
+          },
+          "cpu_us_per_call": {
+            "median": 45.56791349999999,
+            "min": 40.71731099999998,
+            "max": 49.65990900000006
+          }
+        },
+        "parallel": {
+          "wall_us_per_call": {
+            "median": 27.640281,
+            "min": 21.269135000000002,
+            "max": 31.351504000000006
+          },
+          "cpu_us_per_call": {
+            "median": 108.37978850000005,
+            "min": 77.61401599999995,
+            "max": 111.48875400000003
+          }
+        },
+        "dispatch": {
+          "wall_us_per_call": {
+            "median": 11.062782,
+            "min": 7.293826,
+            "max": 12.229068999999999
+          },
+          "cpu_us_per_call": {
+            "median": 38.3203185,
+            "min": 25.724548000000013,
+            "max": 45.58867599999999
+          }
+        }
+      },
+      "parallel_over_serial_wall": 0.5990020151423525,
+      "empty_dispatch_over_parallel_wall": 0.40024130000704405
+    },
+    "192": {
+      "roles": {
+        "serial": {
+          "wall_us_per_call": {
+            "median": 167.41035399999998,
+            "min": 151.586539,
+            "max": 194.529322
+          },
+          "cpu_us_per_call": {
+            "median": 161.1468500000001,
+            "min": 144.94732100000007,
+            "max": 190.9103280000002
+          }
+        },
+        "parallel": {
+          "wall_us_per_call": {
+            "median": 59.002158,
+            "min": 56.718871,
+            "max": 81.068591
+          },
+          "cpu_us_per_call": {
+            "median": 219.72803549999998,
+            "min": 204.0103860000002,
+            "max": 246.7118730000002
+          }
+        },
+        "dispatch": {
+          "wall_us_per_call": {
+            "median": 13.629463,
+            "min": 9.419559,
+            "max": 16.926381
+          },
+          "cpu_us_per_call": {
+            "median": 50.841176499999975,
+            "min": 25.73363499999992,
+            "max": 65.33002099999985
+          }
+        }
+      },
+      "parallel_over_serial_wall": 0.35244031560915284,
+      "empty_dispatch_over_parallel_wall": 0.23099939836098873
+    }
+  },
+  "premise_tested": "For clean regions, dispatch costs more elapsed time than the useful cleanup it enables, so removing dispatch should improve elapsed time as well as total CPU.",
+  "conclusion": "The premise is contradicted by this workload: parallel clean-cell cleanup is faster than production serial cleanup at both sizes. Removing workers trades elapsed time for aggregate CPU savings. Preserve useful parallel work; investigate reducing cleanup work instead.",
+  "limitations": [
+    "Empty dispatch retains task partitioning and FloatEnv installation but omits cell visits. Its ratio is not an additive attribution of production time.",
+    "Short single-process component samples share a live host; retain full dispersion.",
+    "No whole-game or multi-game performance established."
+  ],
+  "diagnostic_patch_sha256": "3ad7bc50993c22c89f62b3894baae28929fa30fab99dd9ccdf6c820c6aaf6825",
+  "raw_samples_sha256": "ab1ea1227b87ab9f69161142598349943b87f48b1610292575b6485d290c9309",
+  "runtime_accepted": false
+}

@@ -1,1 +1,5 @@
 *.png filter=lfs diff=lfs merge=lfs -text
+
+# Preserve the exact hashed input from the completed round-2 experiment.
+# Only this frozen evidence fixture retains its original terminal blank line.
+benchmarks/CycleTrim.FetchAblation/Sources/FetchFixture.cs whitespace=-blank-at-eof

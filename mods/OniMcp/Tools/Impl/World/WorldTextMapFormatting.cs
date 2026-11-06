@@ -403,8 +403,7 @@ namespace OniMcp.Tools
             int x1 = originX + start;
             int x2 = originX + end;
             string xRange = x1 == x2 ? x1.ToString() : x1 + ".." + x2;
-            string rxRange = start == end ? start.ToString() : start + ".." + end;
-            return "x=" + xRange + " rx=" + rxRange + " `" + token + "`";
+            return "x=" + xRange + ":`" + token + "`";
         }
     }
 }

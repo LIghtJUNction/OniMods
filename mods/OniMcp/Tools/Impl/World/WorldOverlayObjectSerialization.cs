@@ -22,9 +22,15 @@ namespace OniMcp.Tools
                 .Select(group => group.OrderByDescending(item => item.IsAnchor).ThenBy(item => item.Y).ThenBy(item => item.X).First());
         }
 
+        private static IEnumerable<OverlaySummary> UnsupportedOverlayObjects(IEnumerable<OverlaySummary> distinctOverlays)
+        {
+            if (distinctOverlays == null) return Enumerable.Empty<OverlaySummary>();
+            return distinctOverlays.Where(item => item != null && item.SupportRequired && item.Supported.HasValue && !item.Supported.Value);
+        }
+
         private static IEnumerable<OverlaySummary> UnsupportedOverlayObjects(Dictionary<int, OverlaySummary> overlays)
         {
-            return DistinctOverlayObjects(overlays).Where(item => item.SupportRequired && item.Supported.HasValue && !item.Supported.Value);
+            return UnsupportedOverlayObjects(DistinctOverlayObjects(overlays));
         }
 
         private static string FootprintText(OverlaySummary overlay)
@@ -115,11 +121,13 @@ namespace OniMcp.Tools
             return cleaned;
         }
 
-        private static List<Dictionary<string, object>> BuildConflictSummaries(Dictionary<int, OverlaySummary> overlays)
+        private static List<Dictionary<string, object>> BuildConflictSummaries(IEnumerable<OverlaySummary> distinctOverlays)
         {
             var conflicts = new List<Dictionary<string, object>>();
-            foreach (var item in DistinctOverlayObjects(overlays))
+            if (distinctOverlays == null) return conflicts;
+            foreach (var item in distinctOverlays)
             {
+                if (item == null) continue;
                 if (item.SupportRequired && item.Supported.HasValue && !item.Supported.Value)
                 {
                     conflicts.Add(new Dictionary<string, object>
@@ -158,6 +166,11 @@ namespace OniMcp.Tools
                 }
             }
             return conflicts;
+        }
+
+        private static List<Dictionary<string, object>> BuildConflictSummaries(Dictionary<int, OverlaySummary> overlays)
+        {
+            return BuildConflictSummaries(DistinctOverlayObjects(overlays));
         }
 
         private static bool IsBuildingOverlapObstruction(string obstruction)

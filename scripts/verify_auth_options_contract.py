@@ -88,7 +88,7 @@ def main() -> int:
     assert "Application.OpenURL(ProjectSupportUrl)" in create_options
     assert 'ProjectSupportUrl = "https://donate.lmm.best/?project=onimcp"' in options
 
-    assert '<PackageReference Include="PLib" Version="4.24.0"' in project
+    assert '<PackageReference Include="PLib" Version="4.25.0"' in project
     assert "Disabled by default" in settings
     dispatch = method_body(server, "private void ProcessRequest")
     assert dispatch.find("TryHandleSettingsRequest") < dispatch.find("ValidateAuth")

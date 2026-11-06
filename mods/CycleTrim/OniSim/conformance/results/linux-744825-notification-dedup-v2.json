@@ -1,0 +1,313 @@
+{
+  "candidate": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89",
+  "baseline": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "source_sha256": {
+    "events.rs": "976600b74b57ebc3118a7dbd5499271ca6e567bfbd8adca6e72216e763946d4d",
+    "frames_engine.rs": "a3d3fb0f7c26054adcc18d1b6c58d8f8d8c668ac37966ce163b1f4b2876ba09f"
+  },
+  "unit_log_sha256": "f722a9ea7cc5c3368c2b211f8ef8fb36decfb809a9c60e3584b2cc697db7f165",
+  "regression_before_log_sha256": "a71a1a23e2e15218f534e21a999929d67119d979c604c676bad461f139e8f22d",
+  "proposal_patch_sha256": "84aab49fcb08c4b4dd3a1425c6548bb140db12dd1ba8318af6eb478feb549e7a",
+  "schema": 1,
+  "scope": "Exact-capacity notification membership tracking; native conformance, not game acceptance",
+  "production_adopted": false,
+  "game_runtime_validated": true,
+  "plan": {
+    "scope": "Fix tracker growth bound; notification semantics and baseline acceptance gates unchanged from V1.",
+    "criteria": {
+      "scope": "Early suppression of repeated valid-cell substance notifications within one unpublished batch; final canonicalization unchanged",
+      "memory": "One bit per public cell per output buffer; at most 2 MiB, fall back to ordinary append if reservation fails or exceeds cap",
+      "acceptance": "At least 15 percent CPU-time reduction and 10 percent process peak-RSS reduction in vacuum scene; no other scene median CPU regression above 3 percent in eight alternating pairs; all official conformance required.",
+      "invariant": "A marked valid cell always has at least one retained substance record; append/merge and final sort/dedup preserve membership; reset clears marks. Other event queues and invalid indices retain original behavior."
+    },
+    "regression": "New growing-map capacity test fails old try_reserve implementation, passes only within 262144-u64 budget. Retain old failing log.",
+    "baseline_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+    "previous_candidate_sha256": "9ac4bae959769a8d0f3ef8b8918d39c0edc12e03cc6af949d3e8c49b4350ede3",
+    "production_adopted": false
+  },
+  "unit_tests": {
+    "passed": 31,
+    "before_fix_regression_failed": true,
+    "growing_dimensions_capacity_bound_u64_words": 262144
+  },
+  "timing": {
+    "complete": true,
+    "passed_predeclared_native_gates": true,
+    "summary_sha256": "18aec881038b501d35a5a015f6828ea42ad4c3f0fcb135e63a7408661e6fe0d4",
+    "input_sha256": {
+      "/home/lightjunction/.local/share/Steam/steamapps/common/OxygenNotIncluded/OxygenNotIncluded_Data/Plugins/libSimDLL.so": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+      "/home/lightjunction/Documents/GITHUB/OniMods/mods/CycleTrim/obj/Release/OniSimNative/release/liboni_sim_core.so": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+      "/home/lightjunction/Documents/GITHUB/OniMods/mods/CycleTrim/OniSim/conformance/artifacts/change-notification-dedup-v2/candidate-final.so": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89",
+      "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+      "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+      "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+      "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+      "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+      "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+      "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+      "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+      "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b",
+      "benchmark_frames.py": "45f6be82f598d3626ad5eda8bcef3258d83769a3fa57370791cd1d37da762db7"
+    },
+    "samples_per_role_per_scene": 8,
+    "workers": 1,
+    "cpu_affinity": [
+      16
+    ],
+    "major_faults": 0,
+    "final_publications_match_official": true,
+    "scenes": {
+      "fluid": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.6170151785,
+            "minimum": 0.544953687,
+            "maximum": 0.6610273149999999
+          },
+          "candidate": {
+            "median": 0.6023286295,
+            "minimum": 0.552981028,
+            "maximum": 0.6110113779999999
+          },
+          "candidate_change_percent": -2.3802573278187134
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.6291039765055757,
+            "minimum": 0.5572826429997804,
+            "maximum": 0.6730468710011337
+          },
+          "candidate": {
+            "median": 0.6146133895017556,
+            "minimum": 0.563221992997569,
+            "maximum": 0.6232583139935741
+          },
+          "candidate_change_percent": -2.3033691639193887
+        },
+        "vm_hwm_kib": {
+          "baseline": 33048.0,
+          "candidate": 32692.0
+        },
+        "peak_rss_change_percent": -1.07722101186154
+      },
+      "thermal": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.27391156299999997,
+            "minimum": 0.244594798,
+            "maximum": 0.280341097
+          },
+          "candidate": {
+            "median": 0.2616396285,
+            "minimum": 0.24900654800000002,
+            "maximum": 0.28995215700000004
+          },
+          "candidate_change_percent": -4.480254270974305
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.28288798999710707,
+            "minimum": 0.25716885199653916,
+            "maximum": 0.28994314999727067
+          },
+          "candidate": {
+            "median": 0.2730072759950417,
+            "minimum": 0.26086650100478437,
+            "maximum": 0.29986138400272466
+          },
+          "candidate_change_percent": -3.49280080860499
+        },
+        "vm_hwm_kib": {
+          "baseline": 32544.0,
+          "candidate": 32606.0
+        },
+        "peak_rss_change_percent": 0.19051130776794878
+      },
+      "sealed": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.5833229790000001,
+            "minimum": 0.506411022,
+            "maximum": 0.598918159
+          },
+          "candidate": {
+            "median": 0.5677631645,
+            "minimum": 0.496131801,
+            "maximum": 0.7073279590000001
+          },
+          "candidate_change_percent": -2.6674441193238363
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.5958628534935997,
+            "minimum": 0.5207624189933995,
+            "maximum": 0.6099658869934501
+          },
+          "candidate": {
+            "median": 0.5796976820056443,
+            "minimum": 0.50765387499996,
+            "maximum": 0.7327996710082516
+          },
+          "candidate_change_percent": -2.712901365335574
+        },
+        "vm_hwm_kib": {
+          "baseline": 33048.0,
+          "candidate": 32604.0
+        },
+        "peak_rss_change_percent": -1.3435003631082076
+      },
+      "germ_flow": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.8052222994999999,
+            "minimum": 0.6403851439999999,
+            "maximum": 0.8247755909999999
+          },
+          "candidate": {
+            "median": 0.8068088305,
+            "minimum": 0.6487720509999999,
+            "maximum": 0.8168152689999999
+          },
+          "candidate_change_percent": 0.19703018669319228
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.8189289624933735,
+            "minimum": 0.6521498729998711,
+            "maximum": 0.837480135000078
+          },
+          "candidate": {
+            "median": 0.8210366099956445,
+            "minimum": 0.6598940050025703,
+            "maximum": 0.8313742510072188
+          },
+          "candidate_change_percent": 0.25736634052528906
+        },
+        "vm_hwm_kib": {
+          "baseline": 33286.0,
+          "candidate": 32914.0
+        },
+        "peak_rss_change_percent": -1.1175869735023714
+      },
+      "mixed_germs": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.838991499,
+            "minimum": 0.686762109,
+            "maximum": 0.88801547
+          },
+          "candidate": {
+            "median": 0.8325229555,
+            "minimum": 0.6511440669999999,
+            "maximum": 0.853516674
+          },
+          "candidate_change_percent": -0.7709903506423976
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.8520692605015938,
+            "minimum": 0.6997427640017122,
+            "maximum": 0.9062198660103604
+          },
+          "candidate": {
+            "median": 0.8464972084984765,
+            "minimum": 0.6627767350000795,
+            "maximum": 0.8668568029970629
+          },
+          "candidate_change_percent": -0.6539435538182814
+        },
+        "vm_hwm_kib": {
+          "baseline": 33344.0,
+          "candidate": 32926.0
+        },
+        "peak_rss_change_percent": -1.25359884836852
+      },
+      "vacuum": {
+        "cpu_seconds": {
+          "baseline": {
+            "median": 0.7155220090000001,
+            "minimum": 0.660588473,
+            "maximum": 0.7469441290000001
+          },
+          "candidate": {
+            "median": 0.548493323,
+            "minimum": 0.487448839,
+            "maximum": 0.579873486
+          },
+          "candidate_change_percent": -23.343612621145816
+        },
+        "wall_seconds": {
+          "baseline": {
+            "median": 0.7288140165037476,
+            "minimum": 0.6753486509987852,
+            "maximum": 0.7642835180013208
+          },
+          "candidate": {
+            "median": 0.5604174724940094,
+            "minimum": 0.4988381639996078,
+            "maximum": 0.59435900299286
+          },
+          "candidate_change_percent": -23.105557823594935
+        },
+        "vm_hwm_kib": {
+          "baseline": 43824.0,
+          "candidate": 32324.0
+        },
+        "peak_rss_change_percent": -26.241328952172328
+      }
+    },
+    "scope": "Six 96x96 native fixtures, alternating roles. Host frequency/load uncontrolled; not FPS or real-game memory. Original V1 timings not substituted."
+  },
+  "conformance": [
+    {
+      "workers_requested": 1,
+      "passed": true,
+      "cases": 224,
+      "publications_compared": 8440,
+      "libraries": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "summary_sha256": "662bb95f4353bda956242de72bd39437f4d56c76e911711bcce3a925aacdb5a0"
+    },
+    {
+      "workers_requested": 4,
+      "passed": true,
+      "cases": 224,
+      "publications_compared": 8440,
+      "libraries": {
+        "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+        "candidate": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89"
+      },
+      "harness_sha256": {
+        "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+        "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+        "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+        "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      },
+      "summary_sha256": "d2fda43ce93d45aaaebd430ba8a7fda97464249e92245c8a879cadf9b9bfd56a"
+    }
+  ],
+  "proof": {
+    "model_receipt_sha256": "cd5019f11696e32702eb4ee7bcda783d4e3337f358c1caede50b40de7484a3d9",
+    "scope": "Five abstract notification membership theorems. Vec capacity bound checked by executed Rust regression, not this Lean model."
+  },
+  "decision": "Native gates and ordered headless then graphical save/load and texture acceptance pass for one three-duplicant fixture. Production adoption and whole-game performance remain pending.",
+  "runtime_receipt": "linux-744825-notification-dedup-v2-runtime.json"
+}

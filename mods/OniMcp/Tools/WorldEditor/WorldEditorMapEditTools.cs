@@ -18,8 +18,7 @@ namespace OniMcp.Tools
 
         private static bool IsEditableMapMarkdown(string relative)
         {
-            return relative == "map/index.md"
-                || relative == "map/viewport.md"
+            return relative == "map/viewport.md"
                 || (relative.StartsWith("map/layers/", StringComparison.Ordinal) && relative.EndsWith(".md", StringComparison.Ordinal))
                 || IsInfrastructureMapMarkdown(relative);
         }
@@ -234,7 +233,7 @@ namespace OniMcp.Tools
                     ["cells"] = groupCells,
                     ["ok"] = !failed,
                     ["error"] = failed ? result.Content?.FirstOrDefault()?.Text ?? string.Empty : string.Empty,
-                    ["result"] = MapEditResultValue(result)
+                    ["result"] = MapEditBuildResultValue(result)
                 });
             }
 

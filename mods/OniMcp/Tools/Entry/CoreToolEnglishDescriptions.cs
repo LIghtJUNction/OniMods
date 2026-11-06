@@ -16,11 +16,11 @@ namespace OniMcp.Tools
                     Describe(tool, BuildingDescriptions());
                     break;
                 case "game_control":
-                    tool.Description = "Unified game entrypoint for speed, pause/resume, game state, saves, DLC activation, and safe UI actions. Use semantic actions and named targets; coordinate input is not accepted here.";
+                    tool.Description = "Unified game entrypoint for native new-game Survival menus, speed, pause/resume, game state, saves, DLC activation, and safe UI actions. Use launch/new_game_status to discover new-game stages and choices; coordinate input is not accepted here.";
                     Describe(tool, GameDescriptions());
                     break;
                 case "navigation_control":
-                    tool.Description = "Unified camera and view entrypoint for camera movement, world switching, overlays, focus, and screenshots.";
+                    tool.Description = "Unified camera and view entrypoint for camera movement, zoom, world switching, overlays, focus, and screenshots. Camera-only coordinates are accepted here; gameplay coordinates remain restricted.";
                     Describe(tool, NavigationDescriptions());
                     break;
                 case "orders_control":
@@ -107,14 +107,21 @@ namespace OniMcp.Tools
         {
             var d = CommonDescriptions();
             d["domain"] = "Game subsystem: launch, speed, state, save, dlc, or ui.";
-            d["action"] = "Game action for the selected subsystem. UI feedback actions include notification, popup, speech_bubble, and marker.";
+            d["action"] = "Game action for the selected subsystem. launch: status, start, restart_load, restart_status, new_game, new_game_status, new_game_select. New-game menu writes support dryRun and require confirm. speed: time, pause, resume, set_speed, step_facts, step_until, step_status, step_cancel. ui/action open_load_menu opens the native load list without loading a save; supports dryRun and requires confirm. UI feedback: notification, popup, speech_bubble, marker.";
             d["kind"] = "UI list subtype.";
             d["uiDomain"] = "UI subsystem: action, feedback.";
-            d["name"] = "Save name, or duplicant name for ui/feedback speech_bubble.";
+            d["name"] = "For launch/new_game_select: an advertised choice id from new_game_status. Otherwise a save name or ui/feedback speech_bubble duplicant name.";
             d["id"] = "Target object id, or duplicant instance id for ui/feedback speech_bubble.";
             d["text"] = "Displayed text for ui/feedback popup or speech_bubble; required for speech_bubble.";
             d["duration"] = "Speech-bubble display duration in seconds; defaults to 5 and is clamped to 0.5-30.";
-            d["speed"] = "Game speed level.";
+            d["speed"] = "Game speed level; step_until accepts 1-3 and defaults to 3.";
+            d["condition"] = "Legacy step_until condition; choose either condition or until. dupe_idle means any idle work-scheduled duplicant; all_dupes_idle means every live duplicant in the selected world.";
+            d["until"] = "Composable step_until predicate: {fact:dupes_idle,quantifier:all,schedule:work,stableSeconds:2}, or {all:[...]}/{any:[...]}. Facts: orders_complete, dupes_idle, cycle_end, alert, alarm, new_notification, notification, printing_pod_ready, research_complete. printing_pod_ready reads current native availability, including already-ready state before resume. Depth <=4, nodes <=32; unknown fields rejected before resume.";
+            d["maxGameSeconds"] = "Step game-time cap, default 60, clamped to 1-600 seconds; must be finite.";
+            d["maxWallSeconds"] = "Step wall-time cap, default 15, clamped to 0.5-30 seconds; must be finite.";
+            d["wait"] = "Wait for step completion by default; false starts a watcher managed by step_status/step_cancel. step_facts observes native idle, pending dig/build facts and immigrantsAvailable without resuming.";
+            d["targetCells"] = "Optional cells selecting existing dig/build orders at step start. Omit to capture all dig/build orders in worldId. Pending-set removal includes completion and cancellation; new orders and other chore types are excluded.";
+            d["worldId"] = "World for state and step_until/step_facts population/order selection; defaults to active world. Severe threat pauses remain global.";
             d["redAlert"] = "Red alert enabled state.";
             d["saveName"] = "Save file name.";
             d["overwrite"] = "Overwrite an existing save file.";
@@ -129,18 +136,18 @@ namespace OniMcp.Tools
         {
             var d = CommonDescriptions();
             d["domain"] = "Camera domain. If omitted, the tool accepts known camera actions.";
-            d["action"] = "Camera action: get_view, set_active_world, set_view, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot.";
+            d["action"] = "Camera action: get_view, set_active_world, set_view, set_zoom, move, switch_view, focus_cell, focus_dupe, screenshot, or coordinate_screenshot. set_zoom requires zoom only and preserves the current center.";
             d["worldId"] = "Target world id; required by set_active_world and otherwise defaults to the active world.";
             d["requireDiscovered"] = "Require the target world to be discovered before switching.";
             d["lookAtSurface"] = "Reveal the target world's surface before switching when needed.";
             d["x"] = "Target world X for set_view/move, or cell X for focus_cell.";
             d["y"] = "Target world Y for set_view/move, or cell Y for focus_cell.";
-            d["zoom"] = "Camera zoom level.";
+            d["zoom"] = "Orthographic half-height in world cells: larger values show more of the colony. Required for set_zoom without x/y; omitted set_view/move zoom preserves the current size.";
             d["snap"] = "Snap immediately instead of moving smoothly.";
             d["mode"] = "Camera move mode: pan or jump.";
             d["dx"] = "Relative camera X offset in move pan mode.";
             d["dy"] = "Relative camera Y offset in move pan mode.";
-            d["duration"] = "Smooth movement duration.";
+            d["duration"] = "Smooth camera movement time constant in seconds; defaults to 0.5.";
             d["view"] = "Overlay view name.";
             d["screenshot"] = "Capture a screenshot.";
             d["filename"] = "Screenshot filename.";

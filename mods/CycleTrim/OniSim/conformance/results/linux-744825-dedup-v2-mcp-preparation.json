@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "prepared": true,
+  "game_instances_started": 0,
+  "runtime_validated": false,
+  "concurrency_validated": false,
+  "managed_sha256": "ea8c59a38f0f66b0284b26aedc30202c391d046d76de7f71c24dce7950dd0a4b",
+  "native_sha256": "4e677de19a2d257e9c5e90a559183f59c3e95f71bc2a4af54c419ff13838ea89",
+  "package_sha256": "98991a3f260b0d180211e573d9fe1e965dc6be92a66fad1331799200bb2072cd",
+  "source_save_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+  "controller_sha256": "730dddb2f0665fd53f834bb20fee4537344107c2a862bec44e2ba1915b8b0816",
+  "staged_save_mode": "0600",
+  "source_save_modified": false,
+  "companion_sha256": {
+    "OniHarness.Runtime.dll": "596075ed57246976a2701f74fc6a9535598e0186ac342f7992767084639551a6",
+    "mod.yaml": "4c973ee3fc0202df2442e871d6fd0586fc1bc075a7e2381e1daa3f60b7ed7160",
+    "mod_info.yaml": "df6c5e480f51b583a7eac73cb6f02589b7afceee1a75baa02cbca54e1afcb104"
+  },
+  "mcp_package_sha256": "d63ef11e956f04fd81fdaf4ea81737e6edc9a753cb260a0a44c1a0d5ebaadbb1",
+  "mcp_payload_sha256": {
+    "OniMcp.dll": "37225e7b9e8240ddb758f56def48c88be89735a3da2cb9dc63a1145426577de3",
+    "mod_info.yaml": "856fab8232089d48a271f94e26f6fb040e6acdc855fcfeeb8c9e7ee843954cbf",
+    "mod.yaml": "f693acb784a4224e99d25a21d0b9bc2a9290f9f77df4d02aeb5edaae7818f125",
+    "THIRD_PARTY_NOTICES.txt": "f17640bce55811e544c693682b6057000d91e5ffe368be6181fa713abc6722fc",
+    "assets/edit_mark_tool.png": "c9fbf5705d6288c061400ce2955cf92374d2f7cd3b9fa5d826273d23db6c5d94",
+    "assets/restart_oni_steam_relay.sh": "62fc2b4e0b0f04d27639fce1be9f9a0528fd47d3e657df3e9d118a9cb3111dd5"
+  },
+  "mcp_profile_configs": {
+    "host": {
+      "port": 30140,
+      "sha256": "bce6ecd48b49813712511760b3ae4144225c0076aa86cc029313695d2826bba1"
+    },
+    "guest1": {
+      "port": 30141,
+      "sha256": "982bc2c63994cd67737fc5d38dd3888a5530d1a6af7afd1d176e8ebb231b151e"
+    },
+    "guest2": {
+      "port": 30142,
+      "sha256": "c812ada7772dcd69843d79d6267c8c86224ff1829168fd04739dfe7d606d10b2"
+    },
+    "guest3": {
+      "port": 30143,
+      "sha256": "f0fd5a4a60a14a90c309066fa2147d932def98e700baeabf038d1d14796f1d67"
+    }
+  },
+  "group_sha256": "0e13a5eb3aa9af2a59c16dd5ef6a4efc6441a99aa924b49c36669408f5c43110",
+  "instance_count": 4,
+  "threads_per_instance": 2,
+  "scope": "Isolated prepared inputs only. Serve/start/step and actual library audit remain required.",
+  "prepared_group": "/tmp/ct-mcp-dedup2-20261021",
+  "save_reload_verified": false,
+  "headless_then_graphics_acceptance": false,
+  "whole_game_performance_measured": false,
+  "host_tests_passed": 30,
+  "host_log_sha256": "b84854a8aa567a5a1d4a87ffea163c7029597c7d8d6859c08969135665f434f8",
+  "tool_sha256": {
+    "prepare_instances.py": "be50f0d23aee449ac28183bed3a0a683d48828c5711e0d2d9fecb7c69d68525c",
+    "verify_instances.py": "ee68ebe5781cf83f2d0fda0bff8eb2bd8e0a3b5dc4e346ba4d475d5a31e82416",
+    "step_instance.py": "0bc2563b90b914debae06b255ddcf019f28f8d6f47361d717e76e4a2d94e6f52",
+    "test_instances.py": "a1558895267a8717b714cb259506756733080f820b32a71200289899fac1263d",
+    "test_runner.py": "0f3d96a731d057aa74b757caf9b2c4a228ac0717338dd1006116e6ef462e5953",
+    "run.py": "9798a1b4e23e1aa0a4456782791c982b667032d44b52f439c1f858cc2d252c88"
+  },
+  "mcp_scope": "Existing OniMcp ZIP is an optional isolated acceptance dependency. Per-profile loopback-only ports and distinct auth credentials; credentials not included in this receipt. Not part of CycleTrim runtime delivery.",
+  "start_attempt": {
+    "started": false,
+    "reason": "Single-game capacity preflight failed: available+owned PSS 3003028480 bytes, required 4294967296 bytes.",
+    "log_sha256": "3d6ac08a8287b58780c2274b2f20d0074da780c15a3312594d1995277f0c317d"
+  },
+  "next_acceptance": [
+    "Audit actual loaded CycleTrim, native core and OniMcp assemblies",
+    "Observe exact loaded paused fixture and native pause state",
+    "Use supported runtime.py bounded step with the game-owned stop lease",
+    "Save a new owned checkpoint using normal MCP save-root checks, then load and verify its clock",
+    "Complete graphics acceptance only after headless save/load passes"
+  ]
+}

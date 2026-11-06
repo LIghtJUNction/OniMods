@@ -33,6 +33,10 @@ namespace CycleTrim.PerformanceProbe.Tests
                 RecognizesDeliveryTemperatureLimitTranspiler();
                 RecognizesMaintainedDeliveryTemperatureLimitType();
                 RejectsUnrelatedFetchCompatibilityTypes();
+                ModLoadRegression.Run();
+                BusyRefreshGateRegression.Run();
+                OptionsRegression.Run();
+                FetchLayoutControlRegression.Run();
                 RecordsCountTotalMeanAndMax();
                 ComputesIntervalDeltaWithoutResettingTheCounter();
                 ClampsNegativeElapsedTicks();

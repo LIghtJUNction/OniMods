@@ -1,0 +1,323 @@
+{
+  "schema": 1,
+  "date": "2026-10-21",
+  "native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.1\nLLVM version: 23.1.1",
+  "edition": "2024",
+  "resolver": "3",
+  "rust_version": "1.99",
+  "toolchain_pin": "rust-toolchain.toml",
+  "unsafe_op_in_unsafe_fn": "deny",
+  "native_host_tests": 28,
+  "format_checks": {
+    "native": true,
+    "lean_harness": true
+  },
+  "native_clippy": {
+    "exit_code": 0,
+    "warnings": {
+      "dead_code": 38,
+      "clippy::too_many_arguments": 32,
+      "clippy::neg_cmp_op_on_partial_ord": 80,
+      "clippy::if_same_then_else": 2,
+      "clippy::assign_op_pattern": 6
+    }
+  },
+  "harness_clippy": {
+    "exit_code": 0,
+    "all_features": true,
+    "warnings": {
+      "clippy::manual_c_str_literals": 2,
+      "clippy::chunks_exact_to_as_chunks": 2
+    }
+  },
+  "warning_scope": "Remaining native warnings concern unused compatibility code, argument groups and intentional IEEE operand/comparison order. Harness warnings refer only to frozen historical baseline files.",
+  "dependency_update": {
+    "native": {
+      "exit_code": 0,
+      "output": "    Updating crates.io index\n     Locking 0 packages to highest Rust 1.99 compatible versions\n"
+    },
+    "lean_harness": {
+      "exit_code": 0,
+      "output": "    Updating crates.io index\n     Locking 0 packages to highest Rust 1.99 compatible versions\n"
+    }
+  },
+  "resolved_registry_packages": [
+    {
+      "name": "crossbeam-deque",
+      "version": "0.8.8"
+    },
+    {
+      "name": "crossbeam-epoch",
+      "version": "0.9.21"
+    },
+    {
+      "name": "crossbeam-utils",
+      "version": "0.8.23"
+    },
+    {
+      "name": "either",
+      "version": "1.19.0"
+    },
+    {
+      "name": "rayon",
+      "version": "1.12.0"
+    },
+    {
+      "name": "rayon-core",
+      "version": "1.13.0"
+    }
+  ],
+  "official_comparisons": {
+    "workers": [
+      1,
+      4
+    ],
+    "cases_each": 215,
+    "publications_each": 6451,
+    "passed": true
+  },
+  "conformance_harness_sha256": {
+    "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+    "run.py": "8d68e59a6a9abf581a1b9730c258462bbf89d9f14b8f6f4559f9a797614a8cd6",
+    "cases.py": "107224bb194b66327bdab6cf781659c8f4830344473d8d8b68de18b7f315b8d7",
+    "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+    "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+    "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+    "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+    "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+  },
+  "lean_component_correctness": {
+    "1": {
+      "status": "passed",
+      "seed_hex": "4f4e495f4c45414e",
+      "worker_count": 1,
+      "total_cases": 65042,
+      "compared_cells": 31991764,
+      "update_steps": 13965,
+      "elapsed_ns": 4156574544,
+      "groups": [
+        {
+          "name": "small_exhaustive_search",
+          "cases": 52488,
+          "compared_cells": 72552,
+          "update_steps": 0,
+          "elapsed_ns": 11423900
+        },
+        {
+          "name": "random_search",
+          "cases": 2000,
+          "compared_cells": 1799434,
+          "update_steps": 0,
+          "elapsed_ns": 180411267
+        },
+        {
+          "name": "u16_coordinate_and_dimension_boundaries",
+          "cases": 4704,
+          "compared_cells": 112698,
+          "update_steps": 0,
+          "elapsed_ns": 106869787
+        },
+        {
+          "name": "small_exhaustive_updates",
+          "cases": 4500,
+          "compared_cells": 256000,
+          "update_steps": 9000,
+          "elapsed_ns": 27028860
+        },
+        {
+          "name": "random_updates_special_float_bits",
+          "cases": 1200,
+          "compared_cells": 1439312,
+          "update_steps": 4800,
+          "elapsed_ns": 123663082
+        },
+        {
+          "name": "overlap_region_timer_and_large_dimension_updates",
+          "cases": 150,
+          "compared_cells": 28311768,
+          "update_steps": 165,
+          "elapsed_ns": 3706849210
+        }
+      ],
+      "scope": "Actual Rust disease emitter component; minimal world adapter; not an ONI runtime test"
+    },
+    "4": {
+      "status": "passed",
+      "seed_hex": "4f4e495f4c45414e",
+      "worker_count": 4,
+      "total_cases": 65042,
+      "compared_cells": 31991764,
+      "update_steps": 13965,
+      "elapsed_ns": 4160923791,
+      "groups": [
+        {
+          "name": "small_exhaustive_search",
+          "cases": 52488,
+          "compared_cells": 72552,
+          "update_steps": 0,
+          "elapsed_ns": 11470734
+        },
+        {
+          "name": "random_search",
+          "cases": 2000,
+          "compared_cells": 1799434,
+          "update_steps": 0,
+          "elapsed_ns": 181838062
+        },
+        {
+          "name": "u16_coordinate_and_dimension_boundaries",
+          "cases": 4704,
+          "compared_cells": 112698,
+          "update_steps": 0,
+          "elapsed_ns": 104225975
+        },
+        {
+          "name": "small_exhaustive_updates",
+          "cases": 4500,
+          "compared_cells": 256000,
+          "update_steps": 9000,
+          "elapsed_ns": 28012468
+        },
+        {
+          "name": "random_updates_special_float_bits",
+          "cases": 1200,
+          "compared_cells": 1439312,
+          "update_steps": 4800,
+          "elapsed_ns": 124050704
+        },
+        {
+          "name": "overlap_region_timer_and_large_dimension_updates",
+          "cases": 150,
+          "compared_cells": 28311768,
+          "update_steps": 165,
+          "elapsed_ns": 3710672208
+        }
+      ],
+      "scope": "Actual Rust disease emitter component; minimal world adapter; not an ONI runtime test"
+    }
+  },
+  "counting_build_timing_guard": [
+    {
+      "command": "benchmark",
+      "exit_code": 2,
+      "output_created": false,
+      "stderr": "never time the counting allocator build"
+    },
+    {
+      "command": "benchmark-focused",
+      "exit_code": 2,
+      "output_created": false,
+      "stderr": "never time the counting allocator build"
+    }
+  ],
+  "native_exports_preserved": 25,
+  "msbuild_native_target": {
+    "passed": true,
+    "selected_compiler": "1.99.1",
+    "same_native_sha256": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33",
+    "managed_rebuilt": false,
+    "package_rebuilt": false
+  },
+  "source_sha256": {
+    "native/src/bytes.rs": "cf2bb99377052808522958b32e95d0bb59e3bc25f6007f03b8bf8a8cdc88a3ee",
+    "native/src/cell_material.rs": "9284535dd4fb4d89ad56eff90f40f99c800e0bfb53366027513204e69d1f54bd",
+    "native/src/cell_material_add_gas.rs": "b55a3f0df2c60aed89a131d9d5cfe04dfc9f35e66caf2468242a35e1708e3e0f",
+    "native/src/cell_material_add_liquid.rs": "e48301f2ffbef88674745ad4a379b98178a2bc7452f73d51ad395de06de2db03",
+    "native/src/cell_material_add_solid.rs": "7da7cb74c934dcde2ed298b30c2588c76288e4f4ed616e5a54b65da2fe7c2911",
+    "native/src/cell_material_commands.rs": "e244580f2c79b617499573d184a5da821fad8c97e4d3ff4ecd40eb921f442aba",
+    "native/src/cell_material_mass.rs": "f9446b654f9098ccbf6818c686de9ec952f15cbeff06b0aa1e50825a9ff06e76",
+    "native/src/cell_material_rect.rs": "f23643e892dd6551874095c56521206d4ba4d5f471f731d3cc41d36ae9005511",
+    "native/src/component_handles.rs": "692f20bbc0e6ca40278bb23342fd1488a6e24e5f44feee1b1bdcecc0c499ff1d",
+    "native/src/conduit.rs": "773c3dab05b21e4d8a84e3da39e09f2e95d5b43260a435c3e34b7d8c297e4fd0",
+    "native/src/conduit_ffi.rs": "c5e2ab4e329e7edc5a2ddda7b1ee421f7e9b5c8f6ab7b9f58471c8f50da05fd7",
+    "native/src/disease.rs": "349e466d42e1f51d0ccc22415a9136bc643bb0b99ee45910ef81afc0d95f151a",
+    "native/src/disease_emitters.rs": "586ba010b024c7488ddffc714176d7b8d93b2a52a927dec0117b00840a150bd3",
+    "native/src/event_consolidation.rs": "ff91fa54d17e8a6b4efcd1b45865446b0ca4703fba706979587b16c4f2f04ce9",
+    "native/src/event_records.rs": "63dbd4bb53397d3fdf90d6250edabf3b11216a2e2270e2a9eece8341a7235851",
+    "native/src/event_sort.rs": "133c18d43fe9d5b4e73facf0bfa095eeac3907744c116e469cc962e6d353906c",
+    "native/src/events.rs": "cf0b4c706a863876ba0a6b7b07b77502ae8e62c537efc9294170618fd3089546",
+    "native/src/float_env.rs": "10c84ff1fb897f56dc2de69b41efe1efae07ebf9c4a28e1a651ad09d92ab4339",
+    "native/src/fluid.rs": "b9d65248f6e991606b4406181f74277acc2fa867076539ece547b6460e001b42",
+    "native/src/fluid_displacement.rs": "6f3c1217cd11ac38dc95665d82fe2a745f48ccf02a786838a9629236fa8c4b94",
+    "native/src/fluid_helpers.rs": "1b77faa09b60134aaf08c84137d0ab503f9a875fec073f332f6d7626ed70326f",
+    "native/src/frames.rs": "19d3858423bd1e5621c5e8a57126ce0a268c0f59a4cd0410b331d78f3d214686",
+    "native/src/frames_commands.rs": "9df81090d398cbb879be6e322917b01e23ec21e01d99c073bc62dd68270d35ed",
+    "native/src/frames_commands_energy.rs": "7f8a4de9b78f135c75168aa14781a78954a1a6bd564c2e89e19887c243f21b7b",
+    "native/src/frames_commands_parse.rs": "e70a1af236b8edea385a08a450d4ae27760323106785c93fa02bbc6a5799439e",
+    "native/src/frames_commands_process.rs": "61507c320ea5dfa12eaf212a8c5c5cb6bd6662340464b412d37e3088c3bd671e",
+    "native/src/frames_data.rs": "1a8cef86c1c8333047a74a502ecc209d681ecc92e58fe84c739360e0c50a6ee8",
+    "native/src/frames_engine.rs": "35083bc5558f88fadf2fb622374c71f7bd550d689ff5137cfce13b8970f27107",
+    "native/src/frames_plan.rs": "0bd9b2e1072af57e6038687a0997a926d2967acd92174c8a06b83d25a2917e5c",
+    "native/src/gas.rs": "63e13a4e0da68d452c793d18614674f217a14e5124e529525e06af00bfece381",
+    "native/src/grid.rs": "024e47c245777e584ca4cafd2f82e58da76ed46d59380e8cfde1ff6de6176169",
+    "native/src/interactions.rs": "97d7ff33136f731574dd3c18115120c6c73e832d49cf8cd9cf93223fa9fb5940",
+    "native/src/lib.rs": "037bfa25dcf92ea9db9082f0cc1dc523e6091d640c97e6b4191cc2d93512e80a",
+    "native/src/mass_components.rs": "3b057c83636fcb264fc478b921819235b5b099aa6bc3123fbadc8a1ad509983b",
+    "native/src/mass_components_consumer.rs": "6d1dd2a1c96b614129d9b948ecd458a417f1231fdafdfc848d8f3b9325535ecc",
+    "native/src/mass_components_emitter.rs": "6e143aa9dd66c3705ad93311cec2d6088f45294937cdb12b2b2000ff7b9dbf34",
+    "native/src/mass_components_flood.rs": "323ea619ac79679ef2f3f731468fc1d18306f1d714a6dc379d517609d9322da1",
+    "native/src/messages.rs": "9888db9c153adb7d6761d2735272e90f9d0fdfa456c8659d74103c269be524e8",
+    "native/src/numeric.rs": "9e542c2157e2057ab33286fba7744aca9200fbf510d1e264713b99f79b2b1d72",
+    "native/src/offgas.rs": "0fbeb600eda014ef77bfd05633dfe03737c7b4a2030ac93828143309f02de55d",
+    "native/src/partial_melt.rs": "25af4976245278978252aaee3c88099e872eeba768042b3cef430f9834308584",
+    "native/src/partial_transition.rs": "f68c3ba379de8b0c9805299ca3983bfada87dd40f3b7eef284c755f11f237e6a",
+    "native/src/postprocess.rs": "a79d2a9509c2150779ccf16be6fecd5f0da074162e3909e767040f1ebb15ec41",
+    "native/src/postprocess_pressure.rs": "446a0f40105d8de964212c8d28e93e352eb5ae6a70acc2bddd2b66d72b947f4a",
+    "native/src/presentation.rs": "7232d454fba762ab3b4b4fbfab2c90d45fed3bc344f74cd89165978509b4f5d5",
+    "native/src/presentation_liquid.rs": "53e64b4e8345f87519418eb25420463fc1fae35bb9bc9e1651c7deca1c3a8a83",
+    "native/src/presentation_sun.rs": "f656c23ad1d72a22e3eb198f350c3e9f90f50373a96be5d7a36a75736c0f59a4",
+    "native/src/radiation.rs": "7dd5283a8a8cdffc778b73bb16d4f98caf4bf1a69646b2cdc44f03a3be82e1a1",
+    "native/src/radiation_rays.rs": "04479e0524217b35a3400b1c4d0ab65856827ec4a9411b0f31c6a9038f1c9622",
+    "native/src/radiation_region.rs": "c20d9cec2b1579265b250ccd719407290629ea973b9cf675b1a7d7e297467f98",
+    "native/src/save.rs": "8eec55c3497186c8078df17fe33be548e5b3d9bf0acc36db126530f3a2beca90",
+    "native/src/simulation_step.rs": "47cf6f480437eb0790b2f4166029b3616670952d6a61328123a56dbdf8233e88",
+    "native/src/simulation_step_fluid.rs": "ab97e17312ee96ff2bca31667c54eb32c67fb386741ed6125a51742782476a46",
+    "native/src/state.rs": "ca305c7a02f43fde6bfeb4f70763da523df743c22c2bd955e0edd37b804b8572",
+    "native/src/status.rs": "0e800e9a61178ef6f04507d52700c535cda088cdffc2b18e0e8c1bd9dd968583",
+    "native/src/sublimation.rs": "3fef2890bec8249302833287a1d76001016b93fcba87a6667002145a3bb602a7",
+    "native/src/tables.rs": "86e41938f6d83cf96e96fdfeb8b06e9bf90d152217d6103cf54464015458df2d",
+    "native/src/thermal.rs": "367ba13b7274d69b4767b5f822d8da27555a9d82ede11262e6d066a976e75160",
+    "native/src/thermal_components.rs": "343b61782716ff4d36d85c00a7d10863ba3cd502faa0da794a8532e842ef82f6",
+    "native/src/thermal_components_buildings.rs": "f4adddc674f4ce47cd599a341558ceaf40547e2f65ddfcaa4b20a3f2bf980659",
+    "native/src/thermal_components_chunks.rs": "823fe39788515e8c1ae81b0afad0f856c7fce30a0c7ed86a1cef876e95552f7f",
+    "native/src/transition.rs": "71c26545b63afbc4bcf2110174aa66468ace1465f593f938fff5738e366c48de",
+    "native/src/unstable.rs": "e8560b8412b366e9ec447fd23b79330a22885662c915de709a726cd44ec04f63",
+    "native/src/worker.rs": "1a6aebaf41e058fc8a015e2e2a72e74ccfa0029d94c385c6891d174c650db3ea",
+    "native/src/worker_loop.rs": "2a755e86b56dd9d552ea8b736d8ce76d585ece7d00a25bdd9d134808f49d71fb",
+    "native/src/worker_shape.rs": "0c7312386aeff87f6f7925eac680e41f4d1b4dbf4b7e6e7e620b7f5f282961e8",
+    "native/src/world.rs": "6cae43b7c2f05a621812856e8ba08033382b684e8b6c291eba67bca8afc2672f",
+    "native/src/world_cells.rs": "91b9975505a805379ad515948ab4ff001c429c8f6203da4a3cbb6801bc27712c",
+    "native/src/world_messages.rs": "2a89f897be14179840e74db5d958581e7d843558d2682dedc3ae388f5b63d230",
+    "native/src/world_messages_cells.rs": "9c00b426abac992ef14c16afacc74960bf5aab16737894c73d6c6c894ad08724",
+    "native/src/diamond.rs": "f10401943f6af3386485c22d06f27ad06201ab8e0c5963c9eae5fb61800b59b5",
+    "native/src/parallel.rs": "70fd47e748481b09ae684789ba0def964631bad830b52d6761a2bc02f5c127cd",
+    "native/src/disease_fields.rs": "e9e1c7a6aee892cbe501144cac5619cd01566d7d77ba75dc088f5365c61a67c1",
+    "native/src/disease_tests.rs": "a5e7f54d0911e299a3ebefedef72fe36c55b30761eb983412da448bb5b264e75",
+    "native/src/messages_cells.rs": "ab09b7f377b52c3b1257c4551470c4fb0ea26476d032fef704ffac91369d75a1",
+    "native/src/messages_world.rs": "5a5121e45f5ff9bf85e43e9da97264a52f6712163c845479c3814dda425833a9",
+    "native/src/messages_tests.rs": "cac4bddea8ad1e549b47a478c294c309ab91929919d28280b4967948d4b323e2",
+    "native/src/diagnostics.rs": "dfe6e7c307b8b0a037c95a1f272ed1c089f3e821b8d2b06ea6a61be5bee950e3",
+    "native/Cargo.toml": "4d343c36a2819dd3f7f934db68e852084402dea7b02597149244824d25bd5df7",
+    "native/Cargo.lock": "526da0a15dff6b5c704a372d764115566cce1c03ee6787e0ed497c1ab7dff255",
+    "rust-toolchain.toml": "d13306be0ecda81ce779baa290ffb417380d525928477f16200884b5169cca33",
+    "lean-lab/harness/src/allocation.rs": "67b209c496effa8932516811e5901ea0ef0cd891968a88a98a437fa22f9b6445",
+    "lean-lab/harness/src/benchmark.rs": "7c5971f825789bb2ce6cec7fc8592f9f923d449c54e3bc952b4e438ab983b170",
+    "lean-lab/harness/src/disease_helpers.rs": "2a52c8b333b5228f2370d28952af62f49400b3d3b56b325fce484f3aa45f359d",
+    "lean-lab/harness/src/main.rs": "558bf41c227d96f31fa4361d1e25a1a92d4b0a26b7f580b4d6f0f84ed39d785a",
+    "lean-lab/harness/src/shared.rs": "f708747d2360d3f1c64a2d41d7c229b89ebaa1c1feb2f0fdad12791f8ffd3566",
+    "lean-lab/harness/src/verify.rs": "14ca2c561b4af315c8103702c33467f404dfd1e5a1038a5b18493f14e1e8bf69",
+    "lean-lab/harness/src/world.rs": "c0219d72e168e016d19b89916c0d402767d05f2e16cd9ed98ee7359991adf1a9",
+    "lean-lab/harness/Cargo.toml": "5e6a8d9c57914b24f399dd8f8e2b5212d1e86e13151e209a79fb470557467888",
+    "lean-lab/harness/Cargo.lock": "baea17ff3e69b36507b5d4c05181aba8cd1f18147fc143636878519647aa5cf5",
+    "lean-lab/harness/run.py": "7c099f23191dace61654fd8e1102b7a2bc2b56c55f4e856a9de249e09b6f5883",
+    "lean-lab/harness/run_parallel.py": "1989ecad34d93a025c1fbc8e82700ec20e9766d7366962f89ef59cd86dcd39d3"
+  },
+  "upstream": {
+    "reported": "https://github.com/rust-lang/rust-clippy/issues/17900",
+    "status": "open; not fixed upstream",
+    "existing_adequate_report": "https://github.com/rust-lang/rust-clippy/issues/17515"
+  },
+  "runtime_validated": false,
+  "game_ready": false
+}

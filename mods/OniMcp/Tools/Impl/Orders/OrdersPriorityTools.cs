@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "orders_priorities_list" },
                 Description = "兼容入口：请优先使用 orders_control domain=priority action=list。列出可设置优先级的对象，可按区域、世界和名称筛选",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -103,7 +102,6 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "orders_set_priority_area", "set_priority_area" },
                 Description = "兼容入口：请优先使用 orders_control domain=priority action=set_area。批量设置矩形区域内可优先级对象的差事优先级",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
                 {
@@ -168,7 +166,6 @@ namespace OniMcp.Tools
                 Group = "orders",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "orders_priority_control", "prioritize_control" },
                 Tags = new List<string> { "orders", "priority", "prioritize", "buildings", "area" },
                 Description = "优先级聚合工具：action=list/set_building/set_area；读取可设置优先级对象，或设置单体/区域优先级。",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>

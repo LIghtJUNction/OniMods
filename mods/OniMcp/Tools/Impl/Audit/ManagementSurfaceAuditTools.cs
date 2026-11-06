@@ -18,7 +18,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "management_screen_audit", "table_screen_audit" },
                 Tags = new List<string> { "coverage", "audit", "management", "screen", "ui", "tools", "resources" },
                 Description = "审计 ONI 管理菜单和 TableScreen/全屏管理界面与 MCP 工具/资源覆盖映射",
                 Parameters = new Dictionary<string, McpToolParameter>

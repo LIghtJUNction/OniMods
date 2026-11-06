@@ -69,12 +69,61 @@ def require_value_error(callback, expected: str) -> None:
     raise RuntimeError("expected ValueError was not raised")
 
 
+def verify_numeric_validation(analyzer, report: dict, required: tuple[str, ...]) -> None:
+    integer_fields = [
+        ((), "stopwatchFrequency"),
+        ((), "captureGeneration"),
+        ((), "reportSequence"),
+        ((), "intervalDurationTicks"),
+    ]
+    integer_fields.extend(
+        (("gc",), name)
+        for name in ("gen0Delta", "gen1Delta", "gen2Delta", "heapBytes", "heapDeltaBytes")
+    )
+    integer_fields.extend(
+        (("targets", 0), name)
+        for name in ("calls", "totalTicks", "maxTicks", "intervalCalls", "intervalTotalTicks")
+    )
+    mean_fields = [(("targets", 0), name) for name in ("meanTicks", "intervalMeanTicks")]
+    for fields, invalid_values in (
+        (integer_fields, (True, False, float("nan"), float("inf"), -float("inf"), 1.0)),
+        (mean_fields, (True, False, float("nan"), float("inf"), -float("inf"), 10 ** 400)),
+    ):
+        for path, name in fields:
+            for invalid in invalid_values:
+                malformed = copy.deepcopy(report)
+                parent = malformed
+                for segment in path:
+                    parent = parent[segment]
+                parent[name] = invalid
+                failures = analyzer.validate(malformed, required)
+                require(
+                    any(name in failure for failure in failures),
+                    f"analyzer accepted invalid {name}={invalid!r}",
+                )
+
+    signed_heap_delta = copy.deepcopy(report)
+    signed_heap_delta["gc"]["heapDeltaBytes"] = -4096
+    signed_heap_delta["targets"][0]["meanTicks"] = 15
+    signed_heap_delta["targets"][0]["intervalMeanTicks"] = 15
+    require(
+        not analyzer.validate(signed_heap_delta, required),
+        "valid signed heap delta and integer mean ticks must remain accepted",
+    )
+    for invalid in (True, False, 1.0, float("nan"), float("inf")):
+        require_value_error(
+            lambda invalid=invalid: analyzer.select_series_after_sequence([report, report], invalid),
+            "after_sequence must be a positive reportSequence",
+        )
+
+
 def main() -> int:
     analyzer = load_analyzer()
     required = analyzer.DEFAULT_REQUIRED
 
     first = make_report(analyzer, 1, 0, 0, 0, 0)
     second = make_report(analyzer, 2, 3, 45, 3, 45)
+    verify_numeric_validation(analyzer, second, required)
     failures = analyzer.validate_series([first, second], required)
     require(
         not failures,
@@ -224,6 +273,17 @@ def main() -> int:
         "no fresh probe report after reportSequence 1",
     )
 
+    ranking = analyzer.hotspot_summary([boundary_first, boundary_second], required)
+    require(ranking["observedSeconds"] == .2, "summary uses only intervals after the selected baseline")
+    require(all(t["freshCalls"] == 2 and abs(t["inclusiveSeconds"] - .000004) < 1e-12
+                for t in ranking["targets"]), "summary excludes all cumulative pre-baseline work")
+    require(all(abs(t["meanMillisecondsPerCall"] - .002) < 1e-12 for t in ranking["targets"]),
+            "summary converts stopwatch ticks into milliseconds per call")
+    require_value_error(lambda: analyzer.hotspot_summary([first], required), "at least two")
+    zero_duration = copy.deepcopy(boundary_second)
+    zero_duration["intervalDurationTicks"] = 0
+    require_value_error(lambda: analyzer.hotspot_summary([boundary_first, zero_duration], required),
+                        "positive observed interval")
     print("PASS CycleTrim performance probe analyzer regressions")
     return 0
 

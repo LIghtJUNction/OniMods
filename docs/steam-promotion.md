@@ -1,5 +1,21 @@
 # OniMcp 创意工坊公开迁移
 
+## 当前更新入口（2026-10-22）
+
+Steam 账号的只读条目清单确认，当前公开条目是 OniMcp `3807166922` 与
+CycleTrim `3807166689`。历史迁移 ID `3806839864` / `3806858440` 当前返回
+`FileNotFound`，不能继续用作更新目标。常规更新分别运行
+`scripts/publish_onimcp_steam.sh` / `scripts/publish_cycletrim_steam.sh`。
+不再执行下面的历史迁移步骤，不向旧目录模式条目上传。
+
+CycleTrim 0.4.0 发布前，从同一提交的 **OniSim native platforms** CI 下载
+`onisim-all-platforms` artifact，解压后把其根目录设为 `OniSimNativeBundle`。
+发布脚本和项目打包都会核验 Windows/macOS/Linux 三份库、当前 Rust 源码摘要
+以及每份库的 SHA-256；缺一份或源码不同就停止。普通本机开发构建只包含本机库，
+不能作为全平台 Steam 发布包。Windows/macOS 的 CI 构建和宿主测试不代表 ONI 实机验收。
+
+## 历史迁移流程
+
 此流程仅适用于原公开 ID `3731864673` 和已通过 ONI 实机加载的私有 Legacy ID `3806839864`。新条目的 ZIP 必须与创建 journal 记录的计划一致；原条目始终保留，不上传或删除其内容。三个在线写入阶段各自有独立的持久意图记录，回调或回读不确定时停止，不自动重试。
 
 ## 审查计划

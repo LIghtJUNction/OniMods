@@ -1,0 +1,4087 @@
+{
+  "schema": 1,
+  "utc": "2026-10-20T16:51:30.588188+00:00",
+  "workers_requested": 1,
+  "harness_sha256": {
+    "host.py": "2336c2ad8dae5fee71bc471bceed2070e2904890da57be8c80303dd70c54762f",
+    "run.py": "f4be71ba7f1dc03af4ec10cec0b8a73f1f03981162ab095130823339487d1bf0",
+    "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+    "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+    "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+    "physics_cases.py": "be739344635fc36298b98f6d5a01696685bae596bc424ad0335daf302c1d4bb3",
+    "pressure_cases.py": "1e43aca5981fa476200b7ecdf04fcfea9ca2a619b8eed67fe90c08478edb0279",
+    "soak_cases.py": "83775c3a1280ce7dfd71cbbdb13f772488f4a4f4d92f7f1223a191c88520b9a6",
+    "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+  },
+  "allocation_clock": "Fixture-only time/CLOCK_REALTIME fixed at 1900000000; monotonic unchanged",
+  "comparison": "Exact IEEE words, every public cell and ordered event record; ABI padding excluded",
+  "scheduling": "Observe ready without release; queue frame; publish empty batch; observe ready; publish frame",
+  "empty_batches_compared": true,
+  "libraries": {
+    "reference": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+    "candidate": "1f56c9b2f0dc47f0db3e24015e6d927492d61cf9c9ade4f17c6bcf3e6c897c33"
+  },
+  "message_ids_exercised": [
+    -1993857213,
+    -1914877797,
+    -1899123924,
+    -1853671274,
+    -1836204275,
+    -1822987624,
+    -1683118492,
+    -1586724321,
+    -1524118282,
+    -1505895314,
+    -1387601379,
+    -1348791658,
+    -1338718217,
+    -1252920804,
+    -1167792921,
+    -1019841536,
+    -931446686,
+    -930289787,
+    -912908555,
+    -898773121,
+    -895846551,
+    -781641650,
+    -775326397,
+    -752676153,
+    -727746602,
+    -704259919,
+    -672538170,
+    -605421515,
+    -563057023,
+    -505471181,
+    -503965465,
+    -469311643,
+    -457308393,
+    -456116629,
+    -449718014,
+    -435115907,
+    -409964931,
+    -374911358,
+    348345681,
+    377112707,
+    403589164,
+    468135926,
+    697100730,
+    797274363,
+    818320644,
+    825301935,
+    833038498,
+    894417742,
+    1020555667,
+    1078620451,
+    1092408308,
+    1108437482,
+    1154135737,
+    1445724082,
+    1486783027,
+    1575539738,
+    1593243982,
+    1727657959,
+    1739021608,
+    1818001569,
+    2024405073,
+    2062421945
+  ],
+  "cases": [
+    {
+      "case": "cell-replace1-element0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "4879a5124afa73d061c4dad7538a8eb5442f76a65bde8a722278fa4aebba522b",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-replace1-element1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "5ba240983ee991ea75192528e1d0416cb006011a2af502374922a2c7ce837a26",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-replace1-element2",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a230871f4ee9f8b4cf8ce41e887b4715ddc1cf9fbbbd043f3a612a1fdc5f4dd6",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-replace1-element3",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "599964ca1764ba47afdda8f7820e74278b305813af2e871999fde2f80b71b1a2",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-replace2-element0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c2b7890c4906f8868f27344aec7d2e8b9d20dc4d9fc3f32875e9840b8be07bbe",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-replace2-element1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "1439664d63d2ad78aa31b7617cbe88475b7b5a3b199aabd0b50c04947f6268fd",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-replace2-element2",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "e98272b86137687ad94641d5b7f0834e4fb556b2d1652c63fbf559d837fa15ab",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-replace2-element3",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a9fc54375c61c901cce7eb133e8aeb736cb564affb1095e0acf2f2e8345a0dca",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-add-gas",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "40aefdf7333515f0022376550d0c693946670f765266f83c48c0b2049c2cd540",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-add-liquid",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ba2cd42a758a36d60ddfa740d7c7a15d4b4c32855d34736049caaaca17debd5b",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-add-solid-column",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a1321f41cb6418762cd9cceb0bc28296b61cddcbd8d59b75e389b1f766cbbb3c",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-add-solid-direct",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "345ea2b44c077700a9766f47dda3a71a13818155b314b4e7370dad1badeeeeda",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-remove-gas",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "38faf88d6b8d495b27c78879b4ba7cc1d166607d18386088cbb60070808d1d3b",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-remove-liquid",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "13ca836f9fa1ad63e53c0209d545d13d5a7466ad74ebe978a6cf97b43f869701",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-remove-solid",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a398aaf159652174a77517a6eb7e1c06a04a4f9426a76df063fd858bf3c15ba2",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-remove-all-liquid",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "24ed3486bb66d4683d3d2e0a63961ca216d4ed9866aa61d4ee5a6ff4706df68f",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1252920804,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-property-gas",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "45c531dc3b51d0de4c54c4c55eb43463abf1eaf18193beb6b9791cc9e2b4c08e",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -469311643,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-property-liquid",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "3f9c5e804810f4ad6f34007b7b770f1b21314fed6e269ed65c9b7ae220c5db34",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -469311643,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-property-bits",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "6516f7a17f8eb913370a0d99056b32749df5b16b0f1c8b1254d77513f8912621",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -469311643,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-insulation",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c7c4e04cbd3a4530917bd936f67cd467485465b38a534c96f96d0373b1e20975",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -898773121,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-strength",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "12924a3a91fb255a9d292c23527397af8d4365d7e66c7f9e7edc3874d24aec9f",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1593243982,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-disease-modify-consume",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "b26ff41bf9d15c530a9eb3be8a9a9fc4ced9115ed980f9ced27f9cd94efbe492",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1853671274,
+        -1019841536,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-dig-skip0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "3506d31ff0b9da2f837573a8e7fd8e56655536690b8120feea0ae6a00579d77e",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        833038498,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-dig-skip1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ab7b6934ef9edf284dd998de4dc9a05c039d05f9d7f26e7fb84c9a639b37ef82",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        833038498,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-dig-backwall",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8c10a0d77d2447faa0563adf3e94bfa3aaabf31acac190e7fcec87ef7b19c30d",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -605421515,
+        825301935,
+        833038498,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "saved-options-bits",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "934681b32b2db87f2eca238fb11fd2de4940411fda277c998209852daa3e2f85",
+      "snapshots_compared": 18,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        1154135737,
+        2062421945
+      ]
+    },
+    {
+      "case": "interaction-registered-normal-frames",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "71e6e3398834a5c2c8382935e42939db48c332ec3f41cd99ca1e2fca5f245923",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -930289787,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "interaction-unknown-record-skipped",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "dcd37b536bef91abce942510ab92759265c2826dc4f03507947901d0f634b3cb",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -930289787,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "interaction-replace-clear",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "d1fa0fa82c953ff787c3280f5b95a8dd073e0094a196ba08f4c272b17a7c337e",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -930289787,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "interaction-negative-count-clears",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "e024c56d757dc58f33a32c20d105cbfa2621da9ede9afc6131d865c1de31b51a",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -930289787,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "disease-emitter-remove-reuse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "76cc10874d46982bebc102167066c97cd00724fd15bb4ec7638de775a310617b",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1899123924,
+        -931446686,
+        -775326397,
+        468135926,
+        825301935,
+        1078620451,
+        1108437482,
+        1486783027,
+        2062421945
+      ]
+    },
+    {
+      "case": "debug-transfer-scales",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "e20f08a0e5ec77a4f6f3f22611b06953dbe5c90448282fca80f5ee85752c560d",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1683118492,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-parameters",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ff6257bfb516e66c4f832733f508c5384bd096ce5c6120bbc7491fd94be13824",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1914877797,
+        -1505895314,
+        -931446686,
+        -775326397,
+        377112707,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "allocate-clear-load-roundtrip",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "90fa23422e2798c2046c94de2844cf67f09d49cf5c1a0e9403cc8480c3785585",
+      "snapshots_compared": 18,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1836204275,
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1092408308,
+        1108437482
+      ]
+    },
+    {
+      "case": "linux-system-info",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f095de3e5d305f429f79c9bb6037edb6f78b7b56cd58256d3f787aa9bd19bba1",
+      "snapshots_compared": 1,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": []
+    },
+    {
+      "case": "intentional-debug-assert",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "2f7b0f5c8678b1dfa55fdb2d5e0ace6f21ffbacc5cd70a4de0e8fd90f924baae",
+      "snapshots_compared": 1,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": []
+    },
+    {
+      "case": "backwall-null-clear-restore",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "e4766728f6649d25e35622f37b221ba4b1714e0022999fe608f65f52377baad9",
+      "snapshots_compared": 24,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        -605421515,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "backwall-null-save",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "d10aeec62ff446d0a35601df7599e5bd940a3f70a8db08125939076ee058dac0",
+      "snapshots_compared": 18,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        -605421515,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "backwall-null-save-zero-elapsed",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "bd77302f5ccd7499301fa5fe948b87cb677d18d7d6af6bbd3f4f5bebd2ad8af2",
+      "snapshots_compared": 18,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        -605421515,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "save-buffer-replacement",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "5530798d6363b33a7700774fa541868bbcb1924fe8459fbdd5b618f1f905eee3",
+      "snapshots_compared": 18,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "save-buffer-replacement-null-wall",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "027424a0814e5cbb483862c8a3f72dba9cdd8301936f6dcadf6b28d20ce4b9f6",
+      "snapshots_compared": 18,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        -605421515,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "save-header-positive-origin",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "67fad6c2f83549f4875ae2f5443cb45530c269e98f4f59efd0aa3598758d7079",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "save-header-negative-origin",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "835beded7ea6e82a29642f57a7fdb79e934fdac235c14ae6837463ca3fb13c81",
+      "snapshots_compared": 11,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "mixed-gas-seed1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c5c48fc993e837958fbbb5f44c50a112e24147facbd68cb0ea80497e5d875cef",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "mixed-gas-seed123456789",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "4475cf95273d2a54f2cd246433f90543cec55d672b8f79c377f5c5e5f2abef88",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "mixed-liquid-invertedFalse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c065ede3887d490852a65ec981ee46acab5feed982e1e91d458e7923fea97055",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "mixed-liquid-invertedTrue",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "b29be4e030d3980d6712b1a7c3bfc033664ce0307d986799975ceb7d199afc64",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "unstable-solid-headlessTrue",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "84950e6a25530625f35ca3621bb982e7cb830e9ad408e9aec37235a426aec018",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "unstable-solid-headlessFalse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "90415bde0b49bdbddccad9bf06deb5a81a56cf43c07c297f21d890c10aa86a7d",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "unstable-diagonal-headlessTrue",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8810bd3f717157fdd9448dccba46077f82db22d5a9a1a9a1bb9d2b0d578aca39",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1154135737,
+        2062421945
+      ]
+    },
+    {
+      "case": "unstable-diagonal-headlessFalse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c75f9feac21c009d928ed74814ffdc67a6ddf3a5e782d92252d4b1949e03af82",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1154135737,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-pressure-damage",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "287bc73476f66637b0732fdd2d9d798296532417620ac0a00959990125acff70",
+      "snapshots_compared": 65,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-asymmetric-i0-hot0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8f8d1f513a5210b1749e2bbb784eca6d9b99bdfc51dc8d0351769fcb1a35cb46",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-asymmetric-i0-hot1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "bd1b054f522c7a43ae83a433554734fab176fe103ef0f9e54ce6615b41138848",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-asymmetric-i127-hot0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "fbc694894dc7bdeeffd1be6170b527d1c13c90336a78cb753269896d6ea4ad27",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-asymmetric-i127-hot1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "7a534d7e86aeb0d1ac0c727a06845e02c59be1e834f9da3e2947671e08163a22",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-asymmetric-i254-hot0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a43b32af9204994ca1480a0d33d3a789e6027abd2b7e561fc7d771707b884650",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-asymmetric-i254-hot1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0b4a50df2ee2dffd4af887218c8bdf4f6eb30c548820312ab0973fd67c439e65",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-asymmetric-i255-hot0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "bcf63cf61bf15d3be3634b35f32a94d6cd9799d50033f1ca5b996b92397fbaf8",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-asymmetric-i255-hot1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a72f5b3fe7149b9a835d4846b01aa917ae5590051d12b1ab80e26e8b11874cab",
+      "snapshots_compared": 32,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "region-overlap-33x35-reverse0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "dd358d903d35da34d20b8d1b735a5585164e7cb976796dc7bf159e6a5307e442",
+      "snapshots_compared": 20,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "region-overlap-33x35-reverse1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "42aa58ce19c3032f117cf23f8390aa568d75e56444ce7abfe9c306fa04296fe4",
+      "snapshots_compared": 20,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "region-overlap-65x67-reverse0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "b388427eaf8283b734cb5cb9fdb5849ea28b0da4979a250b56eb79e3a133e6c0",
+      "snapshots_compared": 20,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "region-overlap-65x67-reverse1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "2dc03357d48f4b81684b104d1debe52937010858aff9e258c508ca318d845343",
+      "snapshots_compared": 20,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-pair-free-side0-repeat0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c90277ce45871a82f22bb00bcbe4015847872548b56a24534b49b9ae2a584f13",
+      "snapshots_compared": 24,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1167792921,
+        -931446686,
+        -895846551,
+        -775326397,
+        -752676153,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-pair-free-side0-repeat1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0251ab13ba12ac4e972e98787241d6664ce44d0402f3be07018c4652d14fca7f",
+      "snapshots_compared": 24,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1167792921,
+        -931446686,
+        -895846551,
+        -775326397,
+        -752676153,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-pair-free-side1-repeat0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "9995f1cc6c169359c29ac02ddcbcb60d2ada5152812ad382d82d572a1d07268a",
+      "snapshots_compared": 24,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1167792921,
+        -931446686,
+        -895846551,
+        -775326397,
+        -752676153,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-pair-free-side1-repeat1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ea08604d84bb054fdcf1e973a723908573dfdeddd497e59370151ebc1a87f2f3",
+      "snapshots_compared": 24,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1167792921,
+        -931446686,
+        -895846551,
+        -775326397,
+        -752676153,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-convection-rounded-below-cold",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c929cb497bb91e59ea9ab2a981ae6178ef7e8c485dd4e03d78c41b59e88dd817",
+      "snapshots_compared": 20,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-pair-save-lifecycle-8",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "716f33bb2877b8810a3736d74ffae86b42114a6d17d9ae8b87e8f4d029f5a699",
+      "snapshots_compared": 73,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -895846551,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-zero-capacity-first0-hot0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f6472d89cb277ece828dab009067333af517030ef01e5280be61b57021fdc5e0",
+      "snapshots_compared": 7,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-zero-capacity-first0-hot1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "dbf1db4f73929d16b968d770020804b00db94bf42ee91c10d12196b78bb08846",
+      "snapshots_compared": 7,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-zero-capacity-first1-hot0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "1e0d96c458b0b5fb7ffed03724ddc084665ef3551741ff9d27a21c03370db3f3",
+      "snapshots_compared": 7,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "thermal-zero-capacity-first1-hot1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f2ef77b0d31e676a46a646884071b3dd0a637e3175a69b2c2445a4f9eb0f4b8b",
+      "snapshots_compared": 7,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-oxygen-0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a2dd1a6399e627082cd585c87bd82fe813377fa315c9288e5b78b6ef6f78d0ed",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-oxygen-1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "19f6392eac542c1b82a80c2e812843e5b49b396f85ca74863f10649fd4aaa6a8",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-oxygen-2",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "1ba9362e77793deda5996a84a0d7fa95e96d200371eae514f760617b5dc394c3",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-oxygen-3",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "6ddc1765d6970c980cd0b43fff5ccb05a1f8b48387ddac16f38a3524382070b7",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-oxygen-4",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "e3766508c877a23791a6bf5000d4786f6b07c0fd529477e6f1856f280b1647df",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-oxygen-5",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c9c80ec4786d7bd030e133d4a03ed323a222066c0e6453478b024ce9de0bf496",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-oxygen-6",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "b382af3b95179df048f2da69ea2207320f20c237db7e79645c89d9b9670b8ad2",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-oxygen-7",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "591649060262a85ab6dfeb1370a146790202fd780cdd7825bdb0dc2859095d41",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-water-0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a6ccb3f54716b7e9f8ee989b31a7f56c3bfa9f83bf70bcb2cebf7e4bfbb39616",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-water-1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a3e6e968a3a730db3360b65cf8f46b85e2b934195a523b9790c2eab23168a836",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-water-2",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "6c6519e41572c57719045e9f6b104ecb4a7305d9ac252cbf9df67599e4678437",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-water-3",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "43dabcf410b7753e2733a720d9ee051793dd92d9a1b87542ad3a50e427619217",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-water-4",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "d44fd1878ab1b3444d738ad61a495f0b23cd341896084d99303ec11841b3a894",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-water-5",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "7d84b2f6f8c9a852f9323f1f370df0327526fdd126411539ae68edbafee17f24",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-water-6",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "d6560b4a79d0096c43125e5fc5d590254263a9ddf1d190f8547f1efc13e2b0de",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-boundary-water-7",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "d6a9d1c092ef851cc0a89bd2bb32ae55f7d43bcb49542565e5b6f25e90b17868",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ce03110c07836d092ed6f1c3c550ab8bb59db73b1b99c4e8f76a3d90405582e5",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "bd52c5808622087e61ab6259ee7490261a550d8b4730ccc8e85e1368f008309d",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-2",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "36221f98f722472f76072ff260cd47baecdd75b2c6525204ffa224a7265c7c63",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-3",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "672f8073613cdcf871188a04fab393f31ae2793836554cfacc86bec3ad6abe7f",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-4",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "48527e5266fc0b9bfae8ba1fd1f3fd7012c395a91a35d896d27075ff1e8a4dc1",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-5",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "50a4501e153032d23db9c61531acc5d21f41579b85155f7551a49ad0511def69",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-6",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "177eb00b43839761ee89af4ccfda40a3e05967aa7277cf9126084e63574cca03",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-7",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "dbdfe8486d75c7fab8a3ecb3033364a8cae68fa8eaffcd4a919cf9177c5917ec",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-8",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8ab7b6e6584b4658aeb2b1a3d9286a63224ba0696406228ca5ca68ff0fa6ef38",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-9",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "70993f45dc5451b8c8755eadff6cfa9d84bc720fbd7684a920dbc02adfc9eddc",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-10",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "695fd0f14d965b034405fbecc769c16d95f42c207fe8b074526543759ff3313b",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-11",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "2e0981079362db5e731262a01d093eecd20b638f8d7ba87dd90de7113dd1dc3d",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-12",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "3bc762f00c1c840ae5e53c7fca83c067f05560077ce628a5d5d9110d7f30a04b",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-13",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f57d3e97110ac50632ff7096c63f274786c0be30c0e2ffdf9ba748a6d7cb013c",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-14",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "6fa475e32a3c08fe92f0a736274958e0a38b4777065be04f5e82198cf97f3710",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "pressure-mixed-seed-15",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a9f0c1e6b5899f9d1899914d2f33538fb85f91633693108433f8aa43ca24b16c",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-gas-seed7",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "3be7b4063ff453cfb85063e58c7a625aab1988bfa0f5201b02657d543f14b636",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-gas-seed104729",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "d391a70a57bd155c4d9124f98d4b1ac7f442c9da4546d4a8840aa001ae6d98b5",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-gas-seed2147483647",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "af38d25f588bc089e72f9ea0fe59f247845f7d9fad3f5a12b24a563f9937c383",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-liquid-seed7",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "6a736ba9e97d4df246836b396da859f1ae9a9695ec2caf5fa2af0e3cd7d18f7e",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-liquid-seed104729",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "34655b5ad0bfb8224c816de3820b478c00b9fa23acd7ba94717580e78eda1d75",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-liquid-seed2147483647",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "80901fec3f5516936c80e09f9fa92251a88f44e90bc1dc883032e0bd393cef6b",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-thermal-seed7",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "96b3452d00a1b35d70d9f4645b8b08fce64da64cb111c74321190dd520c444b4",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-thermal-seed104729",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "1c236f4387c77788c5d71f83504db009469fa5e39407509ac9bbb52c878a20dd",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "soak-thermal-seed2147483647",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "9ce5ceba266cc1fcd2bf92ab19d0ceb6600516c50623bc0f387816cdc43cb423",
+      "snapshots_compared": 221,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "sealed-oxygen",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "912df145676d516b88a6515d59a800f1629244f500636cc76574f3d845b4c32f",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "sealed-water",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "70624bf9b6a95a6d09468ece1851aedb7e5c79de6c5ca6b566322644df589fef",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "sealed-granite",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "b23318b975b5eab955cc3991ff9724436f82b13f422249e9903f886ee92973a8",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "sealed-vacuum",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "9f26f727238caeacbaa158a74923cf9fd47ea5b043901643bafb9e832fa2a596",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "gas-pressure",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "aeaa129d6e1daa23ab582f846bafc2777ced70a0d42bafb5aa345e1eb245371b",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "gas-vacuum",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "eb0d7dc4c63b38fcd85ae644c4b27d082c9ed56a051ce77264a5475ce08b39a7",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "water-drop",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "403cb0531eb8da302669f325db7fe96f093105235edbb4a13e4678e3dda333e3",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "water-gas",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ea20a97a6d844f961842445c22b9755d72c651c954f145c9723645f4f35c04d9",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "solid-heat",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "387d63ce83bf0965fb0d24bf26b5e15eb4d4dafae982f9b84db09c4112853c1a",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "gas-heat",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "e12b4c041cc6b2668f4aef5b93d201ee4fa1c1ed3f893d4d58afa4749843e383",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-heat",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "3222b166363bcb3b512d325efb204857ec57da00e9bb3e0541aeda2a5130f8df",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "solid-heat-reverse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "fb4fa24ae6f67b99ae350f03f186a8f8038bd155a0987e4c21d6046461c37f71",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-heat-reverse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "482cc65a1fd122c41efea98197e8664aaa7151434d4cc018391e11cbb1157fa0",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "gas-heat-reverse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "750e5f5403227c4b49edb30835a4162fb6e2766fc93955a7897b67198300426e",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "gas-chunk-boundary",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "81a43021520f187b75acb1cabab80915d062c98d3adab96d5dfc550d3fd69d11",
+      "snapshots_compared": 9,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "batched-prepare",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "89c530e2431708682e87a312cab8cd40ca1b84c5c8fa7d905c46835c08c6bf78",
+      "snapshots_compared": 25,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "batched-load",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "fb4a3b854db3c22d7fc1e2e85d46dae3f8765b876bee4a0501bee49e49d914c5",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "enum-visible-noop",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "9bb5372928e3ab4e832d0e9aa36f9a9abe24a64a43427b0fa0876759d90bf3d7",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -563057023,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "enum-profiler-noop",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "81109be6df9d2ff12dd83261a0620f25a1cd31cf52abf34189b080826173fa77",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -409964931,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "enum-radiation-sickness-noop",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0e9bffb5d5667618d04c700472fd06131eeeecb163eae82a64137c10032a7271",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -727746602,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "disease-diffusion",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c297afaeeb5b0d0cc9a67b7a6c59259069cac8a2adbcc1e1bcb5ac001713243c",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "disease-conflict",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "7b7a22cf298ed7f6417be88630c15bf818b0b1a4af553ca69dde9588abba147b",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "disease-decay",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "42cb555b355c9df716d3465ed3ec060c44ee9ad7414612dfac7f0937ef297e89",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "disease-diamond-parallel",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a08fb19c929ab62865ac5c0f16fb67f320aeb7fda9fc5b9fadaf3bd0ed3b26e1",
+      "snapshots_compared": 9,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1899123924,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1486783027,
+        2062421945
+      ]
+    },
+    {
+      "case": "solid-melt",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "dfd7286bec8f754da1c9c494d6297fdda0fa73283a4a11a0038e87fbd66b183d",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-boil",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "afb2a3b8d76e3929844376b00e7bfd1c5136569ce6327930bb76cae741721d46",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-freeze",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c51d88f7cc7aea257c50d6e39eec2fbbdfa0f923e607749e1addca2a9b825a7c",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "gas-condense",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "3a2e74ea62680ef43024e2cafd392ad58c734f8a610e0ef0664c41df0605deb5",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-energy",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "9c103438f36deacf2954faa88be3c69e96f910ab472e855ed286e0f1efee6646",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        818320644,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "backwall-heat",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "37495bfc9ca4f5f8147c840543e0827d65bd60be9162627c384ff2a124b4538f",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -605421515,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "backwall-heat-reverse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "bc9fe1dfce663f9c1cca076cdbf9853d93ea134b963d394832e9b3c875cbcf1d",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -605421515,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-cell",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "266eba28596404f904095b5e281bf504f888129d9522089a3e55d4a323c2a0e5",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1914877797,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "gas-heat-1000-frames",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "72c910af0e27ee2134e3508e8d1bc7c0f652dd3ac7ca1fe925c93da59aeb90fa",
+      "snapshots_compared": 2001,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "water-drop-128-frames",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "521985774b565d9f20895cbcb77affcefd252bc361120eb7681b8ce9b713596d",
+      "snapshots_compared": 257,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "gas-save-roundtrip",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ccc8feb066983686399aa7e9d02d1693ef2b247c95afe44fcaeb924016ef11c2",
+      "snapshots_compared": 24,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-save-roundtrip",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f92f8f4294007cc9a3eaf3099a8b110580150464641072f8c56c7d8fcb7ce629",
+      "snapshots_compared": 24,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "building-heat",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "22237d97b7a5fbaadd3b5eda4fb3f1c4c4ab0354452aa9a6e28276b7974a5175",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "building-operating-heat",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0ae63950a588ab826cd55bdca41f9d12bad9c0a4cfe8bcd8e3f029b70a848e29",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "building-energy",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "24b1fdede929edfadbdd4d564381ac7c6070f54da1b4d3b35753b672e92d40f5",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1348791658,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "building-modify-remove",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "82f52b5976bb123cb310b95ceff9888eebd336a9ee6828e20407f47bfb60a69a",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -456116629,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        1818001569,
+        2062421945
+      ]
+    },
+    {
+      "case": "building-contact",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "3c91d2456b307c73c8dde3e6c79881be4a5756546a48b76f1bb18e41fba3d85e",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1993857213,
+        -1586724321,
+        -1338718217,
+        -931446686,
+        -775326397,
+        697100730,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "chunk-heat",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "01d2154399b69eaea0e3a26b9926ff63330bc9cc9ddf2b0b0e981e2f982de2f7",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1445724082,
+        2062421945
+      ]
+    },
+    {
+      "case": "chunk-move-energy-adjust",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "2f949741aafcf9fbf8d1244493021c4350e4eefb7f16fefd09a57fb7d86517cb",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1387601379,
+        -931446686,
+        -775326397,
+        -374911358,
+        825301935,
+        1020555667,
+        1078620451,
+        1108437482,
+        1445724082,
+        2062421945
+      ]
+    },
+    {
+      "case": "chunk-set-remove-reuse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "2f991065291d1b1167635f63771d6361f9e27c9a0377bee0a2f12ae636068618",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -912908555,
+        -775326397,
+        -435115907,
+        825301935,
+        1078620451,
+        1108437482,
+        1445724082,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-hot",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "78eb273900ca438d331aa660117807039326602aef6bb72eea6e8397d77d9175",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-cold",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "dd9ba7700fb832e3895c5ca4c7f6d7a2ec886fc72d4e9e75d98d510a88fe1f50",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-insulated",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "7ab9c5d29363e3e79303d38d97dd5ea96f7b6592903ed4fade381d0e0418873c",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-freeze",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "417098a9516c6361e7b9242b8ce8fe1606b661ed39bdac9270eead4a5cbd2555",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-melt",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "2f87d0460e10275cc8f0767ad98796f18e6a1bc2ed7ba528e34f56328b070886",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-remove-reuse",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8012874d0db4856c39ef82ab8920490aadda41786cb5bb0e5089956448e7a04a",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-clear-reset",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8ac80b945f6911aa76f550abc82729a9b0294f8be4b29bf203718e668bec3d7a",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-invalid-temperature-report",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "14337ef16fcb7dd41bc127b5b729d16b54d03ab726dacb4489eb248425caf34e",
+      "snapshots_compared": 3,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "conduit-invalid-add-temperature-report",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "978e8dc9988f007a9ea2c186462bd9aff4c8a2e5f5a03367c04518255483fbdb",
+      "snapshots_compared": 1,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        825301935,
+        1108437482,
+        1739021608,
+        2062421945
+      ]
+    },
+    {
+      "case": "consumer-specific-gas",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f43964ab475d1f39b2ea8619d1b3e96f7314d1a414909a27843efcf7c337858c",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        894417742,
+        1078620451,
+        1108437482,
+        1575539738,
+        2024405073,
+        2062421945
+      ]
+    },
+    {
+      "case": "consumer-any-gas",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "061594e62d1a181182f00b3fa30c6d00b1a4672cddebb6b2b7c9d038b36710f9",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        894417742,
+        1078620451,
+        1108437482,
+        1575539738,
+        2024405073,
+        2062421945
+      ]
+    },
+    {
+      "case": "consumer-any-liquid",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "dd1a98a5f4c2ad4b79a8c31a3abf07a48d6860c19babc8e1687931f031e2c305",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        894417742,
+        1078620451,
+        1108437482,
+        1575539738,
+        2024405073,
+        2062421945
+      ]
+    },
+    {
+      "case": "consumer-disease",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "74023281edda2afe9dc3cccd1ac45a3ce5506b33644572f5a7c1e3a42fe3e06c",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        1575539738,
+        2024405073,
+        2062421945
+      ]
+    },
+    {
+      "case": "emitter-gas",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8ccac613e6155e2aebf55798212f150ad8c08549a6a9e8c80b990da22990bfd7",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1524118282,
+        -931446686,
+        -775326397,
+        -505471181,
+        403589164,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "emitter-pressure-blocked",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ffbf532ea9d43aaaa89a028c6f8b26f8cf642f40ca631688ab7826a9ef4afd87",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1524118282,
+        -931446686,
+        -775326397,
+        -505471181,
+        403589164,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "emitter-liquid",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "679c8c0c9262e10cfea3da4a3cbce8aa344f2634525a47ae62a6a0b162104fdd",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -505471181,
+        403589164,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "disease-consumer-lifecycle",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "4058b263b1f65ed1bc0d8d3c3c8fb9e9d0e8c3695d0e91275723c0616c51a8f5",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1822987624,
+        -931446686,
+        -781641650,
+        -775326397,
+        348345681,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "cell-mass-emission-consumption",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "48a1465b71ceeead2aa0ac2511a3cb1f5c959d58dd67acaf2a41aff9b9511393",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        797274363,
+        825301935,
+        1078620451,
+        1108437482,
+        1727657959,
+        2062421945
+      ]
+    },
+    {
+      "case": "falling-liquid-events",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f479ae3ba552607af137eb8f4d3aaa0fdfb615c03e13d584c1b066911d3eca70",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-emitter-kind0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c03033fc3dbe05f271ee0576f8308564277fb127f6180dc7d664e0de972b7c3d",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1505895314,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-emitter-kind1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "ad6f36448b5776bb785647d59b28f67b95727f46a6526ecc155b4095707ae01e",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1505895314,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-emitter-kind2",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "bd17467afca475087403f5ac4c6302244f7b7c7362f056933bf1a51b7c1fc208",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1505895314,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-emitter-kind3",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "11fd3e198dd2a6e7aff2f96df9b136c7759f0e4c6be1a04bf1a59bb984684eb0",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1505895314,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-emitter-kind4",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "b652f01a9e4b0055825c8f22ec63e3ee3ab52060ac96775d148db73c9a69c073",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1505895314,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-emitter-kind5",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "e18e2ca0344882155e9d1779d4b3df2a531212946300d4b19340c3234135d950",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1505895314,
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-emitter-direction-modify",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "4a3c80d115530f7b2d2a16e4f809a3167c55159375b47fc27710e81b33fc0c05",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1505895314,
+        -931446686,
+        -775326397,
+        -704259919,
+        -503965465,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "radiation-cosmic",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "718dfdf6b729ee93adbf1be948da20e655b540aea6a0cb3df54dc7bc7fa17b38",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-colored-textures",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "47728cedbb8a837652f7ab51ec19048400b12a81149baf540aa17b264df93b4e",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "sunlight-world-offset",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "c9ec96571682fcd901dea69f72510b6383fb50cd46731741ac43f41e835e56f7",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -895846551,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "sunlight-two-world-offsets",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "890aa040fc778ccfb5279bbd7fe7ef485e597d7f215ecbdaa6c2c261f7df4c83",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -895846551,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "sunlight-blocking-property",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "b84a73562926408927ccf58bd66569b067ceb97780bb5d24bcd98f60709d54a1",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -895846551,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-zones-inactive-decay",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "07787a24820df3b613f021fbcb59097d21f542bae6aeb0afb2d34e693663bc90",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -457308393,
+        -449718014,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "active-region-subset",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "651a11cdf1fbb66ccb8fb2cd71e8dbf5984be212bb1ea799e56b22b204fd32c5",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "two-active-regions",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "eaa36021b828e00309d60256327bfca623ae5b1c48208e8e3ae71e4ac51d4a5b",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "emitter-multitick",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "04c6a3cace74692059a70f210cecfb52b7b2317e8207e3bf586749a099e0c61f",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1524118282,
+        -931446686,
+        -775326397,
+        -505471181,
+        403589164,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "emitter-paused-frames",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "4eaddec11995e064a3c72aef558097ea72e21b950e7b63ca56641ad0d0307705",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1524118282,
+        -931446686,
+        -775326397,
+        -505471181,
+        403589164,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version0",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "65d70626a10772f24ff6a7f5d525f0d4b114b8d674e5da95445e5ffcba4eadd7",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version1",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f6eb4f3fd3fdac8b291d0cfa318718d47ea2795b7f541218c4e00d8c993c2f1a",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version2",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0efd83b59d6487203878c4760e0b853336935534a56d56925db7136ea3e556ff",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version3",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "02a127ee07ed2dc7e77add8dc21d015bb51d505a4fe43583bb431d53009236a1",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version4",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8e155acd97544f310231be03475a0a6823bcac2c6ecc0a4ebfe56d147514d1b9",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version5",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "7a96e0166f1847cdd12d6dad76c88cec5e2fdc881963e125702a40be9cdf33d7",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version6",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "d648fea25deb9fa9a5ce9697d11f557209e6749239a98ba114b09ed6e9a4f23b",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version7",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "459aabcf878f4b8efdba83c0761e0657d4f6b37e683154c823d434d5275e498d",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version8",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "e56f561af4c0483173af417a529fb26cd8cca868c3493827faee47b531538a5d",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version9",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0c1db5ad26478d8cf9429fe792a59cc903d6b8a6d136d1066a832cab01a3b9f1",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version10",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "46f9c8e221161b0f895e5d858fa813bf0e4e15aa0091cdc914d349238040fc2a",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version11",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f0b354ec84511da31a79e69f8b7146896517565c2b1bbcfa3b4340edd1bba5fa",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version12",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0d82cc424c7971123f6213e46ec1c879149ac56b9140f10dfa9d6885980a8f96",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version13",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "1cc75fd7911943c64f0c111a4e9b167bce3d904bc7989fec4ed77c566d00047c",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version14",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "338decb8660f5eee009293748bd661ef51c83a1cc12cf0f6c88475a14086f077",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "native-save-version15",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0cdae0265cb6c10894d8376511b60469104d5b55d0232f6351161ba72d83b3ab",
+      "snapshots_compared": 14,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "legacy-load-retains-radiation",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "b7357c834a1fe8df2204a8bd92c1620f7ccf2df56a08ee5e8775020060e995f1",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -672538170,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-initialize-vacuum",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "719b77c8496aadd3302f55bdc6d2fcd15e857f10fdcb8b597ba5cda48bfd2874",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        -752676153,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-free-rectangle",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "3a888d7634e1f79401e362b0bfe35300bbe94e01b19ed377e60bf74882c3b162",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1167792921,
+        -931446686,
+        -895846551,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-free-reinitialize",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "a2700e9c4576a9651d082f4edc2aade83f7daa008135ecad6c4ce41b31c57e51",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1167792921,
+        -931446686,
+        -895846551,
+        -775326397,
+        -752676153,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "world-clear-primary-retains-backwall",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "8d3079469b7886cd81fa5f3a4670b12881f937fa31c3e05edb22795dc23f70a8",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -1836204275,
+        -931446686,
+        -775326397,
+        -605421515,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "solid-sublimation",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "2b0c9843af6c43afc564aed481731551749448ebc979b7f59b4962e977253ad5",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "solid-sublimation-residue",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "f4fc3948255c75dec2adc5b941de9ddf87b730423a4f23f858966e99cb853a12",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "solid-sublimation-vacuum",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "2b79e262ac9111f1ba3fcb6524427bff2e15714d792f2aafb619ee6d065f824c",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-offgas",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "aea56856bf18736c7f2d35225820103f0cadc0db650a89e45682868746c9dea9",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "liquid-offgas-residue",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "54d5f8bae4a8407a4363d6184812455fc7e549a0d8433e79d1cefb95e9b7a0d8",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "partial-solid-melt",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "4738938d98e0cd741e6a055884c29ad2a52f4569ec3c2d429f75b4fc075836fb",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "partial-solid-melt-falling",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "0efc054a3d78f446b7e6e0d2e7b303a8e175ca38f1403f40698c1126852d1f66",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    },
+    {
+      "case": "partial-liquid-boil",
+      "passed": true,
+      "failures": [],
+      "fixture_sha256": "98407618800fbbae1721370dc82b25b67f08b6e17b90c0b1f09bfb65b6517153",
+      "snapshots_compared": 17,
+      "cell_workers": [],
+      "differences": [],
+      "message_ids_exercised": [
+        -931446686,
+        -775326397,
+        825301935,
+        1078620451,
+        1108437482,
+        2062421945
+      ]
+    }
+  ],
+  "passed": true
+}

@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "story",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "story_side_facility_control" },
                 Tags = new List<string> { "story", "facility", "printerceptor", "poi", "remote-work", "genetic-analysis", "side-screen" },
                 Description = "剧情设施聚合工具：kind=printerceptor/poi_tech_unlock/remote_work_terminal/genetic_analysis_station，action 控制读取或执行",
                 Parameters = StoryFacilityControlParams(),
@@ -59,7 +58,6 @@ namespace OniMcp.Tools
                 Group = "story",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "hijacked_headquarters_list", "printerceptor_status_list" },
                 Tags = new List<string> { "story", "printerceptor", "immigration", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=printerceptor action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -80,7 +78,6 @@ namespace OniMcp.Tools
                 Group = "story",
                 Mode = "execute",
                 Risk = "medium",
-                Aliases = new List<string> { "hijacked_headquarters_control" },
                 Tags = new List<string> { "story", "printerceptor", "immigration", "side-screen" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=printerceptor action=intercept/open_print_interface",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>
@@ -136,7 +133,6 @@ namespace OniMcp.Tools
                 Group = "story",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "research_portals_list", "information_transmission_channels_list", "info_transmission_channels_list" },
                 Tags = new List<string> { "story", "poi", "tech", "unlock", "research-portal", "information-transmission-channel", "信息传送通道", "信息传输通道", "解锁信息传输通道" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=poi_tech_unlock action=list",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>
@@ -190,7 +186,6 @@ namespace OniMcp.Tools
                 Group = "story",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "research_portal_control", "information_transmission_channel_control", "info_transmission_channel_control" },
                 Tags = new List<string> { "story", "poi", "tech", "unlock", "research-portal", "information-transmission-channel", "信息传送通道", "信息传输通道", "解锁信息传输通道" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 building_control domain=story_facility kind=poi_tech_unlock action=start/cancel/toggle；需 confirm=true",
                 Parameters = LookupParams(new Dictionary<string, McpToolParameter>

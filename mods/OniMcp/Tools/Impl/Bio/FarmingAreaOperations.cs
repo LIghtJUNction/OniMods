@@ -19,7 +19,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "planters_batch_set_seed", "plant_seed_area_set" },
                 Tags = new List<string> { "farming", "plants", "planters", "seeds", "batch" },
                 Description = "兼容入口：请优先使用 colony_control domain=bio bioDomain=farming action=batch。按区域批量设置或取消种植请求；适合一次给多块农砖/种植箱安排同一种种子",
                 Parameters = RectParams(new Dictionary<string, McpToolParameter>

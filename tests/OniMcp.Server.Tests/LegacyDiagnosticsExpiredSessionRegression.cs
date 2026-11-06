@@ -16,19 +16,14 @@ using OniMcp.Core;
 using OniMcp.Server;
 using OniMcp.Tools;
 
-internal static class LegacyDiagnosticsExpiredSessionRegressionEntry
+internal static class LegacyDiagnosticsExpiredSessionRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunExpiredDiagnosticsRegression();
 
-        var existing = typeof(LegacyOutboundExpiredSessionRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing server regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunExpiredDiagnosticsRegression()

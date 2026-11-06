@@ -31,7 +31,8 @@ namespace OniMcp.Tools
             bool includeElements,
             int elementLimit,
             int objectLimit,
-            List<string> fullLines)
+            List<string> fullLines,
+            HashSet<string> observedTokens = null)
         {
             var md = new StringBuilder();
             md.AppendLine("# ONI Map");
@@ -50,21 +51,27 @@ namespace OniMcp.Tools
             md.AppendLine("| Visible Only | `" + visibleOnly + "` |");
             md.AppendLine("| Encoding Source | `" + EscapeMarkdown(encoding) + "` |");
             md.AppendLine();
-            md.AppendLine("Coordinates are normal world cells. Use absolute `x,y` from this document when calling build/order tools. `rx,ry` are offsets from the origin.");
-            md.AppendLine("Open/gas cells are not a build contract. `buildable1x1` only means no direct terrain/object obstruction for a single-cell footprint; validate real buildings with `build_preview`.");
+            md.AppendLine("> Coords: use absolute x,y for commands. buildable1x1 is a 1x1 hint; validate footprints with build_preview.");
             md.AppendLine();
 
             md.AppendLine("## Legend");
             md.AppendLine();
             md.AppendLine("| Token | Meaning |");
             md.AppendLine("|---|---|");
-            foreach (var item in BuildTokenLegend(view))
-                md.AppendLine("| `" + EscapeMarkdown(item.Key) + "` | " + EscapeMarkdown(item.Value) + " |");
+            var tokenLegend = BuildTokenLegend(view);
+            foreach (var item in tokenLegend)
+            {
+                if (observedTokens == null || observedTokens.Count == 0 || observedTokens.Contains(item.Key))
+                    md.AppendLine("| `" + EscapeMarkdown(item.Key) + "` | " + EscapeMarkdown(item.Value) + " |");
+            }
             foreach (var item in legend)
             {
                 string token = TokenForSymbol(item.Key, view);
-                if (!BuildTokenLegend(view).ContainsKey(token))
-                    md.AppendLine("| `" + EscapeMarkdown(token) + "` | " + EscapeMarkdown(item.Value) + " |");
+                if (!tokenLegend.ContainsKey(token))
+                {
+                    if (observedTokens == null || observedTokens.Count == 0 || observedTokens.Contains(token))
+                        md.AppendLine("| `" + EscapeMarkdown(token) + "` | " + EscapeMarkdown(item.Value) + " |");
+                }
             }
             md.AppendLine();
 
@@ -74,8 +81,8 @@ namespace OniMcp.Tools
             {
                 md.AppendLine("Sparse mode lists only meaningful cells as horizontal runs.");
                 md.AppendLine();
-                md.AppendLine("| Y | RY | X Range | RX Range | N | Token | Kind | Id / Element | Extra |");
-                md.AppendLine("|---|---:|---|---|---:|---|---|---|---|");
+                md.AppendLine("| Y | X Range | N | Token | Kind | Id / Element | Extra |");
+                md.AppendLine("|---|---|---:|---|---|---|---|");
                 foreach (var item in sparseRuns.Take(objectLimit > 0 ? objectLimit : 500))
                     md.AppendLine(MarkdownSparseRunLine(item, view));
             }
@@ -90,6 +97,8 @@ namespace OniMcp.Tools
             }
             md.AppendLine();
 
+            var distinctOverlays = DistinctOverlayObjects(overlays).ToList();
+
             md.AppendLine("## Summary");
             md.AppendLine();
             md.AppendLine("- Valid cells: `" + validCells + "`");
@@ -98,7 +107,7 @@ namespace OniMcp.Tools
             md.AppendLine("- Occupied cells: `" + occupiedCells + "`");
             md.AppendLine("- Blocked cells: `" + blockedCells + "`");
             md.AppendLine("- Direct 1x1 buildable cells: `" + buildableCells + "`");
-            md.AppendLine("- Objects: `" + DistinctOverlayObjects(overlays).Count() + "`");
+            md.AppendLine("- Objects: `" + distinctOverlays.Count + "`");
             md.AppendLine("- Sparse runs: `" + sparseRuns.Count + "`");
             md.AppendLine();
 
@@ -116,20 +125,20 @@ namespace OniMcp.Tools
                 md.AppendLine();
             }
 
-            if (!sparse && overlays.Count > 0 && objectLimit > 0)
+            if (!sparse && distinctOverlays.Count > 0 && objectLimit > 0)
             {
                 md.AppendLine("## Objects");
                 md.AppendLine();
                 md.AppendLine("| Token | Kind | Id | Name | Anchor | Footprint | Size | Supported | Obstructed By | Extra |");
                 md.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
-                foreach (var overlay in DistinctOverlayObjects(overlays).OrderBy(item => item.AnchorY).ThenBy(item => item.AnchorX).ThenBy(item => item.Kind).Take(objectLimit))
+                foreach (var overlay in distinctOverlays.OrderBy(item => item.AnchorY).ThenBy(item => item.AnchorX).ThenBy(item => item.Kind).Take(objectLimit))
                 {
                     md.AppendLine("| `" + EscapeMarkdown(TokenForSymbol(overlay.ObjectSymbol, view)) + "` | `" + EscapeMarkdown(overlay.Kind) + "` | `" + EscapeMarkdown(overlay.Id) + "` | " + EscapeMarkdown(overlay.Name) + " | `" + overlay.AnchorX + "," + overlay.AnchorY + "` | `" + FootprintText(overlay) + "` | `" + overlay.Width + "x" + overlay.Height + "` | `" + SupportedText(overlay) + "` | " + EscapeMarkdown(ObstructedText(overlay)) + " | " + EscapeMarkdown(overlay.Extra ?? "") + " |");
                 }
                 md.AppendLine();
             }
 
-            var unsupported = UnsupportedOverlayObjects(overlays).Take(objectLimit > 0 ? objectLimit : 500).ToList();
+            var unsupported = UnsupportedOverlayObjects(distinctOverlays).Take(objectLimit > 0 ? objectLimit : 500).ToList();
             if (unsupported.Count > 0)
             {
                 md.AppendLine("## Unsupported Footprints");
@@ -139,7 +148,7 @@ namespace OniMcp.Tools
                 md.AppendLine();
             }
 
-            var conflicts = BuildConflictSummaries(overlays);
+            var conflicts = BuildConflictSummaries(distinctOverlays);
             if (conflicts.Count > 0)
             {
                 md.AppendLine("## Conflicts");
@@ -164,10 +173,7 @@ namespace OniMcp.Tools
         {
             int x1 = ToInt(item, "x1");
             int x2 = ToInt(item, "x2");
-            int rx1 = ToInt(item, "rx1");
-            int rx2 = ToInt(item, "rx2");
             string xRange = x1 == x2 ? x1.ToString() : x1 + ".." + x2;
-            string rxRange = rx1 == rx2 ? rx1.ToString() : rx1 + ".." + rx2;
             string kind = item.ContainsKey("kind") ? item["kind"]?.ToString() : item.ContainsKey("element") ? item["element"]?.ToString() : "";
             string id = item.ContainsKey("id") ? item["id"]?.ToString() : item.ContainsKey("element") ? item["element"]?.ToString() : "";
             string extra = item.ContainsKey("extra") ? item["extra"]?.ToString() : "";
@@ -176,7 +182,7 @@ namespace OniMcp.Tools
             if (item.ContainsKey("cAvg"))
                 extra = (extra + " C~" + item["cAvg"]).Trim();
 
-            return "| `" + item["y"] + "` | `" + item["ry"] + "` | `" + xRange + "` | `" + rxRange + "` | `" + item["n"] + "` | `" + EscapeMarkdown(TokenForSparseItem(item, view)) + "` | `" + EscapeMarkdown(kind) + "` | `" + EscapeMarkdown(id) + "` | " + EscapeMarkdown(extra) + " |";
+            return "| `" + item["y"] + "` | `" + xRange + "` | `" + item["n"] + "` | `" + EscapeMarkdown(TokenForSparseItem(item, view)) + "` | `" + EscapeMarkdown(kind) + "` | `" + EscapeMarkdown(id) + "` | " + EscapeMarkdown(extra) + " |";
         }
 
         private static string EscapeMarkdown(string value)
@@ -214,6 +220,7 @@ namespace OniMcp.Tools
             bool includeRows = true,
             bool includeObjects = true)
         {
+            var distinctOverlays = DistinctOverlayObjects(overlays).ToList();
             var result = new Dictionary<string, object>
             {
                 ["v"] = 1,
@@ -236,7 +243,7 @@ namespace OniMcp.Tools
                     ["occupied"] = occupiedCells,
                     ["blocked"] = blockedCells,
                     ["buildable1x1"] = buildableCells,
-                    ["objects"] = DistinctOverlayObjects(overlays).Count(),
+                    ["objects"] = distinctOverlays.Count,
                     ["sparseCells"] = sparseCells.Count
                 }
             };
@@ -250,8 +257,8 @@ namespace OniMcp.Tools
             else if (includeRows)
                 result["rows"] = rows;
             ((Dictionary<string, object>)result["summary"])["sparseRuns"] = sparseRuns.Count;
-            var unsupported = UnsupportedOverlayObjects(overlays).ToList();
-            var conflicts = BuildConflictSummaries(overlays);
+            var unsupported = UnsupportedOverlayObjects(distinctOverlays).ToList();
+            var conflicts = BuildConflictSummaries(distinctOverlays);
             ((Dictionary<string, object>)result["summary"])["unsupportedFootprints"] = unsupported.Count;
             ((Dictionary<string, object>)result["summary"])["conflicts"] = conflicts;
             if (unsupported.Count > 0)
@@ -280,7 +287,7 @@ namespace OniMcp.Tools
 
             if (!sparse && objectLimit > 0 && includeObjects)
             {
-                result["objects"] = DistinctOverlayObjects(overlays)
+                result["objects"] = distinctOverlays
                     .OrderBy(item => item.AnchorY)
                     .ThenBy(item => item.AnchorX)
                     .ThenBy(item => item.Kind)

@@ -14,20 +14,15 @@ using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class LegacySessionCapacityAdmissionRegressionEntry
+internal static class LegacySessionCapacityAdmissionRegression
 {
     private const int MainThreadCapacity = 20;
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunCapacityAdmissionRegression();
 
-        var existing = typeof(LegacySseDisconnectActivityRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing server regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunCapacityAdmissionRegression()

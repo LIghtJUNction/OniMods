@@ -15,7 +15,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "summon_crew_list", "rocket_passenger_requests_list" },
                 Tags = new List<string> { "rocket", "crew", "passenger", "summon", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=crew_request action=list。列出 SummonCrewSideScreen 乘员召集/释放状态、登船人数和驾驶员状态",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -58,7 +57,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "summon_crew_set", "rocket_passenger_request_set" },
                 Tags = new List<string> { "rocket", "crew", "passenger", "summon", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=crew_request action=set。设置 SummonCrewSideScreen 按钮状态：request=召集乘员登船，release=开放/释放乘员",
                 Parameters = PassengerLookupParams(new Dictionary<string, McpToolParameter>
@@ -100,7 +98,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "summon_crew_control", "rocket_passenger_request_control" },
                 Tags = new List<string> { "rocket", "crew", "passenger", "summon", "side-screen" },
                 Description = "统一读取和设置火箭乘员召集/释放状态。action=list/set；set 需 confirm=true。",
                 Parameters = PassengerLookupParams(new Dictionary<string, McpToolParameter>
@@ -132,7 +129,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "rocket_assignment_groups_list", "crew_assignment_groups_list" },
                 Tags = new List<string> { "rocket", "crew", "assignment", "group", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=assignment_group action=list。列出 AssignmentGroupControllerSideScreen 分配组，以及每个复制人的成员状态、同世界状态和驾驶员资格",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -179,7 +175,6 @@ namespace OniMcp.Tools
                 Mode = "write",
                 Risk = "medium",
                 Hidden = true,
-                Aliases = new List<string> { "rocket_assignment_group_member_set", "crew_assignment_group_member_set" },
                 Tags = new List<string> { "rocket", "crew", "assignment", "group", "side-screen" },
                 Description = "兼容入口：请优先使用 building_control domain=rocket rocketDomain=assignment_group action=set。设置 AssignmentGroupControllerSideScreen 中单个复制人是否属于指定分配组，等价于点击该复制人的成员开关",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -229,7 +224,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "rocket_assignment_group_control", "crew_assignment_group_control" },
                 Tags = new List<string> { "rocket", "crew", "assignment", "group", "side-screen" },
                 Description = "统一读取和设置火箭/分配组成员。action=list/set；set 需 confirm=true。",
                 Parameters = new Dictionary<string, McpToolParameter>

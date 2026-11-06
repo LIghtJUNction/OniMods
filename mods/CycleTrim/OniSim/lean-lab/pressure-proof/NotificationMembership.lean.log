@@ -1,0 +1,5 @@
+'NotificationMembership.clear_sound' depends on axioms: [propext]
+'NotificationMembership.record_membership' depends on axioms: [propext, Quot.sound]
+'NotificationMembership.record_sound' depends on axioms: [propext, Quot.sound]
+'NotificationMembership.raw_append_sound' depends on axioms: [propext]
+'NotificationMembership.fold_membership' depends on axioms: [propext, Quot.sound]

@@ -13,6 +13,17 @@ internal static class Program
 
     private static void Main()
     {
+        LogicAlarmRegression.Run();
+        WorldEditorTools.RunMapContractRegressions();
+        MapReadPolicyRegression.Run();
+        BuildPlanningRegression.Run();
+        ObservationReadinessRegression.Run();
+        FarmingUprootRegression.Run();
+        PriorityWriteEligibilityRegression.Run();
+        BenchmarkMetadataRegression.Run();
+        RadboltDirectionEligibilityRegression.Run();
+        AttackDesignationPolicyRegression.Run();
+
         OniToolRegistry.Tools["ok"] = new McpTool
         {
             Name = "ok", Mode = "read", Risk = "low",
@@ -32,17 +43,83 @@ internal static class Program
             },
             Handler = args => { calls++; return CallToolResult.Text("ok"); }
         };
+        TestBuildPlanWriteSafety();
         TestBatchFailures();
         TestProgramValidation();
         TestProgramExecution();
         TestNumbers();
+        TestBuildPlacementIdentity();
         TestRegexBoundaries();
         TestWorldEditorCellObjectPolicy();
         GameControlRoutingRegression.Run();
+        NewGameOpeningRegression.Run();
         TestExistingMaterialPolicy();
         TestSweepEligibilityPolicy();
         TestBackwallSupportPolicy();
+        TestGameSpeedPauseOwnership();
+        StepSpeedInterruptionRegression.Run();
+        LoadScreenMigrationRegression.Run();
+        StepConditionRegression.Run();
+        StepResearchCompletionRegression.Run();
+        CameraNavigationRegression.Run();
+        StepPrintingPodRegression.Run();
+        UtilityPathPlacementRegression.Run();
+        ExistingFootprintRegression.Run();
+        RequestedPlacementRegression.Run();
+        ConstructionReadinessRegression.Run();
+        ConstructionRecipeAdapterRegression.Run();
+        DeferredBuildPolicyRegression.Run();
+        StepDeferredOrderRegression.Run();
+        ObservedTaskRankingRegression.Run();
+        StepUntilResultCacheRegression.Run();
+        DuplicantNeedStateRegression.Run();
+        TreeFilterEligibilityRegression.Run();
+        TestThresholdValuePolicy();
         Console.WriteLine("OniMcp tools regression checks passed: " + assertions);
+    }
+
+    private static void TestBuildPlanWriteSafety()
+    {
+        var args = JObject.Parse("{plan:'candidate building',limit:1,confirm:true}");
+        var writeArgs = BuildPlanningTools.BuildWriteResolutionArgs(args);
+        Check((int)writeArgs["limit"] == 2, "write resolution must retain a runner-up");
+        Check((int)args["limit"] == 1 && !ReferenceEquals(args, writeArgs),
+            "write candidate budgeting must not mutate the caller's display limit");
+        Check((string)writeArgs["plan"] == (string)args["plan"] && (bool)writeArgs["confirm"],
+            "write candidate budgeting must preserve the remaining request fields");
+        foreach (int limit in new[] { 5, 20, 100 })
+        {
+            args["limit"] = limit;
+            Check((int)BuildPlanningTools.BuildWriteResolutionArgs(args)["limit"] == limit,
+                "larger candidate limits must remain unchanged");
+        }
+        args.Remove("limit");
+        Check((int)BuildPlanningTools.BuildWriteResolutionArgs(args)["limit"] == 5,
+            "default candidate limit remains five");
+
+        string reason;
+        Check(BuildPlanningTools.SuffixBuildingAliasScore + BuildPlanningTools.MaximumPlanTermOrderBoost
+                < BuildPlanningTools.MinimumAutoWriteBuildingScore,
+            "suffix-derived alias scores must remain below the confirmed-write floor");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("alias", 950, 949, out reason) && reason == null,
+            "exact aliases remain executable even when text candidates are nearby");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("prefabId", 10000, 9999, out reason) && reason == null,
+            "explicit prefab ids remain executable");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 700, out reason) && reason == null,
+            "clear strong fuzzy matches remain executable");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe(
+                "alias_suffix",
+                BuildPlanningTools.SuffixBuildingAliasScore + BuildPlanningTools.MaximumPlanTermOrderBoost,
+                0,
+                out reason)
+            && reason == "low_confidence",
+            "suffix-derived aliases cannot masquerade as exact aliases at the write boundary");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 699, 0, out reason) && reason == "low_confidence",
+            "low-confidence fuzzy matches fail closed");
+        Check(!BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 701, out reason) && reason == "near_tie",
+            "near-tied fuzzy matches fail closed");
+        Check(BuildPlanningTools.IsAutoWriteBuildingResolutionSafe("text", 780, 700, out reason),
+            "the minimum accepted score gap is inclusive");
     }
 
     private static void TestBatchFailures()
@@ -128,6 +205,27 @@ internal static class Program
             Check(Run("[{op:'return',value:" + expression + "}]").IsError, "non-finite arithmetic rejected: " + expression);
         foreach (string count in new[] { "0.5", "2147483648", "-0.5" })
             Check(Run("[{op:'repeat',count:" + count + ",do:[]}]").IsError, "invalid repeat count rejected: " + count);
+    }
+
+    private static void TestBuildPlacementIdentity()
+    {
+        var exact = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "R90", 10, 20, 0, "R90", true);
+        Check(exact.Valid && exact.AnchorMatches && exact.WorldMatches && exact.OrientationMatches,
+            "same oriented placement is reusable");
+
+        var rotated = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "R90", 10, 20, 0, "Neutral", true);
+        Check(!rotated.Valid && rotated.AnchorMatches && rotated.WorldMatches && !rotated.OrientationMatches,
+            "same prefab anchor with a different relevant orientation is not reusable");
+
+        var orientationIrrelevant = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "R90", 10, 20, 0, "Neutral", false);
+        Check(orientationIrrelevant.Valid && orientationIrrelevant.OrientationMatches,
+            "orientation-insensitive placement preserves previous anchor/world identity");
+
+        var wrongWorld = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "Neutral", 10, 20, 1, "Neutral", true);
+        Check(!wrongWorld.Valid && !wrongWorld.WorldMatches, "known world mismatch remains invalid");
+
+        var unknownWorld = BuildPlacementIdentityPolicy.Evaluate(10, 20, 0, "Neutral", 10, 20, -1, "Neutral", true);
+        Check(unknownWorld.Valid && unknownWorld.WorldMatches, "unknown actual world preserves the existing wildcard behavior");
     }
 
     private static void TestRegexBoundaries()
@@ -223,6 +321,105 @@ internal static class Program
             "clearable pickupables remain eligible for the existing sweep path");
     }
 
+
+    private static void TestGameSpeedPauseOwnership()
+    {
+        Game.Instance = new Game();
+
+        var nested = new SpeedControlScreen();
+        SpeedControlScreen.Instance = nested;
+        nested.Pause(playSound: false);
+        var pause = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(!pause.IsError && nested.PauseCount == 2, "MCP pause must add exactly one owned pause beside an external pause");
+        var resume = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(!resume.IsError && nested.PauseCount == 1 && nested.IsPaused,
+            "MCP resume must not drain an unrelated ONI pause reference");
+        Check((bool)Body(resume)["isPaused"], "resume result must report the remaining external pause");
+
+        var repeated = new SpeedControlScreen();
+        SpeedControlScreen.Instance = repeated;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(repeated.PauseCount == 1, "repeated MCP pause must not leak extra pause references");
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(repeated.PauseCount == 0, "one MCP resume must release the one MCP-owned pause");
+
+        var speedChange = new SpeedControlScreen();
+        SpeedControlScreen.Instance = speedChange;
+        speedChange.Pause(playSound: false);
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        var changed = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'set_speed',speed:2}"));
+        Check(!changed.IsError && speedChange.GetSpeed() == 1, "set_speed must still select the requested speed");
+        Check(speedChange.PauseCount == 1 && speedChange.IsPaused,
+            "set_speed must not drain an unrelated ONI pause reference");
+        Check((bool)Body(changed)["isPaused"], "set_speed result must report the remaining external pause");
+
+        var nativeSpeedChange = new SpeedControlScreen();
+        SpeedControlScreen.Instance = nativeSpeedChange;
+        nativeSpeedChange.Pause(playSound: false);
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'set_speed',speed:2}"));
+        Check(nativeSpeedChange.PauseCount == 1 && nativeSpeedChange.IsPaused,
+            "set_speed without an MCP lease must not release a native pause");
+
+        var externalOnly = new SpeedControlScreen();
+        SpeedControlScreen.Instance = externalOnly;
+        externalOnly.Pause();
+        var externalResume = GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(!externalResume.IsError && externalOnly.PauseCount == 0 && !externalOnly.IsPaused,
+            "resume without an MCP lease must release one native ONI pause reference");
+        Check(!(bool)Body(externalResume)["isPaused"], "native resume result must report the game as running");
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(externalOnly.PauseCount == 0, "repeated resume after native pause release must remain a no-op");
+
+        var previousScreen = new SpeedControlScreen();
+        SpeedControlScreen.Instance = previousScreen;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        var replacementScreen = new SpeedControlScreen();
+        SpeedControlScreen.Instance = replacementScreen;
+        replacementScreen.Pause();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(replacementScreen.PauseCount == 1, "a stale screen lease must not release a replacement screen's pause");
+
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Game.Instance = new Game();
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+        Check(replacementScreen.PauseCount == 2, "a stale Game lease must not release references from the new game");
+
+        var zeroSpeed = new SpeedControlScreen();
+        SpeedControlScreen.Instance = zeroSpeed;
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'set_speed',speed:0}"));
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'pause'}"));
+        Check(zeroSpeed.PauseCount == 1, "speed zero followed by pause must own only one reference");
+        GameControlTools.ControlGameSpeed().Handler(JObject.Parse("{action:'resume'}"));
+    }
+
+    private static void TestThresholdValuePolicy()
+    {
+        const float celsiusInput = 9600f;
+        const float nativeMin = 0f;
+        const float nativeMax = 9999f;
+        float processedKelvin = celsiusInput + 273.15f;
+
+        float retained = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            processedKelvin, nativeMin, nativeMax);
+        Check(Math.Abs(retained - processedKelvin) < 0.01f,
+            "converted threshold must remain in the native unit domain after processing");
+
+        float high = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            11000f, nativeMin, nativeMax);
+        Check(Math.Abs(high - nativeMax) < 0.01f,
+            "processed threshold above the native range must clamp to native max");
+
+        float low = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            -10f, nativeMin, nativeMax);
+        Check(Math.Abs(low - nativeMin) < 0.01f,
+            "processed threshold below the native range must clamp to native min");
+
+        float identity = ThresholdValuePolicy.ClampProcessedToNativeRange(
+            42f, 0f, 100f);
+        Check(Math.Abs(identity - 42f) < 0.01f,
+            "identity threshold conversions must remain unchanged");
+    }
 
     private static CallToolResult Run(string program, bool dryRun = false) => AgentProgramTools.ExecuteProgram().Handler(new JObject { ["program"] = JToken.Parse(program), ["dryRun"] = dryRun });
     private static JObject Body(CallToolResult result) => JObject.Parse(result.Content[0].Text);

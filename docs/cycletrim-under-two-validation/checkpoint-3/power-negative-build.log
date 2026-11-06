@@ -1,0 +1,9 @@
+  Determining projects to restore...
+  Restored /tmp/cycletrim-r4-power-negative/tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj (in 201 ms).
+  CycleTrim.Optimizations.Tests -> /tmp/cycletrim-r4-power-negative/tests/CycleTrim.Optimizations.Tests/bin/Release/net10.0/CycleTrim.Optimizations.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.21

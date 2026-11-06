@@ -2,6 +2,14 @@
 
 [b]为缺氧提供安全 MCP 访问的服务端 Mod[/b]
 
+[h2]v0.2.6 控制与稳定性更新[/h2]
+[list]
+[*] 原生生存模式新建游戏控制；兼容缺失的可选存档预览。
+[*] 修正建筑锚点、管线工具与镜头导航。
+[*] 研究、打印舱和通知的有界等待，以及紧凑观测。
+[*] 避免 Unity Mono 输入事件构造函数崩溃。
+[/list]
+
 [h2]v0.2.5 创意工坊安装更新[/h2]
 [list]
 [*] 将工坊文件重新打包为 ONI 模组加载器需要的单文件旧版 ZIP。此前 Steam 已下载完整目录，游戏却将其报为“下载失败”。
@@ -60,8 +68,8 @@
 [/list]
 
 [h2]文档[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README.md]查看中文说明[/url]
-[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README_EN.md]View English documentation[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md]查看中文说明[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md]View English documentation[/url]
 
 [h2]可选支持项目[/h2]
 [url=https://api.lmm.best]购买 AI Token（可选）[/url]，可用于支持 OniMods 后续开发。这与模组本地鉴权 Token 无关。使用本 Mod 不需要访问该网站或购买服务；你可以自行选择兼容的 MCP 客户端与模型。

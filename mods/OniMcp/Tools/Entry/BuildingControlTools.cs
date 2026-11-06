@@ -20,7 +20,6 @@ namespace OniMcp.Tools
                 Group = "buildings",
                 Mode = "execute",
                 Risk = "dangerous",
-                Aliases = new List<string> { "buildings_control", "building_system_control" },
                 Tags = new List<string> { "buildings", "planning", "config", "production", "storage", "facility", "side-screen", "materials", "preview", "rocket", "space", "auto-connect", "wire", "power", "conduit", "utility" },
                 Description = "Unified building entrypoint: domain=planning/config/production/storage/filter/tile_selection/receptacle/side_surface/space_building/space_story/special/story_facility/rocket. Exact construction planning is virtual-file only: edit /active/map/viewport.md with world_editor. Public build_area coordinate/anchor calls are forbidden. Preserves each child tool's action/kind/confirm rules.",
                 Parameters = new Dictionary<string, McpToolParameter>

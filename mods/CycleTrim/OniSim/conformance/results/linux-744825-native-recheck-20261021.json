@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "date": "2026-10-21",
+  "base_commit": "adc4b2ebb0c1e2e6a22b5cf3f71278a628a6733f",
+  "native_source_tree_sha1": "78a3a96032d063b196a52226fcdd9dcb0ab76564",
+  "native_sha256": "55d5a236ccf6ac311d05a63898e34faceff686495ac372d1f6c9ccd785a62fd9",
+  "reference_sha256": "85111cd0b1fc14c79c785581d6c055280b9d48ba705776f3d14eb0a7b239c12d",
+  "release_rust_tests": 43,
+  "python_tests": 57,
+  "runs": [
+    {
+      "workers": 1,
+      "cases_passed": 287,
+      "publications": 9739,
+      "sha256": "3f115c71d4a6f848ac4950ead0115dbe09d2bf1ed8170a88231fd06a20bb0325",
+      "actual_worker_names": [],
+      "message_ids": 62,
+      "harness_sha256": {
+        "host.py": "b0cc570ed1f5575ef4b9c87d8c81ef28f4b46b909e632e46276aca27cf4f6ebb",
+        "run.py": "9c64e1af3f7cfd50018593bf3dbee44050d255c588289e5242a890bfcb847aa0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "ed45032133423b7bce6030cff79aacf4b98ceb82508d94151a5d9934a28f17c0",
+        "pressure_cases.py": "9b2a1527e2e138d020816dbe75deda3e45174977a515de3af1f63c3bb73cfb86",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "thermal_boundary_cases.py": "c72b3a3d20babb7b3467bf15978fd2f9a7f0340b1dc4dc8a9fada1f6e4be8ca0",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    },
+    {
+      "workers": 4,
+      "cases_passed": 287,
+      "publications": 9739,
+      "sha256": "b868183f328694b9bc6d5859ddfaefc1393c7fde78a9251a881c1da5c4d8a386",
+      "actual_worker_names": [
+        "OniSim-cell-0",
+        "OniSim-cell-1",
+        "OniSim-cell-2",
+        "OniSim-cell-3"
+      ],
+      "message_ids": 62,
+      "harness_sha256": {
+        "host.py": "b0cc570ed1f5575ef4b9c87d8c81ef28f4b46b909e632e46276aca27cf4f6ebb",
+        "run.py": "9c64e1af3f7cfd50018593bf3dbee44050d255c588289e5242a890bfcb847aa0",
+        "cases.py": "5f0c4d851f9dc9cd46e3addc292754909a618d9ea656ced51ea0ec1168c55057",
+        "conduits.py": "9a14783cca803aad61df87305d89c8947f67b080f5ce4921cef1da5cbc4d0dc0",
+        "cell_cases.py": "3c417db6bdd67888a1aaf387eeb00458288aa67508c8120618d9b3d4815a6b82",
+        "physics_cases.py": "ed45032133423b7bce6030cff79aacf4b98ceb82508d94151a5d9934a28f17c0",
+        "pressure_cases.py": "9b2a1527e2e138d020816dbe75deda3e45174977a515de3af1f63c3bb73cfb86",
+        "soak_cases.py": "3d58e8dcdc434fb8a17ff477627e41434f3b29f4c6ba70931987aad6f043a68b",
+        "thermal_boundary_cases.py": "c72b3a3d20babb7b3467bf15978fd2f9a7f0340b1dc4dc8a9fada1f6e4be8ca0",
+        "fixed_clock.c": "de171c34bff4d529590cf5ac394758da6af560a5c6c0ce4318c4e2607105863b"
+      }
+    }
+  ],
+  "game_runtime_validated": false,
+  "whole_game_performance_validated": false,
+  "scope": "Official 744825 native library and authored ABI fixtures; no Unity or Steam client launched.",
+  "benchmark_fix": "Missing or unreadable optional /proc/pressure fields are recorded as null with explicit error metadata. Process memory and worker reads remain strict.",
+  "reproduce": "cargo test --release --locked --offline; python3 -m unittest discover -s mods/CycleTrim/OniSim/conformance -p test_*.py; run.py --reference <pinned official library> --candidate <native built from the stated source tree> --workers <1 or 4> --jobs 2 --output <new directory>"
+}

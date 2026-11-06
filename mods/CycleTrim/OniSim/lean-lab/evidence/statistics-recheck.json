@@ -1,0 +1,24 @@
+{
+  "review": "Independent recomputation from raw elapsed_ns and iterations; no use of harness/summarize.py",
+  "case_count": 60,
+  "formal_measurement_blocks": 960,
+  "raw_phase_counts": {
+    "warmup": 537,
+    "calibration": 236,
+    "measured": 960
+  },
+  "minimum_formal_block_ms": 18.021885,
+  "all_case_medians_match_summary": true,
+  "all_paired_speedup_medians_match_summary": true,
+  "csv_ns_per_call_decimal_tolerance_ns": 1e-09,
+  "all_480_pairs_faster": true,
+  "minimum_individual_pair_speedup": 4.524986412834292,
+  "candidate_allocation_rows": 60,
+  "candidate_all_allocation_counters_zero": true,
+  "source_sha256": {
+    "raw-samples.csv": "ef998a7645a6ea1dff8bb3f2f5299db503ec4e2402a17504e96bfe2232d4163e",
+    "summary.json": "6eb1927f2d1b41b3c73ab15d81e49069d2690dc4f58c1befa9a601a561f58ad9",
+    "allocations.csv": "48d7e0cc0924117abd9f733d13ed2950a60ba3e67fda18e8afb7ef32506dd4d2"
+  },
+  "scope": "Statistics of recorded component fixtures, not whole-game performance or universal speed guarantees"
+}

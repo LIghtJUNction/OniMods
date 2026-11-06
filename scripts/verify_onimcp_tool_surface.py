@@ -10,6 +10,7 @@ from pathlib import Path
 from onimcp_verify_parsing import fail, matching_delimiter
 from verify_building_blueprint_safety import verify_building_blueprint_safety
 from verify_glyph_lookup_contract import verify_glyph_lookup_contract
+from verify_runtime_smoke_surface import verify_runtime_smoke_surface
 from verify_world_editor_building_files import verify_world_editor_building_files
 
 
@@ -31,15 +32,8 @@ EXPECTED_INTERNAL = {
     "search_control",
 }
 
-EXPECTED_ALIASES = {
-    "benchmark": (),
-    "building_control": ("buildings_control", "building_system_control"),
-    "game_control": ("game_system_control",),
-    "navigation_control": ("spatial_control", "view_control"),
-    "orders_control": ("orders", "orders_unified_control", "orders_action_control", "map_orders_control"),
-    "server_control": ("mcp_server_control", "server_diagnostics_control", "mcp_client_request_control", "tools_catalog_control", "tools_call_many", "agent_program_execute"),
-    "world_editor": ("oni_editor", "map_editor", "save_editor"),
-}
+# Retired aliases must not silently reappear in the single supported protocol.
+EXPECTED_ALIASES = {name: () for name in EXPECTED_REGISTERED}
 
 EXPECTED_OPERATION_FILES = {
     "ops/any.md": "",
@@ -93,6 +87,8 @@ PUBLIC_CONTRACT_FILES = (
     "mods/OniMcp/Tools/Impl/Audit/UiMenuSurfaceAuditTools.cs",
     "mods/OniMcp/Tools/Impl/Build/BuildPlanningErrors.cs",
     "mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementGeometry.cs",
+    "mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementCoordinates.cs",
+    "mods/OniMcp/Tools/Impl/Build/BuildPlanningPlacementModels.cs",
     "mods/OniMcp/Tools/Impl/Build/BuildPlanningTools.cs",
     "mods/OniMcp/Tools/Impl/Server/AgentProgramTools.cs",
 )
@@ -229,17 +225,15 @@ def resolve_factory(
 
 def assert_dispatch_path(registry: str, method_marker: str) -> None:
     block = extract_block(registry, method_marker)
+    # Only registered canonical names are dispatched on the supported wire.
+    # Do not restore alias fallback just to satisfy an obsolete contract.
     canonical = re.search(
         r"_tools\.TryGetValue\(name,\s*out(?:\s+var)?\s+tool\)", block
     )
-    alias = re.search(
-        r"_aliases\.TryGetValue\(name,\s*out(?:\s+var)?\s+canonicalName\)", block
-    )
-    alias_target = re.search(
-        r"_tools\.TryGetValue\(canonicalName,\s*out\s+tool\)", block
-    )
-    if canonical is None or alias is None or alias_target is None:
-        fail(f"{method_marker} must preserve canonical and alias dispatch")
+    if canonical is None:
+        fail(f"{method_marker} must dispatch registered canonical tools")
+    if re.search(r"\b_aliases\b|\bcanonicalName\b", block):
+        fail(f"{method_marker} must not revive retired alias dispatch")
 
 
 def assert_no_removed_pointer_contracts(root: Path, navigation: str) -> None:
@@ -300,6 +294,7 @@ def main() -> None:
             fail(f"required source file not found: {path.relative_to(root)}")
     sources = {path: path.read_text(encoding="utf-8") for path in tools_root.rglob("*.cs")}
     verify_glyph_lookup_contract(root, sources)
+    verify_runtime_smoke_surface(root)
     verify_world_editor_building_files(root)
     registry = sources[registry_path]
     catalog = sources[tools_root / "Impl" / "Build" / "BuildPlanningCatalog.cs"]
@@ -385,6 +380,8 @@ def main() -> None:
                 )
             alias_owner[alias] = canonical
 
+    if "_aliases" in registry:
+        fail("removed alias registry must not return")
     assert_dispatch_path(registry, "public static bool TryGetTool")
     call_tool = extract_block(registry, "public static CallToolResult CallTool")
     if "CallToolCore" in call_tool:
@@ -394,12 +391,6 @@ def main() -> None:
     get_tools = extract_block(registry, "public static List<McpTool> GetTools()")
     if "_tools.Values" not in get_tools or ".Where" in get_tools:
         fail("GetTools must return all registered tools without Hidden filtering")
-    visible_tools = extract_block(
-        registry, "public static List<McpTool> GetVisibleTools()"
-    )
-    if re.search(r"\.Where\(t\s*=>\s*!t\.Hidden\)", visible_tools) is None:
-        fail("GetVisibleTools must filter Hidden tools")
-
     build_infos = extract_block(registry, "private static List<McpToolInfo> BuildToolInfos()")
     if "GetVisibleTools()" not in build_infos or "_internalOperations" in build_infos:
         fail("BuildToolInfos must use the public visible registry, not internal operations")

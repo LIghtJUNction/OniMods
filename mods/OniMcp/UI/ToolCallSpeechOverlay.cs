@@ -18,6 +18,7 @@ namespace OniMcp
         private Image bubbleBackground;
         private Image accent;
         private TextMeshProUGUI text;
+        private string visibleText = string.Empty;
         private Transform bubbleTarget;
         private bool followTarget;
         private float hideAt;
@@ -85,13 +86,15 @@ namespace OniMcp
 
         private bool ShowBubble(string message, float seconds, Transform target)
         {
+            var formatted = SpeechTextFormatter.Format(message);
             if (Camera.main == null || global::SaveGame.Instance == null)
-                return ShowNotification("Oni MCP", message);
+                return ShowNotification("Oni MCP", formatted.RichText);
 
             EnsureCanvas();
             bubbleTarget = target;
             followTarget = target != null;
-            text.SetText(TrimLong(message, 220));
+            visibleText = formatted.PlainText;
+            text.SetText(formatted.RichText);
             bubbleBackground.color = BubbleFill;
             accent.color = BubbleAccent;
             text.color = BubbleText;
@@ -153,6 +156,7 @@ namespace OniMcp
             textRect.offsetMax = new Vector2(-12f, -8f);
 
             text = textObj.GetComponent<TextMeshProUGUI>();
+            text.richText = true;
             text.fontSize = 13f;
             text.alignment = TextAlignmentOptions.Left;
             text.textWrappingMode = TextWrappingModes.Normal;
@@ -166,7 +170,7 @@ namespace OniMcp
         {
             Vector3 mouse = Input.mousePosition;
             string value = text == null ? string.Empty : text.text;
-            float width = value.Length > 52 ? 320f : Mathf.Clamp(value.Length * 8f + 42f, 140f, 320f);
+            float width = visibleText.Length > 52 ? 320f : Mathf.Clamp(visibleText.Length * 8f + 42f, 140f, 320f);
             float height = Mathf.Clamp(text.GetPreferredValues(value, width - 26f, 0f).y + 18f, 40f, 108f);
             float x = Mathf.Clamp(mouse.x + 18f, 8f, Screen.width - width - 8f);
             float y = Mathf.Clamp(Screen.height - mouse.y + 18f, 8f, Screen.height - height - 8f);
@@ -189,7 +193,7 @@ namespace OniMcp
                 return;
 
             string value = text == null ? string.Empty : text.text;
-            float width = value.Length > 52 ? 320f : Mathf.Clamp(value.Length * 8f + 42f, 140f, 320f);
+            float width = visibleText.Length > 52 ? 320f : Mathf.Clamp(visibleText.Length * 8f + 42f, 140f, 320f);
             float height = Mathf.Clamp(text.GetPreferredValues(value, width - 26f, 0f).y + 18f, 40f, 108f);
             float x = Mathf.Clamp(screen.x + 18f, 8f, Screen.width - width - 8f);
             float y = Mathf.Clamp(Screen.height - screen.y - height - 10f, 8f, Screen.height - height - 8f);
@@ -227,15 +231,6 @@ namespace OniMcp
                 Support.OniMcpLog.Warning("[OniMcp] Failed to show tool-call notification: " + ex.Message);
                 return false;
             }
-        }
-
-        private static string TrimLong(string value, int max)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return string.Empty;
-
-            value = value.Trim();
-            return value.Length <= max ? value : value.Substring(0, max - 1) + ".";
         }
 
         private static void ConfigureTopLeft(RectTransform rect)

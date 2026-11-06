@@ -25,7 +25,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "spacecraft_list", "rockets_discover", "spacecraft_discover" },
                 Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=list",
                 Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -71,7 +70,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "spacecraft_status" },
                 Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=status",
                 Hidden = true,
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -124,7 +122,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "spacecraft_detail" },
                 Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=detail",
                 Hidden = true,
                 Parameters = RocketLookupParams(),
@@ -148,7 +145,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "cluster_entities_list" },
                 Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=list_destinations。列出星图实体和基础版航天目的地，可用于选择 set_destination 的 q/r 或 worldId",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -191,7 +187,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "rocket_launch_pads_list", "landing_pads_list" },
                 Tags = new List<string> { "rocket", "launch-pad", "landing", "side-screen" },
                 Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=list_launch_pads。列出 LaunchPadSideScreen 发射台状态、已停靠火箭和可降落/待降落火箭",
                 Parameters = new Dictionary<string, McpToolParameter>
@@ -229,7 +224,6 @@ namespace OniMcp.Tools
                 Group = "rockets",
                 Mode = "write",
                 Risk = "medium",
-                Aliases = new List<string> { "rocket_repeat_destination_set", "rocket_roundtrip_set" },
                 Tags = new List<string> { "rocket", "destination", "round-trip", "side-screen" },
                 Description = "兼容入口：请使用 building_control domain=rocket rocketDomain=ops action=set_round_trip",
                 Hidden = true,

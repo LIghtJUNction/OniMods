@@ -1,0 +1,6 @@
+name = "sim_diamond"
+version = "0.1.0"
+defaultTargets = ["SimDiamond"]
+
+[[lean_lib]]
+name = "SimDiamond"

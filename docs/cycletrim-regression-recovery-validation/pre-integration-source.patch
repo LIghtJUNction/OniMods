@@ -1,0 +1,790 @@
+diff --git a/mods/CycleTrim/Core/AnimationSymbolValueComparer.cs b/mods/CycleTrim/Core/AnimationSymbolValueComparer.cs
+index eb502bc..1a90248 100644
+--- a/mods/CycleTrim/Core/AnimationSymbolValueComparer.cs
++++ b/mods/CycleTrim/Core/AnimationSymbolValueComparer.cs
+@@ -3 +2,0 @@ using System.Runtime.CompilerServices;
+-using System.Runtime.InteropServices;
+@@ -34,4 +32,0 @@ namespace CycleTrim.Core
+-        // Each setter invocation owns this state: 0 = no fields visited,
+-        // 1 = only identical fields, 3 = at least one changed field.
+-        // The transpiler invokes these small helpers once per field. Request
+-        // inlining so those calls need not dominate a large unchanged range.
+@@ -39 +34 @@ namespace CycleTrim.Core
+-        internal static void WriteFloat(ref float destination, float value, ref int state)
++        internal static unsafe bool SameBits(float left, float right)
+@@ -41,5 +36,4 @@ namespace CycleTrim.Core
+-            state |= 1;
+-            if (SameBits(destination, value))
+-                return;
+-            destination = value;
+-            state = 3;
++            // Only reinterpret these two 4-byte value parameters. No pointer
++            // escapes or addresses game storage. This lets the JIT use register
++            // bit moves instead of spilling explicit-layout unions to memory.
++            return *(int*)&left == *(int*)&right;
+@@ -49 +43 @@ namespace CycleTrim.Core
+-        internal static void WriteVector(ref Vector2 destination, Vector2 value, ref int state)
++        internal static bool SameVectorBits(Vector2 left, Vector2 right)
+@@ -51,5 +45,5 @@ namespace CycleTrim.Core
+-            state |= 1;
+-            if (SameBits(destination.x, value.x) && SameBits(destination.y, value.y))
+-                return;
+-            destination = value;
+-            state = 3;
++            // Keep each comparison 32-bit: promoted frame components can make
++            // a packed 64-bit union compile to two narrow stores and a wide
++            // reload. These comparisons preserve NaNs and signed zero without
++            // reconstructing that wider temporary.
++            return SameBits(left.x, right.x) && SameBits(left.y, right.y);
+@@ -58,14 +51,0 @@ namespace CycleTrim.Core
+-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+-        internal static bool SameBits(float left, float right)
+-        {
+-            return new FloatBits { Value = left }.Bits == new FloatBits { Value = right }.Bits;
+-        }
+-
+-        // net48 has no BitConverter.SingleToInt32Bits. This value-type union
+-        // performs the same reinterpretation without unsafe code or allocation.
+-        [StructLayout(LayoutKind.Explicit)]
+-        private struct FloatBits
+-        {
+-            [FieldOffset(0)] internal float Value;
+-            [FieldOffset(0)] internal int Bits;
+-        }
+diff --git a/mods/CycleTrim/Core/ConveyorPathLookup.cs b/mods/CycleTrim/Core/ConveyorPathLookup.cs
+index b5c0b45..517fa0b 100644
+--- a/mods/CycleTrim/Core/ConveyorPathLookup.cs
++++ b/mods/CycleTrim/Core/ConveyorPathLookup.cs
+@@ -2,0 +3 @@ using System.Collections.Generic;
++using System.Runtime.CompilerServices;
+@@ -12,0 +14,2 @@ namespace CycleTrim.Core
++        // At least two complete scans precede an index, then four queries remain.
++        internal const int MinimumCandidateLength = MinimumQueriesRemaining + 2;
+@@ -33,0 +37,25 @@ namespace CycleTrim.Core
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
++        internal static ConveyorPathLookup BeginInvocation()
++        {
++            var previous = current;
++            if (previous != null)
++                previous.Invalidate();
++            return previous;
++        }
++
++        internal static void EndInvocation(ConveyorPathLookup lease, ConveyorPathLookup previous)
++        {
++            Exit(lease);
++            // Even a nested containment return or short-path-only invocation can
++            // change the parent's inputs through callbacks. It need not acquire
++            // its own index scope to invalidate the parent's former answers.
++            if (previous != null)
++                previous.Invalidate();
++        }
++
++        private void Invalidate()
++        {
++            ResetPath();
++            compatibilityChecked = false;
++        }
++
+@@ -72,0 +101 @@ namespace CycleTrim.Core
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+@@ -78,4 +107,14 @@ namespace CycleTrim.Core
+-            // A retained path may alias the path which the game is trimming.
+-            if (!enabled || path == null || predicate == null || candidate == null
+-                || ReferenceEquals(path, candidate) || path.Count < MinimumPathLength
+-                || path.Count > MaximumPathLength)
++            if (path == null || path.Count < MinimumPathLength || path.Count > MaximumPathLength)
++                return path.FindIndex(predicate);
++            return FindEligibleIndex(path, predicate, readRail, canIndex);
++        }
++
++        // The production call site has already checked this path's non-null
++        // receiver and length. Keep per-query state and alias checks here:
++        // later paths in the same invocation need not share the first's identity.
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
++        internal int FindEligibleIndex(List<SolidConduitFlow.Conduit> path,
++            Predicate<SolidConduitFlow.Conduit> predicate,
++            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
++        {
++            if (!enabled || predicate == null || candidate == null || ReferenceEquals(path, candidate))
+@@ -92,7 +131,5 @@ namespace CycleTrim.Core
+-            // Pay for an index only after the original searches have already
+-            // inspected two path lengths and at least four searches remain.
+-            // An early hit costs only index + 1, so it does not invite a table.
+-            var buildIndex = !indexed && inspectedRails >= 2L * pathLength
+-                && expectedQueries - queries >= MinimumQueriesRemaining;
+-            int? rail = null;
+-            if (indexed || buildIndex)
++            // The common early-hit path does only scan accounting. Keep table
++            // construction, compatibility and mutation recovery out of this
++            // small method so callers can inline the original-search path.
++            if (!indexed && (inspectedRails < 2L * pathLength
++                || expectedQueries - queries < MinimumQueriesRemaining))
+@@ -100,6 +137,6 @@ namespace CycleTrim.Core
+-                // Delegate metadata and its captured field are only needed when
+-                // an answer is about to come from the index. Ordinary scans pay
+-                // neither reflection nor closure-key extraction costs.
+-                rail = readRail(predicate);
+-                if (!rail.HasValue)
+-                    return path.FindIndex(predicate);
++                queries++;
++                var beforeQuery = version;
++                var found = path.FindIndex(predicate);
++                if (version == beforeQuery)
++                    inspectedRails += found < 0 ? pathLength : found + 1;
++                return found;
+@@ -107 +144,12 @@ namespace CycleTrim.Core
+-            if (buildIndex)
++
++            return FindIndexed(path, predicate, readRail, canIndex);
++        }
++
++        private int FindIndexed(List<SolidConduitFlow.Conduit> path,
++            Predicate<SolidConduitFlow.Conduit> predicate,
++            Func<Predicate<SolidConduitFlow.Conduit>, int?> readRail, Func<bool> canIndex)
++        {
++            var rail = readRail(predicate);
++            if (!rail.HasValue)
++                return path.FindIndex(predicate);
++            if (!indexed)
+@@ -131 +179,4 @@ namespace CycleTrim.Core
+-            if (indexed)
++            // A copy of the public enumerator detects even an indexer write
++            // which leaves Count unchanged. The copy never advances our stamp.
++            var stamp = indexStamp;
++            try
+@@ -133,14 +184 @@ namespace CycleTrim.Core
+-                // A copy of the public enumerator detects even an indexer write
+-                // which leaves Count unchanged. The copy never advances our stamp.
+-                var stamp = indexStamp;
+-                try
+-                {
+-                    stamp.MoveNext();
+-                }
+-                catch (InvalidOperationException)
+-                {
+-                    ResetPath();
+-                    return path.FindIndex(predicate);
+-                }
+-                int position;
+-                return firstPositions.TryGetValue(rail.Value, out position) ? position : -1;
++                stamp.MoveNext();
+@@ -148,6 +186,7 @@ namespace CycleTrim.Core
+-
+-            var beforeQuery = version;
+-            var found = path.FindIndex(predicate);
+-            if (version == beforeQuery)
+-                inspectedRails += found < 0 ? pathLength : found + 1;
+-            return found;
++            catch (InvalidOperationException)
++            {
++                ResetPath();
++                return path.FindIndex(predicate);
++            }
++            int position;
++            return firstPositions.TryGetValue(rail.Value, out position) ? position : -1;
+diff --git a/mods/CycleTrim/CycleTrim.csproj b/mods/CycleTrim/CycleTrim.csproj
+index be6ea9b..8985d1c 100644
+--- a/mods/CycleTrim/CycleTrim.csproj
++++ b/mods/CycleTrim/CycleTrim.csproj
+@@ -7,0 +8 @@
++    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+diff --git a/mods/CycleTrim/Patches/AnimationSymbolOptimizationPatch.cs b/mods/CycleTrim/Patches/AnimationSymbolOptimizationPatch.cs
+index e3c8e37..145c23d 100644
+--- a/mods/CycleTrim/Patches/AnimationSymbolOptimizationPatch.cs
++++ b/mods/CycleTrim/Patches/AnimationSymbolOptimizationPatch.cs
+@@ -73 +73,2 @@ namespace CycleTrim.Patches
+-                || !SameInstructions(source, PatchProcessor.GetOriginalInstructions(__originalMethod)))
++                || !SameInstructions(source, PatchProcessor.GetOriginalInstructions(__originalMethod))
++                || !TryGetStoreBlock(source, out var firstStore, out var lastStore))
+@@ -82,4 +82,0 @@ namespace CycleTrim.Patches
+-            var scalar = generator.DeclareLocal(typeof(float));
+-            var vector = generator.DeclareLocal(typeof(Vector2));
+-            var writeScalar = AccessTools.Method(typeof(AnimationSymbolValueComparer), "WriteFloat");
+-            var writeVector = AccessTools.Method(typeof(AnimationSymbolValueComparer), "WriteVector");
+@@ -94 +91 @@ namespace CycleTrim.Patches
+-            foreach (var instruction in source)
++            for (int index = 0; index < source.Count; index++)
+@@ -96,2 +93,2 @@ namespace CycleTrim.Patches
+-                var field = instruction.operand as FieldInfo;
+-                if (instruction.opcode == OpCodes.Stfld && field != null)
++                var instruction = source[index];
++                if (index == firstStore)
+@@ -99,10 +96,2 @@ namespace CycleTrim.Patches
+-                    var temporary = field.FieldType == typeof(float) ? scalar : vector;
+-                    // Preserve the original address/value evaluation, including
+-                    // invalid indices and writes completed before a later error.
+-                    result.Add(new CodeInstruction(instruction)
+-                        { opcode = OpCodes.Stloc, operand = temporary });
+-                    result.Add(new CodeInstruction(OpCodes.Ldflda, field));
+-                    result.Add(new CodeInstruction(OpCodes.Ldloc, temporary));
+-                    result.Add(new CodeInstruction(OpCodes.Ldloca, state));
+-                    result.Add(new CodeInstruction(OpCodes.Call,
+-                        field.FieldType == typeof(float) ? writeScalar : writeVector));
++                    AppendStoreBlock(result, source, firstStore, lastStore, generator, state);
++                    index = lastStore;
+@@ -135,0 +125,86 @@ namespace CycleTrim.Patches
++        private static bool TryGetStoreBlock(List<CodeInstruction> source, out int first, out int last)
++        {
++            first = source.FindIndex(instruction => instruction.opcode == OpCodes.Stfld);
++            last = source.FindLastIndex(instruction => instruction.opcode == OpCodes.Stfld);
++            if (first < 0) return false;
++            for (int index = first; index <= last; index++)
++            {
++                var instruction = source[index];
++                // The direct-write tail must have exactly the same stack and
++                // evaluation order as the comparison path at every store.
++                if ((index > first && instruction.labels.Count != 0)
++                    || instruction.opcode.FlowControl == FlowControl.Branch
++                    || instruction.opcode.FlowControl == FlowControl.Cond_Branch
++                    || instruction.opcode.FlowControl == FlowControl.Return
++                    || instruction.opcode.FlowControl == FlowControl.Throw)
++                    return false;
++            }
++            return true;
++        }
++
++        private static void AppendStoreBlock(List<CodeInstruction> result, List<CodeInstruction> source,
++            int first, int last, ILGenerator generator, LocalBuilder state)
++        {
++            var scalar = generator.DeclareLocal(typeof(float));
++            var vector = generator.DeclareLocal(typeof(Vector2));
++            var sameScalar = AccessTools.Method(typeof(AnimationSymbolValueComparer), "SameBits");
++            var sameVector = AccessTools.Method(typeof(AnimationSymbolValueComparer), "SameVectorBits");
++            var directStores = new Dictionary<int, Label>();
++            for (int index = first; index <= last; index++)
++                if (source[index].opcode == OpCodes.Stfld)
++                    directStores.Add(index, generator.DefineLabel());
++            var finished = generator.DefineLabel();
++
++            // State is local to this invocation: 0 = no stores visited,
++            // 1 = all visited fields equal, 3 = changed. Once changed, subsequent
++            // symbols execute the original stores without further comparisons.
++            // The first receiver and value have already been evaluated.
++            result.Add(new CodeInstruction(source[first]) { opcode = OpCodes.Ldloc, operand = state });
++            result.Add(new CodeInstruction(OpCodes.Ldc_I4_3));
++            result.Add(new CodeInstruction(OpCodes.Beq, directStores[first]));
++            result.Add(new CodeInstruction(OpCodes.Ldc_I4_1));
++            result.Add(new CodeInstruction(OpCodes.Stloc, state));
++
++            for (int index = first; index <= last; index++)
++            {
++                var instruction = source[index];
++                if (instruction.opcode != OpCodes.Stfld)
++                {
++                    result.Add(new CodeInstruction(instruction));
++                    continue;
++                }
++                var field = (FieldInfo)instruction.operand;
++                var temporary = field.FieldType == typeof(float) ? scalar : vector;
++                var identical = generator.DefineLabel();
++                result.Add(new CodeInstruction(OpCodes.Stloc, temporary));
++                result.Add(new CodeInstruction(OpCodes.Dup));
++                result.Add(new CodeInstruction(OpCodes.Ldfld, field));
++                result.Add(new CodeInstruction(OpCodes.Ldloc, temporary));
++                result.Add(new CodeInstruction(OpCodes.Call,
++                    field.FieldType == typeof(float) ? sameScalar : sameVector));
++                result.Add(new CodeInstruction(OpCodes.Brtrue, identical));
++                result.Add(new CodeInstruction(OpCodes.Ldc_I4_3));
++                result.Add(new CodeInstruction(OpCodes.Stloc, state));
++                result.Add(new CodeInstruction(OpCodes.Ldloc, temporary));
++                result.Add(new CodeInstruction(OpCodes.Br, directStores[index]));
++                var pop = new CodeInstruction(OpCodes.Pop);
++                pop.labels.Add(identical);
++                result.Add(pop);
++            }
++            result.Add(new CodeInstruction(OpCodes.Br, finished));
++
++            // Branch to the first differing field with its original receiver
++            // and value still on the stack. Do not reevaluate either operand,
++            // skip intervening loads, or prevalidate indices/range lengths.
++            for (int index = first; index <= last; index++)
++            {
++                var instruction = new CodeInstruction(source[index]);
++                instruction.labels.Clear();
++                if (directStores.TryGetValue(index, out var label)) instruction.labels.Add(label);
++                result.Add(instruction);
++            }
++            var end = new CodeInstruction(OpCodes.Nop);
++            end.labels.Add(finished);
++            result.Add(end);
++        }
++
+diff --git a/mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs b/mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs
+index bf1d14a..b07966d 100644
+--- a/mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs
++++ b/mods/CycleTrim/Patches/ConveyorPathLookupPatch.cs
+@@ -28 +27,0 @@ namespace CycleTrim.Patches
+-        private static bool callSiteMatched;
+@@ -50,14 +49,2 @@ namespace CycleTrim.Patches
+-        private static void Prefix(List<SolidConduitFlow.Conduit> new_path,
+-            bool __runOriginal, out ConveyorPathLookup __state)
+-        {
+-            __state = __runOriginal ? ConveyorPathLookup.Enter(new_path, callSiteMatched) : null;
+-        }
+-
+-        private static Exception Finalizer(Exception __exception, ConveyorPathLookup __state)
+-        {
+-            ConveyorPathLookup.Exit(__state);
+-            return __exception;
+-        }
+-
+-        [HarmonyPriority(Priority.Last)]
+-        internal static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
++        internal static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions,
++            ILGenerator generator)
+@@ -66 +52,0 @@ namespace CycleTrim.Patches
+-            callSiteMatched = false;
+@@ -68,0 +55,3 @@ namespace CycleTrim.Patches
++            {
++                if (original[index].opcode == OpCodes.Jmp || original[index].opcode == OpCodes.Tailcall)
++                    return Unchanged(original);
+@@ -71 +60,2 @@ namespace CycleTrim.Patches
+-            if (calls.Count != 3)
++            }
++            if (calls.Count != 3 || original.Count == 0 || original[original.Count - 1].opcode != OpCodes.Ret)
+@@ -87,7 +77,74 @@ namespace CycleTrim.Patches
+-            var replacement = new CodeInstruction(original[at]);
+-            replacement.opcode = OpCodes.Call;
+-            replacement.operand = AccessTools.DeclaredMethod(typeof(ConveyorPathLookupPatch),
+-                nameof(FindIndex));
+-            original[at] = replacement;
+-            callSiteMatched = true;
+-            return original;
++            return AddInvocationScope(original, at, generator);
++        }
++
++        private static IEnumerable<CodeInstruction> AddInvocationScope(List<CodeInstruction> original,
++            int searchAt, ILGenerator generator)
++        {
++            var lease = generator.DeclareLocal(typeof(ConveyorPathLookup));
++            var previous = generator.DeclareLocal(typeof(ConveyorPathLookup));
++            var finished = generator.DefineLabel();
++            var cleanup = generator.DefineLabel();
++            var noCleanup = generator.DefineLabel();
++            var result = new List<CodeInstruction>
++            {
++                new CodeInstruction(OpCodes.Call, AccessTools.DeclaredMethod(typeof(ConveyorPathLookup),
++                    nameof(ConveyorPathLookup.BeginInvocation))),
++                new CodeInstruction(OpCodes.Stloc, previous),
++                new CodeInstruction(OpCodes.Ldnull),
++                new CodeInstruction(OpCodes.Stloc, lease)
++            };
++            for (var index = 0; index < original.Count; index++)
++            {
++                var instruction = original[index];
++                if (index == 0)
++                {
++                    instruction = new CodeInstruction(instruction);
++                    instruction.blocks.Insert(0, new ExceptionBlock(ExceptionBlockType.BeginExceptionBlock));
++                }
++                if (index == searchAt)
++                {
++                    // Branches to the old call must also load the new arguments.
++                    // Keep begin/end exception markers on the same respective
++                    // sides of the entire replacement sequence.
++                    var candidate = new CodeInstruction(OpCodes.Ldarg_1);
++                    candidate.labels.AddRange(instruction.labels);
++                    var replacement = new CodeInstruction(OpCodes.Call,
++                        AccessTools.DeclaredMethod(typeof(ConveyorPathLookupPatch), nameof(FindIndexScoped)));
++                    foreach (var block in instruction.blocks)
++                        (block.blockType == ExceptionBlockType.EndExceptionBlock
++                            ? replacement.blocks : candidate.blocks).Add(block);
++                    result.Add(candidate);
++                    result.Add(new CodeInstruction(OpCodes.Ldloca, lease));
++                    result.Add(replacement);
++                }
++                else if (instruction.opcode == OpCodes.Ret)
++                {
++                    var leave = new CodeInstruction(instruction);
++                    leave.opcode = OpCodes.Leave;
++                    leave.operand = finished;
++                    result.Add(leave);
++                }
++                else
++                    result.Add(instruction);
++            }
++
++            var finallyStart = new CodeInstruction(OpCodes.Ldloc, lease);
++            finallyStart.blocks.Add(new ExceptionBlock(ExceptionBlockType.BeginFinallyBlock));
++            result.Add(finallyStart);
++            result.Add(new CodeInstruction(OpCodes.Brtrue, cleanup));
++            result.Add(new CodeInstruction(OpCodes.Ldloc, previous));
++            result.Add(new CodeInstruction(OpCodes.Brfalse, noCleanup));
++            var loadLease = new CodeInstruction(OpCodes.Ldloc, lease);
++            loadLease.labels.Add(cleanup);
++            result.Add(loadLease);
++            result.Add(new CodeInstruction(OpCodes.Ldloc, previous));
++            result.Add(new CodeInstruction(OpCodes.Call, AccessTools.DeclaredMethod(typeof(ConveyorPathLookup),
++                nameof(ConveyorPathLookup.EndInvocation))));
++            var finallyEnd = new CodeInstruction(OpCodes.Nop);
++            finallyEnd.labels.Add(noCleanup);
++            finallyEnd.blocks.Add(new ExceptionBlock(ExceptionBlockType.EndExceptionBlock));
++            result.Add(finallyEnd);
++            var ret = new CodeInstruction(OpCodes.Ret);
++            ret.labels.Add(finished);
++            result.Add(ret);
++            return result;
+@@ -143,0 +201,18 @@ namespace CycleTrim.Patches
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
++        internal static int FindIndexScoped(List<SolidConduitFlow.Conduit> path,
++            Predicate<SolidConduitFlow.Conduit> predicate, List<SolidConduitFlow.Conduit> candidate,
++            ref ConveyorPathLookup lease)
++        {
++            if (path == null || path.Count < ConveyorPathLookup.MinimumPathLength
++                || path.Count > ConveyorPathLookup.MaximumPathLength)
++                return path.FindIndex(predicate);
++            if (lease == null)
++            {
++                if (candidate == null || candidate.Count < ConveyorPathLookup.MinimumCandidateLength
++                    || ReferenceEquals(path, candidate))
++                    return path.FindIndex(predicate);
++                lease = ConveyorPathLookup.Enter(candidate, true);
++            }
++            return lease.FindEligibleIndex(path, predicate, ReadRail, CheckCompatibility);
++        }
++
+diff --git a/tests/CycleTrim.Optimizations.Tests/AnimationSymbolFixture.cs b/tests/CycleTrim.Optimizations.Tests/AnimationSymbolFixture.cs
+index 7251f2e..033f2ab 100644
+--- a/tests/CycleTrim.Optimizations.Tests/AnimationSymbolFixture.cs
++++ b/tests/CycleTrim.Optimizations.Tests/AnimationSymbolFixture.cs
+@@ -106,0 +107,33 @@ public sealed class SymbolOverrideInfoGpuData
++    // Separate negative contract fixture: its original body has control flow
++    // between stores, so the comparison/direct-tail rewrite must decline it.
++    [MethodImpl(MethodImplOptions.NoInlining)]
++    internal void BranchedStoresForTest(int index, ref KAnim.Build.SymbolFrameInstance frame)
++    {
++        ref var entry = ref symbolOverrideInfos[index];
++        entry.atlas = frame.buildImageIdx;
++        float flag;
++        if (frame.buildImageIdx < 0) flag = -1f;
++        else flag = 1f;
++        entry.isoverriden = flag;
++        entry.bboxMin = frame.bboxMin;
++        entry.bboxMax = frame.bboxMax;
++        entry.uvMin = frame.uvMin;
++        entry.uvMax = frame.uvMax;
++        MarkDirty();
++    }
++
++    // Separate from the timed setters: exercise repeated array-address loads
++    // and a value load that can fail after earlier fields have been written.
++    [MethodImpl(MethodImplOptions.NoInlining)]
++    internal void ArrayAddressesForTest(int index, KBatchGroupData source)
++    {
++        var values = symbolOverrideInfos;
++        values[index].atlas = 23f;
++        values[index].isoverriden = 1f;
++        values[index].bboxMin = source.symbolFrameInstances[0].bboxMin;
++        values[index].bboxMax = source.symbolFrameInstances[1].bboxMax;
++        values[index].uvMin = source.symbolFrameInstances[2].uvMin;
++        values[index].uvMax = source.symbolFrameInstances[3].uvMax;
++        MarkDirty();
++    }
++
+@@ -130,0 +164,2 @@ namespace CycleTrim.Optimizations.Tests
++        internal static readonly MethodInfo ArrayAddresses = AccessTools.DeclaredMethod(
++            typeof(SymbolOverrideInfoGpuData), "ArrayAddressesForTest");
+@@ -140,0 +176,2 @@ namespace CycleTrim.Optimizations.Tests
++            harmony.CreateReversePatcher(ArrayAddresses, new HarmonyMethod(typeof(AnimationSymbolFixture),
++                "OriginalArrayAddresses")).Patch(HarmonyReversePatchType.Original);
+@@ -157,0 +195,7 @@ namespace CycleTrim.Optimizations.Tests
++        [MethodImpl(MethodImplOptions.NoInlining)]
++        internal static void OriginalArrayAddresses(SymbolOverrideInfoGpuData instance, int index,
++            KBatchGroupData source)
++        {
++            throw new InvalidOperationException("Original array-address stand-in not installed");
++        }
++
+diff --git a/tests/CycleTrim.Optimizations.Tests/AnimationSymbolRegression.cs b/tests/CycleTrim.Optimizations.Tests/AnimationSymbolRegression.cs
+index 9ba694d..6678f66 100644
+--- a/tests/CycleTrim.Optimizations.Tests/AnimationSymbolRegression.cs
++++ b/tests/CycleTrim.Optimizations.Tests/AnimationSymbolRegression.cs
+@@ -28,0 +29 @@ namespace CycleTrim.Optimizations.Tests
++                ArbitraryBitPatternsMatchHostReference();
+@@ -31,0 +33 @@ namespace CycleTrim.Optimizations.Tests
++                RepeatedArrayAddressesPreserveFailures();
+@@ -82,5 +83,0 @@ namespace CycleTrim.Optimizations.Tests
+-                float target = value;
+-                int state = 0;
+-                AnimationSymbolValueComparer.WriteFloat(ref target, value, ref state);
+-                Equal(1, state, "identical scalar touched without change");
+-                Equal(bits, BitConverter.SingleToInt32Bits(target), "identical scalar bits");
+@@ -88,3 +85,4 @@ namespace CycleTrim.Optimizations.Tests
+-                AnimationSymbolValueComparer.WriteFloat(ref target, changed, ref state);
+-                Equal(3, state, "sign change is a real write, including zero and NaN");
+-                Equal(bits ^ int.MinValue, BitConverter.SingleToInt32Bits(target), "changed scalar bits");
++                Check(AnimationSymbolValueComparer.SameBits(value, value), "identical scalar bits");
++                Check(!AnimationSymbolValueComparer.SameBits(value, changed),
++                    "sign change differs, including zero and NaN");
++                Check(!AnimationSymbolValueComparer.SameBits(changed, value), "scalar comparison is symmetric");
+@@ -92,8 +90,17 @@ namespace CycleTrim.Optimizations.Tests
+-                state = 0;
+-                AnimationSymbolValueComparer.WriteVector(ref vector,
+-                    new UnityEngine.Vector2(value, changed), ref state);
+-                Equal(1, state, "identical vector bits");
+-                AnimationSymbolValueComparer.WriteVector(ref vector,
+-                    new UnityEngine.Vector2(value, value), ref state);
+-                Equal(3, state, "second vector component changes");
+-                Equal(bits, BitConverter.SingleToInt32Bits(vector.y), "vector stores exact payload");
++                Check(AnimationSymbolValueComparer.SameVectorBits(vector, vector), "identical vector bits");
++                Check(!AnimationSymbolValueComparer.SameVectorBits(vector,
++                    new UnityEngine.Vector2(changed, changed)), "first vector component differs");
++                Check(!AnimationSymbolValueComparer.SameVectorBits(vector,
++                    new UnityEngine.Vector2(value, value)), "second vector component differs");
++                Check(!AnimationSymbolValueComparer.SameVectorBits(vector,
++                    new UnityEngine.Vector2(changed, value)), "both vector components differ");
++            }
++            foreach (int left in FloatPatterns)
++            {
++                foreach (int right in FloatPatterns)
++                {
++                    var vector = new UnityEngine.Vector2(BitConverter.Int32BitsToSingle(left),
++                        BitConverter.Int32BitsToSingle(right));
++                    Check(AnimationSymbolValueComparer.SameVectorBits(vector, vector),
++                        "mixed NaN/zero/infinity payloads retain both words");
++                }
+@@ -150,0 +158,26 @@ namespace CycleTrim.Optimizations.Tests
++        private static void ArbitraryBitPatternsMatchHostReference()
++        {
++            uint random = 0xA315769Bu;
++            for (int sample = 0; sample < 1024; sample++)
++            {
++                int leftBits = unchecked((int)NextBits(ref random));
++                int rightBits = unchecked((int)NextBits(ref random));
++                float left = BitConverter.Int32BitsToSingle(leftBits);
++                float right = BitConverter.Int32BitsToSingle(rightBits);
++                Equal(BitConverter.SingleToInt32Bits(left) == BitConverter.SingleToInt32Bits(right),
++                    AnimationSymbolValueComparer.SameBits(left, right), "arbitrary bit comparison");
++                Check(AnimationSymbolValueComparer.SameBits(left, left), "arbitrary identical payload");
++                float changed = BitConverter.Int32BitsToSingle(leftBits ^ (1 << (sample & 31)));
++                Check(!AnimationSymbolValueComparer.SameBits(left, changed),
++                    "every individual bit can distinguish a payload");
++            }
++        }
++
++        private static uint NextBits(ref uint value)
++        {
++            value ^= value << 13;
++            value ^= value >> 17;
++            value ^= value << 5;
++            return value;
++        }
++
+@@ -261,0 +295,53 @@ namespace CycleTrim.Optimizations.Tests
++        private static void RepeatedArrayAddressesPreserveFailures()
++        {
++            const string owner = "cycletrim.tests.animation.array-addresses";
++            var harmony = new Harmony(owner);
++            harmony.Patch(AnimationSymbolFixture.ArrayAddresses,
++                transpiler: new HarmonyMethod(typeof(AnimationSymbolOptimizationPatch), "Transpiler"),
++                finalizer: new HarmonyMethod(typeof(AnimationSymbolOptimizationPatch), "Finalizer"));
++            try
++            {
++                var frames = Enumerable.Range(0, 4).Select(index => AnimationSymbolFixture.Frame(index + 9)).ToArray();
++                var complete = new KBatchGroupData(frames);
++                foreach (bool initialized in new[] { false, true })
++                {
++                    // Fail after zero, one, two or three vector stores. Each
++                    // destination array address and source item is evaluated
++                    // separately, including on the unchanged comparison path.
++                    for (int count = 0; count <= 4; count++)
++                    {
++                        var baseline = new SymbolOverrideInfoGpuData(1);
++                        var candidate = new SymbolOverrideInfoGpuData(1);
++                        if (initialized)
++                        {
++                            AnimationSymbolFixture.OriginalArrayAddresses(baseline, 0, complete);
++                            candidate.ArrayAddressesForTest(0, complete);
++                        }
++                        int version = candidate.version;
++                        var source = new KBatchGroupData(frames.Take(count).ToArray());
++                        Equal(Error(() => AnimationSymbolFixture.OriginalArrayAddresses(baseline, 0, source)),
++                            Error(() => candidate.ArrayAddressesForTest(0, source)), "array-address exception");
++                        EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "array-address partial writes");
++                        Equal(count < 4 || initialized ? version : version + 1, candidate.version,
++                            "array-address version follows completed changes");
++                        if (count < 4)
++                        {
++                            AnimationSymbolFixture.OriginalArrayAddresses(baseline, 0, complete);
++                            candidate.ArrayAddressesForTest(0, complete);
++                            Equal(baseline.version, candidate.version, "failed array-address instance keeps dirtying");
++                            EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "array-address retry bytes");
++                        }
++                    }
++                }
++                foreach (int index in new[] { -1, 0, 1 })
++                {
++                    var baseline = new SymbolOverrideInfoGpuData(1);
++                    var candidate = new SymbolOverrideInfoGpuData(1);
++                    Equal(Error(() => AnimationSymbolFixture.OriginalArrayAddresses(baseline, index, null)),
++                        Error(() => candidate.ArrayAddressesForTest(index, null)), "address/value exception order");
++                    EqualBytes(baseline.Snapshot(), candidate.Snapshot(), "stores before null source survive");
++                }
++            }
++            finally { harmony.UnpatchAll(owner); }
++        }
++
+@@ -343,0 +430,12 @@ namespace CycleTrim.Optimizations.Tests
++            var branched = AccessTools.DeclaredMethod(typeof(SymbolOverrideInfoGpuData), "BranchedStoresForTest");
++            var branchedCode = PatchProcessor.GetOriginalInstructions(branched, out var branchGenerator);
++            int first = branchedCode.FindIndex(instruction => instruction.opcode == OpCodes.Stfld);
++            int last = branchedCode.FindLastIndex(instruction => instruction.opcode == OpCodes.Stfld);
++            Check(branchedCode.Skip(first).Take(last - first + 1)
++                .Any(instruction => instruction.opcode.FlowControl == FlowControl.Cond_Branch),
++                "negative fixture has original control flow between stores");
++            var unchanged = AnimationSymbolOptimizationPatch.Transpiler(branchedCode,
++                branched, branchGenerator).ToList();
++            Equal(branchedCode.Count, unchanged.Count, "original branched stores remain whole");
++            Check(unchanged.Zip(branchedCode, (a, b) => ReferenceEquals(a, b)).All(same => same),
++                "straight-line guard preserves every original instruction and label");
+diff --git a/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs b/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs
+index e8cab8e..c685fea 100644
+--- a/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs
++++ b/tests/CycleTrim.Optimizations.Tests/ConveyorPathRegression.cs
+@@ -34,0 +35 @@ namespace CycleTrim.Optimizations.Tests
++                TestLazyScopesAndNestedReturns();
+@@ -72 +73 @@ namespace CycleTrim.Optimizations.Tests
+-            var modified = ConveyorPathLookupPatch.Transpiler(original).ToArray();
++            var modified = Transpile(original);
+@@ -74 +75 @@ namespace CycleTrim.Optimizations.Tests
+-                && item.operand is MethodInfo method && method.DeclaringType == typeof(ConveyorPathLookupPatch)) == 1,
++                && item.operand is MethodInfo method && method.Name == "FindIndexScoped") == 1,
+@@ -76,2 +77,2 @@ namespace CycleTrim.Optimizations.Tests
+-            Check(ReferenceEquals(modified[calls[0]], original[calls[0]])
+-                && ReferenceEquals(modified[calls[1]], original[calls[1]]), "endpoint searches are untouched");
++            Check(modified.Any(item => ReferenceEquals(item, original[calls[0]]))
++                && modified.Any(item => ReferenceEquals(item, original[calls[1]])), "endpoint searches are untouched");
+@@ -79,2 +80,18 @@ namespace CycleTrim.Optimizations.Tests
+-            Check(modified[last].labels.SequenceEqual(original[last].labels)
+-                && modified[last].blocks.SequenceEqual(original[last].blocks), "labels and exception boundaries survive");
++            var replacement = Array.FindIndex(modified, item => item.operand is MethodInfo method
++                && method.Name == "FindIndexScoped");
++            Check(modified[replacement - 2].labels.SequenceEqual(original[last].labels)
++                && modified[replacement - 2].blocks.Concat(modified[replacement].blocks)
++                    .SequenceEqual(original[last].blocks), "labels and exception boundaries survive");
++            Check(modified.Count(item => item.opcode == OpCodes.Ret) == 1
++                && modified.Any(item => item.blocks.Any(block => block.blockType == ExceptionBlockType.BeginFinallyBlock)),
++                "all original returns leave through the invocation cleanup");
++            var originalFinallyCount = original.Sum(item => item.blocks.Count(block =>
++                block.blockType == ExceptionBlockType.BeginFinallyBlock));
++            Check(originalFinallyCount == 2 && modified.Sum(item => item.blocks.Count(block =>
++                block.blockType == ExceptionBlockType.BeginFinallyBlock)) == originalFinallyCount + 1,
++                "both original foreach finally blocks survive inside the added invocation finally");
++            Check(original.Where(item => item.opcode == OpCodes.Leave || item.opcode == OpCodes.Leave_S)
++                .All(item => modified.Any(candidate => ReferenceEquals(item, candidate))),
++                "original containment and enumerator leave targets are unchanged");
++            Check(original.SelectMany(item => item.labels).All(label => modified.Any(item => item.labels.Contains(label))),
++                "all original branch and exception-handler labels remain defined");
+@@ -83 +100 @@ namespace CycleTrim.Optimizations.Tests
+-            Check(ConveyorPathLookupPatch.Transpiler(missing).SequenceEqual(missing), "missing call leaves method unchanged");
++            Check(Transpile(missing).SequenceEqual(missing), "missing call leaves method unchanged");
+@@ -85 +102 @@ namespace CycleTrim.Optimizations.Tests
+-            Check(ConveyorPathLookupPatch.Transpiler(extra).SequenceEqual(extra), "extra call leaves method unchanged");
++            Check(Transpile(extra).SequenceEqual(extra), "extra call leaves method unchanged");
+@@ -89 +106 @@ namespace CycleTrim.Optimizations.Tests
+-            Check(ConveyorPathLookupPatch.Transpiler(badLambda).SequenceEqual(badLambda), "unknown predicate is not bypassed");
++            Check(Transpile(badLambda).SequenceEqual(badLambda), "unknown predicate is not bypassed");
+@@ -92,2 +109,18 @@ namespace CycleTrim.Optimizations.Tests
+-            Check(ConveyorPathLookupPatch.Transpiler(prefixed).SequenceEqual(prefixed), "prefixed call is not rewritten");
+-            ConveyorPathLookupPatch.Transpiler(original).ToArray();
++            Check(Transpile(prefixed).SequenceEqual(prefixed), "prefixed call is not rewritten");
++            var tail = new List<CodeInstruction>(original);
++            tail.InsertRange(tail.Count - 1, new[]
++            {
++                new CodeInstruction(OpCodes.Tailcall),
++                new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ConveyorPathRegression), nameof(Noop)))
++            });
++            Check(Transpile(tail).SequenceEqual(tail), "tail transfer preserves the whole original method and EH metadata");
++            var jump = new List<CodeInstruction>(original);
++            jump.Insert(jump.Count - 1, new CodeInstruction(OpCodes.Jmp, Target));
++            Check(Transpile(jump).SequenceEqual(jump), "direct method transfer cannot bypass scope cleanup");
++            Transpile(original);
++        }
++
++        private static CodeInstruction[] Transpile(IEnumerable<CodeInstruction> instructions)
++        {
++            var generator = new DynamicMethod("conveyor_shape", typeof(void), Type.EmptyTypes).GetILGenerator();
++            return ConveyorPathLookupPatch.Transpiler(instructions, generator).ToArray();
+@@ -134,0 +168,11 @@ namespace CycleTrim.Optimizations.Tests
++                var entriesBeforeAlias = lease.IndexEntryCount;
++                var aliasReads = 0;
++                var activeLease = lease;
++                var aliasPosition = ConveyorPathLookupPatch.FindIndexScoped(candidate, rail =>
++                {
++                    aliasReads++;
++                    return rail.idx == 999;
++                }, candidate, ref activeLease);
++                Check(entriesBeforeAlias > 0 && aliasPosition == 0 && aliasReads == 1
++                    && ReferenceEquals(activeLease, lease) && lease.IndexEntryCount == entriesBeforeAlias,
++                    "production path keeps the alias guard after an existing lease acquired an index");
+@@ -273,0 +318,63 @@ namespace CycleTrim.Optimizations.Tests
++        private static void TestLazyScopesAndNestedReturns()
++        {
++            var patches = Harmony.GetPatchInfo(Target);
++            Check(!patches.Prefixes.Any(item => item.PatchMethod.DeclaringType == typeof(ConveyorPathLookupPatch))
++                && !patches.Finalizers.Any(item => item.PatchMethod.DeclaringType == typeof(ConveyorPathLookupPatch)),
++                "conveyor patch has no unconditional Harmony invocation wrappers");
++
++            foreach (var length in new[] { 16, 128, ConveyorPathLookup.MaximumPathLength + 1 })
++            {
++                var flow = RepeatedFixture(length, 1);
++                var reads = 0;
++                flow.GetSOAInfo().ObserveRead = () =>
++                {
++                    reads++;
++                    Check(ConveyorPathLookup.Current == null,
++                        "short, oversized and too-few-query paths do not acquire a scope");
++                };
++                flow.AddPath(Rails(new[] { 65000, 0 }));
++                Check(reads == 1, "unindexed control reaches the original membership callback");
++                Check(ConveyorPathLookup.Current == null, "unindexed invocation leaves no scope behind");
++            }
++
++            var parentPath = Rails(Enumerable.Range(0, 64));
++            var parent = ConveyorPathLookup.Enter(Rails(Enumerable.Range(1000, 64)), true);
++            try
++            {
++                FillIndex(parent, parentPath);
++                var contained = RepeatedFixture(64, 1);
++                contained.AddPath(Rails(Enumerable.Range(0, 8)));
++                Check(ReferenceEquals(ConveyorPathLookup.Current, parent) && parent.IndexEntryCount == 0,
++                    "nested containment return invalidates and preserves the outer scope");
++
++                for (var attempt = 0; attempt < 2; attempt++)
++                {
++                    FillIndex(parent, parentPath);
++                    var nested = RepeatedFixture(16, 1);
++                    var fail = attempt == 1;
++                    nested.GetSOAInfo().ObserveRead = () =>
++                    {
++                        Check(ReferenceEquals(ConveyorPathLookup.Current, parent) && parent.IndexEntryCount == 0,
++                            "nested short invocation invalidates the parent before its callbacks");
++                        FillIndex(parent, parentPath);
++                        Check(parent.IndexEntryCount > 0, "callback deliberately rebuilds an outer index");
++                        if (fail)
++                            throw new InvalidOperationException("nested short-path failure");
++                    };
++                    Action run = () => nested.AddPath(Rails(new[] { 65000, 0 }));
++                    if (fail)
++                        Expect<InvalidOperationException>(run);
++                    else
++                        run();
++                    Check(ReferenceEquals(ConveyorPathLookup.Current, parent) && parent.IndexEntryCount == 0,
++                        "unscoped nested normal/exceptional exit invalidates rebuilt outer answers");
++                }
++
++                FillIndex(parent, parentPath);
++                Expect<NullReferenceException>(() => RepeatedFixture(64, 1).AddPath(null));
++                Check(ReferenceEquals(ConveyorPathLookup.Current, parent) && parent.IndexEntryCount == 0,
++                    "failure before the membership phase still invalidates the parent");
++            }
++            finally { ConveyorPathLookup.Exit(parent); }
++        }
++
+diff --git a/tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj b/tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj
+index 186aee2..3d2d4ed 100644
+--- a/tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj
++++ b/tests/CycleTrim.Optimizations.Tests/CycleTrim.Optimizations.Tests.csproj
+@@ -7,0 +8 @@
++    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

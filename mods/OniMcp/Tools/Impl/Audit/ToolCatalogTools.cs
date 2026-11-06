@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "tools",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "tools_control", "tool_catalog_control" },
                 Tags = new List<string> { "catalog", "search", "discovery", "intent", "manifest", "guide", "coverage", "audit", "surfaces", "low-token" },
                 Description = "统一工具目录入口：action=manifest/search/guide/coverage/static_audit/surface_audit，返回工具清单、工具搜索、意图指南、覆盖审计和 surface 审计。",
                 Parameters = new Dictionary<string, McpToolParameter>

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 // compiled from production source; these tests are not Unity/ONI acceptance.
 namespace UnityEngine
 {
-    internal sealed class GameObject
+    internal sealed partial class GameObject
     {
         private readonly Dictionary<Type, object> components = new Dictionary<Type, object>();
 

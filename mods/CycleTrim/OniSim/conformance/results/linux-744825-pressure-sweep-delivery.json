@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "source_revision": "5eb76a39a6b44deccc77c5dd876b1b1c6d6cd11e",
+  "isolated_git_archive_build": true,
+  "source_archive_sha256": "db12c0a9da2c5211dd8eeda40333f6e0615b443b5fd0ec66a53eb371ce28a35d",
+  "zip_sha256": "bd0b2823b3f03ad7dec3d2ee28df4d994b2e50d24492216d89ad9dfbed703756",
+  "native_sha256": "2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f",
+  "managed_sha256": "d0437d55ac62af5b7a422aaf7e000713c68e1455ffe1f461890073f530100d90",
+  "managed_reference_sha256": "6db652990ad1038e86b3493ed43004e12bfd61e62a4be60c787a9a9b9ac52ee1",
+  "zip_crc_checked": true,
+  "runtime_accepted": false,
+  "production_promoted": false,
+  "zip_entry_count": 101,
+  "package_dlls": [
+    "CycleTrim.dll"
+  ],
+  "source_excludes_generated_and_game_binaries": true,
+  "source_contains_exact_pressure_sweep": true,
+  "full_runtime_delivery_gate_passed": false,
+  "scope": "Isolated test package and prepared comparison profiles; no distribution promotion",
+  "headless_save_reload_receipt": "linux-744825-pressure-sweep-headless.json",
+  "groups": {
+    "rust": {
+      "group_sha256": "33b10536019089e79059ec3f65ac7d4f3a6cddb98bf9dd9f46ec89d57f406b87",
+      "managed_sha256": "d0437d55ac62af5b7a422aaf7e000713c68e1455ffe1f461890073f530100d90",
+      "native_sha256": "2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f",
+      "package_sha256": "bd0b2823b3f03ad7dec3d2ee28df4d994b2e50d24492216d89ad9dfbed703756",
+      "source_save_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+      "controller_sha256": "ed62ea9d6218952b921751340d2df8cd4fe687f5185bf4e2658a39ca345a6e50",
+      "memory_probe_payload_sha256": {
+        "CycleTrim.MemoryProbe.dll": "5a0f8211f436e30e76e99c832dd0a3bedbd153371d7fd435c103363b34cb2121",
+        "mod.yaml": "a5c9a2e167fece88506e290d74ea25010d58c695eb6416b521fe7d9585c6e2d4",
+        "mod_info.yaml": "71fd750b527e5577496d2f2273f10cda86ecb02e678213c0c61fdc64828c4907"
+      },
+      "texture_probe_payload_sha256": {
+        "CycleTrim.TextureProbe.dll": "b7a183a833efcf46238d8b95adea93f4dec8aeb7704dac9a6ac281bab3ae94da",
+        "mod.yaml": "b8ba44419a59b72fa011b951b5b69a59e0a6a804e81a11bc1ebcc6a1678a80fb",
+        "mod_info.yaml": "71fd750b527e5577496d2f2273f10cda86ecb02e678213c0c61fdc64828c4907"
+      },
+      "instance_count": 4,
+      "threads_per_instance": 4,
+      "expected_instance_bytes": 5368709120,
+      "reserve_bytes": 1073741824,
+      "requested_simulation_core": "rust",
+      "game_instances_started": 0
+    },
+    "official": {
+      "group_sha256": "ac3fa87464a14499fc41ba6bbc7d846d4f2c7e747ff44937324b5bf9bb10c07f",
+      "managed_sha256": "d0437d55ac62af5b7a422aaf7e000713c68e1455ffe1f461890073f530100d90",
+      "native_sha256": "2772e52680f74a953a8fd18be396e2718ea1ccba1b7dad4fa738bc9cb98dc76f",
+      "package_sha256": "bd0b2823b3f03ad7dec3d2ee28df4d994b2e50d24492216d89ad9dfbed703756",
+      "source_save_sha256": "dec9042126623536f9149d5250598910a49fac06129f89daefad1984a4c61999",
+      "controller_sha256": "ed62ea9d6218952b921751340d2df8cd4fe687f5185bf4e2658a39ca345a6e50",
+      "memory_probe_payload_sha256": {
+        "CycleTrim.MemoryProbe.dll": "5a0f8211f436e30e76e99c832dd0a3bedbd153371d7fd435c103363b34cb2121",
+        "mod.yaml": "a5c9a2e167fece88506e290d74ea25010d58c695eb6416b521fe7d9585c6e2d4",
+        "mod_info.yaml": "71fd750b527e5577496d2f2273f10cda86ecb02e678213c0c61fdc64828c4907"
+      },
+      "texture_probe_payload_sha256": {
+        "CycleTrim.TextureProbe.dll": "b7a183a833efcf46238d8b95adea93f4dec8aeb7704dac9a6ac281bab3ae94da",
+        "mod.yaml": "b8ba44419a59b72fa011b951b5b69a59e0a6a804e81a11bc1ebcc6a1678a80fb",
+        "mod_info.yaml": "71fd750b527e5577496d2f2273f10cda86ecb02e678213c0c61fdc64828c4907"
+      },
+      "instance_count": 4,
+      "threads_per_instance": 4,
+      "expected_instance_bytes": 5368709120,
+      "reserve_bytes": 1073741824,
+      "requested_simulation_core": "official",
+      "game_instances_started": 0
+    }
+  },
+  "capacity_preflight": {
+    "captured_at": "2026-10-21T07:09:01.016575+00:00",
+    "games_started": 0,
+    "admissions": [
+      {
+        "count": 1,
+        "passed": false,
+        "error": "Insufficient measured memory for 1 simultaneous complete games: available+owned PSS=5276398592, required=6442450944; no sequential substitute"
+      },
+      {
+        "count": 4,
+        "passed": false,
+        "error": "Insufficient measured memory for 4 simultaneous complete games: available+owned PSS=5274731520, required=22548578304; no sequential substitute"
+      }
+    ]
+  }
+}

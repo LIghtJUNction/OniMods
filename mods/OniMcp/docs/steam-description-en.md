@@ -2,6 +2,14 @@
 
 [b]A local MCP bridge mod for Oxygen Not Included[/b]
 
+[h2]v0.2.6 controls and reliability[/h2]
+[list]
+[*] Native Survival new-game controls; tolerate missing optional save previews.
+[*] Correct building anchors, utility tools and camera navigation.
+[*] Bounded research, Printing Pod and notification waits with compact observations.
+[*] Avoid Unity Mono input-event constructor crashes.
+[/list]
+
 [h2]v0.2.5 Workshop installation update[/h2]
 [list]
 [*] Repackage the Workshop files as one legacy ZIP for ONI's mod loader. The previous directory download was complete in Steam but ONI reported it as a failed mod download.
@@ -60,8 +68,8 @@
 [/list]
 
 [h2]Documentation[/h2]
-[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README_EN.md]Read English docs[/url]
-[url=https://github.com/LIghtJUNction/OniMods/blob/v0.2.5/mods/OniMcp/README.md]查看中文文档[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README_EN.md]Read English docs[/url]
+[url=https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md]查看中文文档[/url]
 
 [h2]Optional project support[/h2]
 [url=https://api.lmm.best]Buy AI tokens (optional)[/url] to support OniMods development. This purchase is unrelated to the mod's local authentication token. OniMcp does not require this site or a purchase; you can use a compatible MCP client and model of your choice.

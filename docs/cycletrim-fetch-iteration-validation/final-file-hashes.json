@@ -1,0 +1,258 @@
+{
+  "source_base": "14c08591cbd0bf66cd0f53b37bfb498bdef4abf6",
+  "retained_variant": "V1",
+  "native_game_run": false,
+  "scope": "Final source and evidence hashes; excludes this receipt itself. Round-2 frozen V2 source is intentional. After final tests, the ordinary fixture lost one empty terminal line only; the frozen measured fixture is byte-for-byte unchanged.",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 278,
+      "sha256": "a4b361d287e08d478dd4de91c5928edb43dbd06f2e02976e3b51019cfe773e4c"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Ablation.cs",
+      "bytes": 15836,
+      "sha256": "3e4cceb101a49a27feb80d82d5d5b90f64aaba97f2de6866dd7bb99001c82abe"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/DefaultDispatchAblation.csproj",
+      "bytes": 504,
+      "sha256": "e1bfb549a8ddc92e92eab6ddcd5870db948496fc90b4ea803982ec681d620099"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/README.md",
+      "bytes": 1862,
+      "sha256": "e25b401565656296a521a27c8fd7ad3933d408a6c977e589f077f1ebdb0f5dc1"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/CycleTrimPatchOptions.cs",
+      "bytes": 1384,
+      "sha256": "58ee25c8d1228c1682b293c385d61e0d56929fcd94448248c3c676fcee204817"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/FetchCandidateBuffer.cs",
+      "bytes": 1258,
+      "sha256": "12a4773093392ceb9a46dfa0e31fd2bca65416052f8e383754449641c020cb59"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/FetchControlFixture.cs",
+      "bytes": 4216,
+      "sha256": "af0087c9b34bd29e9b6eb4d20116bc46151d124c75d0ea418ca78b9b3b401171"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/FetchFixture.cs",
+      "bytes": 6407,
+      "sha256": "540b3cf5f9554cb912a978e2424eebd0e5baaca97bbc1af2698c6b9acc1a7a1a"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/FetchLayoutControl.cs",
+      "bytes": 5640,
+      "sha256": "2d8fa170f7877cc6c6f84d901f08ea74026e180bc495240e9f74338f601a8e3f"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/FetchLayoutExperiment.cs",
+      "bytes": 3521,
+      "sha256": "b9add7891caf8eb7519839656e862ae5226eb7f0bea732744929f64ec90a2cce"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/FetchPickupCandidatePatch.cs",
+      "bytes": 10740,
+      "sha256": "3a2fe007bd4697a0ed38b334dabfcc9ffd055d04d913d1358a9c3d055fb1ac09"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/PriorFetchPickupCandidatePatch.cs",
+      "bytes": 6761,
+      "sha256": "a22240a98028a2a77ecf1654b246e24f34e1cdf23c757e26a50cb904c0560bbc"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/ThreadLocalObjectPool.cs",
+      "bytes": 941,
+      "sha256": "a3ebbb23d0bbe8a3fb1fcb65f1a68edc2674ebc76b57ae8fc19e35798f210bc4"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/Sources/V1FetchPickupCandidatePatch.cs",
+      "bytes": 9640,
+      "sha256": "a243ff25ed49ef25818120c98a8202eae49e76e6e2280e031a5b672e9c0b0d3b"
+    },
+    {
+      "path": "benchmarks/CycleTrim.FetchAblation/sources.json",
+      "bytes": 3442,
+      "sha256": "3864796eb1a48cfefeaf217aaf1166c68dcf284ab8b14441fbbce1a17a5faaaa"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-protocol.md",
+      "bytes": 2771,
+      "sha256": "f1b7d008239ed62fc5b46ab90897baf6d34e1fe6482ca9dd8bf6150373679620"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/ablation-functional.log",
+      "bytes": 175,
+      "sha256": "7bdd77f8afc89305adeed4b5e3efa03230096b69ef1148d8c9b8e175a216d61f"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/fetch-tests.log",
+      "bytes": 143,
+      "sha256": "3f2daa39506f06f0d07a918b2eb6b74412b6b11cea41dd1d97ae5dd3bbc2d700"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/final-check-invalid-invocation.json",
+      "bytes": 481,
+      "sha256": "a74f33e749f3953411e083e1bffe60a7e35240b64ab6b4bd054e3d7f47d8be8a"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/final-check-invalid-invocation.log",
+      "bytes": 209,
+      "sha256": "4a1b25561b24a8fa378bdfa9de810d744bdd8670029cf669a01e9577f86bf10b"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/final-validation-commands.json",
+      "bytes": 1884,
+      "sha256": "b92f1741fb0be6c9228d32808a95674290ef4fb3515a959dcd50407412ac1446"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/negative-direct-publication.log",
+      "bytes": 1485,
+      "sha256": "727e6f961bc2e664db26a5393fba0fce4ae0b57cae412654b4a829c2cb9f0743"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/probe-tests.log",
+      "bytes": 657,
+      "sha256": "5a8a6a9116f2f931c5579f40324da185ec71b5f5f100bd3ed0b8a9e1b6b6299c"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/provenance.json",
+      "bytes": 1499,
+      "sha256": "c130eeb4761a0cb28926b831eceb7ea4e354428a85cb8fa3bf3da4838f4a8e15"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/reference-build-744825.log",
+      "bytes": 969,
+      "sha256": "4d464f74b9593a9f4a02e2e98dee450ac8ec70bd91597e1486518d11b17460f8"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/round1-metadata.json",
+      "bytes": 2016,
+      "sha256": "5b86efa8db5aadaa3af1a7a136240ad00156fd6d2057cc9cea376a67b0651fa2"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/round1.log",
+      "bytes": 38052,
+      "sha256": "4c89ad7a9258db36c80572c45f3bae6320826127d183a6f29faeb21efa07f4c7"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/round2-metadata.json",
+      "bytes": 2050,
+      "sha256": "94d415f4ba5d6c14c8db59bcd81ee4816c4032fd44652e632a375779cb368aeb"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/round2-summary.json",
+      "bytes": 3503,
+      "sha256": "1963220540fdc154cc3068d65b5032042024e532da02d53bc704697a4491af72"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/round2.log",
+      "bytes": 50072,
+      "sha256": "6707df95f7f22ab2e30c1a9a357912281cf4e4a5d770201c40a01cb0d4caf106"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration-validation/source-contracts.json",
+      "bytes": 647,
+      "sha256": "405952596a23efb86bd0c01c3912f4bdf03ca450e00f2d4f24f2739b798c0e02"
+    },
+    {
+      "path": "docs/cycletrim-fetch-iteration.md",
+      "bytes": 13549,
+      "sha256": "8acdace3539232e974b549b96d84424d715912d5dd445da69e75d5b1dcf87b98"
+    },
+    {
+      "path": "mods/CycleTrim/Core/FetchCandidateBuffer.cs",
+      "bytes": 1258,
+      "sha256": "12a4773093392ceb9a46dfa0e31fd2bca65416052f8e383754449641c020cb59"
+    },
+    {
+      "path": "mods/CycleTrim/Core/FetchLayoutControl.cs",
+      "bytes": 5640,
+      "sha256": "2d8fa170f7877cc6c6f84d901f08ea74026e180bc495240e9f74338f601a8e3f"
+    },
+    {
+      "path": "mods/CycleTrim/ModInfo.cs",
+      "bytes": 740,
+      "sha256": "5da48a9f7b413170eea297d3a7955dc866cbec196b3d4d42ab39610bfd59b709"
+    },
+    {
+      "path": "mods/CycleTrim/Patches/FetchLayoutExperiment.cs",
+      "bytes": 3521,
+      "sha256": "b9add7891caf8eb7519839656e862ae5226eb7f0bea732744929f64ec90a2cce"
+    },
+    {
+      "path": "mods/CycleTrim/Patches/FetchPickupCandidatePatch.cs",
+      "bytes": 9636,
+      "sha256": "4d7f54a31e862c860ddec0eb47f3ae36eb98faf7bf3e748b207f0f827e3c54df"
+    },
+    {
+      "path": "scripts/analyze_cycletrim_perf_probe.py",
+      "bytes": 21621,
+      "sha256": "da0c76153394906d4343e78c65964d8874a833cbb9ca3963730546b106032adb"
+    },
+    {
+      "path": "scripts/verify_cycletrim_fetch_pool_source.py",
+      "bytes": 3108,
+      "sha256": "4b03334ddfab109412ade5333f3e6fff385475272ce9e3b2f28d4d2031cabe8c"
+    },
+    {
+      "path": "scripts/verify_cycletrim_perf_probe_analyzer.py",
+      "bytes": 11800,
+      "sha256": "2d4839fcc569b52017a86c736e79fc5cb1d7cc7c52d25c0325b5a0ae502e7a5b"
+    },
+    {
+      "path": "tests/CycleTrim.Fetch.Tests/CycleTrim.Fetch.Tests.csproj",
+      "bytes": 1164,
+      "sha256": "5cab0bba0dd703e74fb0277b22c49e91305461f94b32310298f168fed9174a7a"
+    },
+    {
+      "path": "tests/CycleTrim.Fetch.Tests/FetchBenchmark.cs",
+      "bytes": 11741,
+      "sha256": "2cd5004f7dff41a8217992c2a6519ed05477a68dc17a9d054ada431e532fc9ef"
+    },
+    {
+      "path": "tests/CycleTrim.Fetch.Tests/FetchControlFixture.cs",
+      "bytes": 4216,
+      "sha256": "af0087c9b34bd29e9b6eb4d20116bc46151d124c75d0ea418ca78b9b3b401171"
+    },
+    {
+      "path": "tests/CycleTrim.Fetch.Tests/FetchFixture.cs",
+      "bytes": 5853,
+      "sha256": "9ee3be07db970c12989d1c5f4673fd1dcd25dcd65a30654941bca634d1c781f0"
+    },
+    {
+      "path": "tests/CycleTrim.Fetch.Tests/FetchRegression.cs",
+      "bytes": 22150,
+      "sha256": "abfa205d9e4bbe6aba7a6537c9c73165baebaee985ae2047bf64f97af7c94e92"
+    },
+    {
+      "path": "tests/CycleTrim.Fetch.Tests/Program.cs",
+      "bytes": 897,
+      "sha256": "559848f791409b1b435c7c77a61fd62e7fc223c6649ab3102675a0007cef4403"
+    },
+    {
+      "path": "tests/CycleTrim.PerformanceProbe.Tests/CycleTrim.PerformanceProbe.Tests.csproj",
+      "bytes": 1247,
+      "sha256": "38840b58283f246c1f2f1f92ab0e7f57b46c464ca440fdc3c94a86ba06645b86"
+    },
+    {
+      "path": "tests/CycleTrim.PerformanceProbe.Tests/FetchLayoutControlRegression.cs",
+      "bytes": 5345,
+      "sha256": "95c8f56931f85e3d0a657f83214cdae24d776c1f741e3c57857712691bb0f2a5"
+    },
+    {
+      "path": "tests/CycleTrim.PerformanceProbe.Tests/ModLoadRegression.cs",
+      "bytes": 1783,
+      "sha256": "64085f9f9e11f552a8de9c7b513e55991cba15178448939d2edc396181060db0"
+    },
+    {
+      "path": "tests/CycleTrim.PerformanceProbe.Tests/Program.cs",
+      "bytes": 14015,
+      "sha256": "5c9cb0b0edda96cc28ffb8becac68f6db0a434d4796939b40a8d9e26c36463a3"
+    }
+  ]
+}

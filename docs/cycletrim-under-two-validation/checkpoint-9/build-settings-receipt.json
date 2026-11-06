@@ -1,0 +1,39 @@
+[
+  {
+    "name": "net48-reference",
+    "command": [
+      "/tmp/cycletrim-dotnet/dotnet",
+      "build",
+      "mods/CycleTrim/CycleTrim.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-p:OniManagedPath=/tmp/cycletrim-oni-managed",
+      "-p:ImportDirectoryBuildProps=false",
+      "-p:TreatWarningsAsErrors=true",
+      "-p:IncludeOniSim=false"
+    ],
+    "exit_code": 0,
+    "started_utc": "2026-10-30T18:18:54.348835+00:00",
+    "finished_utc": "2026-10-30T18:18:57.470326+00:00"
+  },
+  {
+    "name": "settings-probe",
+    "command": [
+      "/tmp/cycletrim-dotnet/dotnet",
+      "run",
+      "--project",
+      "tests/CycleTrim.PerformanceProbe.Tests",
+      "-c",
+      "Release",
+      "--no-restore",
+      "-p:ImportDirectoryBuildProps=false",
+      "-p:TreatWarningsAsErrors=true",
+      "--",
+      "--skip-synthetic-performance"
+    ],
+    "exit_code": 0,
+    "started_utc": "2026-10-30T18:18:57.470539+00:00",
+    "finished_utc": "2026-10-30T18:19:00.433525+00:00"
+  }
+]

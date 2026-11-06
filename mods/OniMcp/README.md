@@ -11,6 +11,7 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 ## 快速索引
 
 - [用途与边界](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#用途与边界)
+- [架构与核心原理](../../docs/architecture-and-principles.md)
 - [安装与启动](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#安装与启动)
 - [运行端点与客户端](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#运行端点与客户端)
 - [配置与鉴权](https://github.com/LIghtJUNction/OniMods/blob/main/mods/OniMcp/README.md#配置与鉴权)
@@ -84,9 +85,9 @@ ONI MCP Server 是《缺氧》Mod：启动本地 MCP 服务（`http://localhost:
 
 - 在 `1.0.0` 之前，工具名、参数和响应结构可能发生不兼容改动。
 - 外部客户端请固定版本，并优先以运行时 manifest 为准。
-- `2025-11-25` / `2025-06-18` 客户端继续使用 `initialize` + `Mcp-Session-Id` 的完整工具路径。
-- `2026-07-28` 提供无会话兼容：`server/discover`、`resources/list`、`resources/templates/list`、`resources/read`，以及一个刻意收窄的工具切片：`tools/list` 只广告只读 `benchmark`，`tools/call` 也只允许调用该工具。该路径要求每个请求携带现代 `_meta`、`Mcp-Protocol-Version`、`Mcp-Method`；资源读取和工具调用还要求匹配的 `Mcp-Name`。它不会创建或返回 `Mcp-Session-Id`。
-- 现代路径不会暴露 2025 core Tasks 字段，也暂不广告 Tasks、MRTR、订阅或会改变游戏状态的工具。其他工具继续走 2025 会话路径，直到完成 request-scoped 状态和对应的 2026 header/schema 验证。
+- 当前支持 `2025-11-25`：先调用 `initialize`，再携带服务端签发的 `Mcp-Session-Id` 和 `Mcp-Protocol-Version: 2025-11-25`。
+- 工具清单通过当前会话的 `tools/list` 获取；资源通过 `resources/list`、`resources/templates/list` 和 `resources/read` 读取。
+- `2026-07-28` 无会话路径、`server/discover` 和 `2025-06-18` 已停用。[协议回归与历史来源](../../docs/mcp-protocol-retirement.md)记录了当前可执行验证和历史资料的位置。
 
 ## 更新与验证
 

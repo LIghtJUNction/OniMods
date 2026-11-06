@@ -70,11 +70,12 @@ def verify_glyph_lookup_contract(
     require(lookup, "token.Type != JTokenType.String", "glyph batch string-only validation")
     require(lookup, "string.IsNullOrWhiteSpace(token.ToString())", "mixed blank glyph batch rejection")
     require(lookup, 'error = "queries must contain only non-blank strings";', "strict glyph batch item error")
-    require(lookup, "legacySingle ? 200 : 20", "legacy and batch limit defaults")
-    require(lookup, "legacySingle ? 1000 : 100", "legacy and batch limit caps")
-    require(lookup, 'result["query"]', "single-query compatibility query")
-    require(lookup, 'result["count"]', "single-query compatibility count")
-    require(lookup, 'result["symbols"]', "single-query compatibility symbols")
+    require(lookup, 'error = "queries must be an array of non-blank strings";', "required batch glyph input")
+    require(lookup, 'ToolUtil.GetInt(args, "perQueryLimit") ?? 20', "batch limit default")
+    require(lookup, "Math.Min(requestedLimit, 100)", "batch limit cap")
+    for obsolete in ("legacySingle", 'result["query"]', 'result["symbols"]', 'ToolUtil.GetInt(args, "limit")'):
+        if obsolete in lookup:
+            fail(f"obsolete single-query glyph compatibility remains: {obsolete}")
     for field in ("input", "resolvedDirection", "exact", "count", "matches"):
         require(lookup, f'["{field}"]', f"per-query glyph result {field}")
 
@@ -175,7 +176,7 @@ def verify_glyph_lookup_contract(
     world_ref = (root / ".agents" / "skills" / "oni-gameplay" / "references" / "world-editor.md").read_text(encoding="utf-8")
     world_ref_zh = (root / ".agents" / "skills" / "oni-gameplay" / "references" / "world-editor.zh.md").read_text(encoding="utf-8")
     for text, label in ((skill, "skill"), (world_ref, "English world-editor reference"), (world_ref_zh, "Chinese world-editor reference")):
-        require(text, "search_control domain=glyphs queries=[", f"{label} mandatory batch lookup")
+        require(text, "world_editor command=symbols queries=[", f"{label} mandatory public batch lookup")
         require(text, "direction=auto", f"{label} auto direction")
         require(text, "code_to_meaning", f"{label} forward lookup example")
         require(text, "meaning_to_code", f"{label} reverse lookup example")

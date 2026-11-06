@@ -14,7 +14,6 @@ namespace OniMcp.Tools
                 Group = "world",
                 Mode = "execute",
                 Risk = "low",
-                Aliases = new List<string> { "world_inspect", "world_map_read", "world_analysis_read" },
                 Tags = new List<string> { "world", "map", "cell", "terrain", "layout", "thermal", "search", "地图", "格子", "文本地图", "搜索" },
                 Description = "Unified world reader: action=cell_info|cell_detail|element_summary|text_map|area_snapshot|layout_candidates|reachable_area|thermal_overheat_risk|search.",
                 Parameters = WorldReadControlParams(),

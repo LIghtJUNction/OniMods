@@ -1,0 +1,54 @@
+{
+  "archive": "OniSim-source-20261020-040228.zip (original archive retained in the delivered evidence package, SHA-256 below)",
+  "archive_sha256": "8c9e01a6033660c92988859d5ab33a278aeefec5ce2c245f63aa087af761e812",
+  "files": {
+    "disease_emitters.rs": {
+      "archive_member": "experimental/OniSim/native/src/disease_emitters.rs",
+      "bytes": 4070,
+      "sha256": "c1eda38521c5873ba36e5266ceb169c877319480a84a614fef2ea9b0214a5af8"
+    },
+    "fluid_helpers.rs": {
+      "archive_member": "experimental/OniSim/native/src/fluid_helpers.rs",
+      "bytes": 5315,
+      "sha256": "6428eca63f3407fdaa664f1a6bb37f32b0221565babd383247c637f066a62b97"
+    },
+    "numeric.rs": {
+      "archive_member": "experimental/OniSim/native/src/numeric.rs",
+      "bytes": 688,
+      "sha256": "0ddf89d84afae2bbbb82b9992c43966dfdb7e529aca59324fd57a6363a77621e"
+    },
+    "status.rs": {
+      "archive_member": "experimental/OniSim/native/src/status.rs",
+      "bytes": 2881,
+      "sha256": "ec7729bca8d9e9172789f2bd6b65a0ec732ea36df99ddedc520d2d4889a90af1"
+    },
+    "tables.rs": {
+      "archive_member": "experimental/OniSim/native/src/tables.rs",
+      "bytes": 13187,
+      "sha256": "dd1ba491e528189eb09332bc47d5f4263228e6800ce1eb779f203153b3194367"
+    },
+    "world_cells.rs": {
+      "archive_member": "experimental/OniSim/native/src/world_cells.rs",
+      "bytes": 2373,
+      "sha256": "91b9975505a805379ad515948ab4ff001c429c8f6203da4a3cbb6801bc27712c"
+    }
+  },
+  "functions": {
+    "clear_disease": {
+      "sha256": "e68e1b0983008705ae5490c52fd894191ea0ee8d0e7a0b4025a4860f335beb53",
+      "first_line": 20,
+      "last_line": 25
+    },
+    "calculate_disease": {
+      "sha256": "46fb9d969ab79cab73d951f8579a514ee2ba7a5b66826407de745824c672910c",
+      "first_line": 34,
+      "last_line": 64
+    },
+    "add_disease": {
+      "sha256": "67adee9692a9ddb1275f94c817aeb4671f1610f8ca7fa749e87d939bdad9e0ce",
+      "first_line": 66,
+      "last_line": 82
+    }
+  },
+  "generated_helpers_sha256": "ce42cdc2cc224d6cefd5f0a1aaaa64110a70c33aa96df8d9fc0ae8147ea16ee2"
+}

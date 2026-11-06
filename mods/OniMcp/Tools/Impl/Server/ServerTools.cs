@@ -22,7 +22,6 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read/execute",
                 Risk = "medium",
-                Aliases = new List<string> { "mcp_server_control", "server_diagnostics_control", "mcp_client_request_control", "tools_catalog_control", "tools_call_many", "agent_program_execute" },
                 Description = "服务器/MCP 组合入口：domain=diagnostics action=status/capabilities/logs_tail；domain=client_request action=create_sampling/create_elicitation；domain=catalog action=manifest/search/guide/coverage/static_audit/surface_audit；domain=batch action=call_many 批量调用工具；domain=program action=execute 执行受限流程 DSL",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -53,7 +52,8 @@ namespace OniMcp.Tools
                     ["responseMode"] = new McpToolParameter { Type = "string", Description = "domain=batch action=call_many：full/summary/errors，默认 summary", Required = false, EnumValues = new List<string> { "full", "summary", "errors" } },
                     ["includeArguments"] = new McpToolParameter { Type = "boolean", Description = "domain=batch action=call_many：是否回显合并 defaults 后的 arguments，默认 false", Required = false },
                     ["maxTextChars"] = new McpToolParameter { Type = "integer", Description = "domain=batch action=call_many：summary/errors 模式下每项 text 最大字符数，默认 500，最大 4000", Required = false },
-                    ["program"] = new McpToolParameter { Type = "object", Description = "domain=program action=execute：受限流程 DSL 对象、数组或 JSON 字符串，格式如 {vars:{...},steps:[...]}", Required = false },
+                    ["program"] = new McpToolParameter { Type = "object", Description = "domain=program/code action=execute：受限流程 DSL / CodeMode 对象、数组或 JSON 字符串", Required = false },
+                    ["code"] = new McpToolParameter { Type = "object", Description = "program 的别名，支持直接传 CodeMode 步骤数组或程序对象", Required = false },
                     ["maxSteps"] = new McpToolParameter { Type = "integer", Description = "domain=program action=execute：最大执行语句数，默认 200，最大 2000", Required = false },
                     ["maxLoopIterations"] = new McpToolParameter { Type = "integer", Description = "domain=program action=execute：单个 while/repeat 最大迭代次数，默认 100，最大 1000", Required = false },
                     ["trace"] = new McpToolParameter { Type = "boolean", Description = "domain=program action=execute：是否返回详细执行 trace，默认 true", Required = false },
@@ -87,14 +87,14 @@ namespace OniMcp.Tools
                         return ToolBatchTools.CallMany().Handler(args);
                     if (domain == "middleware" || domain == "tool_middleware" || domain == "notice")
                         return ToolCallMiddlewareControl(args);
-                    if (domain == "program" || domain == "agent_program" || domain == "flow" || domain == "script")
+                    if (domain == "program" || domain == "agent_program" || domain == "flow" || domain == "script" || domain == "code" || domain == "codemode")
                     {
                         string action = (args["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant();
-                        if (action == "execute" || action == "run" || action == "start")
+                        if (string.IsNullOrEmpty(action) || action == "execute" || action == "run" || action == "start")
                             return AgentProgramTools.ExecuteProgram().Handler(args);
                         return CallToolResult.Error("domain=program action must be execute");
                     }
-                    return CallToolResult.Error("domain must be diagnostics, client_request, catalog, batch, program, or middleware");
+                    return CallToolResult.Error("domain must be diagnostics, client_request, catalog, batch, program, code, or middleware");
                 }
             };
         }
@@ -152,7 +152,6 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "server_diagnostics", "mcp_server_diagnostics" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 server_control domain=diagnostics action=status/capabilities/logs_tail",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -192,7 +191,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "tail_logs", "player_log" },
                 Description = "兼容旧名；建议使用 server_diagnostics_control action=logs_tail",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -249,7 +247,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "client_capabilities", "server_client_capabilities" },
                 Description = "兼容旧名；建议使用 server_diagnostics_control action=capabilities",
                 Parameters = new Dictionary<string, McpToolParameter>(),
                 Handler = args =>
@@ -275,7 +272,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "sampling_request_create", "client_sampling_request" },
                 Description = "兼容旧名；建议使用 mcp_client_request_control action=create_sampling",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -335,7 +331,6 @@ namespace OniMcp.Tools
                 Group = "server",
                 Mode = "read",
                 Risk = "none",
-                Aliases = new List<string> { "client_request_control", "mcp_client_request" },
                 Description = "弃用警告：旧工具将在 0.3.0 移除；请改用 server_control domain=client_request action=create_sampling/create_elicitation",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {
@@ -377,7 +372,6 @@ namespace OniMcp.Tools
                 Mode = "read",
                 Risk = "none",
                 Hidden = true,
-                Aliases = new List<string> { "elicitation_request_create", "client_elicitation_request" },
                 Description = "兼容旧名；建议使用 mcp_client_request_control action=create_elicitation",
                 Parameters = new Dictionary<string, McpToolParameter>
                 {

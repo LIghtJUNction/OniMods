@@ -45,6 +45,41 @@ internal static class SteamPublicPageReadback
         Timeout = TimeSpan.FromSeconds(20),
     };
 
+    internal static void WaitForFirstPublication(FirstPublicationPlan plan, ulong itemId)
+    {
+        var deadline = DateTime.UtcNow.AddMinutes(2);
+        string lastError = "no response";
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                using var body = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["itemcount"] = "1", ["publishedfileids[0]"] = itemId.ToString(),
+                });
+                using var response = Client.PostAsync("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/", body).GetAwaiter().GetResult();
+                response.EnsureSuccessStatusCode();
+                var page = SteamPublicPage.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult(), itemId);
+                if (MatchesFirstPublication(plan, page, itemId))
+                {
+                    Console.WriteLine($"firstPublicationPublicWebVerified={itemId}");
+                    return;
+                }
+                lastError = "Public page differs from the reviewed first-publication plan";
+            }
+            catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException or FormatException)
+            { lastError = error.Message; }
+            Thread.Sleep(5000);
+        }
+        throw new TimeoutException($"First-publication public Web readback failed: {lastError}");
+    }
+
+    internal static bool MatchesFirstPublication(FirstPublicationPlan plan, SteamPublicPage page, ulong itemId)
+        => page.Id == itemId && page.CreatorAppId == 636750 && page.ConsumerAppId == 457140
+            && page.OwnerId == 76561199137573787 && page.Visibility == 0 && page.Title == plan.Title
+            && page.Description == plan.EnglishDescription && page.Tags.ToHashSet(StringComparer.Ordinal).SetEquals(plan.Tags)
+            && (page.FileSize == 0 || page.FileSize == plan.ZipBytes);
+
     internal static void WaitForReviewedPage(
         WorkshopPromotionPlan plan, bool oldPage)
     {

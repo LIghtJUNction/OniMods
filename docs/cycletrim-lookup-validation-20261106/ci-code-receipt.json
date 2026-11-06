@@ -1,0 +1,19 @@
+{
+  "commit": "29fa09cb352f4bb45f32bc03ee1f326b0e8d15f5",
+  "workflow_runs": [
+    {
+      "id": 42185939786,
+      "name": "Mod quality",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42185939786"
+    },
+    {
+      "id": 42185939784,
+      "name": "ONI reference compatibility",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42185939784"
+    }
+  ]
+}

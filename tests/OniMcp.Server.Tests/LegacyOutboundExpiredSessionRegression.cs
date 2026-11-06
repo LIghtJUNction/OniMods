@@ -5,17 +5,12 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class LegacyOutboundExpiredSessionRegressionEntry
+internal static class LegacyOutboundExpiredSessionRegression
 {
-    private static void Main()
+    internal static void Run()
     {
         RunExpiredRecipientRegression();
 
-        var existing = typeof(LegacyExpiredSessionTaskCleanupRegressionEntry).GetMethod("Main",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing server regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunExpiredRecipientRegression()

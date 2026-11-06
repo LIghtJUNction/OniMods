@@ -16,33 +16,25 @@ namespace OniMcp
         {
             harmony = harmony ?? new Harmony(HarmonyId);
 
+            // Keep KButtonEvent constructors unpatched: MonoMod can emit invalid IL for
+            // them on ONI's Mono runtime. ToolMenu expands the bitmap when needed.
             var toolMenuOnKeyDown = AccessTools.Method(typeof(ToolMenu), "OnKeyDown", new[] { typeof(KButtonEvent) });
             var isAction = AccessTools.Method(typeof(KButtonEvent), nameof(KButtonEvent.IsAction), new[] { typeof(Action) });
-            var buttonEventCtor = AccessTools.Constructor(typeof(KButtonEvent), new[] { typeof(KInputController), typeof(InputEventType), typeof(bool[]) });
-            var actionCtor = AccessTools.Constructor(typeof(KButtonEvent), new[] { typeof(KInputController), typeof(InputEventType), typeof(Action) });
 
             EnsurePatch(harmony, toolMenuOnKeyDown, typeof(ToolMenu_OnKeyDown_Patch));
             EnsurePatch(harmony, isAction, typeof(KButtonEvent_IsAction_Patch));
-            EnsurePatch(harmony, buttonEventCtor, typeof(KButtonEvent_BoolArrayCtor_Patch));
-            EnsurePatch(harmony, actionCtor, typeof(KButtonEvent_ActionCtor_Patch));
 
             string toolMenuOwners = DescribeOwners(toolMenuOnKeyDown);
             string isActionOwners = DescribeOwners(isAction);
-            string ctorOwners = DescribeOwners(buttonEventCtor);
-            string actionCtorOwners = DescribeOwners(actionCtor);
             bool healthy = IsInstalledOrMissing(toolMenuOnKeyDown)
-                && IsInstalledOrMissing(isAction)
-                && IsInstalledOrMissing(buttonEventCtor)
-                && IsInstalledOrMissing(actionCtor);
+                && IsInstalledOrMissing(isAction);
 
             if (!healthy || ReportedPhases.Add(phase))
             {
                 string message = "[OniMcp] Input safety patch check at " + phase
                     + ": healthy=" + healthy
                     + "; ToolMenu.OnKeyDown=" + toolMenuOwners
-                    + "; KButtonEvent.IsAction=" + isActionOwners
-                    + "; KButtonEvent(bool[])=" + ctorOwners
-                    + "; KButtonEvent(Action)=" + actionCtorOwners;
+                    + "; KButtonEvent.IsAction=" + isActionOwners;
                 if (healthy)
                     OniMcpLog.Debug(message);
                 else
