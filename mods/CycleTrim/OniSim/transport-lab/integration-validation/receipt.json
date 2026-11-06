@@ -1,0 +1,241 @@
+{
+  "main_base": "6adc57fdd827f189a7e53467705ef7d6ace01ec3",
+  "historical_head": "905d955623a1ea46ea2aa4f700bf8c8aa9f6426e",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "current_native_tool_versions": {
+    "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)"
+  },
+  "historical_tool_versions": {
+    "cargo": "cargo 1.90.0 (840b83a10 2025-07-30)",
+    "rustc": "rustc 1.90.0 (1159e78c4 2025-09-14)",
+    "rustfmt": "rustfmt 1.8.0-stable (1159e78c47 2025-09-14)"
+  },
+  "current_native_source_sha256": {
+    "mass_components_flood.rs": "f57e65e8a3a8b798cede3ae4150dd5a7c6c6435fa9867ce22f511e0217674ad9",
+    "mass_components_flood_baseline.rs": "3ef2e65be9f6041ab0ad0d3c946b42e915d1b8440b6e8266a04e316f2dba6536",
+    "mass_components_flood_tests.rs": "c450445924676646b0d0d1d86184d08aabd8f04436e2d9a87ade74099632b8d1"
+  },
+  "preserved_main_source_sha256": {
+    "gas.rs": "58dd2112620ff261615209c89e66c3f331a78edbad0c834af8c2e2dd5aedc404",
+    "pressure_sweep.rs": "0cd6e970512d30d433814b4896ae4c7f4644eb655049a00cceaa4e1e6309be9c",
+    "thermal.rs": "79d7090f85846bab65f4ff8c0e9d7e3155da0b18b8376ca703e9e5c9b709650c",
+    "simulation_step.rs": "37c197dbe948a6ca8d3145ac3918bc0658cc9a7760ea771cc45ca4c847cfa261"
+  },
+  "test_oracle_preimage_sha256": "323ea619ac79679ef2f3f731468fc1d18306f1d714a6dc379d517609d9322da1",
+  "test_oracle_note": "Exact main implementation followed only by test observers; compiled with current production helpers.",
+  "unchanged_historical_evidence_sha256": {
+    "source-identity.json": "0094f10c204753e538a44fec3e953d1250b5e02ea45a8f911c2cc147b6f4427f",
+    "results/allocations.csv": "92aca9cdf451559c21ee92384cb70d2507b0f11fdfc28692ce6a2b8917876f0e",
+    "results/summary.json": "6a683985f21120241575453ac843f0cb7234bf003921c341c8cef55af4312cbd",
+    "results/summary.csv": "5a9a85538d5a534f99acd97c0acaac5bd786022ccd7811368e84491f94e8be8a",
+    "results/environment.json": "89f8372b489ad561d376f81d6c7982b82d9dde57d884760f33355e9e3838122f",
+    "results/raw-samples.csv": "c3883ab5f44bb3250070f0da1121de4b9c1f84acf4cdc123da22c7cb6d64003a",
+    "results/benchmark.log": "9c2647f52de59c463814952060fe85779a6f2b2e319fb01e4cfbd38394dfae47",
+    "results/verify-final.jsonl": "0aa90045cce915020999d94ef36523d92e6ce954280b118935213cf810793164",
+    "results/native-build-status.json": "e5043578953b760c0c02cab50465a2589d00502c98a6c0d635864059d5b6e5c9",
+    "proof/axioms.log": "875810a70f352f3bad5269722e8ca63187d2823750b27278401085f00762cd72",
+    "proof/verify.py": "2bc547d94853efb1e24412ae2df46beb82dacede94e70f94b5a8122841f9fde3",
+    "proof/theorems.json": "7d71080278b5828b83b7f9bd55315bf4fca084ea584bc423f49b10fd190538e5",
+    "proof/Transport.lean": "da689c8b3dca53f2ed210e1db15fcb13dd4191f4f5a51040af3557615b66f94c",
+    "proof/ProofChecks.lean": "b37cb24387ab0ee242912a4ef4f70864580f603963d6df27c7ba24234b54a724",
+    "proof/verification.json": "1c86a9f96c31853357939787cdbf8fb95cf1427e099072a615b1bc89f11a511e",
+    "proof/lean-toolchain": "55e97be96000b5e9e290c9e74482e5e317861499a5540353ce845471bded8cea"
+  },
+  "runs": [
+    {
+      "name": "extra-strict-native-attempt",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance",
+      "argv": [
+        "/workspace/scratch/5d2f77a00d9c/toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--release",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "mods/CycleTrim/OniSim/native/Cargo.toml"
+      ],
+      "environment_overrides": {
+        "RUSTC": "/workspace/scratch/5d2f77a00d9c/toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/rustc",
+        "RUSTFLAGS": "-Dwarnings"
+      },
+      "exit_code": 101,
+      "log": "native-extra-strict-attempt.log",
+      "result": "17 dead-code errors in unmodified main files. This extra diagnostic flag is not an existing native CI gate."
+    },
+    {
+      "name": "current-native-regressions",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance",
+      "argv": [
+        "/workspace/scratch/5d2f77a00d9c/toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--release",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "mods/CycleTrim/OniSim/native/Cargo.toml"
+      ],
+      "environment_overrides": {
+        "RUSTC": "/workspace/scratch/5d2f77a00d9c/toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/rustc"
+      },
+      "exit_code": 0,
+      "log": "native-regressions.log",
+      "passed": 58,
+      "failed": 0,
+      "ignored": 2,
+      "new_fifo_tests": 3,
+      "note": "The two ignored cases are existing targeted benchmarks; they were not run."
+    },
+    {
+      "name": "current-native-release-build",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance",
+      "argv": [
+        "/workspace/scratch/5d2f77a00d9c/toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "build",
+        "--release",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "mods/CycleTrim/OniSim/native/Cargo.toml"
+      ],
+      "environment_overrides": {
+        "RUSTC": "/workspace/scratch/5d2f77a00d9c/toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/rustc"
+      },
+      "exit_code": 0,
+      "log": "native-release-build.log",
+      "warnings": 21
+    },
+    {
+      "name": "historical-prepare",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance/mods/CycleTrim/OniSim/transport-lab",
+      "argv": [
+        "python3",
+        "prepare.py"
+      ],
+      "exit_code": 0,
+      "log": "historical-prepare.log"
+    },
+    {
+      "name": "historical-format",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance/mods/CycleTrim/OniSim/transport-lab",
+      "argv": [
+        "/workspace/scratch/a26820df7acf/merge-review-toolchain/rustup/toolchains/1.90.0-x86_64-unknown-linux-gnu/bin/rustfmt",
+        "--edition",
+        "2021",
+        "--check",
+        "--config",
+        "skip_children=true",
+        "historical-source/gas.rs",
+        "historical-source/thermal.rs",
+        "historical-source/mass_components_flood.rs",
+        "historical-source/simulation_step.rs",
+        "src/allocation.rs",
+        "src/benchmark.rs",
+        "src/events.rs",
+        "src/fixture.rs",
+        "src/main.rs",
+        "src/verify.rs",
+        "src/world.rs"
+      ],
+      "exit_code": 0,
+      "log": "historical-format.log"
+    },
+    {
+      "name": "historical-build",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance/mods/CycleTrim/OniSim/transport-lab",
+      "argv": [
+        "/workspace/scratch/a26820df7acf/merge-review-toolchain/rustup/toolchains/1.90.0-x86_64-unknown-linux-gnu/bin/cargo",
+        "build",
+        "--release",
+        "--locked",
+        "--offline"
+      ],
+      "environment_overrides": {
+        "RUSTC": "/workspace/scratch/a26820df7acf/merge-review-toolchain/rustup/toolchains/1.90.0-x86_64-unknown-linux-gnu/bin/rustc",
+        "RUSTFLAGS": "-Dwarnings"
+      },
+      "exit_code": 0,
+      "log": "historical-build.log"
+    },
+    {
+      "name": "historical-differential",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance/mods/CycleTrim/OniSim/transport-lab",
+      "argv": [
+        "./target/release/onisim-transport-lab",
+        "verify"
+      ],
+      "exit_code": 0,
+      "log": "historical-verify.log",
+      "ftz_modes": [
+        false,
+        true
+      ]
+    },
+    {
+      "name": "historical-summary",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance/mods/CycleTrim/OniSim/transport-lab",
+      "argv": [
+        "python3",
+        "summarize.py"
+      ],
+      "exit_code": 0,
+      "log": "historical-summary.log",
+      "result": "Original 640 batches and 40 scenarios retained; both summaries byte-for-byte unchanged."
+    },
+    {
+      "name": "static-before-submodule",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance",
+      "argv": [
+        "python3",
+        "scripts/check_mods.py",
+        "--static-only"
+      ],
+      "exit_code": 2,
+      "log": "static-before-submodule.log",
+      "result": "Stopped before checks because the isolated worktree had no OniHarness checkout."
+    },
+    {
+      "name": "static-contracts",
+      "cwd": "/workspace/scratch/a26820df7acf/merge-review-performance",
+      "argv": [
+        "python3",
+        "scripts/check_mods.py",
+        "--static-only"
+      ],
+      "exit_code": 0,
+      "log": "static-contracts.log",
+      "passed_checks": 60,
+      "oniharness_revision": "7261e65299c72c86d370caa921d5c1407876e1f7",
+      "oniharness_local_clone_source": "/workspace/scratch/5d2f77a00d9c/OniMods/tools/OniHarness"
+    }
+  ],
+  "log_sha256": {
+    "native-extra-strict-attempt.log": "85d36f4b5730e5dc2d9860a795d4a5db5285c637bbd79ba3ac4376f0e074c89c",
+    "native-regressions.log": "0e687ecaccd8362056ac504bd9e5fd1833e4a954140b2e8d94f0995d496bc774",
+    "native-release-build.log": "22e55e3e4adfbe7c0328acf51c4a08036852ff54461b826eff03be2f96d2050a",
+    "historical-prepare.log": "0b3a072581363a3ef49cf0f346b254c32082524ef854b4f2af1a754e2ebf8c22",
+    "historical-format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "historical-build.log": "1cc089db13d97916d3497fbe0b9741d22631ef323266c0509ad00cdb2a2bf067",
+    "historical-verify.log": "0aa90045cce915020999d94ef36523d92e6ce954280b118935213cf810793164",
+    "historical-summary.log": "552cc3057ea500db8ded1c79a9a2aa8e934f4212c5b142d1a4e1897192a27087",
+    "static-before-submodule.log": "0a85306587b86a81170aeb40f8f4fef5015c2b6ae91d6b517621b8428031630a",
+    "static-contracts.log": "44e7849384f4e0d4ee2f5a501ea3c3b566bc382db8d22e68e2300c1a3d627828",
+    "rust190-initial-install.log": "258c55f3732fda61742255c6f1ed15acf170ef4b8d1ba00912dcf65dedd0866e",
+    "rust190-workspace-install.log": "04891aba1684a11bfc870ac65064f509afdb6affa155d856a72596e743aa98f9"
+  },
+  "limitations": [
+    "No new timing run and no modified timing threshold. Historical performance is not a current production result.",
+    "No Steam or ONI runtime execution.",
+    "Lean 4.19.0 not installed locally; proof and original proof receipts unchanged. New commit CI must run its separate Lean job.",
+    "Full inherited environment was not recorded. Only explicit overrides are listed.",
+    "An initial Rust 1.90 installation failed in the full /home/agent tmpfs and rolled back; the successful pinned toolchain lives in scratch. Both installation logs are retained.",
+    "FIFO allocation failure timing and retained capacity differ from the old implementation; no equivalence of allocation failures or process RSS is claimed."
+  ],
+  "log_normalization": {
+    "native-regressions.log": {
+      "change": "Removed one empty final line in repository copy only to satisfy git diff --check; original raw log retained outside repository.",
+      "original_raw_path": "/workspace/scratch/a26820df7acf/merge-review-performance-logs/pr542-current-native-standard.log",
+      "original_raw_sha256": "5debdf2892b2a2d52712af5bedf0231f2a52a5a4b5dc79b8eb546f2d94eaf511"
+    }
+  }
+}

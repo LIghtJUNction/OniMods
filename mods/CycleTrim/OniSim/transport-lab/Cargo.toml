@@ -1,0 +1,14 @@
+[package]
+name = "onisim-transport-lab"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+
+[features]
+allocation-count = []

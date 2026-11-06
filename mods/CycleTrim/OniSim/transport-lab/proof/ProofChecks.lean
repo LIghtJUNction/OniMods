@@ -1,0 +1,29 @@
+import Transport
+
+#print axioms Transport.Germ.clamp_bounded
+#print axioms Transport.Germ.clamp_finite
+#print axioms Transport.Germ.clamp_positive_sign
+#print axioms Transport.Germ.zero_germ_product
+#print axioms Transport.Germ.nan_quotient_selects_one
+#print axioms Transport.Germ.positive_zero_preserved
+#print axioms Transport.Germ.negative_zero_canonicalized
+#print axioms Transport.Memo.pack_bounded
+#print axioms Transport.Memo.sentinel_ne
+#print axioms Transport.Memo.pack_injective
+#print axioms Transport.Memo.put_valid
+#print axioms Transport.Memo.miss_spec
+#print axioms Transport.Memo.read_spec
+#print axioms Transport.Memo.values_exact
+#print axioms Transport.Memo.empty_valid
+#print axioms Transport.Memo.ordered_updates_exact
+#print axioms Transport.Memo.adaptive_values_exact
+#print axioms Transport.Admission.seen_congr
+#print axioms Transport.Admission.mem_firsts
+#print axioms Transport.Admission.nodup_firsts
+#print axioms Transport.Admission.fifo_admission
+#print axioms Transport.Admission.stateful_prefix_preserved
+#print axioms Transport.Admission.vacuum_still_traversable
+#print axioms Transport.Admission.unchanged_elsewhere
+#print axioms Transport.Bookkeeping.mass_conserved
+#print axioms Transport.Bookkeeping.source_nonnegative
+#print axioms Transport.Bookkeeping.energy_conserved
