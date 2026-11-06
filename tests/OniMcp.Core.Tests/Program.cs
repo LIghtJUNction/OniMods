@@ -11,9 +11,11 @@ using OniMcp.Tools;
 internal static class Program
 {
     private static int failures;
+    private static int groups;
 
     private static int Main()
     {
+        Run("deconstruction preserves protected-target eligibility", DeconstructionEligibilityRegression.Run);
         Run("registry initialization can retry after a factory failure", InitializationRetry);
         Run("JSON-RPC preserves null id and success result", JsonRpcNulls);
         Run("tool JSON text uses configurable TOON encoding", ToolTextEncoding);
@@ -31,12 +33,13 @@ internal static class Program
         Run("resource errors return valid JSON content", ResourceErrors);
         Run("construction progress preserves observation limits", ConstructionProgressRegression.Run);
         Run("speech Markdown keeps formatting balanced", SpeechTextRegression.Run);
-        Console.WriteLine(failures == 0 ? "All 17 core regression groups passed." : failures + " regression groups failed.");
+        Console.WriteLine(failures == 0 ? "All " + groups + " core regression groups passed." : failures + " regression groups failed.");
         return failures == 0 ? 0 : 1;
     }
 
     private static void Run(string name, Action test)
     {
+        groups++;
         try
         {
             ToolCallMiddleware.Clear();
