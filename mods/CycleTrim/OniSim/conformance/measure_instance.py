@@ -84,7 +84,7 @@ def main():
             log = args.output.with_name(args.output.stem + f'-{index}.log')
             counters = sample(original['pid'])
             started = time.monotonic()
-            command = ['rtk', 'proxy', sys.executable, str(scripts / 'runtime.py'),
+            command = [sys.executable, str(scripts / 'runtime.py'),
                        '--output', str(paths['control']), '--url', f"http://127.0.0.1:{options['Port']}/mcp/",
                        'step', '--seconds', str(args.seconds), '--speed', '1', '--release-native-pause']
             with log.open('w') as stream:

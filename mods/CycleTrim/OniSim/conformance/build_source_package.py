@@ -44,7 +44,7 @@ def main():
         license_path = (checkout / "mods/CycleTrim/OniSim/native/../../../../LICENSE").resolve()
         if not project.is_file() or license_path != checkout / "LICENSE" or not license_path.is_file():
             raise RuntimeError("Source archive lacks the canonical project/license layout")
-        command = ["rtk", "proxy", "dotnet", "build", str(project), "-c", "Release",
+        command = ["dotnet", "build", str(project), "-c", "Release",
                    "--disable-build-servers",
                    "-p:ImportDirectoryBuildProps=false", "-p:ImportDirectoryBuildTargets=false",
                    f"-p:OniManagedPath={managed}", "-p:IncludeOniSim=true",
