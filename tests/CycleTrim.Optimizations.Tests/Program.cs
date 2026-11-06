@@ -63,7 +63,10 @@ namespace CycleTrim.Optimizations.Tests
             {
                 case "conveyor": ConveyorPathRegression.Run(); break;
                 case "conveyor-compat": ConveyorPathRegression.RunCompatibility(); break;
-                case "power": PowerOverlayRegression.Run(); break;
+                case "power":
+                    PowerOverlayCacheRegression.Run();
+                    PowerOverlayRegression.Run();
+                    break;
                 case "power-provider": PowerOverlayRegression.RunProviderRegression(); break;
                 case "save": SaveMetadataRegression.Run(); break;
                 case "animation": AnimationSymbolRegression.Run(); break;
