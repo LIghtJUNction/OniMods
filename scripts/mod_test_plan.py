@@ -1,7 +1,6 @@
 """Shared host-test invocation policy, independent of process execution."""
 
 from pathlib import Path
-import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,12 +54,6 @@ def host_regression_checks(
         checks.append((
             "OniOnline native-origin adapter regressions",
             _dotnet_run(adapter, dotnet, properties=("-p:OriginAdapterTests=true",)),
-        ))
-    collector = root / "tests/OniOnline.Tests/test_multiplayer_runtime.py"
-    if collector.is_file():
-        checks.append((
-            "OniOnline multiplayer collector regressions",
-            [sys.executable, str(collector), "-v"],
         ))
     return checks
 

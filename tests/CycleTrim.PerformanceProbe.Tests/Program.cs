@@ -30,6 +30,9 @@ namespace CycleTrim.PerformanceProbe.Tests
                     return 0;
                 }
 
+                RecognizesDeliveryTemperatureLimitTranspiler();
+                RecognizesMaintainedDeliveryTemperatureLimitType();
+                RejectsUnrelatedFetchCompatibilityTypes();
                 ModLoadRegression.Run();
                 BusyRefreshGateRegression.Run();
                 OptionsRegression.Run();
@@ -44,7 +47,7 @@ namespace CycleTrim.PerformanceProbe.Tests
                 {
                     MeasuresConsistentSnapshotOverhead();
                 }
-                Console.WriteLine("PASS CycleTrim performance probe counter regressions");
+                Console.WriteLine("PASS CycleTrim performance probe and fetch compatibility regressions");
                 return 0;
             }
             catch (SyntheticTimingRegressionException exception) when (syntheticOnly)
@@ -57,6 +60,44 @@ namespace CycleTrim.PerformanceProbe.Tests
                 Console.Error.WriteLine("FAIL " + exception.Message);
                 return 1;
             }
+        }
+
+        private static void RecognizesDeliveryTemperatureLimitTranspiler()
+        {
+            AssertTrue(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
+                    "DeliveryTemperatureLimit.FetchManager_FetchablesByPrefabId_Patch"),
+                "legacy Delivery Temperature Limit UpdatePickups transpiler type");
+        }
+
+        private static void RecognizesMaintainedDeliveryTemperatureLimitType()
+        {
+            AssertTrue(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitSupercooledType(
+                    "DeliveryTemperatureLimit.KleiPickupTemperatureGroupingPatches"),
+                "maintained Delivery Temperature Limit pickup grouping type");
+        }
+
+        private static void RejectsUnrelatedFetchCompatibilityTypes()
+        {
+            AssertFalse(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(null),
+                "null legacy transpiler type");
+            AssertFalse(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
+                    "DeliveryTemperatureLimit.FetchManager_Patch"),
+                "different legacy Delivery Temperature Limit patch type");
+            AssertFalse(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitTranspiler(
+                    "PeterHan.FastTrack.GamePatches.FetchManagerFastUpdate"),
+                "FastTrack fetch patch as legacy DTL transpiler");
+            AssertFalse(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitSupercooledType(null),
+                "null maintained DTL type");
+            AssertFalse(
+                FetchPatchCompatibility.IsDeliveryTemperatureLimitSupercooledType(
+                    "DeliveryTemperatureLimit.KleiPickupTemperatureGroupingPatch"),
+                "near-match maintained DTL type");
         }
 
         private static void RecordsCountTotalMeanAndMax()
@@ -86,7 +127,7 @@ namespace CycleTrim.PerformanceProbe.Tests
             var interval = current.DeltaSince(previous);
 
             AssertEqual(2, interval.Calls, "interval call count");
-            AssertEqual(60, interval.TotalTicks, "interval total ticks");
+            AssertEqual(60, interval.TotalTicks, "interval total");
             AssertNear(30d, interval.MeanTicks, "interval mean ticks");
             AssertEqual(4, current.Calls, "cumulative count remains intact");
             AssertEqual(100, current.TotalTicks, "cumulative total remains intact");
@@ -303,6 +344,22 @@ namespace CycleTrim.PerformanceProbe.Tests
             AssertEqual(expected, snapshot.Calls, "concurrent measured record calls");
             AssertEqual(expected, snapshot.TotalTicks, "concurrent measured record total");
             return elapsed <= 0 ? 1 : elapsed;
+        }
+
+        private static void AssertTrue(bool value, string name)
+        {
+            if (!value)
+            {
+                throw new InvalidOperationException(name + " expected true");
+            }
+        }
+
+        private static void AssertFalse(bool value, string name)
+        {
+            if (value)
+            {
+                throw new InvalidOperationException(name + " expected false");
+            }
         }
 
         private static void AssertEqual(long expected, long actual, string name)

@@ -20,6 +20,7 @@ namespace CycleTrim.Optimizations.Tests
         internal sealed class Inherited : Skipped { }
         internal sealed class Generic<T> : SyntheticSaveComponent { }
         private sealed class PatchedOnly : SyntheticSaveComponent { }
+        private sealed class ScopedOnly : SyntheticSaveComponent { }
         private sealed class Failing : SyntheticSaveComponent
         {
             public override void Write(BinaryWriter writer)
@@ -30,8 +31,10 @@ namespace CycleTrim.Optimizations.Tests
 
         internal static void Run()
         {
+            SaveMetadataFixture.InstallOriginal();
             AttributeArgumentsStayDistinct();
             CustomReflectionAndExceptionsAreNotCached();
+            LocalQueriesPreserveFallbacks();
             SameNamesDoNotAliasTypes();
             ConcurrentAndWarmReads();
             CollectibleTypesAreNotRetained();
@@ -48,13 +51,19 @@ namespace CycleTrim.Optimizations.Tests
                 typeof(int[]), typeof(int).MakePointerType(), typeof(int).MakeByRefType() };
             var attributes = new[] { typeof(SkipSaveFileSerialization), typeof(SerializableAttribute),
                 typeof(AttributeUsageAttribute) };
+            var local = default(SaveTypeMetadataCache.LocalCache);
             foreach (var type in types)
             {
                 Equal(type.ToString(), SaveTypeMetadataCache.TypeName(type), "exact Type.ToString");
+                Equal(type.ToString(), SaveTypeMetadataCache.TypeName(type, ref local), "local exact Type.ToString");
                 foreach (var attribute in attributes)
                     foreach (var inherit in new[] { false, true })
+                    {
                         Equal(type.IsDefined(attribute, inherit),
                             SaveTypeMetadataCache.IsDefined(type, attribute, inherit), "attribute query");
+                        Equal(type.IsDefined(attribute, inherit),
+                            SaveTypeMetadataCache.IsDefined(type, attribute, inherit, ref local), "local attribute query");
+                    }
             }
             Check(!SaveTypeMetadataCache.IsDefined(typeof(Inherited), typeof(SkipSaveFileSerialization), false),
                 "direct declaration must not inherit skip-save");
@@ -122,6 +131,56 @@ namespace CycleTrim.Optimizations.Tests
                 SaveTypeMetadataCache.IsDefined(method, typeof(ObsoleteAttribute), true), "non-Type member");
         }
 
+        private static void LocalQueriesPreserveFallbacks()
+        {
+            var local = default(SaveTypeMetadataCache.LocalCache);
+            var type = new MutableType();
+            Check(!SaveTypeMetadataCache.IsDefined(type, typeof(SkipSaveFileSerialization), false, ref local),
+                "local custom false");
+            type.Answer = true;
+            Check(SaveTypeMetadataCache.IsDefined(type, typeof(SkipSaveFileSerialization), false, ref local),
+                "local custom changed");
+            Equal(2, type.AttributeCalls, "local custom metadata always queried");
+            Equal("mutable-1", SaveTypeMetadataCache.TypeName(type, ref local), "local custom name 1");
+            Equal("mutable-2", SaveTypeMetadataCache.TypeName(type, ref local), "local custom name 2");
+            type.Throw = true;
+            Equal(typeof(NotSupportedException), Error(() => SaveTypeMetadataCache.IsDefined(type,
+                typeof(SkipSaveFileSerialization), false, ref local)), "local custom exception");
+            type.Throw = false;
+            Check(SaveTypeMetadataCache.IsDefined(type, typeof(SkipSaveFileSerialization), false, ref local),
+                "local exception does not cache an answer");
+            Equal(4, type.AttributeCalls, "local failed custom query is retried");
+            var name = new MutableName();
+            Equal("1", SaveTypeMetadataCache.TypeName(name, ref local), "local non-Type dispatch 1");
+            Equal("2", SaveTypeMetadataCache.TypeName(name, ref local), "local non-Type dispatch 2");
+            Equal(typeof(NullReferenceException), Error(() => SaveTypeMetadataCache.TypeName(null, ref local)),
+                "local null name");
+            Equal(typeof(NullReferenceException), Error(() => SaveTypeMetadataCache.IsDefined(null,
+                typeof(SkipSaveFileSerialization), false, ref local)), "local null member");
+            Equal(Error(() => typeof(Skipped).IsDefined(null, false)), Error(() =>
+                SaveTypeMetadataCache.IsDefined(typeof(Skipped), null, false, ref local)), "local null attribute");
+            Equal(Error(() => typeof(Skipped).IsDefined(typeof(string), false)), Error(() =>
+                SaveTypeMetadataCache.IsDefined(typeof(Skipped), typeof(string), false, ref local)),
+                "local non-attribute type");
+            var method = typeof(MutableName).GetMethod("ToString");
+            Equal(method.IsDefined(typeof(ObsoleteAttribute), true),
+                SaveTypeMetadataCache.IsDefined(method, typeof(ObsoleteAttribute), true, ref local),
+                "local non-Type member");
+
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("CycleTrim.SaveBuilder"),
+                AssemblyBuilderAccess.RunAndCollect);
+            var builder = assembly.DefineDynamicModule("builder").DefineType("Mutable.Builder");
+            Equal(builder.ToString(), SaveTypeMetadataCache.TypeName(builder, ref local), "local TypeBuilder name");
+            Equal(Error(() => builder.IsDefined(typeof(SkipSaveFileSerialization), false)), Error(() =>
+                SaveTypeMetadataCache.IsDefined(builder, typeof(SkipSaveFileSerialization), false, ref local)),
+                "local unfinished TypeBuilder query");
+            builder.SetCustomAttribute(new CustomAttributeBuilder(
+                typeof(SkipSaveFileSerialization).GetConstructor(Type.EmptyTypes), new object[0]));
+            var completed = builder.CreateType();
+            Check(SaveTypeMetadataCache.IsDefined(completed, typeof(SkipSaveFileSerialization), false, ref local),
+                "local completed builder observes added attribute");
+        }
+
         private static Type NewType(string assemblyName, bool skip)
         {
             var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName),
@@ -140,6 +199,13 @@ namespace CycleTrim.Optimizations.Tests
             Equal(first.ToString(), second.ToString(), "same displayed type name fixture");
             Check(SaveTypeMetadataCache.IsDefined(first, typeof(SkipSaveFileSerialization), false), "first type skipped");
             Check(!SaveTypeMetadataCache.IsDefined(second, typeof(SkipSaveFileSerialization), false), "second type saved");
+            var local = default(SaveTypeMetadataCache.LocalCache);
+            Check(SaveTypeMetadataCache.IsDefined(first, typeof(SkipSaveFileSerialization), false, ref local),
+                "local first identity skipped");
+            Check(!SaveTypeMetadataCache.IsDefined(second, typeof(SkipSaveFileSerialization), false, ref local),
+                "local same-name second identity saved");
+            Check(SaveTypeMetadataCache.IsDefined(first, typeof(SkipSaveFileSerialization), false, ref local),
+                "local first identity survives alternating queries");
         }
 
         private static void ConcurrentAndWarmReads()
@@ -148,9 +214,12 @@ namespace CycleTrim.Optimizations.Tests
             var expected = type.ToString();
             Parallel.For(0, 8, worker =>
             {
+                var local = default(SaveTypeMetadataCache.LocalCache);
                 for (int index = 0; index < 10000; index++)
                     if (SaveTypeMetadataCache.TypeName(type) != expected
-                        || SaveTypeMetadataCache.IsDefined(type, typeof(SkipSaveFileSerialization), false))
+                        || SaveTypeMetadataCache.IsDefined(type, typeof(SkipSaveFileSerialization), false)
+                        || SaveTypeMetadataCache.TypeName(type, ref local) != expected
+                        || SaveTypeMetadataCache.IsDefined(type, typeof(SkipSaveFileSerialization), false, ref local))
                         throw new InvalidOperationException("concurrent metadata differs");
             });
             // Warm this complete measuring method, including its counter call
@@ -163,11 +232,14 @@ namespace CycleTrim.Optimizations.Tests
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static long MeasureWarmReads(Type type)
         {
+            var local = default(SaveTypeMetadataCache.LocalCache);
             var before = GC.GetAllocatedBytesForCurrentThread();
             for (int index = 0; index < 100000; index++)
             {
                 SaveTypeMetadataCache.IsDefined(type, typeof(SkipSaveFileSerialization), false);
                 SaveTypeMetadataCache.TypeName(type);
+                SaveTypeMetadataCache.IsDefined(type, typeof(SkipSaveFileSerialization), false, ref local);
+                SaveTypeMetadataCache.TypeName(type, ref local);
             }
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
@@ -209,15 +281,22 @@ namespace CycleTrim.Optimizations.Tests
         private static void TranspilerIsAtomicAndPreservesMetadata()
         {
             var input = Calls();
-            var label = new DynamicMethod("labels", typeof(void), Type.EmptyTypes).GetILGenerator().DefineLabel();
+            var generator = new DynamicMethod("labels", typeof(void), Type.EmptyTypes).GetILGenerator();
+            var label = generator.DefineLabel();
             input[0].labels.Add(label);
             input[0].blocks.Add(new ExceptionBlock(ExceptionBlockType.BeginExceptionBlock));
-            var output = new List<CodeInstruction>(SaveTypeMetadataPatch.Transpiler(input));
+            input[3].blocks.Add(new ExceptionBlock(ExceptionBlockType.EndExceptionBlock));
+            var output = new List<CodeInstruction>(SaveTypeMetadataPatch.Transpiler(input, generator));
             Equal(OpCodes.Callvirt, input[0].opcode, "upstream instruction must not be mutated");
-            Equal(OpCodes.Call, output[0].opcode, "cached query uses static call");
-            Equal(1, output[0].labels.Count, "branch label preserved");
-            Equal(label, output[0].labels[0], "same branch destination");
-            Equal(ExceptionBlockType.BeginExceptionBlock, output[0].blocks[0].blockType, "exception boundary preserved");
+            Equal(OpCodes.Initobj, output[1].opcode, "invocation cursor explicitly initialized");
+            Equal(OpCodes.Ldloca, output[2].opcode, "cached query receives cursor address");
+            Equal(OpCodes.Call, output[3].opcode, "cached query uses static call");
+            Equal(1, output[2].labels.Count, "branch label preserved");
+            Equal(label, output[2].labels[0], "same branch destination includes cursor load");
+            Equal(ExceptionBlockType.BeginExceptionBlock, output[2].blocks[0].blockType, "exception start preserved");
+            Equal(ExceptionBlockType.EndExceptionBlock, output[output.Count - 1].blocks[0].blockType,
+                "exception end follows replacement call");
+            Equal(4, ((MethodInfo)output[3].operand).GetParameters().Length, "exact cursor overload selected");
             foreach (var mutation in new[] { 0, 1, 2, 3 })
             {
                 var changed = Calls();
@@ -225,7 +304,7 @@ namespace CycleTrim.Optimizations.Tests
                 if (mutation == 1) changed.Add(changed[0]);
                 if (mutation == 2) changed[2] = new CodeInstruction(OpCodes.Nop);
                 if (mutation == 3) changed.Insert(0, new CodeInstruction(OpCodes.Constrained, typeof(int)));
-                var unchanged = new List<CodeInstruction>(SaveTypeMetadataPatch.Transpiler(changed));
+                var unchanged = new List<CodeInstruction>(SaveTypeMetadataPatch.Transpiler(changed, generator));
                 Equal(changed.Count, unchanged.Count, "unknown shape instruction count");
                 for (int index = 0; index < changed.Count; index++)
                     Check(ReferenceEquals(changed[index], unchanged[index]), "unknown shape left wholly unchanged");
@@ -283,12 +362,161 @@ namespace CycleTrim.Optimizations.Tests
                         "patched serialized bytes trial " + index);
                 Check(HasCachedType(typeof(PatchedOnly)), "executed Harmony replacement reaches production cache");
                 Equal(expectedError, Error(() => Serialize(failure)), "payload exception unchanged");
+                LocalSaveScopeIsIsolated();
+                PatchedCollectibleTypesAreNotRetained();
             }
             finally
             {
                 harmony.UnpatchAll(harmony.Id);
                 CycleTrimPatchOptions.Configure(true, true, true, true, true, false);
             }
+        }
+
+        private sealed class CallbackWriter : BinaryWriter
+        {
+            private readonly Action afterCount;
+            private bool countWritten;
+            internal CallbackWriter(Stream stream, Action afterCount)
+                : base(stream, System.Text.Encoding.UTF8, true) { this.afterCount = afterCount; }
+            public override void Write(int value)
+            {
+                base.Write(value);
+                if (countWritten) return;
+                countWritten = true;
+                afterCount?.Invoke();
+            }
+        }
+
+        private sealed class SaveResult
+        {
+            internal byte[] Bytes;
+            internal Type Error;
+        }
+
+        private static SaveResult CaptureSave(SaveLoadRoot root, bool original, Action afterCount = null)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new CallbackWriter(stream, afterCount))
+            {
+                var error = Error(() =>
+                {
+                    if (original) SaveMetadataFixture.OriginalSave(root, writer);
+                    else root.SaveWithoutTransform(writer);
+                });
+                return new SaveResult { Bytes = stream.ToArray(), Error = error };
+            }
+        }
+
+        private static void EqualSave(SaveResult expected, SaveResult actual, string message)
+        {
+            Equal(expected.Error, actual.Error, message + " exception");
+            Equal(Convert.ToBase64String(expected.Bytes), Convert.ToBase64String(actual.Bytes), message + " bytes");
+        }
+
+        private static void LocalSaveScopeIsIsolated()
+        {
+            var type = typeof(ScopedOnly);
+            var root = new SaveLoadRoot
+            {
+                Components = new SyntheticSaveComponent[] { new ScopedOnly { Value = 7 }, new ScopedOnly { Value = 9 } }
+            };
+            var expected = CaptureSave(root, true);
+            RemoveCachedType(type);
+            bool callbackRan = false;
+            var actual = CaptureSave(root, false, () =>
+            {
+                callbackRan = true;
+                Check(HasCachedType(type), "counting pass reaches the global metadata cache");
+                Check(RemoveCachedType(type), "test removes the counted type from the global cache");
+            });
+            EqualSave(expected, actual, "local reuse after counting");
+            Check(callbackRan, "count callback executed");
+            Check(!HasCachedType(type), "same invocation reuses its cursor without a second global lookup");
+            Serialize(root);
+            Check(HasCachedType(type), "next invocation begins with a fresh cursor");
+
+            var nested = new SaveLoadRoot
+            {
+                Components = new SyntheticSaveComponent[] { new Generic<long> { Value = 21 } }
+            };
+            var expectedNested = CaptureSave(nested, true);
+            actual = CaptureSave(root, false, () =>
+            {
+                EqualSave(expectedNested, CaptureSave(nested, false), "nested save");
+                Check(RemoveCachedType(type), "remove outer type after nested save");
+            });
+            EqualSave(expected, actual, "outer save after nested invocation");
+            Check(!HasCachedType(type), "nested save cannot replace its caller's cursor");
+
+            Action failAfterCount = () =>
+            {
+                RemoveCachedType(type);
+                throw new InvalidDataException("synthetic writer failure");
+            };
+            EqualSave(CaptureSave(root, true, failAfterCount), CaptureSave(root, false, failAfterCount),
+                "writer failure preserves partial output");
+            Check(!HasCachedType(type), "failed invocation leaves removed global entry absent");
+            Serialize(root);
+            Check(HasCachedType(type), "failed invocation does not leak its cursor to later saves");
+            var failure = new SaveLoadRoot
+            {
+                Components = new SyntheticSaveComponent[] { new ScopedOnly { Value = 3 }, new Failing() }
+            };
+            EqualSave(CaptureSave(failure, true), CaptureSave(failure, false), "component failure preserves partial output");
+
+            var originalMutated = new SaveLoadRoot { Components = root.Components };
+            var candidateMutated = new SaveLoadRoot { Components = root.Components };
+            EqualSave(CaptureSave(originalMutated, true, () => originalMutated.Components = nested.Components),
+                CaptureSave(candidateMutated, false, () => candidateMutated.Components = nested.Components),
+                "changed component identities between passes");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static WeakReference[] WarmPatchedCollectibleType(bool fail)
+        {
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(
+                new AssemblyName("CycleTrim.ScopedCollectible." + fail), AssemblyBuilderAccess.RunAndCollect);
+            var builder = assembly.DefineDynamicModule("component").DefineType("Scoped.Component",
+                TypeAttributes.Public, typeof(SyntheticSaveComponent));
+            if (fail)
+            {
+                var write = builder.DefineMethod("Write", MethodAttributes.Public | MethodAttributes.Virtual,
+                    typeof(void), new[] { typeof(BinaryWriter) });
+                var il = write.GetILGenerator();
+                il.Emit(OpCodes.Newobj, typeof(InvalidOperationException).GetConstructor(Type.EmptyTypes));
+                il.Emit(OpCodes.Throw);
+                builder.DefineMethodOverride(write, typeof(SyntheticSaveComponent).GetMethod("Write"));
+            }
+            var type = builder.CreateType();
+            var component = (SyntheticSaveComponent)Activator.CreateInstance(type);
+            var result = CaptureSave(new SaveLoadRoot { Components = new[] { component } }, false);
+            Equal(fail ? typeof(InvalidOperationException) : null, result.Error, "collectible save outcome");
+            Check(HasCachedType(type), "collectible component reaches production cache through patched save");
+            return new[] { new WeakReference(type), new WeakReference(component) };
+        }
+
+        private static void PatchedCollectibleTypesAreNotRetained()
+        {
+            foreach (var fail in new[] { false, true })
+            {
+                var weak = WarmPatchedCollectibleType(fail);
+                for (int attempt = 0; attempt < 12 && (weak[0].IsAlive || weak[1].IsAlive); attempt++)
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
+                }
+                Check(!weak[0].IsAlive, "completed save scope does not retain collectible type; fail=" + fail);
+                Check(!weak[1].IsAlive, "completed save scope does not retain component; fail=" + fail);
+            }
+        }
+
+        private static bool RemoveCachedType(Type type)
+        {
+            var entries = typeof(SaveTypeMetadataCache).GetField("Entries",
+                BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            return (bool)entries.GetType().GetMethod("Remove", new[] { typeof(Type) })
+                .Invoke(entries, new object[] { type });
         }
 
         private static bool HasCachedType(Type type)

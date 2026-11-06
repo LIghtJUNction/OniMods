@@ -63,22 +63,19 @@ class TestPlanTests(unittest.TestCase):
                 if skip:
                     self.assertEqual(["--", "--skip-synthetic-performance"], commands[str(performance)][-2:])
 
-    def test_online_entry_points_are_independent_and_ordered(self) -> None:
+    def test_online_adapter_is_ordered_and_python_checks_stay_in_python_discovery(self) -> None:
         self.project("OniMcp.Core.Tests")
         self.assertEqual(1, len(host_regression_checks("dotnet", False, self.root)))
-        collector = self.create("tests/OniOnline.Tests/test_multiplayer_runtime.py")
+        self.create("tests/OniOnline.Tests/test_multiplayer_runtime.py")
         checks = host_regression_checks("dotnet", False, self.root)
-        self.assertEqual(2, len(checks))
-        self.assertEqual([sys.executable, str(collector), "-v"], checks[-1][1])
+        self.assertEqual(1, len(checks))
         adapter = self.project("OniOnline.Tests")
         checks = host_regression_checks("dotnet", True, self.root)
-        self.assertEqual(4, len(checks))
-        self.assertEqual("OniOnline native-origin adapter regressions", checks[-2][0])
-        self.assertIn(str(adapter), checks[-2][1])
-        self.assertEqual("-p:OriginAdapterTests=true", checks[-2][1][-1])
-        self.assertNotIn("--skip-synthetic-performance", checks[-2][1])
-        collector.unlink()
-        self.assertEqual(3, len(host_regression_checks("dotnet", False, self.root)))
+        self.assertEqual(3, len(checks))
+        self.assertEqual("OniOnline native-origin adapter regressions", checks[-1][0])
+        self.assertIn(str(adapter), checks[-1][1])
+        self.assertEqual("-p:OriginAdapterTests=true", checks[-1][1][-1])
+        self.assertNotIn("--skip-synthetic-performance", checks[-1][1])
 
     def test_reporter_selects_only_synthetic_evidence(self) -> None:
         command = build_probe_command("custom dotnet", self.root)
@@ -118,7 +115,7 @@ class TestPlanTests(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("later check executed", result.stdout)
         self.assertIn("1/2 checks passed", result.stdout)
-        self.assertIn("FAIL verify_a.py", result.stderr)
+        self.assertIn("FAIL scripts/verify_a.py", result.stderr)
 
     def test_missing_sdk_fails_before_any_check(self) -> None:
         self.create("scripts/verify_local.py", "print('must not run')\n")
@@ -128,6 +125,7 @@ class TestPlanTests(unittest.TestCase):
         self.assertNotIn("must not run", result.stdout)
 
     def test_empty_host_discovery_is_an_error_not_a_pass(self) -> None:
+        self.create("scripts/verify_local.py", "print('must not run')\n")
         result = self.run_cli("--dotnet", sys.executable)
         self.assertEqual(2, result.returncode)
         self.assertIn("no Mod regression projects found", result.stderr)
@@ -147,7 +145,7 @@ class TestPlanTests(unittest.TestCase):
                 self.assertEqual(2, run.call_count)
                 self.assertEqual(300, run.call_args.kwargs["timeout"])
                 self.assertIn("1/2 checks passed", output.getvalue())
-                self.assertIn("FAIL verify_a.py", errors.getvalue())
+                self.assertIn("FAIL scripts/verify_a.py", errors.getvalue())
 
 
 class SyntheticReporterTests(unittest.TestCase):

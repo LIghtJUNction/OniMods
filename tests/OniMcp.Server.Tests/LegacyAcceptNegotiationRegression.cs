@@ -12,11 +12,11 @@ using OniMcp.Core;
 using OniMcp.Server;
 using OniMcp.Tools;
 
-internal static class LegacyAcceptNegotiationRegressionEntry
+internal static class LegacyAcceptNegotiationRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunLegacyAcceptNegotiationRegression();
 

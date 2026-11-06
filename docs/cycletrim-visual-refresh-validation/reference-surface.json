@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "scope": "Static metadata signatures only; no game assembly execution and no actual Unity/Mono runtime validation.",
+  "created_at_utc": "2026-10-30T16:06:40.119679+00:00",
+  "tool": {
+    "name": "ilspycmd",
+    "version": "11.0.0.9375",
+    "mode": "-t decompilation of stripped reference declarations in memory; selected signatures only saved"
+  },
+  "reference": {
+    "path": "/tmp/cycletrim-oni-managed/Assembly-CSharp.dll",
+    "declared_oni_build": 737790,
+    "size_bytes": 4593664,
+    "sha256": "1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c",
+    "expected_sha256_from_reference_manifest": "1be2221bfd1f3cea0cb0aafa6f453f852e72e241ea94f308fcbc5e1cefcf193c",
+    "hash_matches": true,
+    "method_bodies": "Stripped; method declarations are extern. Cannot validate actual IL shapes or behavior from this artifact."
+  },
+  "reviewed_files": [
+    "mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs",
+    "mods/CycleTrim/Patches/ConduitVisualSnapshot.cs",
+    "mods/CycleTrim/Core/ConduitVisualRefreshGate.cs"
+  ],
+  "checks": [
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private bool showContents;",
+      "observed_signature": "private bool showContents;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private int layer;",
+      "observed_signature": "private int layer;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private int highlightedCell;",
+      "observed_signature": "private int highlightedCell;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private Color32 highlightColour;",
+      "observed_signature": "private Color32 highlightColour;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private ConduitFlow flowManager;",
+      "observed_signature": "private ConduitFlow flowManager;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private Tuning tuning;",
+      "observed_signature": "private Tuning tuning;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private Game.ConduitVisInfo visInfo;",
+      "observed_signature": "private Game.ConduitVisInfo visInfo;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private ConduitFlowMesh movingBallMesh;",
+      "observed_signature": "private ConduitFlowMesh movingBallMesh;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private ConduitFlowMesh staticBallMesh;",
+      "observed_signature": "private ConduitFlowMesh staticBallMesh;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private static Vector2 GRID_OFFSET;",
+      "observed_signature": "private static Vector2 GRID_OFFSET;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer.ConduitFlowMesh",
+      "expected_signature": "private Mesh mesh;",
+      "observed_signature": "private Mesh mesh;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer.ConduitFlowMesh",
+      "expected_signature": "private Material material;",
+      "observed_signature": "private Material material;",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "public extern void Render(float z, int render_layer, float lerp_percent, bool trigger_audio = false);",
+      "observed_signature": "public extern void Render(float z, int render_layer, float lerp_percent, bool trigger_audio = false);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "private extern void RenderMesh(float z, int render_layer, float lerp_percent, bool trigger_audio);",
+      "observed_signature": "private extern void RenderMesh(float z, int render_layer, float lerp_percent, bool trigger_audio);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "public extern void AddThermalConductivity(int cell, float conductivity);",
+      "observed_signature": "public extern void AddThermalConductivity(int cell, float conductivity);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "public extern void RemoveThermalConductivity(int cell, float conductivity);",
+      "observed_signature": "public extern void RemoveThermalConductivity(int cell, float conductivity);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "public extern void SetHighlightedCell(int cell);",
+      "observed_signature": "public extern void SetHighlightedCell(int cell);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "public extern void ColourizePipeContents(bool show_contents, bool move_to_overlay_layer);",
+      "observed_signature": "public extern void ColourizePipeContents(bool show_contents, bool move_to_overlay_layer);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer",
+      "expected_signature": "public extern void FreeResources();",
+      "observed_signature": "public extern void FreeResources();",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer.ConduitFlowMesh",
+      "expected_signature": "public extern void End(float z, int layer);",
+      "observed_signature": "public extern void End(float z, int layer);",
+      "matches": true
+    },
+    {
+      "kind": "constructor",
+      "declaring_type": "ConduitFlowVisualizer.RenderMeshContext",
+      "expected_signature": "public extern RenderMeshContext(ConduitFlowVisualizer outer, float lerp_percent, Vector2I min, Vector2I max);",
+      "observed_signature": "public extern RenderMeshContext(ConduitFlowVisualizer outer, float lerp_percent, Vector2I min, Vector2I max);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer.RenderMeshBatchJob",
+      "expected_signature": "public extern void Reset(RenderMeshContext context);",
+      "observed_signature": "public extern void Reset(RenderMeshContext context);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer.RenderMeshBatchJob",
+      "expected_signature": "public extern void Finish(ConduitFlowMesh moving_ball_mesh, ConduitFlowMesh static_ball_mesh, Vector3 camera_pos, ConduitFlowVisualizer visualizer);",
+      "observed_signature": "public extern void Finish(ConduitFlowMesh moving_ball_mesh, ConduitFlowMesh static_ball_mesh, Vector3 camera_pos, ConduitFlowVisualizer visualizer);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlowVisualizer.RenderMeshPerThreadData",
+      "expected_signature": "public extern void Finish(ConduitFlowMesh moving_ball_mesh, ConduitFlowMesh static_ball_mesh, Vector3 camera_pos, ConduitFlowVisualizer visualizer);",
+      "observed_signature": "public extern void Finish(ConduitFlowMesh moving_ball_mesh, ConduitFlowMesh static_ball_mesh, Vector3 camera_pos, ConduitFlowVisualizer visualizer);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlow",
+      "expected_signature": "public extern void Sim200ms(float dt);",
+      "observed_signature": "public extern void Sim200ms(float dt);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "ConduitFlow",
+      "expected_signature": "private extern void RebuildConnections(IEnumerable<int> root_nodes);",
+      "observed_signature": "private extern void RebuildConnections(IEnumerable<int> root_nodes);",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "GridVisibleArea",
+      "expected_signature": "public static extern GridArea GetVisibleArea();",
+      "observed_signature": "public static extern GridArea GetVisibleArea();",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "GridVisibleArea",
+      "expected_signature": "public static extern GridArea GetVisibleAreaExtended(int padding);",
+      "observed_signature": "public static extern GridArea GetVisibleAreaExtended(int padding);",
+      "matches": true
+    },
+    {
+      "kind": "property_getter",
+      "declaring_type": "ClusterManager",
+      "expected_signature": "public extern int activeWorldId { get; }",
+      "observed_signature": "public extern int activeWorldId { get; }",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "Game",
+      "expected_signature": "protected override extern void OnPrefabInit();",
+      "observed_signature": "protected override extern void OnPrefabInit();",
+      "matches": true
+    },
+    {
+      "kind": "method",
+      "declaring_type": "Game",
+      "expected_signature": "protected override extern void OnCleanUp();",
+      "observed_signature": "protected override extern void OnCleanUp();",
+      "matches": true
+    },
+    {
+      "kind": "type",
+      "name": "ConduitFlowVisualizer",
+      "expected_signature": "public class ConduitFlowVisualizer",
+      "observed_signature": "public class ConduitFlowVisualizer",
+      "matches": true
+    },
+    {
+      "kind": "type",
+      "name": "ConduitFlowVisualizer.Tuning",
+      "expected_signature": "public class Tuning",
+      "observed_signature": "public class Tuning",
+      "matches": true
+    },
+    {
+      "kind": "type",
+      "name": "ConduitFlowVisualizer.ConduitFlowMesh",
+      "expected_signature": "private class ConduitFlowMesh",
+      "observed_signature": "private class ConduitFlowMesh",
+      "matches": true
+    },
+    {
+      "kind": "type",
+      "name": "ConduitFlowVisualizer.RenderMeshContext",
+      "expected_signature": "private struct RenderMeshContext",
+      "observed_signature": "private struct RenderMeshContext",
+      "matches": true
+    },
+    {
+      "kind": "type",
+      "name": "ConduitFlowVisualizer.RenderMeshPerThreadData",
+      "expected_signature": "private class RenderMeshPerThreadData",
+      "observed_signature": "private class RenderMeshPerThreadData",
+      "matches": true
+    },
+    {
+      "kind": "type",
+      "name": "ConduitFlowVisualizer.RenderMeshBatchJob",
+      "expected_signature": "private class RenderMeshBatchJob : WorkItemCollectionWithThreadContex<RenderMeshContext, RenderMeshPerThreadData>",
+      "observed_signature": "private class RenderMeshBatchJob : WorkItemCollectionWithThreadContex<RenderMeshContext, RenderMeshPerThreadData>",
+      "matches": true
+    },
+    {
+      "kind": "type",
+      "name": "Game.ConduitVisInfo",
+      "expected_signature": "public class ConduitVisInfo",
+      "observed_signature": "public class ConduitVisInfo",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer.Tuning",
+      "expected_signature": "public bool renderMesh;",
+      "observed_signature": "public bool renderMesh;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer.Tuning",
+      "expected_signature": "public float size;",
+      "observed_signature": "public float size;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer.Tuning",
+      "expected_signature": "public float spriteCount;",
+      "observed_signature": "public float spriteCount;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer.Tuning",
+      "expected_signature": "public float framesPerSecond;",
+      "observed_signature": "public float framesPerSecond;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer.Tuning",
+      "expected_signature": "public Texture2D backgroundTexture;",
+      "observed_signature": "public Texture2D backgroundTexture;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "ConduitFlowVisualizer.Tuning",
+      "expected_signature": "public Texture2D foregroundTexture;",
+      "observed_signature": "public Texture2D foregroundTexture;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "Game.ConduitVisInfo",
+      "expected_signature": "public Color32 tint;",
+      "observed_signature": "public Color32 tint;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "Game.ConduitVisInfo",
+      "expected_signature": "public Color32 insulatedTint;",
+      "observed_signature": "public Color32 insulatedTint;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "Game.ConduitVisInfo",
+      "expected_signature": "public Color32 radiantTint;",
+      "observed_signature": "public Color32 radiantTint;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "Game.ConduitVisInfo",
+      "expected_signature": "public Vector2 overlayMassScaleRange;",
+      "observed_signature": "public Vector2 overlayMassScaleRange;",
+      "matches": true
+    },
+    {
+      "kind": "field",
+      "declaring_type": "Game.ConduitVisInfo",
+      "expected_signature": "public Vector2 overlayMassScaleValues;",
+      "observed_signature": "public Vector2 overlayMassScaleValues;",
+      "matches": true
+    }
+  ],
+  "summary": {
+    "checks": 49,
+    "passed": 49,
+    "failed": 0,
+    "all_passed": true
+  },
+  "limits": [
+    "Time.unscaledTimeAsDouble is statically referenced and covered by the parent strict net48 reference build; not rechecked or executed here.",
+    "744825 source-body analysis is separate evidence and does not identify the body of the 737790 stripped reference assembly.",
+    "Open-instance delegate detour behavior and Unity native object lifetime remain runtime validation requirements.",
+    "Only selected declaration signatures and hashes are stored; no decompiled method source is saved."
+  ],
+  "harmony_reference": {
+    "path": "/tmp/cycletrim-oni-managed/0Harmony.dll",
+    "sha256": "bbf485c419484fd1637e1a7c5bc282a62c63bf2f90571ff0dedc1de584fbfaf8",
+    "assembly_version": "2.4.2.0",
+    "evidence": "ilspycmd --dump-table Assembly --json; metadata only",
+    "host_package_version": "Lib.Harmony 2.4.2",
+    "version_relation": "Reference assembly version aligns with host package; runtime behavior is still .NET 10 versus Unity/Mono."
+  }
+}

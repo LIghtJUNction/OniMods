@@ -1,17 +1,10 @@
-use anyhow::{Context, Result};
-use std::env;
-use std::path::PathBuf;
+use anyhow::Result;
 
 use crate::archive;
 use crate::build;
 use crate::config::{Config, SelectedMod};
 
 pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
-    let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
-        Some(path) => PathBuf::from(path),
-        None => env::current_dir().context("读取当前目录失败")?,
-    };
-
     let dev_dir = cfg.dev_mod_dir(&selected.name)?;
     let legacy_dev_dir = cfg.legacy_dev_mod_dir(&selected.name)?;
     if dev_dir.exists() || (legacy_dev_dir != dev_dir && legacy_dev_dir.exists()) {
@@ -26,22 +19,14 @@ pub fn run(cfg: &Config, selected: &SelectedMod) -> Result<()> {
         );
     }
 
-    // 1. 构建 Release
-    build::run(cfg, selected, true)?;
-
-    // 2. 安装到 Local 目录
-    let dist = cfg.dist_dir(&repo_root);
-    let assembly_name = selected.assembly_name(&repo_root);
-    let zip = dist.join(format!("{}.zip", assembly_name));
-
-    if !zip.exists() {
-        anyhow::bail!("找不到构建产物：{}", zip.display());
-    }
+    let package = build::run(cfg, selected, true)?;
 
     let local_dir = cfg.local_mod_dir(&selected.name)?;
     println!("\n📥 安装到 Local 目录：{}", local_dir.display());
 
-    archive::install(&zip, &local_dir, &assembly_name, || Ok(()))?;
+    archive::install(&package.archive, &local_dir, &package.assembly_name, || {
+        Ok(())
+    })?;
 
     println!("✅ 已正式安装到游戏 Local 目录");
     println!("   启动游戏 → Mod 列表 → 启用 '{}'", selected.name);

@@ -13,11 +13,11 @@ using OniMcp.Core;
 using OniMcp.Server;
 using OniMcp.Tools;
 
-internal static class LegacyRequestIdRegressionEntry
+internal static class LegacyRequestIdRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunLegacyRequestIdRegression();
 

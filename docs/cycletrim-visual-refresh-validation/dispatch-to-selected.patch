@@ -1,0 +1,84 @@
+--- a/mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs
++++ b/mods/CycleTrim/Patches/ConduitVisualRefreshPatch.cs
+@@ -426 +426,9 @@
+-                if (!state.Gate.ShouldRebuild(frame, now, quality, !state.Snapshot.SameInputs(snapshot)))
++                // Expired or invalidated meshes already require a rebuild. Only
++                // compare the previous inputs when reuse is still possible.
++                bool rebuild = state.Gate.ShouldRebuild(frame, now, quality, false);
++                if (!rebuild && !state.Snapshot.SameInputs(snapshot))
++                {
++                    state.Gate.Invalidate();
++                    rebuild = true;
++                }
++                if (!rebuild)
+--- a/mods/CycleTrim/Patches/ConduitVisualSnapshot.cs
++++ b/mods/CycleTrim/Patches/ConduitVisualSnapshot.cs
+@@ -49,34 +49,31 @@
+-            snapshot = new ConduitVisualSnapshot
+-            {
+-                generation = generation,
+-                world = cluster == null ? -1 : cluster.activeWorldId,
+-                width = Grid.WidthInCells,
+-                height = Grid.HeightInCells,
+-                minX = Math.Max(0, area.Min.x - 1),
+-                minY = Math.Max(0, area.Min.y - 1),
+-                maxX = Math.Min(Grid.WidthInCells - 1, area.Max.x + 1),
+-                maxY = Math.Min(Grid.HeightInCells - 1, area.Max.y + 1),
+-                layer = Access.Layer(instance),
+-                highlightedCell = Access.HighlightedCell(instance),
+-                highlightColour = Access.HighlightColour(instance),
+-                flow = Access.Flow(instance),
+-                tuning = tuning,
+-                style = style,
+-                size = tuning.size,
+-                sprites = tuning.spriteCount,
+-                framesPerSecond = tuning.framesPerSecond,
+-                background = tuning.backgroundTexture,
+-                foreground = tuning.foregroundTexture,
+-                tint = style.tint,
+-                insulatedTint = style.insulatedTint,
+-                radiantTint = style.radiantTint,
+-                massRange = style.overlayMassScaleRange,
+-                massValues = style.overlayMassScaleValues,
+-                gridOffset = Access.GridOffset(),
+-                movingHolder = moving,
+-                staticHolder = stationary,
+-                movingMesh = movingMesh,
+-                staticMesh = staticMesh,
+-                movingMaterial = movingMaterial,
+-                staticMaterial = staticMaterial
+-            };
++            snapshot.generation = generation;
++            snapshot.world = cluster == null ? -1 : cluster.activeWorldId;
++            snapshot.width = Grid.WidthInCells;
++            snapshot.height = Grid.HeightInCells;
++            snapshot.minX = Math.Max(0, area.Min.x - 1);
++            snapshot.minY = Math.Max(0, area.Min.y - 1);
++            snapshot.maxX = Math.Min(Grid.WidthInCells - 1, area.Max.x + 1);
++            snapshot.maxY = Math.Min(Grid.HeightInCells - 1, area.Max.y + 1);
++            snapshot.layer = Access.Layer(instance);
++            snapshot.highlightedCell = Access.HighlightedCell(instance);
++            snapshot.highlightColour = Access.HighlightColour(instance);
++            snapshot.flow = Access.Flow(instance);
++            snapshot.tuning = tuning;
++            snapshot.style = style;
++            snapshot.size = tuning.size;
++            snapshot.sprites = tuning.spriteCount;
++            snapshot.framesPerSecond = tuning.framesPerSecond;
++            snapshot.background = tuning.backgroundTexture;
++            snapshot.foreground = tuning.foregroundTexture;
++            snapshot.tint = style.tint;
++            snapshot.insulatedTint = style.insulatedTint;
++            snapshot.radiantTint = style.radiantTint;
++            snapshot.massRange = style.overlayMassScaleRange;
++            snapshot.massValues = style.overlayMassScaleValues;
++            snapshot.gridOffset = Access.GridOffset();
++            snapshot.movingHolder = moving;
++            snapshot.staticHolder = stationary;
++            snapshot.movingMesh = movingMesh;
++            snapshot.staticMesh = staticMesh;
++            snapshot.movingMaterial = movingMaterial;
++            snapshot.staticMaterial = staticMaterial;
+@@ -86 +83 @@
+-        internal bool SameInputs(ConduitVisualSnapshot other)
++        internal bool SameInputs(in ConduitVisualSnapshot other)

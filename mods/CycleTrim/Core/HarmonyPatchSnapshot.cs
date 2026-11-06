@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
-using HarmonyLib;
 
 namespace CycleTrim.Core
 {
@@ -19,8 +18,8 @@ namespace CycleTrim.Core
     // Only byte identity is cached; callers still check on every reuse scope.
     internal sealed class HarmonyPatchSnapshot
     {
-        private static readonly object PublicationLock = ReadPublicationLock();
-        private static readonly Dictionary<MethodBase, byte[]> Registry = ReadRegistry();
+        private static readonly object PublicationLock = HarmonyPatchProfile.ReadPublicationLock();
+        private static readonly Dictionary<MethodBase, byte[]> Registry = HarmonyPatchProfile.ReadRegistry(PublicationLock);
         private static readonly Assembly DynamicMethodHost = new DynamicMethod(
             "CycleTrimPatchSnapshotHost", typeof(void), Type.EmptyTypes).Module.Assembly;
         private static volatile bool uniqueProvider = true;
@@ -113,64 +112,8 @@ namespace CycleTrim.Core
 
         private static void ObserveProvider(Assembly assembly)
         {
-            if (ReferenceEquals(assembly, typeof(Harmony).Assembly))
-                return;
-            try
-            {
-                // A growable assembly can define a provider after its load
-                // event. Only the exact CLR DynamicMethod host cannot do so.
-                if (assembly.IsDynamic && !ReferenceEquals(assembly, DynamicMethodHost))
-                {
-                    uniqueProvider = false;
-                    return;
-                }
-                var provider = assembly.GetType("HarmonyLib.PatchProcessor", false);
-                if (provider != null && provider != typeof(PatchProcessor))
-                    uniqueProvider = false;
-            }
-            catch (Exception)
-            {
-                // Provider discovery must not fail another module's load.
+            if (!HarmonyPatchProfile.CanSharePublicationLock(assembly, DynamicMethodHost))
                 uniqueProvider = false;
-            }
-        }
-
-        private static object ReadPublicationLock()
-        {
-            try
-            {
-                if (typeof(Harmony).Assembly.GetName().Version != new Version(2, 4, 2, 0))
-                    return null;
-                var field = typeof(PatchProcessor).GetField("locker", BindingFlags.Static | BindingFlags.NonPublic);
-                return field != null && field.IsInitOnly && field.FieldType == typeof(object)
-                    ? field.GetValue(null) : null;
-            }
-            catch (MemberAccessException) { return null; }
-            catch (TypeInitializationException) { return null; }
-            catch (System.Security.SecurityException) { return null; }
-        }
-
-        private static Dictionary<MethodBase, byte[]> ReadRegistry()
-        {
-            try
-            {
-                var type = typeof(Harmony).Assembly.GetType("HarmonyLib.HarmonySharedState", false);
-                if (PublicationLock == null || type == null)
-                    return null;
-                const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
-                var state = type.GetField("state", flags);
-                var declared = type.GetField("internalVersion", flags);
-                var actual = type.GetField("actualVersion", flags);
-                if (state == null || !state.IsInitOnly || state.FieldType != typeof(Dictionary<MethodBase, byte[]>)
-                    || declared == null || !declared.IsLiteral || !Equals(declared.GetRawConstantValue(), 102)
-                    || actual == null || !actual.IsInitOnly || actual.FieldType != typeof(int)
-                    || !Equals(actual.GetValue(null), 102))
-                    return null;
-                return (Dictionary<MethodBase, byte[]>)state.GetValue(null);
-            }
-            catch (MemberAccessException) { return null; }
-            catch (TypeInitializationException) { return null; }
-            catch (System.Security.SecurityException) { return null; }
         }
     }
 }

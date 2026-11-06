@@ -15,6 +15,16 @@ namespace CycleTrim.Optimizations.Tests
                     SaveMetadataBenchmark.Run();
                     return 0;
                 }
+                if (args.Length == 1 && args[0] == "--benchmark-save-scoped")
+                {
+                    SaveMetadataBenchmark.RunScoped();
+                    return 0;
+                }
+                if (args.Length == 1 && args[0] == "--benchmark-state-machine")
+                {
+                    StateMachineLookupBenchmark.Run();
+                    return 0;
+                }
                 if (args.Length == 1 && args[0] == "--benchmark-power")
                 {
                     PowerOverlayRegression.Benchmark();
@@ -30,6 +40,16 @@ namespace CycleTrim.Optimizations.Tests
                     AnimationSymbolBenchmark.Run();
                     return 0;
                 }
+                if (args.Length == 1 && args[0] == "--test-conduit-visuals")
+                {
+                    RunFamily("conduit");
+                    return 0;
+                }
+                if (args.Length == 1 && args[0] == "--benchmark-conduit")
+                {
+                    ConduitVisualBenchmark.Run();
+                    return 0;
+                }
                 const string regressionPrefix = "--regression-";
                 if (args.Length == 1 && args[0].StartsWith(regressionPrefix, StringComparison.Ordinal))
                 {
@@ -38,14 +58,15 @@ namespace CycleTrim.Optimizations.Tests
                 }
                 if (args.Length != 0)
                     throw new ArgumentException("expected no arguments or --benchmark-"
-                        + "save, power, conveyor or animation; --regression- selects one family");
+                        + "save, save-scoped, power, conveyor, animation, conduit or state-machine; "
+                        + "--regression- selects one family");
                 // Several negative cases irreversibly load another provider or
                 // a growable assembly. Each complete family gets its own process
                 // so those real invalidations cannot poison a later family's
                 // clean-environment cases. Benchmark entry points stay above.
                 // Conveyor's fresh native detours and warmed index invalidation
                 // have separate assertions; neither assumes retroactive uninlining.
-                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation" })
+                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine", "conduit" })
                     RunIsolated(family);
                 Console.WriteLine("PASS CycleTrim optimization host regressions (synthetic game fixtures)");
                 return 0;
@@ -63,10 +84,18 @@ namespace CycleTrim.Optimizations.Tests
             {
                 case "conveyor": ConveyorPathRegression.Run(); break;
                 case "conveyor-compat": ConveyorPathRegression.RunCompatibility(); break;
-                case "power": PowerOverlayRegression.Run(); break;
+                case "power":
+                    PowerOverlayCacheRegression.Run();
+                    PowerOverlayRegression.Run();
+                    break;
                 case "power-provider": PowerOverlayRegression.RunProviderRegression(); break;
                 case "save": SaveMetadataRegression.Run(); break;
                 case "animation": AnimationSymbolRegression.Run(); break;
+                case "conduit":
+                    ConduitVisualRefreshGateRegression.Run();
+                    ConduitVisualRegression.Run();
+                    break;
+                case "state-machine": StateMachineLookupRegression.Run(); break;
                 default: throw new ArgumentException("unknown regression family: " + family);
             }
         }

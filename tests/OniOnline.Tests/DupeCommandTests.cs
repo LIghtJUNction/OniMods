@@ -36,6 +36,7 @@ internal static class DupeCommandTests
         RemoteWorkBeforeFirstPump(check);
         SessionRouting(check);
         WireBounds(check);
+        CommandWireTextRegression.Run(check);
         Console.WriteLine("Dupe commands: authenticated peer routing, immediate pending, authority preflight, navigation rejection, revocation, replay and stale epochs. Native MoveTo bridge compiled separately; game runtime validation remains gated.");
     }
     private static DupeMoveRequest Request(Context context)

@@ -1,0 +1,29 @@
+{
+  "scope": "Negative validation of the production gate, independent host executable; no game execution.",
+  "gate_sha256": "64ec9f559deeca6ec8e0cddacec085b1f5d3107ad1fd1d22952466170559d1af",
+  "regression_sha256": "0ce639632d56615cbc835f24d79a74d8e47c42b9e0aa0ea2fee41e4b48cc9faa",
+  "positive_log": "PASS conduit visual refresh gate: 74 assertions; cadence, age, failed rebuilds, clock/frame resets and zero allocation\n",
+  "cases": [
+    {
+      "mutation": "missing-invalidation",
+      "build_succeeded": true,
+      "expected_regression_observed": true,
+      "mutation_diff": "--- a/mods/CycleTrim/Core/ConduitVisualRefreshGate.cs\n+++ b/mods/CycleTrim/Core/ConduitVisualRefreshGate.cs\n@@ -38,7 +38,6 @@\n             {\n                 // A failed or empty rebuild must not make the previous mesh\n                 // eligible again. Only the caller's successful Complete does.\n-                reusable = false;\n             }\n             return rebuild;\n         }\n",
+      "test_log": "System.InvalidOperationException: Conduit visual refresh regression: full or unknown quality revokes the previous mesh before returning\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.Check(Boolean condition, String message) in /tmp/oni-tiered-gate/missing-invalidation/Regression.cs:line 277\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.FullAndInvalidQuality() in /tmp/oni-tiered-gate/missing-invalidation/Regression.cs:line 86\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.Run() in /tmp/oni-tiered-gate/missing-invalidation/Regression.cs:line 14\n   at Program.Main() in /tmp/oni-tiered-gate/missing-invalidation/Program.cs:line 3\n"
+    },
+    {
+      "mutation": "completed-time-rewind",
+      "build_succeeded": true,
+      "expected_regression_observed": true,
+      "mutation_diff": "--- a/mods/CycleTrim/Core/ConduitVisualRefreshGate.cs\n+++ b/mods/CycleTrim/Core/ConduitVisualRefreshGate.cs\n@@ -25,7 +25,7 @@\n         {\n             // Compare with the previous observation, including skipped frames.\n             // A clock can move backwards while still being newer than the mesh.\n-            bool movedBackwards = observed && (frame < observedFrame || now < observedAt);\n+            bool movedBackwards = observed && (frame < observedFrame || now < completedAt);\n             observed = true;\n             observedFrame = frame;\n             observedAt = now;\n",
+      "test_log": "System.InvalidOperationException: Conduit visual refresh regression: rewind relative to the skipped observation forces a rebuild\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.Check(Boolean condition, String message) in /tmp/oni-tiered-gate/completed-time-rewind/Regression.cs:line 277\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.TimeAndFrameRewinds() in /tmp/oni-tiered-gate/completed-time-rewind/Regression.cs:line 133\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.Run() in /tmp/oni-tiered-gate/completed-time-rewind/Regression.cs:line 16\n   at Program.Main() in /tmp/oni-tiered-gate/completed-time-rewind/Program.cs:line 3\n"
+    },
+    {
+      "mutation": "float-clock",
+      "build_succeeded": true,
+      "expected_regression_observed": true,
+      "mutation_diff": "--- a/mods/CycleTrim/Core/ConduitVisualRefreshGate.cs\n+++ b/mods/CycleTrim/Core/ConduitVisualRefreshGate.cs\n@@ -33,7 +33,7 @@\n             bool rebuild = !reusable || forceRefresh || frame < 0 || !IsFinite(now) || movedBackwards\n                 || (quality != ConduitAnimationQuality.Half && quality != ConduitAnimationQuality.Quarter)\n                 || (long)frame - completedFrame >= (int)quality\n-                || now - completedAt >= MaximumAgeSeconds;\n+                || (float)now - (float)completedAt >= MaximumAgeSeconds;\n             if (rebuild)\n             {\n                 // A failed or empty rebuild must not make the previous mesh\n",
+      "test_log": "System.InvalidOperationException: Conduit visual refresh regression: a mesh one representable instant below the age limit can be reused\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.Check(Boolean condition, String message) in /tmp/oni-tiered-gate/float-clock/Regression.cs:line 277\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.MaximumAge() in /tmp/oni-tiered-gate/float-clock/Regression.cs:line 100\n   at CycleTrim.Optimizations.Tests.ConduitVisualRefreshGateRegression.Run() in /tmp/oni-tiered-gate/float-clock/Regression.cs:line 15\n   at Program.Main() in /tmp/oni-tiered-gate/float-clock/Program.cs:line 3\n"
+    }
+  ]
+}

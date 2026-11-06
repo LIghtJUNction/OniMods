@@ -19,6 +19,10 @@ internal static class Program
             Console.WriteLine("PASS proxy: server send-half closes before the client reply");
             await ForcedDisconnect();
             Console.WriteLine("PASS proxy: forced disconnect cancels both stalled directions");
+            await AbruptDisconnect(true);
+            Console.WriteLine("PASS proxy: client reset cancels the opposite pending read");
+            await AbruptDisconnect(false);
+            Console.WriteLine("PASS proxy: server reset cancels the opposite pending read");
             return 0;
         }
         catch (Exception error)
@@ -89,6 +93,30 @@ internal static class Program
                     await Until(() => proxy.StalledChunks == 2, "both forwarding directions must reach the blackhole");
                     proxy.DisconnectAll();
                     await Until(() => proxy.ActiveConnections == 0, "forced disconnect retained stalled tasks");
+                }
+            }
+        }
+        finally { listener.Stop(); }
+    }
+
+    private static async Task AbruptDisconnect(bool clientFirst)
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        try
+        {
+            using (var proxy = new TcpFaultProxy(((IPEndPoint)listener.LocalEndpoint).Port, 44))
+            using (var client = new TcpClient())
+            {
+                Task<TcpClient> accepting = listener.AcceptTcpClientAsync();
+                await client.ConnectAsync(IPAddress.Loopback, proxy.Port).WaitAsync(Deadline);
+                using (TcpClient server = await accepting.WaitAsync(Deadline))
+                {
+                    await Until(() => proxy.ActiveConnections == 1, "proxy did not admit the connection");
+                    TcpClient sender = clientFirst ? client : server;
+                    sender.LingerState = new LingerOption(true, 0);
+                    sender.Client.Close();
+                    await Until(() => proxy.ActiveConnections == 0, "peer reset retained the opposite pending read");
                 }
             }
         }

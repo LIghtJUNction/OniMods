@@ -14,11 +14,11 @@ using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class LegacySseDisconnectActivityRegressionEntry
+internal static class LegacySseDisconnectActivityRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunLongLivedSseDisconnectRegression();
 

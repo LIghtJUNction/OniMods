@@ -1,0 +1,12 @@
+{
+  "repository_baseline": "a6cfb9bfc581e48da6e14d23e8a5c1941bfd74e4",
+  "save_code_commit": "9b06e51d69901aea5f0d83a08dff724df95da7a3",
+  "state_machine_code_commit": "29fa09cb352f4bb45f32bc03ee1f326b0e8d15f5",
+  "upstream_mechanism_commit": "6ac665ce05e97ad27bbb106b4de91c69263863e5",
+  "save_benchmark_assembly_sha256": "9adefa5effab735cd9e66aeac6f7900ce237415ba5ba2480fe5f4cd7fa107bdc",
+  "state_machine_benchmark_assembly_sha256": "2d92a0faf399bf4dc74dd35409fe0241d19a4c713b1ae44eb82d558bbc0ddf0a",
+  "save_source_checkout": "clean detached worktree at save_code_commit",
+  "state_machine_source_checkout": "compiled before committing; tracked source matches state_machine_code_commit; subsequent changes only add documentation/evidence",
+  "source_diffs_after_matrix": "",
+  "game_runtime_executed": false
+}

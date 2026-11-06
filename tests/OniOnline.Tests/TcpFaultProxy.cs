@@ -127,8 +127,11 @@ internal sealed class TcpFaultProxy : IDisposable
     {
         try
         {
-            await Task.WhenAny(Forward(pair.Front.GetStream(), pair.Back.GetStream(), pair.Stop.Token),
-                Forward(pair.Back.GetStream(), pair.Front.GetStream(), pair.Stop.Token)).ConfigureAwait(false);
+            // Get both streams before a synchronously completed pump can send FIN.
+            var front = pair.Front.GetStream();
+            var back = pair.Back.GetStream();
+            await Task.WhenAll(Forward(front, back, pair.Back.Client, pair),
+                Forward(back, front, pair.Front.Client, pair)).ConfigureAwait(false);
         }
         catch (Exception error) when (error is SocketException || error is ObjectDisposedException || error is IOException || error is OperationCanceledException) { }
         finally
@@ -138,15 +141,21 @@ internal sealed class TcpFaultProxy : IDisposable
         }
     }
 
-    private async Task Forward(NetworkStream input, NetworkStream output, CancellationToken cancellation)
+    private async Task Forward(NetworkStream input, NetworkStream output, Socket destination, Pair pair)
     {
+        CancellationToken cancellation = pair.Stop.Token;
         var buffer = new byte[1024];
         try
         {
             while (!cancellation.IsCancellationRequested)
             {
                 int count = await input.ReadAsync(buffer, cancellation).ConfigureAwait(false);
-                if (count == 0) return;
+                if (count == 0)
+                {
+                    // EOF ends only this direction; the peer may still reply.
+                    destination.Shutdown(SocketShutdown.Send);
+                    return;
+                }
                 bool counted = false;
                 while (Blackhole)
                 {
@@ -171,7 +180,11 @@ internal sealed class TcpFaultProxy : IDisposable
                 Interlocked.Add(ref bytes, count);
             }
         }
-        catch (Exception error) when (error is SocketException || error is ObjectDisposedException || error is IOException || error is OperationCanceledException) { }
+        catch (Exception error) when (error is SocketException || error is ObjectDisposedException || error is IOException || error is OperationCanceledException)
+        {
+            // A failed pump must unblock its partner rather than leave WhenAll waiting.
+            pair.Close();
+        }
     }
 
     public void Dispose()

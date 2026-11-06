@@ -629,6 +629,12 @@ namespace CycleTrim.Optimizations.Tests
             var publication = AccessTools.Field(typeof(PatchProcessor), "locker").GetValue(null);
             var shared = typeof(Harmony).Assembly.GetType("HarmonyLib.HarmonySharedState", true);
             var registry = AccessTools.Field(shared, "state").GetValue(null);
+            Check(ReferenceEquals(HarmonyPatchProfile.ReadPublicationLock(), publication),
+                "the profile uses Harmony's actual publication lock");
+            Check(ReferenceEquals(HarmonyPatchProfile.ReadRegistry(publication), registry),
+                "the profile observes the same registry that real patch publication updates");
+            Check(HarmonyPatchProfile.ReadRegistry(null) == null,
+                "registry layout alone cannot authorize snapshots without the publication lock");
             var methods = new MethodBase[] { Update, Query };
             var validations = 0;
             var snapshot = new HarmonyPatchSnapshot(methods, method =>

@@ -1,0 +1,219 @@
+type public class Game : KMonoBehaviour
+member private CameraController cameraController
+member private Color flowColour
+member private Dictionary < int , Action < Vector3 , float >> fxSpawner
+member private Dictionary < int , GameObjectPool > fxPools
+member private EntityCellVisualizer previewVisualizer
+member private GameScenePartitioner gameScenePartitioner
+member private GameScreenManager screenMgr
+member private HashSet < int > solidChangedFilter
+member private HashedString lastDrawnOverlayMode
+member private HashedString previousOverlayMode
+member private IEnumerator DelayedExecutor ( int tick_delay , System . Action action )
+member private IEnumerator DelayedInitialSave ( )
+member private IEnumerator DelayedSave ( string filename , bool isAutoSave , bool updateSavePointer )
+member private IEnumerator SanityCheckBoundsNextFrame ( )
+member private List < Klei . CallbackInfo > callbackInfo
+member private List < SimActiveRegion > simActiveRegions
+member private List < SolidInfo > gameSolidInfo
+member private List < SolidInfo > solidInfo
+member private Material gasFlowMaterial
+member private Material liquidFlowMaterial
+member private Player SpawnPlayer ( )
+member private PlayerController playerController
+member private SavingActiveCB activateActiveCB
+member private SavingPostCB activatePostCB
+member private SavingPreCB activatePreCB
+member private SpawnPoolData [ ] fxSpawnData
+member private Vector3 gasFlowPos
+member private Vector3 liquidFlowPos
+member private Vector3 solidFlowPos
+member private bool IsManuallyReleasedHandle ( HandleVector < CallbackInfo > . Handle handle )
+member private bool IsPaused
+member private bool gameStarted
+member private bool hasFirstSimTickRun
+member private bool isLoading
+member private bool sandboxModeActive
+member private float lastTimeWorkStarted
+member private float previousGasConduitFlowDiscreteLerpPercent
+member private float previousLiquidConduitFlowDiscreteLerpPercent
+member private float previousSolidConduitFlowDiscreteLerpPercent
+member private float simDt
+member private int simSubTick
+member private new void OnDestroy ( )
+member private static Action < object > GameInitializeFXSpawners_SpawnFX
+member private static Camera m_CachedCamera
+member private static bool IsAllDlcActiveForCurrentSave ( string [ ] dlcIds )
+member private static bool IsAnyDlcActiveForCurrentSave ( string [ ] dlcIds )
+member private static readonly EventSystem . IntraObjectHandler < Game > ActiveWorldChangedDelegate
+member private static readonly EventSystem . IntraObjectHandler < Game > MarkStatusItemRendererDirtyDelegate
+member private static readonly Thread MainThread
+member private static readonly string NextUniqueIDKey
+member private unsafe Sim . GameDataUpdate * StepTheSim ( float dt )
+member private ushort [ ] activeFX
+member private void DestroyInstances ( )
+member private void InitializeFXSpawners ( )
+member private void LateUpdate ( )
+member private void LateUpdateComponents ( )
+member private void LoadEventHashes ( )
+member private void MarkStatusItemRendererDirty ( object _ )
+member private void OnAddBuildingCellVisualizer ( EntityCellVisualizer entity_cell_visualizer )
+member private void OnApplicationQuit ( )
+member private void OnRemoveBuildingCellVisualizer ( EntityCellVisualizer entity_cell_visualizer )
+member private void Print ( )
+member private void RefreshRadiationLoop ( )
+member private void ShowDebugCellInfo ( )
+member private void SimEveryTick ( float dt )
+member private void SpawnOxygenBubbles ( Vector3 position , float angle )
+member private void UnsafeOnSpawn ( )
+member private void UnsafePrefabInit ( )
+member private void UnsafeSim200ms ( float dt )
+member private void Update ( )
+member private void UpdateOverlayScreen ( )
+member protected override void OnCleanUp ( )
+member protected override void OnForcedCleanUp ( )
+member protected override void OnLoadLevel ( )
+member protected override void OnPrefabInit ( )
+member protected override void OnSpawn ( )
+member public Accumulators accumulators
+member public Action < GameSaveData > OnLoad
+member public Action < GameSaveData > OnSave
+member public AssignmentManager assignmentManager
+member public CircuitManager circuitManager
+member public ComplexCallbackHandleVector < Sim . ConsumedRadiationCallback > radiationConsumedCallbackManager
+member public ComplexCallbackHandleVector < Sim . DiseaseConsumptionCallback > diseaseConsumptionCallbackManager
+member public ComplexCallbackHandleVector < Sim . MassConsumedCallback > massConsumedCallbackManager
+member public ComplexCallbackHandleVector < Sim . MassEmittedCallback > massEmitCallbackManager
+member public ComplexCallbackHandleVector < int > simComponentCallbackManager
+member public ConduitDiseaseManager conduitDiseaseManager
+member public ConduitFlow gasConduitFlow
+member public ConduitFlow liquidConduitFlow
+member public ConduitFlowVisualizer gasFlowVisualizer
+member public ConduitFlowVisualizer liquidFlowVisualizer
+member public ConduitTemperatureManager conduitTemperatureManager
+member public ConduitVisInfo gasConduitVisInfo
+member public ConduitVisInfo liquidConduitVisInfo
+member public ConduitVisInfo solidConduitVisInfo
+member public EdiblesManager ediblesManager
+member public Element VisualTunerElement
+member public EnergySim energySim
+member public FetchManager fetchManager
+member public Game ( )
+member public GameObject cameraControllerPrefab
+member public GameObject playerPrefab
+member public GameObject screenManagerPrefab
+member public GameObject tempIntroScreenPrefab
+member public HandleVector < CallbackInfo > callbackManager
+member public List < Tag > tileOverlayFilters
+member public List < int > callbackManagerManuallyReleasedHandles
+member public List < uint > changelistsPlayedOn
+member public LogicCircuitManager logicCircuitManager
+member public MingleCellTracker mingleCellTracker
+member public PlantElementAbsorbers plantElementAbsorbers
+member public Player LocalPlayer
+member public RoomProber roomProber
+member public SafetyConditions safetyConditions
+member public SavedInfo savedInfo
+member public SimData simData
+member public SolidConduitFlow solidConduitFlow
+member public SolidConduitFlowVisualizer solidFlowVisualizer
+member public SpaceScannerNetworkManager spaceScannerNetworkManager
+member public SpacecraftManager spacecraftManager
+member public System . Action OnSpawnComplete
+member public TemperatureOverlayModes temperatureOverlayMode
+member public TextAsset femaleNamesFile
+member public TextAsset maleNamesFile
+member public Timelapser timelapser
+member public UIColours uiColours
+member public Unlocks unlocks
+member public UserMenu userMenu
+member public UtilityNetworkManager < ElectricalUtilityNetwork , Wire > electricalConduitSystem
+member public UtilityNetworkManager < FlowUtilityNetwork , SolidConduit > solidConduitSystem
+member public UtilityNetworkManager < FlowUtilityNetwork , Vent > gasConduitSystem
+member public UtilityNetworkManager < FlowUtilityNetwork , Vent > liquidConduitSystem
+member public UtilityNetworkManager < LogicCircuitNetwork , LogicWire > logicCircuitSystem
+member public UtilityNetworkTubesManager travelTubeSystem
+member public World world
+member public bool GameStarted ( )
+member public bool IsLoading ( )
+member public bool advancedPersonalPriorities
+member public bool autoPrioritizeRoles
+member public bool baseAlreadyCreated
+member public bool debugWasUsed
+member public bool drawStatusItems
+member public bool showExpandedTemperatures
+member public bool showGasConduitDisease
+member public bool showLiquidConduitDisease
+member public delegate void CansaveCB ( )
+member public delegate void SavingActiveCB ( )
+member public delegate void SavingPostCB ( )
+member public delegate void SavingPreCB ( CansaveCB cb )
+member public float currentFallbackSunlightIntensity
+member public static BrainScheduler BrainScheduler
+member public static bool IsCorrectDlcActiveForCurrentSave ( IHasDlcRestrictions restrictions )
+member public static bool IsDlcActiveForCurrentSave ( string dlcId )
+member public static bool IsOnMainThread ( )
+member public static bool IsQuitting ( )
+member public static bool quitting
+member public static int BlockSelectionLayerMask
+member public static int PickupableLayer
+member public static string clusterId
+member public static void LoadSettings ( Deserializer deserializer )
+member public static void SaveSettings ( BinaryWriter writer )
+member public string dateGenerated
+member public void AddSolidChangedFilter ( int cell )
+member public void AddStatusItem ( Transform transform , StatusItem status_item )
+member public void ForceOverlayUpdate ( bool clearLastMode = false )
+member public void ForceSimStep ( )
+member public void Load ( Deserializer deserializer )
+member public void ManualReleaseHandle ( HandleVector < CallbackInfo > . Handle handle )
+member public void RemoveSolidChangedFilter ( int cell )
+member public void RemoveStatusItem ( Transform transform , StatusItem status_item )
+member public void Reset ( GameSpawnData gsd , Vector2I world_offset )
+member public void Save ( BinaryWriter writer )
+member public void SetAutoSaveCallbacks ( SavingPreCB activatePreCB , SavingActiveCB activateActiveCB , SavingPostCB activatePostCB )
+member public void SetDupePassableSolid ( int cell , bool passable , bool solid )
+member public void SetGameStarted ( )
+member public void SetIsLoading ( )
+member public void SetMusicEnabled ( bool enabled )
+member public void SetStatusItemOffset ( Transform transform , Vector3 offset )
+member public void SpawnFX ( SpawnFXHashes fx_id , Vector3 pos , float rotation )
+member public void SpawnFX ( SpawnFXHashes fx_id , int cell , float rotation )
+member public void StartBE ( )
+member public void StartDelayed ( int tick_delay , System . Action action )
+member public void StartDelayedInitialSave ( )
+member public void StartDelayedSave ( string filename , bool isAutoSave = false , bool updateSavePointer = true )
+member public void StartedWork ( )
+member public void StopBE ( )
+member public void StopFE ( )
+member static Game ( )
+nested private class Settings
+nested private class SpawnFXParams
+nested private class WorldRegion
+nested private enum SpawnRotationConfig
+nested private sealed class < DelayedExecutor > d__209 : IEnumerator < object > , IEnumerator , IDisposable
+nested private sealed class < DelayedInitialSave > d__205 : IEnumerator < object > , IEnumerator , IDisposable
+nested private sealed class < DelayedSave > d__207 : IEnumerator < object > , IEnumerator , IDisposable
+nested private sealed class < SanityCheckBoundsNextFrame > d__136 : IEnumerator < object > , IEnumerator , IDisposable
+nested private struct SpawnPoolData
+nested private struct SpawnRotationData
+nested public class ComplexCallbackHandleVector < DataType >
+nested public class ConduitVisInfo
+nested public class GameSaveData
+nested public class SimActiveRegion
+nested public class UIColours
+nested public enum TemperatureOverlayModes
+nested public struct CallbackInfo
+nested public struct ComplexCallbackInfo < DataType >
+nested public struct LocationColours
+nested public struct SavedInfo
+property public KInputHandler inputHandler { get ; set ; }
+property public PrioritizableRenderer prioritizableRenderer { get ; private set ; }
+property public StatusItemRenderer statusItemRenderer { get ; private set ; }
+property public bool DebugOnlyBuildingsAllowed { get ; }
+property public bool FastWorkersModeActive { get ; set ; }
+property public bool SandboxModeActive { get ; set ; }
+property public bool SaveToCloudActive { get ; set ; }
+property public float LastTimeWorkStarted { get ; }
+property public static Camera MainCamera { get ; }
+property public static Game Instance { get ; private set ; }

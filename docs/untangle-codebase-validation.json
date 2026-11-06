@@ -1,0 +1,258 @@
+{
+  "schema": 1,
+  "date": "2026-11-06",
+  "repository": "LIghtJUNction/OniMods",
+  "pull_request": "https://github.com/LIghtJUNction/OniMods/pull/564",
+  "baseline": "90c31fa9826161caa5382edf4e870f6c07adb317",
+  "tested_code_commit": "ebc9ff661245bd84a29aa6b837b2ea607c807768",
+  "subsequent_change_scope": "Documentation and this validation record only",
+  "environment": {
+    "os": "Linux",
+    "python": "3.12.14",
+    "dotnet": "10.0.401",
+    "rust": "1.99.1",
+    "oniharness": "7261e65299c72c86d370caa921d5c1407876e1f7"
+  },
+  "checks": [
+    {
+      "command": "python3 scripts/check_mods.py --skip-synthetic-performance",
+      "exit_code": 0,
+      "result": {
+        "check_commands": 73,
+        "passed": 73,
+        "standalone_python_scripts": 55,
+        "python_directory_suites": 5,
+        "csharp_projects": 12,
+        "adapter_variants": 1,
+        "directory_test_count": 142
+      },
+      "log_file": "final-mod-checks.log",
+      "log_sha256": "719bbbe24d3147847afd118129072b1cd50a69d2a6e23480ecfe748249a5aa6f",
+      "observed_summary": [
+        "PASS 4615 assertions; real TCP endpoint 127.0.0.1; includes three separate client processes.",
+        "Native library smoke test not run: pass the built bundle root",
+        "PASS 92 production native-origin adapter fixture assertions (not a Unity lifecycle run)",
+        "NOT RUN verify_cycletrim_target_contract.py: requires the installed game's Assembly-CSharp.dll and ilspycmd",
+        "NOT RUN verify_cycletrim_release_binary.py: requires a built CycleTrim Release DLL and ilspycmd",
+        "NOT RUN verify_cycletrim_navgrid_source_contract.py: requires the pinned online ONI 744825 decompilation source",
+        "NOT RUN verify_restart_packaging.py: requires an OniMcp Debug build and distribution archive",
+        "NOT RUN test_legacy_workshop_package.py: requires a built Steam publisher and the installed game's Steamworks files",
+        "NOT RUN CycleTrim synthetic wall-clock performance gate: reported separately by CI",
+        "73/73 checks passed"
+      ]
+    },
+    {
+      "command": "cargo +1.99.1 test --locked",
+      "exit_code": 0,
+      "result": {
+        "passed": 50,
+        "unit": 30,
+        "integration": 15,
+        "setup": 5
+      },
+      "log_file": "candidate-cli.log",
+      "log_sha256": "c638094fc134b95c47acd807d672a666d83a4a56a6802b639d38b1ecc9b5a5ca",
+      "observed_summary": [
+        "test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      ]
+    },
+    {
+      "command": "cargo +1.99.1 test --locked --manifest-path mods/CycleTrim/OniSim/native/Cargo.toml",
+      "exit_code": 0,
+      "result": {
+        "passed": 55,
+        "ignored": 2,
+        "ignored_reason": "Standalone microbenchmarks"
+      },
+      "log_file": "native-tests.log",
+      "log_sha256": "6aca9a2f0b738cf2a04747d34d6b3bdb1536dc6839926960460b4fed232d353a",
+      "observed_summary": [
+        "test presentation::sun::tests::benchmark_sun_indexing ... ignored, explicit single-core microbenchmark, not part of correctness tests",
+        "test world::publication_tests::benchmark_publication ... ignored, targeted production publication benchmark; run after correctness tests",
+        "test result: ok. 55 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 1.80s"
+      ]
+    },
+    {
+      "command": "python3 scripts/run_cycletrim_synthetic_performance.py",
+      "exit_code": 0,
+      "result": {
+        "passed": true,
+        "classification": "Instrumentation overhead; not a refactor speedup or in-game FPS measurement"
+      },
+      "log_file": "synthetic-performance.log",
+      "log_sha256": "dcffaa943abd727fde0957ebf8cf70075a6643d90c531343b653b0221a8d2779",
+      "observed_summary": [
+        "INFO coordinated snapshot serial Record overhead ratio min/median/max: 1.183x / 1.988x / 2.505x",
+        "INFO coordinated snapshot 4-writer Record overhead ratio min/median/max: 0.899x / 1.308x / 2.753x; allocations=0 B over 1000000 serial records",
+        "PASS CycleTrim synthetic performance probe regression"
+      ]
+    },
+    {
+      "command": "dotnet build mods/CycleTrim/CycleTrim.csproj -c Release -p:OniManagedPath=<verified-reference-directory> -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true",
+      "exit_code": 0,
+      "result": {
+        "passed": true,
+        "scope": "Pinned compile-only references; not ONI runtime or current-build binary compatibility"
+      },
+      "log_file": "reference-cycletrim-build.log",
+      "log_sha256": "646a3f9a33c5c8d999ad57a2a55ded239def42ebf9231a5c17610909cd792650",
+      "observed_summary": [
+        "Build succeeded.",
+        "    0 Warning(s)",
+        "    0 Error(s)"
+      ]
+    },
+    {
+      "command": "dotnet build mods/OniMcp/OniMcp.csproj -c Release -p:OniManagedPath=<verified-reference-directory> -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true",
+      "exit_code": 0,
+      "result": {
+        "passed": true,
+        "scope": "Pinned compile-only references; not ONI runtime or current-build binary compatibility"
+      },
+      "log_file": "reference-onimcp-build.log",
+      "log_sha256": "9211a0da3f383ea1f19fa44ce89393f116c3b6bff648747e6e36d9bee0fbd1a4",
+      "observed_summary": [
+        "Build succeeded.",
+        "    0 Warning(s)",
+        "    0 Error(s)"
+      ]
+    },
+    {
+      "command": "dotnet build mods/OniOnline/OniOnline.csproj -c Release -p:OniManagedPath=<verified-reference-directory> -p:ImportDirectoryBuildProps=false -p:TreatWarningsAsErrors=true",
+      "exit_code": 0,
+      "result": {
+        "passed": true,
+        "scope": "Pinned compile-only references; not ONI runtime or current-build binary compatibility"
+      },
+      "log_file": "reference-onionline-build.log",
+      "log_sha256": "40c44c3e048caf6a6eb588a6acbd3eeb008552baf6bb5ef53a7cc3f1355142ee",
+      "observed_summary": [
+        "Build succeeded.",
+        "    0 Warning(s)",
+        "    0 Error(s)"
+      ]
+    }
+  ],
+  "failure_propagation_experiment": {
+    "command": [
+      "dotnet",
+      "run",
+      "--project",
+      "tests/OniMcp.Core.Tests/OniMcp.Core.Tests.csproj",
+      "-c",
+      "Release",
+      "-p:ImportDirectoryBuildProps=false",
+      "-p:TreatWarningsAsErrors=true"
+    ],
+    "probe": "Require(false, \"intentional-entrypoint-propagation-probe\");",
+    "results": [
+      {
+        "revision": "baseline",
+        "exit_code": 0,
+        "expected_exit": 0,
+        "failed_group_observed": true,
+        "one_failure_observed": true,
+        "log": "core-entry-baseline-mutant.log",
+        "log_sha256": "57e32baa0e3702f1ba45b5ee4239e81ef85935e3173dd4c3eb367727472456ec"
+      },
+      {
+        "revision": "candidate",
+        "exit_code": 1,
+        "expected_exit": 1,
+        "failed_group_observed": true,
+        "one_failure_observed": true,
+        "log": "core-entry-candidate-mutant.log",
+        "log_sha256": "978b71e3279230fd5403ad4a8f0965c52621bff6f6824637b8a0a6553e14e2f6"
+      }
+    ],
+    "scope": "Same deliberate assertion failure in isolated baseline and candidate copies; mutation never entered final source."
+  },
+  "extra_compile_references": [
+    {
+      "name": "com.rlabrecque.steamworks.net.dll",
+      "source": "https://raw.githubusercontent.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d/Lib/com.rlabrecque.steamworks.net.dll",
+      "git_blob_sha": "911242a9373e7bff7d20bb54246271b199c0c35b",
+      "sha256": "a8faf6d7e7395bfe10b80f6c06d866857ae8db628036c66e17d52138f4e31363",
+      "compile_only": true
+    },
+    {
+      "name": "UnityEngine.AudioModule.dll",
+      "package_url": "https://api.nuget.org/v3-flatcontainer/unityengine.modules/2021.3.33/unityengine.modules.2021.3.33.nupkg",
+      "package_sha256": "d32d34526d89958c63220d3a5ce26c5c44c11bfd411a2e1fbc3200088ef160c4",
+      "sha256": "95ccdaaf0138591de7c1b62d59c25fd4e8e0208969a1fca0ca6bd459bc2ae048",
+      "compile_only": true
+    }
+  ],
+  "compile_reference": {
+    "repository": "Sgt-Imalas/Sgt_Imalas-Oni-Mods",
+    "commit": "be4a70d8f335fdd8ac7f3b1ccf91b50bb6ddb46d",
+    "declared_oni_build": 737790,
+    "source_contract_target": 744825,
+    "manifest_unchanged": true
+  },
+  "package_inspection": [
+    {
+      "name": "CycleTrim.zip",
+      "files": 113,
+      "test_sources": [],
+      "conformance_json_receipts": 94,
+      "conformance_readme": true
+    },
+    {
+      "name": "OniMcp.zip",
+      "files": 11,
+      "test_sources": [],
+      "conformance_json_receipts": 0,
+      "conformance_readme": false
+    },
+    {
+      "name": "OniOnline.zip",
+      "files": 28,
+      "test_sources": [],
+      "conformance_json_receipts": 0,
+      "conformance_readme": false
+    }
+  ],
+  "github_actions_for_tested_code": [
+    {
+      "name": "Mod quality",
+      "id": 42177890054,
+      "conclusion": "success",
+      "head_sha": "ebc9ff661245bd84a29aa6b837b2ea607c807768",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42177890054"
+    },
+    {
+      "name": "ONI reference compatibility",
+      "id": 42177890049,
+      "conclusion": "success",
+      "head_sha": "ebc9ff661245bd84a29aa6b837b2ea607c807768",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42177890049"
+    },
+    {
+      "name": "OniSim diamond proof and regression",
+      "id": 42177890207,
+      "conclusion": "success",
+      "head_sha": "ebc9ff661245bd84a29aa6b837b2ea607c807768",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42177890207"
+    },
+    {
+      "name": "OniSim native platforms",
+      "id": 42177890228,
+      "conclusion": "success",
+      "head_sha": "ebc9ff661245bd84a29aa6b837b2ea607c807768",
+      "url": "https://github.com/LIghtJUNction/OniMods/actions/runs/42177890228"
+    }
+  ],
+  "limitations": [
+    "73 counts independent check commands; sub-suite assertions and tests are already included.",
+    "The conformance log expected-failure fixture prints FAIL second inside a passing 65-test suite.",
+    "Probe compiler behavior tests use a fake compiler; no full opt-in probe compile or run is claimed.",
+    "Native library loading smoke test was not run; authored C clock fixture loading is separate.",
+    "The integrated runner reports environment-dependent omissions explicitly; synthetic timing was executed separately.",
+    "No ONI/Unity gameplay, multi-device game run, current-game binary acceptance or Steam publishing occurred.",
+    "Raw game binaries and decompiled source are not included in this report.",
+    "Final documentation-head and merge-head CI are tracked separately in the pull request."
+  ]
+}

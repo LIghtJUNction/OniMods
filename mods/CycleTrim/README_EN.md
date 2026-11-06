@@ -17,19 +17,33 @@ A lightweight Oxygen Not Included performance mod. CycleTrim optimizes selected 
 - Throttles stationary-critter navigation probing.
 - Reuses immutable component type metadata during saves.
 - Reuses repeated circuit demand queries within each power overlay update.
+- Optionally samples gas/liquid conduit display mesh rebuilding while retaining simulation calls, every-frame drawing and audio.
 
 ## Usage
 
 - Subscribe and enable as normal.
 - No extra configuration is required in most cases.
 
-**Save type metadata** is enabled by default. **Power overlay queries** is opt-in
+**Save type metadata** is enabled by default and reuses adjacent type queries
+within each save invocation. **Power overlay queries** is opt-in
 because updates with few repeated circuits can cost more; both settings require
 restarting ONI. Power query reuse falls back for unknown electricity interface implementations or
 conflicting patches. The [implementation and validation notes](../../docs/cycletrim-moono-optimizations.md)
 separate host tests and synthetic measurements from pending ONI runtime acceptance.
 These are independent implementations informed by oni-moono's mechanisms, not its
 engine/runtime replacement or its reported whole-game speedup.
+
+**State machine lookups** is opt-in and requires restarting ONI. It reuses query
+results while the state-machine list is unchanged. List changes invalidate the
+answers; short lists and worker-thread queries keep the original path.
+
+**Conduit animation refresh** defaults to Full. Half / Quarter rebuild the display
+every 2 / 4 rendered frames when inputs are stable and continue drawing the completed
+meshes between rebuilds. Simulation, camera, world and style changes refresh immediately;
+a 100 ms age limit is checked on the next render call. Content overlays and audio
+requests retain full updates. Restart is required; FastTrack or incompatible rendering
+patches disable this group. Small workloads can cost more because of cache validation.
+See the [implementation, complete measurements and acceptance scope](../../docs/cycletrim-visual-refresh.md).
 
 ## Compatibility
 
