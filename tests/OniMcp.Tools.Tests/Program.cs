@@ -21,6 +21,7 @@ internal static class Program
         FarmingUprootRegression.Run();
         PriorityWriteEligibilityRegression.Run();
         BenchmarkMetadataRegression.Run();
+        BuildMaterialSufficiencyRegression.Run();
         RadboltDirectionEligibilityRegression.Run();
         AttackDesignationPolicyRegression.Run();
         PrintingPodClaimCleanupRegression.Run();

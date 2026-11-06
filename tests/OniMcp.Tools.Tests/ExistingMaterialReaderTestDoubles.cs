@@ -29,6 +29,11 @@ internal struct Tag
     internal string Name { get; }
     internal bool IsValid => !string.IsNullOrEmpty(Name);
     internal static Tag Invalid => new Tag(null);
+    internal string ProperNameStripLink() => Name;
+    public static bool operator ==(Tag first, Tag second) => first.Name == second.Name;
+    public static bool operator !=(Tag first, Tag second) => first.Name != second.Name;
+    public override bool Equals(object value) => value is Tag other && this == other;
+    public override int GetHashCode() => Name == null ? 0 : Name.GetHashCode();
 }
 
 internal sealed class Constructable

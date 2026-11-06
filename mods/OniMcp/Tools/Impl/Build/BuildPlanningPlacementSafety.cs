@@ -364,32 +364,6 @@ namespace OniMcp.Tools
             };
         }
 
-        private static Dictionary<string, object> ExistingPlacementResult(
-            BuildingDef def,
-            PlacementDetails placement,
-            Dictionary<string, object> existing,
-            bool utility)
-        {
-            return new Dictionary<string, object>
-            {
-                ["planned"] = false,
-                ["blueprintPlaced"] = false,
-                ["alreadyPresent"] = !utility,
-                ["alreadyConnected"] = utility,
-                ["valid"] = true,
-                ["prefabId"] = def.PrefabID,
-                ["name"] = ToolUtil.CleanName(def.Name),
-                ["x"] = placement.AnchorX,
-                ["y"] = placement.AnchorY,
-                ["anchor"] = AnchorDictionary(placement.AnchorX, placement.AnchorY, placement.WorldId),
-                ["worldId"] = placement.WorldId,
-                ["placement"] = placement.ToDictionary(),
-                ["footprint"] = placement.Footprint.Select(cellInfo => cellInfo.ToDictionary()).ToList(),
-                [utility ? "existingUtility" : "existing"] = existing,
-                ["safety"] = "same_prefab_idempotent_reuse"
-            };
-        }
-
         private static bool HasUnsafeExecutionConflict(FootprintValidation validation)
         {
             if (validation == null || validation.Valid)
