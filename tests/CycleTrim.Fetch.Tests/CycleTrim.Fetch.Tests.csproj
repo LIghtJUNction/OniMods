@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../../mods/CycleTrim/Core/CycleTrimPatchOptions.cs" Link="CycleTrimPatchOptions.cs" />
+    <Compile Include="../../mods/CycleTrim/Core/ConduitVisualRefreshGate.cs" Link="ConduitVisualRefreshGate.cs" />
     <Compile Include="../../mods/CycleTrim/Core/FetchPatchActivationPolicy.cs" Link="FetchPatchActivationPolicy.cs" />
     <Compile Include="../../mods/CycleTrim/Core/FetchPatchCompatibility.cs" Link="FetchPatchCompatibility.cs" />
     <Compile Include="../../mods/CycleTrim/Core/ThreadLocalObjectPool.cs" Link="ThreadLocalObjectPool.cs" />

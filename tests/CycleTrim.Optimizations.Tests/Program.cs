@@ -40,6 +40,16 @@ namespace CycleTrim.Optimizations.Tests
                     AnimationSymbolBenchmark.Run();
                     return 0;
                 }
+                if (args.Length == 1 && args[0] == "--test-conduit-visuals")
+                {
+                    RunFamily("conduit");
+                    return 0;
+                }
+                if (args.Length == 1 && args[0] == "--benchmark-conduit")
+                {
+                    ConduitVisualBenchmark.Run();
+                    return 0;
+                }
                 const string regressionPrefix = "--regression-";
                 if (args.Length == 1 && args[0].StartsWith(regressionPrefix, StringComparison.Ordinal))
                 {
@@ -48,7 +58,7 @@ namespace CycleTrim.Optimizations.Tests
                 }
                 if (args.Length != 0)
                     throw new ArgumentException("expected no arguments or --benchmark-"
-                        + "save, save-scoped, power, conveyor, animation or state-machine; "
+                        + "save, save-scoped, power, conveyor, animation, conduit or state-machine; "
                         + "--regression- selects one family");
                 // Several negative cases irreversibly load another provider or
                 // a growable assembly. Each complete family gets its own process
@@ -56,7 +66,7 @@ namespace CycleTrim.Optimizations.Tests
                 // clean-environment cases. Benchmark entry points stay above.
                 // Conveyor's fresh native detours and warmed index invalidation
                 // have separate assertions; neither assumes retroactive uninlining.
-                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine" })
+                foreach (var family in new[] { "conveyor", "conveyor-compat", "power", "power-provider", "save", "animation", "state-machine", "conduit" })
                     RunIsolated(family);
                 Console.WriteLine("PASS CycleTrim optimization host regressions (synthetic game fixtures)");
                 return 0;
@@ -81,6 +91,10 @@ namespace CycleTrim.Optimizations.Tests
                 case "power-provider": PowerOverlayRegression.RunProviderRegression(); break;
                 case "save": SaveMetadataRegression.Run(); break;
                 case "animation": AnimationSymbolRegression.Run(); break;
+                case "conduit":
+                    ConduitVisualRefreshGateRegression.Run();
+                    ConduitVisualRegression.Run();
+                    break;
                 case "state-machine": StateMachineLookupRegression.Run(); break;
                 default: throw new ArgumentException("unknown regression family: " + family);
             }

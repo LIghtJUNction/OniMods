@@ -20,6 +20,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                 "animation version coalescing must remain opt-in");
             Check(!new OniSimOptions().OptimizeStateMachineLookups,
                 "state machine lookup reuse must remain opt-in");
+            Check(new OniSimOptions().ConduitAnimation == ConduitAnimationQuality.Full,
+                "conduit display sampling must preserve full quality by default");
             Load(null, expectedEnabled: true);
 
             var disabled = new OniSimOptions
@@ -52,7 +54,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                 OptimizePowerOverlay = true,
                 OptimizeConveyorPathLookup = true,
                 OptimizeAnimationSymbols = true,
-                OptimizeStateMachineLookups = true
+                OptimizeStateMachineLookups = true,
+                ConduitAnimation = ConduitAnimationQuality.Quarter
             };
             Load(mixed, expectedEnabled: true);
 
@@ -96,6 +99,8 @@ namespace CycleTrim.PerformanceProbe.Tests
                     "animation symbol setting before patch install");
                 Check(CycleTrimPatchOptions.OptimizeStateMachineLookups == expected.OptimizeStateMachineLookups,
                     "state machine lookup setting before patch install");
+                Check(CycleTrimPatchOptions.ConduitAnimation == expected.ConduitAnimation,
+                    "conduit display quality applied before patch install");
                 Check(OniSim.CycleTrim.OniSimLoader.LastEnabled == expectedEnabled,
                     "native core setting passed to loader before patch install");
             };
