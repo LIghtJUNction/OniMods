@@ -669,8 +669,8 @@ namespace CycleTrim.Patches
         // PatchProcessor. Unknown providers keep the original delegate route.
         private sealed class PatchSnapshot
         {
-            private static readonly object PublicationLock = ReadPublicationLock();
-            private static readonly Dictionary<MethodBase, byte[]> Registry = ReadRegistry();
+            private static readonly object PublicationLock = HarmonyPatchProfile.ReadPublicationLock();
+            private static readonly Dictionary<MethodBase, byte[]> Registry = HarmonyPatchProfile.ReadRegistry(PublicationLock);
             private static readonly Assembly DynamicMethodHost = new DynamicMethod(
                 "CycleTrimConveyorHost", typeof(void), Type.EmptyTypes).Module.Assembly;
             private static volatile bool uniqueProvider = true;
@@ -703,28 +703,8 @@ namespace CycleTrim.Patches
 
             private static void ObserveProvider(Assembly assembly)
             {
-                if (assembly == typeof(Harmony).Assembly)
-                    return;
-                try
-                {
-                    // Other dynamic modules can define a provider after their
-                    // AssemblyLoad event. The CLR DynamicMethod host cannot
-                    // acquire ordinary types, so only that exact host is safe.
-                    if (assembly.IsDynamic && !ReferenceEquals(assembly, DynamicMethodHost))
-                    {
-                        uniqueProvider = false;
-                        return;
-                    }
-                    var provider = assembly.GetType("HarmonyLib.PatchProcessor", false);
-                    if (provider != null && provider != typeof(PatchProcessor))
-                        uniqueProvider = false;
-                }
-                catch (Exception)
-                {
-                    // Metadata inspection must not break another module's
-                    // load. An unreadable provider cannot justify direct scans.
+                if (!HarmonyPatchProfile.CanSharePublicationLock(assembly, DynamicMethodHost))
                     uniqueProvider = false;
-                }
             }
 
             internal bool Check()
@@ -822,44 +802,6 @@ namespace CycleTrim.Patches
                         return false;
                 }
                 return true;
-            }
-
-            private static object ReadPublicationLock()
-            {
-                try
-                {
-                    if (typeof(Harmony).Assembly.GetName().Version != new Version(2, 4, 2, 0))
-                        return null;
-                    var field = typeof(PatchProcessor).GetField("locker", BindingFlags.Static | BindingFlags.NonPublic);
-                    return field != null && field.IsInitOnly && field.FieldType == typeof(object)
-                        ? field.GetValue(null) : null;
-                }
-                catch (MemberAccessException) { return null; }
-                catch (TypeInitializationException) { return null; }
-                catch (System.Security.SecurityException) { return null; }
-            }
-
-            private static Dictionary<MethodBase, byte[]> ReadRegistry()
-            {
-                try
-                {
-                    var type = typeof(Harmony).Assembly.GetType("HarmonyLib.HarmonySharedState", false);
-                    if (PublicationLock == null || type == null)
-                        return null;
-                    const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
-                    var state = type.GetField("state", flags);
-                    var declared = type.GetField("internalVersion", flags);
-                    var actual = type.GetField("actualVersion", flags);
-                    if (state == null || !state.IsInitOnly || state.FieldType != typeof(Dictionary<MethodBase, byte[]>)
-                        || declared == null || !declared.IsLiteral || !Equals(declared.GetRawConstantValue(), 102)
-                        || actual == null || !actual.IsInitOnly || actual.FieldType != typeof(int)
-                        || !Equals(actual.GetValue(null), 102))
-                        return null;
-                    return (Dictionary<MethodBase, byte[]>)state.GetValue(null);
-                }
-                catch (MemberAccessException) { return null; }
-                catch (TypeInitializationException) { return null; }
-                catch (System.Security.SecurityException) { return null; }
             }
         }
 
