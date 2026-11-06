@@ -1,0 +1,215 @@
+{
+  "scope": "Report and reproducibility evidence; this manifest excludes itself.",
+  "files": [
+    {
+      "path": "docs/cycletrim-lookup-optimizations-20261106.md",
+      "bytes": 17786,
+      "sha256": "eeab848f13c55687e9214849ad57955fc0dfbb6254d5afabae68816df4d534c7"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/api-signatures.txt",
+      "bytes": 22261,
+      "sha256": "7fb873f353099f5b590ea20896e9417c67195f664d11fe2c021bb86100149ea1"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/checks/baseline-optimizations.log",
+      "bytes": 4707,
+      "sha256": "6bbc1f28db76483cc504c8aad29267a3f5f3393689fa04d57564915df5769278"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/checks/candidate-benchmark-build.log",
+      "bytes": 241,
+      "sha256": "c2bb8ef13443bbaa20ef719f9abe23ad1f2aaa96e0836d61c07aa885502a17d0"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/checks/candidate-integrated-host.log",
+      "bytes": 6396,
+      "sha256": "738975d0fc031d154ba497deb009952fbd5252a67bf89eb39700f98a40901924"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/checks/candidate-options-probe.log",
+      "bytes": 657,
+      "sha256": "9bdce30a3d1f4576c486ba60a3351b8896a4a9b3ac3b16329f43df1e208f0397"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/checks/candidate-reference-build.log",
+      "bytes": 889,
+      "sha256": "6bb271d49059283b5f3d1e0c52bae42ff622ba6bd604e96c4ff8ffe2251ac70c"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/checks/reference-api-behavior.log",
+      "bytes": 101,
+      "sha256": "e20b067c1aa099990dd93e8cf52e16f20affeb4465b39d6ff806cfcdc3eb4890"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/checks/reference-api.log",
+      "bytes": 86,
+      "sha256": "abf7c7b8d027ee26e0066b9becfff5a001c940becb5e457ee85fa1bfdb378fd8"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/checks/save-batch-build.log",
+      "bytes": 427,
+      "sha256": "ffc2059cd5de79053ffc5de72b989d8eb440d804def0cb8492d773fdf827d808"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/ci-code-receipt.json",
+      "bytes": 516,
+      "sha256": "a85e07ae41cc85bebe3b529861538e917db08b7ec999c5cd6510f651f74e66c6"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/README.md",
+      "bytes": 1610,
+      "sha256": "23116f4ff8eab68ecbf1116aa8852f0130458c09e2d014ba5d846a2254fd6368"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/benchmark-final-smoke.log",
+      "bytes": 25897,
+      "sha256": "662e01829fe9fe5303d2dbccecec5f6866e67fde30acc89b91e0ab9194a5d0e7"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/benchmark-smoke.log",
+      "bytes": 24612,
+      "sha256": "b61208615cece5b0e66de85d68bb5ba6cd6ff8422a9e242fcfc3b8a7283d7c15"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/benchmark-v2-loop-smoke.log",
+      "bytes": 16217,
+      "sha256": "d140fe51d74a7c56d274f363b4df723440eee3bd09e3ca821ec6525bfb935613"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/benchmark-v2-no-tier-smoke.log",
+      "bytes": 25796,
+      "sha256": "f5e849b61389d66df6b0f64abe9c84c287f7ec9ff95d773a77d75d095c2763f4"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/benchmark-v2-smoke.log",
+      "bytes": 16702,
+      "sha256": "7833d3eadc39712187945e329134418947dc399fcf861b9a0beaeaf9266c95ad"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/receipt.json",
+      "bytes": 5937,
+      "sha256": "def9277ee7811fda3e063380a69e52c9536b4502000624c51a1dec640fda0256"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/smi-allocation-phase-default.log",
+      "bytes": 137854,
+      "sha256": "fbe0e8d0f2921a4504e382d2a4889dd2155742ee9b5770eff5f18877bc61b749"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/diagnostics/smi-allocation-phase-no-osr.log",
+      "bytes": 137796,
+      "sha256": "b990a6911f8103c04995bd01a085c12571ba5e561058a82287053680f5498e63"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/environment.json",
+      "bytes": 594,
+      "sha256": "29605d9f2088124062d7582500cebe17ab650f866893ab397a9d229d4187cd82"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/measurement-plan.md",
+      "bytes": 5481,
+      "sha256": "1b0ed6be7356628e2eae174fdca9130ff89548dc5f797a4b6e60b33236032584"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/reference-receipt.json",
+      "bytes": 2892,
+      "sha256": "b8c1ff2f02492624d9f5a6b8a9b0c391cba5e3dd34c3ec016c058ceb9c107e36"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/run_matrix.py",
+      "bytes": 3455,
+      "sha256": "56f51ce51ed3aa7c3680caaca8f083d69311763b6e272ce9fc200f196255d311"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/save/default-1.log",
+      "bytes": 12238,
+      "sha256": "7851b48aebd281fdcfff2f24b3f6fae762d59000cd4f1b6aa2115bf69819d4d8"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/save/default-2.log",
+      "bytes": 12233,
+      "sha256": "7981372e5ab83f39deadd57c87c1d6d61fbda25e56d96dd3320ff0d9da493c18"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/save/default-3.log",
+      "bytes": 12239,
+      "sha256": "71d084edf3cd9e02fae0e811a64b29c014fcfd4270bfa9e118412fcd010bc757"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/save/receipt.json",
+      "bytes": 4385,
+      "sha256": "ba4e012b25c2fb930a42c31e221c1189abb5d1ad6d77bdafe9a6453038031a61"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/save/tiering-off-1.log",
+      "bytes": 12244,
+      "sha256": "f4995458c96fa4346ffaa5e6b48fc017407b2927c24c886d7e879d195ce7f819"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/save/tiering-off-2.log",
+      "bytes": 12244,
+      "sha256": "5edb91ce6c17ac0d03a15cfde5f23c674a5165bce30198e851975552cac7bbc2"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/save/tiering-off-3.log",
+      "bytes": 12245,
+      "sha256": "987659bd8b43b18be2eb60f25bcf9a5815032bc5c52805fa65856f011990905a"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/save-summary.json",
+      "bytes": 28370,
+      "sha256": "f8c5fa98227afe48088b2dfeb83db46538df62a11e425dce2f921a36f9c5e050"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/source-receipt.json",
+      "bytes": 814,
+      "sha256": "2eb8c8fd6bcc41de40d377fc47fe351446f823018ede21fa778a804180a255c7"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/state-machine/default-1.log",
+      "bytes": 25903,
+      "sha256": "b53a6ac43140d2c78107acd5564ac1296cd9e4d70681d9866c42546ce0841160"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/state-machine/default-2.log",
+      "bytes": 25901,
+      "sha256": "810ca9170f2f9b322378d02242eba8efd17df28cc2ef9bc95a207ed14e13d0ac"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/state-machine/default-3.log",
+      "bytes": 25901,
+      "sha256": "c719f9cacfbeb9bcee46fc42b7a31bc92280945c1857433bf0e338711ac9afac"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/state-machine/receipt.json",
+      "bytes": 6842,
+      "sha256": "d581ba697e52a385d4e3ee1586e577d46eeb20dd9ee4e72b10d23ec5242a0641"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/state-machine/tiering-off-1.log",
+      "bytes": 25896,
+      "sha256": "49f84310fafde4079ebd1c7da5ba0f4b82cd9cab3fb42837a44ab105d41516a6"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/state-machine/tiering-off-2.log",
+      "bytes": 25896,
+      "sha256": "d4361c8c5f1763cfbd92a09305eb43c8e67e02b061bf5db65594b382a2f2a344"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/state-machine/tiering-off-3.log",
+      "bytes": 25896,
+      "sha256": "72dd6eed678c257152acc4afb6d6a6a8820465355d170400d8909b093e1d2561"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/state-machine-summary.json",
+      "bytes": 40544,
+      "sha256": "379d434bd4139a185ff543265d3e8ab51407c68e18c7ef04e21e30d54fbace06"
+    },
+    {
+      "path": "docs/cycletrim-lookup-validation-20261106/summarize_matrix.py",
+      "bytes": 6343,
+      "sha256": "52eecdb997a808dd77d09dd4ce27e58cd6a502d162a69780e667a67a6f7a2732"
+    }
+  ]
+}

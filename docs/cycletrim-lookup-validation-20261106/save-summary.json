@@ -1,0 +1,1177 @@
+{
+  "benchmark": "save-scoped",
+  "revision": "9b06e51d69901aea5f0d83a08dff724df95da7a3",
+  "method": "median within each process of seven paired baseline/candidate time ratios, then median of three process medians",
+  "validated": {
+    "processes": 6,
+    "sample_windows": 420,
+    "paired_windows": 210,
+    "zero_allocation_warm_windows": 420,
+    "equal_paired_checksums": true,
+    "alternating_order": true
+  },
+  "aggregates": [
+    {
+      "mode": "default",
+      "scenario": "repeated",
+      "median_of_process_medians": 2.047494891442481,
+      "process_medians": [
+        2.036874979354753,
+        2.5258627572509402,
+        2.047494891442481
+      ],
+      "pair_range": [
+        1.549773760496276,
+        3.339050814248329
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 4938.594,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 2430.19955,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "mixed",
+      "median_of_process_medians": 1.4689128631904596,
+      "process_medians": [
+        1.4689128631904596,
+        1.1557871715232149,
+        1.4691890093652138
+      ],
+      "pair_range": [
+        1.0323378220317452,
+        1.6148865610072831
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 6311.93465,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 4272.1504,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "skip-heavy",
+      "median_of_process_medians": 1.971436744585233,
+      "process_medians": [
+        2.0435906611796595,
+        1.8389396452119071,
+        1.971436744585233
+      ],
+      "pair_range": [
+        1.2932449369909464,
+        2.825175468623038
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 1952.8954,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 1005.8351,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "empty",
+      "median_of_process_medians": 1.0138885121933825,
+      "process_medians": [
+        0.9347684633152505,
+        1.0906612280237102,
+        1.0138885121933825
+      ],
+      "pair_range": [
+        0.8755857246483933,
+        1.200961902420162
+      ],
+      "improved_pairs": 14,
+      "pairs": 21,
+      "baseline_ns_per_operation": 10.163845,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 10.099705,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "scenario": "single",
+      "median_of_process_medians": 1.4233536439893104,
+      "process_medians": [
+        1.2769078800431009,
+        1.4233536439893104,
+        1.4296718319278678
+      ],
+      "pair_range": [
+        1.0812835691725533,
+        1.7226692909326775
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 69.113025,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 49.137475,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "repeated",
+      "median_of_process_medians": 1.9940260429559633,
+      "process_medians": [
+        2.0039779804650126,
+        1.9940260429559633,
+        1.983936400495404
+      ],
+      "pair_range": [
+        1.4154206062356638,
+        2.7997620741434575
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 4633.9271,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 2439.7863,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "mixed",
+      "median_of_process_medians": 1.1774516532078143,
+      "process_medians": [
+        1.0891729514193216,
+        1.1801139029740002,
+        1.1774516532078143
+      ],
+      "pair_range": [
+        0.7152528491109593,
+        1.7222647818165477
+      ],
+      "improved_pairs": 18,
+      "pairs": 21,
+      "baseline_ns_per_operation": 7132.07995,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 5740.2133,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "skip-heavy",
+      "median_of_process_medians": 1.8714366379738754,
+      "process_medians": [
+        2.2738236495870687,
+        1.8714366379738754,
+        1.851499644967068
+      ],
+      "pair_range": [
+        1.2154913981643496,
+        2.6182614048635684
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 2150.00585,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 1034.12315,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "empty",
+      "median_of_process_medians": 1.0275462161848394,
+      "process_medians": [
+        1.0275462161848394,
+        1.0098589339801374,
+        1.1041225119845728
+      ],
+      "pair_range": [
+        0.8358927622880439,
+        1.5386032881515477
+      ],
+      "improved_pairs": 13,
+      "pairs": 21,
+      "baseline_ns_per_operation": 12.19553,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 12.02507,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "scenario": "single",
+      "median_of_process_medians": 1.442416970280309,
+      "process_medians": [
+        1.4617127338120515,
+        1.4272118089394057,
+        1.442416970280309
+      ],
+      "pair_range": [
+        1.0712987878796327,
+        2.3972145255075055
+      ],
+      "improved_pairs": 21,
+      "pairs": 21,
+      "baseline_ns_per_operation": 83.652925,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 56.080135,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "process_results": [
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "repeated",
+      "median_ratio": 2.036874979354753,
+      "pair_ratios": [
+        2.0989727880052955,
+        2.036874979354753,
+        1.549773760496276,
+        2.0494207335285313,
+        1.7534360660055268,
+        1.8286196315474703,
+        2.114357004824402
+      ],
+      "pair_range": [
+        1.549773760496276,
+        2.114357004824402
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 4938.594,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 2676.3319,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "mixed",
+      "median_ratio": 1.4689128631904596,
+      "pair_ratios": [
+        1.4651460889579169,
+        1.5049979386709,
+        1.4102975870434316,
+        1.6148865610072831,
+        1.2227420647772536,
+        1.4689128631904596,
+        1.5060460701916178
+      ],
+      "pair_range": [
+        1.2227420647772536,
+        1.6148865610072831
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 6311.93465,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 4272.1504,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "skip-heavy",
+      "median_ratio": 2.0435906611796595,
+      "pair_ratios": [
+        2.287661725756846,
+        2.2926211692265643,
+        2.0435906611796595,
+        2.0798962264570857,
+        1.8987723201052147,
+        1.982470811111724,
+        1.8774029323616406
+      ],
+      "pair_range": [
+        1.8774029323616406,
+        2.2926211692265643
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 1885.921,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 970.30665,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "empty",
+      "median_ratio": 0.9347684633152505,
+      "pair_ratios": [
+        1.0100920422340933,
+        0.8798644430043063,
+        1.0470939970822901,
+        0.9347684633152505,
+        1.0306152992704563,
+        0.8755857246483933,
+        0.9067740896892604
+      ],
+      "pair_range": [
+        0.8755857246483933,
+        1.0470939970822901
+      ],
+      "improved_pairs": 3,
+      "baseline_ns_per_operation": 10.163845,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 10.873115,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 1,
+      "scenario": "single",
+      "median_ratio": 1.2769078800431009,
+      "pair_ratios": [
+        1.0812835691725533,
+        1.2030056299344494,
+        1.2769078800431009,
+        1.2619724917352915,
+        1.3639863206570446,
+        1.4042097421080262,
+        1.431725552770477
+      ],
+      "pair_range": [
+        1.0812835691725533,
+        1.431725552770477
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 69.24946,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 54.333015,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "repeated",
+      "median_ratio": 2.5258627572509402,
+      "pair_ratios": [
+        2.932339879034439,
+        2.107391698337692,
+        2.0591558931655847,
+        1.99138086955452,
+        3.339050814248329,
+        2.5258627572509402,
+        2.706368081138447
+      ],
+      "pair_range": [
+        1.99138086955452,
+        3.339050814248329
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 5490.4483,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 2175.3633,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "mixed",
+      "median_ratio": 1.1557871715232149,
+      "pair_ratios": [
+        1.1557871715232149,
+        1.0950367378240864,
+        1.241746730285321,
+        1.3031807340015509,
+        1.0440850116248224,
+        1.0779769770146104,
+        1.1816810136484093
+      ],
+      "pair_range": [
+        1.0440850116248224,
+        1.3031807340015509
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 4804.9354,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 4231.8491,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "skip-heavy",
+      "median_ratio": 1.8389396452119071,
+      "pair_ratios": [
+        1.8389396452119071,
+        1.9451606631390936,
+        1.5068772987877745,
+        1.8824535128170938,
+        1.4641473321747145,
+        1.2932449369909464,
+        1.9483937309878716
+      ],
+      "pair_range": [
+        1.2932449369909464,
+        1.9483937309878716
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 1952.8954,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 1290.354,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "empty",
+      "median_ratio": 1.0906612280237102,
+      "pair_ratios": [
+        1.1350529799660807,
+        1.0184262719079744,
+        1.0906612280237102,
+        0.9681490697005507,
+        1.0066246353044865,
+        1.101774968837489,
+        1.1150530683866808
+      ],
+      "pair_range": [
+        0.9681490697005507,
+        1.1350529799660807
+      ],
+      "improved_pairs": 6,
+      "baseline_ns_per_operation": 10.789995,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 10.099705,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 2,
+      "scenario": "single",
+      "median_ratio": 1.4233536439893104,
+      "pair_ratios": [
+        1.3098496335216174,
+        1.4239812091275885,
+        1.4788195381515614,
+        1.3380119386676164,
+        1.4233536439893104,
+        1.3830973203242536,
+        1.6174233419413553
+      ],
+      "pair_range": [
+        1.3098496335216174,
+        1.6174233419413553
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 68.56011,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 49.137475,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "repeated",
+      "median_ratio": 2.047494891442481,
+      "pair_ratios": [
+        2.0662783152569877,
+        1.9164282208841656,
+        2.047494891442481,
+        1.8764642892945929,
+        2.123425345050881,
+        2.4207042872182036,
+        1.9953283014469023
+      ],
+      "pair_range": [
+        1.8764642892945929,
+        2.4207042872182036
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 4657.303,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 2430.19955,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "mixed",
+      "median_ratio": 1.4691890093652138,
+      "pair_ratios": [
+        1.0711788639800834,
+        1.0323378220317452,
+        1.5064806125432457,
+        1.4691890093652138,
+        1.3019524923511339,
+        1.4904807691469903,
+        1.5026032344038596
+      ],
+      "pair_range": [
+        1.0323378220317452,
+        1.5064806125432457
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 6908.7988,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 4820.3842,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "skip-heavy",
+      "median_ratio": 1.971436744585233,
+      "pair_ratios": [
+        2.223482595850914,
+        1.971436744585233,
+        2.825175468623038,
+        1.9177454499140292,
+        2.1433840810588474,
+        1.795537802816364,
+        1.9019074011239316
+      ],
+      "pair_range": [
+        1.795537802816364,
+        2.825175468623038
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 1984.70775,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 1005.8351,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "empty",
+      "median_ratio": 1.0138885121933825,
+      "pair_ratios": [
+        1.200961902420162,
+        0.9094453711986289,
+        1.0138885121933825,
+        1.1104285263309788,
+        1.092804025494932,
+        0.9622937261704649,
+        1.0072857759188598
+      ],
+      "pair_range": [
+        0.9094453711986289,
+        1.200961902420162
+      ],
+      "improved_pairs": 5,
+      "baseline_ns_per_operation": 10.156695,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 10.04793,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "default",
+      "process": 3,
+      "scenario": "single",
+      "median_ratio": 1.4296718319278678,
+      "pair_ratios": [
+        1.7226692909326775,
+        1.4296718319278678,
+        1.4796116175779876,
+        1.4139928634657977,
+        1.3805779896040695,
+        1.4512207734760079,
+        1.3680568191806184
+      ],
+      "pair_range": [
+        1.3680568191806184,
+        1.7226692909326775
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 69.113025,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 48.321775,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "repeated",
+      "median_ratio": 2.0039779804650126,
+      "pair_ratios": [
+        2.0039779804650126,
+        1.9773946526280066,
+        2.01347007451304,
+        2.0873892376024274,
+        2.2189885468213895,
+        1.8113215489465158,
+        1.4154206062356638
+      ],
+      "pair_range": [
+        1.4154206062356638,
+        2.2189885468213895
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 4449.9877,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 2133.347,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "mixed",
+      "median_ratio": 1.0891729514193216,
+      "pair_ratios": [
+        1.2236142789980136,
+        1.7222647818165477,
+        1.032165150003937,
+        0.7323216192461777,
+        1.0891729514193216,
+        1.0708064726225899,
+        1.2133156712498712
+      ],
+      "pair_range": [
+        0.7323216192461777,
+        1.7222647818165477
+      ],
+      "improved_pairs": 6,
+      "baseline_ns_per_operation": 7541.45425,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 7343.82,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "skip-heavy",
+      "median_ratio": 2.2738236495870687,
+      "pair_ratios": [
+        1.3796455825259728,
+        1.625507435679193,
+        2.076261226721402,
+        2.6182614048635684,
+        2.2738236495870687,
+        2.611125691069152,
+        2.2793128484811938
+      ],
+      "pair_range": [
+        1.3796455825259728,
+        2.6182614048635684
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 2351.0157,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 1034.12315,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "empty",
+      "median_ratio": 1.0275462161848394,
+      "pair_ratios": [
+        1.3132205995388162,
+        0.9646294496945628,
+        1.162816855030899,
+        1.0275072239605483,
+        0.9777527739312114,
+        1.5386032881515477,
+        1.0275462161848394
+      ],
+      "pair_range": [
+        0.9646294496945628,
+        1.5386032881515477
+      ],
+      "improved_pairs": 5,
+      "baseline_ns_per_operation": 14.054915,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 12.238785,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 1,
+      "scenario": "single",
+      "median_ratio": 1.4617127338120515,
+      "pair_ratios": [
+        1.4441230416596151,
+        1.4670290547683642,
+        1.1807374672307065,
+        1.0712987878796327,
+        1.9913588301940266,
+        1.4617127338120515,
+        2.3972145255075055
+      ],
+      "pair_range": [
+        1.0712987878796327,
+        2.3972145255075055
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 137.33203,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 91.31634,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "repeated",
+      "median_ratio": 1.9940260429559633,
+      "pair_ratios": [
+        1.525661624067381,
+        1.9940260429559633,
+        2.600802378073988,
+        1.722394987470441,
+        2.3999092568760867,
+        1.934782214667324,
+        2.015116444636881
+      ],
+      "pair_range": [
+        1.525661624067381,
+        2.600802378073988
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 4772.3299,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 2598.05205,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "mixed",
+      "median_ratio": 1.1801139029740002,
+      "pair_ratios": [
+        1.1801139029740002,
+        1.591893877153329,
+        1.0922814356227681,
+        1.364808912102199,
+        1.18193443288104,
+        1.1689945341779946,
+        1.1692112082750565
+      ],
+      "pair_range": [
+        1.0922814356227681,
+        1.591893877153329
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 6224.75505,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 5305.10835,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "skip-heavy",
+      "median_ratio": 1.8714366379738754,
+      "pair_ratios": [
+        2.08307034238123,
+        1.8714366379738754,
+        1.3682467436352872,
+        1.2154913981643496,
+        1.405754678088229,
+        2.0086951288732235,
+        2.343471327026784
+      ],
+      "pair_range": [
+        1.2154913981643496,
+        2.343471327026784
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 2150.00585,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 1401.16265,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "empty",
+      "median_ratio": 1.0098589339801374,
+      "pair_ratios": [
+        0.9979997012482916,
+        1.012720970167956,
+        0.9460798702716634,
+        1.0616045530308298,
+        1.0098589339801374,
+        0.9164388788433137,
+        1.1797939724735096
+      ],
+      "pair_range": [
+        0.9164388788433137,
+        1.1797939724735096
+      ],
+      "improved_pairs": 4,
+      "baseline_ns_per_operation": 10.9309,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 11.144225,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 2,
+      "scenario": "single",
+      "median_ratio": 1.4272118089394057,
+      "pair_ratios": [
+        1.554850495803599,
+        1.3982399200018358,
+        1.4817157598886792,
+        1.3483792578751272,
+        1.426752256164185,
+        1.4272118089394057,
+        1.4283843266687366
+      ],
+      "pair_range": [
+        1.3483792578751272,
+        1.554850495803599
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 74.33214,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 52.25976,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "repeated",
+      "median_ratio": 1.983936400495404,
+      "pair_ratios": [
+        1.8843175612926866,
+        1.983936400495404,
+        2.132657036315316,
+        1.7836810492137682,
+        1.530863652768571,
+        2.7997620741434575,
+        2.053917632919898
+      ],
+      "pair_range": [
+        1.530863652768571,
+        2.7997620741434575
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 4633.9271,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 2439.7863,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "mixed",
+      "median_ratio": 1.1774516532078143,
+      "pair_ratios": [
+        1.1774516532078143,
+        1.563024831938795,
+        1.2424764686009142,
+        1.4688921148589538,
+        0.7152528491109593,
+        0.7526084504218001,
+        1.002636433988254
+      ],
+      "pair_range": [
+        0.7152528491109593,
+        1.563024831938795
+      ],
+      "improved_pairs": 5,
+      "baseline_ns_per_operation": 7132.07995,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 5740.2133,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "skip-heavy",
+      "median_ratio": 1.851499644967068,
+      "pair_ratios": [
+        1.9593583690220149,
+        1.8123025636517422,
+        1.8290703277129203,
+        1.851499644967068,
+        1.8077665391362276,
+        2.170764323560164,
+        2.072962814504209
+      ],
+      "pair_range": [
+        1.8077665391362276,
+        2.170764323560164
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 1941.8776,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 1032.7211,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "empty",
+      "median_ratio": 1.1041225119845728,
+      "pair_ratios": [
+        1.1041225119845728,
+        0.960559801181263,
+        1.1314362411195944,
+        0.8358927622880439,
+        1.160885953119121,
+        1.180791171608219,
+        0.9641426405619437
+      ],
+      "pair_range": [
+        0.8358927622880439,
+        1.180791171608219
+      ],
+      "improved_pairs": 4,
+      "baseline_ns_per_operation": 12.19553,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 12.02507,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "mode": "tiering-off",
+      "process": 3,
+      "scenario": "single",
+      "median_ratio": 1.442416970280309,
+      "pair_ratios": [
+        1.4310778765197647,
+        1.3775108388005919,
+        1.6287686763715137,
+        1.5643910272327268,
+        1.3317272240420177,
+        1.5324407074560153,
+        1.442416970280309
+      ],
+      "pair_range": [
+        1.3317272240420177,
+        1.6287686763715137
+      ],
+      "improved_pairs": 7,
+      "baseline_ns_per_operation": 83.652925,
+      "baseline_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ],
+      "candidate_ns_per_operation": 56.080135,
+      "candidate_bytes_per_operation_range": [
+        0.0,
+        0.0
+      ]
+    }
+  ]
+}
