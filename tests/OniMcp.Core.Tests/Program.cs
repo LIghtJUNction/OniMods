@@ -232,12 +232,20 @@ internal static class Program
         var cache = new OniToolRegistryCache();
         var all = cache.GetTools(tools);
         Require(all.Select(tool => tool.Name).SequenceEqual(new[] { "a", "b", "c" }), "All-tools order is unstable.");
-        Require(cache.GetVisibleTools(tools, new[] { c }).Single() == c, "Previously cached all-tools ignored the supplied visible subset.");
+        var visible = cache.GetVisibleTools(tools);
+        Require(visible.SequenceEqual(new[] { b, c }), "Visible tools included a hidden tool or lost their order.");
         a.Hidden = false;
-        Require(cache.GetVisibleSnapshot().Count == 3, "Visibility changes were retained in a stale snapshot.");
+        b.Hidden = true;
+        Require(cache.GetVisibleTools(tools).SequenceEqual(new[] { a, c }), "Visibility changes were retained in a stale snapshot.");
+        a.Group = "two";
+        Require(cache.GetVisibleTools(tools).SequenceEqual(new[] { c, a }), "Visible tools ignored current group ordering.");
+        a.Group = "one";
+        a.Name = "z";
+        Require(cache.GetVisibleTools(tools).SequenceEqual(new[] { c, a }), "Visible tools ignored current name ordering.");
         all.Clear();
-        cache.GetVisibleSnapshot().Clear();
-        Require(cache.GetTools(tools).Count == 3, "Caller modified cached membership.");
+        visible.Clear();
+        Require(cache.GetTools(tools).Count == 3 && cache.GetVisibleTools(tools).Count == 2,
+            "Caller modified registered or cached membership.");
         cache.Clear();
         Require(cache.GetTools(new[] { b }).Count == 1, "Clear did not invalidate the cache.");
     }

@@ -14,20 +14,9 @@ namespace OniMcp.Tools
             return new List<McpTool>(allTools);
         }
 
-        internal List<McpTool> GetVisibleTools(
-            IEnumerable<McpTool> registeredTools,
-            IEnumerable<McpTool> visibleRegisteredTools)
+        internal List<McpTool> GetVisibleTools(IEnumerable<McpTool> registeredTools)
         {
-            Ensure(registeredTools);
-            IEnumerable<McpTool> visible = allTools;
-            if (visibleRegisteredTools != null)
-                visible = Sort(visibleRegisteredTools);
-            return visible.Where(tool => !tool.Hidden).ToList();
-        }
-
-        internal List<McpTool> GetVisibleSnapshot()
-        {
-            return allTools?.Where(tool => !tool.Hidden).ToList();
+            return Sort(registeredTools.Where(tool => !tool.Hidden)).ToList();
         }
 
         internal void Clear()
@@ -35,7 +24,7 @@ namespace OniMcp.Tools
             allTools = null;
         }
 
-        internal void Ensure(IEnumerable<McpTool> registeredTools)
+        private void Ensure(IEnumerable<McpTool> registeredTools)
         {
             if (allTools != null)
                 return;
