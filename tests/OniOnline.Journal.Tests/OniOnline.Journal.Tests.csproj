@@ -8,6 +8,6 @@
     <NoWarn>$(NoWarn);SYSLIB0021;SYSLIB0023;CS0649</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../mods/OniOnline/Multiplayer/NativeWorkJournal.cs;../../mods/OniOnline/Multiplayer/RemoteWorkTypes.cs;../../mods/OniOnline/Multiplayer/RemoteWorkAuthority.cs;../../mods/OniOnline/Multiplayer/RemoteWorkWire.cs;../../mods/OniOnline/Multiplayer/RemoteWorkPersistence.cs" Link="Production/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/OniOnline/Multiplayer/NativeWorkJournal.cs;../../mods/OniOnline/Multiplayer/RemoteWorkTypes.cs;../../mods/OniOnline/Multiplayer/RemoteWorkAuthority.cs;../../mods/OniOnline/Multiplayer/RemoteWorkWire.cs;../../mods/OniOnline/Multiplayer/RemoteWorkPersistence.cs;../../mods/OniOnline/Multiplayer/CommandWireText.cs" Link="Production/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

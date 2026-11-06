@@ -1,8 +1,3 @@
-// Production HTTP regressions for the single supported MCP protocol.
-// The 2026 wire implementation was deliberately retired. These tests replace
-// success-path assertions for removed endpoints with fail-closed checks, while
-// exercising the real 2025-11-25 transport and its existing host doubles.
-// Only game boundaries are stubbed; McpHttpServer and JSON-RPC are production code.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,32 +16,20 @@ using OniMcp.Core;
 using OniMcp.Server;
 using OniMcp.Tools;
 
-internal static class RetiredDiscoveryRegressionEntry
-{
-    private static void Main() { RetiredProtocolRegression.Run("discovery"); }
-}
-
-internal static class RetiredHeadersRegressionEntry
-{
-    private static void Main() { RetiredProtocolRegression.Run("headers"); }
-}
-
-internal static class RetiredProtocolRegressionEntry
-{
-    private static void Main() { RetiredProtocolRegression.Run("protocol"); }
-}
-
-internal static class RetiredResourcesRegressionEntry
-{
-    private static void Main() { RetiredProtocolRegression.Run("resources"); }
-}
-
 internal static class RetiredProtocolRegression
 {
     private const string Current = "2025-11-25";
     private const string Retired = "2026-07-28";
 
-    public static void Run(string category)
+    internal static void Run()
+    {
+        RunScenario(VerifyDiscovery);
+        RunScenario(VerifyHeaders);
+        RunScenario(VerifyProtocol);
+        RunScenario(VerifyResources);
+    }
+
+    private static void RunScenario(Action<HttpClient, MainThreadBridge, McpHttpServer> verify)
     {
         var bridge = new MainThreadBridge();
         Invoke(bridge, "Awake");
@@ -66,14 +49,7 @@ internal static class RetiredProtocolRegression
                 Timeout = TimeSpan.FromSeconds(10)
             })
             {
-                switch (category)
-                {
-                    case "discovery": VerifyDiscovery(client, bridge, server); break;
-                    case "headers": VerifyHeaders(client, bridge, server); break;
-                    case "protocol": VerifyProtocol(client, bridge, server); break;
-                    case "resources": VerifyResources(client, bridge, server); break;
-                    default: throw new ArgumentException("Unknown regression category: " + category);
-                }
+                verify(client, bridge, server);
             }
         }
         finally
@@ -83,7 +59,7 @@ internal static class RetiredProtocolRegression
             Invoke(bridge, "OnDestroy");
         }
 
-        Console.WriteLine("PASS: " + category + " legacy protocol and retired-wire regressions");
+        Console.WriteLine("PASS: " + verify.Method.Name + " supported protocol and retired-wire regressions");
     }
 
     private static void VerifyDiscovery(HttpClient client, MainThreadBridge bridge, McpHttpServer server)

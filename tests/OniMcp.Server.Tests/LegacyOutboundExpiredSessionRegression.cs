@@ -5,9 +5,9 @@ using Newtonsoft.Json.Linq;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class LegacyOutboundExpiredSessionRegressionEntry
+internal static class LegacyOutboundExpiredSessionRegression
 {
-    private static void Main()
+    internal static void Run()
     {
         RunExpiredRecipientRegression();
 

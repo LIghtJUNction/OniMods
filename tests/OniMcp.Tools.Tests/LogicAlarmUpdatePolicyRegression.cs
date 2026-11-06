@@ -1,21 +1,15 @@
 using System;
-using System.Reflection;
 using Newtonsoft.Json.Linq;
 using OniMcp.Tools;
 
-internal static class LogicAlarmRegressionEntry
+internal static class LogicAlarmRegression
 {
     private static int assertions;
 
-    private static void Main()
+    public static void Run()
     {
         RunLogicAlarmUpdatePolicyRegression();
         RunLogicAlarmHandlerRegression();
-
-        var existing = typeof(BenchmarkMetadataRegressionEntry).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
-        if (existing == null)
-            throw new InvalidOperationException("Existing benchmark regression entrypoint was not found");
-        existing.Invoke(null, null);
     }
 
     private static void RunLogicAlarmUpdatePolicyRegression()

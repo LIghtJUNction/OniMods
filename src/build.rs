@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use std::env;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -7,16 +6,17 @@ use std::process::Command;
 
 use crate::config::{Config, SelectedMod};
 
-pub fn run(cfg: &Config, selected: &SelectedMod, release: bool) -> Result<()> {
-    let repo_root = match env::var_os("ONI_CLI_REPO_ROOT") {
-        Some(path) => PathBuf::from(path),
-        None => env::current_dir().context("读取当前目录失败")?,
-    };
+pub struct BuiltMod {
+    pub assembly_name: String,
+    pub directory: PathBuf,
+    pub archive: PathBuf,
+}
 
-    let mod_project = selected.config.project_abs(&repo_root);
-    let assembly_name = selected.assembly_name(&repo_root);
+pub fn run(cfg: &Config, selected: &SelectedMod, release: bool) -> Result<BuiltMod> {
+    let mod_project = selected.config.project_abs(&cfg.repo_root);
+    let assembly_name = selected.assembly_name(&cfg.repo_root);
     crate::config::validate_mod_directory_name(&assembly_name)?;
-    let dist = cfg.dist_dir(&repo_root);
+    let dist = cfg.dist_dir();
     let transaction = PackageBuild::begin(&dist, &assembly_name)?;
     println!("📦 构建 Mod: {} ({})", selected.name, mod_project.display());
 
@@ -59,19 +59,20 @@ pub fn run(cfg: &Config, selected: &SelectedMod, release: bool) -> Result<()> {
     }
     transaction.commit();
 
-    // 显示产物
-    let zip = dist.join(format!("{}.zip", assembly_name));
-    let src = dist.join(format!("{}-src.tar.gz", assembly_name));
+    let package = BuiltMod {
+        directory: dist.join(&assembly_name),
+        archive: dist.join(format!("{}.zip", assembly_name)),
+        assembly_name,
+    };
+    let src = dist.join(format!("{}-src.tar.gz", package.assembly_name));
 
     println!("✅ 构建成功！");
-    if zip.exists() {
-        println!("   📁 {}", zip.display());
-    }
+    println!("   📁 {}", package.archive.display());
     if src.exists() {
         println!("   📁 {}", src.display());
     }
 
-    Ok(())
+    Ok(package)
 }
 
 // The directory is both an exclusive per-output lock and crash-recovery storage.

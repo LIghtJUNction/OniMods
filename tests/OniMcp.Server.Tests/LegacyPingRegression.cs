@@ -13,11 +13,11 @@ using OniMcp.Config;
 using OniMcp.Core;
 using OniMcp.Server;
 
-internal static class LegacyPingRegressionEntry
+internal static class LegacyPingRegression
 {
     private static MainThreadBridge _bridge;
 
-    private static void Main()
+    internal static void Run()
     {
         RunLegacyResourceNotFoundCodeRegression();
         RunLegacyPingLifecycleRegression();

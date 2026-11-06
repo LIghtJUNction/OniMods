@@ -5,16 +5,15 @@
 ## 快速开始
 
 - MCP 地址: `http://localhost:8788/mcp/`
-- 协议兼容: `2026-07-28` 无会话兼容路径 + `2025-11-25` / `2025-06-18` legacy initialize/session 路径
-- Legacy/default public tools: 7 entrypoints: `benchmark`, `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
-- Modern `2026-07-28` `tools/list`: 当前只广告只读 `benchmark`
+- 支持协议: `2025-11-25`，使用 `initialize` 和服务端签发的 `Mcp-Session-Id`
+- Public tools: 7 entrypoints: `benchmark`, `world_editor`, `game_control`, `navigation_control`, `building_control`, `orders_control`, `server_control`
 - 旧聚合入口: 仅作为虚拟文件工作流的内部操作，不再注册为 MCP 工具
 - `coordinate_control` 不属于当前公开运行时；普通聚合工具拒绝 raw coordinates
 - Tool descriptions: default-public tool descriptions and parameter descriptions are in English
 
-现代 `2026-07-28` 请求不使用 `initialize`，也不要求或返回 `Mcp-Session-Id`。每个请求携带 `_meta`、`MCP-Protocol-Version` 和 `Mcp-Method`；`resources/read` / `tools/call` 等有具体资源或工具名的请求还需匹配的 `Mcp-Name`。推荐先调用 `server/discover` 并以实际 capability 为准。
+客户端先以 `2025-11-25` 调用 `initialize`，读取响应中的 `Mcp-Session-Id`。后续会话请求携带该 ID 和 `Mcp-Protocol-Version: 2025-11-25`，再调用 `tools/list` 获取当前工具清单。
 
-Legacy `2025-11-25` / `2025-06-18` 客户端继续先调用 `initialize`，随后请求携带协商得到的 `Mcp-Session-Id` 和 `Mcp-Protocol-Version`。
+`2026-07-28` 无会话路径、`server/discover` 以及 `2025-06-18` 已退出支持范围。历史资料见 [协议回归与历史来源](mcp-protocol-retirement.md)。
 
 ## 定位与执行原则
 
@@ -227,10 +226,10 @@ Prefer extending aggregate entrypoints in `Tools/Entry/` for new public capabili
 
 ## 兼容性说明
 
-新客户端建议按双协议处理：
+客户端按当前会话协议接入：
 
-1. 优先以 `2026-07-28` 调用 `server/discover`，使用返回的 capability；现代请求不发送 `Mcp-Session-Id`。
-2. 若目标服务端只支持旧协议，再走 `initialize` + `Mcp-Session-Id` 的 `2025-11-25` / `2025-06-18` 路径。
+1. 以 `2025-11-25` 调用 `initialize`，保存响应中的 `Mcp-Session-Id`。
+2. 后续请求携带该会话 ID 和 `Mcp-Protocol-Version: 2025-11-25`。
 3. 不要硬编码旧版细粒度工具列表；按当前协议调用 `tools/list` 或读取运行时 manifest。
 4. 调用 `server_control domain=catalog action=search` 或读取 `oni://tools/guide` 查找目标流程。
 5. 优先传语义定位参数。

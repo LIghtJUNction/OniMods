@@ -66,7 +66,7 @@ namespace OniSim.CycleTrim
                         throw new PlatformNotSupportedException("OniSim takeover requires Unity Mono.");
                     OfficialProfile.ValidateAssembly(gameAssembly);
                     RequireNoGameInstance(gameAssembly);
-                    string monoPath = OfficialProfile.MonoPath(gameAssembly.Location);
+                    string monoPath = NativePlatform.MonoPath(gameAssembly.Location);
                     OfficialProfile.ValidateMono(monoPath);
                     mapper = new MonoImageMapper(NativeModule.OpenAlreadyLoaded(monoPath));
                     IntPtr image = mapper.FindImage(Path.GetFullPath(gameAssembly.Location));
